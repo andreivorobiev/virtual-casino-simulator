@@ -22,7 +22,7 @@
   "contracts/openapi/craps.v1.yaml": "1efe301348e53badaa4c69474847de4b1317bf528b483236b622fff76689469e",
   "contracts/openapi/crown_and_anchor.v1.yaml": "edf4abb85e91709a9253d06d6d2ec728216c04274146d5afb1c945f71b1eb0fe",
   "contracts/openapi/daily_draw_lab.v1.yaml": "4ea886120d8a19e2932b6ed5dfa9ae4d2c815c743d2529b17eb3ee4f46b9bd57",
-  "contracts/openapi/deuces_wild_video_poker.v1.yaml": "24e9afc2c7e726e11e6d2ab630516d9ce378473cf183662eedf3c4dfcb77423c",
+  "contracts/openapi/deuces_wild_video_poker.v1.yaml": "e9e0dbd49503be81e102460cf6d7a44869fd757d89d7e52a12c64dbde1003bef",
   "contracts/openapi/double_bonus_video_poker.v1.yaml": "d555d073e5f2074017507cb22e9d9bed0cc99325e1184da10a63f9ca6cf80c88",
   "contracts/openapi/dragon_tiger.v1.yaml": "c520a70fe7c4235bec5456cceb8c286723cd9a9f81d21c7159e4542b7d082300",
   "contracts/openapi/fan_tan.v1.yaml": "397007b7b87da4267731a8d98cbedb3c752e5ffb02be767335feefc42d54e351",

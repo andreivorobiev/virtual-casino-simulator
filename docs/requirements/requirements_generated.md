@@ -30,7 +30,7 @@ Historical source baseline: 9.1.0
 - hi_lo: 1.1.1
 - three_card_poker: 1.1.0
 - jacks_or_better_video_poker: 1.1.0
-- deuces_wild_video_poker: 1.1.0
+- deuces_wild_video_poker: 1.1.1
 - scratch_cards: 1.1.0
 - sic_bo: 1.1.0
 - chuck_a_luck: 1.1.0
@@ -50,9 +50,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.20
-- docs: 1.64.20
-- contracts: 1.49.11
+- tests: 1.64.21
+- docs: 1.64.21
+- contracts: 1.49.12
 - tooling: 1.21.8
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
@@ -554,7 +554,7 @@ Historical source baseline: 9.1.0
 - **JOBVP-003** (Jacks or Better Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw action identities.
 - **JOBVP-004** (Application) - PASS: Jacks or Better supplies complete English and Russian copy with responsive, accessible, reduced-motion-safe play across required viewports.
 - **JOBVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Jacks or Better with requirement, module, version, and visual traceability.
-- **DWVP-001** (Deuces Wild Video Poker) - PASS: Single-hand full-pay Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable.
+- **DWVP-001** (Deuces Wild Video Poker) - PASS: Single-hand house-edged Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable, with the four-of-a-kind return reduced so optimal play is no longer player-positive.
 - **DWVP-002** (Deuces Wild Video Poker) - PASS: Authenticated sessions own isolated reload-safe active hands, holds, history, and canonical route restoration.
 - **DWVP-003** (Deuces Wild Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw identities.
 - **DWVP-004** (Application) - PASS: Deuces Wild supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.
