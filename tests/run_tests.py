@@ -435,16 +435,22 @@ def assert_condition(value, message):
 
 # Resolve exact request-latency source provenance without accepting a branch name.
 def request_latency_source_commit():
-    # Prefer the exact hosted checkout identity when GitHub supplies one.
-    hosted_sha=str(os.environ.get('GITHUB_SHA','')).strip().lower()
-    # Accept only a full lowercase hexadecimal commit.
-    if re.fullmatch(r'[0-9a-f]{40}',hosted_sha): return hosted_sha
-    # Resolve the exact local checkout commit without changing repository state.
-    result=subprocess.run(['git','rev-parse','HEAD'],cwd=str(ROOT),capture_output=True,text=True,timeout=10)
+    # Start one bounded read-only Git query without trusting caller environment.
+    try:
+        # Resolve the exact local checkout commit without changing repository state.
+        result=subprocess.run(['git','rev-parse','HEAD'],cwd=str(ROOT),capture_output=True,text=True,timeout=10)
+    # Normalize timeout and process-launch failures into one value-free diagnostic.
+    except (subprocess.TimeoutExpired,OSError):
+        # Suppress command, path, and operating-system details.
+        raise AssertionError('request-latency source commit is unavailable') from None
     # Normalize the bounded command output.
     local_sha=result.stdout.strip().lower() if result.returncode==0 else ''
     # Require exact immutable provenance before an explicit benchmark begins.
     if not re.fullmatch(r'[0-9a-f]{40}',local_sha): raise AssertionError('request-latency source commit is unavailable')
+    # Read the optional hosted identity only after checkout provenance is verified.
+    hosted_sha=str(os.environ.get('GITHUB_SHA','')).strip().lower()
+    # Reject every present malformed or stale hosted assertion.
+    if hosted_sha and (not re.fullmatch(r'[0-9a-f]{40}',hosted_sha) or hosted_sha!=local_sha): raise AssertionError('request-latency hosted source commit does not match checkout')
     # Return the exact checkout commit.
     return local_sha
 

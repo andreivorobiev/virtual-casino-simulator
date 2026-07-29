@@ -50,6 +50,15 @@ MYSQL_POOL_OVERRIDE_KEYS = (
     "CASINO_MYSQL_POOL_WAIT_MS",  # Preserve the default checkout wait.
     "CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS",  # Preserve the default connector deadline.
 )
+# Name every administrator or migrator capability forbidden in the benchmark child.
+MYSQL_CHILD_CAPABILITY_KEYS = (
+    "CASINO_MYSQL_TEST_ADMIN_USER",  # Withhold the disposable administrator identity.
+    "CASINO_MYSQL_TEST_ADMIN_PASSWORD",  # Withhold the disposable administrator secret.
+    "CASINO_MYSQL_MIGRATION_USER",  # Withhold the schema migrator identity.
+    "CASINO_MYSQL_MIGRATION_PASSWORD",  # Withhold the schema migrator secret.
+    "CASINO_MYSQL_MIGRATION_DATABASE",  # Withhold the migrator-owned target selector.
+    "CASINO_MYSQL_MIGRATION_TARGET_BINDING_KEY",  # Withhold private target-binding material.
+)
 # Enumerate the only low-cardinality route-family labels allowed in evidence.
 ROUTE_FAMILIES = (
     "current_user",  # Measure the authenticated v2 current-user projection.
@@ -58,6 +67,8 @@ ROUTE_FAMILIES = (
     "casino_state",  # Measure the aggregate authenticated state.
     "boule_spin",  # Measure one idempotency-capable mutation.
 )
+# Keep the four read families ahead of every mutation control and timed mutation.
+READ_ROUTE_FAMILIES = ROUTE_FAMILIES[:-1]
 # Pin the complete top-level evidence allowlist.
 EVIDENCE_KEYS = frozenset({"schema", "source_commit", "provider", "rows"})
 # Pin the complete per-row evidence allowlist.
@@ -98,8 +109,14 @@ class DirectResponse:
 
     # Decode the standard JSON envelope after status validation.
     def payload(self) -> dict:
-        # Parse only the bounded application response.
-        value = json.loads(self.body.decode("utf-8"))
+        # Start protected parsing so response bytes never enter diagnostics.
+        try:
+            # Parse only the bounded application response.
+            value = json.loads(self.body.decode("utf-8"))
+        # Convert malformed encoding or JSON into one value-free failure.
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            # Raise one fixed diagnostic without body content.
+            raise RequestLatencyBenchmarkError("request returned an invalid envelope") from None
         # Reject any non-object response before route-specific checks.
         if not isinstance(value, dict):
             # Raise one fixed diagnostic without body content.
@@ -308,7 +325,7 @@ def rolling_bounded_map(
     *,  # Keep test seams keyword-only.
     executor_factory=ThreadPoolExecutor,  # Use real threads unless a unit injects accounting.
     wait_function=wait,  # Use FIRST_COMPLETED unless a unit injects deterministic progress.
-) -> tuple[list, int]:
+) -> tuple[list, int]:  # Return completed results plus the pending high-water mark.
     # Reject invalid bounds before constructing worker threads.
     if operation_count < 1 or concurrency not in CONCURRENCY_LEVELS:
         # Raise one fixed scheduler diagnostic.
@@ -373,18 +390,60 @@ def _successful_response_bytes(response: DirectResponse) -> int:
     if response.status != "200 OK":
         # Raise one fixed route failure.
         raise RequestLatencyBenchmarkError("request row failed")
-    # Parse the standard envelope.
-    payload = response.payload()
-    # Require a successful standard response without retaining its data.
-    if payload.get("ok") is not True:
+    # Collect the case-insensitive response length header.
+    content_lengths = [str(value).strip() for name, value in response.headers if str(name).lower() == "content-length"]
+    # Require exactly one unsigned decimal framing value.
+    if len(content_lengths) != 1 or not re.fullmatch(r"[0-9]+", content_lengths[0]):
+        # Raise one fixed framing failure without the header value.
+        raise RequestLatencyBenchmarkError("request row failed")
+    # Require framing to match the fully consumed response bytes.
+    if int(content_lengths[0]) != len(response.body):
+        # Raise one fixed framing failure without either size.
+        raise RequestLatencyBenchmarkError("request row failed")
+    # Start protected parsing so every timed failure uses one fixed diagnostic.
+    try:
+        # Parse the standard envelope.
+        payload = response.payload()
+    # Normalize malformed JSON, encoding, or non-object envelopes.
+    except RequestLatencyBenchmarkError:
+        # Raise the fixed row failure without chaining parser details.
+        raise RequestLatencyBenchmarkError("request row failed") from None
+    # Require a successful standard response with an object data payload.
+    if payload.get("ok") is not True or not isinstance(payload.get("data"), dict):
         # Raise one fixed envelope failure.
         raise RequestLatencyBenchmarkError("request row failed")
     # Return only the aggregate-safe byte count.
     return len(response.body)
 
 
+# Read one authoritative internal-only player balance from a standard response.
+def _response_player_balance(payload: dict) -> float:
+    # Read the public player projection without retaining any identity.
+    player = payload.get("data", {}).get("player", {})
+    # Prefer the explicit current-user token field and fall back to game response balance.
+    balance = player.get("token_balance", player.get("balance"))
+    # Reject booleans, missing values, and non-finite wallet state.
+    if isinstance(balance, bool) or not isinstance(balance, (int, float)) or not math.isfinite(float(balance)):
+        # Raise one fixed diagnostic that never includes the wallet value.
+        raise RequestLatencyBenchmarkError("Boule wallet control failed")
+    # Normalize only to the application's public hundredth-token boundary.
+    return round(float(balance), 2)
+
+
+# Read the authenticated wallet outside every timed row.
+def _current_player_balance(client: DirectWSGIClient) -> float:
+    # Request the authoritative current-user projection without timing it.
+    response = client.request("GET", "/api/v2/me")
+    # Require exact success before inspecting the internal-only player projection.
+    if response.status != "200 OK":
+        # Raise one fixed diagnostic without response or wallet content.
+        raise RequestLatencyBenchmarkError("Boule wallet control failed")
+    # Parse and normalize the internal-only current balance.
+    return _response_player_balance(response.payload())
+
+
 # Execute the fixed untimed Boule first/replay/conflict controls.
-def _boule_controls(client: DirectWSGIClient) -> None:
+def _boule_controls(client: DirectWSGIClient) -> tuple[object, float]:
     # Use one stable control identity that never enters a timed row.
     payload = {"request_id": "latency-boule-control", "bet": "even", "stake": 1}
     # Execute the first control action outside timed work.
@@ -395,12 +454,14 @@ def _boule_controls(client: DirectWSGIClient) -> None:
     if first.status != "200 OK" or first_payload.get("ok") is not True or first_payload["data"].get("replayed") is not False:
         # Raise one fixed control diagnostic.
         raise RequestLatencyBenchmarkError("Boule first-action control failed")
+    # Capture the authoritative post-settlement wallet only for internal invariants.
+    settled_balance = _response_player_balance(first_payload)
     # Replay the identical action outside timed work.
     replay = client.request("POST", "/api/v1/games/boule/spins", payload)
     # Parse the replay response.
     replay_payload = replay.payload()
     # Require explicit replay with the identical public round.
-    if replay.status != "200 OK" or replay_payload.get("ok") is not True or replay_payload["data"].get("replayed") is not True or replay_payload["data"].get("round") != first_payload["data"].get("round"):
+    if replay.status != "200 OK" or replay_payload.get("ok") is not True or replay_payload["data"].get("replayed") is not True or replay_payload["data"].get("round") != first_payload["data"].get("round") or _response_player_balance(replay_payload) != settled_balance:
         # Raise one fixed replay-control diagnostic.
         raise RequestLatencyBenchmarkError("Boule replay control failed")
     # Reuse the same key with changed content to prove conflict outside timed work.
@@ -415,10 +476,18 @@ def _boule_controls(client: DirectWSGIClient) -> None:
     if conflict.status != "409 Conflict" or conflict_payload.get("error", {}).get("code") != "CONFLICT":
         # Raise one fixed conflict-control diagnostic.
         raise RequestLatencyBenchmarkError("Boule conflict control failed")
+    # Require the changed-body conflict to leave the authoritative wallet unchanged.
+    if _current_player_balance(client) != settled_balance:
+        # Raise one fixed wallet diagnostic without emitting the balance.
+        raise RequestLatencyBenchmarkError("Boule conflict wallet control failed")
+    # Return only internal control state needed for the post-cap proof.
+    return first_payload["data"].get("round"), settled_balance
 
 
 # Re-prove the control receipt after timed keys exceed the compact state cache.
-def _boule_receipt_cap_control(client: DirectWSGIClient) -> None:
+def _boule_receipt_cap_control(client: DirectWSGIClient, original_round, original_balance: float) -> None:
+    # Capture the authoritative wallet after timed actions and before receipt replay.
+    current_balance = _current_player_balance(client)
     # Reuse the exact original control body only after all timed rows complete.
     replay = client.request(
         "POST",  # Reuse the public mutation method.
@@ -428,7 +497,7 @@ def _boule_receipt_cap_control(client: DirectWSGIClient) -> None:
     # Parse only the standard success envelope.
     payload = replay.payload()
     # Require durable replay after compact recent-round eviction.
-    if replay.status != "200 OK" or payload.get("ok") is not True or payload["data"].get("replayed") is not True:
+    if replay.status != "200 OK" or payload.get("ok") is not True or payload["data"].get("replayed") is not True or payload["data"].get("round") != original_round or _response_player_balance(payload) != original_balance:
         # Raise one fixed receipt-cap failure.
         raise RequestLatencyBenchmarkError("Boule receipt-cap control failed")
     # Reuse the evicted control key with different content after the durable replay.
@@ -443,6 +512,10 @@ def _boule_receipt_cap_control(client: DirectWSGIClient) -> None:
     if conflict.status != "409 Conflict" or conflict_payload.get("error", {}).get("code") != "CONFLICT":
         # Raise one fixed receipt-cap conflict diagnostic.
         raise RequestLatencyBenchmarkError("Boule receipt-cap conflict control failed")
+    # Require both receipt-cap replay and conflict to leave the wallet unchanged.
+    if _current_player_balance(client) != current_balance:
+        # Raise one fixed wallet diagnostic without emitting the balance.
+        raise RequestLatencyBenchmarkError("Boule receipt-cap wallet control failed")
 
 
 # Build one route operation using only fixed application paths.
@@ -515,6 +588,10 @@ def _measure_row(client: DirectWSGIClient, route_family: str, concurrency: int) 
     results, maximum_pending = rolling_bounded_map(measured, MEASURED_OPERATIONS, concurrency)
     # Capture row completion after every future is joined.
     row_elapsed_ns = time.perf_counter_ns() - row_started
+    # Reject a nonpositive wall interval before throughput division.
+    if row_elapsed_ns <= 0:
+        # Raise one fixed clock/accounting failure.
+        raise RequestLatencyBenchmarkError("measured row wall time is invalid")
     # Require the production scheduler never to pre-submit beyond N.
     if maximum_pending > concurrency:
         # Raise one fixed bounded-submission failure.
@@ -577,20 +654,24 @@ def validate_evidence(evidence: dict) -> None:
             raise RequestLatencyBenchmarkError("evidence row identity is invalid")
         # Record this unique grid entry.
         seen.add(identity)
-        # Require finite non-negative aggregate timing values.
+        # Require finite positive aggregate timing values.
         for key in ("p50_ms", "p95_ms", "throughput_rps"):
             # Read the numeric aggregate without coercing strings.
             value = row.get(key)
-            # Reject booleans, non-numbers, infinities, negatives, and NaN.
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+            # Reject booleans, non-numbers, infinities, zero, negatives, and NaN.
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) <= 0:
                 # Raise one fixed aggregate diagnostic.
                 raise RequestLatencyBenchmarkError("evidence aggregate is invalid")
+        # Require the tail percentile to be no lower than the median.
+        if float(row["p95_ms"]) < float(row["p50_ms"]):
+            # Reject impossible percentile ordering.
+            raise RequestLatencyBenchmarkError("evidence percentile order is invalid")
         # Require zero integer errors in accepted baseline evidence.
         if row.get("errors") != 0 or isinstance(row.get("errors"), bool):
             # Refuse successful evidence with hidden failures.
             raise RequestLatencyBenchmarkError("evidence errors are nonzero")
-        # Require a non-negative integer byte total.
-        if not isinstance(row.get("response_bytes"), int) or isinstance(row.get("response_bytes"), bool) or row["response_bytes"] < 0:
+        # Require a positive integer byte total.
+        if not isinstance(row.get("response_bytes"), int) or isinstance(row.get("response_bytes"), bool) or row["response_bytes"] <= 0:
             # Reject floating or malformed size aggregates.
             raise RequestLatencyBenchmarkError("evidence response bytes are invalid")
     # Require the complete grid after duplicate checks.
@@ -692,6 +773,25 @@ def _configure_child_environment(provider: str, runtime_root: Path) -> None:
         if loopback_hosts != {"127.0.0.1"}:
             # Fail without including any configured host value.
             raise RequestLatencyBenchmarkError("MySQL benchmark target is not loopback")
+        # Parse only the three guarded endpoint ports.
+        try:
+            # Collect the runtime, migration, and disposable administrator ports.
+            guarded_ports = {
+                int(str(os.environ.get(name, "")).strip())  # Parse one bounded port fact.
+                for name in (  # Read only the three endpoint roles.
+                    "CASINO_MYSQL_PORT",  # Inspect the runtime DML port.
+                    "CASINO_MYSQL_MIGRATION_PORT",  # Inspect the migration port.
+                    "CASINO_MYSQL_TEST_ADMIN_PORT",  # Inspect the disposable administrator port.
+                )
+            }
+        # Convert missing or malformed endpoint facts into one fixed refusal.
+        except (TypeError, ValueError):
+            # Fail before any runtime import.
+            raise RequestLatencyBenchmarkError("MySQL benchmark target is not loopback") from None
+        # Require all roles to select one valid loopback service.
+        if len(guarded_ports) != 1 or not 1 <= next(iter(guarded_ports)) <= 65_535:
+            # Reject split or invalid disposable endpoints.
+            raise RequestLatencyBenchmarkError("MySQL benchmark target is not loopback")
     # Select the exact provider before importing any Casino runtime package.
     os.environ["CASINO_STORAGE_PROVIDER"] = provider
     # Select the production adapter without opening a server.
@@ -728,6 +828,70 @@ def _configure_child_environment(provider: str, runtime_root: Path) -> None:
     for key in MYSQL_POOL_OVERRIDE_KEYS:
         # Remove only the child-process environment entry.
         os.environ.pop(key, None)
+    # Remove every administrator and migrator capability before WSGI import.
+    for key in MYSQL_CHILD_CAPABILITY_KEYS:
+        # Preserve only loopback host/port facts and runtime DML credentials.
+        os.environ.pop(key, None)
+
+
+# Resolve exact checkout provenance with one fixed, value-free failure boundary.
+def _checkout_head() -> str:
+    # Start the bounded read-only Git query without accepting caller assertions.
+    try:
+        # Resolve the immutable commit checked out in this exact worktree.
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],  # Execute only the exact provenance query.
+            cwd=str(ROOT),  # Bind the query to this benchmark checkout.
+            capture_output=True,  # Keep all command output out of diagnostics.
+            text=True,  # Decode only the bounded commit response.
+            timeout=10,  # Bound process startup and Git metadata access.
+        )
+    # Normalize timeout and launch failures without retaining command or OS text.
+    except (subprocess.TimeoutExpired, OSError):
+        # Raise one fixed provenance failure without exception chaining.
+        raise RequestLatencyBenchmarkError("request-latency source commit is unavailable") from None
+    # Normalize the bounded result only after successful process completion.
+    resolved = result.stdout.strip().lower() if result.returncode == 0 else ""
+    # Require one full lowercase immutable commit.
+    if not SOURCE_COMMIT_PATTERN.fullmatch(resolved):
+        # Refuse nonzero, malformed, or missing Git output.
+        raise RequestLatencyBenchmarkError("request-latency source commit is unavailable")
+    # Return only the verified checkout identity.
+    return resolved
+
+
+# Collect rows in the required read-before-mutation order.
+def _collect_rows(client: DirectWSGIClient) -> list[dict]:
+    # Retain only sanitized aggregate rows.
+    rows: list[dict] = []
+    # Complete every read family before any Boule mutation or control.
+    for route_family in READ_ROUTE_FAMILIES:
+        # Measure every required concurrency in deterministic order.
+        for concurrency in CONCURRENCY_LEVELS:
+            # Append only the approved aggregate row.
+            rows.append(_measure_row(client, route_family, concurrency))
+    # Prove Boule first, replay, conflict, and wallet invariants before timed mutations.
+    original_round, original_balance = _boule_controls(client)
+    # Measure the one mutation family only after every GET row is terminal.
+    for concurrency in CONCURRENCY_LEVELS:
+        # Append one approved timed Boule row.
+        rows.append(_measure_row(client, "boule_spin", concurrency))
+    # Re-prove the original receipt after timed keys exceed compact state retention.
+    _boule_receipt_cap_control(client, original_round, original_balance)
+    # Return the complete deterministic five-by-four inventory.
+    return rows
+
+
+# Close only the active provider's optional owned pool lifecycle.
+def _close_active_provider(storage_module) -> None:
+    # Resolve the active provider without changing provider selection.
+    active_provider = storage_module.get_storage_provider()
+    # Resolve the optional pool lifecycle hook.
+    close_pool = getattr(active_provider, "close_pool", None)
+    # Close MySQL idle connections while leaving JSON unchanged.
+    if callable(close_pool):
+        # Execute the provider-owned cleanup hook.
+        close_pool()
 
 
 # Run the complete listener-free benchmark inside one already isolated child.
@@ -736,6 +900,12 @@ def run_benchmark(provider: str, source_commit: str, output_path: str | Path) ->
     if not SOURCE_COMMIT_PATTERN.fullmatch(str(source_commit or "")):
         # Refuse non-commit source identities.
         raise RequestLatencyBenchmarkError("source commit is invalid")
+    # Resolve the independent checkout identity before provider or output work.
+    checkout_head = _checkout_head()
+    # Reject stale or caller-spoofed provenance before application initialization.
+    if source_commit != checkout_head:
+        # Raise one fixed mismatch without reflecting either commit.
+        raise RequestLatencyBenchmarkError("source commit does not match checkout")
     # Resolve the external destination before creating runtime state.
     output = resolve_output_path(output_path)
     # Allocate external runtime state that is removed after provider cleanup.
@@ -749,34 +919,18 @@ def run_benchmark(provider: str, source_commit: str, output_path: str | Path) ->
         # Import the active provider accessor only after the same readiness boundary.
         from casino.core import storage
 
-        # Collect only sanitized aggregate rows.
-        rows: list[dict] = []
         # Bind one listener-free client before protected authentication and measurement.
         client = DirectWSGIClient(application)
         # Protect provider cleanup after every post-import setup or route failure.
         try:
             # Authenticate once outside every timed row.
             client.authenticate()
-            # Prove Boule first/replay/conflict behavior outside timed work.
-            _boule_controls(client)
-            # Measure every fixed route family in deterministic order.
-            for route_family in ROUTE_FAMILIES:
-                # Measure every required concurrency in deterministic order.
-                for concurrency in CONCURRENCY_LEVELS:
-                    # Append only the approved aggregate row.
-                    rows.append(_measure_row(client, route_family, concurrency))
-            # Re-prove the control after compact state receipt eviction.
-            _boule_receipt_cap_control(client)
+            # Collect the complete read-before-mutation aggregate inventory.
+            rows = _collect_rows(client)
         # Always close provider-owned pool resources before temporary cleanup.
         finally:
-            # Resolve the active provider without changing provider selection.
-            active_provider = storage.get_storage_provider()
-            # Resolve the optional pool lifecycle hook.
-            close_pool = getattr(active_provider, "close_pool", None)
-            # Close MySQL idle connections while leaving JSON unchanged.
-            if callable(close_pool):
-                # Execute the provider-owned cleanup hook.
-                close_pool()
+            # Close only provider-owned resources through the focused helper.
+            _close_active_provider(storage)
         # Build the complete allowlisted evidence object.
         evidence = {
             "schema": EVIDENCE_SCHEMA,  # Identify the strict aggregate schema.
@@ -800,32 +954,42 @@ def run_provider_subprocess(provider: str, source_commit: str, output_path: str 
     for key in MYSQL_POOL_OVERRIDE_KEYS:
         # Remove only the child environment value.
         environment.pop(key, None)
+    # Remove every disposable administrator or migrator capability.
+    for key in MYSQL_CHILD_CAPABILITY_KEYS:
+        # Preserve only guarded endpoint facts and runtime DML credentials.
+        environment.pop(key, None)
     # Prevent the child from writing bytecode into the checkout.
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
-    # Run only this explicit module selector in a fresh interpreter.
-    result = subprocess.run(
-        [
-            sys.executable,  # Reuse the exact active interpreter.
-            "-m",  # Execute the benchmark as an import-safe module.
-            "tests.request_latency_benchmark",  # Select only the explicit child entry.
-            "--provider",  # Name the fixed provider selector.
-            provider,  # Pass only the low-cardinality provider identity.
-            "--source-commit",  # Name exact provenance.
-            source_commit,  # Pass only the validated hexadecimal commit.
-            "--output",  # Name the caller-owned destination selector.
-            str(output),  # Pass the validated external output path.
-        ],
-        # Resolve imports from the exact checkout.
-        cwd=str(ROOT),
-        # Inherit the already guarded provider tuple without passing credentials as arguments.
-        env=environment,
-        # Capture child diagnostics so no environment detail is reflected.
-        capture_output=True,
-        # Decode bounded output for process management only.
-        text=True,
-        # Bound the fixed baseline without creating a numeric acceptance threshold.
-        timeout=900,
-    )
+    # Start a bounded child without surfacing its command, path, or environment.
+    try:
+        # Run only this explicit module selector in a fresh interpreter.
+        result = subprocess.run(
+            [
+                sys.executable,  # Reuse the exact active interpreter.
+                "-m",  # Execute the benchmark as an import-safe module.
+                "tests.request_latency_benchmark",  # Select only the explicit child entry.
+                "--provider",  # Name the fixed provider selector.
+                provider,  # Pass only the low-cardinality provider identity.
+                "--source-commit",  # Name exact provenance.
+                source_commit,  # Pass only the validated hexadecimal commit.
+                "--output",  # Name the caller-owned destination selector.
+                str(output),  # Pass the validated external output path.
+            ],
+            # Resolve imports from the exact checkout.
+            cwd=str(ROOT),
+            # Inherit only the minimized guarded provider environment.
+            env=environment,
+            # Capture child diagnostics so no environment detail is reflected.
+            capture_output=True,
+            # Decode bounded output for process management only.
+            text=True,
+            # Bound the fixed baseline without creating a numeric acceptance threshold.
+            timeout=900,
+        )
+    # Normalize timeout and bounded process-launch failures.
+    except (subprocess.TimeoutExpired, OSError):
+        # Raise only the fixed safe diagnostic without exception chaining.
+        raise RequestLatencyBenchmarkError("request-latency benchmark child failed") from None
     # Reject any child failure with one fixed secret-safe message.
     if result.returncode != 0:
         # Avoid including child stdout, stderr, paths, or configuration.
