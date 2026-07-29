@@ -29,7 +29,7 @@ const ROUTE_CSS = [
   '.ou7-bet input{min-height:44px;min-width:0;}', // Preserve keyboard and touch target size.
   '.ou7-play{min-height:46px;border:0;border-radius:12px;color:white;background:#a71922;font-weight:800;}', // Use shared red primary-action convention.
   '.ou7-play:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state readable.
-  '.ou7-repeat{min-height:46px;border:1px solid rgba(255,215,128,.55);border-radius:12px;background:transparent;color:#ffd780;font-weight:700;}', // Offer a secondary one-click repeat action.
+  '.ou7-repeat{min-height:46px;border:1px solid var(--gold);border-radius:12px;background:transparent;color:var(--gold);font-weight:700;}', // Offer a secondary one-click repeat action.
   '.ou7-repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the repeat action state readable.
   '.ou7-stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;place-items:center;gap:16px;overflow:hidden;}', // Reserve a stable dice stage.
   '.ou7-dice{display:flex;align-items:center;justify-content:center;gap:18px;width:100%;min-height:240px;}', // Keep dice central and stable.

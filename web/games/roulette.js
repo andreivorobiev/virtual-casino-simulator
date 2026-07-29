@@ -54,7 +54,7 @@ const PREMIUM_STYLE = [
   '.roulette-advanced[open] summary{border-bottom:1px solid var(--border);}', // Separate the advanced heading from its opened contents.
   '.roulette-advanced-body{padding:8px;}', // Keep advanced bet controls comfortably inset.
   '.roulette-call-number{display:grid;gap:5px;margin:8px 0;color:var(--muted);font-size:11px;font-weight:800;}', // Present the call number as a labeled table field.
-  '.roulette-control-plane{margin-top:8px;padding:10px;border:1px solid rgba(76,170,116,.32);border-radius:10px;background:linear-gradient(135deg,rgba(20,10,34,.17),rgba(0,0,0,.12));}', // Give bot and autoplay status a quiet control-plane treatment.
+  '.roulette-control-plane{margin-top:8px;padding:10px;border:1px solid rgba(255,59,107,.32);border-radius:10px;background:linear-gradient(135deg,rgba(20,10,34,.17),rgba(0,0,0,.12));}', // Give bot and autoplay status a quiet control-plane treatment.
   '.roulette-control-plane b{display:block;color:var(--gold);}', // Keep controller headings readable.
   '.roulette-control-plane span{display:block;margin-top:4px;color:var(--muted);font-size:11px;}', // Keep controller details visually secondary.
   '.roulette-premium #botPanel{overflow:visible;}', // Let bot rows expand into the single intentional control-rail scroll region.
@@ -112,10 +112,10 @@ const PREMIUM_STYLE = [
   '.roulette-settlement-card b{display:block;color:var(--gold);}', // Keep the settlement heading readable.
   '.roulette-settlement-card span{display:block;margin-top:0;color:var(--gold);font-size:15px;font-weight:1000;}', // Elevate the human net above raw log detail.
   '.roulette-spark-bars{display:grid;grid-template-columns:repeat(8,1fr);align-items:end;gap:6px;height:62px;margin:7px 0;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(0,0,0,.18);}', // Reserve the recent-stats chart inside a compact rail card.
-  '.roulette-spark-bars i{display:block;min-height:8px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--gold),var(--brand-strong));box-shadow:0 3px 8px rgba(0,0,0,.28);}', // Render live frequency bars with casino gold-to-red depth.
+  '.roulette-spark-bars i{display:block;min-height:8px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#e8c760,#8e1822);box-shadow:0 3px 8px rgba(0,0,0,.28);}', // Render live frequency bars with casino gold-to-red depth.
   '.roulette-history-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}', // Keep recent pockets in a stable wrapping row.
   '.roulette-history-pills span{display:grid;place-items:center;width:29px;height:29px;border:1px solid rgba(255,255,255,.14);border-radius:50%;color:var(--text);font-size:10px;}', // Render results as compact physical pocket tokens.
-  '.roulette-history-pills span.result-cell{border-color:var(--gold);background:var(--gold)!important;color:#1f1400;font-weight:1000;}', // Highlight the latest settled pocket.
+  '.roulette-history-pills span.result-cell{border-color:var(--metal-gold);background:var(--metal-gold)!important;color:#1f1400;font-weight:1000;}', // Highlight the latest settled pocket.
   '.roulette-premium .details-drawer>h3,.roulette-premium .details-drawer>h4{color:var(--gold);text-transform:uppercase;font-size:11px;letter-spacing:.08em;}', // Give secondary drawer sections one quiet hierarchy.
   '.roulette-premium .details-drawer .mini-table{font-size:11px;}', // Keep scoreboard rows compact.
   '.roulette-premium .details-drawer .stat-bars{max-height:110px;overflow:auto;}', // Contain long hot-number output inside the drawer.

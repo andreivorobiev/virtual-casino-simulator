@@ -119,6 +119,12 @@
   --green: var(--accent);
   --ok: #5ef0c8;
   --bad: #ff8fae;
+  /* Real metallic gold + casino green for GAME objects (coins, chips, win rings,
+     badges, felt). These deliberately do NOT follow the brand aliases above —
+     otherwise game gold renders rose and game green renders mint. */
+  --metal-gold: #e8c760;
+  --metal-gold-deep: #bf9330;
+  --felt-green: #087a43;
   --admin-blue: #0b1b2a;
   --shadow: rgba(6, 2, 16, 0.6);
   --font-ui: "Segoe UI", Inter, Arial, sans-serif;
@@ -2226,7 +2232,7 @@ h3 {
   border: 4px dashed rgba(70, 40, 0, .75);
   border-radius: 50%;
   color: #1e1300;
-  background: radial-gradient(circle, #fff 0 25%, var(--gold) 26% 55%, #9b6800 56%);
+  background: radial-gradient(circle, #fff 0 25%, var(--metal-gold) 26% 55%, #9b6800 56%);
   box-shadow: 0 4px 12px #0009;
   font-size: 11px;
   font-weight: 1000;
@@ -2380,7 +2386,7 @@ h3 {
 
 .keno-num.selected {
   color: #1d1300;
-  background: var(--gold);
+  background: var(--metal-gold);
 }
 
 .keno-num.drawn {
@@ -2388,8 +2394,8 @@ h3 {
 }
 
 .keno-num.catch {
-  color: #0a0712;
-  background: var(--ok);
+  color: #f4eeff;
+  background: var(--felt-green);
 }
 
 .called-balls {
