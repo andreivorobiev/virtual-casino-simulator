@@ -222,12 +222,29 @@ function historyHtml() {
 
 // Render the rules and recent results in the supporting data rail.
 function dataHtml() {
-  // Read server rule values while preserving documented defaults during initial loading.
-  const correctMultiplier = rules.correct_return_multiplier || 2;
+  // Read the server-owned rank paytable and derive the displayed price range during loading.
+  const paytable = rules.correct_paytable || {};
+  // Retain only numeric public prices before calculating display endpoints.
+  const prices = Object.values(paytable).filter(function (value) { return typeof value === 'number'; });
+  // Fall back to the deprecated even-money scalar before the first rules payload arrives.
+  const minMultiplier = prices.length ? Math.min.apply(null, prices) : (rules.correct_return_multiplier || 2);
+  // Apply the same bounded fallback to the upper endpoint during initial loading.
+  const maxMultiplier = prices.length ? Math.max.apply(null, prices) : (rules.correct_return_multiplier || 2);
+  // Format both range endpoints with exact ledger-style precision for stable EN/RU evidence.
+  const minDisplay = Number(minMultiplier).toFixed(2);
+  const maxDisplay = Number(maxMultiplier).toFixed(2);
+  // Read the currently visible server card only while one decision remains active.
+  const activeCard = state?.active_round?.current_card || '';
+  // Remove the one-character suit suffix to address the authoritative public rank key.
+  const activeRank = activeCard ? activeCard.slice(0, -1) : '';
+  // Resolve the current decision price from the additive server-owned table only.
+  const activeMultiplier = paytable[activeRank];
+  // Render an exact current-rank return only when the authoritative table contains the visible rank.
+  const activeReturn = Number.isFinite(activeMultiplier) ? '<li data-testid="hi-lo-current-return">' + safe(text('rules.currentReturn', { multiplier: Number(activeMultiplier).toFixed(2) })) + '</li>' : '';
   // Read the tie multiplier for localized rule explanation.
   const tieMultiplier = rules.tie_return_multiplier || 1;
   // Return distinct rule and history regions in one supporting rail.
-  return '<aside class="hilo-panel hilo-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul class="hilo-rules"><li>' + safe(text('rules.aceHigh')) + '</li><li>' + safe(text('rules.suitsIgnored')) + '</li><li>' + safe(text('rules.correctReturn', { multiplier: correctMultiplier })) + '</li><li>' + safe(text('rules.tieReturn', { multiplier: tieMultiplier })) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
+  return '<aside class="hilo-panel hilo-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul class="hilo-rules"><li>' + safe(text('rules.aceHigh')) + '</li><li>' + safe(text('rules.suitsIgnored')) + '</li><li>' + safe(text('rules.correctReturn', { min: minDisplay, max: maxDisplay })) + '</li>' + activeReturn + '<li>' + safe(text('rules.tieReturn', { multiplier: tieMultiplier })) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
 }
 
 // Return scoped responsive styles without modifying the shared application stylesheet.

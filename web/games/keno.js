@@ -122,6 +122,8 @@ function humanResults() {
 
 // Define primaryHumanResult to select the result that drives summary and paytable comparison.
 function primaryHumanResult() {
+  // Suppress historical result context while a newer open human ticket owns the current route.
+  if (currentHumanTickets().length) return null;
   // Return the first human result, matching the single-ticket happy path.
   return humanResults()[0] || null;
 }
@@ -136,6 +138,8 @@ function botResults() {
 function activeDrawNumbers() {
   // Return partial reveal state during animation so the board never jumps to the final draw early.
   if (drawBusy) return displayedDraw;
+  // Hide historical draw decoration while a newer open human ticket owns the selection surface.
+  if (currentHumanTickets().length) return [];
   // Return explicitly displayed draw numbers when a completed draw has been revealed.
   if (displayedDraw.length) return displayedDraw;
   // Return persisted draw numbers for an already-completed draw loaded from state.
@@ -188,6 +192,8 @@ function activeSpotCount() {
 function activePhase() {
   // Branch while the draw animation or request is still active.
   if (drawBusy) return 'drawing';
+  // Keep a purchased open human ticket visible ahead of any older settled result.
+  if (currentHumanTickets().length) return 'selection';
   // Branch when a completed human result is available for comparison.
   if (primaryHumanResult()) return 'result';
   // Return the spot-selection state for ticket setup.
@@ -226,12 +232,22 @@ function applyKenoPayload(payload) {
 function syncSelectionFromState() {
   // Store the newest open human ticket when one exists.
   const ticket = currentHumanTickets().slice(-1)[0];
-  // Branch when an open ticket should control the visible ticket spots.
-  if (ticket) selected = new Set(sortedNumbers(ticket.spots));
+  // Branch when an open ticket should control the visible ticket spots and amount after reload.
+  if (ticket) {
+    // Restore the open ticket's authoritative spots into the live selection.
+    selected = new Set(sortedNumbers(ticket.spots));
+    // Restore the open ticket's authoritative amount into the live amount control.
+    amount = Number(ticket.amount);
+  }
   // Store the newest persisted human result when no open ticket exists.
   const result = !ticket ? (latestStoredDraw()?.results || []).find(item => item.ticket?.player_id === currentPlayerId()) : null;
   // Branch when recent history can restore the last played human ticket.
-  if (!ticket && result?.ticket?.spots) selected = new Set(sortedNumbers(result.ticket.spots));
+  if (!ticket && result?.ticket?.spots) {
+    // Restore the settled ticket's spots so repeat and autoplay use the same selection.
+    selected = new Set(sortedNumbers(result.ticket.spots));
+    // Restore the settled ticket's amount so the first post-reload action cannot fall back to five.
+    amount = Number(result.ticket.amount);
+  }
 }
 
 // Define refreshBotData to load Keno-compatible bot controllers for the rail.
@@ -499,10 +515,12 @@ function randomSpots(count) {
 
 // Define multiplierText to format paytable multipliers compactly.
 function multiplierText(multiplier) {
-  // Branch when a very large payout row should use the premium major label.
-  if (Number(multiplier) >= 100000) return tx('paytable.major');
+  // Format the exact server-authoritative multiplier for every ordinary and jackpot row.
+  const formatted = numberText(multiplier, { maximumFractionDigits: 2 });
+  // Keep the premium major label additive while preserving the exact visible jackpot magnitude.
+  if (Number(multiplier) >= 100000) return tx('paytable.majorMultiplier', { multiplier: formatted });
   // Return the normal multiplier label for ordinary paytable rows.
-  return tx('paytable.multiplier', { multiplier: numberText(multiplier, { maximumFractionDigits: 2 }) });
+  return tx('paytable.multiplier', { multiplier: formatted });
 }
 
 // Define heroMetricHtml to render one premium state metric.
@@ -600,7 +618,7 @@ function ticketPanelHtml() {
   // Store disabled input markup while a draw is active.
   const disabled = drawBusy ? 'disabled' : '';
   // Return the complete control rail with ticket, status, autoplay, and bot panels.
-  return `<section class="panel control-rail keno-control-panel" data-testid="keno-ticket-drawer"><h2>${safe(tx('ticket.title'))}</h2>${ticketMetricsHtml()}<label>${safe(tx('ticket.amount'))}<input id="kenoAmount" data-testid="keno-amount" type="number" min="1" value="${safe(amount)}" ${disabled}></label>${ticketControlsHtml()}${statusCardHtml()}<div data-keno-auto></div>${botPanelHtml()}</section>`;
+  return `<section class="panel control-rail keno-control-panel" data-testid="keno-ticket-drawer"><h2>${safe(tx('ticket.title'))}</h2>${ticketMetricsHtml()}<label>${safe(tx('ticket.amount'))}<input id="kenoAmount" data-testid="keno-amount" type="number" min="0.01" max="1000000" step="0.01" value="${safe(amount)}" ${disabled}></label>${ticketControlsHtml()}${statusCardHtml()}<div data-keno-auto></div>${botPanelHtml()}</section>`;
 }
 
 // Define boardCellHtml to render one stable Keno number button.
@@ -652,7 +670,7 @@ function resultCopyHtml() {
   // Branch for drawing progress text.
   if (phase === 'drawing') return `<div class="result-box fixed-result keno-result-copy" data-testid="keno-result"><strong>${safe(tx('status.drawingLead', { count: activeDrawNumbers().length, total: DRAW_TOTAL }))}</strong> ${safe(tx('status.drawingSummary', { catches: visibleCatchSet().size }))}</div>`;
   // Branch for completed result text.
-  if (result) {
+  if (phase === 'result' && result) {
     // Store net outcome after the already-debited ticket amount.
     const net = Number(result.payout || 0) - Number(result.ticket?.amount || 0);
     // Select the singular lead copy for a one-catch ticket so the count agrees with the noun. (issue #237)
@@ -724,8 +742,8 @@ function paytableRowsHtml(spots, activeCatch = null) {
 function paytablePreviewHtml() {
   // Store the active spot count for preview.
   const spots = activeSpotCount();
-  // Return the preview list for the current ticket size.
-  return `<section data-testid="keno-paytable-preview"><h3>${safe(tx('paytable.preview'))}</h3><div class="keno-paytable-list">${paytableRowsHtml(spots)}</div></section>`;
+  // Return the preview list plus the player-facing ideal-versus-cent-rounded economics note.
+  return `<section data-testid="keno-paytable-preview"><h3>${safe(tx('paytable.preview'))}</h3><p class="muted" data-testid="keno-economics-note">${safe(tx('paytable.economicsNote'))}</p><div class="keno-paytable-list">${paytableRowsHtml(spots)}</div></section>`;
 }
 
 // Define paytableComparisonHtml to render the completed result paytable comparison.
@@ -734,8 +752,8 @@ function paytableComparisonHtml() {
   const result = primaryHumanResult();
   // Store the active spot count for comparison rows.
   const spots = result?.ticket?.spots?.length || activeSpotCount();
-  // Return the comparison list with the caught row highlighted.
-  return `<section data-testid="keno-paytable-comparison"><h3>${safe(tx('drawer.paytableComparison'))}</h3><div class="keno-paytable-list">${paytableRowsHtml(spots, result?.catch_count ?? null)}</div></section>`;
+  // Return the comparison list with the caught row highlighted and the rounding disclosure retained.
+  return `<section data-testid="keno-paytable-comparison"><h3>${safe(tx('drawer.paytableComparison'))}</h3><p class="muted" data-testid="keno-economics-note">${safe(tx('paytable.economicsNote'))}</p><div class="keno-paytable-list">${paytableRowsHtml(spots, result?.catch_count ?? null)}</div></section>`;
 }
 
 // Define drawnDrawerHtml to render the live drawn-ball drawer.
@@ -800,8 +818,8 @@ function drawerHtml() {
 function bindEvents() {
   // Wire every Keno number cell to spot selection.
   root.querySelectorAll('[data-keno-num]').forEach(button => { button.onclick = () => toggleSpot(Number(button.dataset.kenoNum)); });
-  // Wire the amount input to local state.
-  root.querySelector('#kenoAmount')?.addEventListener('change', () => { readAmount(); render(); });
+  // Synchronize amount state without replacing the focused control during blur into Draw.
+  root.querySelector('#kenoAmount')?.addEventListener('change', readAmount);
   // Wire quick-pick controls when they are present.
   root.querySelector('#quick5')?.addEventListener('click', () => quickPick(5));
   // Wire the ten-spot quick-pick control when it is present.

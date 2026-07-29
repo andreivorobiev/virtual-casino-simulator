@@ -120,7 +120,15 @@ class AceyDeuceyService:
 
     # Build one public response payload.
     def _payload(self, player_id: str, state: dict) -> dict:
-        # Return state, player snapshot, and immutable rules.
+        # Build the authoritative complete price table once for this response.
+        paytable = engine.inside_paytable()
+        # Prefer the actionable round and otherwise retain the newest terminal price for old clients.
+        pricing_round = state.get("active_round") or next(iter(reversed(state.get("recent_rounds", []))), None)
+        # Read the visible spread without trusting an absent or malformed stored round.
+        pricing_spread = pricing_round.get("inside_rank_count") if isinstance(pricing_round, dict) else None
+        # Preserve the frozen-v1 scalar while making it describe the same current price as the paytable.
+        legacy_multiplier = paytable.get(pricing_spread, 2)
+        # Return state, player snapshot, and server-owned compatible rules.
         return {
             "game": GAME_ID,  # Identify this isolated module.
             "state": engine.public_state(state),  # Hide unrevealed result cards.
@@ -128,7 +136,9 @@ class AceyDeuceyService:
             "rules": {  # Publish the exact proposal rules profile.
                 "decks": 1,  # Use one standard deck per deal.
                 "wager_timing": "after_boundaries_before_third_card",  # Distinguish from ante-first Red Dog.
-                "inside_return_multiplier": 2,  # Return stake plus even-money profit.
+                "inside_return_multiplier": legacy_multiplier,  # Retain the deprecated frozen-v1 scalar for the current or latest round.
+                "inside_paytable": paytable,  # Publish the spread-priced return so clients never guess a price.
+                "house_edge": engine.HOUSE_EDGE,  # State the constant edge the spread pricing holds at every spread. (issue #408)
                 "outside_return_multiplier": 0,  # Outside ranks lose the play wager.
                 "boundary_tie_return_multiplier": 0,  # Matching either boundary loses the play wager.
                 "pair_boundaries_have_no_inside_ranks": True,  # Explain equal-boundary edge cases.

@@ -1,37 +1,34 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T19:46:20Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-29T22:17:00Z.
 
 ## Current branch / active Codex work
 
-- Controller PR #484 merged normally at exact protected main `d9a8f860f9f5c67a3932bb755db96b1b39b87da7`, with parents exactly terminal-green v0.9.5.24 main `eb47dc03c58aff39f5392d51a822c3c87281624d` and accepted controller head `5d88e391c9d31ee31d5fa043ac67e026f3d2c4d2`.
-- `codex/release-v0.9.5.25` serializes that accepted Browser shard-state controller as one unique immutable patch release.
-- Deployed v0.9.5.24 remains the live release until v0.9.5.25 passes protected publication and trusted owner/static terminal-green deployment.
+- PR #522 merged normally at exact protected main `f2d0dcb0` after exact-current ancestry, strict aggregate-evidence audit, all-nine-workflow, Browser/Long artifact, and zero-review-thread guards.
+- `codex/release-v0.9.5.35` serializes the accepted #323 listener-free request-latency baseline as one unique immutable patch release.
+- Deployed v0.9.5.34 remains live until v0.9.5.35 passes protected publication and trusted owner/static terminal-green deployment.
 - No later PR may merge during this release/deployment hold.
 
 ## Live queue snapshot
 
-- #484 preserves the accepted Claude #482 ancestry while repairing complete shard ownership, startup-validated affinity, case-neutral auth bootstrap, exact aggregate accounting, current packaged-version PWA checks, and unconditional final invariants/listener cleanup.
-- Original PR #482 is durably closed as superseded; its external branch and worktree remain untouched. Issue #468 stays open for separately governed remaining CI timing and documentation work.
-- Worker A #467 and Worker B checkpoints #388/#430 remain preserved and merge-held until terminal-green v0.9.5.25. Any further governed #467 qualification requires fresh owner authorization.
-- #450 remains held and excluded. All other open proposals remain pending and cannot enter this serialized release.
+- #435 rank 001 remains externally blocked, #450 remains held/excluded, and #471 rank 003 remains blocked on #430 Phase 0c.
+- Issue #323 remains open at P1 stack-rank 005 for later governed performance work; this release carries only its accepted bounded request-latency baseline.
+- #228 rank 006 is closeout-only; existing PR #520 / issue #333 rank 007 is the next substantive lane after terminal-green v0.9.5.35 and requires exact-current contract/version reconciliation.
 
 ## Requirement / version claims
 
-- No permanent identifier is created, deleted, or reused by this release.
-- The accepted #484 controller reuses the Browser and CI/CD requirements already mapped by issue #468; it allocates no new `TEST-*` identifier.
-- v0.9.5.25 owns packaged application `0.9.5.25`, application `9.53.12`, tests/docs `1.64.11`, and contracts `1.49.6`.
-- Core `9.27.2` and tooling `1.21.8` are preserved from accepted source. The exact immutable v0.9.5.24 release remains the application-only rollback predecessor; MySQL schema stays 2 and database rollback is prohibited.
+- The accepted #522 change owns TEST-148 after exact live collision readback; no permanent identifier is deleted or reused by the release.
+- v0.9.5.35 owns packaged application `0.9.5.35`, application `9.53.22`, tests/docs `1.64.35`, and contracts `1.49.19`.
+- Core `9.28.0`, tooling `1.21.12`, storage, every game module, and every unrelated module are preserved from the accepted merge.
 
 ## File claims / collision notes
 
 - Release-owned changes are limited to packaged version surfaces, compatibility and rollback provenance, PWA/cache identity, release tests, release docs, generated governance, and coordination records.
-- #467, #450, Worker B checkpoint source, other proposal source, gameplay economics, Admin/UI, production workflow, provider, DNS, ingress, secrets, signup, OAuth, mail, and invitation files are excluded.
-- Any later proposal that overlaps shared docs or manifests must rebase and recalculate versions from terminal-green v0.9.5.25.
+- #450, #520, #471 Phase 0c, Phase 0b, unrelated routes and games, provider implementations, production workflow, DNS, ingress, secrets, signup, OAuth, mail, and invitation files are excluded.
+- Any later proposal overlapping shared docs or manifests must reconcile and recalculate versions from terminal-green v0.9.5.35.
 
 ## Decisions / handbacks
 
-- Affinity groups must be startup-valid, co-owned by one shard, and preserve exact single-job order.
-- Every Browser case stays registered unconditionally for exact sequence accounting, while its stateful body runs only for the owning shard.
-- The ordinary aggregate must fail closed unless four unique shard reports form one non-duplicating 105-case union.
-- Unsharded execution, formal 50,000-cycle work, Baccarat sustained work, final browser-error invariants, and listener cleanup remain isolated.
+- The baseline opens no listener, changes no runtime route or provider implementation, and emits only aggregate evidence bound to exact source.
+- JSON and disposable loopback MySQL evidence cover five fixed route families at concurrency 1, 2, 4, and 8 without a hardware-dependent latency threshold.
+- Exact immutable v0.9.5.34 remains the application-only rollback predecessor; MySQL schema stays 2 and database rollback is prohibited.

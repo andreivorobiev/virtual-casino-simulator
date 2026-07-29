@@ -2,17 +2,30 @@
 
 # Import deep-copy support so fake persistence models JSON documents.
 import copy
+# Import hashing for exact frozen contract-byte identity checks.
+import hashlib
+# Import JSON parsing for compatibility, matrix, and digest artifacts.
+import json
+# Import repository-relative path resolution for tracked contract evidence.
+from pathlib import Path
 # Import the standard dependency-free test runner.
 import unittest
 
 # Import the shared router to exercise route binding.
 from casino.router import Router
-# Import public conflict, insufficient-funds, and lookup errors for assertions.
-from casino.errors import ConflictError, InsufficientFundsError, NotFoundError
+# Import public conflict, funds, lookup, and validation errors for assertions.
+from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 # Import the isolated route adapter and engine under test.
 from casino.games.acey_deucey import api, engine
 # Import the isolated service orchestration under test.
 from casino.games.acey_deucey.service import AceyDeuceyService, request_fingerprint
+
+# Resolve the repository root from this game-owned focused test directory.
+ROOT = Path(__file__).resolve().parents[3]
+# Point at the frozen-v1 OpenAPI contract under test.
+OPENAPI_PATH = ROOT / "contracts" / "openapi" / "acey_deucey.v1.yaml"
+# Point at the compatible spread-pricing policy record.
+COMPATIBILITY_PATH = ROOT / "contracts" / "compatibility" / "acey-deucey-spread-pricing.json"
 
 
 # Simulate player-scoped state documents without touching repository data files.
@@ -143,16 +156,25 @@ class AceyDeuceyApiTests(unittest.TestCase):
         first = self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-win", "wager": 5})
         # Replay the same play action.
         second = self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-win", "wager": 5})
-        # Verify the inside return table.
-        self.assertEqual(("inside", 10.0, 5.0), (first["round"]["outcome"], first["round"]["payout"], first["round"]["net"]))
+        # Verify the inside return against the published spread price rather than a flat multiple, so the
+        # assertion tracks the paytable instead of pinning a value the edge retune would break. (issue #408)
+        spread = engine.inside_rank_count("2H", "AS")
+        # Resolve the exact server-owned return multiplier for this visible spread.
+        expected_multiplier = engine.inside_return_multiplier(spread)
+        # Derive the exact returned-token total from the public price.
+        expected_payout = round(5 * expected_multiplier, 2)
+        # Confirm outcome, priced payout, and derived net together.
+        self.assertEqual(("inside", expected_payout, round(expected_payout - 5, 2)), (first["round"]["outcome"], first["round"]["payout"], first["round"]["net"]))
+        # Keep the deprecated scalar and authoritative table aligned for the newest terminal round.
+        self.assertEqual((expected_multiplier, expected_multiplier), (first["rules"]["inside_return_multiplier"], first["rules"]["inside_paytable"][spread]))
         # Verify replay reports the terminal result.
         self.assertTrue(second["replayed"])
         # Select wager debits and payout credits.
         debits = [event for event in self.ledger.events if event["transaction_type"] == "ACEY_DEUCEY_WAGER_DEBIT"]
         # Select payout credits.
         credits = [event for event in self.ledger.events if event["transaction_type"] == "ACEY_DEUCEY_PAYOUT_CREDIT"]
-        # Verify exactly one debit and one payout.
-        self.assertEqual((1, -5.0, 1, 10.0), (len(debits), debits[0]["amount"], len(credits), credits[0]["amount"]))
+        # Verify exactly one debit and one spread-priced payout credit.
+        self.assertEqual((1, -5.0, 1, expected_payout), (len(debits), debits[0]["amount"], len(credits), credits[0]["amount"]))
         # Verify stable ledger action suffixes.
         self.assertEqual(("ad:play-win:wager", "ad:play-win:payout"), (debits[0]["details"]["acey_deucey_action_id"], credits[0]["details"]["acey_deucey_action_id"]))
 
@@ -170,6 +192,50 @@ class AceyDeuceyApiTests(unittest.TestCase):
         self.assertEqual(("boundary_tie", "outside"), (tie["round"]["outcome"], outside["round"]["outcome"]))
         # Verify only wager debits exist.
         self.assertEqual([], [event for event in self.ledger.events if event["transaction_type"] == "ACEY_DEUCEY_PAYOUT_CREDIT"])
+
+    # Confirm equal or adjacent boundaries reject play before receipt, state, or ledger mutation.
+    def test_unpriceable_boundaries_are_pass_only(self):
+        # Prepare adjacent ranks whose inside probability is exactly zero.
+        round_id = self.prepared_round("7H", "8S", "KC", action_id="deal-no-inside")
+        # Snapshot the persisted prepared state before the hostile wager.
+        before = self.repository.load("session-player")
+        # Reject the wager at the pure price boundary.
+        with self.assertRaises(ValidationError):
+            # Exercise the real route and service orchestration.
+            self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-no-inside", "wager": 4})
+        # Prove the prepared hidden result and receipts remain byte-equivalent in data terms.
+        self.assertEqual(before, self.repository.load("session-player"))
+        # Prove no debit or credit reached the ledger.
+        self.assertEqual([], self.ledger.events)
+        # Read the pass-only round through the public response.
+        visible = self.call("/api/v1/games/acey-deucey/state", method="GET")
+        # Keep the old scalar field present while the authoritative table omits spread zero.
+        self.assertEqual((2, False), (visible["rules"]["inside_return_multiplier"], "0" in visible["rules"]["inside_paytable"]))
+
+    # Confirm the frozen-v1 route, envelope, pricing, matrix, and digest evidence stays exact.
+    def test_spread_pricing_contract_and_compatibility_artifacts(self):
+        # Read the OpenAPI text once for exact route and schema anchors.
+        contract = OPENAPI_PATH.read_text(encoding="utf-8")
+        # Parse the explicit compatible-patch decision record.
+        compatibility = json.loads(COMPATIBILITY_PATH.read_text(encoding="utf-8"))
+        # Parse the module-to-contract matrix used by repository governance.
+        matrix = json.loads((ROOT / "contracts" / "compatibility" / "module-api-matrix.json").read_text(encoding="utf-8"))
+        # Parse the frozen exact-byte digest map.
+        digests = json.loads((ROOT / "contracts" / "compatibility" / "contract-digests.json").read_text(encoding="utf-8"))
+        # Preserve all four existing frozen-v1 routes, their authentication responses, and both envelopes.
+        self.assertEqual((4, 4, True, True), (contract.count("  /api/v1/games/acey-deucey/"), contract.count("'401':"), "required: [ok, data]" in contract, "required: [ok, error]" in contract))
+        # Require the legacy scalar, complete paytable, house edge, and pass-only boundary semantics.
+        for anchor in ("inside_return_multiplier:", "inside_paytable:", "house_edge:", "zero means pass-only"):
+            # Name a missing public boundary through the focused assertion.
+            self.assertIn(anchor, contract)
+        # Require the decision record to preserve frozen-v1 authority and the scalar field.
+        self.assertEqual((True, "unchanged", True), (compatibility["compatibility"]["api_v1_frozen"], compatibility["compatibility"]["routes"], "inside_return_multiplier" in compatibility["response_rules"]["retained"]))
+        # Keep the game module mapped only to its OpenAPI route contract.
+        self.assertEqual(["contracts/openapi/acey_deucey.v1.yaml"], matrix["acey_deucey"])
+        # Freeze the exact OpenAPI bytes in the shared digest artifact.
+        self.assertEqual(hashlib.sha256(OPENAPI_PATH.read_bytes()).hexdigest(), digests["contracts/openapi/acey_deucey.v1.yaml"])
+        # Freeze the exact compatibility-record bytes independently.
+        self.assertEqual(hashlib.sha256(COMPATIBILITY_PATH.read_bytes()).hexdigest(), digests["contracts/compatibility/acey-deucey-spread-pricing.json"])
 
     # Confirm an overbet restores the original private decision for an affordable retry.
     def test_insufficient_play_wager_restores_active_round_for_safe_retry(self):
@@ -193,8 +259,10 @@ class AceyDeuceyApiTests(unittest.TestCase):
         self.assertNotIn("third_card", readable["state"]["active_round"])
         # Retry the released action identity with an affordable wager.
         settled = self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-overbet", "wager": 5})
-        # Verify the retry settles once and creates one debit plus one inside payout.
-        self.assertEqual(("settled", 2, 10.0), (settled["round"]["phase"], len(self.ledger.events), self.ledger.balances["session-player"]))
+        # Verify the retry settles once and creates one debit plus one spread-priced inside payout.
+        expected_balance = round(5 * engine.inside_return_multiplier(engine.inside_rank_count("2H", "AS")), 2)
+        # Confirm the terminal phase, the exactly-two ledger events, and the priced balance together.
+        self.assertEqual(("settled", 2, expected_balance), (settled["round"]["phase"], len(self.ledger.events), self.ledger.balances["session-player"]))
 
     # Confirm reload repairs a legacy save-before-debit terminal row with no ledger proof.
     def test_reload_restores_legacy_pending_terminal_without_wager_proof(self):

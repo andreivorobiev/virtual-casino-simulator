@@ -492,11 +492,12 @@
         "en-US",
         "ru-RU"
       ],
-      "viewports": [
-        "desktop_primary",
-        "desktop_compact",
-        "mobile"
-      ],
+        "viewports": [
+          "desktop_primary",
+          "desktop_compact",
+          "tablet",
+          "mobile"
+        ],
       "gates": [
         "VIS-COPY-001",
         "VIS-LAYOUT-001",
@@ -865,6 +866,7 @@
       "states": [
         "ready",
         "choose_higher_or_lower",
+        "rank_priced_choice",
         "correct_guess",
         "incorrect_guess",
         "tie_refund",

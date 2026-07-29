@@ -63,7 +63,7 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertEqual(workflow.count("python -m tests.baccarat_sustained"), 1)  # Require the repository-safe module invocation exactly once.
         self.assertNotIn("python tests/baccarat_sustained.py", workflow)  # Reject the Linux import-path failure reproduced by the first hosted attempt.
         ordinary_job = workflow.split("  browser_tests:", 1)[1].split("  # Run the focused issue #265", 1)[0]  # Isolate the ordinary browser job from the sustained profile.
-        self.assertIn("github.event_name == 'pull_request' || inputs.formal_ui_50000 == true", ordinary_job)  # Skip redundant ordinary browser work on sustained-only dispatches.
+        self.assertIn("github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true", ordinary_job)  # Run ordinary coverage for pull requests, protected main, and formal dispatch while skipping sustained-only dispatches.
         self.assertNotIn("baccarat_sustained_2000", ordinary_job)  # Keep the focused run from starting a second browser suite.
         sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Distribute the formal issue #227", 1)[0]  # Isolate only the focused hosted job.
         self.assertIn("inputs.baccarat_sustained_2000 == true", sustained_job)  # Keep the expensive profile behind explicit authorization.
@@ -378,18 +378,21 @@ class UI50000HarnessTests(unittest.TestCase):
             )
             with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:  # Apply every interaction seam for this isolated scenario.
                 ordinal = 0 if decision_action in {"play", '[data-action="deal"]'} else 1  # Select Play first, Pass second, or ignore decisions for automatic settlement.
-                await ui_50000.acey_deucey_terminal_action(page, ordinal, Counter(), Counter())  # Exercise the production state ordering without Playwright.
+                action_evidence = await ui_50000.acey_deucey_terminal_action(page, ordinal, Counter(), Counter())  # Exercise the production state ordering and capture the actual ledger expectation.
             self.assertFalse(waits)  # Require the helper to consume every modeled public state boundary.
-            return events  # Return the semantic order for precise assertions.
+            return events, action_evidence  # Return semantic order plus the actual action-aware ledger classification.
 
         decision_wait = 'wait:[data-action="play"]|[data-action="pass"]|[data-action="deal"]'  # Reuse the exact decision boundary in all scenarios.
         ready_wait = 'wait:[data-action="deal"]'  # Reuse the exact post-settlement boundary.
-        play_events = asyncio.run(run_scenario("play"))  # Exercise the wager-consuming decision.
+        play_events, play_evidence = asyncio.run(run_scenario("play"))  # Exercise the wager-consuming decision.
         self.assertEqual(play_events, ['click:[data-action="deal"]', decision_wait, "inventory", "fill:wager", "click:play", ready_wait])  # Require Deal before wager before Play.
-        pass_events = asyncio.run(run_scenario("pass"))  # Exercise the token-free decision.
+        self.assertEqual(play_evidence, "wager_required")  # Require exact player-scoped ledger evidence for the committed Play wager.
+        pass_events, pass_evidence = asyncio.run(run_scenario("pass"))  # Exercise the token-free decision.
         self.assertEqual(pass_events, ['click:[data-action="deal"]', decision_wait, "inventory", "click:pass", ready_wait])  # Forbid an unnecessary wager edit on Pass.
-        automatic_events = asyncio.run(run_scenario('[data-action="deal"]'))  # Exercise an automatically terminal boundary pair.
+        self.assertEqual(pass_evidence, "non_wager")  # Accept Pass without fabricating a wager ledger row.
+        automatic_events, automatic_evidence = asyncio.run(run_scenario('[data-action="deal"]'))  # Exercise an automatically terminal boundary pair.
         self.assertEqual(automatic_events, ['click:[data-action="deal"]', decision_wait, "inventory"])  # Return safely without fabricating a wager or decision.
+        self.assertEqual(automatic_evidence, "non_wager")  # Accept the free-boundary automatic terminal state without a ledger mutation.
 
     # Prove a terminal shard from another source commit is rerun instead of silently resumed.
     def test_resume_requires_exact_source_commit(self):

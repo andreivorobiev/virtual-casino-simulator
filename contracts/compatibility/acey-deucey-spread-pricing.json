@@ -1,0 +1,49 @@
+{
+  "artifact": "acey-deucey-spread-pricing",
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/408",
+  "status": "compatible_patch",
+  "contract": "contracts/openapi/acey_deucey.v1.yaml",
+  "compatibility": {
+    "api_v1_frozen": true,
+    "routes": "unchanged",
+    "requests": "unchanged",
+    "envelopes": "unchanged",
+    "session_authority": "unchanged",
+    "ledger_authority": "unchanged"
+  },
+  "response_rules": {
+    "retained": {
+      "inside_return_multiplier": "deprecated current-or-latest-round scalar retained for frozen-v1 clients"
+    },
+    "added": {
+      "inside_paytable": "server-owned total-return multipliers for legal spreads 1 through 11",
+      "house_edge": "target edge used to derive every spread price"
+    },
+    "authoritative_price": "rules.inside_paytable[round.inside_rank_count]",
+    "pass_only_boundary": "inside_rank_count zero cannot accept a play wager"
+  },
+  "settlement": {
+    "payout_shape": "unchanged numeric total return",
+    "outside_and_boundary_tie": "zero return",
+    "strict_inside": "wager multiplied by the server-owned visible-spread price"
+  },
+  "browser": {
+    "server_owned_copy": true,
+    "locales": [
+      "en-US",
+      "ru-RU"
+    ],
+    "visual_matrix_surface": "acey_deucey"
+  },
+  "excluded_authority": [
+    "database schema",
+    "provider configuration",
+    "deployment",
+    "DNS",
+    "billing",
+    "public signup",
+    "OAuth",
+    "mail",
+    "invitation"
+  ]
+}

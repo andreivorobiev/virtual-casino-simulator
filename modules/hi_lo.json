@@ -1,6 +1,6 @@
 {
   "module": "hi_lo",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": [
     "casino/games/hi_lo/",
     "web/games/hi_lo.js",
@@ -12,6 +12,9 @@
   ],
   "contracts": [
     "contracts/openapi/hi_lo.v1.yaml"
+  ],
+  "compatibility": [
+    "contracts/compatibility/hi-lo-rank-pricing.json"
   ],
   "game": {
     "id": "hi_lo",
