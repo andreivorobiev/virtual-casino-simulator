@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.34 Release Notes
+# Virtual Casino Simulator v0.9.5.35 Release Notes
+
+## Listener-free request-latency baseline
+
+- Adds an explicit test-only direct-WSGI baseline for authenticated current-user, Slots state, Roulette state, aggregate Casino state, and idempotent Boule actions.
+- Measures each fixed route family at concurrency 1, 2, 4, and 8 with eight warm-ups, sixty-four measured operations, and a rolling at-most-N scheduler.
+- Runs against isolated external JSON and callback-owned disposable loopback MySQL providers while preserving the repository's default MySQL pool settings.
+- Keeps authentication plus Boule first-write, replay, conflict, receipt-retention, and authoritative wallet invariants outside every timed row.
+- Emits only exact-source aggregate evidence with strict schema and recursive type validation; identities, auth material, requests, wagers, outcomes, samples, paths, hosts, timestamps, and exception text are excluded.
+- Defines no numeric latency threshold because hosted hardware varies; acceptance requires complete rows, positive measurements, exact replay controls, zero errors, and cleanup.
+- Opens no listener and changes no runtime route, API contract, provider implementation, pool default, game, production workflow, or deployment behavior.
+- Retains exact immutable v0.9.5.34 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.34 authoritative house-side Keno economics
 
 ## Authoritative house-side Keno economics
 

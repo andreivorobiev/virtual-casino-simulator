@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.34`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.35`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -133,6 +133,8 @@ v0.9.5.32 carries the accepted exact visible-rank Hi-Lo pricing for issue #406 w
 v0.9.5.33 carries the accepted Slots economics-only slice for issue #471 through the established route, with an authoritative line-bet, scatter, four-free-spin, and paid-only progressive model. It makes no durable reservation, cross-process, exactly-once, or composite state-and-ledger claim. Its compatibility record retains exact immutable v0.9.5.32 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 v0.9.5.34 carries the accepted Keno economics correction for issue #472 while preserving the frozen-v1 routes, envelopes, amount range, and float-plus-hundredth settlement law. Exact proof keeps every accepted pick-count and amount house-side, including the approved pick-one cent-rounding exception. Its compatibility record retains exact immutable v0.9.5.33 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.35 carries the accepted listener-free request-latency baseline for issue #323. The test-only harness measures fixed direct-WSGI route families against isolated JSON and disposable loopback MySQL providers, emits aggregate-only exact-source evidence, and changes no runtime, API, provider, pool-default, game, production, or deployment behavior. Its compatibility record retains exact immutable v0.9.5.34 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
