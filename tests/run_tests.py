@@ -70,6 +70,8 @@ ACTIVE_PROGRESS=None
 BROWSER_SHARD_RANGE=None
 # Count executed browser run_case positions so contiguous shards partition deterministically.
 BROWSER_CASE_SEQ=0
+# Restrict browser execution to specific games' dedicated acceptance cases, or None for every game. (issue #468 item 4)
+BROWSER_AFFECTED_GAMES=None
 # Declare producer/consumer case groups whose inline browser state must stay on one shard.
 BROWSER_CASE_AFFINITY_GROUPS={
     # Keep the real backend login and service-worker lifecycle in one isolated context.
@@ -244,6 +246,8 @@ def run_case(test_id, reqs, fn):
     seq=BROWSER_CASE_SEQ; BROWSER_CASE_SEQ+=1
     # Skip cases owned by other contiguous browser shards without recording or reporting them.
     if BROWSER_SHARD_RANGE is not None and not BROWSER_SHARD_RANGE[0]<=seq<BROWSER_SHARD_RANGE[1]: return
+    # Skip a dedicated per-game acceptance case when this run did not target that game, after claiming its sequence position. (issue #468 item 4)
+    if browser_case_deselected(test_id): return
     # Read the active browser reporter without changing API or storage runner behavior.
     progress=ACTIVE_PROGRESS
     # Flush the named browser-test start before its body begins.
@@ -338,10 +342,49 @@ def skip_browser_affinity(group_name):
     # Advance once for each literal run_case call that the unowned guarded body omitted.
     BROWSER_CASE_SEQ+=len(group_case_ids)
 
-# Verify aggregated browser shard results cover every literal case exactly once and pass.
-def verify_browser_shards(results_dir, shard_count):
-    # Load the deterministic expected id list from this exact checkout's source.
-    expected=browser_case_ids()
+# Map each game to its one dedicated deep browser acceptance case so unaffected games can be skipped. (issue #468 item 4)
+BROWSER_GAME_ACCEPTANCE_CASES={'acey_deucey':'BR-AD-001', 'andar_bahar':'BR-AB-001', 'big_six_wheel':'BR-BIG-SIX-001', 'caribbean_stud':'BR-CS-001', 'casino_holdem':'BR-CH-001', 'casino_war':'BR-CW-001', 'chuck_a_luck':'BR-CHUCK-001', 'craps':'BR-CRAPS-001', 'crown_and_anchor':'BR-CAA-001', 'deuces_wild_video_poker':'BR-DWVP-001', 'double_bonus_video_poker':'BR-DBVP-001', 'dragon_tiger':'BR-DT-001', 'fan_tan':'BR-FAN-TAN-001', 'hi_lo':'BR-HILO-001', 'jacks_or_better_video_poker':'BR-JOBVP-001', 'joker_poker':'BR-JP-001', 'let_it_ride':'BR-LIR-001', 'mississippi_stud':'BR-MSTUD-001', 'multi_hand_video_poker':'BR-MHVP-001', 'over_under_7':'BR-OU7-001', 'pai_gow_poker':'BR-PGP-001', 'plinko':'BR-PLINKO-001', 'red_dog':'BR-RD-001', 'scratch_cards':'BR-SCRATCH-001', 'sic_bo':'BR-SIC-BO-001', 'teen_patti':'BR-TEEN-PATTI-001', 'texas_holdem_practice_table':'BR-THPT-001', 'three_card_poker':'BR-TCP-001'}
+# Invert the map once so run_case can resolve a dedicated case's owning game in constant time.
+_BROWSER_ACCEPTANCE_CASE_GAME={case_id:game_id for game_id,case_id in BROWSER_GAME_ACCEPTANCE_CASES.items()}
+
+# Validate the game->case acceptance map against the exact catalog and literal case inventory before any use.
+def validate_browser_affected_games():
+    # Read the deterministic literal browser case inventory and the current catalog once.
+    case_ids=set(browser_case_ids()); catalog_ids={game['id'] for game in casino_config.GAMES}
+    # Reject a map that pairs two games with one case because deselection would then be ambiguous.
+    if len(set(BROWSER_GAME_ACCEPTANCE_CASES.values()))!=len(BROWSER_GAME_ACCEPTANCE_CASES): raise AssertionError('duplicate dedicated acceptance case in affected-game map')
+    # Require every mapped game and case to still exist so a stale map fails startup instead of under-testing.
+    for game_id,case_id in BROWSER_GAME_ACCEPTANCE_CASES.items():
+        # Fail closed on an unknown catalog game id.
+        if game_id not in catalog_ids: raise AssertionError(f'affected-game map references unknown game {game_id}')
+        # Fail closed when a mapped dedicated case is absent from the literal inventory.
+        if case_id not in case_ids: raise AssertionError(f'affected-game case {case_id} absent from browser inventory')
+
+# Report whether a case is a dedicated per-game acceptance case excluded by the active affected-game set.
+def browser_case_deselected(case_id):
+    # Keep every case when no affected-game restriction is active.
+    if BROWSER_AFFECTED_GAMES is None: return False
+    # Skip only dedicated per-game acceptance cases whose game is not among the affected games.
+    return case_id in _BROWSER_ACCEPTANCE_CASE_GAME and _BROWSER_ACCEPTANCE_CASE_GAME[case_id] not in BROWSER_AFFECTED_GAMES
+
+# List the case ids one shard range actually executes after affected-game deselection.
+def browser_selected_case_ids(shard_range):
+    # Read the deterministic literal inventory once.
+    case_ids=browser_case_ids()
+    # Keep only in-range cases that survive affected-game deselection.
+    return [case_ids[index] for index in range(shard_range[0],shard_range[1]) if not browser_case_deselected(case_ids[index])]
+
+# Compute the exact case ids expected across shards for an affected-game selection, independent of process state.
+def browser_expected_case_ids(affected_games):
+    # Return the full literal inventory when no affected-game restriction applies.
+    if affected_games is None: return browser_case_ids()
+    # Otherwise drop each dedicated per-game acceptance case whose game is not among the affected games.
+    return [case_id for case_id in browser_case_ids() if not (case_id in _BROWSER_ACCEPTANCE_CASE_GAME and _BROWSER_ACCEPTANCE_CASE_GAME[case_id] not in affected_games)]
+
+# Verify aggregated browser shard results cover every expected case exactly once and pass.
+def verify_browser_shards(results_dir, shard_count, affected_games=None):
+    # Load the deterministic expected id list, honoring any affected-game selection this run used.
+    expected=browser_expected_case_ids(affected_games)
     # Track every observed browser case id and the shard that executed it.
     seen={}
     # Read each shard's unique result file and fail on any missing shard evidence.
@@ -3104,9 +3147,9 @@ def run_api_tests():
         stop_server(proc,base); save_results()
 
 # Define the run_browser_tests function used by this module.
-def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds=2700.0,shard_count=1,shard_index=0):
-    # Make the active reporter and shard partition visible to the existing shared run_case helper.
-    global ACTIVE_PROGRESS,BROWSER_SHARD_RANGE,BROWSER_CASE_SEQ
+def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds=2700.0,shard_count=1,shard_index=0,affected_games=None):
+    # Make the active reporter, shard partition, and affected-game selection visible to the shared run_case helper.
+    global ACTIVE_PROGRESS,BROWSER_SHARD_RANGE,BROWSER_CASE_SEQ,BROWSER_AFFECTED_GAMES
     # Start protected logic so failures can be handled safely.
     try: from playwright.sync_api import sync_playwright
     # Handle the expected failure path for the protected logic.
@@ -3115,14 +3158,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
         print('Playwright is not installed. Install with python -m pip install -r requirements-dev.txt and python -m playwright install chromium'); return 2
     # Fail before listener startup when any declared producer/consumer affinity crosses a shard.
     validate_browser_shard_affinity(shard_count)
+    # Fail before listener startup when the affected-game acceptance map has drifted from the catalog or inventory.
+    validate_browser_affected_games()
+    # Restrict execution to the requested games' dedicated acceptance cases before partitioning or counting.
+    BROWSER_AFFECTED_GAMES=affected_games
     # Partition the deterministic case sequence before the reporter learns its exact total.
     shard_range=browser_shard_range(browser_case_total(),shard_count,shard_index)
     # Reset the shared sequence counter so shard ownership always starts at position zero.
     BROWSER_CASE_SEQ=0
     # Activate contiguous shard ownership only for real multi-shard runs.
     BROWSER_SHARD_RANGE=shard_range if shard_count>1 else None
-    # Build one reusable reporter with exact owned-case totals and configurable CI timing.
-    progress=ProgressReporter(shard_range[1]-shard_range[0],heartbeat_seconds,stall_seconds,timeout_seconds)
+    # Build one reusable reporter sized to the cases this shard actually executes after affected-game deselection.
+    progress=ProgressReporter(len(browser_selected_case_ids(shard_range)),heartbeat_seconds,stall_seconds,timeout_seconds)
     # Start flushed phase and watchdog output before the ephemeral server starts.
     progress.start('browser-server-startup')
     # Route existing run_case calls through this reporter only for the browser suite.
@@ -9326,6 +9373,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
         ACTIVE_PROGRESS=None
         # Prevent later API or storage cases from inheriting browser shard ownership.
         BROWSER_SHARD_RANGE=None
+        # Prevent later API or storage cases from inheriting the affected-game restriction.
+        BROWSER_AFFECTED_GAMES=None
         # Preserve the existing JSON result artifact path and behavior.
         save_results()
         # Retain one shard-unique result file so aggregate verification can prove exact coverage.
@@ -9359,8 +9408,20 @@ def main():
     ap.add_argument('--shard-index',type=int,default=0)
     # Verify aggregated per-shard result files from a directory instead of running any suite.
     ap.add_argument('--verify-browser-shards',default=None)
+    # Restrict browser execution to a comma-separated set of affected game ids, or omit for the full catalog. (issue #468 item 4)
+    ap.add_argument('--games',default=None)
     # Parse caller options before running any suite.
     args=ap.parse_args()
+    # Resolve the affected-game restriction once so the runner and the aggregate verifier agree on the expected set.
+    affected_games=None
+    if args.games is not None:
+        # Accept a comma-separated list, ignoring surrounding whitespace and empty entries.
+        affected_games={token.strip() for token in args.games.split(',') if token.strip()}
+        # Reject an empty selection so an accidental blank never silently skips every dedicated case.
+        if not affected_games: ap.error('--games must name at least one game id')
+        # Reject unknown ids so a typo fails loudly instead of quietly under-testing.
+        unknown=affected_games-{game['id'] for game in casino_config.GAMES}
+        if unknown: ap.error(f'--games contains unknown game ids: {sorted(unknown)}')
     # Reject heartbeat intervals outside issue #207 acceptance before starting work.
     if args.heartbeat_seconds<=0 or args.heartbeat_seconds>60: ap.error('--heartbeat-seconds must be greater than 0 and at most 60')
     # Reject warning thresholds that would fire before one heartbeat.
@@ -9376,7 +9437,7 @@ def main():
     # Keep shard selection scoped to the browser suite and aggregate verification only.
     if args.shard_count>1 and not (args.browser or args.verify_browser_shards): ap.error('--shard-count applies only to --browser or --verify-browser-shards')
     # Run aggregate shard verification alone so gate jobs never start servers or suites.
-    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count)
+    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count,affected_games)
     # Branch when the following condition is true.
     if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live: args.api=True
     # Start protected logic so failures can be handled safely.
@@ -9388,7 +9449,7 @@ def main():
         # Branch when the following condition is true.
         if args.browser:
             # Set code to the value needed for the next operation.
-            code=run_browser_tests(args.heartbeat_seconds,args.stall_seconds,args.timeout_seconds,args.shard_count,args.shard_index)
+            code=run_browser_tests(args.heartbeat_seconds,args.stall_seconds,args.timeout_seconds,args.shard_count,args.shard_index,affected_games)
             # Branch when the following condition is true.
             if code: return code
     # Run cleanup logic regardless of success or failure.
