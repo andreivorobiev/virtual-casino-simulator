@@ -490,6 +490,14 @@ class KenoEconomicsTests(TestCase):
         self.assertIn("amount = Number(ticket.amount)", frontend)
         # Require settled-history amount restoration for repeat and autoplay after reload.
         self.assertIn("amount = Number(result.ticket.amount)", frontend)
+        # Require an open human ticket to keep the ticket drawer authoritative over older settled results.
+        self.assertIn("if (currentHumanTickets().length) return 'selection';", frontend)
+        # Require the central result selector to suppress older outcomes while an open ticket exists.
+        self.assertIn("if (currentHumanTickets().length) return null;", frontend)
+        # Require historical balls to remain hidden while the open ticket owns the selection board.
+        self.assertIn("if (currentHumanTickets().length) return [];", frontend)
+        # Require historical result copy to render only in the actual result phase.
+        self.assertIn("if (phase === 'result' && result)", frontend)
         # Require amount blur to synchronize state without rerendering and detaching the clicked Draw control.
         self.assertIn("addEventListener('change', readAmount)", frontend)
         # Reject the prior blur-time root replacement that swallowed the first public Draw click.

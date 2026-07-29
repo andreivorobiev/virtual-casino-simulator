@@ -8270,8 +8270,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         open_state={'open_tickets':[{'ticket_id':'keno-open-restore','player_id':behavior_player,'spots':open_spots,'amount':0.11,'source':'browser-test','created_at':'2026-07-20T00:01:00Z'}],'last_draws':settled_state['last_draws']}
                         # Reconstruct the route from the state containing both historical and open-ticket values.
                         save_player_game_state('keno',behavior_player,open_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
-                        # Require the newest open human ticket to own both live spots and amount.
-                        assert float(page.get_by_test_id('keno-amount').input_value())==0.11 and page.get_by_test_id('keno-open-ticket').count()==1 and page.locator('.keno-num.selected').count()==len(open_spots) and all(page.get_by_test_id(f'keno-num-{spot}').get_attribute('aria-pressed')=='true' for spot in open_spots)
+                        # Read each open-ticket restoration predicate into one diagnostic probe.
+                        open_restore_probe={'amount':float(page.get_by_test_id('keno-amount').input_value()),'open_rows':page.get_by_test_id('keno-open-ticket').count(),'selected_count':page.locator('.keno-num.selected').count(),'pressed_spots':[spot for spot in open_spots if page.get_by_test_id(f'keno-num-{spot}').get_attribute('aria-pressed')=='true'],'drawn_count':page.locator('[data-testid="keno-drawn-ball"]').count(),'paytable_comparisons':page.get_by_test_id('keno-paytable-comparison').count(),'new_ticket_controls':page.get_by_test_id('keno-new-ticket').count(),'buy_controls':page.get_by_test_id('keno-buy').count()}
+                        # Require the newest open human ticket to own the exact live fake-token amount.
+                        assert open_restore_probe['amount']==0.11,open_restore_probe
+                        # Require exactly one visible open-ticket row instead of the older result drawer.
+                        assert open_restore_probe['open_rows']==1,open_restore_probe
+                        # Require exactly the three authoritative open-ticket spots to remain selected and pressed.
+                        assert open_restore_probe['selected_count']==len(open_spots) and open_restore_probe['pressed_spots']==open_spots,open_restore_probe
+                        # Require the older settled draw to remain history only while the open ticket owns the board.
+                        assert open_restore_probe['drawn_count']==0,open_restore_probe
+                        # Require selection controls and reject every historical result-mode surface.
+                        assert open_restore_probe['buy_controls']==1 and open_restore_probe['paytable_comparisons']==0 and open_restore_probe['new_ticket_controls']==0,open_restore_probe
                         # Replace the state with settled history only so repeat and autoplay restoration share one authority.
                         save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
                         # Require settled history to restore the exact live amount, spots, and repeat availability.

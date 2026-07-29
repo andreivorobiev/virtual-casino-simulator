@@ -122,6 +122,8 @@ function humanResults() {
 
 // Define primaryHumanResult to select the result that drives summary and paytable comparison.
 function primaryHumanResult() {
+  // Suppress historical result context while a newer open human ticket owns the current route.
+  if (currentHumanTickets().length) return null;
   // Return the first human result, matching the single-ticket happy path.
   return humanResults()[0] || null;
 }
@@ -136,6 +138,8 @@ function botResults() {
 function activeDrawNumbers() {
   // Return partial reveal state during animation so the board never jumps to the final draw early.
   if (drawBusy) return displayedDraw;
+  // Hide historical draw decoration while a newer open human ticket owns the selection surface.
+  if (currentHumanTickets().length) return [];
   // Return explicitly displayed draw numbers when a completed draw has been revealed.
   if (displayedDraw.length) return displayedDraw;
   // Return persisted draw numbers for an already-completed draw loaded from state.
@@ -188,6 +192,8 @@ function activeSpotCount() {
 function activePhase() {
   // Branch while the draw animation or request is still active.
   if (drawBusy) return 'drawing';
+  // Keep a purchased open human ticket visible ahead of any older settled result.
+  if (currentHumanTickets().length) return 'selection';
   // Branch when a completed human result is available for comparison.
   if (primaryHumanResult()) return 'result';
   // Return the spot-selection state for ticket setup.
@@ -664,7 +670,7 @@ function resultCopyHtml() {
   // Branch for drawing progress text.
   if (phase === 'drawing') return `<div class="result-box fixed-result keno-result-copy" data-testid="keno-result"><strong>${safe(tx('status.drawingLead', { count: activeDrawNumbers().length, total: DRAW_TOTAL }))}</strong> ${safe(tx('status.drawingSummary', { catches: visibleCatchSet().size }))}</div>`;
   // Branch for completed result text.
-  if (result) {
+  if (phase === 'result' && result) {
     // Store net outcome after the already-debited ticket amount.
     const net = Number(result.payout || 0) - Number(result.ticket?.amount || 0);
     // Select the singular lead copy for a one-catch ticket so the count agrees with the noun. (issue #237)
