@@ -492,11 +492,12 @@
         "en-US",
         "ru-RU"
       ],
-      "viewports": [
-        "desktop_primary",
-        "desktop_compact",
-        "mobile"
-      ],
+        "viewports": [
+          "desktop_primary",
+          "desktop_compact",
+          "tablet",
+          "mobile"
+        ],
       "gates": [
         "VIS-COPY-001",
         "VIS-LAYOUT-001",

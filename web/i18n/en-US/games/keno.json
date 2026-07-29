@@ -74,6 +74,8 @@
   "paytable.row": "{spots} spots, {catches} catches",
   "paytable.multiplier": "{multiplier}x",
   "paytable.major": "Major",
+  "paytable.majorMultiplier": "Major · {multiplier}x",
+  "paytable.economicsNote": "These multipliers describe ideal unit-stake return across all draws. Each ticket payout uses the existing rounding to hundredths of a play token, so realized low-stake return can differ.",
   "paytable.empty": "No paytable row.",
   "bot.title": "Bot controllers",
   "bot.none": "None",

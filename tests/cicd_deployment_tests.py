@@ -246,6 +246,18 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertIn("run: python -m tests.slots_economics_long", workflow_text)
         # Reject direct-file execution because it omits the repository root from Python's import path.
         self.assertNotIn("run: python tests/slots_economics_long.py", workflow_text)
+        # Invoke the exact Keno proof as a package module so repository imports resolve on hosted Linux.
+        self.assertIn("run: python -m tests.keno_economics_long", workflow_text)
+        # Run the governed Keno module exactly once rather than multiplying proof across shards.
+        self.assertEqual(workflow_text.count("python -m tests.keno_economics_long"), 1)
+        # Keep both exact proof and artifact-identity steps on the single shard-one owner.
+        keno_steps = workflow_text.split("- name: Prove Keno exact economics", 1)[1].split("- name: Upload long-suite shard artifacts", 1)[0]
+        # Require both governed steps to declare shard one explicitly.
+        self.assertEqual(keno_steps.count("if: matrix.shard == 1"), 2)
+        # Require fail-closed semantic verification of the exact evidence identity before upload.
+        self.assertIn("python scripts/verify_keno_economics_artifact.py logs/test-runs/keno-economics-exact.json", keno_steps)
+        # Reject direct-file Keno execution for the same import-path reason.
+        self.assertNotIn("run: python tests/keno_economics_long.py", workflow_text)
         # Upload terminal evidence even when one shard command fails.
         self.assertIn("if: always()", workflow_text)
         # Require the exact branch-protection aggregate job identifier once.
@@ -284,10 +296,26 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Extract permanent literal IDs in deterministic source order.
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Require the current exact suite inventory and balanced 27/27/27/26 allocation.
+        # Require the current exact suite inventory after the Keno economics proof joined its edge owner case.
         self.assertEqual(len(case_ids), 107)
         # Compute the same half-open contiguous partition used by the production runner.
         ranges = [(0, 27), (27, 54), (54, 81), (81, 107)]
+        # Locate the one permanent Keno owner call that carries both edge and economics acceptance.
+        keno_owner_call = next(node for node in ast.walk(runner) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run_case" and ast.literal_eval(node.args[0]) == "BR-KENO-EDGE-001")
+        # Read the owner call's permanent requirement mapping without executing Browser code.
+        keno_owner_requirements = ast.literal_eval(keno_owner_call.args[1])
+        # Require the combined owner to map both the Keno economics requirement and its test requirement.
+        self.assertTrue({"KENO-027", "TEST-147"}.issubset(set(keno_owner_requirements)))
+        # Require the combined owner to invoke the named complete-acceptance callback.
+        self.assertIsInstance(keno_owner_call.args[2], ast.Name)
+        # Pin the callback identity so a later refactor cannot silently drop either economics body.
+        self.assertEqual(keno_owner_call.args[2].id, "keno_complete_acceptance")
+        # Locate the complete callback inside the Browser runner.
+        keno_complete_callback = next(node for node in ast.walk(runner) if isinstance(node, ast.FunctionDef) and node.name == "keno_complete_acceptance")
+        # Read every direct helper call from the complete callback in source order.
+        keno_complete_calls = [statement.value.func.id for statement in keno_complete_callback.body if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call) and isinstance(statement.value.func, ast.Name)]
+        # Require one complete 64-cell matrix pass followed by one route/restoration economics pass.
+        self.assertEqual(keno_complete_calls, ["keno_edge_containment", "keno_economics_route_behavior"])
         # Locate the literal affinity declaration at module scope.
         affinity_node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_CASE_AFFINITY_GROUPS" for target in node.targets))
         # Read only literal strings and tuples from the tracked declaration.

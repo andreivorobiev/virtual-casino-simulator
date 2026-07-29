@@ -226,12 +226,22 @@ function applyKenoPayload(payload) {
 function syncSelectionFromState() {
   // Store the newest open human ticket when one exists.
   const ticket = currentHumanTickets().slice(-1)[0];
-  // Branch when an open ticket should control the visible ticket spots.
-  if (ticket) selected = new Set(sortedNumbers(ticket.spots));
+  // Branch when an open ticket should control the visible ticket spots and amount after reload.
+  if (ticket) {
+    // Restore the open ticket's authoritative spots into the live selection.
+    selected = new Set(sortedNumbers(ticket.spots));
+    // Restore the open ticket's authoritative amount into the live amount control.
+    amount = Number(ticket.amount);
+  }
   // Store the newest persisted human result when no open ticket exists.
   const result = !ticket ? (latestStoredDraw()?.results || []).find(item => item.ticket?.player_id === currentPlayerId()) : null;
   // Branch when recent history can restore the last played human ticket.
-  if (!ticket && result?.ticket?.spots) selected = new Set(sortedNumbers(result.ticket.spots));
+  if (!ticket && result?.ticket?.spots) {
+    // Restore the settled ticket's spots so repeat and autoplay use the same selection.
+    selected = new Set(sortedNumbers(result.ticket.spots));
+    // Restore the settled ticket's amount so the first post-reload action cannot fall back to five.
+    amount = Number(result.ticket.amount);
+  }
 }
 
 // Define refreshBotData to load Keno-compatible bot controllers for the rail.
@@ -499,10 +509,12 @@ function randomSpots(count) {
 
 // Define multiplierText to format paytable multipliers compactly.
 function multiplierText(multiplier) {
-  // Branch when a very large payout row should use the premium major label.
-  if (Number(multiplier) >= 100000) return tx('paytable.major');
+  // Format the exact server-authoritative multiplier for every ordinary and jackpot row.
+  const formatted = numberText(multiplier, { maximumFractionDigits: 2 });
+  // Keep the premium major label additive while preserving the exact visible jackpot magnitude.
+  if (Number(multiplier) >= 100000) return tx('paytable.majorMultiplier', { multiplier: formatted });
   // Return the normal multiplier label for ordinary paytable rows.
-  return tx('paytable.multiplier', { multiplier: numberText(multiplier, { maximumFractionDigits: 2 }) });
+  return tx('paytable.multiplier', { multiplier: formatted });
 }
 
 // Define heroMetricHtml to render one premium state metric.
@@ -600,7 +612,7 @@ function ticketPanelHtml() {
   // Store disabled input markup while a draw is active.
   const disabled = drawBusy ? 'disabled' : '';
   // Return the complete control rail with ticket, status, autoplay, and bot panels.
-  return `<section class="panel control-rail keno-control-panel" data-testid="keno-ticket-drawer"><h2>${safe(tx('ticket.title'))}</h2>${ticketMetricsHtml()}<label>${safe(tx('ticket.amount'))}<input id="kenoAmount" data-testid="keno-amount" type="number" min="1" value="${safe(amount)}" ${disabled}></label>${ticketControlsHtml()}${statusCardHtml()}<div data-keno-auto></div>${botPanelHtml()}</section>`;
+  return `<section class="panel control-rail keno-control-panel" data-testid="keno-ticket-drawer"><h2>${safe(tx('ticket.title'))}</h2>${ticketMetricsHtml()}<label>${safe(tx('ticket.amount'))}<input id="kenoAmount" data-testid="keno-amount" type="number" min="0.01" max="1000000" step="0.01" value="${safe(amount)}" ${disabled}></label>${ticketControlsHtml()}${statusCardHtml()}<div data-keno-auto></div>${botPanelHtml()}</section>`;
 }
 
 // Define boardCellHtml to render one stable Keno number button.
@@ -724,8 +736,8 @@ function paytableRowsHtml(spots, activeCatch = null) {
 function paytablePreviewHtml() {
   // Store the active spot count for preview.
   const spots = activeSpotCount();
-  // Return the preview list for the current ticket size.
-  return `<section data-testid="keno-paytable-preview"><h3>${safe(tx('paytable.preview'))}</h3><div class="keno-paytable-list">${paytableRowsHtml(spots)}</div></section>`;
+  // Return the preview list plus the player-facing ideal-versus-cent-rounded economics note.
+  return `<section data-testid="keno-paytable-preview"><h3>${safe(tx('paytable.preview'))}</h3><p class="muted" data-testid="keno-economics-note">${safe(tx('paytable.economicsNote'))}</p><div class="keno-paytable-list">${paytableRowsHtml(spots)}</div></section>`;
 }
 
 // Define paytableComparisonHtml to render the completed result paytable comparison.
@@ -734,8 +746,8 @@ function paytableComparisonHtml() {
   const result = primaryHumanResult();
   // Store the active spot count for comparison rows.
   const spots = result?.ticket?.spots?.length || activeSpotCount();
-  // Return the comparison list with the caught row highlighted.
-  return `<section data-testid="keno-paytable-comparison"><h3>${safe(tx('drawer.paytableComparison'))}</h3><div class="keno-paytable-list">${paytableRowsHtml(spots, result?.catch_count ?? null)}</div></section>`;
+  // Return the comparison list with the caught row highlighted and the rounding disclosure retained.
+  return `<section data-testid="keno-paytable-comparison"><h3>${safe(tx('drawer.paytableComparison'))}</h3><p class="muted" data-testid="keno-economics-note">${safe(tx('paytable.economicsNote'))}</p><div class="keno-paytable-list">${paytableRowsHtml(spots, result?.catch_count ?? null)}</div></section>`;
 }
 
 // Define drawnDrawerHtml to render the live drawn-ball drawer.
