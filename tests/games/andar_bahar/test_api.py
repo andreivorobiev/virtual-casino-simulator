@@ -84,7 +84,7 @@ class AndarBaharApiTests(unittest.TestCase):
         # Create fresh fake balances and append-only ledger events.
         self.ledger = RecordingLedger()
         # Define deterministic fixtures keyed by action id.
-        self.fixtures = {"play-win": {"match_card": "7H", "dealt_cards": [{"side": "andar", "card": "2C", "matched": False}, {"side": "bahar", "card": "QS", "matched": False}, {"side": "andar", "card": "7D", "matched": True}]}, "play-loss": {"match_card": "9C", "dealt_cards": [{"side": "andar", "card": "4C", "matched": False}, {"side": "bahar", "card": "9S", "matched": True}]}}
+        self.fixtures = {"play-win": {"match_card": "7H", "dealt_cards": [{"side": "andar", "card": "2C", "matched": False}, {"side": "bahar", "card": "QS", "matched": False}, {"side": "andar", "card": "7D", "matched": True}]}, "play-loss": {"match_card": "9C", "dealt_cards": [{"side": "andar", "card": "4C", "matched": False}, {"side": "bahar", "card": "9S", "matched": True}]}, "play-bahar-win": {"match_card": "9C", "dealt_cards": [{"side": "andar", "card": "4C", "matched": False}, {"side": "bahar", "card": "9S", "matched": True}]}}
         # Build a deterministic service without filesystem or ambient randomness.
         self.service = AndarBaharService(ledger_gateway=self.ledger, state_loader=self.repository.load, state_saver=self.repository.save, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", fixture_factory=lambda action_id: self.fixtures.get(action_id))
         # Register only the game-owned routes on the real shared router.
@@ -115,8 +115,10 @@ class AndarBaharApiTests(unittest.TestCase):
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_WAGER_DEBIT"]))
         # Verify the winning payout returns stake plus even-money winnings.
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_PAYOUT_CREDIT"]))
-        # Verify the final fake balance reflects exactly one debit and one payout.
-        self.assertEqual(107.0, self.ledger.balances["session-player"])
+        # Verify the final fake balance reflects one debit and the 1.90x Andar return.
+        self.assertEqual(106.3, self.ledger.balances["session-player"])
+        # Verify old clients retain the required integer scalar while new clients receive both prices.
+        self.assertEqual((2, int, {"andar": 1.9, "bahar": 2.0}), (first["rules"]["return_multiplier"], type(first["rules"]["return_multiplier"]), first["rules"]["return_multipliers"]))
         # Request the other player's isolated state while spoofing the first player in the query.
         other_state = self.call("/api/v1/games/andar-bahar/state?player_id=session-player", method="GET", context={"bound_player_id": "other-player", "user": {"player_id": "other-player"}})
         # Verify the other session cannot read the first player's history.
@@ -155,6 +157,17 @@ class AndarBaharApiTests(unittest.TestCase):
         self.assertEqual([], [event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_PAYOUT_CREDIT"])
         # Verify only the wager debit changed the fake balance.
         self.assertEqual(96.0, self.ledger.balances["session-player"])
+
+    # Confirm Bahar keeps even-money settlement through the public route and ledger.
+    def test_bahar_win_retains_even_money_return(self):
+        # Play one winning Bahar prediction through the real route adapter.
+        result = self.call("/api/v1/games/andar-bahar/rounds", {"action_id": "play-bahar-win", "wager": 7, "side": "bahar"})
+        # Verify the exact winning side, 2.00x payout, and net result.
+        self.assertEqual(("bahar", 14.0, 7.0), (result["round"]["winning_side"], result["round"]["payout"], result["round"]["net"]))
+        # Verify exactly one payout credit used the side-priced amount.
+        payout_events = [event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_PAYOUT_CREDIT"]
+        # Require the returned-token ledger movement and resulting wallet value.
+        self.assertEqual(([14.0], 107.0), ([event["amount"] for event in payout_events], self.ledger.balances["session-player"]))
 
 
 # Run this focused suite when invoked directly by a worker.

@@ -39,7 +39,7 @@ Historical source baseline: 9.1.0
 - over_under_7: 1.1.0
 - plinko: 1.1.0
 - fan_tan: 1.1.0
-- andar_bahar: 1.1.0
+- andar_bahar: 1.1.1
 - acey_deucey: 1.1.1
 - caribbean_stud: 1.1.0
 - let_it_ride: 1.1.0
@@ -50,9 +50,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.25
-- docs: 1.64.25
-- contracts: 1.49.12
+- tests: 1.64.26
+- docs: 1.64.26
+- contracts: 1.49.13
 - tooling: 1.21.10
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
@@ -599,10 +599,10 @@ Historical source baseline: 9.1.0
 - **FAN-TAN-003** (Fan-Tan) - PASS: Aggregate residue wagers and returned-token credits use the shared ledger exactly once under durable action identities.
 - **FAN-TAN-004** (Application) - PASS: Fan-Tan supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **FAN-TAN-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Fan-Tan with requirement, module, version, and visual traceability.
-- **AB-001** (Andar Bahar) - PASS: A joker or match card sets the rank and alternating Andar/Bahar deals stop at the first matching rank with transparent even-money settlement.
+- **AB-001** (Andar Bahar) - PASS: Alternating Andar/Bahar deals stop at the first matching rank and settle with exact side prices: Andar returns 1.90x and Bahar returns 2.00x.
 - **AB-002** (Andar Bahar) - PASS: Authenticated sessions own private reload-safe rounds, durable receipts, settled history, and canonical route restoration.
 - **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
-- **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with unobscured wallet and feedback controls.
 - **AB-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
 - **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision; a play requires at least one strict inside rank and settles at the server-owned spread price that holds a constant target house edge, while outside ranks and boundary ties lose.
 - **AD-002** (Acey-Deucey) - PASS: Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.

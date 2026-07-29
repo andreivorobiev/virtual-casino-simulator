@@ -1,16 +1,17 @@
 {
   "module": "andar_bahar",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": ["casino/games/andar_bahar/", "web/games/andar_bahar.js", "web/i18n/en-US/games/andar_bahar.json", "web/i18n/ru-RU/games/andar_bahar.json"],
   "requirements_prefixes": ["AB"],
   "contracts": ["contracts/openapi/andar_bahar.v1.yaml"],
+  "compatibility": ["contracts/compatibility/andar-bahar-side-pricing.json"],
   "game": {
     "id": "andar_bahar", "sort_order": 250, "route": "/games/andar_bahar", "label": "Andar Bahar", "category": "table", "categories": ["table", "cards", "strategy"],
     "backend": {"register": "casino.games.andar_bahar.api:register"},
     "frontend": {"module": "./games/andar_bahar.js", "export": "AndarBaharGame", "ready_testid": "andar-bahar", "i18n_domain": "games/andar_bahar", "i18n_probe": "controls.play"},
     "tests": {"long_driver": "tests.game_drivers.andar_bahar:play"},
-    "translations": {"ru-RU": {"label": "Андар Бахар", "kicker": "Карточный стол", "description": "Выберите Андар или Бахар и наблюдайте прозрачную раздачу до первого совпадения ранга с картой-джокером.", "tags": ["Карты", "Сравнение ранга", "Стратегия", "Журнал жетонов"]}},
-    "lobby": {"featured": false, "wide": false, "art_class": "andar-bahar-art", "symbol": "AB", "kicker": "Card showdown", "description": "Pick Andar or Bahar, reveal the joker card, and settle the first rank match through the play-token ledger.", "tags": ["Cards", "Rank match", "Strategy", "Ledger-backed"]}
+    "translations": {"ru-RU": {"label": "Андар Бахар", "kicker": "Карточный стол", "description": "Выберите Андар с возвратом 1,90x или Бахар с возвратом 2,00x и наблюдайте раздачу до первого совпадения ранга.", "tags": ["Карты", "Сравнение ранга", "Стратегия", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "andar-bahar-art", "symbol": "AB", "kicker": "Card showdown", "description": "Pick Andar at 1.90x or Bahar at 2.00x, then reveal the transparent deal through the first rank match.", "tags": ["Cards", "Rank match", "Strategy", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],
   "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan"]
