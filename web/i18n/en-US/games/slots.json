@@ -33,7 +33,7 @@
   "feature.freeSpinsTitle": "Free spins",
   "feature.history": "Bonus results remain in recent spins.",
   "feature.historyTitle": "History",
-  "feature.progressive": "Eligible meter: {amount}",
+  "feature.progressive": "Eligible for {lines} lines x {lineBet}; meter: {amount}",
   "feature.progressiveIneligible": "Not eligible; select {lines} lines x {lineBet}. The unchanged meter is {amount}",
   "feature.progressiveTitle": "Progressive",
   "feature.scatter": "{count} scatters triggered the bonus context.",

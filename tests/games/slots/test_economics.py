@@ -431,6 +431,8 @@ class SlotsEconomicsTests(TestCase):
             self.assertTrue(all(token in resource["paytable.progressive"] for token in ("{contribution}", "{seed}", "{lines}", "{lineBet}")))
             # Require nonqualifying controls to expose an explicit localized state.
             self.assertTrue(all(token in resource["feature.progressiveIneligible"] for token in ("{amount}", "{lines}", "{lineBet}")))
+            # Require qualifying feature copy to disclose the exact setup while keeping the formatted amount terminal.
+            self.assertTrue(all(token in resource["feature.progressive"] for token in ("{amount}", "{lines}", "{lineBet}")))
             # Keep every formatted play-token amount at the end of its visible leaf for label and clipping policy.
             self.assertTrue(resource["feature.progressive"].endswith("{amount}") and resource["feature.progressiveIneligible"].endswith("{amount}") and resource["paytable.progressive"].endswith("{seed}"))
             # Require the exact frozen lower and upper values in localized validation.

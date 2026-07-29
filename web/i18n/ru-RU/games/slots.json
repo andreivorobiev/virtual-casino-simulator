@@ -33,7 +33,7 @@
   "feature.freeSpinsTitle": "Фриспины",
   "feature.history": "Бонусные результаты остаются в последних спинах.",
   "feature.historyTitle": "История",
-  "feature.progressive": "Доступный счетчик: {amount}",
+  "feature.progressive": "Доступно при {lines} линиях x {lineBet}; счетчик: {amount}",
   "feature.progressiveIneligible": "Недоступно; выберите {lines} линий x {lineBet}. Неизменившееся значение счетчика: {amount}",
   "feature.progressiveTitle": "Прогрессив",
   "feature.scatter": "{count} скаттера включили бонусный контекст.",
