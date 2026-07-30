@@ -94,7 +94,7 @@ class EnrollmentPolicyTests(unittest.TestCase):
     # Verify a truthy non-boolean cannot enable a method.
     def test_only_exact_booleans_enable_a_method(self) -> None:
         # Normalize a document whose flags are truthy strings rather than booleans.
-        resolved = enrollment_policy.normalize({"mode": enrollment_policy.MODE_SELF_SIGNUP, "methods": {"email": "yes", "google": 1, "facebook": True}})
+        resolved = enrollment_policy.normalize({"schema_version": enrollment_policy.SCHEMA_VERSION, "mode": enrollment_policy.MODE_SELF_SIGNUP, "methods": {"email": "yes", "google": 1, "facebook": True}})
         # Require the strings and integers to be rejected and only the real boolean accepted.
         self.assertEqual({"email": False, "google": False, "facebook": True}, resolved["methods"])
 
@@ -103,7 +103,7 @@ class EnrollmentPolicyTests(unittest.TestCase):
         # Attempt to normalize a document naming a mode this release does not implement.
         with self.assertRaises(ValidationError):
             # Require the published validation envelope rather than a default.
-            enrollment_policy.normalize({"mode": "everyone"})
+            enrollment_policy.normalize({"schema_version": enrollment_policy.SCHEMA_VERSION, "mode": "everyone"})
 
     # Verify a malformed document falls back to the baseline rather than to open access.
     def test_malformed_document_falls_back_to_baseline(self) -> None:
@@ -113,6 +113,25 @@ class EnrollmentPolicyTests(unittest.TestCase):
         resolved = enrollment_policy.normalize(["not", "a", "policy"])
         # Require the closed baseline rather than any partially applied state.
         self.assertEqual(enrollment_policy.MODE_CLOSED, resolved["mode"])
+
+    # Verify missing or non-v1 schema markers cannot widen the deployed baseline.
+    def test_unowned_schema_versions_preserve_closed_default(self) -> None:
+        # Disable every enrollment flag so any accepted override would be an observable widening.
+        config.SIGNUP_ENABLED = config.INVITATIONS_ENABLED = config.ENROLLMENT_ENABLED = False
+        # Exercise missing, future, string, and boolean markers independently.
+        for marker in (None, 2, "1", True):
+            # Name the hostile marker when one exact domain case fails.
+            with self.subTest(schema_version=marker):
+                # Build the widening document while omitting the marker for the missing-field case.
+                candidate = {"mode": enrollment_policy.MODE_SELF_SIGNUP, "methods": {"email": True}, "invitations_enabled": True}
+                # Add every present hostile marker without normalizing its type.
+                if marker is not None:
+                    # Preserve the exact hostile JSON-shaped value.
+                    candidate["schema_version"] = marker
+                # Normalize through the public policy boundary.
+                resolved = enrollment_policy.normalize(candidate)
+                # Require the complete closed/default-off baseline for every unowned shape.
+                self.assertEqual((enrollment_policy.MODE_CLOSED, False, False, {"email": False, "google": False, "facebook": False}), (resolved["mode"], resolved["methods"]["email"], resolved["invitations_enabled"], resolved["methods"]))
 
     # Verify the additive response field and compatibility-v2 policy stay exact.
     def test_additive_v2_contract_and_read_only_compatibility_are_bound(self) -> None:

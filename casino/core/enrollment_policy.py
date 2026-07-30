@@ -88,6 +88,12 @@ def normalize(candidate) -> dict:
     if not isinstance(candidate, dict):
         # Return the baseline unchanged for any malformed stored value.
         return resolved
+    # Read the stored schema marker before considering any capability override.
+    stored_schema_version = candidate.get("schema_version")
+    # Reject absent, boolean, string, old, or future shapes by preserving the deployed baseline.
+    if type(stored_schema_version) is not int or stored_schema_version != SCHEMA_VERSION:
+        # Never interpret fields from a document whose exact shape this release does not own.
+        return resolved
     # Apply a stored mode only when it is one this release understands.
     stored_mode = candidate.get("mode")
     # Reject an unrecognized mode loudly so a typo cannot silently open enrollment.
