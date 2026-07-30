@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.40 Release Notes
+# Virtual Casino Simulator v0.9.5.41 Release Notes
+
+## Bounded enrollment-policy enforcement
+
+- Enforces the resolved provider-backed policy at public email signup and invitation redemption.
+- Preserves existing login, frozen `/api/v1`, the exact non-boolean integer schema-v1 gate, and the deployed environment seed/fallback.
+- Maps unknown schema-v1 modes to the existing safe signup and generic invitation-denial envelopes before mutation.
+- Restricts operational enrollment-decision event, route, mode, method, decision, and reason values to reviewed bounded vocabularies.
+- Requires operational decision logging to succeed before account or invitation mutation.
+- States explicitly that the existing JSONL sink is operational logging, not immutable provider-backed actor/change audit; immutable Admin audit remains deferred to issue #528.
+- Keeps `AUTH-013` mapped only to existing central case `API-ENROLLMENT-POLICY-001` without a generic TEST identifier.
+- Adds no Admin write, readiness policy, RBAC, UI, OAuth/provider enablement, provider network, public exposure, credential, DNS, billing, mail, or issue-closure change.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.40 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
+- Keeps issue #333 and issues #430/#471 open; stacked issue #528 remains separately governed.
 
 ## Read-only enrollment-policy foundation
 
