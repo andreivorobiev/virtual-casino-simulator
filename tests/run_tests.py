@@ -467,6 +467,16 @@ def run_request_latency_provider(provider,output_path):
 
 # Define the run_storage_tests function used by this module.
 def run_storage_tests(include_live=False, include_migration_live=False, request_latency_callback=None):
+    # Define one listener-free runner for the STORAGE-011 JSON game-action boundary.
+    def run_json_game_action_provider_tests():
+        # Import the provider-specific suite only when the storage profile executes.
+        from tests import json_game_action_provider_tests
+        # Load the complete recovery, reset, contention, and hostile-input test case.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(json_game_action_provider_tests.JsonGameActionProviderTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the mapped case whenever any provider-boundary assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('JSON game-action provider suite failed')
     # Define one focused unittest runner for provider-neutral player-game-state atomicity.
     def run_player_state_atomic_tests():
         # Load only the CORE-030 player-state atomicity test class.
@@ -507,6 +517,8 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
+    # Execute provider-owned journal recovery, contention, reset, and fail-closed proof. (#430)
+    run_case('STORAGE-GAME-ACTION-ONCE-001',['STORAGE-011'],run_json_game_action_provider_tests)
     # Prove player-scoped JSON concurrency, rollback, fallback, isolation, and MySQL delegation.
     run_case('STORAGE-PLAYER-STATE-ATOMIC-001',['CORE-030','STORAGE-001','STORAGE-002'],run_player_state_atomic_tests)
     # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.

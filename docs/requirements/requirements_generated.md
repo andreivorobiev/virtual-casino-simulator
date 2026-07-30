@@ -7,13 +7,13 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.24
-- core: 9.30.0
+- core: 9.31.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.4
 - audio: 9.1.1
-- admin: 1.13.0
+- admin: 1.13.3
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.4.12
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.40
-- docs: 1.64.40
+- tests: 1.64.41
+- docs: 1.64.41
 - contracts: 1.49.22
 - tooling: 1.21.12
 - commenting_policy: 1.0.0
@@ -929,6 +929,7 @@ Historical source baseline: 9.1.0
 - **CORE-031** (Core) - PASS: The core defines one provider-neutral game-action contract with bounded immutable identity, declared resources, snapshots, signed integer-cent movements, plans, and receipts; canonical request fingerprints bind exact semantic input and resources, conflicting durable-key reuse is rejected before planner or RNG work, and the abstract execute_game_action_once boundary applies the same receipt model to paid and zero-cost actions.
 - **TEST-140** (Tests) - PASS: Listener-free source inspection proves the Casino nginx virtual hosts override the identity-bearing default access log, use the complete fixed route-family set, and expose exactly the five approved timing variables with every raw request, path, query, identity, network, header, cookie, body, and payload field excluded.
 - **STORAGE-010** (Storage) - PASS: Each MySQL application process owns one lazy thread-safe physical connection pool with validated capacity one through sixteen, bounded checkout and physical-connect deadlines, non-reconnecting idle liveness checks, request-scoped cursor and lease cleanup, fork/PID isolation, rollback and session reset before reuse, unhealthy-session discard, and terminal process cleanup, while JSON storage, schema version two, DDL-free runtime grants, transaction semantics, and application-only rollback remain unchanged.
+- **STORAGE-011** (Storage) - PASS: The JSON storage provider owns one recoverable execute-game-action-once boundary that validates immutable action identity, canonical fingerprint, declared wallet and game-state resources, and a side-effect-free planner before converging wallet movements, game-state publication, and an immutable receipt under one cross-process gate. Durable journal recovery completes before affected JSON state is exposed; same-key replays return the committed receipt, conflicting reuse is rejected before planner, RNG, or mutation, and corrupt or unknown journal state fails closed without replacing its original bytes.
 - **TEST-141** (Tests) - PASS: Focused fake-connector and disposable-MySQL evidence proves pool configuration bounds, hard capacity, waiter wake and timeout, physical reuse, non-reconnecting dead-session replacement, rollback/reset isolation, cleanup discard, connector failure, PID rebuild, terminal shutdown, provider integration, secret-free metrics, and sanitized p50/p95/throughput/error measurements at concurrency one, two, four, and eight with no exhaustion or cross-request session leakage.
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
 - **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
