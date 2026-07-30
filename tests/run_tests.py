@@ -510,9 +510,9 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         # Fail the named central case when any focused assertion failed.
         if not result.wasSuccessful(): raise AssertionError('MySQL migration policy suite failed')
     # Map the listener-free policy suite to the permanent migration requirements.
-    run_case('MYSQL-MIGRATION-001',['MYSQL-005','MYSQL-007','STORAGE-007','TEST-048'],run_mysql_migration_policy_tests)
+    run_case('MYSQL-MIGRATION-001',['MYSQL-005','MYSQL-007','MYSQL-008','STORAGE-007','TEST-048'],run_mysql_migration_policy_tests)
     # Map the listener-free recovery suite to the permanent recovery requirements.
-    run_case('RECOVERY-POLICY-001',['MYSQL-006','TOOL-004','TEST-049'],run_recovery_policy_tests)
+    run_case('RECOVERY-POLICY-001',['MYSQL-006','MYSQL-008','TOOL-004','TEST-049'],run_recovery_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
@@ -540,7 +540,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','MYSQL-007','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','MYSQL-007','MYSQL-008','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -1268,7 +1268,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('release predecessor policy suite failed')
     # Record exact compatibility-owned rollback selection and manifest binding.
-    run_case('RELEASE-PREDECESSOR-001',['TOOL-003','TOOL-008','TEST-133'],run_release_predecessor_tests)
+    run_case('RELEASE-PREDECESSOR-001',['TOOL-003','TOOL-008','TOOL-011','TEST-133'],run_release_predecessor_tests)
     # Execute the split monitor bearer/digest proof without opening a listener.
     def run_monitor_config_tests():
         # Load only the focused root-managed monitor configuration class.
@@ -1292,7 +1292,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('production CI/CD workflow suite failed')
     # Record immutable publication, hosted assets, SSH boundaries, and rollback behavior.
-    run_case('DEPLOY-CICD-001',['TOOL-008','TEST-133'],run_cicd_deployment_tests)
+    run_case('DEPLOY-CICD-001',['TOOL-008','TOOL-011','TEST-133'],run_cicd_deployment_tests)
     # Execute listener-free ordinary-workflow cancellation and sharded qualification policy proofs.
     def run_ci_qualification_tests():
         # Load only the focused acceleration policy class.

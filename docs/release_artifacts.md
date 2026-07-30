@@ -1,13 +1,13 @@
 # Reproducible release artifacts
 
-Requirement `TOOL-003` defines the repository-only release-artifact and rollback-provenance gate. Producing a candidate is evidence; it is not approval to deploy or expose the application.
+Requirements `TOOL-003` and `TOOL-011` define the repository-only release-artifact and rollback-provenance gate. Producing a candidate is evidence; it is not approval to deploy or expose the application.
 
 ## Candidate assets
 
 `python scripts/make_release.py` validates the exact clean Git checkout and writes three ignored files under `dist/`:
 
 - `virtual_casino_simulator_package.zip` contains only explicitly allowlisted, Git-tracked application files.
-- `release-manifest.json` binds the archive to the full commit SHA, canonical packaged version, optional canonical tag, supported Python range, module revisions, distinct MySQL expected/minimum migration versions plus catalog/chain checksums, declared dependency/SBOM inputs, every packaged file hash, the archive checksum, completed validation commands, and rollback provenance.
+- `release-manifest.json` binds the archive to the full commit SHA, canonical packaged version, optional canonical tag, supported Python range, module revisions, distinct MySQL expected/minimum migration versions, exact apply policy, catalog/chain checksums, declared dependency/SBOM inputs, every packaged file hash, the archive checksum, completed validation commands, and rollback provenance.
 - `checksums.txt` provides convenience SHA-256 rows for the archive and manifest. The JSON manifest remains the canonical machine-readable provenance record.
 
 The ZIP writer sorts members, fixes their timestamps and modes, and writes exact source bytes with fixed compression settings. The manifest uses the Git commit time as its deterministic provenance timestamp. Equivalent builds from the same clean commit therefore produce identical archive and manifest bytes.
@@ -49,11 +49,11 @@ The recovered v9.2.0 manifest is intentionally not rollback-eligible itself beca
 
 ## Application-only rollback
 
-Each publication-eligible manifest records the immediately previous retained release version, commit, archive checksum, and manifest checksum. Before rollback, verify the retained manifest and archive, install the prior archive into a new immutable release directory, run the same clean-copy verification, then atomically repoint the application release selector according to the separately approved deployment procedure.
+Each publication-eligible manifest records the immediately previous retained release version, commit, archive checksum, manifest checksum, and declared rollback MySQL version. Before rollback, verify the retained manifest and archive, install the prior archive into a new immutable release directory, run the same clean-copy verification, then atomically repoint the application release selector according to the separately approved deployment procedure.
 
-The compatibility record, not GitHub release-list ordering, selects the retained predecessor. A published release with incorrect rollback provenance or an incomplete host-command inventory remains immutable and is superseded by a new patch identity; its assets and tag are never replaced in place. v0.9.5.38 retains the exact checksum-verified v0.9.5.37 release as its application-only predecessor while carrying the JSON-provider game-action journal, cross-process storage gate, and failure-atomic reset boundary. v0.9.5.37 in turn retains v0.9.5.36 for the route-free provider-neutral game-action contract foundation.
+The authenticated compatibility record, not GitHub release-list ordering, selects the retained predecessor. Packaging and verification require its rollback policy to be exactly application-only, database rollback prohibited, and retained-predecessor manifest required. The rollback schema declaration must match the packaged compatibility record and fit both the candidate and predecessor runtime windows. A published release with incorrect rollback provenance or an incomplete host-command inventory remains immutable and is superseded by a new patch identity; its assets and tag are never replaced in place. v0.9.5.38 retains the exact checksum-verified v0.9.5.37 release as its application-only predecessor while carrying the JSON-provider game-action journal, cross-process storage gate, and failure-atomic reset boundary. v0.9.5.37 in turn retains v0.9.5.36 for the route-free provider-neutral game-action contract foundation.
 
-This gate covers application artifact rollback only. A predecessor may be selected only when its manifest accepts the already-applied MySQL migration version. Database or schema rollback is intentionally outside `TOOL-003` and must follow the separately accepted migration and recovery gates. A candidate without a valid prior manifest remains useful for branch validation but is not eligible for immutable publication.
+This gate covers application artifact rollback only. An exact-schema-three candidate cannot select the exact-schema-two-only v0.9.5.38 predecessor. A bridge release operating at schema `2` may select v0.9.5.38, and a future release operating at schema `3` may select the bridge because both runtime windows include that exact version. Database or schema rollback is intentionally outside `TOOL-003` and `TOOL-011` and must follow the separately accepted migration and recovery gates. A candidate without a valid prior manifest remains useful for branch validation but is not eligible for immutable publication.
 
 ## Local commands
 

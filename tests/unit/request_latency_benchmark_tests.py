@@ -1344,15 +1344,35 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(mysql_007), 1)
         # Require the new requirement to remain MySQL-owned.
         self.assertEqual(mysql_007[0]["module"], "MySQL")
+        # Count the additive schema rollback-compatibility bridge requirement.
+        mysql_008 = [row for row in requirements if row.get("id") == "MYSQL-008"]
+        # Require exactly one permanent MySQL bridge allocation.
+        self.assertEqual(len(mysql_008), 1)
+        # Require the bridge requirement to remain MySQL-owned.
+        self.assertEqual(mysql_008[0]["module"], "MySQL")
+        # Count the additive release and deployment bridge requirement.
+        tool_011 = [row for row in requirements if row.get("id") == "TOOL-011"]
+        # Require exactly one permanent tooling bridge allocation.
+        self.assertEqual(len(tool_011), 1)
+        # Require the bridge requirement to remain Tooling-owned.
+        self.assertEqual(tool_011[0]["module"], "Tooling")
+        # Parse the core descriptor for the runtime compatibility addition.
+        core_module = json.loads((ROOT / "modules" / "core.json").read_text(encoding="utf-8"))
         # Parse the tests descriptor.
         tests_module = json.loads((ROOT / "modules" / "tests.json").read_text(encoding="utf-8"))
         # Parse the docs descriptor independently.
         docs_module = json.loads((ROOT / "modules" / "docs.json").read_text(encoding="utf-8"))
-        # Parse the tooling descriptor for the compatible schema capacity addition.
+        # Parse the contracts descriptor for the rollback-policy contract addition.
+        contracts_module = json.loads((ROOT / "modules" / "contracts.json").read_text(encoding="utf-8"))
+        # Parse the tooling descriptor for the compatible bridge addition.
         tooling_module = json.loads((ROOT / "modules" / "tooling.json").read_text(encoding="utf-8"))
+        # Require the exact compatible core minor allocation.
+        self.assertEqual(core_module["version"], "9.32.0")
         # Require the exact shared tests patch allocation.
-        self.assertEqual(tests_module["version"], "1.64.43")
+        self.assertEqual(tests_module["version"], "1.64.44")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.43")
+        self.assertEqual(docs_module["version"], "1.64.44")
+        # Require the exact compatible contracts minor allocation.
+        self.assertEqual(contracts_module["version"], "1.50.0")
         # Require the compatible tooling minor allocation.
-        self.assertEqual(tooling_module["version"], "1.22.0")
+        self.assertEqual(tooling_module["version"], "1.23.0")

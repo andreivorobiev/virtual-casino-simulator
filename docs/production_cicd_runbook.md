@@ -22,12 +22,16 @@ Packaged release numbers use the four-part scheme documented in [the release ver
 8. It connects to the production host over SSH.
 9. It verifies checksums and the exact commit/tag on the host.
 10. It installs the archive under `/opt/casino/releases/<commit-sha>`.
-11. It validates that the root-managed monitor bearer matches the application-only SHA-256 digest without printing either value.
-12. It writes `/etc/casino/release.env` with the exact `CASINO_BUILD_SHA`.
-13. It atomically repoints `/opt/casino/current`.
-14. It restarts the Casino service and reloads nginx.
-15. It runs authenticated production readiness through `scripts/run_edge_monitor.py`, which strictly parses only the root-managed Authorization assignment and calls `scripts/edge_gate.py observe` without shell evaluation.
-16. If the post-switch health check fails, it rolls the application symlink back to the previous release. Database rollback is never automatic.
+11. It runs the selected release's read-only `bridge-check-schema2` with command-scoped release-root imports and refuses cutover unless the database is exact clean checksum-valid schema `2`.
+12. It validates that the root-managed monitor bearer matches the application-only SHA-256 digest without printing either value.
+13. It writes `/etc/casino/release.env` with the exact `CASINO_BUILD_SHA`.
+14. It atomically repoints `/opt/casino/current`.
+15. It restarts the Casino service and reloads nginx.
+16. It runs authenticated production readiness through `scripts/run_edge_monitor.py`, which strictly parses only the root-managed Authorization assignment and calls `scripts/edge_gate.py observe` without shell evaluation.
+17. It proves the selector still resolves to the exact selected release and reruns that release's read-only exact-schema-two bridge check.
+18. If a post-switch check fails, it rolls the application symlink back to the previous release. Database rollback is never automatic.
+
+The bridge deployment invokes no migration command and changes no database schema, data, grant, account, secret, or server global. Both schema checks import `casino` and `scripts` from the exact selected immutable release rather than the upload staging directory or an assumed installed package.
 
 ## Required GitHub Actions secrets
 
@@ -178,6 +182,8 @@ Rollback is application-only:
 - rerun readiness checks.
 
 Rollback does not edit historical release directories. It does not roll back MySQL schema or mutable data. If the predecessor cannot run against the current schema, rollback is blocked and must be handled by a separately approved recovery plan.
+
+The release verifier authenticates the compatibility record's exact application-only, database-rollback-prohibited, retained-predecessor policy and requires the declared rollback schema to fit both candidate and predecessor runtime windows. The bridge must remain at exact schema `2` before and after activation; schema `3` is not live under this packet.
 
 ## Operator rule
 

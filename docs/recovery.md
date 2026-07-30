@@ -6,6 +6,7 @@ Requirements `MYSQL-006`, `TOOL-004`, and `TEST-049` define the repository-side 
 
 - Application rollback repoints only to an immutable predecessor whose manifest accepts the already-applied MySQL schema. It does not reverse schema or data.
 - Migration and data recovery use the forward-only #204 catalog plus one exact encrypted logical recovery point. There is no generic down migration, history edit, mark-applied escape hatch, or ambient-target restore.
+- The `MYSQL-008` bridge binds recovery context to the actual clean runtime schema: schema `2` must carry the exact two-migration prefix digest and schema `3` must carry the complete three-migration digest. Cross-version prefix/full-chain pairs, schema `1`, future, dirty, applying, gapped, or foreign chains fail closed.
 - Full-VM recovery is provider-owned disaster recovery. A completed provider snapshot does not prove application-consistent logical backup or clean-target restore and cannot replace this gate.
 
 ## Provider evidence interface
