@@ -30,28 +30,28 @@ const PAYLINE_DASHES = ['none', '8 3', '2 3', '10 3 2 3', '1 3'];
 const DEFAULT_GRID = [['BELL', 'CHERRY', 'SEVEN', 'BAR', 'WILD'], ['BAR', 'WILD', 'CHERRY', 'BELL', 'SEVEN'], ['LEMON', 'BAR', 'SCATTER', 'CHERRY', 'BELL']];
 // Store SYMBOL_POOL echoing the engine's 14-stop strip distribution so decorative filler reads authentic.
 const SYMBOL_POOL = ['CHERRY', 'LEMON', 'BAR', 'CHERRY', 'BELL', 'LEMON', 'WILD', 'BAR', 'CHERRY', 'SEVEN', 'LEMON', 'SCATTER', 'BELL', 'BAR'];
-// Store the first reel's deceleration budget inside the governed fast stop band. (SLOT-032 vocabulary)
-const REEL_BASE_STOP_MS = 1050;
-// Store the adjacent-reel stop stagger inside the governed 140-240 ms band.
-const REEL_STAGGER_MS = 170;
-// Store the bounce-back time each reel takes to recover its landing overshoot.
-const REEL_SETTLE_MS = 210;
+// Export the first reel's deceleration budget inside the governed fast stop band. (SLOT-032 vocabulary)
+export const REEL_BASE_STOP_MS = 1050;
+// Export the adjacent-reel stop stagger inside the governed 140-240 ms band.
+export const REEL_STAGGER_MS = 170;
+// Export the bounce-back time each reel takes to recover its landing overshoot.
+export const REEL_SETTLE_MS = 210;
 // Store the extra travel in device pixels a landing reel overshoots before snapping back.
 const REEL_OVERSHOOT_PX = 14;
-// Store the last-reel tension extension used when early scatters tease the free-spin feature.
-const REEL_ANTICIPATION_MS = 900;
-// Store the short hold between the final reel stop and the settled reveal render.
-const REEL_HOLD_MS = 200;
-// Store the bounded non-animated reveal used when the player asks for reduced motion.
-const REDUCED_HOLD_MS = 520;
-// Store the fast unattended reveal so autoplay keeps its existing cadence.
-const AUTOPLAY_HOLD_MS = 180;
+// Export the last-reel tension extension used when early scatters tease the free-spin feature.
+export const REEL_ANTICIPATION_MS = 900;
+// Export the short hold between the final reel stop and the settled reveal render.
+export const REEL_HOLD_MS = 200;
+// Export the bounded non-animated reveal used when the player asks for reduced motion.
+export const REDUCED_HOLD_MS = 520;
+// Export the fast unattended reveal so autoplay keeps its existing cadence.
+export const AUTOPLAY_HOLD_MS = 180;
 // Store the count of decorative filler tiles rendered above the launch window before travel begins.
 const REEL_LAUNCH_FILLER = 6;
-// Store the base travel rows each landing strip scrolls through before its authoritative rows arrive.
-const REEL_TRAVEL_BASE_ROWS = 12;
-// Store the per-column travel growth so later reels visibly spin farther than earlier ones.
-const REEL_TRAVEL_STEP_ROWS = 4;
+// Export the base travel rows each landing strip scrolls through before its authoritative rows arrive.
+export const REEL_TRAVEL_BASE_ROWS = 12;
+// Export the per-column travel growth so later reels visibly spin farther than earlier ones.
+export const REEL_TRAVEL_STEP_ROWS = 4;
 // Store root so route lifecycle methods can mount and unmount the Slots view.
 let root = null;
 // Store state so rendering can reuse the latest Slots state payload.
@@ -289,6 +289,26 @@ function bindControls() {
 }
 // Define updateBotPanel to load bot capabilities through the documented bot API.
 async function updateBotPanel() { botInfo = await eligibleBots('slots'); if (root && !spinning) render(); else if (root) pendingRender = true; }
+// Export the per-column deceleration budget so tests can verify the staggered stop schedule. (SLOT-020)
+export function reelStopDuration(column, anticipation) {
+  // Add the stop stagger per column and the final-reel tease extension when early scatters demand it.
+  return REEL_BASE_STOP_MS + column * REEL_STAGGER_MS + (anticipation && column === 4 ? REEL_ANTICIPATION_MS : 0);
+}
+
+// Export the landing-strip composition so tests can prove authoritative rows and seamless launches. (SLOT-021)
+export function composeLandingStrip({ grid, column, shownGrid, random }) {
+  // Grow travel distance per column so later reels visibly spin farther before stopping.
+  const travelRows = REEL_TRAVEL_BASE_ROWS + column * REEL_TRAVEL_STEP_ROWS;
+  // Start the landing strip with the three authoritative rows that must finish on top.
+  const tiles = [grid[0][column], grid[1][column], grid[2][column]];
+  // Fill the travel span with seeded decorative symbols drawn from the engine-shaped pool.
+  for (let filler = 0; filler < travelRows; filler += 1) tiles.push(SYMBOL_POOL[Math.floor(random() * SYMBOL_POOL.length)]);
+  // Close the strip with the launch window so the first frame matches the tiles already on screen.
+  tiles.push(shownGrid[0][column], shownGrid[1][column], shownGrid[2][column]);
+  // Return a frozen sequence so callers and tests cannot mutate a composed landing.
+  return Object.freeze(tiles);
+}
+
 // Define waitMotion to wait one bounded interval through the route-owned scope instead of a raw timer. (MOTION-002)
 function waitMotion(ms) {
   // Resolve immediately when the route scope is gone so continuation semantics match the legacy timer path.
@@ -296,8 +316,8 @@ function waitMotion(ms) {
   // Schedule through the shared scope so navigation and reload cancel the pending reveal cleanly.
   return new Promise(resolve => { motionScope.schedule(resolve, ms, { reducedMotion: false }); });
 }
-// Define countEarlyScatters to detect a live free-spin tease across the first four authoritative reels.
-function countEarlyScatters(grid) {
+// Export the free-spin tease detector so tests can verify the anticipation threshold across reels.
+export function countEarlyScatters(grid) {
   // Accumulate scatter symbols across rows zero to two and columns zero to three only.
   let count = 0;
   // Walk each visible row of the committed grid.
@@ -341,16 +361,8 @@ function runReelLanding(spin) {
       const strip = reel?.querySelector('.slots-reel-strip');
       // Skip a column whose overlay was removed rather than failing the whole landing.
       if (!reel || !strip) continue;
-      // Grow travel distance per column so later reels visibly spin farther before stopping.
-      const travelRows = REEL_TRAVEL_BASE_ROWS + column * REEL_TRAVEL_STEP_ROWS;
-      // Start the landing strip with the three authoritative rows that must finish on top.
-      const tiles = [grid[0][column], grid[1][column], grid[2][column]];
-      // Fill the travel span with seeded decorative symbols drawn from the engine-shaped pool.
-      for (let filler = 0; filler < travelRows; filler += 1) tiles.push(SYMBOL_POOL[Math.floor(random() * SYMBOL_POOL.length)]);
-      // Close the strip with the launch window so the first frame matches the tiles already on screen.
-      const shown = currentGrid();
-      // Append the three currently visible symbols of this column at the strip bottom.
-      tiles.push(shown[0][column], shown[1][column], shown[2][column]);
+      // Compose the landing sequence through the tested pure helper.
+      const tiles = composeLandingStrip({ grid, column, shownGrid: currentGrid(), random });
       // Replace the launch strip content with the composed landing sequence.
       strip.innerHTML = tiles.map(tileHtml).join('');
       // Stop the priming shiver now that the real travel is starting.
@@ -361,8 +373,8 @@ function runReelLanding(spin) {
       strip.style.transform = 'translateY(0px)';
       // Compute the total downward travel that puts the authoritative rows into the window.
       const travelPx = (tiles.length - 3) * stride;
-      // Compute this column's deceleration budget including its stop stagger and any tease extension.
-      const durationMs = REEL_BASE_STOP_MS + column * REEL_STAGGER_MS + (anticipation && column === 4 ? REEL_ANTICIPATION_MS : 0);
+      // Compute this column's deceleration budget through the tested stagger schedule.
+      const durationMs = reelStopDuration(column, anticipation);
       // Light the anticipation glow on the final reel while early scatters tease the feature.
       if (anticipation && column === 4) reel.classList.add('anticipating');
       // Force one layout read so the browser commits the launch frame before the target changes. (PR #311 pattern)

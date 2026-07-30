@@ -32,22 +32,22 @@ const SPOT_SIZE = 15;
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 // Store board geometry so click targets and placed chips remain aligned on the fixed table.
 const BOARD = { width: 760, height: 560, x0: 170, y0: 82, cw: 132, ch: 34 };
-// Store the visible reveal budget that the tracked 3.6-second compatibility curves are sampled against. (ROU-069)
-const SPIN_REVEAL_MS = 3600;
-// Store the short autoplay reveal so unattended rounds keep their existing fast cadence.
-const AUTOPLAY_REVEAL_MS = 250;
-// Store the bounded non-spinning reveal used when the player asks for reduced motion. (ROU-070)
-const REDUCED_REVEAL_MS = 600;
+// Export the visible reveal budget that the tracked 3.6-second compatibility curves are sampled against. (ROU-069)
+export const SPIN_REVEAL_MS = 3600;
+// Export the short autoplay reveal so unattended rounds keep their existing fast cadence.
+export const AUTOPLAY_REVEAL_MS = 250;
+// Export the bounded non-spinning reveal used when the player asks for reduced motion. (ROU-070)
+export const REDUCED_REVEAL_MS = 600;
 // Store the quick rim-lift duration that returns the captured ball to its track before a new spin.
 const BALL_LIFT_MS = 260;
-// Store the radial travel in SVG units from the outer ball track down into a pocket mouth.
-const BALL_POCKET_DEPTH = 24;
-// Store the extra whole rotor turns the honest-landing wrapper adds on top of the sampled curve.
-const WHEEL_EXTRA_TURNS = 1;
-// Store the extra whole counter-turns the ball wrapper adds so total circuits read as a real launch.
-const BALL_EXTRA_TURNS = 2;
-// Store the minimum wrapper travel time so a slow backend can never produce a teleporting landing.
-const MIN_LANDING_MS = 900;
+// Export the radial travel in SVG units from the outer ball track down into a pocket mouth.
+export const BALL_POCKET_DEPTH = 24;
+// Export the extra whole rotor turns the honest-landing wrapper adds on top of the sampled curve.
+export const WHEEL_EXTRA_TURNS = 1;
+// Export the extra whole counter-turns the ball wrapper adds so total circuits read as a real launch.
+export const BALL_EXTRA_TURNS = 2;
+// Export the minimum wrapper travel time so a slow backend can never produce a teleporting landing.
+export const MIN_LANDING_MS = 900;
 // Store premium Roulette CSS inside the owned module so shared foundation styles stay untouched.
 const PREMIUM_STYLE = [
   '.roulette-premium{display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px;height:100%;min-height:0;container-type:inline-size;}', // Keep the complete table route stable inside the shared shell.
@@ -613,14 +613,16 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   if (!orient || !orbit || !radial) return 0;
   // Seed decorative pocket scatter from the committed round id so one round always lands the same way.
   const random = createSeededRandom(String(payload?.round?.round_id || 'roulette-round'));
-  // Choose the rotor's new rest orientation one-plus clockwise turns ahead with seeded scatter.
-  const wheelTarget = wheelRestAngle + WHEEL_EXTRA_TURNS * 360 + random() * 360;
-  // Compute the orbital angle that parks the ball over the winning pocket at that rest orientation.
-  const pocketAngle = pocketBaseAngle(targetIndex, nums.length) + wheelTarget;
-  // Extend the ball's counter-clockwise travel so it reaches the pocket after extra whole circuits.
-  const ballTarget = ballOrbitAngle - BALL_EXTRA_TURNS * 360 - norm360(ballOrbitAngle - pocketAngle);
-  // Give the wrappers whatever part of the reveal budget the backend round-trip has not consumed.
-  const travelMs = Math.max(MIN_LANDING_MS, revealMs - (performance.now() - revealStartedAt));
+  // Compute the deterministic wrapper targets and travel budget through the tested pure plan.
+  const plan = computeLandingPlan({ wheelAngle: wheelRestAngle, ballAngle: ballOrbitAngle, pocketIndex: targetIndex, pocketCount: nums.length, random, revealMs, elapsedMs: performance.now() - revealStartedAt });
+  // Stop safely when the plan rejects the pocket rather than inventing a landing. (ROU-051)
+  if (!plan) return 0;
+  // Read the rotor's committed rest target from the plan.
+  const wheelTarget = plan.wheelTarget;
+  // Read the ball's committed orbital target from the plan.
+  const ballTarget = plan.ballTarget;
+  // Read the wrapper travel budget from the plan.
+  const travelMs = plan.travelMs;
   // Force one layout read so the browser commits the start frame before target transforms change. (PR #311 pattern)
   orient.getBoundingClientRect();
   // Coast the rotor wrapper to its new rest orientation over the remaining reveal budget.
@@ -883,16 +885,32 @@ function wheelNums() {
   return ['0', '32', '15', '19', '4', '21', '2', '25', '17', '34', '6', '27', '13', '36', '11', '30', '8', '23', '10', '5', '24', '16', '33', '1', '20', '14', '31', '9', '22', '18', '29', '7', '28', '12', '35', '3', '26'];
 }
 
-// Return the clockwise-from-top angle in degrees for the center of one wheel pocket.
-function pocketBaseAngle(index, count) {
+// Export the clockwise-from-top pocket-center angle so focused tests can verify landing geometry.
+export function pocketBaseAngle(index, count) {
   // Convert the pocket index to the same clockwise wedge layout the rotor renders.
   return ((index + .5) / count) * 360;
 }
 
-// Normalize any signed angle into the [0, 360) range used by resting wheel poses.
-function norm360(angle) {
+// Export the [0, 360) normalization used by resting wheel poses so tests share the exact fold.
+export function norm360(angle) {
   // Fold negative and multi-turn values into one canonical visual orientation.
   return ((angle % 360) + 360) % 360;
+}
+
+// Export the deterministic honest-landing computation so tests can prove pocket congruence without a DOM. (ROU-053)
+export function computeLandingPlan({ wheelAngle, ballAngle, pocketIndex, pocketCount, random, revealMs, elapsedMs }) {
+  // Reject an off-wheel pocket so presentation can never invent a landing. (ROU-051)
+  if (!Number.isInteger(pocketIndex) || pocketIndex < 0 || pocketIndex >= pocketCount) return null;
+  // Choose the rotor's new rest orientation one-plus clockwise turns ahead with caller-seeded scatter.
+  const wheelTarget = wheelAngle + WHEEL_EXTRA_TURNS * 360 + random() * 360;
+  // Compute the orbital angle that parks the ball over the winning pocket at that rest orientation.
+  const pocketAngle = pocketBaseAngle(pocketIndex, pocketCount) + wheelTarget;
+  // Extend the ball's counter-clockwise travel so it reaches the pocket after extra whole circuits.
+  const ballTarget = ballAngle - BALL_EXTRA_TURNS * 360 - norm360(ballAngle - pocketAngle);
+  // Give the wrappers whatever part of the reveal budget the backend round-trip has not consumed.
+  const travelMs = Math.max(MIN_LANDING_MS, revealMs - elapsedMs);
+  // Return a frozen plan so callers and tests cannot mutate an accepted trajectory.
+  return Object.freeze({ wheelTarget, ballTarget, travelMs });
 }
 
 // Render the premium vector wheel while preserving result accuracy.
