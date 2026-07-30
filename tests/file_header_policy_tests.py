@@ -130,8 +130,8 @@ class FileHeaderPolicyTests(unittest.TestCase):
         self.assertEqual(policy.notice_copyright(self.root), COPYRIGHT_LINE)
         # Replace the fixed year with an unauthorized dynamic year.
         (self.root / "NOTICE").write_text(
-            NOTICE_TEXT.replace("Copyright 2026", "Copyright 2027"),
-            encoding="utf-8",
+            NOTICE_TEXT.replace("Copyright 2026", "Copyright 2027"),  # Replace only the governed year.
+            encoding="utf-8",  # Preserve the repository text encoding.
         )
         # Reject the changed convention rather than adopting it silently.
         with self.assertRaisesRegex(policy.HeaderPolicyError, "fixed 2026"):
@@ -139,8 +139,8 @@ class FileHeaderPolicyTests(unittest.TestCase):
             policy.notice_copyright(self.root)
         # Restore the valid line and add a second ambiguous copyright declaration.
         (self.root / "NOTICE").write_text(
-            NOTICE_TEXT + "Copyright 2026 Another Holder\n",
-            encoding="utf-8",
+            NOTICE_TEXT + "Copyright 2026 Another Holder\n",  # Introduce a second candidate owner.
+            encoding="utf-8",  # Preserve the repository text encoding.
         )
         # Reject multiple candidate ownership lines.
         with self.assertRaisesRegex(policy.HeaderPolicyError, "exactly one"):
@@ -172,9 +172,9 @@ class FileHeaderPolicyTests(unittest.TestCase):
         original = path.read_bytes()
         # Run repository check mode over the selected path.
         result = policy.run_repository(
-            self.root,
-            write=False,
-            boundaries=("module.py",),
+            self.root,  # Inspect the isolated repository fixture.
+            write=False,  # Keep the policy invocation read-only.
+            boundaries=("module.py",),  # Restrict inspection to the tracked module.
         )
         # Confirm one missing-header finding is returned.
         self.assertTrue(any("missing exact" in finding.message for finding in result.findings))
@@ -189,10 +189,10 @@ class FileHeaderPolicyTests(unittest.TestCase):
 
         # Build a BOM-prefixed CRLF module with both legal preamble lines and no final newline.
         original_text = (
-            "#!/usr/bin/env python\r\n"
-            "# -*- coding: utf-8 -*-\r\n"
-            '"""Explain the executable module."""\r\n'
-            "VALUE = 7"
+            "#!/usr/bin/env python\r\n"  # Preserve the executable interpreter directive.
+            "# -*- coding: utf-8 -*-\r\n"  # Preserve the explicit source encoding.
+            '"""Explain the executable module."""\r\n'  # Supply human-authored file purpose.
+            "VALUE = 7"  # Retain executable content without a final newline.
         )
         # Encode the fixture with its explicit UTF-8 marker.
         original = codecs.BOM_UTF8 + original_text.encode("utf-8")
@@ -202,9 +202,9 @@ class FileHeaderPolicyTests(unittest.TestCase):
         before_fingerprint = policy.python_executable_fingerprint(original_text)
         # Run one explicit path-bounded write.
         result = policy.run_repository(
-            self.root,
-            write=True,
-            boundaries=("tool.py",),
+            self.root,  # Apply policy inside the isolated repository.
+            write=True,  # Exercise the explicitly authorized writer.
+            boundaries=("tool.py",),  # Bound mutation to the selected Python file.
         )
         # Confirm one file changed and no finding remains.
         self.assertEqual(result, policy.PolicyRun(changed=1, findings=()))
@@ -216,11 +216,11 @@ class FileHeaderPolicyTests(unittest.TestCase):
         candidate_text = candidate[len(codecs.BOM_UTF8) :].decode("utf-8")
         # Confirm the header appears after shebang and encoding cookie.
         self.assertTrue(
-            candidate_text.startswith(
-                "#!/usr/bin/env python\r\n"
-                "# -*- coding: utf-8 -*-\r\n"
-                + self._python_header("\r\n")
-                + '"""Explain the executable module."""\r\n'
+            candidate_text.startswith(  # Compare the complete governed preamble.
+                "#!/usr/bin/env python\r\n"  # Require the shebang to remain first.
+                "# -*- coding: utf-8 -*-\r\n"  # Require the encoding cookie to remain second.
+                + self._python_header("\r\n")  # Require the exact generated license header.
+                + '"""Explain the executable module."""\r\n'  # Keep purpose after licensing.
             )
         )
         # Confirm no LF-only newline was introduced.
@@ -229,14 +229,14 @@ class FileHeaderPolicyTests(unittest.TestCase):
         self.assertFalse(candidate_text.endswith(("\n", "\r")))
         # Confirm executable token spelling and order remain identical.
         self.assertEqual(
-            policy.python_executable_fingerprint(candidate_text),
-            before_fingerprint,
+            policy.python_executable_fingerprint(candidate_text),  # Fingerprint rewritten source.
+            before_fingerprint,  # Compare against the pre-write executable token stream.
         )
         # Run the same bounded writer again to prove idempotence.
         second = policy.run_repository(
-            self.root,
-            write=True,
-            boundaries=("tool.py",),
+            self.root,  # Reuse the isolated repository.
+            write=True,  # Exercise a second authorized write pass.
+            boundaries=("tool.py",),  # Keep the idempotency probe path-bounded.
         )
         # Confirm no second change occurs.
         self.assertEqual(second, policy.PolicyRun(changed=0, findings=()))
@@ -255,9 +255,9 @@ class FileHeaderPolicyTests(unittest.TestCase):
         path = self._source("command.js", original)
         # Apply the bounded writer.
         result = policy.run_repository(
-            self.root,
-            write=True,
-            boundaries=("command.js",),
+            self.root,  # Apply policy inside the isolated repository.
+            write=True,  # Exercise the bounded JavaScript writer.
+            boundaries=("command.js",),  # Restrict mutation to the selected command.
         )
         # Confirm one exact change.
         self.assertEqual(result, policy.PolicyRun(changed=1, findings=()))
@@ -269,9 +269,9 @@ class FileHeaderPolicyTests(unittest.TestCase):
         candidate_text = candidate[len(codecs.BOM_UTF8) :].decode("utf-8")
         # Confirm the header follows the shebang and precedes the original purpose comment.
         expected_prefix = (
-            "#!/usr/bin/env node\r\n"
-            + self._javascript_header("\r\n")
-            + "// Explain this command.\r\n"
+            "#!/usr/bin/env node\r\n"  # Require the runtime shebang to remain first.
+            + self._javascript_header("\r\n")  # Require the exact JavaScript license header.
+            + "// Explain this command.\r\n"  # Keep human purpose after licensing.
         )
         # Assert exact physical placement.
         self.assertTrue(candidate_text.startswith(expected_prefix))
@@ -290,9 +290,9 @@ class FileHeaderPolicyTests(unittest.TestCase):
         marker = self._source("marker/__init__.py", b"")
         # Apply a bounded license-header write.
         marker_result = policy.run_repository(
-            self.root,
-            write=True,
-            boundaries=("marker/__init__.py",),
+            self.root,  # Apply policy inside the isolated repository.
+            write=True,  # Exercise license insertion for a marker package.
+            boundaries=("marker/__init__.py",),  # Limit mutation to the marker initializer.
         )
         # Confirm license-only marker handling passes.
         self.assertEqual(marker_result, policy.PolicyRun(changed=1, findings=()))
@@ -300,27 +300,27 @@ class FileHeaderPolicyTests(unittest.TestCase):
         self.assertEqual(marker.read_text(encoding="utf-8"), self._python_header())
         # Create active package initialization with the exact header but no purpose.
         active = self._source(
-            "active/__init__.py",
-            (self._python_header() + "VALUE = 1\n").encode("utf-8"),
+            "active/__init__.py",  # Name the executable package initializer.
+            (self._python_header() + "VALUE = 1\n").encode("utf-8"),  # Omit purpose deliberately.
         )
         # Check the active initializer.
         active_result = policy.run_repository(
-            self.root,
-            write=False,
-            boundaries=("active/__init__.py",),
+            self.root,  # Inspect the isolated repository.
+            write=False,  # Detect missing purpose without mutation.
+            boundaries=("active/__init__.py",),  # Select the active initializer only.
         )
         # Confirm purpose remains an explicit human-authored requirement.
         self.assertTrue(any("missing substantive" in item.message for item in active_result.findings))
         # Replace it with a substantive module docstring and active code.
         active.write_text(
-            self._python_header() + '"""Initialize the active package registry."""\nVALUE = 1\n',
-            encoding="utf-8",
+            self._python_header() + '"""Initialize the active package registry."""\nVALUE = 1\n',  # Add purpose.
+            encoding="utf-8",  # Preserve the repository text encoding.
         )
         # Confirm the active initializer now passes.
         passing = policy.run_repository(
-            self.root,
-            write=False,
-            boundaries=("active/__init__.py",),
+            self.root,  # Inspect the corrected isolated repository.
+            write=False,  # Confirm compliance without mutation.
+            boundaries=("active/__init__.py",),  # Select the active initializer only.
         )
         # Assert the clean result.
         self.assertEqual(passing, policy.PolicyRun(changed=0, findings=()))
@@ -331,11 +331,11 @@ class FileHeaderPolicyTests(unittest.TestCase):
 
         # Build a fully licensed module whose only other comments are transport metadata and exact filler.
         content = (
-            "#!/usr/bin/env python\n"
-            "# coding: utf-8\n"
-            + self._python_header()
-            + "# Execute this statement as part of the module's documented control flow.\n"
-            + "VALUE = 1\n"
+            "#!/usr/bin/env python\n"  # Supply transport metadata rather than purpose.
+            "# coding: utf-8\n"  # Supply encoding metadata rather than purpose.
+            + self._python_header()  # Supply the exact governed license lines.
+            + "# Execute this statement as part of the module's documented control flow.\n"  # Add exact filler.
+            + "VALUE = 1\n"  # Include executable content requiring real purpose.
         )
         # Track the fixture.
         self._source("no_purpose.py", content.encode("utf-8"))
@@ -343,23 +343,23 @@ class FileHeaderPolicyTests(unittest.TestCase):
         baseline = self.root / "baseline.json"
         # Write the current exact filler debt.
         baseline.write_text(
-            json.dumps({"version": 1, "files": {"no_purpose.py": 1}}),
-            encoding="utf-8",
+            json.dumps({"version": 1, "files": {"no_purpose.py": 1}}),  # Record exact filler debt.
+            encoding="utf-8",  # Preserve the baseline text encoding.
         )
         # Check the selected module.
         result = policy.run_repository(
-            self.root,
-            write=False,
-            boundaries=("no_purpose.py",),
-            filler_baseline_path=baseline,
+            self.root,  # Inspect the isolated repository.
+            write=False,  # Report purpose debt without mutation.
+            boundaries=("no_purpose.py",),  # Select the deliberately deficient module.
+            filler_baseline_path=baseline,  # Supply the approved current filler count.
         )
         # Confirm the missing-purpose finding is present.
         self.assertEqual(
-            result.findings,
-            (
-                policy.PolicyFinding(
-                    "no_purpose.py",
-                    "missing substantive file-purpose docstring or leading comment",
+            result.findings,  # Compare the complete finding collection.
+            (  # Build the one expected fail-closed result.
+                policy.PolicyFinding(  # Express the exact policy violation.
+                    "no_purpose.py",  # Identify the deficient tracked file.
+                    "missing substantive file-purpose docstring or leading comment",  # Pin the reason.
                 ),
             ),
         )
@@ -370,17 +370,17 @@ class FileHeaderPolicyTests(unittest.TestCase):
 
         # Build a purposeful module with only one governed line in the wrong location.
         original = (
-            '"""Explain this module."""\n'
-            "VALUE = 1\n"
-            f"# {COPYRIGHT_LINE}\n"
-        ).encode("utf-8")
+            '"""Explain this module."""\n'  # Start with legitimate human purpose.
+            "VALUE = 1\n"  # Place executable content before the governed marker.
+            f"# {COPYRIGHT_LINE}\n"  # Add a displaced partial header.
+        ).encode("utf-8")  # Preserve the exact unsafe fixture bytes.
         # Track the unsafe fixture.
         path = self._source("partial.py", original)
         # Attempt a bounded write that must remain fail-closed.
         result = policy.run_repository(
-            self.root,
-            write=True,
-            boundaries=("partial.py",),
+            self.root,  # Apply policy inside the isolated repository.
+            write=True,  # Attempt the bounded writer against unsafe input.
+            boundaries=("partial.py",),  # Select only the partial-header fixture.
         )
         # Confirm the governed-marker conflict is reported.
         self.assertTrue(any("partial, conflicting" in item.message for item in result.findings))
@@ -395,17 +395,17 @@ class FileHeaderPolicyTests(unittest.TestCase):
 
         # Build purposeful source whose governed text omits the required space after each marker.
         original = (
-            f"#{COPYRIGHT_LINE}\n"
-            f"#{policy.SPDX_LINE}\n"
-            '"""Explain the module."""\n'
-        ).encode("utf-8")
+            f"#{COPYRIGHT_LINE}\n"  # Omit required physical spacing deliberately.
+            f"#{policy.SPDX_LINE}\n"  # Repeat the noncanonical spacing for SPDX.
+            '"""Explain the module."""\n'  # Retain otherwise valid file purpose.
+        ).encode("utf-8")  # Preserve exact noncanonical bytes.
         # Track the noncanonical fixture.
         path = self._source("noncanonical.py", original)
         # Attempt the bounded writer.
         result = policy.run_repository(
-            self.root,
-            write=True,
-            boundaries=("noncanonical.py",),
+            self.root,  # Apply policy inside the isolated repository.
+            write=True,  # Attempt normalization that must be refused.
+            boundaries=("noncanonical.py",),  # Select only the malformed header.
         )
         # Confirm exact physical text is enforced.
         self.assertTrue(any("physical header text is not exact" in item.message for item in result.findings))
@@ -418,13 +418,13 @@ class FileHeaderPolicyTests(unittest.TestCase):
 
         # Build Python whose shebang is already invalidly displaced.
         python_path = self._source(
-            "displaced.py",
-            b'"""Explain the module."""\n#!/usr/bin/env python\nVALUE = 1\n',
+            "displaced.py",  # Name the invalid Python fixture.
+            b'"""Explain the module."""\n#!/usr/bin/env python\nVALUE = 1\n',  # Displace its shebang.
         )
         # Build JavaScript whose runtime shebang is already invalidly displaced.
         javascript_path = self._source(
-            "displaced.js",
-            b"// Explain the module.\n#!/usr/bin/env node\nconst value = 1;\n",
+            "displaced.js",  # Name the invalid JavaScript fixture.
+            b"// Explain the module.\n#!/usr/bin/env node\nconst value = 1;\n",  # Displace its shebang.
         )
         # Preserve both exact sources.
         originals = {
@@ -435,9 +435,9 @@ class FileHeaderPolicyTests(unittest.TestCase):
         }
         # Attempt a bounded selected-set write.
         result = policy.run_repository(
-            self.root,
-            write=True,
-            boundaries=("displaced.py", "displaced.js"),
+            self.root,  # Apply policy inside the isolated repository.
+            write=True,  # Attempt the bounded multi-file writer.
+            boundaries=("displaced.py", "displaced.js"),  # Select both unsafe fixtures.
         )
         # Confirm both files report a physical-line-one failure.
         self.assertEqual(
