@@ -1,4 +1,19 @@
-# Virtual Casino Simulator v0.9.5.37 Release Notes
+# Virtual Casino Simulator v0.9.5.38 Release Notes
+
+## Recoverable JSON-provider game-action execution
+
+- Adds one provider-owned JSON execution boundary for the route-free game-action contract, with immutable receipts for paid and zero-cost actions.
+- Rejects conflicting replays before snapshot, planner, randomness, or mutation while converging identical duplicate requests on the original committed receipt.
+- Serializes affected JSON wallet, state, document, history, Admin game-state, and reset operations through one stable cross-process gate while preserving the legacy wallet-lock order.
+- Recovers durable prepare, plan, wallet, state, receipt, and cleanup boundaries after restart without exposing an application-visible saga or compensation path.
+- Makes Admin reset failure-atomic through a private recovery snapshot, complete rollback-before-unlock behavior, exact response visibility, and retained fail-closed recovery material.
+- Keeps the stable gate and reset recovery material in a verified provider-private control directory under the canonical log root, outside the reset-owned data tree.
+- Registers `STORAGE-011` and central listener-free case `STORAGE-GAME-ACTION-ONCE-001` without allocating a generic TEST identifier.
+- Adds no schema-3 migration, MySQL composite transaction, route, game, Slots adoption, ledger behavior, provider scaling, or all-provider atomicity claim; issues #430 and #471 remain open.
+- Retains exact immutable v0.9.5.37 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider-selection or provider-configuration, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.37 provider-neutral game-action contract foundation
 
 ## Provider-neutral game-action contract foundation
 

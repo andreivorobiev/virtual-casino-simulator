@@ -1343,6 +1343,6 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the docs descriptor independently.
         docs_module = json.loads((ROOT / "modules" / "docs.json").read_text(encoding="utf-8"))
         # Require the exact shared patch allocation.
-        self.assertEqual(tests_module["version"], "1.64.41")
+        self.assertEqual(tests_module["version"], "1.64.42")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.41")
+        self.assertEqual(docs_module["version"], "1.64.42")
