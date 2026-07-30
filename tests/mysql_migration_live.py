@@ -4,6 +4,8 @@
 from datetime import datetime, timedelta, timezone
 # Import process isolation for advisory-lock and runtime transaction evidence.
 from concurrent.futures import ProcessPoolExecutor
+# Import SHA-256 for canonical receipt-byte verification.
+import hashlib
 # Import JSON for synthetic proof files.
 import json
 # Import environment access for explicitly enabled disposable CI configuration.
@@ -205,6 +207,95 @@ def _cleanup(admin, databases, migrator_user, runtime_user):
     admin.commit()
 
 
+# Exercise exact-scope uniqueness, canonical receipt capacity, and durable persistence.
+def _exercise_game_action_receipts(connection):
+    # Open one runtime-identity cursor against the fully migrated disposable target.
+    cursor = connection.cursor()
+    # Read the applied table engine through public server metadata.
+    cursor.execute("SELECT ENGINE FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts'")
+    # Require the exact transactional storage engine after live application.
+    assert str(cursor.fetchone()[0]).lower() == "innodb"
+    # Read exact schema-three column types and capacities without application values.
+    cursor.execute("SELECT COLUMN_NAME, COLUMN_TYPE, COLLATION_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts' ORDER BY ORDINAL_POSITION")
+    # Normalize the fixed structural rows for exact assertions.
+    columns = {str(row[0]): (str(row[1]).lower(), None if row[2] is None else str(row[2]).lower()) for row in cursor.fetchall()}
+    # Require the complete bounded storage shape.
+    assert columns == {
+        "game_id": ("varchar(191)", "utf8mb4_bin"),
+        "player_id": ("varchar(191)", "utf8mb4_bin"),
+        "action_key": ("varchar(191)", "utf8mb4_bin"),
+        "request_fingerprint": ("char(64)", "ascii_bin"),
+        "resources_json": ("text", "utf8mb4_bin"),
+        "receipt_json": ("mediumtext", "utf8mb4_bin"),
+        "receipt_sha256": ("char(64)", "ascii_bin"),
+    }
+    # Read exact primary-key ordering for one action-scope identity.
+    cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts' AND INDEX_NAME = 'PRIMARY' ORDER BY SEQ_IN_INDEX")
+    # Require the exact game/player/action scope boundary.
+    assert [str(row[0]) for row in cursor.fetchall()] == ["game_id", "player_id", "action_key"]
+    # Build one canonical bounded resource representation shared by paid and zero-cost receipts.
+    resources = {"state_keys": ["roulette.round"], "wallet_ids": ["player_204"]}
+    # Encode resource bytes in deterministic compact canonical form.
+    resources_json = json.dumps(resources, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    # Preserve representative paid and zero-cost receipt plans.
+    plans = (
+        # A paid action debits one declared wallet using signed integer cents.
+        ("paid_204", "a" * 64, [{"amount_cents": -100, "reason": "stake", "wallet_id": "player_204"}], 1000, 900),
+        # A zero-cost action has no synthetic money movement.
+        ("zero_204", "b" * 64, [], 900, 900),
+    )
+    # Retain exact inserted rows for post-duplicate persistence equality.
+    inserted = []
+    # Insert each complete receipt representation once.
+    for action_key, fingerprint, movements, before_cents, after_cents in plans:
+        # Build the exact game-action identity.
+        identity = {"action_key": action_key, "game_id": "roulette", "player_id": "player_204", "request_fingerprint": fingerprint}
+        # Build one complete provider-neutral receipt graph.
+        receipt = {
+            "identity": identity,
+            "plan": {"movements": movements, "outcome": {"accepted": True}, "state_updates": []},
+            "resources": resources,
+            "snapshot_after": {"state_values": [["roulette.round", {"phase": "settled"}]], "wallet_balances": [["player_204", after_cents]]},
+            "snapshot_before": {"state_values": [["roulette.round", {"phase": "ready"}]], "wallet_balances": [["player_204", before_cents]]},
+        }
+        # Encode the exact canonical receipt bytes.
+        receipt_json = json.dumps(receipt, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        # Hash the exact stored receipt representation independently of request semantics.
+        receipt_sha256 = hashlib.sha256(receipt_json.encode("utf-8")).hexdigest()
+        # Insert one exact-scope receipt-capacity row.
+        cursor.execute(
+            "INSERT INTO casino_game_action_receipts (game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            ("roulette", "player_204", action_key, fingerprint, resources_json, receipt_json, receipt_sha256),
+        )
+        # Retain the exact row expected after the duplicate attempt.
+        inserted.append(("roulette", "player_204", action_key, fingerprint, resources_json, receipt_json, receipt_sha256))
+    # Durably commit both representative receipts before the duplicate attempt.
+    connection.commit()
+    # Require same-scope reuse with another fingerprint to fail on the unique boundary.
+    try:
+        # Attempt to reuse the paid action scope with different request semantics.
+        cursor.execute(
+            "INSERT INTO casino_game_action_receipts (game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            ("roulette", "player_204", "paid_204", "c" * 64, resources_json, inserted[0][5], inserted[0][6]),
+        )
+    # Accept only one duplicate-key server refusal.
+    except _connector().Error as exc:
+        # Require exact-scope uniqueness rather than another schema failure.
+        assert int(getattr(exc, "errno", 0) or 0) == 1062
+        # Clear only the rejected statement transaction state.
+        connection.rollback()
+    # Fail if another request duplicated the exact scope.
+    else:
+        # Surface one fixed category without receipt content.
+        raise AssertionError("game-action receipt scope reuse was accepted")
+    # Read exact durable rows after the duplicate-key refusal.
+    cursor.execute("SELECT game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256 FROM casino_game_action_receipts ORDER BY action_key")
+    # Normalize driver-returned text without parsing away exact bytes.
+    persisted = [tuple(str(value) for value in row) for row in cursor.fetchall()]
+    # Require both exact inserted rows and canonical receipt bytes/hash to persist.
+    assert persisted == sorted(inserted, key=lambda row: row[2])
+
+
 # Run the complete MySQL 8.4 migration and DDL-free runtime matrix.
 def run_mysql_migration_live_matrix(request_latency_callback=None):
     # Reject a malformed optional test callback before any administrator connection.
@@ -213,7 +304,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
         raise TypeError("request_latency_callback must be callable")
     # Validate every synthetic database and account before connecting.
     base_database = _identifier(os.environ["CASINO_MYSQL_MIGRATION_DATABASE"])
-    # Derive a separate explicit version-one upgrade target.
+    # Derive a separate explicit schema-two upgrade target.
     upgrade_database = _identifier("casino_upgrade_204")
     # Derive a separate proof-tamper target.
     tamper_database = _identifier("casino_tamper_204")
@@ -269,14 +360,14 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 lock_cursor.execute("SELECT RELEASE_LOCK(%s)", (lock_name,))
                 # Require release confirmation before normal apply.
                 assert lock_cursor.fetchone()[0] == 1
-                # Apply clean empty 0-to-1-to-2 under the real runner.
+                # Apply clean empty 0-to-1-to-2-to-3 under the real runner.
                 final_state = mysql_migrations.apply_migrations(base_connection, base_config, base_proof)
-                # Require exact schema version two.
-                assert final_state.current_version == 2 and final_state.status == "clean"
+                # Require exact schema version three.
+                assert final_state.current_version == 3 and final_state.status == "clean"
                 # Require exact applied migration sequence.
-                assert [item[0] for item in final_state.applied] == [1, 2]
+                assert [item[0] for item in final_state.applied] == [1, 2, 3]
                 # Prove repeat-safe exact recheck needs no backup proof or DDL.
-                assert mysql_migrations.apply_migrations(base_connection, base_config, None).current_version == 2
+                assert mysql_migrations.apply_migrations(base_connection, base_config, None).current_version == 3
             # Always close the base migrator connection.
             finally:
                 # Release all base connection resources.
@@ -285,9 +376,9 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
             upgrade_config = _migration_config(upgrade_database)
             # Connect as the deployment-only migrator.
             upgrade_connection = _connector().connect(**upgrade_config.kwargs())
-            # Start protected version-one seeding and runner upgrade.
+            # Start protected exact schema-two seeding and runner upgrade.
             try:
-                # Load the immutable two-step catalog.
+                # Load the immutable three-step catalog.
                 migrations, expected, _, _ = mysql_migrations.load_catalog()
                 # Create and validate proof before metadata DDL in test setup.
                 initial_proof = _proof(upgrade_connection, upgrade_config, proof_root, "upgrade-initial")
@@ -301,26 +392,60 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 upgrade_connection.autocommit = False
                 # Establish the minimal migration metadata boundary.
                 mysql_migrations._initialize_metadata(upgrade_connection, migrations)
-                # Read clean version-zero metadata.
-                version_zero = mysql_migrations.inspect_schema(upgrade_connection, migrations)
-                # Mark version one applying before application DDL.
-                mysql_migrations._mark_applying(upgrade_connection, version_zero, migrations[0])
-                # Execute exact version-one statements without SQL splitting.
+                # Open the statement cursor used only for reviewed predecessor migrations.
                 cursor = upgrade_connection.cursor()
-                # Apply the reviewed initial-schema statements.
-                for statement in migrations[0].statements:
-                    # Execute one exact driver statement.
-                    cursor.execute(statement)
-                # Mark only the completed version-one checksum.
-                mysql_migrations._mark_complete(upgrade_connection, migrations[0], migrations)
-                # Require the supported clean version-one state.
-                version_one = mysql_migrations.inspect_schema(upgrade_connection, migrations)
-                # Prove the isolated upgrade starts exactly at one.
-                assert version_one.current_version == 1 and version_one.status == "clean"
-                # Create a new exact version-one backup/restore proof.
+                # Seed the exact immutable version-one and version-two prefix.
+                for migration in migrations[:2]:
+                    # Re-read the clean contiguous source before each transition.
+                    source_state = mysql_migrations.inspect_schema(upgrade_connection, migrations)
+                    # Mark this predecessor applying before application DDL.
+                    mysql_migrations._mark_applying(upgrade_connection, source_state, migration)
+                    # Execute every exact predecessor statement without SQL splitting.
+                    for statement in migration.statements:
+                        # Execute one exact driver statement.
+                        cursor.execute(statement)
+                    # Persist only the completed predecessor checksum.
+                    mysql_migrations._mark_complete(upgrade_connection, migration, migrations)
+                # Require the exact supported clean schema-two state.
+                version_two = mysql_migrations.inspect_schema(upgrade_connection, migrations)
+                # Prove only migration three remains pending.
+                assert version_two.current_version == 2 and version_two.status == "clean"
+                # Mark the exact next transition dirty to prove automatic replay refusal.
+                cursor.execute("UPDATE casino_schema_migration_state SET status = 'dirty', applying_version = 3 WHERE state_id = 1")
+                # Persist the intentional interrupted-state fixture.
+                upgrade_connection.commit()
+                # Require runtime compatibility to reject dirty schema two.
+                try:
+                    # Inspect the exact dirty two/applying-three state.
+                    mysql_migrations.verify_runtime_compatibility(upgrade_connection)
+                # Accept only a fixed migration refusal.
+                except mysql_migrations.MigrationError:
+                    # Continue after the required fail-closed result.
+                    pass
+                # Fail if dirty schema two served runtime traffic.
+                else:
+                    # Surface one fixed category.
+                    raise AssertionError("dirty schema-two migration state was accepted")
+                # Require public apply to refuse automatic replay.
+                try:
+                    # Attempt normal application against the dirty boundary.
+                    mysql_migrations.apply_migrations(upgrade_connection, upgrade_config, None)
+                # Accept only the fixed forward-fix requirement.
+                except mysql_migrations.MigrationError:
+                    # Continue after required refusal.
+                    pass
+                # Fail if the interrupted migration replayed.
+                else:
+                    # Surface one fixed category.
+                    raise AssertionError("dirty schema-three migration was replayed")
+                # Restore the intentional fixture to exact clean schema two.
+                cursor.execute("UPDATE casino_schema_migration_state SET status = 'clean', applying_version = NULL WHERE state_id = 1")
+                # Commit source restoration before proof construction.
+                upgrade_connection.commit()
+                # Create a new exact schema-two backup/restore proof.
                 upgrade_proof = _proof(upgrade_connection, upgrade_config, proof_root, "upgrade")
-                # Apply only the pending 1-to-2 suffix through the public runner.
-                assert mysql_migrations.apply_migrations(upgrade_connection, upgrade_config, upgrade_proof).current_version == 2
+                # Apply only the pending 2-to-3 suffix through the public runner.
+                assert mysql_migrations.apply_migrations(upgrade_connection, upgrade_config, upgrade_proof).current_version == 3
                 # Capture exact immutable rows for corruption/refusal cases.
                 applied_rows = [(item.version, item.name, item.checksum) for item in migrations]
                 # Corrupt one checksum in the disposable metadata.
@@ -360,7 +485,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 # Restore exact version-one row.
                 cursor.execute("INSERT INTO casino_schema_migrations (version, name, checksum, applied_at) VALUES (1, %s, %s, %s)", (applied_rows[0][1], applied_rows[0][2], datetime.now(timezone.utc).isoformat()))
                 # Set an impossible future current version.
-                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 3 WHERE state_id = 1")
+                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 4 WHERE state_id = 1")
                 # Commit the future fixture.
                 upgrade_connection.commit()
                 # Require future refusal.
@@ -376,7 +501,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                     # Surface the missing refusal.
                     raise AssertionError("future migration state was accepted")
                 # Restore current version and mark the next transition dirty.
-                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 2, status = 'dirty', applying_version = 3 WHERE state_id = 1")
+                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 3, status = 'dirty', applying_version = 4 WHERE state_id = 1")
                 # Commit the dirty fixture.
                 upgrade_connection.commit()
                 # Require runtime refusal of dirty state.
@@ -454,7 +579,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
             # Start protected runtime grant tests.
             try:
                 # Prove runtime startup compatibility with SELECT only.
-                assert mysql_migrations.verify_runtime_compatibility(runtime_connection).current_version == 2
+                assert mysql_migrations.verify_runtime_compatibility(runtime_connection).current_version == 3
                 # Read actual grants through the runtime identity.
                 runtime_cursor = runtime_connection.cursor()
                 # Query current-user grants without administrator credentials.
@@ -465,6 +590,8 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 assert all(privilege in grants for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE"))
                 # Require no schema or grant-management privilege.
                 assert all(privilege not in grants for privilege in ("CREATE", "ALTER", "DROP", "INDEX", "TRIGGER", "GRANT OPTION"))
+                # Prove paid/zero-cost insertion, duplicate refusal, and exact persistence.
+                _exercise_game_action_receipts(runtime_connection)
                 # Enumerate actual forbidden schema and grant-management attempts.
                 generic_denials = frozenset({1044, 1045, 1142, 1227})
                 denied_statements = (

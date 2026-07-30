@@ -510,7 +510,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         # Fail the named central case when any focused assertion failed.
         if not result.wasSuccessful(): raise AssertionError('MySQL migration policy suite failed')
     # Map the listener-free policy suite to the permanent migration requirements.
-    run_case('MYSQL-MIGRATION-001',['MYSQL-005','STORAGE-007','TEST-048'],run_mysql_migration_policy_tests)
+    run_case('MYSQL-MIGRATION-001',['MYSQL-005','MYSQL-007','STORAGE-007','TEST-048'],run_mysql_migration_policy_tests)
     # Map the listener-free recovery suite to the permanent recovery requirements.
     run_case('RECOVERY-POLICY-001',['MYSQL-006','TOOL-004','TEST-049'],run_recovery_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
@@ -540,7 +540,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','MYSQL-007','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):

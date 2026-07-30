@@ -1328,7 +1328,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require fixed timeout and launch failure handling.
         self.assertIn("except (subprocess.TimeoutExpired,OSError):", provenance)
 
-    # Prove the current governance allocation remains TEST-148 and tests/docs only.
+    # Prove the current governance allocations and module revisions remain exact.
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
@@ -1338,11 +1338,21 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(test_148), 1)
         # Require the tests module ownership.
         self.assertEqual(test_148[0]["module"], "Tests")
-        # Parse the two owned descriptors.
+        # Count the additive schema-three capacity requirement.
+        mysql_007 = [row for row in requirements if row.get("id") == "MYSQL-007"]
+        # Require exactly one MySQL-owned capacity allocation.
+        self.assertEqual(len(mysql_007), 1)
+        # Require the new requirement to remain MySQL-owned.
+        self.assertEqual(mysql_007[0]["module"], "MySQL")
+        # Parse the tests descriptor.
         tests_module = json.loads((ROOT / "modules" / "tests.json").read_text(encoding="utf-8"))
         # Parse the docs descriptor independently.
         docs_module = json.loads((ROOT / "modules" / "docs.json").read_text(encoding="utf-8"))
-        # Require the exact shared patch allocation.
-        self.assertEqual(tests_module["version"], "1.64.42")
+        # Parse the tooling descriptor for the compatible schema capacity addition.
+        tooling_module = json.loads((ROOT / "modules" / "tooling.json").read_text(encoding="utf-8"))
+        # Require the exact shared tests patch allocation.
+        self.assertEqual(tests_module["version"], "1.64.43")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.42")
+        self.assertEqual(docs_module["version"], "1.64.43")
+        # Require the compatible tooling minor allocation.
+        self.assertEqual(tooling_module["version"], "1.22.0")

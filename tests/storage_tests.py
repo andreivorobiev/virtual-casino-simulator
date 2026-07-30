@@ -667,8 +667,8 @@ def run_mysql_schema_provider_path():
     joined = "\n".join(statement for migration in migrations for statement in migration.statements)
     # Verify every expected application table is present in the canonical migrations.
     assert all(table in joined for table in ("casino_schema_versions", "casino_players", "casino_ledger", "casino_history", "casino_documents"))
-    # Verify exact-only schema compatibility is versioned independently at migration two.
-    assert expected == minimum == 2 and len(catalog_sha256) == 64
+    # Verify exact-only compatibility matches the checksum-validated catalog tail.
+    assert expected == minimum == migrations[-1].version and len(catalog_sha256) == 64
     # Verify wallet and ledger money columns use fixed decimal precision.
     assert "DECIMAL(18,2)" in joined
     # Verify ledger rows depend on player rows through a foreign key.

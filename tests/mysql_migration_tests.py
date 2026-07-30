@@ -19,10 +19,12 @@ import unittest
 # Import environment and function replacement for isolated failure injection.
 from unittest import mock
 
-# Import the complete migration policy under test.
-from casino.core import mysql_migrations
+# Import game-action bounds and the complete migration policy under test.
+from casino.core import game_action, mysql_migrations
 # Import the runtime provider whose readiness check must remain DDL-free.
 from casino.core import storage
+# Import the release inventory verifier that must package every migration.
+from scripts import package_app
 
 
 # Build one deployment-only synthetic configuration without ambient credentials.
@@ -177,20 +179,157 @@ class FailureConnection:
         return FailureCursor(self)
 
 
+# Build one exact clean state at a selected immutable migration prefix.
+def clean_schema_state(migrations, version, *, initialized=True):
+    # Preserve only the exact contiguous applied prefix.
+    applied = tuple((item.version, item.name, item.checksum) for item in migrations[:version])
+    # Return the migration state consumed by public apply seams.
+    return mysql_migrations.SchemaState(initialized, version, "clean", None, mysql_migrations.migration_chain_digest(migrations, version), applied, version > 0)
+
+
 # Exercise immutable files, proof integrity, and failure semantics without a database service.
 class MySQLMigrationTests(unittest.TestCase):
     # Prove the catalog is contiguous, checksum-bound, and version-distinct from app data schema.
     def test_catalog_contract_is_exact(self):
         # Load the verified immutable migration catalog.
         migrations, expected, minimum, catalog_sha256 = mysql_migrations.load_catalog()
-        # Require the two explicit sequential migrations and exact-only compatibility.
-        self.assertEqual([item.version for item in migrations], [1, 2])
+        # Require the three explicit sequential migrations and exact-only compatibility.
+        self.assertEqual([item.version for item in migrations], [1, 2, 3])
         # Require the separately versioned runtime window.
-        self.assertEqual((minimum, expected), (2, 2))
+        self.assertEqual((minimum, expected), (3, 3))
         # Require canonical SHA-256 identities.
         self.assertRegex(catalog_sha256, r"^[0-9a-f]{64}$")
         # Require every listed migration to retain a distinct checksum.
-        self.assertEqual(len({item.checksum for item in migrations}), 2)
+        self.assertEqual(len({item.checksum for item in migrations}), 3)
+        # Pin the two immutable predecessor files byte-for-byte.
+        self.assertEqual(
+            [item.checksum for item in migrations[:2]],
+            [
+                "f54c288ef95f2df274f6873936969c0d9207ff6f4e1329fe43c3f79cd91e0121",
+                "c3bf013483a00bddd13cf7a9b3666ea029a0f447e7a04f6dbfa7f9074103c828",
+            ],
+        )
+        # Pin both the unchanged schema-two prefix and the deterministic schema-three chain.
+        self.assertEqual(mysql_migrations.migration_chain_digest(migrations, 2), "72fa8f8918022d5bcd29ba286bd96ab6f319ea0ea6aee5e376e1ff71c2eeedd8")
+        # Require one reviewed complete chain identity for the new catalog tail.
+        self.assertEqual(mysql_migrations.migration_chain_digest(migrations), "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
+
+    # Prove schema three adds one bounded exact-scope receipt-capacity table and no journal.
+    def test_schema_three_receipt_boundary_is_exact_and_bounded(self):
+        # Load the checksum-verified schema-three migration through the production parser.
+        migrations, expected, _, _ = mysql_migrations.load_catalog()
+        # Select only the new receipt-capacity migration tail.
+        migration = migrations[-1]
+        # Require the exact stable migration identity.
+        self.assertEqual((expected, migration.version, migration.name), (3, 3, "game-action-receipts"))
+        # Require exactly one additive table and no stored enforcement object.
+        self.assertEqual(len(migration.statements), 1)
+        # Read the complete additive table statement once.
+        create_table = migration.statements[0]
+        # Require one and only one new application table.
+        self.assertEqual(create_table.upper().count("CREATE TABLE "), 1)
+        # Require the receipt-capacity table to use the transactional InnoDB engine.
+        self.assertEqual(create_table.count("ENGINE=InnoDB"), 1)
+        # Pin the exact binary-collated action-scope primary key.
+        self.assertIn("PRIMARY KEY (game_id, player_id, action_key)", create_table)
+        # Require every identity field to retain the contract's 191-character bound.
+        for field in ("game_id", "player_id", "action_key"):
+            # Require exact binary UTF-8 comparison without normalization.
+            self.assertIn(f"{field} VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL", create_table)
+        # Require lowercase exact-length semantic and receipt digests.
+        self.assertIn("request_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL", create_table)
+        # Preserve one independent checksum for exact canonical receipt bytes.
+        self.assertIn("receipt_sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL", create_table)
+        # Require both lowercase hexadecimal constraints.
+        self.assertEqual(create_table.count("REGEXP '^[0-9a-f]{64}$'"), 2)
+        # Require separate canonical resource and complete receipt representations.
+        self.assertIn("resources_json TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL", create_table)
+        # Require enough bounded storage for the complete paid or zero-cost receipt graph.
+        self.assertIn("receipt_json MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL", create_table)
+        # Require exact object-shaped JSON and explicit byte ceilings.
+        self.assertIn("OCTET_LENGTH(resources_json) BETWEEN 2 AND 16384", create_table)
+        # Require an eight-mebibyte maximum for one complete canonical receipt.
+        self.assertIn("OCTET_LENGTH(receipt_json) BETWEEN 2 AND 8388608", create_table)
+        # Prove the resource bound can encode every declared identity at maximum contract width.
+        self.assertGreaterEqual(16384, (game_action.MAX_WALLET_RESOURCES + game_action.MAX_STATE_RESOURCES) * (game_action.MAX_IDENTITY_LENGTH + 8))
+        # Prove the receipt bound covers every independently bounded canonical state/outcome tree.
+        receipt_tree_budget = (3 * game_action.MAX_STATE_RESOURCES + 1) * game_action.MAX_CANONICAL_BYTES
+        # Require headroom for complete before/plan/after state plus identity and movement structure.
+        self.assertGreater(8388608, receipt_tree_budget)
+        # Reject any trigger, routine, saga, compensation, or journal object in this capacity slice.
+        self.assertTrue(all(term not in " ".join(migration.statements).lower() for term in ("trigger", "procedure", "function", "journal", "saga", "compensation")))
+
+    # Prove the public migration runner applies exact 0-to-3 and 2-to-3 suffixes.
+    def test_public_apply_supports_fresh_and_schema_two_upgrade(self):
+        # Load the immutable plan used by both synthetic application paths.
+        migrations, _, _, _ = mysql_migrations.load_catalog()
+        # Build the exact states needed after each public runner transition.
+        version_zero = clean_schema_state(migrations, 0)
+        # Model a genuinely empty target before metadata initialization.
+        uninitialized = clean_schema_state(migrations, 0, initialized=False)
+        # Build every clean applied prefix.
+        version_one = clean_schema_state(migrations, 1)
+        # Preserve exact schema-two upgrade provenance.
+        version_two = clean_schema_state(migrations, 2)
+        # Preserve the final schema-three state.
+        version_three = clean_schema_state(migrations, 3)
+        # Exercise both the empty and exact schema-two source in one bounded table.
+        cases = (
+            # Fresh apply initializes metadata and executes all application migrations.
+            ("fresh", [uninitialized, version_zero, version_one, version_two, version_three], migrations, True),
+            # Exact upgrade executes only the additive schema-three tail.
+            ("upgrade", [version_two, version_three], migrations[2:], False),
+        )
+        # Run each source-state transition independently.
+        for label, states, expected_migrations, initializes in cases:
+            # Allocate one statement-recording connector boundary.
+            connection = FailureConnection()
+            # Patch state/proof seams while exercising the real public apply loop.
+            with self.subTest(label=label), mock.patch.object(mysql_migrations, "inspect_schema", side_effect=states), mock.patch.object(mysql_migrations, "schema_state_digest", return_value="b" * 64), mock.patch.object(mysql_migrations, "validate_backup_proof", return_value={}), mock.patch.object(mysql_migrations, "_initialize_metadata") as initialize, mock.patch.object(mysql_migrations, "_mark_applying") as mark_applying, mock.patch.object(mysql_migrations, "_mark_complete") as mark_complete, mock.patch.object(mysql_migrations, "verify_runtime_compatibility", return_value=version_three):
+                # Apply through the unchanged production migration state machine.
+                result = mysql_migrations.apply_migrations(connection, synthetic_config(), Path("synthetic-proof"))
+            # Require exact clean schema-three completion.
+            self.assertEqual((result.current_version, result.status), (3, "clean"))
+            # Require metadata initialization only for the empty target.
+            self.assertEqual(initialize.call_count, int(initializes))
+            # Require applying and completion markers for the exact pending suffix.
+            self.assertEqual([call.args[2] for call in mark_applying.call_args_list], list(expected_migrations))
+            # Require exact completion records for the same suffix.
+            self.assertEqual([call.args[1] for call in mark_complete.call_args_list], list(expected_migrations))
+            # Extract only immutable application statements between lock operations.
+            application_statements = [statement for statement, _ in connection.statements if not statement.startswith("SELECT ")]
+            # Require exact statement order and no invented repair or journal SQL.
+            self.assertEqual(application_statements, [statement for migration in expected_migrations for statement in migration.statements])
+
+    # Prove release packaging binds and requires the exact schema-three inventory.
+    def test_package_inventory_requires_schema_three(self):
+        # Calculate release schema provenance from the selected source tree.
+        inventory = package_app.mysql_schema_inventory(package_app.ROOT)
+        # Require exact-only schema-three runtime compatibility.
+        self.assertEqual((inventory["minimum_version"], inventory["expected_version"]), (3, 3))
+        # Require the same deterministic chain as the migration runtime.
+        self.assertEqual(inventory["migration_chain_sha256"], "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
+        # Require every immutable migration path in the archive's mandatory allowlist.
+        self.assertTrue(
+            {
+                "migrations/mysql/0001_initial.json",
+                "migrations/mysql/0002_action_identity.json",
+                "migrations/mysql/0003_game_action_receipts.json",
+                "migrations/mysql/catalog.json",
+            }.issubset(package_app.REQUIRED_FILES)
+        )
+        # Read the tracked source inventory and add the new checkpoint file before commit.
+        repository_paths = [*package_app.tracked_paths(package_app.ROOT), "migrations/mysql/0003_game_action_receipts.json"]
+        # Select the exact package inventory through the production allowlist.
+        selected = package_app.select_release_files(package_app.ROOT, repository_paths)
+        # Require the schema-three descriptor to be physically packaged.
+        self.assertIn("migrations/mysql/0003_game_action_receipts.json", selected)
+        # Remove only the new migration from an otherwise complete source inventory.
+        missing_three = [path for path in repository_paths if path != "migrations/mysql/0003_game_action_receipts.json"]
+        # Require package selection to fail before creating an incomplete archive.
+        with self.assertRaisesRegex(ValueError, "0003_game_action_receipts"):
+            # Attempt selection without the catalog-required migration.
+            package_app.select_release_files(package_app.ROOT, missing_three)
 
     # Prove migration configuration never falls back to runtime credentials or weak/reused keys.
     def test_migration_configuration_is_isolated(self):
@@ -381,8 +520,8 @@ class MySQLMigrationTests(unittest.TestCase):
                 clock.now.return_value = datetime(2026, 7, 16, 18, 30, tzinfo=timezone.utc)
                 # Execute the non-mutating pending dry run.
                 pending = mysql_migrations.dry_run(connection, synthetic_config(), proof_path)
-        # Require both migration versions to remain pending.
-        self.assertEqual([item.version for item in pending], [1, 2])
+        # Require all three migration versions to remain pending.
+        self.assertEqual([item.version for item in pending], [1, 2, 3])
         # Require every database statement during pending dry-run to be SELECT.
         self.assertTrue(connection.statements and all(statement.lstrip().upper().startswith("SELECT") for statement, _ in connection.statements))
 
@@ -403,24 +542,45 @@ class MySQLMigrationTests(unittest.TestCase):
 
     # Prove connection loss after DDL does not claim dirty-state persistence.
     def test_connection_loss_reports_unconfirmed_dirty_state(self):
-        # Load the immutable catalog for a version-one upgrade state.
+        # Load the immutable catalog for the exact schema-two upgrade state.
         migrations, _, _, _ = mysql_migrations.load_catalog()
-        # Build exact applied history for version one.
-        applied = ((1, migrations[0].name, migrations[0].checksum),)
-        # Model one clean supported upgrade source.
-        state = mysql_migrations.SchemaState(True, 1, "clean", None, mysql_migrations.migration_chain_digest(migrations, 1), applied, True)
+        # Model the clean schema-two source whose only pending migration is version three.
+        state = clean_schema_state(migrations, 2)
         # Build the connection that loses transport on application SQL.
         connection = FailureConnection(fail_application_statement=True)
+        # Capture the exact interrupted migration passed to dirty-state persistence.
+        dirty_marker = mock.Mock(side_effect=ConnectionError("synthetic marker loss"))
         # Replace preflight/state helpers so this test targets failure semantics only.
-        with mock.patch.object(mysql_migrations, "inspect_schema", return_value=state), mock.patch.object(mysql_migrations, "schema_state_digest", return_value="b" * 64), mock.patch.object(mysql_migrations, "validate_backup_proof", return_value={}), mock.patch.object(mysql_migrations, "_mark_applying", return_value=None), mock.patch.object(mysql_migrations, "_mark_dirty", side_effect=ConnectionError("synthetic marker loss")):
+        with mock.patch.object(mysql_migrations, "inspect_schema", return_value=state), mock.patch.object(mysql_migrations, "schema_state_digest", return_value="b" * 64), mock.patch.object(mysql_migrations, "validate_backup_proof", return_value={}), mock.patch.object(mysql_migrations, "_mark_applying", return_value=None), mock.patch.object(mysql_migrations, "_mark_dirty", dirty_marker):
             # Require the explicit unknown-dirty-state outcome.
             with self.assertRaisesRegex(mysql_migrations.MigrationError, "dirty state could not be confirmed"):
                 # Apply against synthetic proof while all real connection identifiers remain unused.
                 mysql_migrations.apply_migrations(connection, synthetic_config(), Path("synthetic-proof"))
+        # Require the fail-closed marker to name only the interrupted schema-three migration.
+        self.assertEqual(dirty_marker.call_args.args[1], migrations[2])
         # Require apply to force non-autocommit before the failed statement.
         self.assertFalse(connection.autocommit)
         # Require advisory lock release to be attempted after the primary failure.
         self.assertTrue(any(statement.startswith("SELECT RELEASE_LOCK") for statement, _ in connection.statements))
+
+    # Prove a persisted schema-two/applying-three dirty boundary never replays automatically.
+    def test_dirty_schema_two_applying_three_requires_forward_fix(self):
+        # Load the exact immutable migration plan.
+        migrations, _, _, _ = mysql_migrations.load_catalog()
+        # Preserve the exact applied schema-two prefix.
+        applied = tuple((item.version, item.name, item.checksum) for item in migrations[:2])
+        # Model a known interrupted schema-three transition.
+        dirty = mysql_migrations.SchemaState(True, 2, "dirty", 3, mysql_migrations.migration_chain_digest(migrations, 2), applied, True)
+        # Record every lock and potential application statement.
+        connection = FailureConnection()
+        # Return only the dirty state after the advisory lock is acquired.
+        with mock.patch.object(mysql_migrations, "inspect_schema", return_value=dirty):
+            # Require a reviewed forward-fix rather than replay.
+            with self.assertRaisesRegex(mysql_migrations.MigrationError, "forward-fix"):
+                # Attempt normal apply without bypass evidence.
+                mysql_migrations.apply_migrations(connection, synthetic_config(), None)
+        # Require no application statement or migration metadata mutation.
+        self.assertTrue(all(statement.startswith("SELECT ") for statement, _ in connection.statements))
 
     # Prove unconfirmed advisory-lock release fails a successful no-op recheck.
     def test_lock_release_failure_fails_closed(self):
