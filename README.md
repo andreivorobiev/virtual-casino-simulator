@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.36`
+Packaged application release: `0.9.5.37`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.36 carries the accepted route-free atomic player game-state update foundation for issue #430 Phase 0b. The public core helper delegates a complete player-scoped document mutation through the existing JSON process-lock or MySQL row-locking transaction boundary while preserving lazy defaults, normalized schema metadata, player isolation, and the legacy-human fallback. It retains the listener-free request-latency baseline, authoritative house-side Keno and Slots economics, exact visible-rank Hi-Lo and independent Andar/Bahar pricing, fail-closed affected-game Browser qualification, the route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability, governed Acey-Deucey spread pricing, deterministic Browser shard state, runtime-inert rule coercion, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.35 application-only rollback. The new helper is not wired to a route or game and changes no API, ledger, provider implementation, game, or production behavior. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.37 carries the accepted route-free provider-neutral game-action contract foundation for issue #430 Phase 0c. The public core types validate bounded immutable identities, resources, snapshots, plans, receipts, state updates, outcomes, and canonical request fingerprints; listener-free proof uses only a fake provider and makes no current-production atomicity claim. It retains the Phase 0b atomic player game-state update foundation, listener-free request-latency baseline, authoritative house-side Keno and Slots economics, exact visible-rank Hi-Lo and independent Andar/Bahar pricing, fail-closed affected-game Browser qualification, the route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability, governed Acey-Deucey spread pricing, deterministic Browser shard state, runtime-inert rule coercion, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.36 application-only rollback. Provider execution, JSON journaling, schema-3 migration, the MySQL composite transaction, routes, games, Slots adoption, and ledger behavior remain separately governed. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
