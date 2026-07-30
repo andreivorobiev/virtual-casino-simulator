@@ -4,7 +4,7 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-3
 
 ## Current branch / active Codex work
 
-- Protected main and terminal-green production remain exact v0.9.5.38 `8fdb6b16`; the v0.9.5.39 tag and release do not exist.
+- Protected main is exact 8fdb6b16. Terminal-green published/released/live production remains exact v0.9.5.38 69995920. The v0.9.5.39 tag and release do not exist.
 - `codex/430-mysql-schema-bridge` preserves binary-accepted source/test checkpoint `98e46cef` and adds only current-main governance for the rollback-compatibility bridge.
 - The branch remains local-only until Worker B accepts the exact governed head. Integration alone may authorize push, draft PR, ready, merge, release, or deploy.
 
