@@ -385,19 +385,19 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.35.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.36.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.35", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.36", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
         self.assertEqual(
             compatibility["predecessor"],
             {
-                "app_version": "0.9.5.34",
-                "compatibility_record": "contracts/compatibility/app-0.9.5.34.json",
+                "app_version": "0.9.5.35",
+                "compatibility_record": "contracts/compatibility/app-0.9.5.35.json",
                 "required_artifact": "release-manifest.json",
-                "source_commit_sha": "3b6b82f3add05104c0a2f38c661eec0fb495587e",
-                "artifact_sha256": "6f723f7d2aaace92cf385ce2a13851a797e7a8e23b87343dbf20bb2b30100661",
-                "manifest_sha256": "4ef812f8c3e35d1a517f074676533080e3bafa35b9776835d4d7f3a3f930fc85",
+                "source_commit_sha": "c500b6ddeb6f2d928f3b34b4cf0d906d0c650ddb",
+                "artifact_sha256": "20509a2b60e704562997c36aaa4ca36e14dafba4eda1aa038bcb8a9f77f4832c",
+                "manifest_sha256": "b4aee06d88d662dc18ca6b0f7d97ad103c27dabc29d75377647304d8bc738fe",
             },
         )
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
