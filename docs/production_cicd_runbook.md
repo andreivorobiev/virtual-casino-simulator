@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.38`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.39`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -141,6 +141,8 @@ v0.9.5.34 carries the accepted Keno economics correction for issue #472 while pr
 v0.9.5.35 carries the accepted listener-free request-latency baseline for issue #323. The test-only harness measures fixed direct-WSGI route families against isolated JSON and disposable loopback MySQL providers, emits aggregate-only exact-source evidence, and changes no runtime, API, provider, pool-default, game, production, or deployment behavior. Its compatibility record retains exact immutable v0.9.5.34 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 v0.9.5.38 carries the accepted #430 Phase 0c JSON-provider recoverable game-action journal, immutable paid and zero-cost receipts, cross-process storage gate, and failure-atomic Admin reset boundary. It preserves the route-free provider-neutral contract while excluding schema-3, the MySQL composite transaction, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity claims. Its compatibility record retains exact immutable v0.9.5.37 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.39 carries the accepted #430 MySQL rollback-compatibility bridge. The packaged runtime accepts a clean checksum-valid schema-2 prefix or complete schema-3 chain, but migration application is held before database contact or mutation. Deployment must prove exact schema 2 before and after activation and must invoke no migration. Its compatibility record declares rollback at unchanged schema 2 and retains exact immutable v0.9.5.38 as the application-only predecessor; database rollback remains prohibited. A later separately governed migration release may apply schema 3 only after backup, quiescence, grant and drift proof, and must retain this schema-3-capable bridge as its predecessor.
 
 ## Historical first-rollout blocker
 

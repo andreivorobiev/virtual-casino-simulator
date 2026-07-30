@@ -4778,12 +4778,13 @@
         "contracts/compatibility/app-0.9.5.36.json",
         "contracts/compatibility/app-0.9.5.37.json",
         "contracts/compatibility/app-0.9.5.38.json",
+        "contracts/compatibility/app-0.9.5.39.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "0.9.5.38",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.38 publication derives exact retained v0.9.5.37 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
+      "changed_in": "0.9.5.39",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.39 publication derives exact retained v0.9.5.38 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. The bridge release declares rollback at unchanged MySQL schema 2 inside both runtime windows; rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
     },
     {
       "id": "BOT-001",
@@ -10613,7 +10614,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.38 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.39 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10650,7 +10651,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.38 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.39 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -12669,7 +12670,7 @@
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
       "changed_in": "issue-430-mysql-schema-rollback-bridge",
-      "notes": "This bridge is runtime capacity only: it permits clean schema-two and schema-three restart compatibility while the catalog apply policy remains held. It performs no live database migration and makes no MySQL provider, composite transaction, receipt immutability, current production atomicity, grant, account, secret, server-global, database-rollback, schema-three-live, v40 migration, route, game, Slots, ledger, release, publication, deployment, or issue-closure claim."
+      "notes": "This bridge is runtime capacity only: it permits clean schema-two and schema-three restart compatibility while the catalog apply policy remains held. The separately governed v0.9.5.39 release deploys this capacity while proving production remains at schema two; the bridge itself performs no live database migration and makes no MySQL provider, composite transaction, receipt immutability, current production atomicity, grant, account, secret, server-global, database-rollback, schema-three-live, v40 migration, route, game, Slots, ledger, or issue-closure claim."
     },
     {
       "id": "TOOL-011",
@@ -12691,7 +12692,7 @@
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
       "changed_in": "issue-430-mysql-schema-rollback-bridge",
-      "notes": "The bridge rejects an exact-schema-three candidate mapped to the exact-schema-two v0.9.5.38 predecessor, accepts bridge-at-two rollback to v0.9.5.38, and accepts a future schema-three release rollback to the bridge. It creates no v0.9.5.39 compatibility record or release packet and authorizes no migration, database rollback, credential, provider, server-global, production, publication, deployment, or issue closure."
+      "notes": "The bridge rejects an exact-schema-three candidate mapped to the exact-schema-two v0.9.5.38 predecessor, accepts bridge-at-two rollback to v0.9.5.38, and accepts a future schema-three release rollback to the bridge. The separately governed v0.9.5.39 compatibility record declares unchanged schema-two application rollback and authorizes no migration, database rollback, credential, provider, server-global, schema-three production activation, or issue closure."
     }
   ]
 }

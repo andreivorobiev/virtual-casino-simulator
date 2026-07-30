@@ -1,4 +1,19 @@
-# Virtual Casino Simulator v0.9.5.38 Release Notes
+# Virtual Casino Simulator v0.9.5.39 Release Notes
+
+## MySQL schema rollback-compatibility bridge
+
+- Accepts only initialized clean MySQL schema 2 with the exact checksum-bound migration prefix or schema 3 with the complete checksum-bound chain.
+- Keeps migration `apply_policy` held and refuses application before configuration, connection, migration lock, DDL, or state write.
+- Binds recovery evidence to the actual schema version and its exact applied migration prefix.
+- Authenticates the packaged application-only, database-rollback-prohibited, retained-predecessor policy and requires the declared rollback schema inside both candidate and predecessor runtime windows.
+- Proves the selected release-root migration CLI works independently of the caller's working directory.
+- Requires production activation to observe exact schema 2 before and after cutover and invokes no migration.
+- Registers `MYSQL-008` and `TOOL-011` through existing migration, recovery, predecessor, and deployment cases without allocating a generic TEST identifier.
+- Retains exact immutable v0.9.5.38 as the application-only rollback predecessor at unchanged MySQL schema 2; database rollback is prohibited.
+- Defers schema-3 production migration, MySQL composite execution, receipt-table least-privilege and drift hardening, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity; issues #430 and #471 remain open.
+- Performs no database, grant, provider-selection or provider-configuration, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.38 recoverable JSON-provider game-action execution
 
 ## Recoverable JSON-provider game-action execution
 
