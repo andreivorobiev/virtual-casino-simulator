@@ -196,6 +196,101 @@ class EnrollmentEnforcementTests(unittest.TestCase):
             self.assertFalse(enrollment_policy.evaluate(enrollment_policy.ROUTE_INVITATION)["allowed"])
 
 
+# Prove the owner-only write path validates, audits, and returns a reversible previous state. (slice 3)
+class EnrollmentAdminWriteTests(unittest.TestCase):
+    # Isolate storage, flags, and the audit sink for every case.
+    def setUp(self) -> None:
+        # Remember the deployed flags.
+        self._flags = (config.SIGNUP_ENABLED, config.INVITATIONS_ENABLED, config.ENROLLMENT_ENABLED)
+        # Start from the shipped closed default so any opening must come from the write path.
+        config.SIGNUP_ENABLED = config.INVITATIONS_ENABLED = config.ENROLLMENT_ENABLED = False
+        # Own a temporary storage root for the durable document.
+        self._tmp = tempfile.TemporaryDirectory()
+        # Build the isolated provider.
+        provider = storage.JsonStorageProvider(Path(self._tmp.name) / "data")
+        # Make it active.
+        storage.set_provider_for_tests(provider)
+        # Create the storage root before any document write.
+        provider.ensure_ready()
+        # Collect audit events rather than writing to the application log.
+        self.events = []
+        # Remember the real log function.
+        self._info = enrollment_policy.logger.info
+        # Redirect the sink.
+        enrollment_policy.logger.info = lambda event, **fields: self.events.append((event, fields))
+
+    # Restore every global this case replaced.
+    def tearDown(self) -> None:
+        # Restore the flags.
+        config.SIGNUP_ENABLED, config.INVITATIONS_ENABLED, config.ENROLLMENT_ENABLED = self._flags
+        # Restore the log function.
+        enrollment_policy.logger.info = self._info
+        # Release the provider.
+        storage.set_provider_for_tests(None)
+        # Remove the temporary root.
+        self._tmp.cleanup()
+
+    # Verify a change persists, audits, and reports what actually moved.
+    def test_change_persists_audits_and_reports_impact(self) -> None:
+        # Open public email signup from the closed default.
+        result = enrollment_policy.update({"mode": enrollment_policy.MODE_SELF_SIGNUP, "methods": {"email": True}}, actor_id="owner-1", reason="open private beta")
+        # Require the durable read to reflect the change.
+        self.assertTrue(enrollment_policy.capabilities()["signup_enabled"])
+        # Require the previous state to be returned for rollback.
+        self.assertEqual(enrollment_policy.MODE_CLOSED, result["previous"]["mode"])
+        # Require the impact summary to name the capabilities that moved.
+        self.assertIn("signup_enabled", result["impact"]["changed"])
+        # Require exactly one audit event naming the actor.
+        self.assertEqual(1, len(self.events))
+        # Require the actor and previous mode to be recorded.
+        self.assertEqual(("owner-1", enrollment_policy.MODE_CLOSED), (self.events[0][1]["actor_id"], self.events[0][1]["previous_mode"]))
+
+    # Verify the returned previous state restores the original policy exactly.
+    def test_previous_state_round_trips_as_a_rollback(self) -> None:
+        # Capture the shipped default.
+        original = enrollment_policy.current()
+        # Apply a change.
+        result = enrollment_policy.update({"mode": enrollment_policy.MODE_SELF_SIGNUP, "methods": {"email": True}}, actor_id="owner-1", reason="open")
+        # Roll back using exactly the previous document the write path returned.
+        enrollment_policy.update({"mode": result["previous"]["mode"], "methods": result["previous"]["methods"], "invitations_enabled": result["previous"]["invitations_enabled"]}, actor_id="owner-1", reason="rollback")
+        # Require the resolved policy to match the original in every governed field.
+        restored = enrollment_policy.current()
+        # Compare the fields the policy actually governs.
+        self.assertEqual((original["mode"], original["methods"], original["invitations_enabled"]), (restored["mode"], restored["methods"], restored["invitations_enabled"]))
+
+    # Verify a change without a reason is refused.
+    def test_reason_is_required(self) -> None:
+        # Attempt a change with a blank reason.
+        with self.assertRaises(ValidationError):
+            # Require the validation envelope rather than an unexplained change.
+            enrollment_policy.update({"mode": enrollment_policy.MODE_CLOSED}, actor_id="owner-1", reason="   ")
+
+    # Verify an unsupported field cannot be smuggled into the policy document.
+    def test_unsupported_fields_are_refused(self) -> None:
+        # Attempt to set a field outside the governed shape.
+        with self.assertRaises(ValidationError):
+            # Require the change to fail closed.
+            enrollment_policy.update({"mode": enrollment_policy.MODE_CLOSED, "roles": ["admin"]}, actor_id="owner-1", reason="probe")
+
+    # Verify an unknown method name is refused rather than silently dropped.
+    def test_unknown_method_is_refused(self) -> None:
+        # Attempt to enable a method this release does not implement.
+        with self.assertRaises(ValidationError):
+            # Require the change to name the legal methods and fail closed.
+            enrollment_policy.update({"methods": {"passkey": True}}, actor_id="owner-1", reason="probe")
+
+    # Verify an invalid mode leaves the stored policy untouched.
+    def test_failed_change_leaves_policy_unchanged(self) -> None:
+        # Capture the state before the attempt.
+        before = enrollment_policy.current()
+        # Attempt a change naming an unknown mode.
+        with self.assertRaises(ValidationError):
+            # The mutator must raise before anything is persisted.
+            enrollment_policy.update({"mode": "everyone"}, actor_id="owner-1", reason="probe")
+        # Require the stored policy to be exactly what it was.
+        self.assertEqual(before, enrollment_policy.current())
+
+
 # Allow direct execution for focused local runs.
 if __name__ == "__main__":
     # Run the focused suite.

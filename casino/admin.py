@@ -13,6 +13,8 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings
+# Import the durable enrollment policy so the owner surface and the enforcement path share one module. (#333)
+from casino.core import enrollment_policy
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import the invitation lifecycle for the Admin invitation-by-email section. (issue #332)
@@ -738,6 +740,41 @@ def register(router):
         return {"guest_trial": trial}
 
     # Attach the v2 manual retention trigger for Admin diagnostics and bounded CI tests.
+    # Publish the resolved enrollment policy and its readiness for the owner surface. (issue #333, slice 3)
+    @router.get(r"/api/v2/admin/enrollment-policy")
+    # Read the durable policy without requiring owner authority, because reading changes nothing.
+    def admin_enrollment_policy_read(body, query):
+        # Return the stored policy plus the capabilities it currently resolves to.
+        return {"policy": enrollment_policy.current(), "capabilities": enrollment_policy.capabilities(), "modes": list(enrollment_policy.MODES), "methods": list(enrollment_policy.METHODS)}
+
+    # Preview a proposed change without persisting it, so an operator confirms an effect not a payload.
+    @router.post(r"/api/v2/admin/enrollment-policy/preview")
+    # Require owner authority even to preview, because the response describes the governed surface.
+    def admin_enrollment_policy_preview(body, query, context):
+        # Reject ordinary Admins: enrollment is separated from general Admin access. (#333)
+        auth.require_platform_owner(context["user"])
+        # Resolve the proposal through the same validation the write path uses, without storing it.
+        proposed = enrollment_policy.normalize({**enrollment_policy.current(), **{key: value for key, value in (body or {}).items() if key in ("mode", "methods", "invitations_enabled")}})
+        # Return the impact summary so the confirmation step describes real consequences.
+        return {"impact": enrollment_policy.impact(enrollment_policy.current(), proposed)}
+
+    # Apply an owner-authorized enrollment policy change with reason, confirmation, and rollback.
+    @router.post(r"/api/v2/admin/enrollment-policy")
+    # Require the platform-owner role rather than general Admin access.
+    def admin_enrollment_policy_write(body, query, context):
+        # Reject ordinary Admins before any validation so role state is never probed through errors.
+        auth.require_platform_owner(context["user"])
+        # Require explicit confirmation so a policy change cannot be a single accidental request.
+        if (body or {}).get("confirm") is not True:
+            # Fail closed through the standard validation envelope.
+            raise ValidationError("enrollment policy change requires explicit confirmation")
+        # Separate the policy fields from the control fields before applying.
+        changes = {key: value for key, value in (body or {}).items() if key not in ("confirm", "reason")}
+        # Apply atomically; the module owns validation, concurrency, and the audit record.
+        result = enrollment_policy.update(changes, actor_id=context["user"]["user_id"], reason=str((body or {}).get("reason", "")))
+        # Return the previous policy so the operator can reverse the change exactly.
+        return {"policy": result["current"], "previous": result["previous"], "impact": result["impact"]}
+
     @router.post(r"/api/v2/admin/guest-trials/cleanup")
     # Run the same idempotent raw and aggregate retention used by Admin reads. (issue #317)
     def admin_guest_trials_cleanup_v2(body, query):

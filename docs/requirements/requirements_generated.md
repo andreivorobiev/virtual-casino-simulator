@@ -7,13 +7,13 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.22
-- core: 9.28.2
+- core: 9.28.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.4
 - audio: 9.1.1
-- admin: 1.13.0
+- admin: 1.13.1
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.4.12
@@ -930,6 +930,7 @@ Historical source baseline: 9.1.0
 - **TEST-141** (Tests) - PASS: Focused fake-connector and disposable-MySQL evidence proves pool configuration bounds, hard capacity, waiter wake and timeout, physical reuse, non-reconnecting dead-session replacement, rollback/reset isolation, cleanup discard, connector failure, PID rebuild, terminal shutdown, provider integration, secret-free metrics, and sanitized p50/p95/throughput/error measurements at concurrency one, two, four, and eight with no exhaustion or cross-request session leakage.
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
 - **AUTH-013** (Auth) - PASS: Enrollment is governed by a durable concurrency-safe policy document resolving an enrollment mode and independent self-signup method flags, seeded from and falling back to the deployed environment baseline; public signup and invitation redemption are enforced through that policy, every decision emits one allowlisted audit event, and unknown modes, non-boolean method values, unrouted callers, and a closed mode all fail closed.
+- **AUTH-014** (Auth) - PASS: Enrollment policy changes require the platform-owner role rather than general Admin access, plus an explicit reason and confirmation; each change is applied atomically through the provider document lock, records one allowlisted audit event naming the actor and the capabilities that moved, and returns the exact previous policy so the change can be reversed.
 - **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
 - **TEST-142** (Tests) - PASS: An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, reuses that rendered gate under one formal-only bounded login deadline, performs authentication plus catalog navigation and one complete game action under one formal-only data-derived absolute gameplay deadline, attributes bounded failures to public game, fixed phase, and fixed action state, filters expected anonymous current-user probes only before rendered login succeeds, evaluates action-aware wager and non-wager evidence through player-scoped filter-before-limit ledger routes, and emits only aggregate phase, action-state, latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.

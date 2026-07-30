@@ -157,10 +157,10 @@ def capabilities() -> dict:
 
 # Restrict audit fields so no email, token, or credential material can be logged accidentally.
 # This mirrors the allowlist convention in casino/core/one_time_tokens.py. (issue #333, slice 2)
-AUDIT_FIELDS = frozenset({"route", "mode", "method", "decision", "reason"})
+AUDIT_FIELDS = frozenset({"route", "mode", "method", "decision", "reason", "actor_id", "previous_mode", "changed"})
 
 # Enumerate the internal decision reasons so logs stay useful without becoming caller-visible state.
-AUDIT_REASONS = frozenset({"allowed", "mode_closed", "method_disabled", "invitations_disabled", "unknown_route"})
+AUDIT_REASONS = frozenset({"allowed", "mode_closed", "method_disabled", "invitations_disabled", "unknown_route", "policy_changed", "policy_unchanged"})
 
 # Name each governed enrollment route so a typo cannot silently bypass the policy.
 ROUTE_SIGNUP = "signup"
@@ -238,3 +238,105 @@ def evaluate(route: str, *, method: str | None = None) -> dict:
     _audit("enrollment_decision", route=route, mode=mode, method=consumed, decision="allowed", reason="allowed")
     # Allow the public method.
     return {"allowed": True, "reason": "allowed", "mode": mode}
+
+
+# Summarize what a proposed policy would change, so an operator confirms an effect not a payload.
+def impact(previous: dict, proposed: dict) -> dict:
+    """Return the human-meaningful differences between two resolved policies."""
+    # Compare the resolved capabilities rather than the raw documents, because the capabilities are
+    # what actually gates a route: a mode change with no capability change is not worth confirming.
+    before = _capabilities_for(previous)
+    # Resolve the proposed capabilities the same way.
+    after = _capabilities_for(proposed)
+    # Collect only the fields that genuinely differ.
+    changed = sorted(key for key in ("mode", "signup_enabled", "invitation_enrollment_enabled") if before[key] != after[key])
+    # Report each method whose availability would flip.
+    method_changes = sorted(method for method in METHODS if before["methods"][method] != after["methods"][method])
+    # Return a compact, identifier-free summary.
+    return {"changed": changed, "methods_changed": method_changes, "before": before, "after": after}
+
+
+# Derive capabilities from an already-resolved policy without re-reading storage.
+def _capabilities_for(policy: dict) -> dict:
+    # Read the mode that gates every route.
+    mode = policy["mode"]
+    # Apply the same derivation the live resolver uses so preview and effect cannot diverge.
+    return {
+        # Publish the mode.
+        "mode": mode,
+        # Public email signup requires self-signup mode and the enabled method.
+        "signup_enabled": mode == MODE_SELF_SIGNUP and policy["methods"]["email"] is True,
+        # Invitation redemption requires a non-closed mode and the retained capability.
+        "invitation_enrollment_enabled": mode != MODE_CLOSED and policy["invitations_enabled"] is True,
+        # Publish the per-method flags.
+        "methods": dict(policy["methods"]),
+    }
+
+
+# Apply an owner-authorized policy change atomically and record it.
+def update(changes: dict, *, actor_id: str, reason: str) -> dict:
+    """Persist ``changes`` over the current policy and return the previous state for rollback.
+
+    The caller must already have proved platform-owner authority; this function owns validation,
+    atomicity, and the audit record, not authorization.
+    """
+    # Require a non-empty operator reason so every change carries accountability.
+    if not isinstance(reason, str) or not reason.strip():
+        # Fail closed rather than recording an unexplained policy change.
+        raise ValidationError("enrollment policy change requires a reason")
+    # Reject any field outside the governed policy shape so nothing can be smuggled in.
+    if set(changes or {}) - {"mode", "methods", "invitations_enabled"}:
+        # Fail closed through the standard validation envelope.
+        raise ValidationError("enrollment policy change contains unsupported fields")
+    # Reject an unknown method key before the mutator runs, so a typo cannot be silently dropped.
+    if isinstance((changes or {}).get("methods"), dict):
+        # Compare the supplied method names against the declared set.
+        if set(changes["methods"]) - set(METHODS):
+            # Name the legal methods without echoing the rejected key.
+            raise ValidationError(f"enrollment methods must be among: {', '.join(METHODS)}")
+    # Capture the state being replaced so the caller can roll back to exactly it.
+    previous = current()
+    # Hold a box for the resolved proposal so it survives the mutator closure.
+    resolved = {}
+
+    # Merge the change over whatever is durably stored, inside the provider's lock.
+    def mutate(stored):
+        # Normalize the stored document first so a hand-edited file cannot widen the merge.
+        base = normalize(stored)
+        # Overlay the requested mode when supplied.
+        merged = dict(base)
+        # Copy the methods mapping so the base is never mutated in place.
+        merged["methods"] = dict(base["methods"])
+        # Apply each supported field that the caller supplied.
+        for field in ("mode", "invitations_enabled"):
+            # Only touch a field the caller actually sent.
+            if field in (changes or {}):
+                # Stage the raw value; normalize below performs the validation and coercion.
+                merged[field] = changes[field]
+        # Apply method flags individually so an omitted method keeps its current value.
+        for method, value in ((changes or {}).get("methods") or {}).items():
+            # Stage the raw value for normalization.
+            merged["methods"][method] = value
+        # Validate and coerce the merged result, raising on an unknown mode before anything persists.
+        validated = normalize(merged)
+        # Publish the resolved proposal to the enclosing scope.
+        resolved.update(validated)
+        # Return the document to persist.
+        return validated
+
+    # Persist through the provider primitive that owns read-modify-write concurrency on both backends.
+    get_storage_provider().update_document(POLICY_DOCUMENT_KEY, mutate, environment_baseline)
+    # Describe the effect of the change for the operator and the audit trail.
+    summary = impact(previous, resolved)
+    # Record the change with the actor, the previous mode, and which capabilities moved.
+    _audit(
+        "enrollment_policy_changed",
+        actor_id=actor_id,
+        mode=resolved["mode"],
+        previous_mode=previous["mode"],
+        changed=",".join(summary["changed"] + summary["methods_changed"]) or "none",
+        decision="applied",
+        reason="policy_changed" if (summary["changed"] or summary["methods_changed"]) else "policy_unchanged",
+    )
+    # Return both states plus the summary so the caller can present and reverse the change.
+    return {"previous": previous, "current": resolved, "impact": summary}

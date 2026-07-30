@@ -509,7 +509,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
         # Fail the named central case when any focused assertion failed.
         if not result.wasSuccessful(): raise AssertionError("enrollment policy suite failed")
-    run_case('API-ENROLLMENT-POLICY-001',['AUTH-013'],run_enrollment_policy_tests)
+    run_case('API-ENROLLMENT-POLICY-001',['AUTH-013','AUTH-014'],run_enrollment_policy_tests)
     # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
     run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','LEDGER-001','CORE-017'],storage_tests.run_player_creation_preserves_ledger)
     # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)

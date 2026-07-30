@@ -12501,6 +12501,24 @@
       "notes": "Slices 1-2 of issue #333: durable resolution plus enforcement and audit at signup and invitation redemption. A closed mode reuses the identical generic redemption envelope so it cannot be distinguished from an invalid token. OAuth start carries a policy hook but no wiring, because providers are absent today. The least-privilege permission, readiness gating, and Admin UI follow in later slices."
     },
     {
+      "id": "AUTH-014",
+      "module": "Auth",
+      "description": "Enrollment policy changes require the platform-owner role rather than general Admin access, plus an explicit reason and confirmation; each change is applied atomically through the provider document lock, records one allowlisted audit event naming the actor and the capabilities that moved, and returns the exact previous policy so the change can be reversed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ENROLLMENT-POLICY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/enrollment_policy.py",
+        "casino/admin.py",
+        "tests/enrollment_policy_tests.py"
+      ],
+      "introduced_in": "issue-333-enrollment-admin-surface",
+      "changed_in": "issue-333-enrollment-admin-surface",
+      "notes": "Slice 3 of issue #333. Consumes the platform-owner primitive from the merged #455 RBAC foundation rather than inventing a parallel permission model; granular delegation remains with #351. A rejected change persists nothing, verified by asserting the stored policy is unchanged after a failed attempt. Readiness gating and the Admin UI follow in slices 4 and 5."
+    },
+    {
       "id": "ADMIN-028",
       "module": "Admin",
       "description": "Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.",
