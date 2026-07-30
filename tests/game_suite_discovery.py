@@ -27,7 +27,7 @@ class SuiteDiscoveryError(ValueError):
 
 # Preserve the immutable metadata needed by a future shared runner integration.
 @dataclass(frozen=True)
-class GameSuiteCase:
+class GameSuiteCase:  # Keep discovery packets immutable between validation and execution.
     """One descriptor-owned API case whose suites can be loaded on demand."""
 
     # Retain the canonical catalog game identifier for diagnostics.
@@ -49,8 +49,8 @@ class GameSuiteCase:
         if current_count != self.test_count:
             # Explain the unstable evidence count without silently running a different suite.
             raise SuiteDiscoveryError(
-                f"{self.game_id}: suite test count changed from "
-                f"{self.test_count} to {current_count}"
+                f"{self.game_id}: suite test count changed from "  # Name the affected game.
+                f"{self.test_count} to {current_count}"  # Report both observed counts.
             )
         # Capture unittest output so a later shared runner receives compact failure evidence.
         output = io.StringIO()
@@ -62,8 +62,8 @@ class GameSuiteCase:
             details = output.getvalue().strip()
             # Raise one stable boundary error for future run_case integration.
             raise AssertionError(
-                f"{self.case_id}: descriptor-owned suites failed"
-                f"{': ' + details if details else ''}"
+                f"{self.case_id}: descriptor-owned suites failed"  # Identify the runner case.
+                f"{': ' + details if details else ''}"  # Append captured unittest evidence.
             )
 
 
@@ -85,8 +85,8 @@ def _required_string_list(value: Any, field_name: str, game_id: str) -> tuple[st
         raise SuiteDiscoveryError(f"{game_id}: {field_name} must be a non-empty list")
     # Validate every item while preserving the descriptor's deterministic order.
     items = tuple(
-        _required_string(item, f"{field_name}[{index}]", game_id)
-        for index, item in enumerate(value)
+        _required_string(item, f"{field_name}[{index}]", game_id)  # Validate one entry.
+        for index, item in enumerate(value)  # Preserve the declared array order.
     )
     # Reject an explicitly declared but empty evidence list.
     if not items:
@@ -102,8 +102,8 @@ def _required_string_list(value: Any, field_name: str, game_id: str) -> tuple[st
 
 # Import and load every declared module through unittest's default loader.
 def _load_suite_modules(
-    game_id: str, suite_modules: tuple[str, ...]
-) -> tuple[unittest.TestSuite, int]:
+    game_id: str, suite_modules: tuple[str, ...]  # Accept the validated discovery inputs.
+) -> tuple[unittest.TestSuite, int]:  # Return the composed suite and exact case count.
     # Collect module suites in descriptor order for deterministic execution.
     loaded_suites: list[unittest.TestSuite] = []
     # Count every discovered test for zero-evidence and stability checks.
@@ -114,7 +114,7 @@ def _load_suite_modules(
         if _DOTTED_MODULE_RE.fullmatch(module_reference) is None:
             # Explain the exact invalid reference without attempting execution.
             raise SuiteDiscoveryError(
-                f"{game_id}: invalid dotted suite module {module_reference!r}"
+                f"{game_id}: invalid dotted suite module {module_reference!r}"  # Name it.
             )
         # Import only the validated dotted module path.
         try:
@@ -124,8 +124,8 @@ def _load_suite_modules(
         except Exception as exc:
             # Preserve the original exception as the diagnostic cause.
             raise SuiteDiscoveryError(
-                f"{game_id}: could not import suite module {module_reference!r}"
-            ) from exc
+                f"{game_id}: could not import suite module {module_reference!r}"  # Name it.
+            ) from exc  # Retain the import failure for debugging without hiding the boundary.
         # Snapshot singleton-loader diagnostics before this module is inspected.
         loader_error_count = len(unittest.defaultTestLoader.errors)
         # Load all TestCase classes and load_tests hooks from the declared module.
@@ -136,8 +136,8 @@ def _load_suite_modules(
         if loader_errors:
             # Preserve compact loader evidence in the stable discovery error.
             raise SuiteDiscoveryError(
-                f"{game_id}: suite module {module_reference!r} could not be loaded: "
-                f"{loader_errors[-1]}"
+                f"{game_id}: suite module {module_reference!r} could not be loaded: "  # Context.
+                f"{loader_errors[-1]}"  # Include the loader's final diagnostic.
             )
         # Count the module's concrete tests before adding it to the aggregate.
         module_test_count = suite.countTestCases()
@@ -145,7 +145,7 @@ def _load_suite_modules(
         if module_test_count == 0:
             # Identify the empty module so the owner can repair its evidence.
             raise SuiteDiscoveryError(
-                f"{game_id}: suite module {module_reference!r} contains no tests"
+                f"{game_id}: suite module {module_reference!r} contains no tests"  # Name it.
             )
         # Retain the loaded module suite in descriptor order.
         loaded_suites.append(suite)
@@ -183,23 +183,23 @@ def discover_game_suite_case(descriptor: Mapping[str, Any]) -> GameSuiteCase | N
         return None
     # Validate the explicitly declared ordered suite module list.
     suite_modules = _required_string_list(
-        tests_spec.get("suites"), "game.tests.suites", game_id
+        tests_spec.get("suites"), "game.tests.suites", game_id  # Validate suite ownership.
     )
     # Validate the permanent case id required by future run_case integration.
     case_id = _required_string(
-        tests_spec.get("case_id"), "game.tests.case_id", game_id
+        tests_spec.get("case_id"), "game.tests.case_id", game_id  # Validate runner identity.
     )
     # Validate every requirement mapping without allocating or rewriting an id.
     requirements = _required_string_list(
-        tests_spec.get("requirements"), "game.tests.requirements", game_id
+        tests_spec.get("requirements"), "game.tests.requirements", game_id  # Validate mappings.
     )
     # Import and count every declared suite now so invalid evidence fails discovery.
     _suite, test_count = _load_suite_modules(game_id, suite_modules)
     # Return immutable metadata with an on-demand runner and no shared-file wiring.
     return GameSuiteCase(
-        game_id=game_id,
-        case_id=case_id,
-        requirements=requirements,
-        suite_modules=suite_modules,
-        test_count=test_count,
+        game_id=game_id,  # Retain the canonical catalog identity.
+        case_id=case_id,  # Retain the future shared-runner identity.
+        requirements=requirements,  # Retain permanent requirement mappings.
+        suite_modules=suite_modules,  # Retain descriptor-owned module ordering.
+        test_count=test_count,  # Retain the discovery-time stability guard.
     )
