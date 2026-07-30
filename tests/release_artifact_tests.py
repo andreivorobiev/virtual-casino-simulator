@@ -39,7 +39,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         migration_one = json.dumps({"version": 1, "name": "initial", "description": "fixture", "statements": ["CREATE TABLE fixture_one (id INT)"]}, indent=2) + "\n"
         # Define one exact follow-up fixture migration.
         migration_two = json.dumps({"version": 2, "name": "upgrade", "description": "fixture", "statements": ["ALTER TABLE fixture_one ADD COLUMN value INT"]}, indent=2) + "\n"
-        # Define one exact schema-three immutable-receipt fixture migration.
+        # Define one exact schema-three receipt-capacity fixture migration.
         migration_three = json.dumps({"version": 3, "name": "game-action-receipts", "description": "fixture", "statements": ["CREATE TABLE fixture_game_action_receipts (game_id VARCHAR(191) NOT NULL, player_id VARCHAR(191) NOT NULL, action_key VARCHAR(191) NOT NULL, PRIMARY KEY (game_id, player_id, action_key))"]}, indent=2) + "\n"
         # Build the checksum-pinned fixture catalog from exact UTF-8 bytes.
         migration_catalog = json.dumps({"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 3, "expected_version": 3, "migrations": [{"version": 1, "name": "initial", "file": "0001_initial.json", "sha256": hashlib.sha256(migration_one.encode("utf-8")).hexdigest()}, {"version": 2, "name": "upgrade", "file": "0002_upgrade.json", "sha256": hashlib.sha256(migration_two.encode("utf-8")).hexdigest()}, {"version": 3, "name": "game-action-receipts", "file": "0003_game_action_receipts.json", "sha256": hashlib.sha256(migration_three.encode("utf-8")).hexdigest()}]}, indent=2) + "\n"

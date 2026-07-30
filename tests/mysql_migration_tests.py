@@ -212,22 +212,24 @@ class MySQLMigrationTests(unittest.TestCase):
         # Pin both the unchanged schema-two prefix and the deterministic schema-three chain.
         self.assertEqual(mysql_migrations.migration_chain_digest(migrations, 2), "72fa8f8918022d5bcd29ba286bd96ab6f319ea0ea6aee5e376e1ff71c2eeedd8")
         # Require one reviewed complete chain identity for the new catalog tail.
-        self.assertEqual(mysql_migrations.migration_chain_digest(migrations), "6d692439ab9590655ce93c47f7b608738839400485adbb714fd3a44a4b7575da")
+        self.assertEqual(mysql_migrations.migration_chain_digest(migrations), "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
 
-    # Prove schema three adds one bounded exact-scope immutable receipt table and no journal.
+    # Prove schema three adds one bounded exact-scope receipt-capacity table and no journal.
     def test_schema_three_receipt_boundary_is_exact_and_bounded(self):
         # Load the checksum-verified schema-three migration through the production parser.
         migrations, expected, _, _ = mysql_migrations.load_catalog()
-        # Select only the new immutable migration tail.
+        # Select only the new receipt-capacity migration tail.
         migration = migrations[-1]
         # Require the exact stable migration identity.
         self.assertEqual((expected, migration.version, migration.name), (3, 3, "game-action-receipts"))
-        # Require exactly one table plus update/delete immutability guards.
-        self.assertEqual(len(migration.statements), 3)
+        # Require exactly one additive table and no stored enforcement object.
+        self.assertEqual(len(migration.statements), 1)
         # Read the complete additive table statement once.
-        create_table, block_update, block_delete = migration.statements
+        create_table = migration.statements[0]
         # Require one and only one new application table.
         self.assertEqual(create_table.upper().count("CREATE TABLE "), 1)
+        # Require the receipt-capacity table to use the transactional InnoDB engine.
+        self.assertEqual(create_table.count("ENGINE=InnoDB"), 1)
         # Pin the exact binary-collated action-scope primary key.
         self.assertIn("PRIMARY KEY (game_id, player_id, action_key)", create_table)
         # Require every identity field to retain the contract's 191-character bound.
@@ -254,14 +256,8 @@ class MySQLMigrationTests(unittest.TestCase):
         receipt_tree_budget = (3 * game_action.MAX_STATE_RESOURCES + 1) * game_action.MAX_CANONICAL_BYTES
         # Require headroom for complete before/plan/after state plus identity and movement structure.
         self.assertGreater(8388608, receipt_tree_budget)
-        # Require permanent update and delete tombstone protection with one fixed diagnostic.
-        self.assertIn("BEFORE UPDATE ON casino_game_action_receipts", block_update)
-        # Require delete refusal so a committed scope can never be reused.
-        self.assertIn("BEFORE DELETE ON casino_game_action_receipts", block_delete)
-        # Require both guards to publish the same value-free immutable outcome.
-        self.assertTrue(all("SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'casino game-action receipts are immutable'" in statement for statement in (block_update, block_delete)))
-        # Reject any saga, compensation, or journal table/object in the new migration.
-        self.assertTrue(all(term not in " ".join(migration.statements).lower() for term in ("journal", "saga", "compensation")))
+        # Reject any trigger, routine, saga, compensation, or journal object in this capacity slice.
+        self.assertTrue(all(term not in " ".join(migration.statements).lower() for term in ("trigger", "procedure", "function", "journal", "saga", "compensation")))
 
     # Prove the public migration runner applies exact 0-to-3 and 2-to-3 suffixes.
     def test_public_apply_supports_fresh_and_schema_two_upgrade(self):
@@ -312,7 +308,7 @@ class MySQLMigrationTests(unittest.TestCase):
         # Require exact-only schema-three runtime compatibility.
         self.assertEqual((inventory["minimum_version"], inventory["expected_version"]), (3, 3))
         # Require the same deterministic chain as the migration runtime.
-        self.assertEqual(inventory["migration_chain_sha256"], "6d692439ab9590655ce93c47f7b608738839400485adbb714fd3a44a4b7575da")
+        self.assertEqual(inventory["migration_chain_sha256"], "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
         # Require every immutable migration path in the archive's mandatory allowlist.
         self.assertTrue(
             {

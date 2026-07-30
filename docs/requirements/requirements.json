@@ -12625,7 +12625,7 @@
     {
       "id": "MYSQL-007",
       "module": "MySQL",
-      "description": "The checksum-bound contiguous schema-three catalog provisions one exact binary action-scope identity, lowercase request fingerprint, bounded declared-resource document, complete bounded paid-or-zero-cost receipt document, and receipt SHA-256, with live UPDATE and DELETE refusal preserving every committed receipt row.",
+      "description": "The checksum-bound contiguous schema-three catalog provisions exact binary action-scope identity, lowercase request fingerprint, bounded declared-resource and complete paid-or-zero-cost receipt documents, receipt SHA-256, duplicate-scope rejection, and persisted receipt capacity.",
       "status": "PASS",
       "api_tests": [
         "MYSQL-MIGRATION-001",
@@ -12644,7 +12644,7 @@
       ],
       "introduced_in": "issue-430-mysql-schema3-receipts",
       "changed_in": "issue-430-mysql-schema3-receipts",
-      "notes": "This capacity-only checkpoint proves checksum-bound initial DDL application and live immutable-row UPDATE and DELETE refusal. schema_state_digest() does not bind CHECK clauses or trigger definitions, so exact post-apply CHECK and trigger inspection or digest binding is a mandatory later migration-readiness dependency before any MySQL provider composite or runtime atomicity acceptance. It adds no runtime provider implementation, route, game, Slots, ledger, saga, journal, production atomicity, or issue-closure claim."
+      "notes": "This capacity-only checkpoint proves checksum-bound initial DDL application, paid and zero-cost receipt insertion, exact-scope duplicate rejection, and exact persisted rows. Current database-wide runtime DML grants do not prevent receipt UPDATE or DELETE, so this slice does not claim database-enforced immutability. Before any MySQL provider composite or runtime atomicity acceptance, a separately governed migration-readiness slice must restrict the receipt table to runtime SELECT and INSERT only, fail startup closed on exact SHOW GRANTS, bind CHECK and grant drift, and prove disposable upgrade, restart, and rollback behavior. It adds no privilege or server-global change, runtime provider implementation, route, game, Slots, ledger, saga, journal, production atomicity, or issue-closure claim."
     }
   ]
 }

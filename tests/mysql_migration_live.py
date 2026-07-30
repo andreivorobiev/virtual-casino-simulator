@@ -207,10 +207,14 @@ def _cleanup(admin, databases, migrator_user, runtime_user):
     admin.commit()
 
 
-# Exercise exact-scope uniqueness, canonical receipt capacity, and permanent immutability.
+# Exercise exact-scope uniqueness, canonical receipt capacity, and durable persistence.
 def _exercise_game_action_receipts(connection):
     # Open one runtime-identity cursor against the fully migrated disposable target.
     cursor = connection.cursor()
+    # Read the applied table engine through public server metadata.
+    cursor.execute("SELECT ENGINE FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts'")
+    # Require the exact transactional storage engine after live application.
+    assert str(cursor.fetchone()[0]).lower() == "innodb"
     # Read exact schema-three column types and capacities without application values.
     cursor.execute("SELECT COLUMN_NAME, COLUMN_TYPE, COLLATION_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts' ORDER BY ORDINAL_POSITION")
     # Normalize the fixed structural rows for exact assertions.
@@ -225,17 +229,10 @@ def _exercise_game_action_receipts(connection):
         "receipt_json": ("mediumtext", "utf8mb4_bin"),
         "receipt_sha256": ("char(64)", "ascii_bin"),
     }
-    # Read exact primary-key ordering for permanent action-scope identity.
+    # Read exact primary-key ordering for one action-scope identity.
     cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts' AND INDEX_NAME = 'PRIMARY' ORDER BY SEQ_IN_INDEX")
     # Require the exact game/player/action scope boundary.
     assert [str(row[0]) for row in cursor.fetchall()] == ["game_id", "player_id", "action_key"]
-    # Read both immutable trigger identities without inspecting server definitions.
-    cursor.execute("SELECT TRIGGER_NAME, ACTION_TIMING, EVENT_MANIPULATION FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE() AND EVENT_OBJECT_TABLE = 'casino_game_action_receipts' ORDER BY TRIGGER_NAME")
-    # Require deterministic update and delete refusal boundaries.
-    assert [(str(row[0]), str(row[1]), str(row[2])) for row in cursor.fetchall()] == [
-        ("casino_game_action_receipts_no_delete", "BEFORE", "DELETE"),
-        ("casino_game_action_receipts_no_update", "BEFORE", "UPDATE"),
-    ]
     # Build one canonical bounded resource representation shared by paid and zero-cost receipts.
     resources = {"state_keys": ["roulette.round"], "wallet_ids": ["player_204"]}
     # Encode resource bytes in deterministic compact canonical form.
@@ -247,9 +244,9 @@ def _exercise_game_action_receipts(connection):
         # A zero-cost action has no synthetic money movement.
         ("zero_204", "b" * 64, [], 900, 900),
     )
-    # Retain exact inserted rows for post-refusal equality.
+    # Retain exact inserted rows for post-duplicate persistence equality.
     inserted = []
-    # Insert each complete immutable receipt once.
+    # Insert each complete receipt representation once.
     for action_key, fingerprint, movements, before_cents, after_cents in plans:
         # Build the exact game-action identity.
         identity = {"action_key": action_key, "game_id": "roulette", "player_id": "player_204", "request_fingerprint": fingerprint}
@@ -265,14 +262,14 @@ def _exercise_game_action_receipts(connection):
         receipt_json = json.dumps(receipt, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         # Hash the exact stored receipt representation independently of request semantics.
         receipt_sha256 = hashlib.sha256(receipt_json.encode("utf-8")).hexdigest()
-        # Insert one permanent exact-scope receipt.
+        # Insert one exact-scope receipt-capacity row.
         cursor.execute(
             "INSERT INTO casino_game_action_receipts (game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             ("roulette", "player_204", action_key, fingerprint, resources_json, receipt_json, receipt_sha256),
         )
-        # Retain the exact row expected after every hostile mutation.
+        # Retain the exact row expected after the duplicate attempt.
         inserted.append(("roulette", "player_204", action_key, fingerprint, resources_json, receipt_json, receipt_sha256))
-    # Durably commit both representative receipts before hostile operations.
+    # Durably commit both representative receipts before the duplicate attempt.
     connection.commit()
     # Require same-scope reuse with another fingerprint to fail on the unique boundary.
     try:
@@ -287,36 +284,15 @@ def _exercise_game_action_receipts(connection):
         assert int(getattr(exc, "errno", 0) or 0) == 1062
         # Clear only the rejected statement transaction state.
         connection.rollback()
-    # Fail if another request replaced or duplicated the permanent scope.
+    # Fail if another request duplicated the exact scope.
     else:
         # Surface one fixed category without receipt content.
         raise AssertionError("game-action receipt scope reuse was accepted")
-    # Exercise both permanent mutation refusals.
-    for statement, parameters in (
-        # Attempt to rewrite the original semantic fingerprint.
-        ("UPDATE casino_game_action_receipts SET request_fingerprint = %s WHERE game_id = %s AND player_id = %s AND action_key = %s", ("d" * 64, "roulette", "player_204", "paid_204")),
-        # Attempt to remove the tombstone so its action key could be reused.
-        ("DELETE FROM casino_game_action_receipts WHERE game_id = %s AND player_id = %s AND action_key = %s", ("roulette", "player_204", "paid_204")),
-    ):
-        # Start protected execution for one trigger-enforced immutable operation.
-        try:
-            # Execute the forbidden mutation as the ordinary runtime identity.
-            cursor.execute(statement, parameters)
-        # Accept only the explicit SQLSTATE 45000 trigger refusal.
-        except _connector().Error as exc:
-            # Require MySQL's fixed SIGNAL error number.
-            assert int(getattr(exc, "errno", 0) or 0) == 1644
-            # Discard only the rejected statement transaction state.
-            connection.rollback()
-        # Fail if the permanent receipt was mutable.
-        else:
-            # Surface only the immutable boundary category.
-            raise AssertionError("game-action receipt mutation was accepted")
-    # Read exact durable rows after duplicate, update, and delete attempts.
+    # Read exact durable rows after the duplicate-key refusal.
     cursor.execute("SELECT game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256 FROM casino_game_action_receipts ORDER BY action_key")
     # Normalize driver-returned text without parsing away exact bytes.
     persisted = [tuple(str(value) for value in row) for row in cursor.fetchall()]
-    # Require both exact rows and canonical receipt bytes/hash to remain unchanged.
+    # Require both exact inserted rows and canonical receipt bytes/hash to persist.
     assert persisted == sorted(inserted, key=lambda row: row[2])
 
 
@@ -614,7 +590,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 assert all(privilege in grants for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE"))
                 # Require no schema or grant-management privilege.
                 assert all(privilege not in grants for privilege in ("CREATE", "ALTER", "DROP", "INDEX", "TRIGGER", "GRANT OPTION"))
-                # Prove paid/zero-cost receipt insertion plus permanent update/delete refusal.
+                # Prove paid/zero-cost insertion, duplicate refusal, and exact persistence.
                 _exercise_game_action_receipts(runtime_connection)
                 # Enumerate actual forbidden schema and grant-management attempts.
                 generic_denials = frozenset({1044, 1045, 1142, 1227})
