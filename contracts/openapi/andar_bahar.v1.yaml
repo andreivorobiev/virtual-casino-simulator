@@ -196,6 +196,22 @@ components:
         return_multiplier:
           type: integer
           enum: [2]
+          deprecated: true
+          description: >-
+            Frozen v1 even-money scalar retained for older clients. New clients use
+            return_multipliers because the first-dealt Andar side returns 1.90x.
+        return_multipliers:
+          type: object
+          additionalProperties: false
+          required: [andar, bahar]
+          description: Authoritative total-return multipliers for each legal side.
+          properties:
+            andar:
+              type: number
+              enum: [1.9]
+            bahar:
+              type: number
+              enum: [2.0]
     Player:
       type: object
       additionalProperties: true

@@ -43,15 +43,25 @@ COMMIT_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 ALLOWED_PREFIXES = ("casino/", "contracts/", "deploy/", "migrations/", "modules/", "web/")
 # Allow only deployable top-level files rather than repository governance content.
 ALLOWED_FILES = {
+    # Package the architecture overview shipped with the release for operators.
     "ARCHITECTURE.md",
+    # Package the license text required for redistribution.
     "LICENSE",
+    # Package the attribution notice that accompanies the license.
     "NOTICE",
+    # Package the top-level readme so an extracted release is self-describing.
     "README.md",
+    # Package the release notes that document the shipped version.
     "RELEASE_NOTES.md",
+    # Package the project metadata consumed by the production interpreter.
     "pyproject.toml",
+    # Package the one-click launcher entry point.
     "run.py",
+    # Package the migration driver executed against production MySQL.
     "scripts/mysql_migrate.py",
+    # Package the recovery driver invoked during application-only rollback.
     "scripts/recovery.py",
+    # Package the edge gate helper executed from the extracted release.
     "scripts/edge_gate.py",
     # Package the exact extracted-release verifier invoked by production activation.
     "scripts/package_app.py",
@@ -59,6 +69,7 @@ ALLOWED_FILES = {
     "scripts/validate_monitor_config.py",
     # Package the non-shell monitor runner invoked after production restart.
     "scripts/run_edge_monitor.py",
+    # Package the release-environment writer that installs build provenance.
     "scripts/write_release_env.py",
 }
 # Reject runtime, private, generated, test, and local-evidence directories anywhere.
@@ -97,6 +108,7 @@ REQUIRED_FILES = {
     "run.py",
     "migrations/mysql/0001_initial.json",
     "migrations/mysql/0002_action_identity.json",
+    "migrations/mysql/0003_game_action_receipts.json",
     "migrations/mysql/catalog.json",
     "scripts/mysql_migrate.py",
     "scripts/recovery.py",
@@ -293,10 +305,14 @@ def mysql_schema_inventory(root):
     expected = int(catalog.get("expected_version", -1))
     # Parse the minimum compatible MySQL migration version.
     minimum = int(catalog.get("minimum_runtime_version", -1))
-    # Require the restricted-preview exact-only compatibility window.
-    if expected < 1 or minimum != expected:
-        # Refuse drift between runtime and release schema expectations.
+    # Require one closed runtime window within the complete packaged catalog.
+    if expected < 1 or minimum < 1 or minimum > expected:
+        # Refuse an empty, inverted, or unbounded compatibility range.
         raise ValueError("MySQL migration compatibility window is invalid")
+    # Require the manifest-bound bridge policy to keep migration execution closed.
+    if catalog.get("apply_policy") != "held":
+        # Reject a catalog that silently enables schema application.
+        raise ValueError("MySQL migration apply policy is invalid")
     # Accumulate the exact migration identity chain.
     rows = []
     # Verify every catalog row and referenced tracked file.
@@ -331,11 +347,79 @@ def mysql_schema_inventory(root):
         "minimum_version": minimum,
         # Bind the complete ordered migration chain.
         "migration_chain_sha256": sha256_bytes(json.dumps(rows, separators=(",", ":"), ensure_ascii=True).encode("utf-8")),
+        # Bind the closed migration-application policy.
+        "apply_policy": "held",
     }
 
 
+# Validate the exact application-only/no-database-rollback compatibility tuple.
+def compatibility_rollback_schema(rollback):
+    # Require exactly the four governed rollback fields and no shadow policy.
+    expected_keys = {"scope", "database_rollback", "mysql_expected_schema_version", "requires_retained_predecessor_manifest"}
+    # Reject missing, extra, or non-object rollback declarations.
+    if not isinstance(rollback, dict) or set(rollback) != expected_keys:
+        # Fail publication without the complete governed boundary.
+        raise ValueError("release rollback policy declaration is invalid")
+    # Require the application-only rollback scope.
+    if rollback.get("scope") != "application-only":
+        # Reject any broader restoration authority.
+        raise ValueError("release rollback policy declaration is invalid")
+    # Require database rollback to remain explicitly prohibited.
+    if rollback.get("database_rollback") != "prohibited":
+        # Prevent a packaged record from authorizing database mutation.
+        raise ValueError("release rollback policy declaration is invalid")
+    # Require the exact retained predecessor manifest boundary.
+    if rollback.get("requires_retained_predecessor_manifest") is not True:
+        # Refuse a waiver or missing retained-artifact requirement.
+        raise ValueError("release rollback policy declaration is invalid")
+    # Preserve the exact database version expected during application rollback.
+    schema_version = rollback.get("mysql_expected_schema_version")
+    # Reject booleans and nonpositive or noninteger declarations.
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int) or schema_version < 1:
+        # Keep the failure independent of record content or path.
+        raise ValueError("release rollback schema declaration is invalid")
+    # Return the reviewed exact rollback database version.
+    return schema_version
+
+
+# Read the candidate compatibility record's exact rollback database version.
+def rollback_schema_version(root, current_version):
+    # Resolve only the governed compatibility record for this packaged version.
+    record_path = root / "contracts" / "compatibility" / f"app-{current_version}.json"
+    # Parse the tracked candidate policy before writing release assets.
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    # Require the record identity to match the packaged version.
+    if record.get("app_version") != current_version:
+        # Reject copied or stale rollback policy.
+        raise ValueError("release compatibility identity does not match application version")
+    # Validate the complete governed rollback tuple before consuming its version.
+    return compatibility_rollback_schema(record.get("rollback"))
+
+
+# Require one declared database version to fall inside a closed runtime window.
+def require_schema_window(schema_version, schema_record, label):
+    # Require the manifest schema record to remain a mapping.
+    if not isinstance(schema_record, dict):
+        # Refuse missing candidate or predecessor schema provenance.
+        raise ValueError(f"{label} MySQL schema window is missing")
+    # Read exact non-boolean integer bounds.
+    minimum = schema_record.get("minimum_version")
+    # Read the maximum packaged schema version independently.
+    expected = schema_record.get("expected_version")
+    # Reject malformed or inverted schema bounds.
+    if any(isinstance(value, bool) or not isinstance(value, int) for value in (minimum, expected)) or minimum < 1 or minimum > expected:
+        # Preserve one fixed window diagnostic.
+        raise ValueError(f"{label} MySQL schema window is invalid")
+    # Require the declared rollback database to be runnable by the release.
+    if schema_version < minimum or schema_version > expected:
+        # Prevent an application rollback that cannot pass runtime readiness.
+        raise ValueError(f"{label} release cannot run against declared rollback MySQL schema")
+
+
 # Convert an optional prior manifest into application-only rollback provenance.
-def rollback_provenance(previous_manifest, current_version):
+def rollback_provenance(previous_manifest, current_version, candidate_schema, schema_version):
+    # Require the candidate itself to accept the declared rollback database version.
+    require_schema_window(schema_version, candidate_schema, "candidate")
     # Block immutable promotion when no retained prior artifact was supplied.
     if previous_manifest is None:
         # Return an explicit fail-closed mapping for ordinary branch candidates.
@@ -343,6 +427,7 @@ def rollback_provenance(previous_manifest, current_version):
             "application_only": True,
             "database_rollback": "outside-TOOL-003",
             "eligible": False,
+            "mysql_schema_version": schema_version,
             "previous": None,
             "reason": "A verified previous release manifest is required before immutable publication.",
         }
@@ -359,6 +444,8 @@ def rollback_provenance(previous_manifest, current_version):
             "artifact_sha256": previous["artifact"]["sha256"],
             "commit_sha": previous["source"]["commit_sha"],
             "manifest_sha256": sha256_bytes(previous_bytes),
+            "mysql_minimum_version": previous["mysql_schema"]["minimum_version"],
+            "mysql_expected_version": previous["mysql_schema"]["expected_version"],
         }
     # Convert malformed or legacy prior records into a safe release-blocking error.
     except (KeyError, TypeError) as exc:
@@ -368,11 +455,14 @@ def rollback_provenance(previous_manifest, current_version):
     if pointer["app_version"] == current_version:
         # Require the immediately previous distinct packaged version instead.
         raise ValueError("previous release manifest must identify a different application version")
+    # Require the retained predecessor runtime to accept the same database version.
+    require_schema_window(schema_version, previous.get("mysql_schema"), "predecessor")
     # Return a testable application-only rollback mapping with database work excluded.
     return {
         "application_only": True,
         "database_rollback": "outside-TOOL-003",
         "eligible": True,
+        "mysql_schema_version": schema_version,
         "previous": pointer,
         "reason": None,
     }
@@ -451,8 +541,10 @@ def build_release(root, dist, repository_paths, commit_sha, commit_epoch, releas
     archive_bytes = archive_path.read_bytes()
     # Convert the source commit epoch into a deterministic UTC provenance timestamp.
     source_timestamp = datetime.datetime.fromtimestamp(int(commit_epoch), tz=datetime.timezone.utc).isoformat().replace("+00:00", "Z")
-    # Build application-only rollback provenance from the retained prior manifest.
-    rollback = rollback_provenance(previous_manifest, project["version"])
+    # Read the exact database version declared by governed rollback policy.
+    rollback_schema = rollback_schema_version(root, project["version"])
+    # Build application-only rollback provenance from both runtime windows.
+    rollback = rollback_provenance(previous_manifest, project["version"], mysql_schema, rollback_schema)
     # Record validators as deterministic passed assertions executed by make_release.py.
     validation_rows = [
         {"command": command, "status": "passed"}
@@ -615,10 +707,14 @@ def verify_release(archive_path, manifest_path, expected_commit=None, expected_t
         packaged_expected = int(catalog.get("expected_version", -1))
         # Parse the independent minimum runtime-compatible version.
         packaged_minimum = int(catalog.get("minimum_runtime_version", -1))
-        # Require the reviewed exact-only compatibility window.
-        if packaged_expected < 1 or packaged_minimum != packaged_expected:
-            # Reject a coherently re-signed but unsupported compatibility range.
+        # Require one closed runtime window inside the complete packaged catalog.
+        if packaged_expected < 1 or packaged_minimum < 1 or packaged_minimum > packaged_expected:
+            # Reject a coherently re-signed but invalid compatibility range.
             raise ValueError("release MySQL migration compatibility window is invalid")
+        # Require the packaged catalog to bind the closed bridge apply policy.
+        if catalog.get("apply_policy") != "held":
+            # Reject a coherently re-signed migration-enabling catalog.
+            raise ValueError("release MySQL migration apply policy is invalid")
         # Collect exact packaged migration identities.
         rows = []
         # Verify every catalog checksum against authenticated archive bytes.
@@ -653,11 +749,69 @@ def verify_release(archive_path, manifest_path, expected_commit=None, expected_t
             "minimum_version": packaged_minimum,
             # Bind the complete ordered packaged chain.
             "migration_chain_sha256": sha256_bytes(json.dumps(rows, separators=(",", ":"), ensure_ascii=True).encode("utf-8")),
+            # Bind the closed migration-application policy.
+            "apply_policy": "held",
         }
         # Require the external manifest to match packaged catalog and migrations exactly.
         if manifest.get("mysql_schema") != packaged_schema:
             # Reject divergent release schema expectations.
             raise ValueError("release manifest MySQL schema provenance does not match archive")
+        # Resolve the authenticated packaged compatibility record for this application version.
+        compatibility_member = f"{ARCHIVE_ROOT}/contracts/compatibility/app-{manifest['app_version']}.json"
+        # Require the compatibility record to be part of the authenticated inventory.
+        if compatibility_member not in expected_members:
+            # Reject an archive that omits governed rollback schema policy.
+            raise ValueError("release packaged compatibility record is missing")
+        # Parse the already inventory- and checksum-verified compatibility bytes.
+        try:
+            # Decode the exact packaged policy object.
+            packaged_compatibility = json.loads(archive.read(compatibility_member).decode("utf-8"))
+        # Normalize malformed or undecodable policy bytes.
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            # Preserve no packaged content in the diagnostic.
+            raise ValueError("release packaged compatibility record is invalid") from exc
+        # Require the packaged policy identity to match the manifest application.
+        if not isinstance(packaged_compatibility, dict) or packaged_compatibility.get("app_version") != manifest["app_version"]:
+            # Reject copied, malformed, or stale packaged rollback policy.
+            raise ValueError("release compatibility identity does not match manifest")
+        # Read the packaged rollback policy only after its bytes are authenticated.
+        packaged_rollback = packaged_compatibility.get("rollback")
+        # Require the governed rollback declaration to remain an object.
+        if not isinstance(packaged_rollback, dict):
+            # Refuse an artifact without packaged rollback schema policy.
+            raise ValueError("release compatibility rollback declaration is invalid")
+        # Validate the complete policy and read its exact rollback database version.
+        packaged_rollback_schema = compatibility_rollback_schema(packaged_rollback)
+        # Read the manifest-bound rollback mapping only after schema provenance is authenticated.
+        rollback = manifest.get("rollback")
+        # Require the governed rollback record to remain an object.
+        if not isinstance(rollback, dict):
+            # Refuse an artifact without a database compatibility decision.
+            raise ValueError("release rollback provenance is invalid")
+        # Read the exact database version retained during application rollback.
+        rollback_schema = rollback.get("mysql_schema_version")
+        # Reject noninteger or boolean schema declarations.
+        if isinstance(rollback_schema, bool) or not isinstance(rollback_schema, int):
+            # Preserve a fixed manifest-shape diagnostic.
+            raise ValueError("release rollback schema declaration is invalid")
+        # Require manifest provenance to equal the authenticated packaged policy.
+        if rollback_schema != packaged_rollback_schema:
+            # Reject a coherently re-signed rollback-version substitution.
+            raise ValueError("release rollback schema does not match packaged compatibility")
+        # Require the candidate runtime to accept the declared database version.
+        require_schema_window(rollback_schema, packaged_schema, "candidate")
+        # Validate predecessor runtime bounds whenever rollback is eligible.
+        if rollback.get("eligible"):
+            # Require the compact predecessor pointer used during trusted rollback.
+            previous = rollback.get("previous")
+            # Reject a missing or malformed predecessor pointer.
+            if not isinstance(previous, dict):
+                # Preserve immutable-publication refusal.
+                raise ValueError("release rollback predecessor is invalid")
+            # Reconstruct only the predecessor runtime window from manifest-bound values.
+            predecessor_schema = {"minimum_version": previous.get("mysql_minimum_version"), "expected_version": previous.get("mysql_expected_version")}
+            # Require the predecessor to run against the same retained database version.
+            require_schema_window(rollback_schema, predecessor_schema, "predecessor")
         # Run smoke only after every path and byte has been authenticated.
         if smoke:
             # Create a disposable clean target outside the repository and user runtime data.

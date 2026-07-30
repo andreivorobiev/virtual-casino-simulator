@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.27`
+Packaged application release: `0.9.5.39`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.27 carries the governed all-game desktop control-reachability gate: exact-commit Browser evidence verifies every enabled control in all 46 registered games at the primary and compact desktop viewports and fails closed on fixed-shell clipping without a scroll owner. It retains governed Acey-Deucey spread pricing, the deterministic Browser shard-state controller, runtime-inert game rule-schema coercion foundation, safe CI qualification acceleration, privacy-safe Admin session-control core, owner-gated Admin authority foundation, bounded MySQL connection lifecycle, transactional non-destructive player writer, secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.26 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.39 carries the accepted MySQL schema-two/schema-three rollback-compatibility bridge for issue #430 Phase 0c. The runtime accepts only a clean checksum-valid schema-two prefix or complete schema-three chain, migration application remains held before database contact or mutation, recovery binds the observed version to its exact applied prefix, and release provenance requires one unchanged rollback schema accepted by both candidate and predecessor windows. Production remains at MySQL schema 2 before and after deployment, preserving exact v0.9.5.38 as the application-only rollback predecessor. The release retains the JSON-provider game-action journal, provider-neutral game-action contract, Phase 0b atomic player game-state update foundation, listener-free request-latency baseline, authoritative house-side Keno and Slots economics, exact visible-rank Hi-Lo and independent Andar/Bahar pricing, fail-closed affected-game Browser qualification, route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability, governed Acey-Deucey spread pricing, deterministic Browser shard state, runtime-inert rule coercion, private-invite security, provider-disablement, and public-exposure gates. Schema-3 production migration, MySQL composite execution, receipt-table grant hardening, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity remain separately governed. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 

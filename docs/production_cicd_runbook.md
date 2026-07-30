@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.27`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.39`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -22,12 +22,16 @@ Packaged release numbers use the four-part scheme documented in [the release ver
 8. It connects to the production host over SSH.
 9. It verifies checksums and the exact commit/tag on the host.
 10. It installs the archive under `/opt/casino/releases/<commit-sha>`.
-11. It validates that the root-managed monitor bearer matches the application-only SHA-256 digest without printing either value.
-12. It writes `/etc/casino/release.env` with the exact `CASINO_BUILD_SHA`.
-13. It atomically repoints `/opt/casino/current`.
-14. It restarts the Casino service and reloads nginx.
-15. It runs authenticated production readiness through `scripts/run_edge_monitor.py`, which strictly parses only the root-managed Authorization assignment and calls `scripts/edge_gate.py observe` without shell evaluation.
-16. If the post-switch health check fails, it rolls the application symlink back to the previous release. Database rollback is never automatic.
+11. It runs the selected release's read-only `bridge-check-schema2` with command-scoped release-root imports and refuses cutover unless the database is exact clean checksum-valid schema `2`.
+12. It validates that the root-managed monitor bearer matches the application-only SHA-256 digest without printing either value.
+13. It writes `/etc/casino/release.env` with the exact `CASINO_BUILD_SHA`.
+14. It atomically repoints `/opt/casino/current`.
+15. It restarts the Casino service and reloads nginx.
+16. It runs authenticated production readiness through `scripts/run_edge_monitor.py`, which strictly parses only the root-managed Authorization assignment and calls `scripts/edge_gate.py observe` without shell evaluation.
+17. It proves the selector still resolves to the exact selected release and reruns that release's read-only exact-schema-two bridge check.
+18. If a post-switch check fails, it rolls the application symlink back to the previous release. Database rollback is never automatic.
+
+The bridge deployment invokes no migration command and changes no database schema, data, grant, account, secret, or server global. Both schema checks import `casino` and `scripts` from the exact selected immutable release rather than the upload staging directory or an assumed installed package.
 
 ## Required GitHub Actions secrets
 
@@ -120,6 +124,26 @@ v0.9.5.26 carries the accepted governed Acey-Deucey spread-pricing repair for is
 
 v0.9.5.27 carries the accepted all-game desktop control-reachability gate for issue #221. Its compatibility record retains exact immutable v0.9.5.26 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
+v0.9.5.28 carries the accepted exact 138-browser full-catalog qualification and bounded concurrency-resilience repairs for issue #225. Its compatibility record retains exact immutable v0.9.5.27 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.29 carries the accepted route-free storage-atomic settlement-adapter foundation for issue #430. Its compatibility record retains exact immutable v0.9.5.28 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.30 carries the accepted fail-closed affected-game Browser qualification controller for issue #468 item 4. Its compatibility record retains exact immutable v0.9.5.29 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.31 carries the accepted independent Andar/Bahar side pricing for issue #409 while preserving the deprecated frozen-v1 integer return scalar. Its compatibility record retains exact immutable v0.9.5.30 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.32 carries the accepted exact visible-rank Hi-Lo pricing for issue #406 while preserving the deprecated frozen-v1 integer return scalar. Its compatibility record retains exact immutable v0.9.5.31 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.33 carries the accepted Slots economics-only slice for issue #471 through the established route, with an authoritative line-bet, scatter, four-free-spin, and paid-only progressive model. It makes no durable reservation, cross-process, exactly-once, or composite state-and-ledger claim. Its compatibility record retains exact immutable v0.9.5.32 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.34 carries the accepted Keno economics correction for issue #472 while preserving the frozen-v1 routes, envelopes, amount range, and float-plus-hundredth settlement law. Exact proof keeps every accepted pick-count and amount house-side, including the approved pick-one cent-rounding exception. Its compatibility record retains exact immutable v0.9.5.33 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.35 carries the accepted listener-free request-latency baseline for issue #323. The test-only harness measures fixed direct-WSGI route families against isolated JSON and disposable loopback MySQL providers, emits aggregate-only exact-source evidence, and changes no runtime, API, provider, pool-default, game, production, or deployment behavior. Its compatibility record retains exact immutable v0.9.5.34 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.38 carries the accepted #430 Phase 0c JSON-provider recoverable game-action journal, immutable paid and zero-cost receipts, cross-process storage gate, and failure-atomic Admin reset boundary. It preserves the route-free provider-neutral contract while excluding schema-3, the MySQL composite transaction, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity claims. Its compatibility record retains exact immutable v0.9.5.37 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.39 carries the accepted #430 MySQL rollback-compatibility bridge. The packaged runtime accepts a clean checksum-valid schema-2 prefix or complete schema-3 chain, but migration application is held before database contact or mutation. Deployment must prove exact schema 2 before and after activation and must invoke no migration. Its compatibility record declares rollback at unchanged schema 2 and retains exact immutable v0.9.5.38 as the application-only predecessor; database rollback remains prohibited. A later separately governed migration release may apply schema 3 only after backup, quiescence, grant and drift proof, and must retain this schema-3-capable bridge as its predecessor.
+
 ## Historical first-rollout blocker
 
 The CI/CD code merged and the exact `v9.5.6` release was published successfully.
@@ -160,6 +184,8 @@ Rollback is application-only:
 - rerun readiness checks.
 
 Rollback does not edit historical release directories. It does not roll back MySQL schema or mutable data. If the predecessor cannot run against the current schema, rollback is blocked and must be handled by a separately approved recovery plan.
+
+The release verifier authenticates the compatibility record's exact application-only, database-rollback-prohibited, retained-predecessor policy and requires the declared rollback schema to fit both candidate and predecessor runtime windows. The bridge must remain at exact schema `2` before and after activation; schema `3` is not live under this packet.
 
 ## Operator rule
 

@@ -1,4 +1,173 @@
-# Virtual Casino Simulator v0.9.5.27 Release Notes
+# Virtual Casino Simulator v0.9.5.39 Release Notes
+
+## MySQL schema rollback-compatibility bridge
+
+- Accepts only initialized clean MySQL schema 2 with the exact checksum-bound migration prefix or schema 3 with the complete checksum-bound chain.
+- Keeps migration `apply_policy` held and refuses application before configuration, connection, migration lock, DDL, or state write.
+- Binds recovery evidence to the actual schema version and its exact applied migration prefix.
+- Authenticates the packaged application-only, database-rollback-prohibited, retained-predecessor policy and requires the declared rollback schema inside both candidate and predecessor runtime windows.
+- Proves the selected release-root migration CLI works independently of the caller's working directory.
+- Requires production activation to observe exact schema 2 before and after cutover and invokes no migration.
+- Registers `MYSQL-008` and `TOOL-011` through existing migration, recovery, predecessor, and deployment cases without allocating a generic TEST identifier.
+- Retains exact immutable v0.9.5.38 as the application-only rollback predecessor at unchanged MySQL schema 2; database rollback is prohibited.
+- Defers schema-3 production migration, MySQL composite execution, receipt-table least-privilege and drift hardening, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity; issues #430 and #471 remain open.
+- Performs no database, grant, provider-selection or provider-configuration, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.38 recoverable JSON-provider game-action execution
+
+## Recoverable JSON-provider game-action execution
+
+- Adds one provider-owned JSON execution boundary for the route-free game-action contract, with immutable receipts for paid and zero-cost actions.
+- Rejects conflicting replays before snapshot, planner, randomness, or mutation while converging identical duplicate requests on the original committed receipt.
+- Serializes affected JSON wallet, state, document, history, Admin game-state, and reset operations through one stable cross-process gate while preserving the legacy wallet-lock order.
+- Recovers durable prepare, plan, wallet, state, receipt, and cleanup boundaries after restart without exposing an application-visible saga or compensation path.
+- Makes Admin reset failure-atomic through a private recovery snapshot, complete rollback-before-unlock behavior, exact response visibility, and retained fail-closed recovery material.
+- Keeps the stable gate and reset recovery material in a verified provider-private control directory under the canonical log root, outside the reset-owned data tree.
+- Registers `STORAGE-011` and central listener-free case `STORAGE-GAME-ACTION-ONCE-001` without allocating a generic TEST identifier.
+- Adds no schema-3 migration, MySQL composite transaction, route, game, Slots adoption, ledger behavior, provider scaling, or all-provider atomicity claim; issues #430 and #471 remain open.
+- Retains exact immutable v0.9.5.37 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider-selection or provider-configuration, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.37 provider-neutral game-action contract foundation
+
+## Provider-neutral game-action contract foundation
+
+- Adds bounded immutable core types for game-action identities, resources, snapshots, plans, receipts, outcomes, and state updates.
+- Adds deterministic canonical request fingerprinting with exact mismatch rejection semantics.
+- Validates direct and factory-created durable trees through the same bounded canonical-value rules.
+- Proves the abstract contract through a listener-free fake provider without claiming a production provider implementation.
+- Registers `CORE-031` and central listener-free case `API-GAMECORE-003` without allocating a generic TEST identifier.
+- Adds no JSON journal or cross-process gate, schema-3 migration, MySQL composite transaction, route, game, Slots adoption, ledger behavior, API contract, or current-production atomicity.
+- Keeps issues #430 and #471 open for the independently governed provider implementation and adoption sequence.
+- Retains exact immutable v0.9.5.36 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.36 atomic player game-state update foundation
+
+## Atomic player game-state update foundation
+
+- Adds the route-free `update_player_game_state` core helper for one complete player-scoped game-state mutation.
+- Delegates the complete read, mutate, normalize, and write boundary to the existing JSON process lock or MySQL row-locking transaction.
+- Preserves lazy default creation, schema and timestamp normalization, player isolation, and the legacy-human state fallback.
+- Proves twenty-four concurrent distinct JSON updates are retained without a lost write.
+- Proves failed JSON mutations leave the original bytes unchanged and MySQL failures preserve the prior committed document.
+- Registers `CORE-030` and central storage case `STORAGE-PLAYER-STATE-ATOMIC-001` without allocating a generic TEST identifier.
+- Adds no route, game adoption, ledger behavior, provider implementation, API contract, or production behavior; Phase 0c remains separately governed.
+- Retains exact immutable v0.9.5.35 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.35 listener-free request-latency baseline
+
+## Listener-free request-latency baseline
+
+- Adds an explicit test-only direct-WSGI baseline for authenticated current-user, Slots state, Roulette state, aggregate Casino state, and idempotent Boule actions.
+- Measures each fixed route family at concurrency 1, 2, 4, and 8 with eight warm-ups, sixty-four measured operations, and a rolling at-most-N scheduler.
+- Runs against isolated external JSON and callback-owned disposable loopback MySQL providers while preserving the repository's default MySQL pool settings.
+- Keeps authentication plus Boule first-write, replay, conflict, receipt-retention, and authoritative wallet invariants outside every timed row.
+- Emits only exact-source aggregate evidence with strict schema and recursive type validation; identities, auth material, requests, wagers, outcomes, samples, paths, hosts, timestamps, and exception text are excluded.
+- Defines no numeric latency threshold because hosted hardware varies; acceptance requires complete rows, positive measurements, exact replay controls, zero errors, and cleanup.
+- Opens no listener and changes no runtime route, API contract, provider implementation, pool default, game, production workflow, or deployment behavior.
+- Retains exact immutable v0.9.5.34 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.34 authoritative house-side Keno economics
+
+## Authoritative house-side Keno economics
+
+- Rebalances one server-authoritative paytable across every legal one-through-twenty-spot Keno ticket.
+- Keeps every positive award at least stake-neutral while preserving strictly increasing rows and full-catch jackpots.
+- Preserves the frozen `/api/v1` routes, standard envelopes, accepted `0.01`–`1,000,000` play-token range, and existing `round(float(amount) * multiplier, 2)` settlement law.
+- Applies the owner-approved `3.49x` pick-one cent-rounding exception so the one-cent ticket remains house-side.
+- Proves all 230 hypergeometric outcome classes with exact rational evidence and bounds realized production settlement below `1` across the complete accepted amount domain, including IEEE-754 error.
+- Verifies maximum-stake maximum-jackpot engine, API, current-ledger, and history equations while restoring randomness after proof.
+- Verifies sixty-four governed Keno states across English and Russian and four viewports, including numeric jackpot, transient drawing, open-ticket precedence, route restoration, Repeat, autoplay, and aligned history.
+- Retains exact immutable v0.9.5.33 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.33 authoritative house-side Slots economics
+
+## Authoritative house-side Slots economics
+
+- Aligns the engine, existing API route, browser, and English/Russian copy on one authoritative line-bet, payline, scatter, four-free-spin, and progressive model.
+- Keeps the frozen `/api/v1` cent line-bet domain and the supported 1, 3, 5, 9, and 20 line choices compatible.
+- Qualifies one bounded scalar progressive only for paid 20-line spins at line bet `1.00`; other paid configurations and every free spin preserve the current meter.
+- Locks free spins to their earned wager basis so consuming requests cannot escalate the bonus value.
+- Proves six real-engine scenarios with at least 1,000,000 paid spins each, complete retriggered bonus drain, restored randomness, and a 99% upper confidence bound below `1`.
+- Verifies exact engine, route, current-ledger, history, and browser equations, including the maximum accepted line bet.
+- Verifies all ten governed Slots states in English and Russian across four viewports, including progressive hit/reset, bonus basis, paylines, repeat, and route restoration.
+- Makes no durable action-reservation, cross-process, exactly-once, or composite state-and-ledger claim; issue #471 remains open for the separately governed #430 Phase 0c remainder.
+- Retains exact immutable v0.9.5.32 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.32 exact visible-rank Hi-Lo pricing
+
+## Exact visible-rank Hi-Lo pricing
+
+- Makes the server-owned visible-rank paytable authoritative for settlement, with total-return prices from `0.96x` through `1.93x`.
+- Keeps ties as exact `1x` refunds and proves fractional-wager cent rounding through the catalog Long driver.
+- Preserves the required deprecated frozen `/api/v1` integer `correct_return_multiplier=2` scalar for older clients.
+- Adds optional `correct_paytable` and `house_edge` fields without changing the standard response envelope.
+- Records player-scoped ledger payout-multiplier evidence for exact replay and audit.
+- Verifies the localized price range and active-rank price across English and Russian at all four governed viewports.
+- Retains exact immutable v0.9.5.31 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.31 independent Andar and Bahar side pricing
+
+## Independent Andar and Bahar side pricing
+
+- Prices Andar at 1.90x and Bahar at 2.00x instead of presenting one shared side return.
+- Preserves the deprecated frozen `/api/v1` integer `return_multiplier=2` scalar for older clients.
+- Adds an optional `return_multipliers` object with exact per-side values and LF-stable OpenAPI digest coverage.
+- Records exact rational return-to-player evidence: Andar `8151/8330` (97.8511%) and Bahar `808/833` (96.9988%).
+- Aligns settlement, API, contract, Long Suite, EN/RU copy, and governed Browser evidence with the independent prices.
+- Verifies both exact `1.90x` and `2.00x` displays across English and Russian, four viewports, and four governed states.
+- Retains exact immutable v0.9.5.30 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.30 fail-closed affected-game Browser qualification
+
+## Fail-closed affected-game Browser qualification
+
+- Maps changed pull-request files to catalog-owned games and falls back to complete coverage for every shared, unknown, or ambiguous path.
+- Runs complete Browser coverage for protected-main pushes, release inputs, manual formal qualification, and pull requests carrying the explicit full-browser label.
+- Omits only dedicated acceptance cases owned by unaffected games; shared shell, authentication, PWA, Admin, affinity-owned, and unmapped cases remain included.
+- Passes the detector-owned game selection independently to every shard and the aggregate instead of trusting artifact declarations.
+- Fails the aggregate closed on detector failure, missing, duplicate, failed, unexpected, or selection-mismatched shard evidence.
+- Preserves four deterministic Browser shards, unique artifacts, unconditional browser/listener cleanup, and the historical required aggregate context.
+- Keeps formal 50,000-cycle, governed 138-context, and sustained Baccarat profiles isolated behind their existing owner gates.
+- Retains exact immutable v0.9.5.29 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.29 route-free storage-atomic settlement foundation
+
+## Route-free storage-atomic settlement foundation
+
+- Adds one internal shared adapter for finite non-zero signed game actions without wiring any route or game.
+- Delegates debits and credits to the existing public storage-atomic ledger boundaries instead of creating another transaction engine.
+- Preserves every caller-owned audit field and adds canonical game action, request fingerprint, and round evidence without mutating caller input.
+- Returns exact provider replay evidence and performs no proof-before-write scan on ordinary commits.
+- After a provider conflict, recovers only an exact committed player, game, action, round, transaction-type, fingerprint, and signed-amount match.
+- Fails closed on malformed money, missing identities, conflicting canonical details, changed replay semantics, or absent compatible proof.
+- Keeps Phase 0b state storage, Phase 0c game wiring, routes, games, providers, frozen API contracts, and browser behavior outside this release.
+- Retains exact immutable v0.9.5.28 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.28 governed 138-browser full-catalog qualification
+
+## Governed 138-browser full-catalog qualification
+
+- Proves exactly 138 simultaneous users across all 46 registered games, with exactly three assigned and three successful users per game.
+- Requires barrier, login, navigation, and gameplay completion for all 138 contexts and records fixed game, phase, and action-state attribution.
+- Verifies 136/136 committed wager actions through exact player-scoped ledger evidence while two legitimate no-wager actions produce no fabricated game ledger rows.
+- Proves 138 unique matching players, zero duplicate player, action, or ledger identifiers, and nonnegative balances.
+- Exercises disposable MySQL concurrency 1/2/4/8 with zero errors, timeouts, residual leases, or waiters.
+- Hardens concurrent autoplay registry updates, Keno lazy-module delivery, Double Bonus Deal/Draw readiness, and client-log peer-disconnect handling.
+- Keeps browser diagnostics, autoplay 404s, and governed client-log 500s at zero while closing all 138 contexts, the listener, and the job container.
+- Retains exact immutable v0.9.5.27 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.27 all-game desktop control reachability
 
 ## All-game desktop control reachability
 

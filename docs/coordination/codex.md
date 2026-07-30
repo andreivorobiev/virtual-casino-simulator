@@ -1,37 +1,35 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T22:29:45Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-30T19:13:19Z.
 
 ## Current branch / active Codex work
 
-- Controller PR #499 merged normally at exact protected main `e3e4174319c0f12038530a95556dfba08ac44c1b`, with parents exactly terminal-green v0.9.5.26 main `06183a30299187156ba85049a0edc0dd22a3683a` and accepted controller head `bc6b398f0d2299eaca7569f1bdb7f1ae3cf1ff36`.
-- `codex/release-v0.9.5.27` serializes that accepted all-game desktop control-reachability gate as one unique immutable patch release.
-- Deployed v0.9.5.26 remains the live release until v0.9.5.27 passes protected publication and trusted owner/static terminal-green deployment.
-- No later PR may merge during this release/deployment hold.
+- PR #537 merged normally as protected main `2a28ef52` after exact-head bridge review, all nine required workflow families, source-bound Browser and Long artifacts, non-closing issue verification, and zero review state.
+- Terminal-green published/released/live production remains exact v0.9.5.38 `69995920`; the v0.9.5.39 tag and release remain unused.
+- `codex/release-v0.9.5.39-bridge` serializes the unique immutable bridge release from exact protected main. No other merge, release, or deployment lane may advance until v0.9.5.39 is terminal green through the trusted owner/static route.
 
 ## Live queue snapshot
 
-- #499 preserves the accepted Claude #453 ancestry while reconciling the permanent TEST-139 allocation and adding exact hosted evidence for issue #221.
-- Original PR #453 is GitHub-confirmed merged through preserved ancestry; its external branch and worktree remain untouched.
-- Worker A #467 and Worker B checkpoints #388/#430/#434/#441 remain preserved and merge-held until terminal-green v0.9.5.27. Any governed #467 138-user qualification requires fresh owner authorization after its version collision is reconciled.
-- #450 remains held and excluded. All other open proposals remain pending and cannot enter this serialized release.
+- #435 rank 001 remains externally blocked and #450 remains held/excluded.
+- #471 rank 003 remains blocked on the remaining #430 schema-3 production migration, MySQL composite, and adoption sequence.
+- Issues #430 and #471 remain open after the bounded bridge merge.
+- Existing open contributor and stacked PRs remain held; the frozen unsafe pre-bridge release-v39 worktree remains untouched and excluded.
 
 ## Requirement / version claims
 
-- No permanent identifier is created, deleted, or reused by this release.
-- The accepted #499 controller owns the earlier durable `TEST-139` reservation and reuses `CORE-015` and `UX-004`.
-- v0.9.5.27 owns packaged application `0.9.5.27`, application `9.53.14`, tests/docs `1.64.15`, and contracts `1.49.9`.
-- Core `9.27.2`, tooling `1.21.8`, and all game module versions are preserved. The exact immutable v0.9.5.26 release remains the application-only rollback predecessor; MySQL schema stays 2 and database rollback is prohibited.
+- Merged main owns `MYSQL-008` and `TOOL-011` through the existing migration, recovery, predecessor, and deployment cases; no generic TEST or other requirement ID was allocated.
+- The merged bridge revisions remain core `9.32.0`, tooling `1.23.0`, and contracts `1.50.0`, with tests/docs `1.64.44`.
+- This release packet alone advances package `0.9.5.39`, application `9.53.26`, contracts `1.50.1`, and tests/docs `1.64.45`; every unrelated module remains unchanged.
 
 ## File claims / collision notes
 
-- Release-owned changes are limited to packaged version surfaces, compatibility and rollback provenance, PWA/cache identity, release tests, release docs, generated governance, and coordination records.
-- #467, #450, Worker B checkpoint source, other proposal source, gameplay, Admin UI, production workflow, provider, DNS, ingress, secrets, signup, OAuth, mail, and invitation files are excluded.
-- Any later proposal that overlaps shared docs or manifests must rebase and recalculate versions from terminal-green v0.9.5.27.
+- The release branch contains only the standard release contract, documentation, localization, version, predecessor-test, PWA-version, and coordination surfaces.
+- It imports no stale contributor hunk and changes no casino source, migration, provider, route, game, ledger, grant, secret, or production workflow.
+- The unsafe uncommitted standard release packet remains preserved in its separate worktree and contributes no bytes to this clean rebuild.
 
 ## Decisions / handbacks
 
-- Every registered game is checked at both governed desktop viewports, producing one exact set of 92 PNG and 92 JSON after-pass sidecars.
-- A control is accepted only when it is visible inside the viewport or has a reachable vertical scroll owner; fixed-shell clipping fails closed.
-- The four ordinary Browser shards preserve exact 106-case union accounting, unique artifacts, fail-closed aggregation, and listener cleanup.
-- The gate changes qualification evidence only; gameplay, API contracts, UI styling, formal 50,000-cycle work, and Baccarat sustained work remain unchanged.
+- v0.9.5.39 packages the accepted runtime bridge while keeping `apply_policy=held`.
+- Its compatibility record declares unchanged rollback schema `2`, binds exact immutable v0.9.5.38 as the application-only predecessor, and prohibits database rollback.
+- Hosted publication may create immutable assets, but unchanged hosted SSH activation must be cancelled before cutover. Trusted deployment must prove schema `2` before and after activation and invoke no migration.
+- MySQL composite execution, receipt-table grant and drift hardening, schema-3 production activation, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity remain separately governed.

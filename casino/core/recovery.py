@@ -1085,17 +1085,17 @@ def validate_backup_context(context: Mapping[str, Any]) -> dict[str, Any]:
         raise RecoveryError("Recovery encryption context is invalid")
     # Import the #204 checksum-bound schema contract only when recovery tooling runs.
     try:
-        # Load exact packaged schema version and migration chain.
-        from casino.core.mysql_migrations import schema_contract
+        # Load the exact catalog and prefix-digest helper without opening a database.
+        from casino.core.mysql_migrations import load_catalog, migration_chain_digest
         # Read the local immutable migration contract.
-        mysql_contract = schema_contract()
+        migrations, expected_version, minimum_version, _ = load_catalog()
     # Replace catalog, path, and parser details with one fixed error.
     except Exception as exc:
         # Refuse recovery when packaged migration provenance cannot be verified.
         raise RecoveryError("Recovery MySQL schema contract is unavailable") from exc
-    # Require exact #204 schema version and ordered migration-chain provenance.
-    if schema_version != mysql_contract["expected_version"] or context.get("migration_chain_sha256") != mysql_contract["migration_chain_sha256"]:
-        # Refuse a recovery point for another schema contract.
+    # Require one runtime-compatible version and its exact applied migration prefix.
+    if schema_version < minimum_version or schema_version > expected_version or context.get("migration_chain_sha256") != migration_chain_digest(migrations, schema_version):
+        # Refuse a recovery point for another version or migration prefix.
         raise RecoveryError("Recovery encryption context does not match packaged MySQL schema")
     # Return one plain sanitized copy.
     return {str(key): value for key, value in context.items()}

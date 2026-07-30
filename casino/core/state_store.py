@@ -319,6 +319,55 @@ def load_player_game_state(game_id: str, player_id: str, default_factory: Callab
     # Return the computed value to the caller.
     return state
 
+# Apply one player-scoped game-state mutation through the existing atomic JSON/MySQL boundary. (STORAGE-001, STORAGE-002)
+def update_player_game_state(
+    game_id: str,
+    player_id: str,
+    mutator: Callable[[dict], dict],
+    default_factory: Callable[[], dict],
+) -> dict:
+    # Resolve the same player-scoped document path used by the existing load and save helpers.
+    path = player_game_state_path(game_id, player_id)
+
+    # Build the absent-document seed while preserving the established legacy-human read fallback.
+    def initial_state() -> dict:
+        # Reuse legacy global human state only while no player-scoped document exists.
+        if str(player_id or "human") == "human" and not path.exists() and game_state_path(game_id).exists():
+            # Load through the provider-aware legacy helper so JSON and MySQL keep existing behavior.
+            return load_game_state(game_id, default_factory)
+        # Create a fresh caller-owned default for every genuinely absent or malformed document.
+        return default_factory()
+
+    # Normalize, mutate, and stamp one state while the selected provider holds its atomic boundary.
+    def apply_mutation(current: Any) -> dict:
+        # Match load_player_game_state by replacing a non-object payload with a fresh default.
+        normalized = current if isinstance(current, dict) else initial_state()
+        # Reject an invalid default before a provider can publish a non-object game-state document.
+        if not isinstance(normalized, dict):
+            # Raise a stable programming error while the atomic provider still owns rollback.
+            raise ValueError("Player game-state defaults must be JSON objects")
+        # Give the caller a copy so provider-owned decoded state cannot be mutated after rollback.
+        working = dict(normalized)
+        # Preserve the load helper's schema default before the caller evaluates the state.
+        working.setdefault("schema_version", SCHEMA_VERSION)
+        # Apply the caller's complete state transition inside the atomic read-modify-write boundary.
+        updated = mutator(working)
+        # Require a complete JSON object so partial or invalid results are never persisted.
+        if not isinstance(updated, dict):
+            # Raise before publication so JSON remains byte-identical and MySQL rolls back.
+            raise ValueError("Player game-state mutators must return JSON objects")
+        # Copy the result so timestamp and schema normalization do not alter caller-owned state.
+        persisted = dict(updated)
+        # Stamp the current schema exactly as the existing save helper does.
+        persisted["schema_version"] = SCHEMA_VERSION
+        # Stamp the successful atomic update exactly as the existing save helper does.
+        persisted["updated_at"] = utc_now()
+        # Return the complete document for atomic provider publication.
+        return persisted
+
+    # Delegate locking, provider selection, transaction commit, and rollback to the existing public seam.
+    return update_json(path, apply_mutation, initial_state)
+
 # Define the save_game_state function used by this module.
 def save_game_state(game_id: str, state: dict) -> None:
     # Set state to the value needed for the next operation.

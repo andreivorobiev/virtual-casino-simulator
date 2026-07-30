@@ -210,6 +210,7 @@ jobs:
           fi
           /opt/casino/venv/bin/python "${release_root}/scripts/package_app.py" --verify-only --archive "${staging}/virtual_casino_simulator_package.zip" --manifest "${staging}/release-manifest.json" --expected-commit "${release_sha}" --expected-tag "${release_tag}" --require-rollback
           /opt/casino/venv/bin/python "${release_root}/scripts/validate_monitor_config.py" check --monitor-env /etc/casino/edge-monitor.env --application-env /etc/casino/casino.env
+          PYTHONPATH="${release_root}" /opt/casino/venv/bin/python "${release_root}/scripts/mysql_migrate.py" bridge-check-schema2
           /opt/casino/venv/bin/python "${release_root}/scripts/write_release_env.py" --manifest "${staging}/release-manifest.json" --destination "${staging}/release.env"
           trap rollback ERR
           install -m 0640 -o root -g root "${staging}/release.env" /etc/casino/release.env
@@ -218,6 +219,8 @@ jobs:
           systemctl restart casino
           systemctl reload nginx
           /opt/casino/venv/bin/python /opt/casino/current/scripts/run_edge_monitor.py --monitor-env /etc/casino/edge-monitor.env --policy /opt/casino/current/deploy/edge/restricted-preview.json
+          test "$(readlink -f /opt/casino/current)" = "${release_root}"
+          PYTHONPATH="${release_root}" /opt/casino/venv/bin/python "${release_root}/scripts/mysql_migrate.py" bridge-check-schema2
           rm -rf "${staging}" "${prior_env}"
           trap - ERR
           REMOTE_DEPLOY

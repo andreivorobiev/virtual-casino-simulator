@@ -1,0 +1,57 @@
+{
+  "artifact": "hi-lo-rank-pricing",
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/406",
+  "status": "compatible_patch",
+  "contract": "contracts/openapi/hi_lo.v1.yaml",
+  "compatibility": {
+    "api_v1_frozen": true,
+    "routes": "unchanged",
+    "requests": "unchanged",
+    "envelopes": "unchanged",
+    "session_authority": "unchanged",
+    "ledger_authority": "unchanged"
+  },
+  "response_rules": {
+    "retained": {
+      "correct_return_multiplier": "deprecated required integer scalar fixed at 2 for frozen-v1 clients",
+      "tie_return_multiplier": "unchanged wager refund on an equal-rank tie"
+    },
+    "added": {
+      "correct_paytable": "optional server-owned total-return multipliers for a correct call keyed by the visible current-card rank",
+      "house_edge": "optional target edge used to derive every rank price"
+    },
+    "authoritative_price": "rules.correct_paytable[round.current_card rank]",
+    "extreme_ranks": "a near-certain call (rank 2 or ace) prices below even money so the edge stays constant"
+  },
+  "settlement": {
+    "payout_shape": "unchanged numeric total return",
+    "tie": "wager refunded",
+    "incorrect": "zero return",
+    "correct": "wager multiplied by the server-owned current-rank price"
+  },
+  "browser": {
+    "server_owned_copy": true,
+    "locales": [
+      "en-US",
+      "ru-RU"
+    ],
+    "viewports": [
+      "desktop_primary",
+      "desktop_compact",
+      "tablet",
+      "mobile"
+    ],
+    "visual_matrix_surface": "hi_lo"
+  },
+  "excluded_authority": [
+    "database schema",
+    "provider configuration",
+    "deployment",
+    "DNS",
+    "billing",
+    "public signup",
+    "OAuth",
+    "mail",
+    "invitation"
+  ]
+}

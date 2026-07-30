@@ -21,8 +21,8 @@ import threading
 
 # Import only the repository-side recovery evidence contract.
 from casino.core import recovery
-# Import the immutable #204 schema contract for exact recovery context fixtures.
-from casino.core.mysql_migrations import schema_contract
+# Import the immutable schema window and prefix identity helpers for recovery fixtures.
+from casino.core.mysql_migrations import load_catalog, migration_chain_digest, schema_contract
 # Import the packaged CLI loader for least-privilege child environment tests.
 from scripts import recovery as recovery_cli
 
@@ -38,8 +38,18 @@ PROVIDER_KEY = b"p" * 32
 RESTORE_KEY = b"r" * 32
 # Fix the decision time so freshness tests remain deterministic.
 NOW = datetime(2026, 7, 16, 20, 0, tzinfo=timezone.utc)
-# Bind every fixture to the exact packaged #204 migration chain.
-MIGRATION_CHAIN = schema_contract()["migration_chain_sha256"]
+# Load the exact packaged MySQL schema contract once for current-version fixtures.
+SCHEMA_CONTRACT = schema_contract()
+# Bind every fixture to the exact packaged migration version.
+EXPECTED_SCHEMA_VERSION = SCHEMA_CONTRACT["expected_version"]
+# Bind the lower bridge-compatible version independently.
+MINIMUM_SCHEMA_VERSION = SCHEMA_CONTRACT["minimum_version"]
+# Bind every fixture to the exact packaged migration chain.
+MIGRATION_CHAIN = SCHEMA_CONTRACT["migration_chain_sha256"]
+# Load immutable migration rows for exact prefix fixtures.
+MIGRATIONS = load_catalog()[0]
+# Bind the exact schema-two applied prefix.
+MINIMUM_MIGRATION_CHAIN = migration_chain_digest(MIGRATIONS, MINIMUM_SCHEMA_VERSION)
 
 
 # Construct all pairwise-independent synthetic key roles.
@@ -92,7 +102,7 @@ def manifest_record():
         # Bind the canonical semantic application version.
         "app_version": "9.2.0",
         # Bind the independent MySQL schema version from #204.
-        "mysql_schema_version": 2,
+        "mysql_schema_version": EXPECTED_SCHEMA_VERSION,
         # Bind the checksum-ordered migration chain.
         "migration_chain_sha256": MIGRATION_CHAIN,
         # Bind the source without exposing a target identifier.
@@ -146,7 +156,7 @@ def signed_manifest_pair():
 # Build a complete real encrypted artifact plus paired signed recovery evidence.
 def encrypted_recovery_bundle(plaintext=None):
     # Bind only the strict public release/schema/source context.
-    context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": 2, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
+    context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": EXPECTED_SCHEMA_VERSION, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
     # Use representative synthetic persistence rows only.
     plaintext = plaintext or b"synthetic-user\tsynthetic-wallet\tsynthetic-ledger\n"
     # Encrypt into memory so no plaintext file can exist.
@@ -525,7 +535,7 @@ class RecoveryEvidenceTests(unittest.TestCase):
         # Parse the valid record first.
         validated = recovery.validate_recovery_manifest(signed, EVIDENCE_KEY, acknowledgement, DESTINATION_KEY, NOW)
         # Require the distinct schema and artifact identities.
-        self.assertEqual((validated.mysql_schema_version, validated.encrypted_size), (2, 512))
+        self.assertEqual((validated.mysql_schema_version, validated.encrypted_size), (EXPECTED_SCHEMA_VERSION, 512))
         # Copy before changing the acknowledged encrypted checksum.
         tampered = copy.deepcopy(signed)
         # Substitute another syntactically valid artifact identity.
@@ -566,7 +576,7 @@ class RecoveryEvidenceTests(unittest.TestCase):
         # Copy only unsigned manifest fields for independently signed mutation.
         baseline = {key: value for key, value in signed.items() if key != recovery.SIGNATURE_FIELD}
         # Exercise both independent packaged schema bindings.
-        for field, value in (("mysql_schema_version", 3), ("migration_chain_sha256", "c" * 64)):
+        for field, value in (("mysql_schema_version", EXPECTED_SCHEMA_VERSION + 1), ("migration_chain_sha256", "c" * 64)):
             # Name the changed binding in unittest diagnostics.
             with self.subTest(field=field):
                 # Copy the valid manifest for one isolated foreign-contract mutation.
@@ -577,6 +587,27 @@ class RecoveryEvidenceTests(unittest.TestCase):
                 with self.assertRaisesRegex(recovery.RecoveryError, "packaged MySQL schema"):
                     # Use the same valid destination evidence to isolate schema compatibility.
                     recovery.validate_recovery_manifest(recovery.sign_evidence(foreign, EVIDENCE_KEY), EVIDENCE_KEY, acknowledgement, DESTINATION_KEY, NOW)
+
+    # Prove recovery context binds schema two to its prefix and schema three to the full chain.
+    def test_recovery_context_accepts_only_exact_runtime_prefix(self):
+        # Exercise both bridge-compatible schema identities.
+        for version, chain in ((MINIMUM_SCHEMA_VERSION, MINIMUM_MIGRATION_CHAIN), (EXPECTED_SCHEMA_VERSION, MIGRATION_CHAIN)):
+            # Build one exact sanitized recovery context.
+            context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": version, "migration_chain_sha256": chain, "source_target_hmac_sha256": "d" * 64}
+            # Require exact identity preservation.
+            with self.subTest(version=version):
+                # Validate the version-specific applied prefix.
+                self.assertEqual(recovery.validate_backup_context(context), context)
+        # Pair each accepted version with the other version's chain.
+        mismatches = ((MINIMUM_SCHEMA_VERSION, MIGRATION_CHAIN), (EXPECTED_SCHEMA_VERSION, MINIMUM_MIGRATION_CHAIN))
+        # Require cross-paired recovery evidence to fail closed.
+        for version, chain in mismatches:
+            # Build the mismatched but syntactically valid context.
+            context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": version, "migration_chain_sha256": chain, "source_target_hmac_sha256": "d" * 64}
+            # Require exact packaged-prefix refusal.
+            with self.subTest(mismatch=version), self.assertRaisesRegex(recovery.RecoveryError, "packaged MySQL schema"):
+                # Validate the foreign version/chain pair.
+                recovery.validate_backup_context(context)
 
     # Prove hostile field values never enter recovery diagnostics.
     def test_errors_do_not_echo_hostile_values(self):
@@ -594,7 +625,7 @@ class RecoveryEvidenceTests(unittest.TestCase):
         # Build a logical stream larger than one fixed chunk.
         plaintext = (b"synthetic logical backup row\n" * 5000)
         # Create one sanitized release/schema/target context.
-        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": 2, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
+        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": EXPECTED_SCHEMA_VERSION, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
         # Encrypt directly between in-memory binary streams.
         encrypted = io.BytesIO()
         # Record encryption metadata without retaining plaintext.
@@ -613,7 +644,7 @@ class RecoveryEvidenceTests(unittest.TestCase):
     # Prove encrypted staging framing cannot silently accept a partial write.
     def test_streaming_encryption_rejects_short_staging_write(self):
         # Build one exact packaged release and schema context.
-        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": 2, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
+        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": EXPECTED_SCHEMA_VERSION, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
         # Use a sink that accepts only a strict prefix of its first write.
         target = ShortWritingSink()
         # Require fixed staging failure before any artifact can be accepted.
@@ -628,7 +659,7 @@ class RecoveryEvidenceTests(unittest.TestCase):
         # Build a compact synthetic logical dump.
         plaintext = b"synthetic recovery content"
         # Bind a synthetic exact release context.
-        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": 2, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
+        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": EXPECTED_SCHEMA_VERSION, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
         # Encrypt the source into one binary artifact.
         encrypted = io.BytesIO()
         # Capture exact authenticated header metadata.
@@ -661,7 +692,7 @@ class RecoveryEvidenceTests(unittest.TestCase):
     # Prove strict authenticated context allowlisting excludes private additions.
     def test_streaming_context_rejects_extra_fields(self):
         # Build the complete allowed public context.
-        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": 2, "migration_chain_sha256": "c" * 64, "source_target_hmac_sha256": "d" * 64}
+        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": EXPECTED_SCHEMA_VERSION, "migration_chain_sha256": "c" * 64, "source_target_hmac_sha256": "d" * 64}
         # Add a field that could otherwise carry private configuration.
         context["private_path"] = "host-private-value"
         # Require refusal before any logical bytes are encrypted.
@@ -805,7 +836,7 @@ class RecoveryEvidenceTests(unittest.TestCase):
         # Use representative synthetic logical rows only.
         logical = b"synthetic-user\tsynthetic-wallet\tsynthetic-ledger\n"
         # Bind exact release and #204 schema context.
-        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": 2, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
+        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": EXPECTED_SCHEMA_VERSION, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
         # Create one isolated encrypted-staging directory.
         with tempfile.TemporaryDirectory() as temporary_directory:
             # Resolve the isolated staging directory.
@@ -831,14 +862,14 @@ class RecoveryEvidenceTests(unittest.TestCase):
             # Validate the signed manifest paired to exact destination evidence.
             manifest = recovery.validate_recovery_manifest(manifest_record_value, EVIDENCE_KEY, destination.acknowledgement, DESTINATION_KEY, NOW)
             # Require exact logical, release, and schema bindings.
-            self.assertEqual((manifest.logical_plaintext_size, manifest.release_sha, manifest.mysql_schema_version, manifest.migration_chain_sha256), (len(logical), context["release_sha"], 2, MIGRATION_CHAIN))
+            self.assertEqual((manifest.logical_plaintext_size, manifest.release_sha, manifest.mysql_schema_version, manifest.migration_chain_sha256), (len(logical), context["release_sha"], EXPECTED_SCHEMA_VERSION, MIGRATION_CHAIN))
 
     # Prove failed destination acknowledgements retain encrypted staging for retry only.
     def test_backup_bad_ack_retains_only_encrypted_staging(self):
         # Use one synthetic logical stream.
         logical = b"synthetic private logical content"
         # Bind exact release and #204 schema context.
-        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": 2, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
+        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": EXPECTED_SCHEMA_VERSION, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
         # Exercise both artifact and manifest acknowledgement failures.
         for bad_upload, bad_manifest in ((True, False), (False, True)):
             # Create a new isolated staging directory for each failure.
@@ -867,7 +898,7 @@ class RecoveryEvidenceTests(unittest.TestCase):
         # Use one synthetic logical stream.
         logical = b"synthetic logical content"
         # Bind exact release and #204 schema context.
-        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": 2, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
+        context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": EXPECTED_SCHEMA_VERSION, "migration_chain_sha256": MIGRATION_CHAIN, "source_target_hmac_sha256": "d" * 64}
         # Exercise nonzero and watchdog timeout separately.
         for timed_out in (False, True):
             # Create a new isolated staging directory.

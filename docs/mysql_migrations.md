@@ -1,12 +1,12 @@
 # MySQL migration and DDL-free runtime gate
 
-Requirements `MYSQL-005`, `STORAGE-007`, and `TEST-048` define the repository-side MySQL schema boundary for restricted preview. This packet does not connect to or mutate an existing database, VM, service environment, backup, provider, listener, DNS, TLS, firewall, or deployment.
+Requirements `MYSQL-005`, `MYSQL-008`, `STORAGE-007`, and `TEST-048` define the repository-side MySQL schema boundary for restricted preview. This packet does not connect to or mutate an existing database, VM, service environment, backup, provider, listener, DNS, TLS, firewall, or deployment.
 
 ## Canonical schema contract
 
 `migrations/mysql/catalog.json` is the only executable schema catalog. It lists contiguous immutable JSON migration files and their exact SHA-256 checksums. Each JSON `statements` element is passed to the driver as one statement; the runner never splits SQL on semicolons or accepts client `DELIMITER` directives.
 
-The restricted-preview release expects MySQL migration version `2` and accepts version `2` only at runtime. This migration version is independent of the application version and the JSON document `SCHEMA_VERSION`. Release packaging includes the catalog and migrations, recomputes every checksum, and writes `mysql_schema.expected_version`, `minimum_version`, `catalog_sha256`, and `migration_chain_sha256` into `release-manifest.json`.
+The bridge catalog declares expected migration version `3`, minimum runtime version `2`, and exact `apply_policy=held`. Runtime accepts only initialized clean schema `2` with the exact checksum-bound migration prefix or initialized clean schema `3` with the complete checksum-bound chain. Schema `1`, future versions, dirty or applying state, gaps, foreign checksums, and an invalid prefix or full-chain digest fail closed. This migration version is independent of the application version and the JSON document `SCHEMA_VERSION`. Release packaging includes the catalog and migrations, recomputes every checksum, and writes `mysql_schema.expected_version`, `minimum_version`, `apply_policy`, `catalog_sha256`, and `migration_chain_sha256` into `release-manifest.json`.
 
 ## Identity and environment boundary
 
@@ -51,19 +51,21 @@ Run the tool from an immutable verified release with migration variables loaded 
 python scripts/mysql_migrate.py status
 python scripts/mysql_migrate.py check
 python scripts/mysql_migrate.py dry-run --backup-proof <external-proof-path>
-python scripts/mysql_migrate.py apply --backup-proof <external-proof-path>
+python scripts/mysql_migrate.py bridge-check-schema2
 ```
 
 `status`, `check`, and `dry-run` issue only `SELECT` statements and never create migration metadata, acquire advisory locks, or modify application state. Their output is limited to initialized state, numeric versions, finite status, optional applying version, and the public catalog checksum. Target values, credentials, proof paths, SQL, and driver messages are never printed.
 
-`apply` acquires a target-derived MySQL named lock, rechecks the proof-bound state, forces non-autocommit for migration history/state DML, and creates the two minimal metadata tables only after proof acceptance. Before each application migration it commits an `applying` marker. MySQL DDL auto-commits; therefore a failed statement is not described as rolled back. The runner attempts to persist `dirty`, refuses every later normal apply, and requires a separately reviewed checksum-bound forward-fix packet. There is no `mark applied`, checksum override, automatic replay, or arbitrary repair command.
+`bridge-check-schema2` uses only the existing runtime DML identity, reuses the checksum-prefix runtime verifier, and additionally requires exact clean schema `2`. Deployment binds both its pre-cutover and post-cutover checks to the selected immutable release root. It performs no migration or schema mutation.
+
+`apply` is retained as a fail-closed command name but the held catalog rejects it before migration configuration, connector creation, advisory-lock acquisition, DDL, or migration-state write. The public `apply_migrations` boundary enforces the same ordering. There is no dormant selector, mark-applied path, checksum override, automatic replay, or arbitrary repair command. Enabling schema `3` requires a separately governed v40 migration, backup, quiesce, grant, drift, and restart packet.
 
 ## Upgrade and rollback boundary
 
-The supported matrix is clean empty `0 -> 1 -> 2` and clean version `1 -> 2`. A clean exact version-2 recheck is repeat-safe. Missing metadata with application tables, a partial metadata boundary, gaps, checksum drift, future versions, `applying`, and `dirty` all fail before runtime traffic.
+The bridge runtime matrix is exact clean schema `2` prefix restart or exact clean schema `3` full-chain restart. The held application boundary performs no `0 -> 3` or `2 -> 3` migration. Missing metadata, schema `1`, a partial metadata boundary, gaps, checksum drift, future versions, `applying`, and `dirty` all fail before runtime traffic.
 
 Migration files are forward-only. Application rollback is allowed only when the retained predecessor release manifest accepts the already-applied MySQL version. If the predecessor does not accept it, do not repoint the application release. Schema reversal, manual history edits, destructive down migrations, and data restoration remain prohibited without a separate recovery-reviewed packet. For partial DDL, preserve the dirty evidence and ship an explicit forward fix rather than attempting transactional rollback.
 
 ## Disposable validation
 
-The CI matrix creates a new ephemeral MySQL 8.4 service, requires an explicit disposable marker, creates separate synthetic administrator, migrator, and runtime accounts, and uses test-suffixed isolated databases only. It proves empty bootstrap, supported upgrade, exact recheck, proof refusal before metadata DDL, checksum/gap/future/dirty refusal, two-process advisory-lock serialization, restart and runtime DML, `SHOW GRANTS`, and actual denied `CREATE`, `ALTER`, `DROP`, `INDEX`, `TRIGGER`, and `GRANT` attempts. It removes every test database and account afterward. It does not open or use protected application ports `8765` or `8877`, and the ephemeral service is destroyed with the CI job.
+The CI matrix creates a new ephemeral MySQL 8.4 service, requires an explicit disposable marker, creates separate synthetic administrator, migrator, and runtime accounts, and uses test-suffixed isolated databases only. A private test seam seeds immutable catalog prefixes so live evidence can prove schema `2` and schema `3` restart compatibility while the public apply path remains held. The matrix proves held refusal before lock or write, checksum/gap/future/dirty refusal, restart and runtime DML, `SHOW GRANTS`, and actual denied `CREATE`, `ALTER`, `DROP`, `INDEX`, `TRIGGER`, and `GRANT` attempts. It removes every test database and account afterward. It does not open or use protected application ports `8765` or `8877`, and the ephemeral service is destroyed with the CI job.

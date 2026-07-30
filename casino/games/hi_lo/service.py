@@ -129,8 +129,10 @@ class HiLoService:
                 "guesses": list(engine.GUESSES),  # Advertise the two legal decisions.
                 "ace_high": True,  # Explain rank ordering.
                 "suits_break_ties": False,  # Explain equal-rank handling.
-                "correct_return_multiplier": 2,  # Return stake plus even-money win.
-                "tie_return_multiplier": 1,  # Refund the wager on equal rank.
+                "correct_return_multiplier": engine.CORRECT_RETURN_MULTIPLIER,  # Retain the deprecated frozen-v1 even-money scalar for legacy clients.
+                "tie_return_multiplier": engine.TIE_RETURN_MULTIPLIER,  # Refund the wager on equal rank.
+                "correct_paytable": engine.correct_paytable(),  # Publish the rank-priced correct return so clients never guess a price. (issue #406)
+                "house_edge": engine.HOUSE_EDGE,  # State the constant edge the rank pricing holds at every current card. (issue #406)
             },
         }
 
@@ -160,7 +162,7 @@ class HiLoService:
         # Use a distinct audit type for a tie refund versus a winning payout.
         transaction_type = "HI_LO_REFUND_CREDIT" if round_state.get("outcome") == "tie" else "HI_LO_PAYOUT_CREDIT"
         # Apply or recover the stable guess action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type=transaction_type, round_id=round_state["round_id"], action_id=round_state["guess_action_id"], fingerprint=round_state["guess_fingerprint"], details={"stage": "guess", "wager": round_state["wager"], "guess": round_state["guess"], "current_card": round_state["current_card"], "next_card": round_state["next_card"], "outcome": round_state["outcome"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type=transaction_type, round_id=round_state["round_id"], action_id=round_state["guess_action_id"], fingerprint=round_state["guess_fingerprint"], details={"stage": "guess", "wager": round_state["wager"], "guess": round_state["guess"], "current_card": round_state["current_card"], "next_card": round_state["next_card"], "outcome": round_state["outcome"], "correct_return_multiplier": engine.correct_return_multiplier(round_state["current_card"])})
         # Mark the returned-token movement complete only after ledger proof exists.
         round_state["settlement_status"] = "complete"
         # Store the immutable refund or payout ledger id.
