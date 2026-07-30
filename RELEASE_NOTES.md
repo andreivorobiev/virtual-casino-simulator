@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.36 Release Notes
+# Virtual Casino Simulator v0.9.5.37 Release Notes
+
+## Provider-neutral game-action contract foundation
+
+- Adds bounded immutable core types for game-action identities, resources, snapshots, plans, receipts, outcomes, and state updates.
+- Adds deterministic canonical request fingerprinting with exact mismatch rejection semantics.
+- Validates direct and factory-created durable trees through the same bounded canonical-value rules.
+- Proves the abstract contract through a listener-free fake provider without claiming a production provider implementation.
+- Registers `CORE-031` and central listener-free case `API-GAMECORE-003` without allocating a generic TEST identifier.
+- Adds no JSON journal or cross-process gate, schema-3 migration, MySQL composite transaction, route, game, Slots adoption, ledger behavior, API contract, or current-production atomicity.
+- Keeps issues #430 and #471 open for the independently governed provider implementation and adoption sequence.
+- Retains exact immutable v0.9.5.36 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.36 atomic player game-state update foundation
 
 ## Atomic player game-state update foundation
 
