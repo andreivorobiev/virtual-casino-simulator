@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.42
-- docs: 1.64.42
+- tests: 1.64.43
+- docs: 1.64.43
 - contracts: 1.49.23
-- tooling: 1.21.12
+- tooling: 1.22.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -940,3 +940,4 @@ Historical source baseline: 9.1.0
 - **KENO-027** (Keno) - PASS: Keno uses one server-authoritative, strictly increasing paytable for every legal one-through-twenty-spot ticket, with every positive award at least one times the ticket, strictly increasing full-catch jackpots, exact ideal hypergeometric returns in the approved house-side band except the disclosed one-spot cent-rounding exception, and realized production float-plus-hundredth rounding strictly below one for every frozen-v1 amount from 0.01 through 1,000,000. The state API, current ledger and history equations, browser controls, exact jackpot copy, route restoration, repeat, autoplay, and localized player disclosure all consume the same rules without changing the frozen v1 request, route, envelope, or payout law.
 - **TEST-147** (Tests) - PASS: Listener-free and hosted exact-head evidence proves all 230 Keno outcome classes, exact hypergeometric probability rows, paytable and jackpot monotonicity, frozen production rounding across the complete accepted amount domain, maximum-stake maximum-jackpot settlement, current ledger and history equations, entropy restoration, API-paytable equality, and the unchanged frozen-v1 contract. Hosted Long publishes exact rational per-row evidence, while Browser acceptance emits all sixty-four eight-state by two-locale by four-viewport cells and behaviorally proves exact open-ticket and settled-history amount restoration, Repeat, first autoplay tick, player-scoped history alignment, numeric jackpot visibility, and listener cleanup.
 - **TEST-148** (Tests) - PASS: An explicit listener-free request-latency baseline measures direct WSGI handling for authenticated current-user, Slots state, Roulette state, aggregate Casino state, and idempotent Boule actions against isolated external JSON and callback-owned disposable loopback MySQL providers. Every route family runs fixed warm-up work followed by exactly sixty-four measured operations at concurrency one, two, four, and eight through a rolling at-most-N future window, default MySQL pool settings, untimed authentication and Boule first/replay/conflict controls, zero accepted errors, and cleanup. Evidence is an atomic caller-external aggregate containing only schema, exact source commit, provider, route family, concurrency, p50 and p95 milliseconds, throughput, error count, and response-byte total, with no numeric performance threshold or network, edge, Gunicorn, multi-process, identity, request, outcome, sample, timestamp, path, host, database, or exception detail.
+- **MYSQL-007** (MySQL) - PASS: The checksum-bound contiguous schema-three catalog provisions one exact binary action-scope identity, lowercase request fingerprint, bounded declared-resource document, complete bounded paid-or-zero-cost receipt document, and receipt SHA-256, with live UPDATE and DELETE refusal preserving every committed receipt row.

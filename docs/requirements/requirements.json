@@ -12621,6 +12621,30 @@
       "introduced_in": "issue-323-request-latency-baseline",
       "changed_in": "issue-323-request-latency-baseline",
       "notes": "TEST-148 was reserved durably on issue #323 after exact v0.9.5.34 ownership and collision readback. The benchmark imports casino.wsgi only in a fresh child after provider and authentication environment readiness, opens no listener, uses no provider administrator or private migration helper, and invokes MySQL only through a no-argument callback after the existing disposable migration and DML-grant boundary and before its existing cleanup. The baseline records measurements only and defines no pass/fail latency threshold."
+    },
+    {
+      "id": "MYSQL-007",
+      "module": "MySQL",
+      "description": "The checksum-bound contiguous schema-three catalog provisions one exact binary action-scope identity, lowercase request fingerprint, bounded declared-resource document, complete bounded paid-or-zero-cost receipt document, and receipt SHA-256, with live UPDATE and DELETE refusal preserving every committed receipt row.",
+      "status": "PASS",
+      "api_tests": [
+        "MYSQL-MIGRATION-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "migrations/mysql/catalog.json",
+        "migrations/mysql/0003_game_action_receipts.json",
+        "scripts/package_app.py",
+        "tests/mysql_migration_tests.py",
+        "tests/mysql_migration_live.py",
+        "tests/recovery_tests.py",
+        "tests/release_artifact_tests.py",
+        "tests/storage_tests.py"
+      ],
+      "introduced_in": "issue-430-mysql-schema3-receipts",
+      "changed_in": "issue-430-mysql-schema3-receipts",
+      "notes": "This capacity-only checkpoint proves checksum-bound initial DDL application and live immutable-row UPDATE and DELETE refusal. schema_state_digest() does not bind CHECK clauses or trigger definitions, so exact post-apply CHECK and trigger inspection or digest binding is a mandatory later migration-readiness dependency before any MySQL provider composite or runtime atomicity acceptance. It adds no runtime provider implementation, route, game, Slots, ledger, saga, journal, production atomicity, or issue-closure claim."
     }
   ]
 }
