@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup, SIGNUP_ENABLED, PASSKEYS_ENABLED, INVITATIONS_ENABLED, ENROLLMENT_ENABLED
+from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup, SIGNUP_ENABLED, PASSKEYS_ENABLED, INVITATIONS_ENABLED, ENROLLMENT_ENABLED
 # Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
@@ -130,24 +130,22 @@ def build_router() -> Router:
     def reset(body, query, context):
         # Require an Admin role before destroying shared local casino state.
         auth.require_admin(context["user"])
-        # Import required dependency so this module can use its public functions or constants.
-        import shutil
-        # Reset configured provider state before bootstrapping default players.
-        get_storage_provider().reset()
-        # Branch when the following condition is true.
-        if DATA_DIR.exists():
-            # Use this standard-library helper to perform the requested operation.
-            shutil.rmtree(DATA_DIR)
-        # Execute this statement as part of the module's documented control flow.
-        ensure_dirs()
-        # Bootstrap default players through the active provider after reset.
-        players.save_players(players.default_players())
-        # Execute this statement as part of the module's documented control flow.
-        auth.bootstrap_admin_from_env()
+        # Resolve the configured provider once for one stable reset identity.
+        provider = get_storage_provider()
+        # Hold the provider reset boundary through recreation and bootstrap visibility.
+        with provider.reset_transaction():
+            # Recreate shared runtime folders while the reset boundary remains held.
+            ensure_dirs()
+            # Bootstrap default players reentrantly under the same provider boundary.
+            players.save_players(players.default_players())
+            # Bootstrap the default administrator before releasing reset visibility.
+            auth.bootstrap_admin_from_env()
+            # Build the unchanged success payload while reset visibility remains private.
+            result = {"games": list_games(), "players": players.list_players()}
         # Execute this statement as part of the module's documented control flow.
         logger.info("casino_reset")
         # Return the computed value to the caller.
-        return {"games": list_games(), "players": players.list_players()}
+        return result
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/casino/history")

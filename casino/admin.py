@@ -21,6 +21,8 @@ from casino.core import invitations
 from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import read_json
+# Import the provider visibility boundary for direct game-state tree inspection.
+from casino.core.storage import get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
 from casino.bots import profiles, practice_opponents
 # Import required dependency so this module can use its public functions or constants.
@@ -584,16 +586,20 @@ def requirements():
 
 # Define the game_states function used by this module.
 def game_states():
-    # Set states to the value needed for the next operation.
-    states = {}
-    # Branch when the following condition is true.
-    if GAME_DATA_DIR.exists():
-        # Iterate through the collection to process each item.
-        for p in sorted(GAME_DATA_DIR.glob("*.json")):
-            # Set states[p.stem] to the value needed for the next operation.
-            states[p.stem] = {"path": str(p), "state": _read_json_file(p, {})}
-    # Return the computed value to the caller.
-    return states
+    # Resolve the active provider once so reset and direct state reads share one boundary.
+    provider = get_storage_provider()
+    # Hold JSON reset visibility while enumerating and reading the complete state snapshot.
+    with provider.state_visibility_transaction():
+        # Set states to the value needed for the next operation.
+        states = {}
+        # Branch when the following condition is true.
+        if GAME_DATA_DIR.exists():
+            # Iterate through the collection to process each item.
+            for p in sorted(GAME_DATA_DIR.glob("*.json")):
+                # Set states[p.stem] to the value needed for the next operation.
+                states[p.stem] = {"path": str(p), "state": _read_json_file(p, {})}
+        # Return the computed value to the caller from within stable visibility.
+        return states
 
 
 # Define the overview function used by this module.
