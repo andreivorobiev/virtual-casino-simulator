@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "name": "game-action-receipts",
+  "description": "Add the exact-scope immutable receipt boundary for future transactional MySQL game actions.",
+  "statements": [
+    "CREATE TABLE casino_game_action_receipts (game_id VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, player_id VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, action_key VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, request_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, resources_json TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, receipt_json MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, receipt_sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, PRIMARY KEY (game_id, player_id, action_key), CONSTRAINT chk_game_action_request_fingerprint CHECK (request_fingerprint REGEXP '^[0-9a-f]{64}$'), CONSTRAINT chk_game_action_receipt_sha256 CHECK (receipt_sha256 REGEXP '^[0-9a-f]{64}$'), CONSTRAINT chk_game_action_resources_json CHECK (JSON_VALID(resources_json) AND JSON_TYPE(resources_json) = 'OBJECT' AND OCTET_LENGTH(resources_json) BETWEEN 2 AND 16384), CONSTRAINT chk_game_action_receipt_json CHECK (JSON_VALID(receipt_json) AND JSON_TYPE(receipt_json) = 'OBJECT' AND OCTET_LENGTH(receipt_json) BETWEEN 2 AND 8388608)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "CREATE TRIGGER casino_game_action_receipts_no_update BEFORE UPDATE ON casino_game_action_receipts FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'casino game-action receipts are immutable'",
+    "CREATE TRIGGER casino_game_action_receipts_no_delete BEFORE DELETE ON casino_game_action_receipts FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'casino game-action receipts are immutable'"
+  ]
+}

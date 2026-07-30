@@ -97,6 +97,7 @@ REQUIRED_FILES = {
     "run.py",
     "migrations/mysql/0001_initial.json",
     "migrations/mysql/0002_action_identity.json",
+    "migrations/mysql/0003_game_action_receipts.json",
     "migrations/mysql/catalog.json",
     "scripts/mysql_migrate.py",
     "scripts/recovery.py",
