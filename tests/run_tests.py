@@ -1,7 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, base64, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
+import argparse, base64, hashlib, importlib, io, json, math, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
 # Import date arithmetic for fixed-window Guest Trials retention tests.
 from datetime import datetime, timedelta, timezone
 # Import source inspection so browser progress totals follow declared run_case calls automatically.
@@ -309,7 +309,7 @@ def browser_case_durations():
         # Read the tracked measured-seconds map keyed by literal case id.
         profile=json.loads(BROWSER_DURATION_PROFILE_PATH.read_text(encoding='utf-8'))
         # Accept only a dictionary of numeric weights.
-        return {str(case_id):max(1,int(value)) for case_id,value in profile.items() if isinstance(value,(int,float))} if isinstance(profile,dict) else {}
+        return {str(case_id):min(3600,max(1,int(value))) for case_id,value in profile.items() if isinstance(value,(int,float)) and not isinstance(value,bool) and math.isfinite(value)} if isinstance(profile,dict) else {}
     # Treat unreadable profiles as absent so packing still proceeds deterministically.
     except (OSError,ValueError):
         # Return the empty profile that makes every case weigh the default.
@@ -437,6 +437,8 @@ def browser_expected_case_ids(affected_games):
 def verify_browser_shards(results_dir, shard_count, affected_games=None):
     # Track every observed browser case id and the shard that executed it.
     seen={}
+    # Track every shard's declared packed ownership so forged or inconsistent ownership fails closed. (issue #502)
+    declared_owned={}
     # Canonicalize the detector-owned selection so shard self-descriptions can be checked rather than trusted.
     expected_declaration=sorted(affected_games) if affected_games else None
     # Derive the expected case set only from the workflow-supplied detector selection.
@@ -451,16 +453,28 @@ def verify_browser_shards(results_dir, shard_count, affected_games=None):
         data=json.loads(path.read_text(encoding='utf-8'))
         # Reject a shard whose self-description does not match the detector-owned aggregate selection.
         if data.get('affected_games')!=expected_declaration: print(f'BROWSER_SHARDS FAIL shard {index} affected games {data.get("affected_games")} != expected {expected_declaration}'); return 1
+        # Require each shard to declare its packed ownership as a list of literal case ids.
+        owned=data.get('owned_cases')
+        # Fail closed when the ownership declaration is absent or malformed.
+        if not isinstance(owned,list) or not all(isinstance(case_id,str) for case_id in owned): print(f'BROWSER_SHARDS FAIL shard {index} has no valid owned_cases declaration'); return 1
+        # Retain this shard's declared ownership for cross-shard partition checks.
+        declared_owned[index]=set(owned)
         # Examine only browser-suite records so mixed local suite runs cannot confuse coverage.
         for result in data['results']:
             # Skip non-browser records defensively without counting them as coverage.
             if not str(result['test_id']).startswith('BR-'): continue
+            # Fail closed when a shard reports a case outside its own declared ownership.
+            if result['test_id'] not in declared_owned[index]: print(f'BROWSER_SHARDS FAIL shard {index} reported unowned case {result["test_id"]}'); return 1
             # Fail closed when any shard retained a non-passing browser case.
             if result['status']!='PASS': print(f'BROWSER_SHARDS FAIL non-passing case {result["test_id"]} in shard {index}'); return 1
             # Fail closed when two shards both claim one case.
             if result['test_id'] in seen: print(f'BROWSER_SHARDS FAIL duplicate case {result["test_id"]} in shards {seen[result["test_id"]]} and {index}'); return 1
             # Record this case's owning shard for duplicate detection.
             seen[result['test_id']]=index
+    # Require the declared ownerships to be pairwise disjoint so two shards can never both claim a case.
+    if sum(len(owned) for owned in declared_owned.values())!=len(set().union(*declared_owned.values())): print('BROWSER_SHARDS FAIL declared shard ownerships overlap'); return 1
+    # Require the declared ownerships to cover the exact literal inventory so packing gaps cannot hide.
+    if set().union(*declared_owned.values())!=set(browser_case_ids()): print('BROWSER_SHARDS FAIL declared shard ownerships do not partition the case inventory'); return 1
     # Collect every literal case that never executed on any shard.
     missing=[case_id for case_id in expected if case_id not in seen]
     # Fail closed when the shard union leaves any literal case unexecuted.

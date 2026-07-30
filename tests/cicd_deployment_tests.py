@@ -531,16 +531,14 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         expected = [case_id for case_id in case_ids if case_id not in set(game_cases.values()) or case_id == game_cases["acey_deucey"]]
         # Create one disposable four-shard result packet.
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Write each deterministic contiguous shard result with an exact self-description.
+            # Write each deterministic contiguous shard result with an exact packed-ownership self-description.
             for index in range(4):
-                # Split the selected inventory into the same balanced contiguous shape.
-                start = (len(expected) * index) // 4
-                # Resolve the exclusive shard boundary.
-                stop = (len(expected) * (index + 1)) // 4
-                # Build passing evidence for this shard's exact selected cases.
-                results = [{"test_id": case_id, "status": "PASS"} for case_id in expected[start:stop]]
-                # Retain the detector selection beside the synthetic case evidence.
-                payload = {"affected_games": ["acey_deucey"], "results": results}
+                # Split the full literal inventory into the declared packed ownership partition. (issue #502)
+                owned = case_ids[(len(case_ids) * index) // 4:(len(case_ids) * (index + 1)) // 4]
+                # Build passing evidence for this shard's owned cases that survive the detector selection.
+                results = [{"test_id": case_id, "status": "PASS"} for case_id in owned if case_id in set(expected)]
+                # Retain the detector selection and declared ownership beside the synthetic case evidence.
+                payload = {"affected_games": ["acey_deucey"], "owned_cases": owned, "results": results}
                 # Write the exact filename consumed by the aggregate verifier.
                 (Path(temp_dir) / f"browser_results_shard_{index}_of_4.json").write_text(json.dumps(payload), encoding="utf-8")
             # Run the real aggregate CLI without invoking a browser or listener.
@@ -561,6 +559,18 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             self.assertNotEqual(rejected.returncode, 0, rejected.stdout + rejected.stderr)
             # Retain a focused diagnostic proving the expected-selection mismatch was detected.
             self.assertIn("affected games", rejected.stdout)
+            # Restore the detector selection and instead forge the ownership partition itself. (issue #502)
+            forged["affected_games"] = ["acey_deucey"]
+            # Move one owned case out of this shard's declaration while its passing row remains.
+            forged["owned_cases"] = forged["owned_cases"][1:]
+            # Persist the ownership forgery for the second negative regression.
+            forged_path.write_text(json.dumps(forged), encoding="utf-8")
+            # Re-run the real aggregate verifier against the forged ownership.
+            unowned = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "4", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            # Require forged or inconsistent ownership to fail closed.
+            self.assertNotEqual(unowned.returncode, 0, unowned.stdout + unowned.stderr)
+            # Retain a focused diagnostic proving ownership verification detected the forgery.
+            self.assertIn("BROWSER_SHARDS FAIL", unowned.stdout)
 
     # Prove ordinary sharding does not alter formal 50k or sustained Baccarat governance.
     def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
