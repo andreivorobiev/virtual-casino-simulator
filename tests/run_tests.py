@@ -40,6 +40,8 @@ from casino.core.state_store import save_player_game_state, write_json
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
+# Import the listener-free player-state atomicity suite for central storage validation.
+from tests import state_store_atomic_tests
 # Import bounded MySQL pool lifecycle and concurrency evidence.
 from tests import mysql_pool_tests
 # Import listener-free migration policy tests for every storage validation run.
@@ -465,6 +467,14 @@ def run_request_latency_provider(provider,output_path):
 
 # Define the run_storage_tests function used by this module.
 def run_storage_tests(include_live=False, include_migration_live=False, request_latency_callback=None):
+    # Define one focused unittest runner for provider-neutral player-game-state atomicity.
+    def run_player_state_atomic_tests():
+        # Load only the CORE-030 player-state atomicity test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(state_store_atomic_tests.PlayerGameStateAtomicTests)
+        # Execute the focused listener-free suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any concurrency or rollback assertion failed.
+        if not result.wasSuccessful(): raise AssertionError('player game-state atomicity suite failed')
     # Define one focused unittest runner for bounded MySQL pool lifecycle behavior.
     def run_mysql_pool_tests():
         # Load only the STORAGE-010 and TEST-141 pool test class.
@@ -497,6 +507,8 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
+    # Prove player-scoped JSON concurrency, rollback, fallback, isolation, and MySQL delegation.
+    run_case('STORAGE-PLAYER-STATE-ATOMIC-001',['CORE-030','STORAGE-001','STORAGE-002'],run_player_state_atomic_tests)
     # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
     run_case('STORAGE-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','LEDGER-026','STORAGE-005','STORAGE-006'],storage_tests.run_practice_opponent_accounting)
     # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
