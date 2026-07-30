@@ -1534,6 +1534,20 @@ def run_api_tests():
             raise AssertionError('settlement adapter suite failed')
     # Record the additive audit, sign routing, replay, conflict, and bounded recovery proof.
     run_case('API-GAMECORE-002',['GAMECORE-003'],run_settlement_adapter_tests)
+    # Execute the route-free provider-neutral game-action contract proof without opening a listener.
+    def run_game_action_contract_tests():
+        # Import the focused contract suite only when its named case runs.
+        from tests import game_action_contract_tests
+        # Load the complete immutable-contract and hostile conformance class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(game_action_contract_tests.GameActionContractTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any contract or conformance proof failed.
+        if not result.wasSuccessful():
+            # Preserve detailed unittest output while keeping the named failure stable.
+            raise AssertionError('game-action contract suite failed')
+    # Record bounded identity, fingerprint, planner-order, paid, zero-cost, and receipt semantics.
+    run_case('API-GAMECORE-003',['CORE-031'],run_game_action_contract_tests)
     # Execute the Color Wheel rules and settlement proof without opening a listener.
     def run_color_wheel_tests():
         # Load only the focused Color Wheel class.
