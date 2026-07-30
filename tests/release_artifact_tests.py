@@ -42,7 +42,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         # Define one exact schema-three receipt-capacity fixture migration.
         migration_three = json.dumps({"version": 3, "name": "game-action-receipts", "description": "fixture", "statements": ["CREATE TABLE fixture_game_action_receipts (game_id VARCHAR(191) NOT NULL, player_id VARCHAR(191) NOT NULL, action_key VARCHAR(191) NOT NULL, PRIMARY KEY (game_id, player_id, action_key))"]}, indent=2) + "\n"
         # Build the checksum-pinned fixture catalog from exact UTF-8 bytes.
-        migration_catalog = json.dumps({"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 3, "expected_version": 3, "migrations": [{"version": 1, "name": "initial", "file": "0001_initial.json", "sha256": hashlib.sha256(migration_one.encode("utf-8")).hexdigest()}, {"version": 2, "name": "upgrade", "file": "0002_upgrade.json", "sha256": hashlib.sha256(migration_two.encode("utf-8")).hexdigest()}, {"version": 3, "name": "game-action-receipts", "file": "0003_game_action_receipts.json", "sha256": hashlib.sha256(migration_three.encode("utf-8")).hexdigest()}]}, indent=2) + "\n"
+        migration_catalog = json.dumps({"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 2, "expected_version": 3, "apply_policy": "held", "migrations": [{"version": 1, "name": "initial", "file": "0001_initial.json", "sha256": hashlib.sha256(migration_one.encode("utf-8")).hexdigest()}, {"version": 2, "name": "upgrade", "file": "0002_upgrade.json", "sha256": hashlib.sha256(migration_two.encode("utf-8")).hexdigest()}, {"version": 3, "name": "game-action-receipts", "file": "0003_game_action_receipts.json", "sha256": hashlib.sha256(migration_three.encode("utf-8")).hexdigest()}]}, indent=2) + "\n"
         # Define the minimal required tracked application file inventory.
         self.files = {
             "ARCHITECTURE.md": "# Architecture\n",
@@ -55,7 +55,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             "casino/config.py": "\"\"\"Fixture config.\"\"\"\n\n# Expose the canonical fixture release.\nAPP_VERSION = \"9.3.0\"\n",
             "casino/core/recovery.py": "\"\"\"Fixture recovery policy.\"\"\"\n\n# Expose the authenticated chunked recovery format.\nENCRYPTED_STREAM_SCHEMA = \"casino-aes-256-gcm-chunked-v1\"\n",
             "casino/wsgi.py": "\"\"\"Fixture production WSGI adapter.\"\"\"\n\n# Expose a non-listening fixture callable.\ndef application(environ, start_response):\n    # Return a valid empty response for fixture metadata only.\n    start_response('204 No Content', [('Content-Length', '0')])\n    # Yield no response body bytes.\n    return [b'']\n",
-            "contracts/compatibility/app-9.3.0.json": "{\"app_version\": \"9.3.0\"}\n",
+            "contracts/compatibility/app-9.3.0.json": "{\"app_version\": \"9.3.0\", \"rollback\": {\"scope\": \"application-only\", \"database_rollback\": \"prohibited\", \"mysql_expected_schema_version\": 2, \"requires_retained_predecessor_manifest\": true}}\n",
             "deploy/gunicorn.conf.py": "# Bind the fixture production policy to loopback only.\nbind = '127.0.0.1:8765'\n",
             "deploy/systemd/casino.service": "[Service]\n# Start only the fixture production adapter.\nExecStart=gunicorn casino.wsgi:application\n",
             "modules/module-manifest.json": json.dumps({"application": "9.3.0", "source_baseline": "9.1.0", "modules": {"tooling": "1.7.0"}}) + "\n",
@@ -229,6 +229,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         # Pin the reviewed host-command inventory so syntax drift cannot silently evade the extractor.
         self.assertEqual(host_scripts, {
             "scripts/package_app.py",
+            "scripts/mysql_migrate.py",
             "scripts/run_edge_monitor.py",
             "scripts/validate_monitor_config.py",
             "scripts/write_release_env.py",
@@ -342,6 +343,29 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Verify without smoke so the internal catalog gate is isolated.
             package_app.verify_release(archive_path, manifest_path, smoke=False)
 
+    # Prove a coherently re-signed catalog cannot enable migration application.
+    def test_packaged_catalog_apply_policy_is_held(self):
+        # Build a valid candidate before coherent fixture alteration.
+        archive_path, manifest_path = self.build("catalog-policy-tamper")
+        # Parse the packaged catalog fixture.
+        catalog = json.loads(self.files["migrations/mysql/catalog.json"])
+        # Replace only the closed apply policy.
+        catalog["apply_policy"] = "automatic"
+        # Serialize exact hostile catalog bytes.
+        replacement = (json.dumps(catalog, indent=2) + "\n").encode("utf-8")
+        # Define an external manifest mutation that mirrors the hostile policy.
+        def mutate_manifest(manifest):
+            # Rebind exact catalog bytes.
+            manifest["mysql_schema"]["catalog_sha256"] = hashlib.sha256(replacement).hexdigest()
+            # Rebind the same unreviewed policy value.
+            manifest["mysql_schema"]["apply_policy"] = "automatic"
+        # Rewrite catalog plus outer identities coherently.
+        self.rewrite_member_and_rebind_manifest(archive_path, manifest_path, f"{package_app.ARCHIVE_ROOT}/migrations/mysql/catalog.json", replacement, mutate_manifest)
+        # Require the independent packaged policy gate to reject it.
+        with self.assertRaisesRegex(ValueError, "apply policy"):
+            # Skip smoke because catalog policy is the isolated failure.
+            package_app.verify_release(archive_path, manifest_path, smoke=False)
+
     # Prove external MySQL schema provenance cannot diverge from unchanged packaged bytes.
     def test_manifest_mysql_schema_mismatch_is_rejected(self):
         # Build one valid candidate.
@@ -357,12 +381,73 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Verify without smoke so schema comparison is isolated.
             package_app.verify_release(archive_path, manifest_path, smoke=False)
 
+    # Prove independent verification authenticates the packaged rollback schema policy.
+    def test_packaged_compatibility_identity_shape_and_schema_are_required(self):
+        # Resolve the exact packaged compatibility member.
+        member_name = f"{package_app.ARCHIVE_ROOT}/contracts/compatibility/app-9.3.0.json"
+        # Exercise malformed JSON, wrong identity, malformed rollback, and schema drift.
+        replacements = (
+            # Reject undecodable JSON syntax.
+            b"{",
+            # Reject another application identity.
+            b'{"app_version":"9.2.0","rollback":{"scope":"application-only","database_rollback":"prohibited","mysql_expected_schema_version":2,"requires_retained_predecessor_manifest":true}}\n',
+            # Reject a non-object rollback declaration.
+            b'{"app_version":"9.3.0","rollback":[]}\n',
+            # Reject a Boolean schema declaration.
+            b'{"app_version":"9.3.0","rollback":{"scope":"application-only","database_rollback":"prohibited","mysql_expected_schema_version":true,"requires_retained_predecessor_manifest":true}}\n',
+            # Reject a broader rollback scope.
+            b'{"app_version":"9.3.0","rollback":{"scope":"database-and-application","database_rollback":"prohibited","mysql_expected_schema_version":2,"requires_retained_predecessor_manifest":true}}\n',
+            # Reject any database rollback authority.
+            b'{"app_version":"9.3.0","rollback":{"scope":"application-only","database_rollback":"permitted","mysql_expected_schema_version":2,"requires_retained_predecessor_manifest":true}}\n',
+            # Reject a retained-predecessor waiver.
+            b'{"app_version":"9.3.0","rollback":{"scope":"application-only","database_rollback":"prohibited","mysql_expected_schema_version":2,"requires_retained_predecessor_manifest":false}}\n',
+            # Reject packaged schema drift even though schema three is inside the bridge window.
+            b'{"app_version":"9.3.0","rollback":{"scope":"application-only","database_rollback":"prohibited","mysql_expected_schema_version":3,"requires_retained_predecessor_manifest":true}}\n',
+        )
+        # Verify every coherently re-bound packaged policy fails closed.
+        for index, replacement in enumerate(replacements):
+            # Build an independent valid candidate for one mutation.
+            archive_path, manifest_path = self.build(f"compatibility-tamper-{index}")
+            # Rebind archive and inventory identities to reach semantic policy validation.
+            self.rewrite_member_and_rebind_manifest(archive_path, manifest_path, member_name, replacement)
+            # Require the packaged compatibility gate to reject the mutation.
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                # Skip smoke so rollback policy is the isolated failure.
+                package_app.verify_release(archive_path, manifest_path, smoke=False)
+
+    # Prove the governed packaged compatibility record cannot be omitted.
+    def test_packaged_compatibility_record_is_required(self):
+        # Resolve one isolated output directory.
+        output = pathlib.Path(self.temporary.name) / "missing-compatibility"
+        # Build from the complete fixture minus only its compatibility member.
+        archive_path, manifest_path = package_app.build_release(self.root, output, [path for path in self.files if path != "contracts/compatibility/app-9.3.0.json"], self.commit_sha, self.commit_epoch)
+        # Require independent verification to refuse the omitted policy.
+        with self.assertRaisesRegex(ValueError, "compatibility record is missing"):
+            # Skip smoke because archive policy is the isolated boundary.
+            package_app.verify_release(archive_path, manifest_path, smoke=False)
+
+    # Prove a coherently edited manifest cannot drift from packaged rollback policy.
+    def test_manifest_rollback_schema_must_equal_packaged_policy(self):
+        # Build one valid branch candidate without predecessor eligibility.
+        archive_path, manifest_path = self.build("manifest-rollback-schema-tamper")
+        # Parse the external manifest.
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        # Select another value still inside the candidate runtime window.
+        manifest["rollback"]["mysql_schema_version"] = 3
+        # Persist the coherently shaped but policy-divergent manifest.
+        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+        # Require packaged-policy equality before window acceptance.
+        with self.assertRaisesRegex(ValueError, "does not match packaged compatibility"):
+            # Verify without smoke to isolate the schema declaration.
+            package_app.verify_release(archive_path, manifest_path, smoke=False)
+
     # Prove a retained prior manifest produces testable application rollback mapping.
     def test_previous_manifest_enables_application_rollback(self):
         # Define a complete synthetic prior release identity without external data.
         previous = {
             "app_version": "9.2.0",
             "artifact": {"name": package_app.ARCHIVE_NAME, "sha256": "b" * 64},
+            "mysql_schema": {"minimum_version": 2, "expected_version": 2},
             "source": {"commit_sha": "c" * 40},
         }
         # Resolve the retained prior manifest fixture outside candidate output directories.
@@ -386,6 +471,33 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertEqual(manifest["rollback"]["database_rollback"], "outside-TOOL-003")
         # Require the exact prior packaged version in the checksum-bound pointer.
         self.assertEqual(manifest["rollback"]["previous"]["app_version"], "9.2.0")
+        # Require the application-only rollback database version to be manifest-bound.
+        self.assertEqual(manifest["rollback"]["mysql_schema_version"], 2)
+        # Require the compact predecessor pointer to retain its runtime window.
+        self.assertEqual((manifest["rollback"]["previous"]["mysql_minimum_version"], manifest["rollback"]["previous"]["mysql_expected_version"]), (2, 2))
+
+    # Prove package rollback provenance requires both candidate and predecessor runtime windows.
+    def test_rollback_provenance_rejects_unsafe_cross_schema_mapping(self):
+        # Define one compact predecessor identity shared by window cases.
+        base = {"app_version": "9.2.0", "artifact": {"name": package_app.ARCHIVE_NAME, "sha256": "b" * 64}, "source": {"commit_sha": "c" * 40}}
+        # Resolve an external predecessor manifest path.
+        previous_path = pathlib.Path(self.temporary.name) / "window-previous.json"
+        # Write an exact-schema-two predecessor.
+        previous_path.write_text(json.dumps({**base, "mysql_schema": {"minimum_version": 2, "expected_version": 2}}, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+        # Reject schema three rollback into the exact-schema-two predecessor.
+        with self.assertRaisesRegex(ValueError, "predecessor release cannot run"):
+            # Exercise the package-owned provenance boundary.
+            package_app.rollback_provenance(previous_path, "9.3.0", {"minimum_version": 2, "expected_version": 3}, 3)
+        # Accept schema two across the same bridge candidate and exact predecessor.
+        accepted_two = package_app.rollback_provenance(previous_path, "9.3.0", {"minimum_version": 2, "expected_version": 3}, 2)
+        # Require exact database-version binding.
+        self.assertEqual(accepted_two["mysql_schema_version"], 2)
+        # Replace the predecessor with a bridge runtime window.
+        previous_path.write_text(json.dumps({**base, "mysql_schema": {"minimum_version": 2, "expected_version": 3}}, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+        # Accept a future exact-schema-three candidate rolling back to the bridge.
+        accepted_three = package_app.rollback_provenance(previous_path, "9.4.0", {"minimum_version": 3, "expected_version": 3}, 3)
+        # Require exact schema-three rollback binding.
+        self.assertEqual(accepted_three["mysql_schema_version"], 3)
 
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
@@ -490,8 +602,10 @@ class ReleaseArtifactTests(unittest.TestCase):
         manifest = package_app.verify_release(archive_path, manifest_path, expected_commit=self.commit_sha, smoke=True)
         # Require the smoke-verified manifest to retain canonical fixture version identity.
         self.assertEqual(manifest["app_version"], "9.3.0")
-        # Require release provenance to bind exact-only MySQL schema version three.
-        self.assertEqual((manifest["mysql_schema"]["minimum_version"], manifest["mysql_schema"]["expected_version"]), (3, 3))
+        # Require release provenance to bind the schema-two-to-three bridge window.
+        self.assertEqual((manifest["mysql_schema"]["minimum_version"], manifest["mysql_schema"]["expected_version"]), (2, 3))
+        # Require release provenance to bind held migration application.
+        self.assertEqual(manifest["mysql_schema"]["apply_policy"], "held")
         # Require both catalog and ordered migration chain checksums.
         self.assertRegex(manifest["mysql_schema"]["catalog_sha256"], r"^[0-9a-f]{64}$")
         # Require the copied recovery tooling dependency to be represented in the release SBOM.

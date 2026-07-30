@@ -1,7 +1,8 @@
 {
   "schema": "casino-mysql-migration-catalog-v1",
-  "minimum_runtime_version": 3,
+  "minimum_runtime_version": 2,
   "expected_version": 3,
+  "apply_policy": "held",
   "migrations": [
     {
       "version": 1,

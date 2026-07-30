@@ -26,6 +26,68 @@ VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
+# Read one exact runtime schema window from a catalog or release manifest record.
+def schema_window(record: dict, label: str) -> tuple[int, int]:
+    # Require a mapping before reading version bounds.
+    if not isinstance(record, dict):
+        # Refuse missing candidate or predecessor schema provenance.
+        raise ValueError(f"{label} schema window missing")
+    # Read the independently declared lower and upper runtime bounds.
+    minimum = record.get("minimum_version")
+    # Read the packaged maximum schema version.
+    expected = record.get("expected_version")
+    # Reject booleans, nonintegers, and inverted ranges.
+    if any(isinstance(value, bool) or not isinstance(value, int) for value in (minimum, expected)) or minimum < 1 or minimum > expected:
+        # Preserve one bounded policy error.
+        raise ValueError(f"{label} schema window invalid")
+    # Return the closed accepted runtime interval.
+    return minimum, expected
+
+
+# Read the candidate's manifest-bound migration and rollback database policy.
+def candidate_schema_policy(app_version: str, root: pathlib.Path) -> tuple[int, int, int]:
+    # Parse the candidate's checksum-packaged migration catalog.
+    catalog = read_object(root / "migrations" / "mysql" / "catalog.json")
+    # Require the reviewed catalog format before consuming version policy.
+    if catalog.get("schema") != "casino-mysql-migration-catalog-v1":
+        # Reject a substituted schema-policy document.
+        raise ValueError("candidate migration catalog invalid")
+    # Require the bridge to retain its closed application policy.
+    if catalog.get("apply_policy") != "held":
+        # Refuse publication from a migration-enabled or unbound catalog.
+        raise ValueError("candidate apply policy invalid")
+    # Normalize catalog field names into the manifest window shape.
+    minimum, expected = schema_window({"minimum_version": catalog.get("minimum_runtime_version"), "expected_version": catalog.get("expected_version")}, "candidate")
+    # Parse the governed candidate compatibility record.
+    compatibility = read_object(root / "contracts" / "compatibility" / f"app-{app_version}.json")
+    # Require the candidate identity before consuming rollback policy.
+    if compatibility.get("app_version") != app_version:
+        # Reject a copied or stale compatibility record.
+        raise ValueError("compatibility identity mismatch")
+    # Require the application-only rollback declaration object.
+    rollback = compatibility.get("rollback")
+    # Require exactly the governed rollback tuple and no shadow fields.
+    if not isinstance(rollback, dict) or set(rollback) != {"scope", "database_rollback", "mysql_expected_schema_version", "requires_retained_predecessor_manifest"}:
+        # Preserve a fixed selection failure.
+        raise ValueError("rollback declaration missing")
+    # Require application-only rollback with database rollback prohibited.
+    if rollback.get("scope") != "application-only" or rollback.get("database_rollback") != "prohibited":
+        # Reject broader or database-mutating rollback authority.
+        raise ValueError("rollback declaration invalid")
+    # Require one retained checksum-bound predecessor manifest.
+    if rollback.get("requires_retained_predecessor_manifest") is not True:
+        # Reject a waiver or missing artifact boundary.
+        raise ValueError("rollback declaration invalid")
+    # Read the exact database version retained across application rollback.
+    schema_version = rollback.get("mysql_expected_schema_version")
+    # Reject booleans, nonintegers, and impossible versions.
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int) or schema_version < minimum or schema_version > expected:
+        # Prevent candidate publication when its own runtime cannot accept rollback state.
+        raise ValueError("candidate rollback schema is incompatible")
+    # Return the closed candidate window and exact rollback database version.
+    return minimum, expected, schema_version
+
+
 # Read one JSON object while keeping parsing errors path-free at the command boundary.
 def read_object(path: pathlib.Path) -> dict:
     # Decode the tracked or downloaded JSON bytes using the repository encoding.
@@ -44,6 +106,8 @@ def predecessor_tag(app_version: str, root: pathlib.Path = ROOT) -> str:
     if not VERSION_RE.fullmatch(app_version):
         # Keep the reason stable for sanitized workflow logs.
         raise ValueError("invalid application version")
+    # Require the candidate catalog and rollback database declaration to agree.
+    candidate_schema_policy(app_version, root)
     # Locate only the canonical compatibility record for the requested packaged release.
     record_path = root / "contracts" / "compatibility" / f"app-{app_version}.json"
     # Parse the current release compatibility record.
@@ -110,6 +174,8 @@ def verify_manifest(app_version: str, manifest_path: pathlib.Path, root: pathlib
     compatibility = read_object(root / "contracts" / "compatibility" / f"app-{app_version}.json")
     # Read the already shape-validated predecessor declaration.
     predecessor = compatibility["predecessor"]
+    # Re-read the exact database version already proven compatible with the candidate.
+    _, _, rollback_schema = candidate_schema_policy(app_version, root)
     # Require the downloaded manifest bytes to match the pinned retained manifest.
     if hashlib.sha256(manifest_bytes).hexdigest() != predecessor["manifest_sha256"]:
         # Reject any rebuilt, reformatted, or substituted manifest.
@@ -146,6 +212,12 @@ def verify_manifest(app_version: str, manifest_path: pathlib.Path, root: pathlib
     if artifact.get("name") != "virtual_casino_simulator_package.zip" or artifact.get("sha256") != predecessor["artifact_sha256"]:
         # Reject renamed, rebuilt, or substituted predecessor archives.
         raise ValueError("predecessor artifact identity mismatch")
+    # Read the predecessor's manifest-bound runtime schema window.
+    minimum, expected = schema_window(manifest.get("mysql_schema"), "predecessor")
+    # Require the retained application to run against the declared rollback database.
+    if rollback_schema < minimum or rollback_schema > expected:
+        # Reject unsafe exact-three rollback to an exact-two predecessor.
+        raise ValueError("predecessor rollback schema is incompatible")
     # Return the verified predecessor tag for bounded workflow evidence.
     return expected_tag
 

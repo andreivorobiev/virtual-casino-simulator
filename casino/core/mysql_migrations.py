@@ -29,6 +29,8 @@ CATALOG_PATH = MIGRATION_ROOT / "catalog.json"
 BACKUP_PROOF_SCHEMA = "casino-mysql-backup-restore-proof-v1"
 # Identify the catalog format independently of application and JSON data versions.
 CATALOG_SCHEMA = "casino-mysql-migration-catalog-v1"
+# Name the only reviewed bridge policy that keeps migration execution unavailable.
+APPLY_POLICY_HELD = "held"
 # Accept only lowercase SHA-256 strings in persisted migration evidence.
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 # Name the two migration-control tables separately from application storage tables.
@@ -195,13 +197,17 @@ def load_catalog(catalog_path: Path = CATALOG_PATH) -> tuple[tuple[Migration, ..
     if catalog.get("schema") != CATALOG_SCHEMA:
         # Keep diagnostics independent of private extraction paths.
         raise MigrationError("MySQL migration catalog format is unsupported")
+    # Require the reviewed bridge policy before exposing any catalog content.
+    if catalog.get("apply_policy") != APPLY_POLICY_HELD:
+        # Refuse migration catalogs that silently enable application.
+        raise MigrationError("MySQL migration apply policy is invalid")
     # Parse the exact and minimum runtime compatibility versions.
     expected_version = int(catalog.get("expected_version", -1))
     # Parse the minimum version separately from application and JSON data schema values.
     minimum_version = int(catalog.get("minimum_runtime_version", -1))
-    # Require an exact-only compatibility window for this restricted-preview gate.
-    if expected_version < 1 or minimum_version != expected_version:
-        # Refuse an unreviewed compatibility range.
+    # Require one closed contiguous runtime window within the packaged catalog.
+    if expected_version < 1 or minimum_version < 1 or minimum_version > expected_version:
+        # Refuse an empty, inverted, or unbounded compatibility range.
         raise MigrationError("MySQL migration compatibility window is invalid")
     # Collect verified immutable migrations in catalog order.
     migrations = []
@@ -269,6 +275,8 @@ def schema_contract() -> dict:
         "catalog_sha256": catalog_sha256,
         # Bind the ordered migration file identity chain.
         "migration_chain_sha256": migration_chain_digest(migrations),
+        # Publish the closed migration-application boundary.
+        "apply_policy": APPLY_POLICY_HELD,
     }
 
 
@@ -360,8 +368,8 @@ def verify_runtime_compatibility(connection) -> SchemaState:
     migrations, expected, minimum, _ = load_catalog()
     # Inspect version and checksums using only the runtime connection's read privileges.
     state = inspect_schema(connection, migrations)
-    # Reject missing metadata, old state, future state, or any dirty/applying transition.
-    if not state.initialized or state.status != "clean" or state.current_version != expected or state.current_version < minimum:
+    # Reject missing metadata, out-of-window state, or any dirty/applying transition.
+    if not state.initialized or state.status != "clean" or state.current_version < minimum or state.current_version > expected:
         # Avoid disclosing the observed schema version or database identity in service logs.
         raise MigrationError("MySQL runtime schema is not compatible with this release")
     # Return sanitized state for internal readiness evidence.
@@ -629,7 +637,9 @@ def _mark_complete(connection, migration: Migration, migrations: tuple[Migration
 # Apply pending migrations under one target-derived advisory lock and verified recovery proof.
 def apply_migrations(connection, config: MigrationConfig, proof_path: Path | None, lock_timeout_seconds: int = 30) -> SchemaState:
     # Load the complete immutable plan before touching the database.
-    migrations, expected, _, _ = load_catalog()
+    load_catalog()
+    # Refuse the bridge catalog before connection state, lock, DDL, or metadata mutation.
+    raise MigrationError("MySQL migration apply policy is held")
     # Force transaction control for history and state DML without changing DDL auto-commit semantics.
     connection.autocommit = False
     # Verify the connector accepted non-autocommit mode.

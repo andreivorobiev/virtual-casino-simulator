@@ -21,8 +21,8 @@ import threading
 
 # Import only the repository-side recovery evidence contract.
 from casino.core import recovery
-# Import the immutable #204 schema contract for exact recovery context fixtures.
-from casino.core.mysql_migrations import schema_contract
+# Import the immutable schema window and prefix identity helpers for recovery fixtures.
+from casino.core.mysql_migrations import load_catalog, migration_chain_digest, schema_contract
 # Import the packaged CLI loader for least-privilege child environment tests.
 from scripts import recovery as recovery_cli
 
@@ -42,8 +42,14 @@ NOW = datetime(2026, 7, 16, 20, 0, tzinfo=timezone.utc)
 SCHEMA_CONTRACT = schema_contract()
 # Bind every fixture to the exact packaged migration version.
 EXPECTED_SCHEMA_VERSION = SCHEMA_CONTRACT["expected_version"]
+# Bind the lower bridge-compatible version independently.
+MINIMUM_SCHEMA_VERSION = SCHEMA_CONTRACT["minimum_version"]
 # Bind every fixture to the exact packaged migration chain.
 MIGRATION_CHAIN = SCHEMA_CONTRACT["migration_chain_sha256"]
+# Load immutable migration rows for exact prefix fixtures.
+MIGRATIONS = load_catalog()[0]
+# Bind the exact schema-two applied prefix.
+MINIMUM_MIGRATION_CHAIN = migration_chain_digest(MIGRATIONS, MINIMUM_SCHEMA_VERSION)
 
 
 # Construct all pairwise-independent synthetic key roles.
@@ -581,6 +587,27 @@ class RecoveryEvidenceTests(unittest.TestCase):
                 with self.assertRaisesRegex(recovery.RecoveryError, "packaged MySQL schema"):
                     # Use the same valid destination evidence to isolate schema compatibility.
                     recovery.validate_recovery_manifest(recovery.sign_evidence(foreign, EVIDENCE_KEY), EVIDENCE_KEY, acknowledgement, DESTINATION_KEY, NOW)
+
+    # Prove recovery context binds schema two to its prefix and schema three to the full chain.
+    def test_recovery_context_accepts_only_exact_runtime_prefix(self):
+        # Exercise both bridge-compatible schema identities.
+        for version, chain in ((MINIMUM_SCHEMA_VERSION, MINIMUM_MIGRATION_CHAIN), (EXPECTED_SCHEMA_VERSION, MIGRATION_CHAIN)):
+            # Build one exact sanitized recovery context.
+            context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": version, "migration_chain_sha256": chain, "source_target_hmac_sha256": "d" * 64}
+            # Require exact identity preservation.
+            with self.subTest(version=version):
+                # Validate the version-specific applied prefix.
+                self.assertEqual(recovery.validate_backup_context(context), context)
+        # Pair each accepted version with the other version's chain.
+        mismatches = ((MINIMUM_SCHEMA_VERSION, MIGRATION_CHAIN), (EXPECTED_SCHEMA_VERSION, MINIMUM_MIGRATION_CHAIN))
+        # Require cross-paired recovery evidence to fail closed.
+        for version, chain in mismatches:
+            # Build the mismatched but syntactically valid context.
+            context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": version, "migration_chain_sha256": chain, "source_target_hmac_sha256": "d" * 64}
+            # Require exact packaged-prefix refusal.
+            with self.subTest(mismatch=version), self.assertRaisesRegex(recovery.RecoveryError, "packaged MySQL schema"):
+                # Validate the foreign version/chain pair.
+                recovery.validate_backup_context(context)
 
     # Prove hostile field values never enter recovery diagnostics.
     def test_errors_do_not_echo_hostile_values(self):

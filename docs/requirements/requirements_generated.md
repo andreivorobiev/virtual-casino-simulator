@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.25
-- core: 9.31.0
+- core: 9.32.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.43
-- docs: 1.64.43
-- contracts: 1.49.23
-- tooling: 1.22.0
+- tests: 1.64.44
+- docs: 1.64.44
+- contracts: 1.50.0
+- tooling: 1.23.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -941,3 +941,5 @@ Historical source baseline: 9.1.0
 - **TEST-147** (Tests) - PASS: Listener-free and hosted exact-head evidence proves all 230 Keno outcome classes, exact hypergeometric probability rows, paytable and jackpot monotonicity, frozen production rounding across the complete accepted amount domain, maximum-stake maximum-jackpot settlement, current ledger and history equations, entropy restoration, API-paytable equality, and the unchanged frozen-v1 contract. Hosted Long publishes exact rational per-row evidence, while Browser acceptance emits all sixty-four eight-state by two-locale by four-viewport cells and behaviorally proves exact open-ticket and settled-history amount restoration, Repeat, first autoplay tick, player-scoped history alignment, numeric jackpot visibility, and listener cleanup.
 - **TEST-148** (Tests) - PASS: An explicit listener-free request-latency baseline measures direct WSGI handling for authenticated current-user, Slots state, Roulette state, aggregate Casino state, and idempotent Boule actions against isolated external JSON and callback-owned disposable loopback MySQL providers. Every route family runs fixed warm-up work followed by exactly sixty-four measured operations at concurrency one, two, four, and eight through a rolling at-most-N future window, default MySQL pool settings, untimed authentication and Boule first/replay/conflict controls, zero accepted errors, and cleanup. Evidence is an atomic caller-external aggregate containing only schema, exact source commit, provider, route family, concurrency, p50 and p95 milliseconds, throughput, error count, and response-byte total, with no numeric performance threshold or network, edge, Gunicorn, multi-process, identity, request, outcome, sample, timestamp, path, host, database, or exception detail.
 - **MYSQL-007** (MySQL) - PASS: The checksum-bound contiguous schema-three catalog provisions exact binary action-scope identity, lowercase request fingerprint, bounded declared-resource and complete paid-or-zero-cost receipt documents, receipt SHA-256, duplicate-scope rejection, and persisted receipt capacity.
+- **MYSQL-008** (MySQL) - PASS: The schema-three rollback-compatibility bridge accepts runtime startup only for an initialized clean checksum-valid schema-two migration prefix or the complete checksum-valid schema-three chain, binds recovery evidence to the actual schema version and exact applied prefix, and holds migration application before configuration, connection, lock, DDL, or state mutation.
+- **TOOL-011** (Tooling) - PASS: Release and predecessor tooling authenticate the application-only, database-rollback-prohibited, retained-predecessor compatibility policy and rollback schema declaration, require that schema to fit both candidate and predecessor runtime windows, and make bridge deployment prove exact schema two before and after cutover without invoking migration.
