@@ -1,8 +1,18 @@
 {
   "artifact": "restricted-preview-security",
-  "version": 1,
+  "version": 2,
   "stage": "restricted-preview",
   "canonical_origin": "https://casino.tiltseven.com",
+  "enrollment_policy": {
+    "route": "/api/v2/auth/enrollment-policy",
+    "modes": ["closed", "invite-only", "self-signup"],
+    "environment_seed": true,
+    "environment_fallback": true,
+    "public_methods_default_enabled": false,
+    "admin_write_available": false,
+    "live_enablement_authorized": false,
+    "api_v1_unchanged": true
+  },
   "anonymous_routes": [
     "/api/v2/auth/login",
     "/api/v2/auth/guest",

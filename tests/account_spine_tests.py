@@ -15,6 +15,8 @@ from pathlib import Path
 
 # Import the registered route table for direct endpoint dispatch.
 from casino.app import ROUTER
+# Import enrollment configuration so the restricted-preview baseline can be pinned explicitly.
+from casino import config
 # Import Admin account management helpers under test.
 from casino import admin
 # Import the canonical auth identity/session store.
@@ -67,10 +69,12 @@ class ProductAccountSpineTests(unittest.TestCase):
 
     # Prove the disabled enrollment policy and signup route fail closed by default.
     def test_enrollment_policy_and_disabled_signup_are_explicit(self) -> None:
-        # Read the public policy route without a session.
-        policy = ROUTER.dispatch("GET", "/api/v2/auth/enrollment-policy")
-        # Require the owner-approved future controls to stay disabled by default.
-        self.assertEqual((policy["signup_enabled"], policy["passkeys_enabled"], policy["guest_conversion_enabled"]), (False, False, True))
+        # Pin every environment-derived enrollment input to the shipped restricted-preview default.
+        with patch.object(config, "SIGNUP_ENABLED", False), patch.object(config, "INVITATIONS_ENABLED", False), patch.object(config, "ENROLLMENT_ENABLED", False):
+            # Read the public policy route without a session.
+            policy = ROUTER.dispatch("GET", "/api/v2/auth/enrollment-policy")
+        # Require the exact additive v2 response while every public enrollment control stays disabled.
+        self.assertEqual(policy, {"enrollment_mode": "closed", "signup_enabled": False, "guest_trials_enabled": True, "invitation_enrollment_enabled": False, "guest_conversion_enabled": True, "passkeys_enabled": False, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"})
         # Attempt the public signup mutation with a complete payload.
         with self.assertRaises(ForbiddenError):
             # Dispatch directly with response headers to match the adapter contract.
