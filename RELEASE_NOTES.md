@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.35 Release Notes
+# Virtual Casino Simulator v0.9.5.36 Release Notes
+
+## Atomic player game-state update foundation
+
+- Adds the route-free `update_player_game_state` core helper for one complete player-scoped game-state mutation.
+- Delegates the complete read, mutate, normalize, and write boundary to the existing JSON process lock or MySQL row-locking transaction.
+- Preserves lazy default creation, schema and timestamp normalization, player isolation, and the legacy-human state fallback.
+- Proves twenty-four concurrent distinct JSON updates are retained without a lost write.
+- Proves failed JSON mutations leave the original bytes unchanged and MySQL failures preserve the prior committed document.
+- Registers `CORE-030` and central storage case `STORAGE-PLAYER-STATE-ATOMIC-001` without allocating a generic TEST identifier.
+- Adds no route, game adoption, ledger behavior, provider implementation, API contract, or production behavior; Phase 0c remains separately governed.
+- Retains exact immutable v0.9.5.35 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.35 listener-free request-latency baseline
 
 ## Listener-free request-latency baseline
 
