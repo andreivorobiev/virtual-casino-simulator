@@ -6,6 +6,10 @@ import hashlib
 import itertools
 # Import JSON decoding for the restricted-preview compatibility decision.
 import json
+# Import subprocess execution for an isolated dependency-light runner-import proof.
+import subprocess
+# Import the active interpreter path for the isolated import-only regression.
+import sys
 # Import temporary storage roots for provider-isolated evidence.
 import tempfile
 # Import unittest so this focused suite runs listener-free.
@@ -23,13 +27,19 @@ from casino.core import enrollment_policy
 from casino.core import auth, invitations
 # Import storage so a temporary provider replaces the real data directory.
 from casino.core import storage
-# Import a fresh listener-free router so both public enforcement call sites are exercised.
-from casino.app import build_router
 # Import the validation envelope expected for a rejected mode.
 from casino.errors import ForbiddenError, ValidationError
 
 # Resolve the repository root for checked contract evidence.
 ROOT = Path(__file__).resolve().parents[1]
+
+
+# Build the application router only inside focused route tests that have the full dependency set.
+def _build_router_for_route_test():
+    # Defer the application import so aggregate shard verification can import the central runner without Pillow.
+    from casino.app import build_router
+    # Return a fresh listener-free route table for the requesting focused test.
+    return build_router()
 
 
 # Prove the policy resolves durably without changing deployed behaviour.
@@ -138,6 +148,13 @@ class EnrollmentPolicyTests(unittest.TestCase):
                 resolved = enrollment_policy.normalize(candidate)
                 # Require the complete closed/default-off baseline for every unowned shape.
                 self.assertEqual((enrollment_policy.MODE_CLOSED, False, False, {"email": False, "google": False, "facebook": False}), (resolved["mode"], resolved["methods"]["email"], resolved["invitations_enabled"], resolved["methods"]))
+
+    # Prove aggregate verification can import the central runner without application or Pillow dependencies.
+    def test_central_runner_import_is_dependency_light(self) -> None:
+        # Import the central runner under Python's no-site mode so unavailable optional packages cannot be masked.
+        probe = subprocess.run([sys.executable, "-S", "-c", "import sys; import tests.run_tests; assert 'casino.app' not in sys.modules; assert 'PIL' not in sys.modules"], cwd=ROOT, capture_output=True, text=True, timeout=30, check=False)
+        # Require a clean import without leaking arbitrary subprocess output into the assertion message.
+        self.assertEqual(probe.returncode, 0, "dependency-light central runner import failed")
 
     # Verify the additive response field and compatibility-v3 enforcement policy stay exact.
     def test_additive_v2_contract_and_enforcement_compatibility_are_bound(self) -> None:
@@ -270,7 +287,7 @@ class EnrollmentEnforcementTests(unittest.TestCase):
             # Install the exact restricted-preview baseline.
             self._policy(tmp, mode=enrollment_policy.MODE_CLOSED, email=False, invitations_enabled=False)
             # Build a fresh listener-free route table.
-            router = build_router()
+            router = _build_router_for_route_test()
             # Prevent any account mutation if the policy denial is accidentally bypassed.
             with mock.patch.object(auth, "create_user") as create_user:
                 # Dispatch one complete public signup request.
@@ -305,7 +322,7 @@ class EnrollmentEnforcementTests(unittest.TestCase):
             # Install a closed policy that must suspend redemption.
             self._policy(tmp, mode=enrollment_policy.MODE_CLOSED, email=False, invitations_enabled=False)
             # Build a fresh listener-free route table.
-            router = build_router()
+            router = _build_router_for_route_test()
             # Prevent any bearer inspection or mutation if policy denial is bypassed.
             with mock.patch.object(invitations, "redeem") as redeem:
                 # Dispatch a complete but synthetic redemption request.
@@ -344,7 +361,7 @@ class EnrollmentEnforcementTests(unittest.TestCase):
             # Persist an owned schema marker with an unreviewed mode.
             provider.update_document(enrollment_policy.POLICY_DOCUMENT_KEY, lambda current: {"schema_version": enrollment_policy.SCHEMA_VERSION, "mode": "synthetic-unreviewed-mode", "methods": {"email": True}, "invitations_enabled": True}, enrollment_policy.environment_baseline)
             # Build a fresh listener-free route table.
-            router = build_router()
+            router = _build_router_for_route_test()
             # Guard both downstream mutation seams.
             with mock.patch.object(auth, "create_user") as create_user, mock.patch.object(invitations, "redeem") as redeem:
                 # Require signup to retain its existing disabled envelope.
@@ -365,7 +382,7 @@ class EnrollmentEnforcementTests(unittest.TestCase):
     # Prove a logging failure preserves each route's public denial and prevents mutation.
     def test_route_log_failure_preserves_public_envelopes_and_no_mutation(self) -> None:
         # Build a fresh listener-free route table.
-        router = build_router()
+        router = _build_router_for_route_test()
         # Replace the operational sink with hostile failure detail.
         with mock.patch.object(enrollment_policy.logger, "info", side_effect=OSError("secret-log-path")), mock.patch.object(auth, "create_user") as create_user, mock.patch.object(invitations, "redeem") as redeem:
             # Require signup to retain its existing disabled envelope.
