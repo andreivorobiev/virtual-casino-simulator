@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup, SIGNUP_ENABLED, PASSKEYS_ENABLED, INVITATIONS_ENABLED, ENROLLMENT_ENABLED
+from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup, PASSKEYS_ENABLED
 # Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
@@ -305,6 +305,18 @@ def build_router() -> Router:
         if set(body or {}) - {"token", "email", "password", "display_name", "locale", "terms_version", "accepted", "idempotency_key"}:
             # Fail closed through the same generic envelope used for every public rejection.
             raise ValidationError("invitation could not be redeemed", dict(invitations.GENERIC_REDEMPTION_DETAILS))
+        # Start a fixed logging-failure boundary before bearer inspection or invitation mutation.
+        try:
+            # Enforce the same resolved invitation capability published by the read-only policy route. (AUTH-013)
+            invitation_decision = enrollment_policy.evaluate(enrollment_policy.ROUTE_INVITATION)
+        # Keep operational logger failures indistinguishable from every other public redemption denial.
+        except (enrollment_policy.EnrollmentAuditError, ValidationError):
+            # Return the existing identifier-free generic envelope without exposing logger details.
+            raise ValidationError("invitation could not be redeemed", dict(invitations.GENERIC_REDEMPTION_DETAILS)) from None
+        # Deny a closed or invitation-disabled policy before the bearer reaches the service.
+        if invitation_decision["allowed"] is not True:
+            # Reuse the exact generic envelope so policy state cannot become an invitation oracle.
+            raise ValidationError("invitation could not be redeemed", dict(invitations.GENERIC_REDEMPTION_DETAILS))
         # Redeem through the invitation lifecycle; disabled enrollment and every abuse case fail closed generically.
         return invitations.redeem(str((body or {}).get("token", "")), str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), str((body or {}).get("locale", "en-US")), str((body or {}).get("terms_version", "")), (body or {}).get("accepted") is True, str((body or {}).get("idempotency_key", "")))
 
@@ -340,8 +352,16 @@ def build_router() -> Router:
     @router.post(r"/api/v2/auth/signup")
     # Create a local first-party user only when the explicit signup gate is enabled.
     def auth_signup(body, query, context):
-        # Keep the route present but fail closed until the operator enables signup intentionally.
-        if not SIGNUP_ENABLED:
+        # Start a fixed logging-failure boundary before validating or creating an account.
+        try:
+            # Enforce the same resolved email-signup capability published by the read-only policy route. (AUTH-013)
+            signup_decision = enrollment_policy.evaluate(enrollment_policy.ROUTE_SIGNUP)
+        # Preserve the existing disabled-signup envelope when operational decision logging is unavailable.
+        except (enrollment_policy.EnrollmentAuditError, ValidationError):
+            # Reveal no logger path, exception, or policy internals to the anonymous caller.
+            raise ForbiddenError("Full account signup is disabled") from None
+        # Keep the route present but fail closed until the resolved policy explicitly allows signup.
+        if signup_decision["allowed"] is not True:
             # Reject disabled signup before validating account fields to avoid account enumeration.
             raise ForbiddenError("Full account signup is disabled")
         # Reject unsupported fields so public signup cannot smuggle roles, status, wallet, or provider identity.

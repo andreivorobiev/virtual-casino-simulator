@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.27
-- core: 9.33.0
+- core: 9.34.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,9 +50,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.47
-- docs: 1.64.47
-- contracts: 1.51.1
+- tests: 1.64.48
+- docs: 1.64.48
+- contracts: 1.52.0
 - tooling: 1.23.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
@@ -932,7 +932,7 @@ Historical source baseline: 9.1.0
 - **STORAGE-011** (Storage) - PASS: The JSON storage provider owns one recoverable execute-game-action-once boundary that validates immutable action identity, canonical fingerprint, declared wallet and game-state resources, and a side-effect-free planner before converging wallet movements, game-state publication, and an immutable receipt under one cross-process gate. Durable journal recovery completes before affected JSON state is exposed; same-key replays return the committed receipt, conflicting reuse is rejected before planner, RNG, or mutation, and corrupt or unknown journal state fails closed without replacing its original bytes.
 - **TEST-141** (Tests) - PASS: Focused fake-connector and disposable-MySQL evidence proves pool configuration bounds, hard capacity, waiter wake and timeout, physical reuse, non-reconnecting dead-session replacement, rollback/reset isolation, cleanup discard, connector failure, PID rebuild, terminal shutdown, provider integration, secret-free metrics, and sanitized p50/p95/throughput/error measurements at concurrency one, two, four, and eight with no exhaustion or cross-request session leakage.
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
-- **AUTH-013** (Core) - PASS: Enrollment policy resolution reads one durable provider-backed document with exact closed, invite-only, and self-signup modes plus independent public-method flags, using the deployed environment as both seed and fallback so an absent or malformed document preserves restricted-preview behavior; unknown modes fail closed and non-boolean method values never enable access.
+- **AUTH-013** (Core) - PASS: Enrollment policy resolution reads one durable provider-backed document with exact closed, invite-only, and self-signup modes plus independent public-method flags; absent, non-mapping, or unowned-schema documents preserve the deployed environment seed/fallback with strict booleans and no widening beyond it, schema-owned unknown modes fail public mutation routes to their safe denial envelopes, and public email signup plus invitation redemption emit only closed-vocabulary operational decisions whose logging must succeed before mutation.
 - **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
 - **TEST-142** (Tests) - PASS: An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, reuses that rendered gate under one formal-only bounded login deadline, performs authentication plus catalog navigation and one complete game action under one formal-only data-derived absolute gameplay deadline, attributes bounded failures to public game, fixed phase, and fixed action state, filters expected anonymous current-user probes only before rendered login succeeds, evaluates action-aware wager and non-wager evidence through player-scoped filter-before-limit ledger routes, and emits only aggregate phase, action-state, latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.

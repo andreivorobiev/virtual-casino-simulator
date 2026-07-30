@@ -2,9 +2,18 @@ openapi: 3.0.3
 info:
   title: Virtual Casino auth and current-user API
   version: v2
-  description: Additive v2 contract for authenticated private-invite play, guest trials, current-user state, invitations, terms acceptance, play-token balance flows, and disabled-by-default provider linking and sign-in.
+  description: Additive v2 contract for authenticated private-invite play, guest trials, policy-enforced signup and invitation redemption, current-user state, terms acceptance, play-token balance flows, and disabled-by-default provider linking and sign-in.
 servers:
   - url: /api/v2
+x-casino-enrollment-policy:
+  revision: 3
+  enforced_routes: [/api/v2/auth/signup, /api/v2/auth/redeem-invitation]
+  absent-malformed-or-unowned-document: deployed-environment-baseline
+  schema-v1-unknown-mode: safe-route-denial
+  decision_logging: operational-jsonl
+  logging_failure: deny-before-mutation
+  immutable_actor_change_audit: deferred-to-pr-528-admin-write-transaction
+  api_v1_unchanged: true
 paths:
   # Guest entry is repository-only restricted-preview behavior and does not authorize public launch.
   /auth/guest:
@@ -110,7 +119,7 @@ paths:
           description: Empty standard envelope; the recovered value travels only in the Set-Cookie header, never the response body.
   /auth/signup:
     post:
-      summary: Create a first-party account only when the explicit signup feature gate is enabled.
+      summary: Create a first-party account only when the resolved enrollment policy allows public email signup.
       operationId: auth_v2_signup
       requestBody:
         required: true
@@ -132,7 +141,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '403':
-          description: Full-account signup is disabled by default under restricted preview.
+          description: The resolved enrollment policy denies signup or its operational decision cannot be logged.
           content:
             application/json:
               schema:
