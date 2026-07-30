@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.39 Release Notes
+# Virtual Casino Simulator v0.9.5.40 Release Notes
+
+## Read-only enrollment-policy foundation
+
+- Adds the required auth-v2 `enrollment_mode` vocabulary: `closed`, `invite-only`, and `self-signup`.
+- Resolves the additive policy response through one durable provider-backed enrollment-policy document.
+- Applies stored overrides only when the document declares exact non-boolean integer schema version 1.
+- Preserves the complete deployed restricted-preview baseline for missing, malformed, boolean, string, old, or future schema documents.
+- Publishes read-only/default-off compatibility evidence while leaving `/api/v1` unchanged.
+- Maps permanent requirement `AUTH-013` to existing central case `API-ENROLLMENT-POLICY-001` without a generic TEST identifier.
+- Adds no enrollment enforcement, audit trail, Admin mutation, readiness policy, RBAC, UI, provider enablement, signup, OAuth, mail, invitation, or public-exposure change.
+- Retains the v0.9.5.39 MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.39 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
+- Keeps issue #333 open for the remaining enrollment stack and issues #430/#471 open for the remaining MySQL sequence.
 
 ## MySQL schema rollback-compatibility bridge
 
