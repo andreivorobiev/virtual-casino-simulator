@@ -1,35 +1,35 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-30T21:31:35Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-30T22:46:34Z.
 
 ## Current branch / active Codex work
 
-- PR #540 merged normally as protected main `28b2283a` after exact-head controller review, all nine required workflow families, source-bound Browser/Long/release-candidate artifacts, and zero review state.
-- Terminal-green published/released/live production remains exact v0.9.5.39 `9de0d53c`, with MySQL clean at schema 2 and the held schema-3 migration uninvoked.
-- `codex/release-v0.9.5.40` serializes the unique immutable release for the accepted read-only enrollment-policy foundation. No other merge may advance until v0.9.5.40 is terminal green through the trusted deployment route.
+- Protected main and terminal-green published/released/live production are exact v0.9.5.40 `3d769813`; MySQL remains clean at schema 2 and the held schema-3 migration was not invoked.
+- `codex/524-enrollment-enforcement-controller` preserves exact v40 main as first parent and immutable contributor head `271d3615` as second parent through ancestry commit `c3045365`, whose tree equals current main.
+- The controller is local and unpushed while bounded signup/invitation enforcement, operational decision-log hardening, contract truth, tests, and fresh governance undergo independent Worker-B review.
 
 ## Live queue snapshot
 
 - #435 rank 001 remains externally blocked; #471 rank 003 remains architecture-blocked on separately governed #430 work.
-- #333 rank 007 remains open after the bounded root slice; stacked #524/#528 remain held and untouched until v0.9.5.40 deploys terminal green.
-- GitHub automatically marked external #520 merged when its immutable contributor head became reachable through the audited controller ancestry. Durable comments on #520 and #333 record that #540 is the sole content integration and no second #520 content merge occurred.
-- #450 remains held/excluded; no child-stack, provider, public, or production configuration worktree is part of this release lane.
+- #333 rank 007 remains open after the read-only/default-off root slice; #524 is the sole active controller lane and #528 remains held and untouched.
+- Open #539 collides only on generated requirements and the module manifest; #525 and older heads collide only on shared governance and must rebase or serialize later.
+- #450 remains held/excluded; no provider, OAuth, Admin-write, child-stack, public-enable, or production configuration worktree is part of this lane.
 
 ## Requirement / version claims
 
-- Merged main owns `AUTH-013` through existing listener-free case `API-ENROLLMENT-POLICY-001`; no generic TEST or other permanent ID was allocated.
-- The merged policy revisions remain core `9.33.0` and contracts `1.51.0`, with tests/docs `1.64.46`.
-- This release packet alone advances package `0.9.5.40`, application `9.53.27`, contracts `1.51.1`, and tests/docs `1.64.47`; tooling `1.23.0` and every unrelated module remain unchanged.
+- The controller changes only existing `AUTH-013`, still mapped solely to `API-ENROLLMENT-POLICY-001`; no generic TEST or other permanent ID is allocated.
+- Proposed compatible revisions are core `9.34.0`, contracts `1.52.0`, and tests/docs `1.64.48`.
+- Package `0.9.5.40`, application `9.53.27`, tooling `1.23.0`, and every unrelated module remain unchanged.
 
 ## File claims / collision notes
 
-- The release branch contains only the standard release contract, documentation, localization, version, predecessor-test, PWA-version, and coordination surfaces.
-- It imports no stale contributor hunk and changes no casino source, policy implementation, route, provider, migration, ledger, grant, secret, or production workflow.
-- Open PR #539 and every stacked or shared-governance head remain held and must rebase/recalculate after terminal deployment.
+- Source changes are limited to the current v40 policy and app route seams; contributor source is reconciled manually after an ancestry-only merge, with stale `SIGNUP_ENABLED`/`DATA_DIR` hunks excluded.
+- Contract changes are additive auth-v2/restricted-preview enforcement truth plus the authenticated digest; frozen v1 is unchanged.
+- Tests bind bounded log values/failures, safe unknown-policy envelopes, exact account-spine routes, and signup/invitation allow-deny behavior without listeners, external providers/provider network, or live enrollment.
 
 ## Decisions / handbacks
 
-- v0.9.5.40 packages the accepted read-only policy while public enrollment methods remain default-off and `/api/v1` remains unchanged.
-- Its compatibility record binds exact immutable v0.9.5.39 as the application-only schema-2 predecessor; database rollback is prohibited and schema migration remains held.
-- Hosted publication may create immutable assets, but unchanged hosted SSH activation must be cancelled before cutover. Trusted deployment must prove schema 2 before and after activation and invoke no migration.
-- Enforcement, audit, Admin mutation, readiness, RBAC, UI, provider/signup/OAuth/mail/invitation/public enablement, MySQL composite execution, schema-3 activation, and issue closure remain separately governed.
+- Public email signup and invitation redemption enforce the same resolved policy that the read-only endpoint publishes; existing login behavior and frozen v1 remain unchanged.
+- Absent, non-mapping, and unowned-schema documents preserve the deployed environment seed/fallback; schema-v1 unknown modes map only the two public mutation routes to their existing safe denial envelopes.
+- The existing JSONL sink is bounded operational enrollment-decision logging. It must succeed before account or invitation mutation and is not immutable/provider-backed actor/change audit; that remains deferred to #528.
+- Admin mutation, readiness, RBAC, UI, OAuth/provider, live enablement, provider network, public exposure, release, deployment, issue closure, and #528 remain excluded.

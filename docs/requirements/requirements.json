@@ -12493,14 +12493,14 @@
     {
       "id": "AUTH-013",
       "module": "Core",
-      "description": "Enrollment policy resolution reads one durable provider-backed document with exact closed, invite-only, and self-signup modes plus independent public-method flags, using the deployed environment as both seed and fallback so an absent or malformed document preserves restricted-preview behavior; unknown modes fail closed and non-boolean method values never enable access.",
+      "description": "Enrollment policy resolution reads one durable provider-backed document with exact closed, invite-only, and self-signup modes plus independent public-method flags; absent, non-mapping, or unowned-schema documents preserve the deployed environment seed/fallback with strict booleans and no widening beyond it, schema-owned unknown modes fail public mutation routes to their safe denial envelopes, and public email signup plus invitation redemption emit only closed-vocabulary operational decisions whose logging must succeed before mutation.",
       "status": "PASS",
       "api_tests": ["API-ENROLLMENT-POLICY-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/enrollment_policy.py", "casino/app.py", "contracts/openapi/auth.v2.yaml", "contracts/compatibility/restricted-preview-security.json", "tests/enrollment_policy_tests.py", "tests/account_spine_tests.py", "tests/run_tests.py"],
       "introduced_in": "issue-333-enrollment-policy-slice1",
-      "changed_in": "issue-333-enrollment-policy-slice1",
-      "notes": "This slice is read-only and default-off: it adds no Admin write, enforcement, audit, readiness, RBAC, UI, provider, signup, OAuth, mail, invitation, public-exposure, or live-enablement authority. The frozen v1 API is unchanged; issue #333 remains open for the separately governed remainder."
+      "changed_in": "issue-333-enrollment-policy-slice2",
+      "notes": "This slice enforces only existing public email-signup and invitation-redemption routes while preserving the shipped default-off restricted-preview configuration, deployed environment fallback semantics, generic redemption denial, existing login behavior, and frozen v1 API. The existing JSONL sink is operational enrollment-decision logging, not immutable/provider-backed actor/change audit; that audit remains deferred to the separately governed #528 Admin-write transaction. No Admin write, readiness, RBAC, UI, OAuth/provider, live enablement, provider network, public exposure, deployment, or issue-closure authority is added, and #333 remains open."
     },
     {
       "id": "ADMIN-028",

@@ -1,6 +1,6 @@
 {
   "artifact": "restricted-preview-security",
-  "version": 2,
+  "version": 3,
   "stage": "restricted-preview",
   "canonical_origin": "https://casino.tiltseven.com",
   "enrollment_policy": {
@@ -8,7 +8,22 @@
     "modes": ["closed", "invite-only", "self-signup"],
     "environment_seed": true,
     "environment_fallback": true,
+    "absent_malformed_or_unowned_document": "deployed-environment-baseline",
+    "schema_v1_unknown_mode": "safe-route-denial",
     "public_methods_default_enabled": false,
+    "enforced_routes": ["/api/v2/auth/signup", "/api/v2/auth/redeem-invitation"],
+    "decision_logging": {
+      "kind": "operational-jsonl",
+      "event": "enrollment_decision",
+      "routes": ["signup", "invitation", "unknown"],
+      "modes": ["closed", "invite-only", "self-signup"],
+      "methods": ["email", "google", "facebook", "unknown"],
+      "decisions": ["allowed", "denied"],
+      "reasons": ["allowed", "mode_closed", "self_signup_disabled", "method_disabled", "invitations_disabled", "unknown_route"],
+      "fail_closed_before_mutation": true,
+      "immutable_actor_change_audit": false,
+      "immutable_audit_deferred_to": "#528 Admin-write transaction"
+    },
     "admin_write_available": false,
     "live_enablement_authorized": false,
     "api_v1_unchanged": true

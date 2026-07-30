@@ -5,10 +5,11 @@ Enrollment was governed only by process environment variables read once at impor
 join required an operator to edit the environment and restart. This module introduces the durable
 policy document those flags become the seed for.
 
-Slice 1 is read-path only and deliberately behaviour-preserving: with no stored document the
-resolved policy reproduces the environment baseline exactly, so the public endpoint publishes the
-same values it published before. Later slices add enforcement, audit, the least-privilege
-permission, readiness gating, and the Admin surface.
+The resolved policy reproduces the environment baseline exactly when no stored document exists.
+Public signup and invitation redemption now enforce that same resolved policy, and each decision is
+written to the existing operational JSONL log before either route may mutate enrollment state.
+Least-privilege Admin mutation, readiness, immutable actor/change audit, and provider enablement
+remain separate work.
 
 The policy is read through the active StorageProvider so JSON and MySQL share one durable document
 boundary. This slice exposes no application or Admin write path, and it never enables a method on
@@ -19,6 +20,8 @@ its own.
 from casino import config
 # Import the storage provider accessor so the document uses the active backend.
 from casino.core.storage import get_storage_provider
+# Import the existing JSONL logger for bounded operational enrollment-decision records.
+from casino.core import logger
 # Import the validation envelope so a rejected policy value fails closed with a stable code.
 from casino.errors import ValidationError
 
@@ -41,14 +44,39 @@ MODES = (MODE_CLOSED, MODE_INVITE_ONLY, MODE_SELF_SIGNUP)
 # Name the self-signup methods that can be enabled independently of the mode.
 METHODS = ("email", "google", "facebook")
 
+# Name the only operational event this slice may emit.
+AUDIT_EVENT = "enrollment_decision"
+
+# Name each public enrollment route governed by this slice.
+ROUTE_SIGNUP = "signup"
+# Name private invitation redemption independently from public self-signup.
+ROUTE_INVITATION = "invitation"
+
+# Publish only reviewed route labels, plus one fixed collapse value for hostile callers.
+AUDIT_ROUTES = frozenset({ROUTE_SIGNUP, ROUTE_INVITATION, "unknown"})
+# Publish only the policy modes already owned by the durable document.
+AUDIT_MODES = frozenset(MODES)
+# Publish only the reviewed self-signup methods, plus one fixed collapse value.
+AUDIT_METHODS = frozenset((*METHODS, "unknown"))
+# Publish only fixed decision labels.
+AUDIT_DECISIONS = frozenset({"allowed", "denied"})
+# Publish only fixed reasons that reveal no identity, bearer, credential, or policy document value.
+AUDIT_REASONS = frozenset({"allowed", "mode_closed", "self_signup_disabled", "method_disabled", "invitations_disabled", "unknown_route"})
+# Retain only the reviewed low-cardinality fields in the operational JSONL record.
+AUDIT_FIELDS = frozenset({"route", "mode", "method", "decision", "reason"})
+
+
+# Identify a fixed logging failure without exposing an exception, path, or caller value.
+class EnrollmentAuditError(RuntimeError):
+    """Report that an enrollment decision could not be recorded before mutation."""
+
 
 # Derive the environment baseline that the deployed release already behaves as.
 def environment_baseline() -> dict:
     """Return the policy the current environment flags describe.
 
-    This is the seed and the fallback. It must reproduce today's behaviour exactly, because slice 1
-    ships with no Admin write path: every deployment resolves to this until an operator stores a
-    document in a later slice.
+    This is the seed and the fallback. It must reproduce deployed behaviour exactly while no Admin
+    write path exists; a separately governed transaction may store a reviewed document later.
     """
     # Treat public email signup as the only method the environment can currently enable.
     email_enabled = bool(config.SIGNUP_ENABLED)
@@ -135,8 +163,8 @@ def current() -> dict:
 def capabilities() -> dict:
     """Return the effective enrollment capabilities implied by the current policy.
 
-    Keeping this derivation in one place means enforcement in the next slice cannot drift from what
-    the public endpoint advertises.
+    Keeping this derivation in one place ensures current signup and invitation enforcement cannot
+    drift from what the public endpoint advertises.
     """
     # Resolve the policy once so every derived value describes the same state.
     policy = current()
@@ -157,3 +185,89 @@ def capabilities() -> dict:
         # Publish the per-method flags without exposing environment names or operator settings.
         "methods": dict(policy["methods"]),
     }
+
+
+# Collapse one caller-supplied value into an exact reviewed vocabulary.
+def _reviewed(value, allowed: frozenset[str], fallback: str) -> str:
+    # Accept only exact built-in strings so hostile objects cannot control comparison or formatting.
+    if type(value) is str and value in allowed:
+        # Return the reviewed low-cardinality value unchanged.
+        return value
+    # Replace arbitrary, oversized, multiline, secret-like, or unknown values with one fixed label.
+    return fallback
+
+
+# Forward one bounded operational enrollment decision to the existing JSONL logger.
+def _audit(event, **fields) -> None:
+    """Emit one value-bounded operational record, never an immutable actor/change audit."""
+    # Ignore the caller event and always emit the sole reviewed enrollment event name.
+    safe_event = AUDIT_EVENT
+    # Collapse the route before it can reach the operational log.
+    safe_fields = {"route": _reviewed(fields.get("route"), AUDIT_ROUTES, "unknown")}
+    # Collapse the mode to the closed baseline when a hostile direct caller supplies an unknown value.
+    safe_fields["mode"] = _reviewed(fields.get("mode"), AUDIT_MODES, MODE_CLOSED)
+    # Collapse an unknown decision to denial so malformed audit input can never describe permission.
+    safe_fields["decision"] = _reviewed(fields.get("decision"), AUDIT_DECISIONS, "denied")
+    # Collapse an unknown reason to the fixed unknown-route refusal.
+    safe_fields["reason"] = _reviewed(fields.get("reason"), AUDIT_REASONS, "unknown_route")
+    # Include a method only when the decision path supplied one.
+    if fields.get("method") is not None:
+        # Collapse arbitrary method material to one reviewed value.
+        safe_fields["method"] = _reviewed(fields.get("method"), AUDIT_METHODS, "unknown")
+    # Start a fixed failure boundary so logger details cannot escape into a public route.
+    try:
+        # Write the bounded record before any governed enrollment mutation may start.
+        logger.info(safe_event, **safe_fields)
+    # Normalize every sink failure to one fixed local exception.
+    except Exception:
+        # Hide exception text, paths, record values, and logger implementation details.
+        raise EnrollmentAuditError("Enrollment decision logging is unavailable") from None
+
+
+# Decide whether one governed enrollment route may proceed and record the exact decision first.
+def evaluate(route) -> dict:
+    """Return one bounded signup or invitation decision after its operational log succeeds."""
+    # Resolve one coherent policy snapshot for both enforcement and operational logging.
+    resolved = capabilities()
+    # Read the closed-vocabulary mode from the normalized policy.
+    mode = resolved["mode"]
+    # Reject every unreviewed route without reflecting its caller-supplied value.
+    if type(route) is not str or route not in (ROUTE_SIGNUP, ROUTE_INVITATION):
+        # Record only the fixed unknown route label.
+        _audit(AUDIT_EVENT, route="unknown", mode=mode, decision="denied", reason="unknown_route")
+        # Return only fixed reviewed values to the internal caller.
+        return {"allowed": False, "reason": "unknown_route", "mode": mode}
+    # Deny both routes while restricted-preview enrollment is closed.
+    if mode == MODE_CLOSED:
+        # Record the fixed mode-level refusal before returning.
+        _audit(AUDIT_EVENT, route=route, mode=mode, decision="denied", reason="mode_closed")
+        # Preserve the reviewed mode and reason without exposing stored policy fields.
+        return {"allowed": False, "reason": "mode_closed", "mode": mode}
+    # Evaluate invitation redemption independently from public signup methods.
+    if route == ROUTE_INVITATION:
+        # Deny redemption when the normalized invitation capability is not exactly enabled.
+        if resolved["invitation_enrollment_enabled"] is not True:
+            # Record the fixed capability refusal before returning.
+            _audit(AUDIT_EVENT, route=route, mode=mode, decision="denied", reason="invitations_disabled")
+            # Preserve only the reviewed reason and mode.
+            return {"allowed": False, "reason": "invitations_disabled", "mode": mode}
+        # Record the allowed redemption before the route may inspect or consume a bearer.
+        _audit(AUDIT_EVENT, route=route, mode=mode, decision="allowed", reason="allowed")
+        # Allow the existing invitation service to retain its generic envelopes and lifecycle.
+        return {"allowed": True, "reason": "allowed", "mode": mode}
+    # Deny public email signup outside the explicit self-signup mode.
+    if mode != MODE_SELF_SIGNUP:
+        # Record the truthful invite-only refusal with only the reviewed email-method label.
+        _audit(AUDIT_EVENT, route=route, mode=mode, method="email", decision="denied", reason="self_signup_disabled")
+        # Preserve only the reviewed reason and mode.
+        return {"allowed": False, "reason": "self_signup_disabled", "mode": mode}
+    # Deny public email signup unless its strict method flag is enabled.
+    if resolved["methods"]["email"] is not True:
+        # Record the fixed method refusal before account validation or creation.
+        _audit(AUDIT_EVENT, route=route, mode=mode, method="email", decision="denied", reason="method_disabled")
+        # Preserve only the reviewed reason and mode.
+        return {"allowed": False, "reason": "method_disabled", "mode": mode}
+    # Record the allowed signup before any identity or session mutation begins.
+    _audit(AUDIT_EVENT, route=route, mode=mode, method="email", decision="allowed", reason="allowed")
+    # Allow the existing signup route to retain its request validation and response contract.
+    return {"allowed": True, "reason": "allowed", "mode": mode}

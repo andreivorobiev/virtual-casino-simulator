@@ -525,7 +525,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     run_case('STORAGE-PLAYER-STATE-ATOMIC-001',['CORE-030','STORAGE-001','STORAGE-002'],run_player_state_atomic_tests)
     # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
     run_case('STORAGE-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','LEDGER-026','STORAGE-005','STORAGE-006'],storage_tests.run_practice_opponent_accounting)
-    # Prove enrollment resolves through the durable read-only policy without changing deployed behaviour. (AUTH-013)
+    # Prove durable enrollment resolution, bounded decision logging, and signup/redemption enforcement. (AUTH-013)
     def run_enrollment_policy_tests():
         # Load the focused listener-free policy suite.
         suite=unittest.defaultTestLoader.loadTestsFromModule(enrollment_policy_tests)

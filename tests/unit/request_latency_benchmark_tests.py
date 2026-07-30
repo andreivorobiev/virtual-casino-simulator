@@ -1373,12 +1373,12 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the tooling descriptor for the compatible bridge addition.
         tooling_module = json.loads((ROOT / "modules" / "tooling.json").read_text(encoding="utf-8"))
         # Require the exact compatible core minor allocation.
-        self.assertEqual(core_module["version"], "9.33.0")
+        self.assertEqual(core_module["version"], "9.34.0")
         # Require the exact shared tests patch allocation.
-        self.assertEqual(tests_module["version"], "1.64.47")
+        self.assertEqual(tests_module["version"], "1.64.48")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.47")
+        self.assertEqual(docs_module["version"], "1.64.48")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.51.1")
+        self.assertEqual(contracts_module["version"], "1.52.0")
         # Require the compatible tooling minor allocation.
         self.assertEqual(tooling_module["version"], "1.23.0")

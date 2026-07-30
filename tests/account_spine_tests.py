@@ -20,7 +20,7 @@ from casino import config
 # Import Admin account management helpers under test.
 from casino import admin
 # Import the canonical auth identity/session store.
-from casino.core import auth
+from casino.core import auth, enrollment_policy
 # Import reporter-status service behavior.
 from casino.core import feedback
 # Import wallet storage reset helpers.
@@ -69,16 +69,20 @@ class ProductAccountSpineTests(unittest.TestCase):
 
     # Prove the disabled enrollment policy and signup route fail closed by default.
     def test_enrollment_policy_and_disabled_signup_are_explicit(self) -> None:
+        # Read the exact registered route identities before dispatching either public policy surface.
+        registered = {(route.method, route.regex.pattern) for route in ROUTER.routes}
+        # Require policy-enforced signup and invitation redemption to remain exact additive v2 routes.
+        self.assertTrue({("POST", "^/api/v2/auth/signup$"), ("POST", "^/api/v2/auth/redeem-invitation$")}.issubset(registered))
         # Pin every environment-derived enrollment input to the shipped restricted-preview default.
-        with patch.object(config, "SIGNUP_ENABLED", False), patch.object(config, "INVITATIONS_ENABLED", False), patch.object(config, "ENROLLMENT_ENABLED", False):
+        with patch.object(config, "SIGNUP_ENABLED", False), patch.object(config, "INVITATIONS_ENABLED", False), patch.object(config, "ENROLLMENT_ENABLED", False), patch.object(enrollment_policy.logger, "info", return_value={}):
             # Read the public policy route without a session.
             policy = ROUTER.dispatch("GET", "/api/v2/auth/enrollment-policy")
-        # Require the exact additive v2 response while every public enrollment control stays disabled.
-        self.assertEqual(policy, {"enrollment_mode": "closed", "signup_enabled": False, "guest_trials_enabled": True, "invitation_enrollment_enabled": False, "guest_conversion_enabled": True, "passkeys_enabled": False, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"})
-        # Attempt the public signup mutation with a complete payload.
-        with self.assertRaises(ForbiddenError):
-            # Dispatch directly with response headers to match the adapter contract.
-            ROUTER.dispatch("POST", "/api/v2/auth/signup", {"email": "signup-held@example.test", "password": "SignupHeldPassw0rd!23", "display_name": "Signup Held", "terms_version": "private-beta-1", "accepted": True}, context={"client": "unit", "response_headers": []})
+            # Require the exact additive v2 response while every public enrollment control stays disabled.
+            self.assertEqual(policy, {"enrollment_mode": "closed", "signup_enabled": False, "guest_trials_enabled": True, "invitation_enrollment_enabled": False, "guest_conversion_enabled": True, "passkeys_enabled": False, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"})
+            # Attempt the public signup mutation with a complete payload.
+            with self.assertRaises(ForbiddenError):
+                # Dispatch directly with response headers to match the adapter contract.
+                ROUTER.dispatch("POST", "/api/v2/auth/signup", {"email": "signup-held@example.test", "password": "SignupHeldPassw0rd!23", "display_name": "Signup Held", "terms_version": "private-beta-1", "accepted": True}, context={"client": "unit", "response_headers": []})
         # Require the failed signup attempt to create no account.
         self.assertIsNone(auth.find_user_by_email("signup-held@example.test"))
 
