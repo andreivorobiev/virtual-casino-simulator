@@ -19,7 +19,7 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-3
 ## Requirement / version claims
 
 - The accepted #529 change owns `CORE-030`; no generic TEST requirement ID was allocated.
-- v0.9.5.36 owns packaged application `0.9.5.36`, application `9.53.23`, tests/docs `1.64.37`, and contracts `1.49.20`.
+- v0.9.5.36 owns packaged application `0.9.5.36`, application `9.53.23`, tests/docs `1.64.38`, and contracts `1.49.21`.
 - Core `9.29.0`, tooling `1.21.12`, storage, every game module, and every unrelated module are preserved from the accepted merge.
 
 ## File claims / collision notes
