@@ -44,6 +44,43 @@ function animateCount(el, from, to) {
   requestAnimationFrame(step);
 }
 
+// Emit a brief gold-coin burst from the wallet for big wins only — genre-appropriate, reduced-motion aware.
+function coinBurst(pill) {
+  // Honour reduced motion by skipping the particle burst entirely.
+  if (reduceMotion()) return;
+  // Anchor the burst to the wallet's on-screen position so no container overflow can clip the coins.
+  const rect = pill.getBoundingClientRect();
+  // Create one fixed-position layer that owns every coin and is removed as a unit.
+  const layer = document.createElement('div');
+  // Style hook for the fixed burst layer.
+  layer.className = 'wallet-coin-layer';
+  // Originate the burst near the wallet's coin badge on the left of the pill.
+  layer.style.left = (rect.left + rect.width * 0.18) + 'px';
+  // Centre the origin vertically on the pill.
+  layer.style.top = (rect.top + rect.height / 2) + 'px';
+  // Spawn a bounded set of coins, each with its own randomized arc.
+  for (let i = 0; i < 12; i += 1) {
+    // Build one coin disc.
+    const coin = document.createElement('span');
+    // Style hook for a single coin.
+    coin.className = 'wallet-coin';
+    // Randomize the horizontal spread of this coin's arc peak.
+    coin.style.setProperty('--dx', ((Math.random() * 2 - 1) * 72).toFixed(1) + 'px');
+    // Randomize the upward rise of this coin's arc peak.
+    coin.style.setProperty('--dy', (-(28 + Math.random() * 62)).toFixed(1) + 'px');
+    // Randomize the tumble rotation so no two coins read identically.
+    coin.style.setProperty('--rot', ((Math.random() * 2 - 1) * 220).toFixed(0) + 'deg');
+    // Stagger each coin slightly so the burst scatters rather than firing in one frame.
+    coin.style.animationDelay = (Math.random() * 70).toFixed(0) + 'ms';
+    // Attach the coin to the burst layer.
+    layer.appendChild(coin);
+  }
+  // Mount the burst above all shell chrome.
+  document.body.appendChild(layer);
+  // Remove the whole burst once the longest staggered coin animation has finished.
+  setTimeout(() => layer.remove(), 1200);
+}
+
 // Flash a brand glow on the wallet and float the gained amount above it.
 function celebrateGain(pill, gain) {
   // Choose a stronger treatment for a large jump so big wins feel bigger.
@@ -54,6 +91,8 @@ function celebrateGain(pill, gain) {
   void pill.offsetWidth;
   // Apply the magnitude-appropriate pulse class.
   pill.classList.add(big ? 'wallet-bigwin' : 'wallet-win');
+  // Escalate a big win with a gold-coin burst; ordinary wins keep the quieter glow.
+  if (big) coinBurst(pill);
   // Remove the pulse class once its animation window elapses.
   setTimeout(() => pill.classList.remove('wallet-win', 'wallet-bigwin'), 1100);
   // Skip the floating chip under reduced motion to honour the preference.

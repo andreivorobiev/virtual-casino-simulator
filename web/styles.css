@@ -475,11 +475,35 @@ label {
   20% { opacity: 1; transform: translateY(-2px) scale(1); }
   100% { opacity: 0; transform: translateY(-26px) scale(1); }
 }
+/* Big-win coin burst (core/celebrate.js): a fixed layer so no chrome overflow clips the coins. */
+.wallet-coin-layer {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+}
+.wallet-coin {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #fff3c2, var(--metal-gold, #e8c760) 55%, #a9791f);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  animation: wallet-coin-burst 0.95s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+/* Arc each coin: pop from the wallet, rise to a random peak, then fall under gravity and fade. */
+@keyframes wallet-coin-burst {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4) rotate(0deg); }
+  15% { opacity: 1; }
+  40% { transform: translate(var(--dx), var(--dy)) scale(1) rotate(calc(var(--rot) * 0.5)); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.2), calc(var(--dy) + 150px)) scale(0.9) rotate(var(--rot)); }
+}
 @media (prefers-reduced-motion: reduce) {
   .wallet-pill.wallet-win::after,
   .wallet-pill.wallet-bigwin::after,
   .wallet-pill.wallet-bigwin { animation: none; }
   .wallet-gain { display: none; }
+  .wallet-coin-layer { display: none; }
 }
 
 .wallet-pill::before {
