@@ -20,6 +20,8 @@ sys.path.insert(0, str(ROOT))
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
 # Import Slots rules so deterministic browser evidence is derived from the authoritative twenty-payline table.
 from casino.games.slots import engine as slots_engine
+# Import Keno rules so browser fixtures use the same paytable and production rounding as the server.
+from casino.games.keno import engine as keno_engine
 # Import the canonical catalog so guest compatibility is proved for every released game state route.
 from casino.games.registry import list_games as list_catalog_games
 # Import auth helpers so API tests can seed users through the backend storage seam.
@@ -58,6 +60,8 @@ from tests import cicd_deployment_tests
 from tests import nonfinite_money_tests
 # Import exact-source 50,000-cycle harness proofs for TEST-092.
 from tests.unit import ui_50000_tests
+# Import listener-free exact-138 concurrency harness proofs for TEST-142.
+from tests.unit import concurrent_browser_138_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -70,6 +74,8 @@ ACTIVE_PROGRESS=None
 BROWSER_SHARD_RANGE=None
 # Count executed browser run_case positions so contiguous shards partition deterministically.
 BROWSER_CASE_SEQ=0
+# Restrict browser execution to specific games' dedicated acceptance cases, or None for every game. (issue #468 item 4)
+BROWSER_AFFECTED_GAMES=None
 # Declare producer/consumer case groups whose inline browser state must stay on one shard.
 BROWSER_CASE_AFFINITY_GROUPS={
     # Keep the real backend login and service-worker lifecycle in one isolated context.
@@ -79,7 +85,7 @@ BROWSER_CASE_AFFINITY_GROUPS={
     # Keep login, terms, wallet, shell, catalog, and responsive lobby state on shard zero.
     'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
     # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
-    'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
+    'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
     # Keep Bingo, Blackjack, Baccarat, feedback, Admin, audio, and i18n state on shard three.
     'bingo_admin':('BR-BINGO-PURCHASE-001','BR-BINGO-001','BR-BJ-NATURAL-PAYOUT-001','BR-BJ-001','BR-BJ-I18N-001','BR-BJ-INSURANCE-NET-001','BR-BAC-COPY-001','BR-BAC-FRESH-SHOE-001','BR-BAC-MUTATION-001','BR-BAC-001','BR-I18N-ROUTES-001','BR-FEEDBACK-001','BR-ADMIN-NAV-AUTH-001','BR-ADMIN-001','BR-ADMIN-LEDGER-LABELS-001','BR-ADMIN-FEEDBACK-001','BR-ADMIN-OAUTH-001','BR-ADMIN-MAIL-001','BR-INVITE-001','BR-OPS-001','BR-ADMIN-PRACTICE-OPPONENT-001','BR-ADMIN-USERS-001','BR-ADMIN-GUEST-001','BR-AUDIO-001','BR-I18N-FOUNDATION-001','BR-I18N-ADMIN-001'),
 }
@@ -244,6 +250,8 @@ def run_case(test_id, reqs, fn):
     seq=BROWSER_CASE_SEQ; BROWSER_CASE_SEQ+=1
     # Skip cases owned by other contiguous browser shards without recording or reporting them.
     if BROWSER_SHARD_RANGE is not None and not BROWSER_SHARD_RANGE[0]<=seq<BROWSER_SHARD_RANGE[1]: return
+    # Skip a dedicated per-game acceptance case when this run did not target that game, after claiming its sequence position. (issue #468 item 4)
+    if browser_case_deselected(test_id): return
     # Read the active browser reporter without changing API or storage runner behavior.
     progress=ACTIVE_PROGRESS
     # Flush the named browser-test start before its body begins.
@@ -338,12 +346,57 @@ def skip_browser_affinity(group_name):
     # Advance once for each literal run_case call that the unowned guarded body omitted.
     BROWSER_CASE_SEQ+=len(group_case_ids)
 
-# Verify aggregated browser shard results cover every literal case exactly once and pass.
-def verify_browser_shards(results_dir, shard_count):
-    # Load the deterministic expected id list from this exact checkout's source.
-    expected=browser_case_ids()
+# Map each game to its one dedicated deep browser acceptance case so unaffected games can be skipped. (issue #468 item 4)
+BROWSER_GAME_ACCEPTANCE_CASES={'acey_deucey':'BR-AD-001', 'andar_bahar':'BR-AB-001', 'big_six_wheel':'BR-BIG-SIX-001', 'caribbean_stud':'BR-CS-001', 'casino_holdem':'BR-CH-001', 'casino_war':'BR-CW-001', 'chuck_a_luck':'BR-CHUCK-001', 'craps':'BR-CRAPS-001', 'crown_and_anchor':'BR-CAA-001', 'deuces_wild_video_poker':'BR-DWVP-001', 'double_bonus_video_poker':'BR-DBVP-001', 'dragon_tiger':'BR-DT-001', 'fan_tan':'BR-FAN-TAN-001', 'hi_lo':'BR-HILO-001', 'jacks_or_better_video_poker':'BR-JOBVP-001', 'joker_poker':'BR-JP-001', 'let_it_ride':'BR-LIR-001', 'mississippi_stud':'BR-MSTUD-001', 'multi_hand_video_poker':'BR-MHVP-001', 'over_under_7':'BR-OU7-001', 'pai_gow_poker':'BR-PGP-001', 'plinko':'BR-PLINKO-001', 'red_dog':'BR-RD-001', 'scratch_cards':'BR-SCRATCH-001', 'sic_bo':'BR-SIC-BO-001', 'teen_patti':'BR-TEEN-PATTI-001', 'texas_holdem_practice_table':'BR-THPT-001', 'three_card_poker':'BR-TCP-001'}
+# Invert the map once so run_case can resolve a dedicated case's owning game in constant time.
+_BROWSER_ACCEPTANCE_CASE_GAME={case_id:game_id for game_id,case_id in BROWSER_GAME_ACCEPTANCE_CASES.items()}
+
+# Validate the game->case acceptance map against the exact catalog and literal case inventory before any use.
+def validate_browser_affected_games():
+    # Read the deterministic literal browser case inventory and the current catalog once.
+    case_ids=set(browser_case_ids()); catalog_ids={game['id'] for game in casino_config.GAMES}
+    # Flatten declared affinity cases so dedicated deselection can never bypass a producer/consumer group.
+    affinity_case_ids={case_id for group_case_ids in BROWSER_CASE_AFFINITY_GROUPS.values() for case_id in group_case_ids}
+    # Reject a map that pairs two games with one case because deselection would then be ambiguous.
+    if len(set(BROWSER_GAME_ACCEPTANCE_CASES.values()))!=len(BROWSER_GAME_ACCEPTANCE_CASES): raise AssertionError('duplicate dedicated acceptance case in affected-game map')
+    # Reject any dedicated case that is also affinity-owned because partial group deselection would break state ownership.
+    if set(BROWSER_GAME_ACCEPTANCE_CASES.values())&affinity_case_ids: raise AssertionError('affected-game map contains an affinity-owned browser case')
+    # Require every mapped game and case to still exist so a stale map fails startup instead of under-testing.
+    for game_id,case_id in BROWSER_GAME_ACCEPTANCE_CASES.items():
+        # Fail closed on an unknown catalog game id.
+        if game_id not in catalog_ids: raise AssertionError(f'affected-game map references unknown game {game_id}')
+        # Fail closed when a mapped dedicated case is absent from the literal inventory.
+        if case_id not in case_ids: raise AssertionError(f'affected-game case {case_id} absent from browser inventory')
+
+# Report whether a case is a dedicated per-game acceptance case excluded by the active affected-game set.
+def browser_case_deselected(case_id):
+    # Keep every case when no affected-game restriction is active.
+    if BROWSER_AFFECTED_GAMES is None: return False
+    # Skip only dedicated per-game acceptance cases whose game is not among the affected games.
+    return case_id in _BROWSER_ACCEPTANCE_CASE_GAME and _BROWSER_ACCEPTANCE_CASE_GAME[case_id] not in BROWSER_AFFECTED_GAMES
+
+# List the case ids one shard range actually executes after affected-game deselection.
+def browser_selected_case_ids(shard_range):
+    # Read the deterministic literal inventory once.
+    case_ids=browser_case_ids()
+    # Keep only in-range cases that survive affected-game deselection.
+    return [case_ids[index] for index in range(shard_range[0],shard_range[1]) if not browser_case_deselected(case_ids[index])]
+
+# Compute the exact case ids expected across shards for an affected-game selection, independent of process state.
+def browser_expected_case_ids(affected_games):
+    # Return the full literal inventory when no affected-game restriction applies.
+    if affected_games is None: return browser_case_ids()
+    # Otherwise drop each dedicated per-game acceptance case whose game is not among the affected games.
+    return [case_id for case_id in browser_case_ids() if not (case_id in _BROWSER_ACCEPTANCE_CASE_GAME and _BROWSER_ACCEPTANCE_CASE_GAME[case_id] not in affected_games)]
+
+# Verify aggregated browser shard results cover the independently expected selection exactly once and pass.
+def verify_browser_shards(results_dir, shard_count, affected_games=None):
     # Track every observed browser case id and the shard that executed it.
     seen={}
+    # Canonicalize the detector-owned selection so shard self-descriptions can be checked rather than trusted.
+    expected_declaration=sorted(affected_games) if affected_games else None
+    # Derive the expected case set only from the workflow-supplied detector selection.
+    expected=browser_expected_case_ids(affected_games)
     # Read each shard's unique result file and fail on any missing shard evidence.
     for index in range(shard_count):
         # Resolve the exact per-shard result file created by the sharded browser runner.
@@ -352,6 +405,8 @@ def verify_browser_shards(results_dir, shard_count):
         if not path.exists(): print(f'BROWSER_SHARDS FAIL missing shard result file {path}'); return 1
         # Parse this shard's retained result records.
         data=json.loads(path.read_text(encoding='utf-8'))
+        # Reject a shard whose self-description does not match the detector-owned aggregate selection.
+        if data.get('affected_games')!=expected_declaration: print(f'BROWSER_SHARDS FAIL shard {index} affected games {data.get("affected_games")} != expected {expected_declaration}'); return 1
         # Examine only browser-suite records so mixed local suite runs cannot confuse coverage.
         for result in data['results']:
             # Skip non-browser records defensively without counting them as coverage.
@@ -378,8 +433,38 @@ def assert_condition(value, message):
     # Raise a focused assertion when the mapped acceptance predicate is false.
     assert value, message
 
+# Resolve exact request-latency source provenance without accepting a branch name.
+def request_latency_source_commit():
+    # Start one bounded read-only Git query without trusting caller environment.
+    try:
+        # Resolve the exact local checkout commit without changing repository state.
+        result=subprocess.run(['git','rev-parse','HEAD'],cwd=str(ROOT),capture_output=True,text=True,timeout=10)
+    # Normalize timeout and process-launch failures into one value-free diagnostic.
+    except (subprocess.TimeoutExpired,OSError):
+        # Suppress command, path, and operating-system details.
+        raise AssertionError('request-latency source commit is unavailable') from None
+    # Normalize the bounded command output.
+    local_sha=result.stdout.strip().lower() if result.returncode==0 else ''
+    # Require exact immutable provenance before an explicit benchmark begins.
+    if not re.fullmatch(r'[0-9a-f]{40}',local_sha): raise AssertionError('request-latency source commit is unavailable')
+    # Read the optional hosted identity only after checkout provenance is verified.
+    hosted_sha=str(os.environ.get('GITHUB_SHA','')).strip().lower()
+    # Reject every present malformed or stale hosted assertion.
+    if hosted_sha and (not re.fullmatch(r'[0-9a-f]{40}',hosted_sha) or hosted_sha!=local_sha): raise AssertionError('request-latency hosted source commit does not match checkout')
+    # Return the exact checkout commit.
+    return local_sha
+
+# Run one explicit provider baseline in a fresh listener-free child.
+def run_request_latency_provider(provider,output_path):
+    # Import the benchmark lazily only for its explicit selector.
+    from tests import request_latency_benchmark
+    # Resolve exact source provenance before launching the child.
+    source_commit=request_latency_source_commit()
+    # Run without passing any provider credential through the callback or child arguments.
+    request_latency_benchmark.run_provider_subprocess(provider,source_commit,output_path)
+
 # Define the run_storage_tests function used by this module.
-def run_storage_tests(include_live=False, include_migration_live=False):
+def run_storage_tests(include_live=False, include_migration_live=False, request_latency_callback=None):
     # Define one focused unittest runner for bounded MySQL pool lifecycle behavior.
     def run_mysql_pool_tests():
         # Load only the STORAGE-010 and TEST-141 pool test class.
@@ -431,7 +516,7 @@ def run_storage_tests(include_live=False, include_migration_live=False):
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],run_mysql_migration_live_matrix)
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -1066,6 +1151,28 @@ def run_api_tests():
     runner_source=Path(__file__).read_text(encoding='utf-8')
     # Fail the whole lane immediately when a tautological mapped predicate reappears anywhere in this runner.
     assert re.search(r"assert_condition\(\s*True\s*,",runner_source) is None, 'tautological always-true mapped predicate found in tests/run_tests.py'
+    # Execute only listener-free benchmark policy and scheduler unit proof on the ordinary API path.
+    def run_request_latency_unit_tests():
+        # Import the focused TEST-148 suite lazily so no benchmark or WSGI application starts during runner import.
+        from tests.unit import request_latency_benchmark_tests
+        # Load exactly the bounded request-latency unit class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(request_latency_benchmark_tests.RequestLatencyBenchmarkTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any policy, privacy, callback, or scheduler assertion failed.
+        if not result.wasSuccessful(): raise AssertionError('request-latency baseline unit suite failed')
+    # Map the ordinary listener-free unit proof without executing either provider benchmark.
+    run_case('REQUEST-LATENCY-UNIT-001',['TEST-148'],run_request_latency_unit_tests)
+    # Execute the exact-138 planner, barrier, aggregate, and workflow proofs without a listener or browser.
+    def run_concurrent_browser_138_harness_tests():
+        # Load only the focused issue #225 harness test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(concurrent_browser_138_tests.ConcurrentBrowser138Tests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('138-context browser qualification harness unit suite failed')
+    # Record exact-user allocation, source-bound pool evidence, synchronization, privacy, and cleanup policy.
+    run_case('BROWSER-138-HARNESS-001',['AUTH-001','AUTH-002','SESSION-001','SESSION-005','TEST-039','TEST-042','TEST-142','CORE-021'],run_concurrent_browser_138_harness_tests)
     # Execute the listener-free TEST-092 allocation, classification, and resume-policy proofs.
     def run_ui_50000_harness_tests():
         # Load only the focused #227 harness test class.
@@ -1272,6 +1379,21 @@ def run_api_tests():
             raise AssertionError('cross-game copy and focus suite failed')
     # Record the listener-free return semantics, identifier privacy, Russian terminology, and focus proof.
     run_case('UI-GAME-POLISH-001',['I18N-010','UX-020','TEST-117'],run_game_polish_tests)
+
+    # Execute the listener-free Slots economics, route, ledger-equation, and copy regressions.
+    def run_slots_economics_tests():
+        # Import the bounded SLOT-036 test module without opening a browser or listener.
+        from tests.games.slots import test_economics
+        # Load exactly the module-owned economics assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(test_economics.SlotsEconomicsTests)
+        # Run through the shared fail-closed unittest result collector.
+        result = unittest.TextTestRunner(verbosity=1).run(suite)
+        # Fail the named API case when any focused invariant failed or errored.
+        if not result.wasSuccessful():
+            # Raise one stable harness error after unittest printed exact diagnostics.
+            raise AssertionError('Slots economics suite failed')
+    # Record the complete browser-free Split A acceptance under its permanent requirement.
+    run_case('API-SLOT-ECONOMICS-001',['SLOT-036'],run_slots_economics_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -1386,6 +1508,20 @@ def run_api_tests():
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
     run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-127'],run_simple_game_core_tests)
+    # Execute the route-free signed-action settlement-adapter proof without opening a listener.
+    def run_settlement_adapter_tests():
+        # Load only the focused storage-atomic adapter class.
+        from tests import settlement_core_tests
+        # Build the focused listener-free suite explicitly.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(settlement_core_tests.SettlementAdapterTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any adapter proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('settlement adapter suite failed')
+    # Record the additive audit, sign routing, replay, conflict, and bounded recovery proof.
+    run_case('API-GAMECORE-002',['GAMECORE-003'],run_settlement_adapter_tests)
     # Execute the Color Wheel rules and settlement proof without opening a listener.
     def run_color_wheel_tests():
         # Load only the focused Color Wheel class.
@@ -1555,6 +1691,20 @@ def run_api_tests():
             raise AssertionError('keno ball-rail layout suite failed')
     # Record the listener-free Keno drawn-ball rail overflow regression proof.
     run_case('UI-KENO-BALL-RAIL-001',['KENO-026','TEST-113'],run_keno_ball_rail_tests)
+    # Execute the exact Keno paytable, float-rounding, engine, route, ledger, and UI policy proof.
+    def run_keno_economics_tests():
+        # Import only the focused Keno economics class at its mapped API-suite position.
+        from tests.games.keno import test_economics as keno_economics_tests
+        # Load the exact listener-free economics and compatibility suite.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(keno_economics_tests.KenoEconomicsTests)
+        # Execute with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any exact proof or current-route equation regresses.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('Keno economics suite failed')
+    # Record the exact all-domain Keno economics and current-route settlement proof.
+    run_case('API-KENO-ECONOMICS-001',['KENO-027','TEST-147'],run_keno_economics_tests)
     # Execute the production Admin label rules, EN/RU resources, and surface wiring without opening a listener or browser.
     def run_admin_ledger_label_tests():
         # Import the focused listener-free suite only when its mapped case runs.
@@ -3104,9 +3254,9 @@ def run_api_tests():
         stop_server(proc,base); save_results()
 
 # Define the run_browser_tests function used by this module.
-def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds=2700.0,shard_count=1,shard_index=0):
-    # Make the active reporter and shard partition visible to the existing shared run_case helper.
-    global ACTIVE_PROGRESS,BROWSER_SHARD_RANGE,BROWSER_CASE_SEQ
+def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds=2700.0,shard_count=1,shard_index=0,affected_games=None):
+    # Make the active reporter, shard partition, and affected-game selection visible to the shared run_case helper.
+    global ACTIVE_PROGRESS,BROWSER_SHARD_RANGE,BROWSER_CASE_SEQ,BROWSER_AFFECTED_GAMES
     # Start protected logic so failures can be handled safely.
     try: from playwright.sync_api import sync_playwright
     # Handle the expected failure path for the protected logic.
@@ -3115,14 +3265,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
         print('Playwright is not installed. Install with python -m pip install -r requirements-dev.txt and python -m playwright install chromium'); return 2
     # Fail before listener startup when any declared producer/consumer affinity crosses a shard.
     validate_browser_shard_affinity(shard_count)
+    # Fail before listener startup when the affected-game acceptance map has drifted from the catalog or inventory.
+    validate_browser_affected_games()
+    # Restrict execution to the requested games' dedicated acceptance cases before partitioning or counting.
+    BROWSER_AFFECTED_GAMES=affected_games
     # Partition the deterministic case sequence before the reporter learns its exact total.
     shard_range=browser_shard_range(browser_case_total(),shard_count,shard_index)
     # Reset the shared sequence counter so shard ownership always starts at position zero.
     BROWSER_CASE_SEQ=0
     # Activate contiguous shard ownership only for real multi-shard runs.
     BROWSER_SHARD_RANGE=shard_range if shard_count>1 else None
-    # Build one reusable reporter with exact owned-case totals and configurable CI timing.
-    progress=ProgressReporter(shard_range[1]-shard_range[0],heartbeat_seconds,stall_seconds,timeout_seconds)
+    # Build one reusable reporter sized to the cases this shard actually executes after affected-game deselection.
+    progress=ProgressReporter(len(browser_selected_case_ids(shard_range)),heartbeat_seconds,stall_seconds,timeout_seconds)
     # Start flushed phase and watchdog output before the ephemeral server starts.
     progress.start('browser-server-startup')
     # Route existing run_case calls through this reporter only for the browser suite.
@@ -4869,6 +5023,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the expansion matrix under each game-specific permanent test allocation.
                 run_case('BR-CATALOG-EXPANSION-001',['CWHEEL-001','CWHEEL-002','PDICE-001','PDICE-002','BOULE-001','BOULE-002','FARO-001','FARO-002','TEQ-001','TEQ-002','PACH-001','PACH-002','COINP-001','COINP-002','MARBLE-001','MARBLE-002','PATTERN-001','PATTERN-002','LGRID-001','LGRID-002','DDLAB-001','DDLAB-002','FOURCP-001','FOURCP-002','TEST-119','TEST-120','TEST-121','TEST-122','TEST-123','TEST-124','TEST-125','TEST-126','TEST-128','TEST-129','TEST-130','TEST-131'],catalog_expansion_visuals)
+                # Prove every catalog game keeps its enabled controls vertically reachable in the fixed-height shell. (issue #221, CORE-015, UX-004, TEST-139)
+                def control_reachability():
+                    # Pin the two governed desktop viewports where clipped controls were originally reported.
+                    reach_viewports=(('desktop_primary',1920,1080),('desktop_compact',1440,900))
+                    # Collect every offending surface before failing so one hosted run reports the complete catalog.
+                    unreachable_report={}
+                    # Restore the governed English shell before walking routes and capturing reviewable evidence.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait until the public locale state owns the next route render.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Sweep the authoritative registry rather than maintaining a second catalog list.
+                    for reach_game in casino_config.GAMES:
+                        # Return through the real shell lobby before mounting each registered game.
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=8000)
+                        # Enter the game through its catalog-owned navigation control.
+                        page.get_by_test_id(f"nav-{reach_game['id']}").click()
+                        # Wait for the descriptor-declared ready marker before measuring the complete route outlet.
+                        page.get_by_test_id(reach_game['frontend']['ready_testid']).wait_for(timeout=10000)
+                        # Measure and capture both required desktop surfaces.
+                        for reach_viewport_id,reach_width,reach_height in reach_viewports:
+                            # Apply the exact governed viewport and let responsive layout settle.
+                            page.set_viewport_size({'width':reach_width,'height':reach_height}); page.wait_for_timeout(160)
+                            # Inspect every enabled route control while excluding Chromium geometry retained inside collapsed disclosures.
+                            reach=page.evaluate("""() => { const root=document.querySelector('#view'); const visible=node=>{const style=getComputedStyle(node);return style.display!=='none'&&style.visibility!=='hidden'&&node.getClientRects().length>0;}; const inCollapsedDisclosure=node=>Boolean(node.closest('details:not([open])'))&&!node.closest('summary'); const clipsY=el=>{const overflow=getComputedStyle(el).overflowY;return overflow==='hidden'||overflow==='clip';}; const scrollsY=el=>{const overflow=getComputedStyle(el).overflowY;return (overflow==='auto'||overflow==='scroll')&&el.scrollHeight>el.clientHeight+1;}; const label=node=>node.getAttribute('data-testid')||node.getAttribute('data-action')||node.getAttribute('aria-label')||(node.textContent||'').trim().slice(0,24)||node.tagName.toLowerCase(); const enabled=[...(root?.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[role="button"]')||[])].filter(node=>visible(node)&&!inCollapsedDisclosure(node)); const unreachable=[]; for(const node of enabled){const rect=node.getBoundingClientRect();let ancestor=node.parentElement;let blocked=false;let reachableByScroll=false;while(ancestor&&ancestor!==document.documentElement){if(scrollsY(ancestor)){reachableByScroll=true;break;}if(clipsY(ancestor)){const bounds=ancestor.getBoundingClientRect();if(rect.bottom>bounds.bottom+1||rect.top<bounds.top-1){blocked=true;break;}}ancestor=ancestor.parentElement;}if(!blocked&&!reachableByScroll&&(rect.bottom>window.innerHeight+1||rect.top<-1)){const documentScrolls=document.scrollingElement&&document.scrollingElement.scrollHeight>window.innerHeight+1;if(!documentScrolls)blocked=true;}if(blocked)unreachable.push(label(node));}return {enabledControls:enabled.length,unreachableControls:[...new Set(unreachable)]};}""")
+                            # Reject an empty route so missing game controls cannot produce a vacuous pass.
+                            assert reach['enabledControls']>0,{'game':reach_game['id'],'viewport':reach_viewport_id,'reach':reach}
+                            # Preserve the complete bounded failure set for one actionable hosted result.
+                            if reach['unreachableControls']: unreachable_report[f"{reach_game['id']}@{reach_viewport_id}"]=reach['unreachableControls'][:8]
+                            # Emit exact-commit after-pass evidence for independent human review of every governed surface.
+                            game_evidence(f"after-pass-control-reach-{reach_game['id']}-en-{reach_viewport_id}.png",reach_game['id'],['ready','control_reachability'],'en-US',reach_viewport_id)
+                    # Fail after the full sweep so the artifact and error identify every clipped route.
+                    assert not unreachable_report,unreachable_report
+                    # Restore the canonical lobby and primary viewport for the next independent case.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute one shard-owned full-catalog case under the reserved permanent test mapping.
+                run_case('BR-CONTROL-REACH-001',['CORE-015','UX-004','TEST-139'],control_reachability)
                 # Define catalog-wide repeat control, localization, real action, and visual acceptance. (UX-022, TEST-137)
                 def catalog_repeat_bet():
                     # Pin the exact forty-three games that lacked the pre-existing Roulette and Baccarat behavior.
@@ -5563,6 +5753,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Ready to deal'",timeout=5000)
                     # Require the canonical route, complete English title, and initial ready phase.
                     assert page.url.split('?',1)[0].endswith('/games/hi_lo') and page.locator('.hilo-header h1').inner_text()=='Hi-Lo' and page.locator('.hilo-phase').inner_text()=='Ready to deal'
+                    # Require the exact authoritative range as two-decimal player-facing tokens.
+                    hi_lo_rules=page.locator('.hilo-rules').inner_text(); assert '0.96x' in hi_lo_rules and '1.93x' in hi_lo_rules
                     # Define every named viewport required by the Hi-Lo visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Define a helper that captures one registered live state in both supported locales and every governed viewport.
@@ -5575,6 +5767,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.wait_for_timeout(100)
                             # Verify the mounted game title belongs to the selected locale.
                             assert page.locator('.hilo-header h1').inner_text()==('Hi-Lo' if locale=='en-US' else 'Больше — меньше')
+                            # Require the same exact server-owned price range in both governed locales.
+                            localized_rules=page.locator('.hilo-rules').inner_text(); assert '0.96x' in localized_rules and '1.93x' in localized_rules,{'locale':locale,'rules':localized_rules}
                             # Inspect the mounted Russian game for representative English-copy leakage.
                             if locale=='ru-RU':
                                 # Read only the game-owned surface so shell brand names do not create false positives.
@@ -5601,8 +5795,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Choose higher or lower'",timeout=5000)
                     # Require the protected next card and both documented choice controls during the active decision.
                     assert page.get_by_text('Face-down playing card',exact=True).count()==0 and page.locator('[data-guess="higher"]').is_enabled() and page.locator('[data-guess="lower"]').is_enabled()
+                    # Read the active card and its authoritative price through the same authenticated frozen-v1 response.
+                    active_price=page.evaluate("""async () => { const payload=await (await fetch('/api/v1/games/hi-lo/state')).json(); if(!payload.ok) throw new Error(payload.error?.message || 'Hi-Lo state failed'); const card=payload.data.state.active_round.current_card; return payload.data.rules.correct_paytable[card.slice(0,-1)]; }""")
+                    # Require the visible decision copy to show that exact server price with two decimal places.
+                    assert f'{active_price:.2f}x' in page.get_by_test_id('hi-lo-current-return').inner_text()
                     # Capture the higher-or-lower choice state in both locales and every required viewport.
-                    localized_evidence('choose',['choose_higher_or_lower'])
+                    localized_evidence('choose',['choose_higher_or_lower','rank_priced_choice'])
                     # Complete the mounted choice so later direct public actions start without an active-round conflict.
                     page.locator('[data-guess="higher"]').click(); page.wait_for_function("() => !['Choose higher or lower',''].includes(document.querySelector('.hilo-phase')?.textContent || '')",timeout=5000)
                     # Define a bounded real-backend search for one documented settlement class.
@@ -5610,27 +5808,29 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Retain real entropy while giving the one-in-thirteen tie state ample opportunity.
                         for attempt in range(240):
                             # Deal and settle one public session-bound round without any test-only seed seam.
-                            result=page.evaluate("""async ({target,attempt}) => { const call=async(path,body)=>{ const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const payload=await response.json(); if(!payload.ok) throw new Error(payload.error?.message || 'Hi-Lo evidence action failed'); return payload.data; }; const deal=await call('/api/v1/games/hi-lo/rounds',{action_id:`browser-hi-lo-${target}-${attempt}-deal`,wager:1}); return (await call(`/api/v1/games/hi-lo/rounds/${encodeURIComponent(deal.round.round_id)}/guesses`,{action_id:`browser-hi-lo-${target}-${attempt}-guess`,guess:'higher'})).round; }""",{'target':target,'attempt':attempt})
+                            result=page.evaluate("""async ({target,attempt}) => { const call=async(path,body)=>{ const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const payload=await response.json(); if(!payload.ok) throw new Error(payload.error?.message || 'Hi-Lo evidence action failed'); return payload.data; }; const deal=await call('/api/v1/games/hi-lo/rounds',{action_id:`browser-hi-lo-${target}-${attempt}-deal`,wager:1}); return await call(`/api/v1/games/hi-lo/rounds/${encodeURIComponent(deal.round.round_id)}/guesses`,{action_id:`browser-hi-lo-${target}-${attempt}-guess`,guess:'higher'}); }""",{'target':target,'attempt':attempt})
                             # Return immediately when the registered shuffled backend produces the requested class.
-                            if result['outcome']==target:
-                                # Preserve the exact terminal round for payout assertions.
+                            if result['round']['outcome']==target:
+                                # Preserve the exact terminal round and authoritative rule table for payout assertions.
                                 return result
                         # Fail the browser case if the bounded real-backend search never reaches the governed state.
                         raise AssertionError(f'Hi-Lo did not produce {target} within 240 rounds')
                     # Find and mount one real correct prediction.
-                    correct_round=find_outcome('correct'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
-                    # Require the documented 2x return before recording correct-result evidence.
-                    assert correct_round['payout']==correct_round['wager']*2 and correct_round['net']==correct_round['wager']
+                    correct_result=find_outcome('correct'); correct_round=correct_result['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    # Select the exact total-return price published for the visible current-card rank.
+                    correct_price=correct_result['rules']['correct_paytable'][correct_round['current_card'][:-1]]
+                    # Require ledger-rounded rank pricing before recording correct-result evidence.
+                    assert correct_round['payout']==round(correct_round['wager']*correct_price,2) and correct_round['net']==round(correct_round['payout']-correct_round['wager'],2)
                     # Capture correct prediction evidence in both locales and every required viewport.
                     localized_evidence('correct',['correct_guess'])
                     # Find and mount one real incorrect prediction.
-                    incorrect_round=find_outcome('incorrect'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    incorrect_round=find_outcome('incorrect')['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
                     # Require the documented zero return before recording incorrect-result evidence.
                     assert incorrect_round['payout']==0 and incorrect_round['net']==-incorrect_round['wager']
                     # Capture incorrect prediction evidence in both locales and every required viewport.
                     localized_evidence('incorrect',['incorrect_guess'])
                     # Find and mount one real equal-rank refund.
-                    tie_round=find_outcome('tie'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    tie_round=find_outcome('tie')['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
                     # Require the documented 1x refund and zero net before recording tie evidence.
                     assert tie_round['payout']==tie_round['wager'] and tie_round['net']==0
                     # Capture equal-rank refund evidence in both locales and every required viewport.
@@ -6151,6 +6351,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def andar_bahar_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-andar_bahar').click(); page.get_by_test_id('andar-bahar').wait_for(timeout=5000)
+                    # Require both authoritative prices as exact two-decimal visible English tokens before evidence.
+                    andar_rules=page.locator('.andar-rules').inner_text(); assert '1.90x' in andar_rules and '2.00x' in andar_rules
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -6163,12 +6365,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized game title rather than a fallback key or English leakage.
                             assert page.locator('.andar-header h1').inner_text()==expected_titles[locale]
+                            # Require exact owner-approved price tokens in both governed locale renderings.
+                            localized_rules=page.locator('.andar-rules').inner_text(); assert '1.90x' in localized_rules and '2.00x' in localized_rules,{'locale':locale,'rules':localized_rules}
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                                 # Reject horizontal overflow and require the mounted rank-match table.
                                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('andar-bahar').is_visible()
+                                # Measure the fixed feedback affordance and shell wallet against game-owned visible content.
+                                clearance=page.evaluate("""() => { const root=document.querySelector('[data-testid="andar-bahar"]'); const feedback=document.querySelector('.report-problem-fab:not([hidden])')?.getBoundingClientRect(); const wallet=document.querySelector('.wallet-pill:not([hidden])')?.getBoundingClientRect(); const rootRect=root?.getBoundingClientRect(); const intersects=(a,b)=>a&&b&&a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top; const visible=node=>{const style=getComputedStyle(node);return style.display!=='none'&&style.visibility!=='hidden'&&node.getClientRects().length>0;}; const hits=[]; for(const node of root?.querySelectorAll('button,input,select,h1,h2,h3,p,li,label,legend,span,strong')||[]){if(!visible(node))continue; const rect=node.matches('h1,h2,h3,p,li,label,legend,span,strong')?(()=>{const range=document.createRange();range.selectNodeContents(node);return [...range.getClientRects()].find(item=>intersects(item,feedback));})():node.getBoundingClientRect(); if(rect&&intersects(rect,feedback))hits.push(node.getAttribute('data-action')||node.getAttribute('data-side')||node.tagName.toLowerCase());} return {feedbackHits:[...new Set(hits)],walletOverlapsGame:intersects(wallet,rootRect)}; }""")
+                                # Reject the original phone collision while proving normal-flow wallet chrome stays outside the game.
+                                assert not clearance['walletOverlapsGame'] and (viewport_id!='mobile' or not clearance['feedbackHits']),{'locale':locale,'viewport':viewport_id,'clearance':clearance}
                                 # Record self-describing evidence for this state and viewport.
                                 game_evidence(f'after-pass-andar-bahar-{prefix}-{locale.lower()}-{viewport_id}.png','andar_bahar',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
@@ -7463,11 +7671,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Require the authoritative engine to return all twenty indexed rows before UI evidence is seeded.
                         assert len(payline_result['wins'])==20 and [win['line'] for win in payline_result['wins']]==payline_rows
                         # Build the persisted spin shape consumed by the normal Slots route loader.
-                        payline_spin={'round_id':'slot-payline-acceptance','timestamp':'2026-07-20T00:00:00Z','stops':[0,0,0,0,0],'grid':payline_grid,'active_lines':20,'line_bet':1,'cost':20,**payline_result,'free_spin':False,'free_spins_remaining':0,'progressive':1000}
+                        payline_spin={'round_id':'slot-payline-acceptance','timestamp':'2026-07-20T00:00:00Z','stops':[0,0,0,0,0],'grid':payline_grid,'active_lines':20,'line_bet':1,'cost':20,**payline_result,'free_spin':False,'free_spins_remaining':0,'progressive_eligible':True,'progressive_before':slots_engine.PROGRESSIVE_SEED,'progressive_contribution':0.2,'progressive_hit':0.0,'progressive':slots_engine.PROGRESSIVE_SEED+0.2}
                         # Resolve the authenticated browser player before writing isolated deterministic game state.
                         payline_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
                         # Persist the authoritative result through the same state store the Slots route reads after refresh.
-                        save_player_game_state('slots',payline_player,{'last_spins':[payline_spin],'progressive':1000,'free_spins':0})
+                        save_player_game_state('slots',payline_player,{'last_spins':[payline_spin],'progressive':slots_engine.PROGRESSIVE_SEED+0.2,'progressive_basis':{'active_lines':slots_engine.PROGRESSIVE_QUALIFYING_LINES,'line_bet':slots_engine.PROGRESSIVE_QUALIFYING_LINE_BET},'free_spins':0})
                         # Reload the real route so the overlay, result text, and history all recover from one authoritative state.
                         page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
                         # Define a browser-side audit that compares every rendered SVG point with its actual cell center in screen coordinates.
@@ -7540,24 +7748,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.on('request',observe_slots_spin)
                         # Select the real browser-visible line-bet input.
                         line_bet=page.get_by_test_id('slots-line-bet')
+                        # Resolve exact active-locale eligibility prefixes from authoritative resources rather than stale literals.
+                        progressive_labels=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); const marker='__AMOUNT__'; const args={amount:marker,lines:i18n.formatNumber(20),lineBet:'1.00'}; return {eligible:i18n.t('feature.progressive',args,'games/slots').split(marker)[0],ineligible:i18n.t('feature.progressiveIneligible',args,'games/slots').split(marker)[0]}; }""")
+                        # Preserve the settled result headline before changing any progressive eligibility control.
+                        settled_headline=page.get_by_test_id('slots-progressive-headline').inner_text()
+                        # Switch just below the exact qualifier and require dedicated eligibility to update immediately.
+                        line_bet.fill('0.99'); page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-progressive-status\"]')?.textContent.startsWith(expected)",arg=progressive_labels['ineligible'])
+                        # Require eligibility changes to preserve the settled payout headline and history.
+                        assert page.get_by_test_id('slots-progressive-headline').inner_text()==settled_headline and page.get_by_test_id('slots-recent-spins').is_visible()
+                        # Restore the exact qualifier and require the eligible status without another game action.
+                        line_bet.fill('1.00'); page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-progressive-status\"]')?.textContent.startsWith(expected)",arg=progressive_labels['eligible'])
+                        # Require the settled result headline to survive the second control transition.
+                        assert page.get_by_test_id('slots-progressive-headline').inner_text()==settled_headline
                         # Type the reported negative value through the normal input event path.
-                        line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.value === '1'")
+                        line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.value === '0.01'")
                         # Require immediate correction, machine-readable invalid state, localized feedback, and zero requests.
-                        assert line_bet.get_attribute('aria-invalid')=='true' and page.get_by_test_id('slots-line-bet-feedback').text_content().strip()=='Line bet must be a whole number of at least 1. Reset to 1.' and not observed_spin_requests
+                        assert line_bet.get_attribute('aria-invalid')=='true' and page.get_by_test_id('slots-line-bet-feedback').text_content().strip()=='Line bet must round to a cent value from 0.01 to 1,000,000 play tokens. Reset to 0.01.' and not observed_spin_requests
                         # Type a valid replacement to prove the error clears and visible cost updates before any spin.
                         line_bet.fill('3'); page.wait_for_timeout(50)
                         # Require the valid state and the twenty-line cost implied by the visible controls.
                         assert line_bet.get_attribute('aria-invalid')=='false' and page.get_by_test_id('slots-line-bet-feedback').inner_text()=='' and '60' in page.get_by_test_id('slots-round-cost').inner_text() and not observed_spin_requests
                         # Re-enter the reported invalid value so governed evidence records the correction feedback.
                         line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.getAttribute('aria-invalid') === 'true'")
-                        # Define the localized feedback required in each governed locale.
-                        localized_feedback={'en-US':'Line bet must be a whole number of at least 1. Reset to 1.','ru-RU':'Ставка на линию должна быть целым числом не меньше 1. Значение сброшено на 1.'}
+                        # Define the governed locale vocabulary exercised through the live browser resource loader.
+                        validation_locales=('en-US','ru-RU')
                         # Define the affected compact and mobile visual-matrix viewports.
                         validation_viewports={'desktop_compact':{'width':1440,'height':900},'mobile':{'width':390,'height':844}}
                         # Exercise localized invalid-input presentation without losing corrected state.
-                        for locale,expected_feedback in localized_feedback.items():
+                        for locale in validation_locales:
                             # Change locale through the shared visible shell control.
-                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === expected",arg=expected_feedback)
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected",arg=locale)
+                            # Exercise the invalid input after the locale settles so the current resource owns feedback.
+                            localized_line_bet=page.get_by_test_id('slots-line-bet'); localized_line_bet.fill('-5')
+                            # Resolve the exact message from the same active browser resource boundary as the game.
+                            expected_feedback=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.t('errors.lineBetRange',{},'games/slots'); }""")
+                            # Require exact localized feedback, correction, invalid state, and no token-moving request.
+                            page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === expected",arg=expected_feedback); assert localized_line_bet.input_value()=='0.01' and localized_line_bet.get_attribute('aria-invalid')=='true' and not observed_spin_requests
                             # Capture and measure every affected viewport for the active locale.
                             for viewport_id,viewport in validation_viewports.items():
                                 # Resize to the exact governed dimensions before containment checks.
@@ -7569,15 +7795,19 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Record focused after-pass evidence without accepting unrelated nav or reel defects.
                                 region_evidence(f'after-pass-slots-control-invalid-line-bet-{locale}-{viewport_id}.png','.slots-control','slots',['invalid_line_bet'],locale,viewport_id)
                         # Restore English and primary desktop dimensions before the real corrected spin.
-                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === 'Line bet must be a whole number of at least 1. Reset to 1.'")
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                        # Resolve the restored exact English message through the live resource boundary.
+                        restored_feedback=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.t('errors.lineBetRange',{},'games/slots'); }""")
+                        # Require the restored live region to equal that authoritative resource.
+                        page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === expected",arg=restored_feedback)
                         # Submit one corrected spin and capture the exact public request emitted by the visible button.
                         with page.expect_request(lambda request: request.method=='POST' and request.url.endswith('/api/v1/games/slots/spin')) as corrected_request_info: page.get_by_test_id('slots-spin').click()
                         # Read the frozen endpoint payload after Playwright observes the real request.
                         corrected_payload=corrected_request_info.value.post_data_json
                         # Wait for a completed real round rather than accepting request emission alone.
                         page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"slots-result\"]')?.textContent.includes('Result.')",timeout=5000)
-                        # Require one corrected whole-token line bet and an authoritative completed result.
-                        assert corrected_payload['line_bet']==1 and corrected_payload['active_lines']==20 and observed_spin_requests and page.get_by_test_id('slots-result').is_visible()
+                        # Require one corrected minimum-cent line bet and an authoritative completed result.
+                        assert corrected_payload['line_bet']==0.01 and corrected_payload['active_lines']==20 and observed_spin_requests and page.get_by_test_id('slots-result').is_visible()
                         # Limit the visible autoplay control to one round so its corrected plan can be inspected safely.
                         page.get_by_test_id('slots-auto-rounds').fill('1')
                         # Define one deterministic control-plane response while leaving the real Slots action unmocked.
@@ -7591,7 +7821,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the request body emitted by the shared autoplay control plane.
                         autoplay_payload=autoplay_request_info.value.post_data_json
                         # Require the corrected visible value to reach the autoplay plan unchanged.
-                        assert autoplay_payload['plan']['active_lines']==20 and autoplay_payload['plan']['line_bet']==1
+                        assert autoplay_payload['plan']['active_lines']==20 and autoplay_payload['plan']['line_bet']==0.01
                         # Wait for the one locally committed autoplay action to settle and return the controls to Off.
                         page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"autoplay-slots\"] .badge')?.textContent === 'Off'",timeout=5000)
                         # Clear the synthetic session identifier so later route-unmount cleanup stays listener-free.
@@ -7601,7 +7831,203 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Detach the observer so later game traffic cannot affect this completed case.
                         page.remove_listener('request',observe_slots_spin)
                     # Record immediate feedback, synchronization, localization, evidence, and real request coverage.
-                    run_case('BR-SLOT-LINE-BET-001',['SLOT-027','TEST-058','UX-009'],slots_line_bet_validation)
+                    run_case('BR-SLOT-LINE-BET-001',['SLOT-027','SLOT-036','TEST-058','UX-009'],slots_line_bet_validation)
+                    # Define the complete governed Slots economics and visual-state matrix for SLOT-036.
+                    def slots_economics_visual_matrix():
+                        # Resolve the authenticated player whose isolated Slots state drives deterministic evidence.
+                        matrix_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+                        # Read every exact viewport from the authoritative visual matrix.
+                        matrix_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                        # Require the complete governed viewport vocabulary before any evidence capture.
+                        assert set(matrix_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                        # Build one deterministic grid with an ordinary single-line CHERRY win.
+                        win_grid=[['LEMON','BAR','BELL','SEVEN','CHERRY'],['CHERRY','CHERRY','CHERRY','LEMON','BAR'],['BAR','BELL','SEVEN','CHERRY','LEMON']]
+                        # Build one deterministic all-SEVEN grid with twenty line wins and one qualifying jackpot.
+                        multi_grid=[['SEVEN' for _column in range(5)] for _row in range(3)]
+                        # Build one deterministic three-SCATTER grid that awards the exact four-spin feature.
+                        bonus_grid=[['SCATTER','SCATTER','SCATTER','BELL','SEVEN'],['LEMON','BAR','BELL','SEVEN','CHERRY'],['BAR','BELL','SEVEN','CHERRY','LEMON']]
+                        # Build one complete persisted spin from the authoritative engine rules.
+                        def matrix_spin(round_id,grid,active_lines,line_bet):
+                            # Evaluate exact line and scatter components through production rules.
+                            evaluated=slots_engine.evaluate(grid,active_lines,line_bet)
+                            # Resolve the fixed paid-only progressive qualifier from production rules.
+                            eligible=slots_engine.progressive_eligible(active_lines,line_bet)
+                            # Calculate the exact qualifying paid contribution before any same-spin jackpot.
+                            contribution=round(active_lines*line_bet*slots_engine.PROGRESSIVE_RATE,8) if eligible else 0.0
+                            # Resolve a five-SEVEN result through the same win evidence used by the production engine.
+                            progressive_hit=slots_engine.PROGRESSIVE_SEED+contribution if eligible and any(win.get('symbol')=='SEVEN' and win.get('count')==5 for win in evaluated['wins']) else 0.0
+                            # Reconcile the exact complete result payout with the progressive component.
+                            payout=round(evaluated['payout']+progressive_hit,2)
+                            # Reset only a winning qualifier; otherwise retain the contributed scalar meter.
+                            meter=slots_engine.PROGRESSIVE_SEED if progressive_hit else slots_engine.PROGRESSIVE_SEED+contribution
+                            # Return the complete state row consumed by the real route loader.
+                            return {'round_id':round_id,'timestamp':'2026-07-29T00:00:00Z','stops':[0,0,0,0,0],'grid':grid,'requested_active_lines':active_lines,'requested_line_bet':line_bet,'active_lines':active_lines,'line_bet':line_bet,'cost':round(active_lines*line_bet,2),**evaluated,'payout':payout,'free_spin':False,'free_spins_remaining':evaluated['free_spins_awarded'],'progressive_eligible':eligible,'progressive_basis':{'active_lines':slots_engine.PROGRESSIVE_QUALIFYING_LINES,'line_bet':slots_engine.PROGRESSIVE_QUALIFYING_LINE_BET},'progressive_before':slots_engine.PROGRESSIVE_SEED,'progressive_contribution':contribution,'progressive_hit':progressive_hit,'progressive':meter}
+                        # Build authoritative win, multi-win, and bonus rows once.
+                        win_spin=matrix_spin('slots-matrix-win',win_grid,1,0.01)
+                        # Build the simultaneous-payline jackpot row from the exact qualifier.
+                        multi_spin=matrix_spin('slots-matrix-multi',multi_grid,20,1.0)
+                        # Build the feature-trigger row from a nonqualifying minimum stake.
+                        bonus_spin=matrix_spin('slots-matrix-bonus',bonus_grid,1,0.01)
+                        # Require exact engine and progressive components before they become browser evidence.
+                        assert win_spin['line_payout']==0.02 and len(multi_spin['wins'])==20 and multi_spin['progressive_eligible'] and multi_spin['progressive_contribution']==0.2 and multi_spin['progressive_hit']==200.2 and multi_spin['progressive']==slots_engine.PROGRESSIVE_SEED and multi_spin['payout']==round(multi_spin['line_payout']+multi_spin['scatter_payout']+multi_spin['progressive_hit'],2) and bonus_spin['free_spins_awarded']==4 and bonus_spin['scatter_payout']==0
+                        # Build one constant-size default state with the exact qualifier metadata.
+                        def matrix_state(spins=None,free_spins=0,basis=None,meter=None):
+                            # Start from the production default so state shape cannot drift.
+                            prepared=slots_engine.default_state()
+                            # Replace only deterministic recent-spin evidence for this matrix cell.
+                            prepared['last_spins']=list(spins or [])
+                            # Set the feature bank required by the bonus state.
+                            prepared['free_spins']=free_spins
+                            # Retain an exact visible meter where a fixture provides one.
+                            prepared['progressive']=slots_engine.PROGRESSIVE_SEED if meter is None else meter
+                            # Store a server-owned paid-trigger basis only for an open feature chain.
+                            if basis: prepared['free_spin_basis']=dict(basis)
+                            # Return constant-size state with no caller-derived meter map.
+                            return prepared
+                        # Map every persisted visual state to its authoritative backend fixture.
+                        persisted_states={
+                            'idle':matrix_state(),  # Seed a pristine state for idle evidence.
+                            'win':matrix_state([win_spin]),  # Seed one exact ordinary winning line.
+                            'multi_win':matrix_state([multi_spin],meter=multi_spin['progressive']),  # Seed jackpot reset.
+                            'bonus':matrix_state([bonus_spin],free_spins=4,basis={'active_lines':1,'line_bet':0.01}),  # Seed bonus bank.
+                            'repeat_available':matrix_state([win_spin]),  # Seed a repeatable completed round.
+                            'route_restored':matrix_state([multi_spin],meter=multi_spin['progressive']),  # Seed restoration.
+                        }
+                        # Fetch the live API config once to prove exact server-owned rules reach the browser route.
+                        runtime=page.request.get(base+'/api/v1/games/slots/state').json()['data']['config']
+                        # Read the additive economics block under the frozen v1 envelope.
+                        economics=runtime['economics']
+                        # Require exact qualifier, one-meter policy, scatter/free rules, cent domain, and paytable values.
+                        assert economics['progressive_qualifying_lines']==20 and economics['progressive_qualifying_line_bet']==1.0 and economics['progressive_meter_limit']==1 and economics['progressive_basis_policy']=='single_exact_qualifier'
+                        # Require exact scatter and feature configuration.
+                        assert economics['scatter_pays']=={'4':1,'5':5} or economics['scatter_pays']=={4:1,5:5}
+                        # Require exact four-spin feature and frozen cent bounds.
+                        assert economics['free_spins_awarded']==4 and economics['line_bet']['api_minimum']==0.01 and economics['line_bet']['api_maximum']==1000000
+                        # Require the API paytable to equal the detached authoritative engine table.
+                        assert runtime['paytable']=={symbol:{str(count):multiplier for count,multiplier in table.items()} for symbol,table in slots_engine.PAYTABLE.items()}
+                        # Exercise both installed localized packs.
+                        for locale in ('en-US','ru-RU'):
+                            # Exercise all four exact governed viewport sizes.
+                            for viewport_id,viewport in matrix_viewports.items():
+                                # Apply the exact viewport before route reconstruction.
+                                page.set_viewport_size(viewport)
+                                # Capture each persisted state from its exact server-owned document.
+                                for state_name,prepared_state in persisted_states.items():
+                                    # Save one detached copy so route reads cannot mutate a later matrix cell.
+                                    save_player_game_state('slots',matrix_player,json.loads(json.dumps(prepared_state)))
+                                    # Reload the canonical Slots route from the persisted state.
+                                    page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                                    # Switch through the visible locale control and wait for the runtime rerender.
+                                    page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected",arg=locale)
+                                    # Read the exact backing state/config returned to the mounted browser.
+                                    backing=page.request.get(base+'/api/v1/games/slots/state').json()['data']
+                                    # Re-enter the route through normal navigation for the route-restored cell.
+                                    if state_name=='route_restored':
+                                        # Leave the game through the shared lobby action.
+                                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                                        # Return through the catalog-owned Slots route.
+                                        page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                                        # Read state again after the real unmount/remount cycle.
+                                        restored=page.request.get(base+'/api/v1/games/slots/state').json()['data']
+                                        # Require the same exact round, result, meter, and economics configuration after restoration.
+                                        assert restored['state']['last_spins'][-1]==backing['state']['last_spins'][-1] and restored['state']['progressive']==backing['state']['progressive'] and restored['config']['economics']==backing['config']['economics']
+                                    # Read exact localized paytable and eligibility surfaces.
+                                    visible=page.get_by_test_id('slots-premium').inner_text()
+                                    # Require exact changed economics tokens without raw resource keys.
+                                    assert '1000' not in visible and 'paytable.' not in visible and 'feature.' not in visible
+                                    # Require the one-meter qualifier to remain visible in both localized layouts.
+                                    assert '20' in visible and ('1.00' in visible or '1,00' in visible)
+                                    # Render the exact authoritative localized rule strings through the active browser runtime.
+                                    expected_rules=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); const amount=i18n.formatMoney(200); const number=i18n.formatNumber; return {scatter:i18n.t('paytable.scatter',{threshold:number(3),freeSpins:number(4),four:number(1),five:number(5)},'games/slots'),progressive:i18n.t('paytable.progressive',{seed:amount,contribution:number(1),lines:number(20),lineBet:'1.00'},'games/slots'),eligible:i18n.t('feature.progressive',{amount,lines:number(20),lineBet:'1.00'},'games/slots'),ineligible:i18n.t('feature.progressiveIneligible',{amount,lines:number(20),lineBet:'1.00'},'games/slots')}; }""")
+                                    # Determine the exact eligibility state represented by this persisted fixture.
+                                    expected_eligible=state_name in ('idle','multi_win','route_restored')
+                                    # Verify either the visible paytable or feature drawer carries exact localized server-owned copy.
+                                    if page.get_by_test_id('slots-pay-scatter').count():
+                                        # Require exact scatter and progressive text rather than numeric substrings.
+                                        assert page.get_by_test_id('slots-pay-scatter').locator('span').inner_text()==expected_rules['scatter'] and page.get_by_test_id('slots-pay-progressive').locator('span').inner_text()==expected_rules['progressive']
+                                    else:
+                                        # Require the feature drawer to disclose the exact current eligibility state.
+                                        assert page.get_by_test_id('slots-progressive-feature-status').inner_text()==expected_rules['eligible' if expected_eligible else 'ineligible']
+                                    # Require the dedicated control status to match the precise fixture eligibility.
+                                    assert page.get_by_test_id('slots-progressive-status').inner_text()==expected_rules['eligible' if expected_eligible else 'ineligible']
+                                    # Read the exact payline identities rendered from the backing result.
+                                    rendered_lines=[int(value) for value in page.locator('[data-testid="slots-payline"] polyline').evaluate_all("paths => paths.map(path => path.dataset.lineNumber)")] if page.get_by_test_id('slots-payline').count() else []
+                                    # Require idle to contain no result, paylines, or enabled repeat action.
+                                    if state_name=='idle':
+                                        # Prove one disclosed seed, no result history, no lines, and no repeat setup.
+                                        assert backing['state']['last_spins']==[] and backing['state']['progressive']==slots_engine.PROGRESSIVE_SEED and rendered_lines==[] and page.locator('[data-action="repeat"]').is_disabled()
+                                    # Require the ordinary win to preserve one exact line identity and payout.
+                                    elif state_name=='win':
+                                        # Prove one line-one CHERRY return and its visible result amount.
+                                        assert backing['state']['last_spins'][-1]['round_id']=='slots-matrix-win' and backing['state']['last_spins'][-1]['payout']==0.02 and rendered_lines==[1] and page.get_by_test_id('slots-result').is_visible() and page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.formatMoney(.02); }""") in page.get_by_test_id('slots-result').inner_text()
+                                    # Require the progressive multi-win to prove exact contribution, hit, payout, and reset.
+                                    elif state_name=='multi_win':
+                                        # Resolve the exact persisted jackpot result once.
+                                        jackpot=backing['state']['last_spins'][-1]
+                                        # Prove twenty winning line identities and the complete qualifying settlement.
+                                        assert rendered_lines==list(range(1,21)) and jackpot['progressive_eligible'] and jackpot['progressive_contribution']==0.2 and jackpot['progressive_hit']==200.2 and jackpot['payout']==round(jackpot['line_payout']+jackpot['scatter_payout']+jackpot['progressive_hit'],2)
+                                        # Prove the backing meter reset while the visible headline retains the won amount.
+                                        assert backing['state']['progressive']==slots_engine.PROGRESSIVE_SEED and expected_rules['eligible']==page.get_by_test_id('slots-progressive-status').inner_text() and page.get_by_test_id('slots-progressive-headline').inner_text()==page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.t('cabinet.progressiveHit',{amount:i18n.formatMoney(200.2)},'games/slots'); }""")
+                                    # Require the feature state to retain the exact award and trusted paid-trigger basis.
+                                    elif state_name=='bonus':
+                                        # Prove four pending feature actions, their exact one-line one-cent basis, and no progressive movement.
+                                        assert backing['state']['free_spins']==4 and backing['state']['free_spin_basis']=={'active_lines':1,'line_bet':0.01} and backing['state']['last_spins'][-1]['free_spins_awarded']==4 and not backing['state']['last_spins'][-1]['progressive_eligible'] and backing['state']['last_spins'][-1]['progressive_hit']==0
+                                        # Require the cabinet headline to expose the exact localized four-spin bank.
+                                        assert page.get_by_test_id('slots-progressive-headline').inner_text()==page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.t('cabinet.freeSpins',{count:i18n.formatNumber(4)},'games/slots'); }""")
+                                    # Require repeat availability to use the exact preceding visible setup.
+                                    elif state_name=='repeat_available':
+                                        # Prove one retained result and an enabled current-semantics Repeat control.
+                                        assert backing['state']['last_spins'][-1]['round_id']=='slots-matrix-win' and page.locator('[data-action="repeat"]').is_enabled() and rendered_lines==[1]
+                                    # Require route restoration to retain the exact qualifying result and all line identities.
+                                    elif state_name=='route_restored':
+                                        # Prove the same exact jackpot round, reset meter, and twenty paylines survived remount.
+                                        assert backing['state']['last_spins'][-1]['round_id']=='slots-matrix-multi' and backing['state']['progressive']==slots_engine.PROGRESSIVE_SEED and rendered_lines==list(range(1,21))
+                                    # Require no document-level overflow at any matrix size.
+                                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                                    # Require the complete game root, control, cabinet, and data drawer to remain rendered.
+                                    assert page.get_by_test_id('slot-grid').is_visible() and page.locator('.slots-control').is_visible() and page.locator('.slots-drawer').is_visible()
+                                    # Capture one exact-head image and sidecar for this persisted state.
+                                    game_evidence(f'after-pass-slots-economics-{state_name}-{locale}-{viewport_id}.png','slots',[state_name],locale,viewport_id)
+                                # Seed idle state for the three interaction-owned visual states.
+                                save_player_game_state('slots',matrix_player,matrix_state())
+                                # Reload and restore the active locale after the deterministic seed.
+                                page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option(locale)
+                                # Enter invalid input through the player-visible control.
+                                page.get_by_test_id('slots-line-bet').fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.getAttribute('aria-invalid') === 'true'")
+                                # Read state after the invalid edit to prove it caused no hidden game action.
+                                invalid_backing=page.request.get(base+'/api/v1/games/slots/state').json()['data']['state']
+                                # Require exact correction, localized feedback, nonqualification, and unchanged seed state.
+                                assert page.get_by_test_id('slots-line-bet').input_value()=='0.01' and page.get_by_test_id('slots-line-bet-feedback').inner_text().strip() and page.get_by_test_id('slots-progressive-status').inner_text().strip() and invalid_backing['last_spins']==[] and invalid_backing['progressive']==slots_engine.PROGRESSIVE_SEED
+                                # Capture the exact invalid-input matrix cell.
+                                game_evidence(f'after-pass-slots-economics-invalid_line_bet-{locale}-{viewport_id}.png','slots',['invalid_line_bet'],locale,viewport_id)
+                                # Enable the real reduced-motion media preference and rebuild the route.
+                                page.emulate_media(reduced_motion='reduce'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                                # Require the real media preference, idle reel cells, and bounded layout under reduced motion.
+                                assert page.evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches") and page.get_by_test_id('slot-grid').is_visible() and page.locator('.slots-symbol.spinning').count()==0 and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                                # Capture the reduced-motion matrix cell.
+                                game_evidence(f'after-pass-slots-economics-reduced_motion-{locale}-{viewport_id}.png','slots',['reduced_motion'],locale,viewport_id)
+                                # Restore normal motion and apply the governed 125-percent zoom state.
+                                page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000); page.evaluate("document.body.style.zoom='125%'"); page.wait_for_timeout(120)
+                                # Require the exact zoom value, page containment, and visible primary action.
+                                assert page.evaluate("document.body.style.zoom==='125%'") and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('slots-spin').is_visible()
+                                # Capture the zoomed matrix cell.
+                                game_evidence(f'after-pass-slots-economics-zoomed-{locale}-{viewport_id}.png','slots',['zoomed'],locale,viewport_id)
+                                # Restore zoom before exercising the real committed spinning state.
+                                page.evaluate("document.body.style.zoom=''")
+                                # Use the minimum nonqualifying setup so matrix capture cannot materially deplete the wallet.
+                                page.get_by_test_id('slots-lines').select_option('1'); page.get_by_test_id('slots-line-bet').fill('0.01')
+                                # Begin one real action and wait for the committed in-progress render.
+                                page.get_by_test_id('slots-spin').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === true")
+                                # Require a real disabled action, all fifteen moving cells, and visible nonqualifying status while pending.
+                                assert page.get_by_test_id('slots-spin').is_disabled() and page.locator('.slots-symbol.spinning').count()==15 and page.get_by_test_id('slots-progressive-status').is_visible()
+                                # Capture the actual spinning matrix cell before the fixed reveal delay completes.
+                                game_evidence(f'after-pass-slots-economics-spinning-{locale}-{viewport_id}.png','slots',['spinning'],locale,viewport_id)
+                                # Wait for the real action to finish before the next matrix cell or viewport.
+                                page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === false",timeout=5000)
+                        # Restore English, primary desktop, normal motion, and normal zoom for downstream cases.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(matrix_viewports['desktop_primary']); page.emulate_media(reduced_motion='no-preference'); page.evaluate("document.body.style.zoom=''")
+                    # Execute full engine/config/copy/state geometry and visual-matrix evidence.
+                    run_case('BR-SLOT-ECONOMICS-001',['SLOT-010','SLOT-011','SLOT-012','SLOT-013','SLOT-014','SLOT-015','SLOT-016','SLOT-017','SLOT-018','SLOT-019','SLOT-036'],slots_economics_visual_matrix)
                     # Refresh idle boxes after the focused real spin so the existing animation comparison uses one baseline.
                     idle_box=page.get_by_test_id('slots-cabinet').bounding_box(); idle_result_box=page.get_by_test_id('slots-result').bounding_box()
                     # Start one real spin through the browser-visible control.
@@ -7674,12 +8100,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         edge_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
                         # Define the exact governed viewport matrix from the visual standard.
                         edge_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                        # Pin the complete eight-state by two-locale by four-viewport evidence count.
+                        keno_matrix_expected_cells=64
+                        # Count each exact governed state/locale/viewport cell as its evidence is written.
+                        keno_matrix_cells=0
                         # Keep the idle state free of prior tickets and draws before each locale/viewport capture.
                         empty_edge_state={'open_tickets':[],'last_draws':[]}
-                        # Build one legitimate one-catch final draw with the latest result on bottom-right cell 80.
-                        edge_draw=[2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,80]
-                        # Reuse the existing one-spot Keno multiplier so evidence state agrees with the published paytable.
-                        final_edge_state={'open_tickets':[],'last_draws':[{'round_id':'keno-edge-final','timestamp':'2026-07-20T00:00:00Z','drawn':edge_draw,'results':[{'ticket':{'ticket_id':'keno-edge-catch','player_id':edge_player,'spots':[80],'amount':1,'source':'browser-test','created_at':'2026-07-20T00:00:00Z'},'catches':[80],'catch_count':1,'multiplier':3,'payout':3}]}]}
+                        # Build one legitimate twenty-catch final draw whose selected range includes edge cell 80.
+                        edge_draw=list(range(61,81))
+                        # Resolve the exact top jackpot from the server table instead of a stale Browser fixture.
+                        edge_jackpot_multiplier=keno_engine.PAYTABLE[20][20]
+                        # Apply the frozen production payout law to the one-token visual ticket.
+                        edge_jackpot_payout=round(1.0*edge_jackpot_multiplier,2)
+                        # Persist one authoritative full-catch jackpot state for result, restore, repeat, and exact-value evidence.
+                        final_edge_state={'open_tickets':[],'last_draws':[{'round_id':'keno-edge-final','timestamp':'2026-07-20T00:00:00Z','drawn':edge_draw,'results':[{'ticket':{'ticket_id':'keno-edge-catch','player_id':edge_player,'spots':edge_draw,'amount':1,'source':'browser-test','created_at':'2026-07-20T00:00:00Z'},'catches':edge_draw,'catch_count':20,'multiplier':edge_jackpot_multiplier,'payout':edge_jackpot_payout}]}]}
                         # Exercise both installed player-facing locales.
                         for edge_locale in ('en-US','ru-RU'):
                             # Exercise every governed viewport without substituting an approximate breakpoint.
@@ -7718,6 +8152,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 edge_board_evidence_selector='[data-testid="keno-board-scroll"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                                 # Record self-describing idle evidence for this exact locale and viewport.
                                 region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_idle'],edge_locale,edge_viewport_id)
+                                # Count the exact idle edge matrix cell.
+                                keno_matrix_cells+=1
+                                # Select one real number so the selection cell cannot duplicate the idle state.
+                                page.get_by_test_id('keno-num-5').click()
+                                # Require the draft selection to be visible and server-authoritative paytable preview to stay mounted.
+                                assert page.get_by_test_id('keno-num-5').get_attribute('aria-pressed')=='true' and page.get_by_test_id('keno-paytable-preview').is_visible()
+                                # Record the governed non-empty draft selection state.
+                                region_evidence(f'after-pass-keno-selection-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['selection'],edge_locale,edge_viewport_id)
+                                # Count the exact selection matrix cell.
+                                keno_matrix_cells+=1
                                 # Select all four corner cells through the same public controls used by a player.
                                 for edge_number in (1,10,71,80): page.get_by_test_id(f'keno-num-{edge_number}').click()
                                 # Start keyboard traversal from the named board region so the first corner receives true focus-visible state.
@@ -7730,12 +8174,70 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 assert all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in (1,10,71,80))
                                 # Record selected and focus-visible evidence from the real public controls.
                                 region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
+                                # Count the exact selected and focus-visible matrix cell.
+                                keno_matrix_cells+=1
+                                # Collect the exact public Keno action requests emitted after the amount edit.
+                                edge_action_requests=[]
+                                # Define the scoped request observer used only for this one matrix action.
+                                def capture_edge_action_request(request):
+                                    # Record ticket and draw POSTs while ignoring unrelated shell traffic.
+                                    if request.method=='POST' and (request.url.endswith('/api/v1/games/keno/tickets') or request.url.endswith('/api/v1/games/keno/draw')): edge_action_requests.append(request)
+                                # Attach the observer before the edit can blur into the public Draw control.
+                                page.on('request',capture_edge_action_request)
+                                # Use the frozen one-cent amount so the visible action proves browser/server domain agreement.
+                                try:
+                                    # Edit through the real input so blur/change ordering matches the production click path.
+                                    page.get_by_test_id('keno-amount').fill('0.01')
+                                    # Start exactly one real public draw from the selected corners.
+                                    page.get_by_test_id('keno-draw').click()
+                                    # Wait for the production reveal loop to enter a genuine partial drawing state.
+                                    page.wait_for_function("""() => { const count=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count>=2 && count<20; }""",timeout=5000)
+                                    # Resolve the drawing PNG target without retaining a locator across the production rerender loop.
+                                    keno_drawing_target=screenshots/f'after-pass-keno-drawing-{edge_locale.lower()}-{edge_viewport_id}.png'
+                                    # Atomically read the current partial count and page-relative crop before another reveal rerender can detach the region.
+                                    keno_drawing_probe=page.evaluate("""() => { const region=document.querySelector('.keno-premium'); const rect=region.getBoundingClientRect(); const drawnCount=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return {drawn_count:drawnCount,clip:{x:rect.left+window.scrollX,y:rect.top+window.scrollY,width:rect.width,height:rect.height}}; }""")
+                                    # Require this exact artifact to remain a genuine partial 2..19-ball drawing with a paintable region.
+                                    assert 2<=keno_drawing_probe['drawn_count']<20 and keno_drawing_probe['clip']['width']>0 and keno_drawing_probe['clip']['height']>0,keno_drawing_probe
+                                    # Capture through the page-level clip so the 65ms root replacement cannot detach a screenshot locator.
+                                    page.screenshot(path=str(keno_drawing_target),clip=keno_drawing_probe['clip'],animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                                    # Record the active viewport dimensions beside the governed matrix viewport id.
+                                    keno_drawing_viewport=page.viewport_size
+                                    # Record the current focus target without retaining a live element reference.
+                                    keno_drawing_focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || document.activeElement?.getAttribute('data-action') || ''")
+                                    # Preserve the standard after-pass metadata and disclose the same bounded region selector.
+                                    keno_drawing_metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'keno','states':['drawing'],'locale':edge_locale,'viewport':{'id':edge_viewport_id,**keno_drawing_viewport},'path':str(keno_drawing_target.relative_to(ROOT)).replace('\\','/'),'focused_control':keno_drawing_focused,'region_selector':'.keno-premium','drawn_count':keno_drawing_probe['drawn_count']}
+                                    # Write the drawing sidecar next to the page-level clipped image for independent audit.
+                                    keno_drawing_target.with_suffix('.json').write_text(json.dumps(keno_drawing_metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+                                    # Count the exact drawing matrix cell.
+                                    keno_matrix_cells+=1
+                                    # Wait for the real action to finish before replacing only its test-owned persisted state.
+                                    page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20 && !document.querySelector('[data-testid="keno-draw"]')?.disabled""",timeout=6000)
+                                # Always detach the scoped observer so later matrix actions cannot contaminate this count.
+                                finally:
+                                    # Remove the exact callback registered for this one public action.
+                                    page.remove_listener('request',capture_edge_action_request)
+                                # Resolve the exact ticket and draw requests captured from the single click.
+                                edge_ticket_requests=[request for request in edge_action_requests if request.url.endswith('/api/v1/games/keno/tickets')]; edge_draw_requests=[request for request in edge_action_requests if request.url.endswith('/api/v1/games/keno/draw')]
+                                # Require one ticket purchase and one draw request, with no blur-time swallowed or duplicate action.
+                                assert len(edge_ticket_requests)==1 and len(edge_draw_requests)==1,[(request.method,request.url) for request in edge_action_requests]
+                                # Decode the exact frozen-v1 ticket request emitted by the edited input.
+                                edge_ticket_body=edge_ticket_requests[0].post_data_json
+                                # Require the single request to retain exact amount and selected spots.
+                                assert float(edge_ticket_body['amount'])==0.01 and edge_ticket_body['spots']==[1,5,10,71,80],edge_ticket_body
                                 # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
                                 save_player_game_state('keno',edge_player,final_edge_state)
                                 # Reconstruct the route from authoritative history and wait for all twenty final balls.
                                 page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
-                                # Require the seeded result to render every draw plus the caught/latest bottom-right edge cell.
-                                assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==1 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                                # Require the seeded result to render every draw plus all caught cells and the latest bottom-right edge.
+                                assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==20 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                                # Require the restored live amount and enabled repeat action to match the settled authoritative ticket.
+                                assert float(page.get_by_test_id('keno-amount').input_value())==1.0 and not page.locator('[data-action="repeat"]').is_disabled()
+                                # Require the exact numeric jackpot magnitude to remain visible rather than collapsing to a generic label.
+                                active_paytable_digits=re.sub(r'\D','',page.get_by_test_id('keno-paytable-active').inner_text())
+                                # Match the full authoritative multiplier despite locale-owned separators.
+                                assert str(keno_engine.PAYTABLE[20][20]) in active_paytable_digits,active_paytable_digits
+                                # Require the ideal-versus-realized fake-token disclosure on the result surface.
+                                assert page.get_by_test_id('keno-economics-note').is_visible()
                                 # Measure the completed drawn-ball rail before scrolling so internal overflow cannot masquerade as clipped page content.
                                 rail_probe=page.get_by_test_id('keno-drawn-balls').evaluate("""rail => { const style=getComputedStyle(rail); const box=rail.getBoundingClientRect(); const owner=rail.closest('.keno-stage-panel')?.getBoundingClientRect(); const last=rail.querySelector('[data-testid="keno-drawn-ball"]:last-child')?.getBoundingClientRect(); return {clientWidth:rail.clientWidth,scrollWidth:rail.scrollWidth,scrollLeft:rail.scrollLeft,maxScrollLeft:rail.scrollWidth-rail.clientWidth,minWidth:style.minWidth,maxWidth:style.maxWidth,overflowX:style.overflowX,overflowY:style.overflowY,tabindex:rail.getAttribute('tabindex'),role:rail.getAttribute('role'),label:rail.getAttribute('aria-label'),box:{left:box.left,right:box.right},owner:owner&&{left:owner.left,right:owner.right},last:last&&{left:last.left,right:last.right}}; }""")
                                 # Require one named keyboard-reachable horizontal owner bounded inside the stage whether this viewport needs overflow or fits all balls.
@@ -7758,10 +8260,142 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 edge_final_evidence_selector='[data-testid="keno-drawn-balls"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                                 # Record final-draw and caught/latest evidence for this exact locale and viewport.
                                 region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png',edge_final_evidence_selector,'keno',['edge_final_caught'],edge_locale,edge_viewport_id)
+                                # Count the exact final-edge matrix cell.
+                                keno_matrix_cells+=1
+                                # Record exact settled result evidence with the authoritative multiplier and payout visible.
+                                region_evidence(f'after-pass-keno-result-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['result'],edge_locale,edge_viewport_id)
+                                # Count the exact result matrix cell.
+                                keno_matrix_cells+=1
+                                # Persist the authoritative settled fixture again before testing a distinct route reconstruction.
+                                save_player_game_state('keno',edge_player,final_edge_state)
+                                # Reconstruct the route independently from the persisted result instead of reusing the result DOM.
+                                page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                                # Wait for the requested locale and all authoritative result balls after reconstruction.
+                                page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
+                                # Read the exact state returned by the frozen public route after reconstruction.
+                                restored_edge_state=page.request.get(base+'/api/v1/games/keno/state').json()['data']['state']
+                                # Resolve the exact authoritative terminal draw and ticket used by the restored surface.
+                                restored_edge_draw=restored_edge_state['last_draws'][-1]; restored_edge_ticket=restored_edge_draw['results'][0]['ticket']
+                                # Require exact round, spots, and amount rather than accepting a visually similar route.
+                                assert restored_edge_draw['round_id']=='keno-edge-final' and restored_edge_ticket['spots']==edge_draw and float(restored_edge_ticket['amount'])==1.0,restored_edge_state
+                                # Require the reconstructed public controls to reflect exactly the restored ticket.
+                                assert page.locator('.keno-num.selected').count()==len(edge_draw) and all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in edge_draw) and float(page.get_by_test_id('keno-amount').input_value())==1.0
+                                # Record route-restored evidence only after exact state and live-control assertions pass.
+                                region_evidence(f'after-pass-keno-route-restored-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['route_restored'],edge_locale,edge_viewport_id)
+                                # Count the exact route-restored matrix cell.
+                                keno_matrix_cells+=1
+                                # Bring the enabled Repeat control into view before creating a distinct focus-visible state.
+                                repeat_edge_control=page.locator('[data-action="repeat"]'); repeat_edge_control.scroll_into_view_if_needed(); repeat_edge_control.focus()
+                                # Read the exact accessible and focus state from the live Repeat control.
+                                repeat_edge_probe=repeat_edge_control.evaluate("control => ({focused:document.activeElement===control,disabled:control.disabled,ariaDisabled:control.getAttribute('aria-disabled'),text:control.textContent.trim()})")
+                                # Require a visibly focused, enabled, named Repeat control backed by the restored ticket.
+                                assert repeat_edge_probe['focused'] and not repeat_edge_probe['disabled'] and repeat_edge_probe['ariaDisabled']!='true' and repeat_edge_probe['text'],repeat_edge_probe
+                                # Record repeat-available evidence only after its distinct focus and authoritative state pass.
+                                region_evidence(f'after-pass-keno-repeat-available-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['repeat_available'],edge_locale,edge_viewport_id)
+                                # Count the exact repeat-available matrix cell.
+                                keno_matrix_cells+=1
+                        # Require every one of the 64 governed Keno matrix cells to have passed assertions and emitted evidence.
+                        assert keno_matrix_cells==keno_matrix_expected_cells,(keno_matrix_cells,keno_matrix_expected_cells)
                         # Restore an empty English desktop route so the existing real-draw regression remains independent.
                         save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
-                    # Execute the Keno edge-containment geometry regression.
-                    run_case('BR-KENO-EDGE-001',['KENO-025','KENO-026','TEST-078','TEST-113'],keno_edge_containment)
+                    # Prove restored ticket authority, repeat, autoplay, and aligned history through public controls. (issue #472)
+                    def keno_economics_route_behavior():
+                        # Resolve the authenticated player whose isolated state drives this current-route proof.
+                        behavior_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+                        # Build one settled result whose amount intentionally differs from the Keno default.
+                        settled_spots=[2,4,6,8,10]
+                        # Apply the exact production one-cent payout expression for the no-catch fixture.
+                        settled_state={'open_tickets':[],'last_draws':[{'round_id':'keno-restore-settled','timestamp':'2026-07-20T00:00:00Z','drawn':list(range(21,41)),'results':[{'ticket':{'ticket_id':'keno-restore-ticket','player_id':behavior_player,'spots':settled_spots,'amount':0.07,'source':'browser-test','created_at':'2026-07-20T00:00:00Z'},'catches':[],'catch_count':0,'multiplier':0,'payout':0}]}]}
+                        # Add a newer open ticket with different authority for the open-ticket restoration branch.
+                        open_spots=[1,5,9]
+                        # Persist both sources so the open ticket must win visible restoration precedence.
+                        open_state={'open_tickets':[{'ticket_id':'keno-open-restore','player_id':behavior_player,'spots':open_spots,'amount':0.11,'source':'browser-test','created_at':'2026-07-20T00:01:00Z'}],'last_draws':settled_state['last_draws']}
+                        # Reconstruct the route from the state containing both historical and open-ticket values.
+                        save_player_game_state('keno',behavior_player,open_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                        # Read each open-ticket restoration predicate into one diagnostic probe.
+                        open_restore_probe={'amount':float(page.get_by_test_id('keno-amount').input_value()),'open_rows':page.get_by_test_id('keno-open-ticket').count(),'selected_count':page.locator('.keno-num.selected').count(),'pressed_spots':[spot for spot in open_spots if page.get_by_test_id(f'keno-num-{spot}').get_attribute('aria-pressed')=='true'],'drawn_count':page.locator('[data-testid="keno-drawn-ball"]').count(),'paytable_comparisons':page.get_by_test_id('keno-paytable-comparison').count(),'new_ticket_controls':page.get_by_test_id('keno-new-ticket').count(),'buy_controls':page.get_by_test_id('keno-buy').count()}
+                        # Require the newest open human ticket to own the exact live fake-token amount.
+                        assert open_restore_probe['amount']==0.11,open_restore_probe
+                        # Require exactly one visible open-ticket row instead of the older result drawer.
+                        assert open_restore_probe['open_rows']==1,open_restore_probe
+                        # Require exactly the three authoritative open-ticket spots to remain selected and pressed.
+                        assert open_restore_probe['selected_count']==len(open_spots) and open_restore_probe['pressed_spots']==open_spots,open_restore_probe
+                        # Require the older settled draw to remain history only while the open ticket owns the board.
+                        assert open_restore_probe['drawn_count']==0,open_restore_probe
+                        # Require selection controls and reject every historical result-mode surface.
+                        assert open_restore_probe['buy_controls']==1 and open_restore_probe['paytable_comparisons']==0 and open_restore_probe['new_ticket_controls']==0,open_restore_probe
+                        # Replace the state with settled history only so repeat and autoplay restoration share one authority.
+                        save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                        # Require settled history to restore the exact live amount, spots, and repeat availability.
+                        assert float(page.get_by_test_id('keno-amount').input_value())==0.07 and page.locator('.keno-num.selected').count()==len(settled_spots) and all(page.get_by_test_id(f'keno-num-{spot}').get_attribute('aria-pressed')=='true' for spot in settled_spots) and not page.locator('[data-action="repeat"]').is_disabled()
+                        # Capture the repeat purchase request emitted by the real visible control.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/keno/draw') and response.request.method=='POST') as repeat_draw_response:
+                            # Capture the ticket purchase paired with the same repeat action.
+                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/keno/tickets') and request.method=='POST') as repeat_request:
+                                # Start the one-click repeat through the player-facing action.
+                                page.locator('[data-action="repeat"]').click()
+                        # Parse the exact frozen-v1 request body sent by repeat.
+                        repeat_body=repeat_request.value.post_data_json
+                        # Require repeat to reuse both exact restored fields.
+                        assert repeat_body['spots']==settled_spots and float(repeat_body['amount'])==0.07,repeat_body
+                        # Read the terminal draw response before any seeded state can replace it.
+                        repeat_draw=repeat_draw_response.value.json()['data']['draw']
+                        # Resolve the exact human result and round identity returned by the action.
+                        repeat_result=next(result for result in repeat_draw['results'] if result['ticket']['player_id']==behavior_player)
+                        # Wait for the exact new round identity to become visible in history.
+                        page.wait_for_function("""roundId => [...document.querySelectorAll('[data-testid="keno-history"] .keno-history-row span')].some(node => node.textContent.trim()===roundId)""",arg=repeat_draw['round_id'],timeout=7000)
+                        # Read player-scoped Keno history only after the exact terminal round is visible.
+                        repeat_history=page.request.get(base+'/api/v1/casino/history?game=keno').json()['data']['history']
+                        # Resolve the exact aligned history row by current round identity.
+                        repeat_history_row=next(row for row in repeat_history if row['round_id']==repeat_draw['round_id'])
+                        # Decode its compatibility-preserved structured details.
+                        repeat_details=json.loads(repeat_history_row['details_json'])
+                        # Require exact amount, spots, catches, payout, and outcome alignment.
+                        assert float(repeat_history_row['amount'])==0.07 and repeat_details['spots']==settled_spots and repeat_details['catches']==repeat_result['catches'] and float(repeat_history_row['payout'])==float(repeat_result['payout']) and repeat_history_row['outcome']==('win' if repeat_result['payout'] else 'loss'),repeat_history_row
+                        # Read the exact post-repeat state from the current public state route.
+                        repeat_state=page.request.get(base+'/api/v1/games/keno/state').json()['data']['state']
+                        # Require exactly one added draw whose settled ticket retains repeat's restored fields.
+                        assert len(repeat_state['last_draws'])==2 and repeat_state['last_draws'][-1]['results'][0]['ticket']['spots']==settled_spots and float(repeat_state['last_draws'][-1]['results'][0]['ticket']['amount'])==0.07,repeat_state
+                        # Re-seed the settled fixture so the first autoplay tick starts from a clean reload.
+                        save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                        # Configure exactly one fast autoplay round through public controls.
+                        page.get_by_test_id('keno-auto-rounds').fill('1'); page.get_by_test_id('keno-auto-speed').select_option('fast')
+                        # Capture the first autoplay purchase request after route restoration.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/keno/draw') and response.request.method=='POST',timeout=10000) as autoplay_draw_response:
+                            # Capture the first ticket purchase paired with the one-round autoplay session.
+                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/keno/tickets') and request.method=='POST',timeout=10000) as autoplay_request:
+                                # Start server-authorized autoplay through the mounted control plane.
+                                page.get_by_test_id('keno-auto-start').click()
+                        # Parse the first autoplay action body.
+                        autoplay_body=autoplay_request.value.post_data_json
+                        # Require the first tick to reuse exact restored spots and amount without falling back to five.
+                        assert autoplay_body['spots']==settled_spots and float(autoplay_body['amount'])==0.07,autoplay_body
+                        # Read the terminal autoplay draw response before checking rendered state.
+                        autoplay_draw=autoplay_draw_response.value.json()['data']['draw']
+                        # Resolve the exact first-tick human result.
+                        autoplay_result=next(result for result in autoplay_draw['results'] if result['ticket']['player_id']==behavior_player)
+                        # Wait for the exact new round identity and stopped one-round control-plane state.
+                        page.wait_for_function("""roundId => document.querySelector('[data-testid="autoplay-keno"] .badge')?.textContent==='Off' && [...document.querySelectorAll('[data-testid="keno-history"] .keno-history-row span')].some(node => node.textContent.trim()===roundId)""",arg=autoplay_draw['round_id'],timeout=10000)
+                        # Read player-scoped Keno history after exact autoplay completion.
+                        autoplay_history=page.request.get(base+'/api/v1/casino/history?game=keno').json()['data']['history']
+                        # Resolve and decode the exact aligned autoplay history row.
+                        autoplay_history_row=next(row for row in autoplay_history if row['round_id']==autoplay_draw['round_id']); autoplay_details=json.loads(autoplay_history_row['details_json'])
+                        # Require exact first-tick amount, spots, catches, payout, and outcome alignment.
+                        assert float(autoplay_history_row['amount'])==0.07 and autoplay_details['spots']==settled_spots and autoplay_details['catches']==autoplay_result['catches'] and float(autoplay_history_row['payout'])==float(autoplay_result['payout']) and autoplay_history_row['outcome']==('win' if autoplay_result['payout'] else 'loss'),autoplay_history_row
+                        # Read the exact post-autoplay state from the public route.
+                        autoplay_state=page.request.get(base+'/api/v1/games/keno/state').json()['data']['state']
+                        # Require one and only one added draw whose first tick retained restored fields.
+                        assert len(autoplay_state['last_draws'])==2 and autoplay_state['last_draws'][-1]['results'][0]['ticket']['spots']==settled_spots and float(autoplay_state['last_draws'][-1]['results'][0]['ticket']['amount'])==0.07,autoplay_state
+                        # Restore an empty state so the following legacy Keno acceptance starts independently.
+                        save_player_game_state('keno',behavior_player,{'open_tickets':[],'last_draws':[]}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                    # Combine the existing edge proof and new economics behavior under their one contiguous owning case.
+                    def keno_complete_acceptance():
+                        # Execute all sixty-four exact visual-matrix cells first.
+                        keno_edge_containment()
+                        # Execute current-route restoration, Repeat, autoplay, and history behavior second.
+                        keno_economics_route_behavior()
+                    # Execute complete Keno geometry, economics, restoration, and interaction acceptance on one shard.
+                    run_case('BR-KENO-EDGE-001',['KENO-025','KENO-026','KENO-027','TEST-078','TEST-113','TEST-147'],keno_complete_acceptance)
                     # Select ten deterministic spots so paytable comparison has a stable row.
                     for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
                     # Store the spot-selection board box for stability assertions.
@@ -7807,7 +8441,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Resolve the browser shell's active player id before seeding focused evidence.
                         keno_singular_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
                         # Seed deterministic one-catch Keno state so singular copy is proven without relying on a random draw.
-                        keno_singular_state={'open_tickets':[],'last_draws':[{'round_id':'keno-singular-copy','timestamp':'2026-07-19T00:00:00Z','drawn':list(range(1,21)),'results':[{'ticket':{'ticket_id':'keno-one-catch','player_id':keno_singular_player,'spots':[1],'amount':1,'source':'browser-test','created_at':'2026-07-19T00:00:00Z'},'catches':[1],'catch_count':1,'multiplier':3,'payout':3}]}]}
+                        keno_singular_state={'open_tickets':[],'last_draws':[{'round_id':'keno-singular-copy','timestamp':'2026-07-19T00:00:00Z','drawn':list(range(1,21)),'results':[{'ticket':{'ticket_id':'keno-one-catch','player_id':keno_singular_player,'spots':[1],'amount':1,'source':'browser-test','created_at':'2026-07-19T00:00:00Z'},'catches':[1],'catch_count':1,'multiplier':keno_engine.PAYTABLE[1][1],'payout':round(1.0*keno_engine.PAYTABLE[1][1],2)}]}]}
                         # Persist the focused state through the same test data store used by the browser server.
                         save_player_game_state('keno',keno_singular_player,keno_singular_state)
                         # Select English before reload so the copy assertion checks the exact reported wording.
@@ -9290,10 +9924,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
         ACTIVE_PROGRESS=None
         # Prevent later API or storage cases from inheriting browser shard ownership.
         BROWSER_SHARD_RANGE=None
+        # Prevent later API or storage cases from inheriting the affected-game restriction.
+        BROWSER_AFFECTED_GAMES=None
         # Preserve the existing JSON result artifact path and behavior.
         save_results()
-        # Retain one shard-unique result file so aggregate verification can prove exact coverage.
-        if shard_count>1: (ROOT/'logs'/'test-runs'/f'browser_results_shard_{shard_index}_of_{shard_count}.json').write_text(json.dumps({'shard_index':shard_index,'shard_count':shard_count,'case_start':shard_range[0],'case_stop':shard_range[1],'results':RESULTS},indent=2),encoding='utf-8')
+        # Retain one shard-unique, self-describing result file so aggregate verification needs no external selection input.
+        if shard_count>1: (ROOT/'logs'/'test-runs'/f'browser_results_shard_{shard_index}_of_{shard_count}.json').write_text(json.dumps({'shard_index':shard_index,'shard_count':shard_count,'case_start':shard_range[0],'case_stop':shard_range[1],'affected_games':(sorted(affected_games) if affected_games else None),'results':RESULTS},indent=2),encoding='utf-8')
     # Return success only when browser execution and tracked listener cleanup both passed.
     return 0 if status=='PASS' else 1
 
@@ -9311,6 +9947,10 @@ def main():
     ap.add_argument('--mysql-live',action='store_true')
     # Add the explicit disposable MySQL 8.4 migration selector.
     ap.add_argument('--mysql-migrations-live',action='store_true')
+    # Select one explicit listener-free request-latency provider baseline.
+    ap.add_argument('--request-latency',choices=('json','mysql'),default=None)
+    # Select the caller-owned external aggregate evidence destination.
+    ap.add_argument('--request-latency-output',default=None)
     # Configure heartbeat cadence while enforcing the public sixty-second maximum below.
     ap.add_argument('--heartbeat-seconds',type=float,default=45.0)
     # Configure the non-failing no-progress warning threshold.
@@ -9323,8 +9963,26 @@ def main():
     ap.add_argument('--shard-index',type=int,default=0)
     # Verify aggregated per-shard result files from a directory instead of running any suite.
     ap.add_argument('--verify-browser-shards',default=None)
+    # Restrict browser execution to a comma-separated set of affected game ids, or omit for the full catalog. (issue #468 item 4)
+    ap.add_argument('--games',default=None)
     # Parse caller options before running any suite.
     args=ap.parse_args()
+    # Require an external output only with the explicit request-latency selector.
+    if bool(args.request_latency)!=bool(args.request_latency_output): ap.error('--request-latency and --request-latency-output must be supplied together')
+    # Require the existing disposable migration lifecycle for a MySQL baseline.
+    if args.request_latency=='mysql' and not args.mysql_migrations_live: ap.error('--request-latency mysql requires --mysql-migrations-live')
+    # Keep the JSON baseline separate from MySQL migration and live-service selectors.
+    if args.request_latency=='json' and (args.mysql_live or args.mysql_migrations_live): ap.error('--request-latency json cannot be combined with MySQL live selectors')
+    # Resolve the affected-game restriction once so the runner and the aggregate verifier agree on the expected set.
+    affected_games=None
+    if args.games is not None:
+        # Accept a comma-separated list, ignoring surrounding whitespace and empty entries.
+        affected_games={token.strip() for token in args.games.split(',') if token.strip()}
+        # Reject an empty selection so an accidental blank never silently skips every dedicated case.
+        if not affected_games: ap.error('--games must name at least one game id')
+        # Reject unknown ids so a typo fails loudly instead of quietly under-testing.
+        unknown=affected_games-{game['id'] for game in casino_config.GAMES}
+        if unknown: ap.error(f'--games contains unknown game ids: {sorted(unknown)}')
     # Reject heartbeat intervals outside issue #207 acceptance before starting work.
     if args.heartbeat_seconds<=0 or args.heartbeat_seconds>60: ap.error('--heartbeat-seconds must be greater than 0 and at most 60')
     # Reject warning thresholds that would fire before one heartbeat.
@@ -9339,20 +9997,24 @@ def main():
     if args.shard_count>browser_case_total(): ap.error('--shard-count must not exceed the literal browser case total')
     # Keep shard selection scoped to the browser suite and aggregate verification only.
     if args.shard_count>1 and not (args.browser or args.verify_browser_shards): ap.error('--shard-count applies only to --browser or --verify-browser-shards')
-    # Run aggregate shard verification alone so gate jobs never start servers or suites.
-    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count)
+    # Run aggregate shard verification alone using the detector-owned expected selection.
+    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count,affected_games)
     # Branch when the following condition is true.
-    if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live: args.api=True
+    if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live and not args.request_latency: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
+        # Build the credential-free MySQL callback only for the explicit benchmark selector.
+        request_latency_callback=(lambda: run_case('REQUEST-LATENCY-MYSQL-001',['TEST-148'],lambda: run_request_latency_provider('mysql',args.request_latency_output))) if args.request_latency=='mysql' else None
         # Branch when the following condition is true.
-        if args.storage or args.mysql_live or args.mysql_migrations_live: run_storage_tests(include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live)
+        if args.storage or args.mysql_live or args.mysql_migrations_live: run_storage_tests(include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback)
+        # Run the JSON provider only through its explicit benchmark selector.
+        if args.request_latency=='json': run_case('REQUEST-LATENCY-JSON-001',['TEST-148'],lambda: run_request_latency_provider('json',args.request_latency_output))
         # Branch when the following condition is true.
         if args.api: run_api_tests()
         # Branch when the following condition is true.
         if args.browser:
             # Set code to the value needed for the next operation.
-            code=run_browser_tests(args.heartbeat_seconds,args.stall_seconds,args.timeout_seconds,args.shard_count,args.shard_index)
+            code=run_browser_tests(args.heartbeat_seconds,args.stall_seconds,args.timeout_seconds,args.shard_count,args.shard_index,affected_games)
             # Branch when the following condition is true.
             if code: return code
     # Run cleanup logic regardless of success or failure.

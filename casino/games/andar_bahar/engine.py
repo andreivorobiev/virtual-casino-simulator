@@ -22,8 +22,20 @@ SIDES = ("andar", "bahar")
 DEAL_ORDER = ("andar", "bahar")
 # Bound reload-safe history so one player document cannot grow indefinitely.
 RECENT_ROUND_LIMIT = 20
-# Pay even-money total returns for the side that first receives the matching rank.
+# Retain the frozen-v1 integer scalar for clients that only understand even-money rules.
 RETURN_MULTIPLIER = 2
+# Price the first-dealt Andar side below even money while preserving even-money Bahar returns. (issue #409)
+RETURN_MULTIPLIERS = {"andar": 1.9, "bahar": 2.0}
+
+
+# Resolve the authoritative total-return multiplier for one normalized side.
+def return_multiplier(side: str) -> float:
+    # Reject unknown sides rather than silently applying the deprecated scalar.
+    if side not in RETURN_MULTIPLIERS:
+        # Keep corrupt stored or caller-controlled values outside settlement.
+        raise ValidationError("Andar Bahar side must be andar or bahar")
+    # Return the side-specific total return used by settlement and published rules.
+    return RETURN_MULTIPLIERS[side]
 
 
 # Build one fresh player-scoped state document.
@@ -118,8 +130,8 @@ def create_round(player_id: str, wager, side, action_id: str, *, match_card: str
         raise ValidationError("Andar Bahar sequence must end on the first matching rank")
     # Store the side that first received the matching rank.
     winning_side = terminal["side"]
-    # Calculate total returned play tokens for a correct prediction.
-    payout = round(amount * RETURN_MULTIPLIER, 2) if selected_side == winning_side else 0.0
+    # Calculate total returned play tokens from the selected side's authoritative price.
+    payout = round(amount * return_multiplier(selected_side), 2) if selected_side == winning_side else 0.0
     # Return one complete but settlement-pending state document.
     return {
         "round_id": round_id,  # Correlate state, routes, and ledger movements.

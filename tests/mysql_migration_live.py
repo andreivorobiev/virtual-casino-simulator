@@ -206,7 +206,11 @@ def _cleanup(admin, databases, migrator_user, runtime_user):
 
 
 # Run the complete MySQL 8.4 migration and DDL-free runtime matrix.
-def run_mysql_migration_live_matrix():
+def run_mysql_migration_live_matrix(request_latency_callback=None):
+    # Reject a malformed optional test callback before any administrator connection.
+    if request_latency_callback is not None and not callable(request_latency_callback):
+        # Keep the no-argument production path unchanged while failing closed on test misuse.
+        raise TypeError("request_latency_callback must be callable")
     # Validate every synthetic database and account before connecting.
     base_database = _identifier(os.environ["CASINO_MYSQL_MIGRATION_DATABASE"])
     # Derive a separate explicit version-one upgrade target.
@@ -506,6 +510,10 @@ def run_mysql_migration_live_matrix():
                 runtime_connection.close()
             # Run representative runtime DML, restart, and two-process exact-once evidence.
             storage_tests.run_mysql_live_provider_path()
+            # Run an optional credential-free test callback only after migration and runtime grants.
+            if request_latency_callback is not None:
+                # Invoke without arguments so administrator, migrator, and runtime credentials never cross the seam.
+                request_latency_callback()
         # Always remove every disposable database and account.
         finally:
             # Teardown only validated `_204` targets and users.

@@ -37,7 +37,7 @@ class HiLoEngineTests(unittest.TestCase):
         self.assertEqual(0, engine.compare_cards("7H", "7S"))
 
     # Confirm correct higher and lower guesses return stake plus even-money winnings.
-    def test_correct_guesses_return_twice_the_wager(self):
+    def test_correct_guesses_return_the_rank_priced_amount(self):
         # Define one winning vector for each legal direction.
         vectors = [("4H", "QC", "higher"), ("KS", "3D", "lower")]
         # Exercise both direction branches with stable fixtures.
@@ -48,8 +48,10 @@ class HiLoEngineTests(unittest.TestCase):
                 round_state = self.round(current_card, next_card, wager=12.5)
                 # Settle through the public engine transition.
                 engine.settle_round(round_state, guess, f"guess-{guess}", completed_at="2026-07-14T00:00:01Z", request_fingerprint=f"fingerprint-{guess}")
-                # Verify the documented correct result and returned amount.
-                self.assertEqual(("correct", 25.0, 12.5), (round_state["outcome"], round_state["payout"], round_state["net"]))
+                # Derive the expected return from the visible-rank server price. (issue #406)
+                expected_payout = round(12.5 * engine.correct_return_multiplier(current_card), 2)
+                # Verify the documented correct result and the rank-priced returned amount.
+                self.assertEqual(("correct", expected_payout, round(expected_payout - 12.5, 2)), (round_state["outcome"], round_state["payout"], round_state["net"]))
                 # Verify the private reveal field is removed after settlement.
                 self.assertNotIn("_next_card", round_state)
 

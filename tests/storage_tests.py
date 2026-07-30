@@ -819,8 +819,33 @@ def _run_mysql_pool_live_measurements(provider):
     assert after_snapshot["in_use"] == 0 and after_snapshot["waiting"] == 0
     # Require no pool exhaustion during the complete live packet.
     assert after_snapshot["timeout_count"] == before_snapshot["timeout_count"]
+    # Build one exact-source secret-safe preflight artifact for later browser qualification.
+    evidence = {
+        # Bind the preflight to the workflow checkout without reading repository-private data.
+        "source_commit": str(os.environ.get("GITHUB_SHA", "")).strip().lower(),
+        # Preserve only the four aggregate measurement rows.
+        "measurements": measurements,
+        # Preserve only the fixed-cardinality pool snapshot.
+        "pool": after_snapshot,
+    }
+    # Read the optional external evidence destination selected by an explicit qualification workflow.
+    evidence_path_value = str(os.environ.get("CASINO_MYSQL_POOL_EVIDENCE", "")).strip()
+    # Persist machine-readable evidence only when the caller selected a destination.
+    if evidence_path_value:
+        # Require one exact full source identity before writing a reusable preflight.
+        assert len(evidence["source_commit"]) == 40 and all(character in "0123456789abcdef" for character in evidence["source_commit"])
+        # Resolve the caller-owned external evidence file.
+        evidence_path = Path(evidence_path_value).expanduser().resolve()
+        # Refuse a generated qualification artifact inside the source checkout.
+        assert evidence_path != ROOT and ROOT.resolve() not in evidence_path.parents
+        # Create only the external parent selected by the workflow.
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        # Write stable compact JSON without credentials, target details, or connector text.
+        evidence_path.write_text(json.dumps(evidence, sort_keys=True), encoding="utf-8")
     # Emit only sanitized aggregate evidence for hosted job logs.
-    print("MYSQL_POOL_1_2_4_8 " + json.dumps({"measurements": measurements, "pool": after_snapshot}, sort_keys=True), flush=True)
+    print("MYSQL_POOL_1_2_4_8 " + json.dumps(evidence, sort_keys=True), flush=True)
+    # Return the same sanitized packet to listener-free callers.
+    return evidence
 
 
 # Exercise real MySQL persistence, domain documents, and concurrent ledger locking.

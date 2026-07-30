@@ -2,10 +2,18 @@
 
 # Import Python syntax inspection for listener-free browser ownership policy tests.
 import ast
+# Import JSON encoding for synthetic fail-closed shard evidence.
+import json
 # Import path helpers so assertions read the checked-in workflow from any cwd.
 from pathlib import Path
 # Import regular expressions for deterministic literal browser case discovery.
 import re
+# Import subprocess execution for the listener-free aggregate CLI regression.
+import subprocess
+# Import the active Python executable for isolated aggregate verification.
+import sys
+# Import disposable directories for synthetic shard evidence.
+import tempfile
 # Import unittest for dependency-free workflow policy checks.
 import unittest
 
@@ -35,6 +43,8 @@ LONG_SUITE_RUNNER = ROOT / "tests" / "long_suites.py"
 BROWSER_RUNNER = ROOT / "tests" / "run_tests.py"
 # Point at the ordinary, formal, and sustained browser workflow.
 BROWSER_WORKFLOW = ROOT / ".github" / "workflows" / "browser-tests.yml"
+# Point at the pull-request affected-game detector.
+AFFECTED_BROWSER_GAMES = ROOT / "scripts" / "affected_browser_games.py"
 
 
 # Validate the production deployment workflow without invoking GitHub or SSH.
@@ -232,6 +242,22 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertEqual(shard_script.count("--copy-deployment"), 2)
         # Require a unique artifact identity for each matrix worker.
         self.assertIn("name: long-suite-100-shard-${{ matrix.shard }}-artifacts", workflow_text)
+        # Invoke the Slots proof as a package module so repository imports resolve on hosted Linux.
+        self.assertIn("run: python -m tests.slots_economics_long", workflow_text)
+        # Reject direct-file execution because it omits the repository root from Python's import path.
+        self.assertNotIn("run: python tests/slots_economics_long.py", workflow_text)
+        # Invoke the exact Keno proof as a package module so repository imports resolve on hosted Linux.
+        self.assertIn("run: python -m tests.keno_economics_long", workflow_text)
+        # Run the governed Keno module exactly once rather than multiplying proof across shards.
+        self.assertEqual(workflow_text.count("python -m tests.keno_economics_long"), 1)
+        # Keep both exact proof and artifact-identity steps on the single shard-one owner.
+        keno_steps = workflow_text.split("- name: Prove Keno exact economics", 1)[1].split("- name: Upload long-suite shard artifacts", 1)[0]
+        # Require both governed steps to declare shard one explicitly.
+        self.assertEqual(keno_steps.count("if: matrix.shard == 1"), 2)
+        # Require fail-closed semantic verification of the exact evidence identity before upload.
+        self.assertIn("python scripts/verify_keno_economics_artifact.py logs/test-runs/keno-economics-exact.json", keno_steps)
+        # Reject direct-file Keno execution for the same import-path reason.
+        self.assertNotIn("run: python tests/keno_economics_long.py", workflow_text)
         # Upload terminal evidence even when one shard command fails.
         self.assertIn("if: always()", workflow_text)
         # Require the exact branch-protection aggregate job identifier once.
@@ -270,10 +296,26 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Extract permanent literal IDs in deterministic source order.
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Require the current exact suite inventory and balanced 27/26/26/26 allocation.
-        self.assertEqual(len(case_ids), 105)
+        # Require the current exact suite inventory after the Keno economics proof joined its edge owner case.
+        self.assertEqual(len(case_ids), 107)
         # Compute the same half-open contiguous partition used by the production runner.
-        ranges = [(0, 27), (27, 53), (53, 79), (79, 105)]
+        ranges = [(0, 27), (27, 54), (54, 81), (81, 107)]
+        # Locate the one permanent Keno owner call that carries both edge and economics acceptance.
+        keno_owner_call = next(node for node in ast.walk(runner) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run_case" and ast.literal_eval(node.args[0]) == "BR-KENO-EDGE-001")
+        # Read the owner call's permanent requirement mapping without executing Browser code.
+        keno_owner_requirements = ast.literal_eval(keno_owner_call.args[1])
+        # Require the combined owner to map both the Keno economics requirement and its test requirement.
+        self.assertTrue({"KENO-027", "TEST-147"}.issubset(set(keno_owner_requirements)))
+        # Require the combined owner to invoke the named complete-acceptance callback.
+        self.assertIsInstance(keno_owner_call.args[2], ast.Name)
+        # Pin the callback identity so a later refactor cannot silently drop either economics body.
+        self.assertEqual(keno_owner_call.args[2].id, "keno_complete_acceptance")
+        # Locate the complete callback inside the Browser runner.
+        keno_complete_callback = next(node for node in ast.walk(runner) if isinstance(node, ast.FunctionDef) and node.name == "keno_complete_acceptance")
+        # Read every direct helper call from the complete callback in source order.
+        keno_complete_calls = [statement.value.func.id for statement in keno_complete_callback.body if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call) and isinstance(statement.value.func, ast.Name)]
+        # Require one complete 64-cell matrix pass followed by one route/restoration economics pass.
+        self.assertEqual(keno_complete_calls, ["keno_edge_containment", "keno_economics_route_behavior"])
         # Locate the literal affinity declaration at module scope.
         affinity_node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_CASE_AFFINITY_GROUPS" for target in node.targets))
         # Read only literal strings and tuples from the tracked declaration.
@@ -397,6 +439,96 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Preserve final invariant signal for every unexpected Admin-side browser failure.
         self.assertLess(cleanup_index, admin_login_index)
 
+    # Prove changed-file routing restricts only unambiguous game-owned changes and fails closed otherwise.
+    def test_browser_affected_game_detector_is_conservative(self):
+        # Execute the dependency-free detector CLI with one changed-path packet.
+        def detect(paths):
+            # Send newline-delimited repository paths exactly as the workflow does.
+            result = subprocess.run([sys.executable, str(AFFECTED_BROWSER_GAMES)], input="\n".join(paths), text=True, capture_output=True, cwd=ROOT, check=False)
+            # Require detector execution itself to remain healthy.
+            self.assertEqual(result.returncode, 0, result.stderr)
+            # Return the single documented routing token.
+            return result.stdout.strip()
+        # Restrict one unambiguous game-owned change to that game.
+        self.assertEqual(detect(["casino/games/craps/engine.py"]), "craps")
+        # Sort multiple unambiguous game owners deterministically.
+        self.assertEqual(detect(["web/games/slots.js", "tests/games/craps/test_api.py"]), "craps,slots")
+        # Force full coverage for shared runtime code.
+        self.assertEqual(detect(["web/core/api.js"]), "FULL")
+        # Force full coverage for a path that resembles a game but is absent from the catalog.
+        self.assertEqual(detect(["casino/games/not_a_catalog_game/api.py"]), "FULL")
+        # Report no browser-relevant ownership for game documentation and retained evidence only.
+        self.assertEqual(detect(["docs/games/craps.md", "docs/evidence/craps/current.json"]), "NONE")
+
+    # Prove pull requests may select affected cases while main, manual, and ambiguous work remain complete.
+    def test_browser_workflow_routes_prs_and_preserves_full_coverage(self):
+        # Read the complete workflow as inert policy text.
+        workflow_text = self.workflow_text(BROWSER_WORKFLOW)
+        # Require protected-main pushes to run the complete detector-to-aggregate path.
+        self.assertIn("push:\n    branches:\n      - main", workflow_text)
+        # Require pull-request game detection and the explicit full-suite label.
+        self.assertIn("gh api --paginate", workflow_text)
+        self.assertIn("'full-browser'", workflow_text)
+        # Require non-pull-request events to resolve to full coverage.
+        self.assertIn('if [ "${IS_PR}" != "true" ]', workflow_text)
+        # Require each shard to consume the detector-owned game selection.
+        self.assertIn("${{ needs.detect_affected_games.outputs.games_arg }}", workflow_text)
+        # Require the historical aggregate to depend on both detection and shard execution.
+        self.assertIn("      - detect_affected_games\n      - browser_tests_shard", workflow_text)
+        # Require the aggregate to fail when detection fails even if shard artifacts exist.
+        self.assertIn('test "${{ needs.detect_affected_games.result }}" = "success"', workflow_text)
+        # Preserve every separately authorized formal profile.
+        self.assertIn("formal_ui_50000:", workflow_text)
+        self.assertIn("baccarat_sustained_2000:", workflow_text)
+        self.assertIn("concurrent_browser_138:", workflow_text)
+
+    # Prove explicit detector selection controls aggregate coverage and cannot be forged by shard artifacts.
+    def test_browser_aggregate_verifies_detector_owned_selection(self):
+        # Parse the exact browser runner without importing Playwright or opening a listener.
+        source, tree = self.browser_runner_syntax()
+        # Select the browser runner and read permanent literal cases in source order.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Extract the permanent browser case inventory.
+        case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
+        # Locate the literal affected-game acceptance map.
+        mapping_node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_GAME_ACCEPTANCE_CASES" for target in node.targets))
+        # Read only the literal game-to-case mapping.
+        game_cases = ast.literal_eval(mapping_node.value)
+        # Keep shared cases and the one selected game's dedicated case.
+        expected = [case_id for case_id in case_ids if case_id not in set(game_cases.values()) or case_id == game_cases["acey_deucey"]]
+        # Create one disposable four-shard result packet.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Write each deterministic contiguous shard result with an exact self-description.
+            for index in range(4):
+                # Split the selected inventory into the same balanced contiguous shape.
+                start = (len(expected) * index) // 4
+                # Resolve the exclusive shard boundary.
+                stop = (len(expected) * (index + 1)) // 4
+                # Build passing evidence for this shard's exact selected cases.
+                results = [{"test_id": case_id, "status": "PASS"} for case_id in expected[start:stop]]
+                # Retain the detector selection beside the synthetic case evidence.
+                payload = {"affected_games": ["acey_deucey"], "results": results}
+                # Write the exact filename consumed by the aggregate verifier.
+                (Path(temp_dir) / f"browser_results_shard_{index}_of_4.json").write_text(json.dumps(payload), encoding="utf-8")
+            # Run the real aggregate CLI without invoking a browser or listener.
+            verified = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "4", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            # Require exact selected-case coverage to pass.
+            self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
+            # Forge one shard's declaration while keeping all case rows unchanged.
+            forged_path = Path(temp_dir) / "browser_results_shard_0_of_4.json"
+            # Read the existing evidence before changing only its self-description.
+            forged = json.loads(forged_path.read_text(encoding="utf-8"))
+            # Claim a different detector selection to simulate an untrusted artifact.
+            forged["affected_games"] = ["craps"]
+            # Persist the forged declaration for the negative regression.
+            forged_path.write_text(json.dumps(forged), encoding="utf-8")
+            # Re-run the real aggregate verifier against the same expected detector input.
+            rejected = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "4", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            # Require the forged shard selection to fail closed.
+            self.assertNotEqual(rejected.returncode, 0, rejected.stdout + rejected.stderr)
+            # Retain a focused diagnostic proving the expected-selection mismatch was detected.
+            self.assertIn("affected games", rejected.stdout)
+
     # Prove ordinary sharding does not alter formal 50k or sustained Baccarat governance.
     def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
         # Read the complete workflow as inert text.
@@ -404,7 +536,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require exactly four ordinary browser shard identities.
         self.assertIn("shard: [0, 1, 2, 3]", workflow_text)
         # Require exact aggregate result accounting through the historical branch-protection context.
-        self.assertIn("needs: browser_tests_shard", workflow_text)
+        self.assertIn("      - browser_tests_shard", workflow_text)
         # Require literal-case union verification after every shard succeeds.
         self.assertIn("--verify-browser-shards logs/test-runs --shard-count 4", workflow_text)
         # Preserve the explicit formal 50,000-cycle authorization input and exact aggregate.
