@@ -92,11 +92,11 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
   /auth/enrollment-policy:
     get:
-      summary: Publish disabled-by-default enrollment, guest, conversion, and passkey availability.
+      summary: Publish the closed-vocabulary enrollment mode plus disabled-by-default feature availability.
       operationId: auth_v2_enrollment_policy
       responses:
         '200':
-          description: Standard API envelope carrying boolean-only first-party enrollment policy.
+          description: Standard API envelope carrying the enrollment mode and boolean first-party feature gates.
           content:
             application/json:
               schema:
@@ -651,9 +651,12 @@ components:
           enum: [desktop, tablet, mobile, unknown]
     EnrollmentPolicy:
       type: object
-      required: [signup_enabled, guest_trials_enabled, invitation_enrollment_enabled, guest_conversion_enabled, passkeys_enabled, canonical_identity, shared_auth_origin]
+      required: [enrollment_mode, signup_enabled, guest_trials_enabled, invitation_enrollment_enabled, guest_conversion_enabled, passkeys_enabled, canonical_identity, shared_auth_origin]
       additionalProperties: false
       properties:
+        enrollment_mode:
+          type: string
+          enum: [closed, invite-only, self-signup]
         signup_enabled:
           type: boolean
         guest_trials_enabled:

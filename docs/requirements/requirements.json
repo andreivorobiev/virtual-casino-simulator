@@ -11768,7 +11768,7 @@
     {
       "id": "AUTH-010",
       "module": "Core",
-      "description": "The Casino keeps one canonical first-party identity system keyed by the internal Casino user id for tiltseven.com and casino.tiltseven.com. Guest trials, Admin-created accounts, self-service conversion, disabled public signup, OAuth links, and future passkeys are provider layers over that identity rather than account owners. Public enrollment policy exposes only boolean feature gates; full signup and passkey registration are disabled by default and fail closed without creating users, provider identities, or credentials.",
+      "description": "The Casino keeps one canonical first-party identity system keyed by the internal Casino user id for tiltseven.com and casino.tiltseven.com. Guest trials, Admin-created accounts, self-service conversion, disabled public signup, OAuth links, and future passkeys are provider layers over that identity rather than account owners. Public enrollment policy exposes one closed-vocabulary enrollment mode plus boolean feature gates; full signup and passkey registration are disabled by default and fail closed without creating users, provider identities, or credentials.",
       "status": "PASS",
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
@@ -11785,7 +11785,7 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "product-account-spine",
-      "changed_in": "product-account-spine",
+      "changed_in": "issue-333-enrollment-policy-slice1",
       "notes": "OCI or provider identity may be added later only as a separately approved authentication adapter; it must not replace the Casino user id as the account authority."
     },
     {
@@ -12488,6 +12488,18 @@
       "introduced_in": "issue-351-owner-rbac-core",
       "changed_in": "issue-351-owner-rbac-core",
       "notes": "platform_owner is bootstrap-managed and cannot be requested through normal account creation or role payloads. is_admin intentionally treats the owner as an Admin while require_platform_owner keeps delegation authority separate."
+    },
+    {
+      "id": "AUTH-013",
+      "module": "Core",
+      "description": "Enrollment policy resolution reads one durable provider-backed document with exact closed, invite-only, and self-signup modes plus independent public-method flags, using the deployed environment as both seed and fallback so an absent or malformed document preserves restricted-preview behavior; unknown modes fail closed and non-boolean method values never enable access.",
+      "status": "PASS",
+      "api_tests": ["API-ENROLLMENT-POLICY-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/enrollment_policy.py", "casino/app.py", "contracts/openapi/auth.v2.yaml", "contracts/compatibility/restricted-preview-security.json", "tests/enrollment_policy_tests.py", "tests/account_spine_tests.py", "tests/run_tests.py"],
+      "introduced_in": "issue-333-enrollment-policy-slice1",
+      "changed_in": "issue-333-enrollment-policy-slice1",
+      "notes": "This slice is read-only and default-off: it adds no Admin write, enforcement, audit, readiness, RBAC, UI, provider, signup, OAuth, mail, invitation, public-exposure, or live-enablement authority. The frozen v1 API is unchanged; issue #333 remains open for the separately governed remainder."
     },
     {
       "id": "ADMIN-028",

@@ -1356,23 +1356,29 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(tool_011), 1)
         # Require the bridge requirement to remain Tooling-owned.
         self.assertEqual(tool_011[0]["module"], "Tooling")
-        # Parse the core descriptor for the runtime compatibility addition.
+        # Count the durable read-only enrollment-policy requirement.
+        auth_013 = [row for row in requirements if row.get("id") == "AUTH-013"]
+        # Require exactly one permanent enrollment-policy allocation.
+        self.assertEqual(len(auth_013), 1)
+        # Require the policy requirement to remain Core-owned.
+        self.assertEqual(auth_013[0]["module"], "Core")
+        # Parse the core descriptor for the enrollment-policy compatible addition.
         core_module = json.loads((ROOT / "modules" / "core.json").read_text(encoding="utf-8"))
         # Parse the tests descriptor.
         tests_module = json.loads((ROOT / "modules" / "tests.json").read_text(encoding="utf-8"))
         # Parse the docs descriptor independently.
         docs_module = json.loads((ROOT / "modules" / "docs.json").read_text(encoding="utf-8"))
-        # Parse the contracts descriptor for the rollback-policy contract addition.
+        # Parse the contracts descriptor for the additive enrollment-mode contract.
         contracts_module = json.loads((ROOT / "modules" / "contracts.json").read_text(encoding="utf-8"))
         # Parse the tooling descriptor for the compatible bridge addition.
         tooling_module = json.loads((ROOT / "modules" / "tooling.json").read_text(encoding="utf-8"))
         # Require the exact compatible core minor allocation.
-        self.assertEqual(core_module["version"], "9.32.0")
+        self.assertEqual(core_module["version"], "9.33.0")
         # Require the exact shared tests patch allocation.
-        self.assertEqual(tests_module["version"], "1.64.45")
+        self.assertEqual(tests_module["version"], "1.64.46")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.45")
+        self.assertEqual(docs_module["version"], "1.64.46")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.50.1")
+        self.assertEqual(contracts_module["version"], "1.51.0")
         # Require the compatible tooling minor allocation.
         self.assertEqual(tooling_module["version"], "1.23.0")
