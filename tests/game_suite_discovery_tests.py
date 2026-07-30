@@ -11,9 +11,9 @@ from unittest.mock import patch
 
 # Import the discovery boundary and its stable failure type.
 from tests.game_suite_discovery import (
-    GameSuiteCase,
-    SuiteDiscoveryError,
-    discover_game_suite_case,
+    GameSuiteCase,  # Assert the immutable discovery packet type.
+    SuiteDiscoveryError,  # Assert the stable fail-closed boundary.
+    discover_game_suite_case,  # Exercise descriptor-owned discovery.
 )
 
 
@@ -55,7 +55,7 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
     def test_unmigrated_descriptor_returns_no_case(self):
         # Model today's catalog metadata without any suites opt-in.
         descriptor = descriptor_with(
-            {"long_driver": "tests.game_drivers.fixture_game:play"}
+            {"long_driver": "tests.game_drivers.fixture_game:play"}  # Preserve legacy metadata.
         )
         # Verify discovery performs no implicit suite selection.
         self.assertIsNone(discover_game_suite_case(descriptor))
@@ -66,29 +66,29 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
         events = []
         # Build the first independently owned suite.
         first_module, _first_events = synthetic_suite_module(
-            "tests.synthetic_suite_first", events=events
+            "tests.synthetic_suite_first", events=events  # Record first-module execution.
         )
         # Build the second independently owned suite.
         second_module, _second_events = synthetic_suite_module(
-            "tests.synthetic_suite_second", events=events
+            "tests.synthetic_suite_second", events=events  # Record second-module execution.
         )
         # Register only the two declared dotted modules for this test.
         with patch.dict(
-            sys.modules,
+            sys.modules,  # Isolate imports to the synthetic descriptor-owned modules.
             {
-                first_module.__name__: first_module,
-                second_module.__name__: second_module,
+                first_module.__name__: first_module,  # Register the first dotted module.
+                second_module.__name__: second_module,  # Register the second dotted module.
             },
-        ):
+        ):  # Keep synthetic registration scoped to this deterministic proof.
             # Discover one immutable case packet from descriptor-owned metadata.
             case = discover_game_suite_case(
-                descriptor_with(
+                descriptor_with(  # Build the same nested shape as a catalog descriptor.
                     {
-                        "case_id": "API-FIXTURE-001",
-                        "requirements": ["FIXTURE-001", "TEST-042"],
-                        "suites": [
-                            first_module.__name__,
-                            second_module.__name__,
+                        "case_id": "API-FIXTURE-001",  # Supply the permanent runner identity.
+                        "requirements": ["FIXTURE-001", "TEST-042"],  # Map evidence.
+                        "suites": [  # Declare independently owned modules in execution order.
+                            first_module.__name__,  # Execute the first module first.
+                            second_module.__name__,  # Execute the second module second.
                         ],
                     }
                 )
@@ -97,27 +97,27 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
             self.assertIsInstance(case, GameSuiteCase)
             # Verify metadata order is preserved without normalization.
             self.assertEqual(
-                (
-                    "fixture_game",
-                    "API-FIXTURE-001",
-                    ("FIXTURE-001", "TEST-042"),
-                    (first_module.__name__, second_module.__name__),
-                    2,
+                (  # Define the exact descriptor-owned metadata expected from discovery.
+                    "fixture_game",  # Preserve the canonical game identity.
+                    "API-FIXTURE-001",  # Preserve the shared-runner case identity.
+                    ("FIXTURE-001", "TEST-042"),  # Preserve requirement ordering.
+                    (first_module.__name__, second_module.__name__),  # Preserve suite ordering.
+                    2,  # Count one test from each synthetic module.
                 ),
-                (
-                    case.game_id,
-                    case.case_id,
-                    case.requirements,
-                    case.suite_modules,
-                    case.test_count,
+                (  # Read the immutable discovery packet without rewriting it.
+                    case.game_id,  # Compare the canonical game identity.
+                    case.case_id,  # Compare the runner case identity.
+                    case.requirements,  # Compare the ordered requirement mappings.
+                    case.suite_modules,  # Compare the ordered module references.
+                    case.test_count,  # Compare the exact discovered test count.
                 ),
             )
             # Execute fresh suite instances through the packet's inert runner.
             case.run()
         # Verify the descriptor order controls execution order.
         self.assertEqual(
-            [first_module.__name__, second_module.__name__],
-            events,
+            [first_module.__name__, second_module.__name__],  # Define expected ordering.
+            events,  # Compare the shared execution record.
         )
 
     # Confirm explicit suite migration cannot omit required mapping metadata.
@@ -126,41 +126,41 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
         module, _events = synthetic_suite_module("tests.synthetic_suite_metadata")
         # Define invalid opt-in declarations and their stable failure fragments.
         invalid_specs = [
-            (
-                {"requirements": ["FIXTURE-001"], "suites": [module.__name__]},
-                "game.tests.case_id",
+            (  # Reject a suite declaration without a permanent case identity.
+                {"requirements": ["FIXTURE-001"], "suites": [module.__name__]},  # Omit it.
+                "game.tests.case_id",  # Require the precise missing-field diagnostic.
             ),
-            (
+            (  # Reject a suite declaration without requirement evidence.
                 {
-                    "case_id": "API-FIXTURE-001",
-                    "requirements": [],
-                    "suites": [module.__name__],
+                    "case_id": "API-FIXTURE-001",  # Keep the case identity valid.
+                    "requirements": [],  # Deliberately omit permanent mappings.
+                    "suites": [module.__name__],  # Keep the module reference valid.
                 },
-                "game.tests.requirements",
+                "game.tests.requirements",  # Require the precise empty-list diagnostic.
             ),
-            (
+            (  # Reject a suite declaration without executable evidence.
                 {
-                    "case_id": "API-FIXTURE-001",
-                    "requirements": ["FIXTURE-001"],
-                    "suites": [],
+                    "case_id": "API-FIXTURE-001",  # Keep the case identity valid.
+                    "requirements": ["FIXTURE-001"],  # Keep requirement evidence valid.
+                    "suites": [],  # Deliberately omit suite modules.
                 },
-                "game.tests.suites",
+                "game.tests.suites",  # Require the precise empty-suite diagnostic.
             ),
-            (
+            (  # Reject duplicate execution evidence.
                 {
-                    "case_id": "API-FIXTURE-001",
-                    "requirements": ["FIXTURE-001"],
-                    "suites": [module.__name__, module.__name__],
+                    "case_id": "API-FIXTURE-001",  # Keep the case identity valid.
+                    "requirements": ["FIXTURE-001"],  # Keep requirement evidence valid.
+                    "suites": [module.__name__, module.__name__],  # Repeat one module.
                 },
-                "must not contain duplicates",
+                "must not contain duplicates",  # Require duplicate-specific rejection.
             ),
-            (
+            (  # Reject expressions that are not dotted Python modules.
                 {
-                    "case_id": "API-FIXTURE-001",
-                    "requirements": ["FIXTURE-001"],
-                    "suites": ["not a dotted module"],
+                    "case_id": "API-FIXTURE-001",  # Keep the case identity valid.
+                    "requirements": ["FIXTURE-001"],  # Keep requirement evidence valid.
+                    "suites": ["not a dotted module"],  # Supply unsafe import syntax.
                 },
-                "invalid dotted suite module",
+                "invalid dotted suite module",  # Require syntax-specific rejection.
             ),
         ]
         # Register the valid fixture module for every table-driven declaration.
@@ -171,8 +171,8 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
                 with self.subTest(expected_message=expected_message):
                     # Require the descriptor boundary to fail closed.
                     with self.assertRaisesRegex(
-                        SuiteDiscoveryError, expected_message
-                    ):
+                        SuiteDiscoveryError, expected_message  # Match the stable diagnostic.
+                    ):  # Scope the rejected declaration to this table row.
                         # Attempt discovery without any shared-runner integration.
                         discover_game_suite_case(descriptor_with(tests_spec))
 
@@ -181,15 +181,15 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
         # Declare a syntactically valid dotted path that is intentionally absent.
         descriptor = descriptor_with(
             {
-                "case_id": "API-FIXTURE-001",
-                "requirements": ["FIXTURE-001"],
-                "suites": ["tests.synthetic_suite_missing"],
+                "case_id": "API-FIXTURE-001",  # Keep the runner identity valid.
+                "requirements": ["FIXTURE-001"],  # Keep requirement evidence valid.
+                "suites": ["tests.synthetic_suite_missing"],  # Name the absent module.
             }
         )
         # Require a stable discovery error that identifies the missing module.
         with self.assertRaisesRegex(
-            SuiteDiscoveryError, "could not import suite module"
-        ):
+            SuiteDiscoveryError, "could not import suite module"  # Match the stable boundary.
+        ):  # Scope the missing-module attempt to this assertion.
             # Attempt discovery without installing the declared module.
             discover_game_suite_case(descriptor)
 
@@ -203,11 +203,11 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(SuiteDiscoveryError, "contains no tests"):
                 # Attempt to opt the empty module into the shared evidence packet.
                 discover_game_suite_case(
-                    descriptor_with(
+                    descriptor_with(  # Build one otherwise valid descriptor.
                         {
-                            "case_id": "API-FIXTURE-001",
-                            "requirements": ["FIXTURE-001"],
-                            "suites": [module.__name__],
+                            "case_id": "API-FIXTURE-001",  # Supply the case identity.
+                            "requirements": ["FIXTURE-001"],  # Supply requirement evidence.
+                            "suites": [module.__name__],  # Cite the empty module.
                         }
                     )
                 )
@@ -216,17 +216,17 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
     def test_runner_propagates_declared_suite_failure(self):
         # Build one importable suite whose only test fails normally.
         module, _events = synthetic_suite_module(
-            "tests.synthetic_suite_failing", outcome="fail"
+            "tests.synthetic_suite_failing", outcome="fail"  # Request one assertion failure.
         )
         # Register the failing suite for both discovery and on-demand execution.
         with patch.dict(sys.modules, {module.__name__: module}):
             # Discover a valid packet before exercising its runner.
             case = discover_game_suite_case(
-                descriptor_with(
+                descriptor_with(  # Build one valid explicit suite opt-in.
                     {
-                        "case_id": "API-FIXTURE-FAIL-001",
-                        "requirements": ["FIXTURE-001"],
-                        "suites": [module.__name__],
+                        "case_id": "API-FIXTURE-FAIL-001",  # Identify the failing case.
+                        "requirements": ["FIXTURE-001"],  # Retain mapped evidence.
+                        "suites": [module.__name__],  # Declare the failing suite.
                     }
                 )
             )
@@ -234,8 +234,8 @@ class GameSuiteDiscoveryTests(unittest.TestCase):
             self.assertIsNotNone(case)
             # Require normal unittest failure evidence to become a raised boundary error.
             with self.assertRaisesRegex(
-                AssertionError, "descriptor-owned suites failed"
-            ):
+                AssertionError, "descriptor-owned suites failed"  # Match stable propagation.
+            ):  # Scope the failing run to this assertion.
                 # Run a fresh copy of the declared failing suite.
                 case.run()
 
