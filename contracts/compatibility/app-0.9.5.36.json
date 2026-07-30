@@ -15,7 +15,7 @@
     "required_artifact": "release-manifest.json",
     "source_commit_sha": "c500b6ddeb6f2d928f3b34b4cf0d906d0c650ddb",
     "artifact_sha256": "20509a2b60e704562997c36aaa4ca36e14dafba4eda1aa038bcb8a9f77f4832c",
-    "manifest_sha256": "b4aee06d88d662dc18ca6b0f7d97ad103c27dabc29d75377647304d8bc738fe"
+    "manifest_sha256": "b4aee06d88d662dc18ca68b0f7d97ad103c27dabc29d75377647304d8bc738fe"
   },
   "rollback": {
     "scope": "application-only",

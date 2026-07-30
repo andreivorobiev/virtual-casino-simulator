@@ -19,6 +19,8 @@ import zipfile
 from scripts import package_app
 # Import the protected predecessor receipt helper for exact fail-closed recovery tests.
 from scripts import bootstrap_predecessor
+# Import compatibility-owned predecessor resolution for the live release-policy regression.
+from scripts import resolve_release_predecessor
 
 
 # Exercise deterministic packaging, exclusion, verification, and rollback behavior.
@@ -397,9 +399,15 @@ class ReleaseArtifactTests(unittest.TestCase):
                 "required_artifact": "release-manifest.json",
                 "source_commit_sha": "c500b6ddeb6f2d928f3b34b4cf0d906d0c650ddb",
                 "artifact_sha256": "20509a2b60e704562997c36aaa4ca36e14dafba4eda1aa038bcb8a9f77f4832c",
-                "manifest_sha256": "b4aee06d88d662dc18ca6b0f7d97ad103c27dabc29d75377647304d8bc738fe",
+                "manifest_sha256": "b4aee06d88d662dc18ca68b0f7d97ad103c27dabc29d75377647304d8bc738fe",
             },
         )
+        # Require both retained release-asset identities to remain exact lowercase SHA-256 values.
+        for identity_name in ("artifact_sha256", "manifest_sha256"):
+            # Reject truncated, uppercase, or otherwise noncanonical live predecessor pins.
+            self.assertRegex(compatibility["predecessor"][identity_name], r"^[0-9a-f]{64}$")
+        # Require the exact current candidate policy to resolve its retained immutable predecessor.
+        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.36"), "v0.9.5.35")
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
         self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
         # Require all broader enrollment surfaces to remain disabled for this release channel.
