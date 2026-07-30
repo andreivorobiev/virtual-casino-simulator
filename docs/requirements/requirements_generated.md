@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.22
-- core: 9.28.0
+- core: 9.29.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.35
-- docs: 1.64.35
+- tests: 1.64.36
+- docs: 1.64.36
 - contracts: 1.49.19
 - tooling: 1.21.12
 - commenting_policy: 1.0.0
@@ -925,6 +925,7 @@ Historical source baseline: 9.1.0
 - **UX-022** (Application) - PASS: Each of the forty-three catalog games that previously lacked repeat-bet behavior renders one localized secondary Repeat bet control, keeps it unavailable until a player-owned settled wager configuration exists, and uses one activation to submit a fresh exactly-once game action with that exact base configuration without replaying later draw, hold, call, fold, or hand-setting decisions. Repeat remains guarded while work is active and introduces no parallel timer.
 - **TEST-137** (Tests) - PASS: Listener-free exact-source acceptance pins the complete forty-three-game repeat catalog, paired English and Russian copy, semantic button hooks, settled-wager guards, shared game-action delegation, in-flight exclusion, event wiring, and timer-free execution. Hosted exact-head Browser acceptance renders every control in both locales, proves one real backend-funded exact-configuration repeat, checks containment and fixed-feedback clearance, and captures eight after-pass visual rows across all governed viewport classes.
 - **CORE-029** (Application) - PASS: The repository nginx edge template normalizes arbitrary request methods and paths into fixed low-cardinality families and emits only method family, route family, response status, total request time, and upstream response time as structured timing data, never raw methods, paths, queries, identifiers, client or upstream addresses, headers, cookies, tokens, bodies, byte counts, user-agent, referrer, or application data.
+- **CORE-030** (Core) - PASS: The core exposes one route-free player-game-state update helper that executes default selection, object normalization, caller mutation, schema and timestamp stamping, and publication inside the selected provider's existing atomic document boundary. It preserves the legacy human fallback, keeps non-human documents isolated, publishes no partial state, and leaves durable JSON bytes or MySQL-owned state unchanged when the mutator fails.
 - **TEST-140** (Tests) - PASS: Listener-free source inspection proves the Casino nginx virtual hosts override the identity-bearing default access log, use the complete fixed route-family set, and expose exactly the five approved timing variables with every raw request, path, query, identity, network, header, cookie, body, and payload field excluded.
 - **STORAGE-010** (Storage) - PASS: Each MySQL application process owns one lazy thread-safe physical connection pool with validated capacity one through sixteen, bounded checkout and physical-connect deadlines, non-reconnecting idle liveness checks, request-scoped cursor and lease cleanup, fork/PID isolation, rollback and session reset before reuse, unhealthy-session discard, and terminal process cleanup, while JSON storage, schema version two, DDL-free runtime grants, transaction semantics, and application-only rollback remain unchanged.
 - **TEST-141** (Tests) - PASS: Focused fake-connector and disposable-MySQL evidence proves pool configuration bounds, hard capacity, waiter wake and timeout, physical reuse, non-reconnecting dead-session replacement, rollback/reset isolation, cleanup discard, connector failure, PID rebuild, terminal shutdown, provider integration, secret-free metrics, and sanitized p50/p95/throughput/error measurements at concurrency one, two, four, and eight with no exhaustion or cross-request session leakage.
