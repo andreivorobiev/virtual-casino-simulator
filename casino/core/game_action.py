@@ -44,6 +44,8 @@ MAX_CANONICAL_TEXT = 4_096
 MAX_CANONICAL_BYTES = 65_536
 # Keep cents inside the conservative signed 64-bit storage domain.
 MAX_INTEGER_CENTS = 9_000_000_000_000_000_000
+# Apply the same conservative bound to canonical integer payload values.
+MAX_CANONICAL_INTEGER = MAX_INTEGER_CENTS
 # Accept only portable internal identity characters.
 IDENTITY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
 # Require one lowercase SHA-256 digest at durable identity boundaries.
@@ -149,7 +151,7 @@ def _validate_frozen_node(value, *, depth: int, budget: list[int]) -> None:
     # Validate exact bounded integers.
     if type(value) is int:
         # Reject integers outside the conservative provider storage domain.
-        if abs(value) > MAX_INTEGER_CENTS:
+        if abs(value) > MAX_CANONICAL_INTEGER:
             # Publish one fixed value-free numeric failure.
             raise ValidationError("Canonical integer is out of range")
         # Finish scalar validation.
@@ -213,7 +215,7 @@ def _freeze_canonical(value, *, depth: int, budget: list[int], active: set[int])
     # Preserve bounded signed integers exactly without bool coercion.
     if type(value) is int:
         # Reject integers outside the conservative provider storage domain.
-        if abs(value) > MAX_INTEGER_CENTS:
+        if abs(value) > MAX_CANONICAL_INTEGER:
             # Publish one fixed value-free numeric failure.
             raise ValidationError("Canonical integer is out of range")
         # Return the immutable integer unchanged.
@@ -524,6 +526,8 @@ class GameActionSnapshot:
             if not _is_frozen_value(state_value):
                 # Reject mutable state escaping into a planner.
                 raise ValidationError("Game action state snapshot is invalid")
+            # Enforce all canonical scalar, nesting, and item bounds on direct reconstruction.
+            _validate_frozen_tree(state_value)
         # Require exact declared canonical state coverage.
         if tuple(state_keys) != self.resources.state_keys:
             # Reject missing, duplicate, reordered, or undeclared state keys.
@@ -618,6 +622,8 @@ class GameActionPlan:
         if not _is_frozen_value(self.outcome):
             # Reject mutable planner outcomes.
             raise ValidationError("Game action outcome is invalid")
+        # Enforce all canonical scalar, nesting, and item bounds on direct reconstruction.
+        _validate_frozen_tree(self.outcome)
         # Require an immutable bounded movement tuple.
         if type(self.movements) is not tuple or len(self.movements) > MAX_MOVEMENTS:
             # Reject mutable or unbounded movement collections.
@@ -646,6 +652,8 @@ class GameActionPlan:
             if not _is_frozen_value(state_value):
                 # Reject mutable planner state writes.
                 raise ValidationError("Game action state updates are invalid")
+            # Enforce all canonical scalar, nesting, and item bounds on direct reconstruction.
+            _validate_frozen_tree(state_value)
         # Require canonical order and unique state writes.
         if keys != sorted(set(keys)):
             # Prevent order-dependent or duplicate state replacements.

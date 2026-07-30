@@ -32,7 +32,9 @@ from casino.core.game_action import (
     GameActionSnapshot,
     # Import reviewed public bounds for hostile cases.
     MAX_CANONICAL_DEPTH,
+    MAX_CANONICAL_INTEGER,
     MAX_CANONICAL_ITEMS,
+    MAX_CANONICAL_TEXT,
     MAX_MOVEMENTS,
     MAX_STATE_RESOURCES,
     MAX_WALLET_RESOURCES,
@@ -320,6 +322,33 @@ class GameActionContractTests(unittest.TestCase):
             # Omit the exact declared state key.
             GameActionSnapshot.create(resources=resources, wallet_balances={"player-a": 1_000}, state_values={})
 
+    # Prove direct durable snapshot reconstruction enforces canonical scalar bounds.
+    def test_direct_snapshot_reconstruction_rejects_oversized_scalar_state(self):
+        # Declare the exact state-only resource used by each hostile snapshot.
+        resources = _resources(wallet_ids=())
+        # Enumerate canonical scalar values immediately beyond their public bounds.
+        oversized_values = (
+            # Exceed the maximum canonical text length by one code point.
+            "x" * (MAX_CANONICAL_TEXT + 1),
+            # Exceed the maximum canonical integer magnitude by one.
+            MAX_CANONICAL_INTEGER + 1,
+        )
+        # Exercise each hostile direct state value independently.
+        for value in oversized_values:
+            # Identify only the scalar type in focused diagnostics.
+            with self.subTest(value_type=type(value).__name__):
+                # Require direct reconstruction to enforce the canonical tree boundary.
+                with self.assertRaises(ValidationError):
+                    # Construct the snapshot directly instead of using its safe factory.
+                    GameActionSnapshot(
+                        # Bind the exact declared resources.
+                        resources=resources,
+                        # Provide the complete empty wallet projection.
+                        wallet_balances=(),
+                        # Supply the hostile scalar as a directly reconstructed state value.
+                        state_values=(("example-state:player-a", value),),
+                    )
+
     # Prove a paid action commits once and compatible replay returns the exact receipt.
     def test_paid_action_commits_signed_cents_once_and_replays_exact_receipt(self):
         # Build one isolated conformance fake.
@@ -546,6 +575,35 @@ class GameActionContractTests(unittest.TestCase):
                 # Repeat valid movement objects above the bound.
                 movements=tuple(GameActionMovement(wallet_id="player-a", amount_cents=1, reason="credit") for _index in range(MAX_MOVEMENTS + 1)),
             )
+
+    # Prove direct durable plan reconstruction enforces canonical scalar bounds.
+    def test_direct_plan_reconstruction_rejects_oversized_outcome_and_state_scalars(self):
+        # Enumerate canonical scalar values immediately beyond their public bounds.
+        oversized_values = (
+            # Exceed the maximum canonical text length by one code point.
+            "x" * (MAX_CANONICAL_TEXT + 1),
+            # Exceed the maximum canonical integer magnitude by one.
+            MAX_CANONICAL_INTEGER + 1,
+        )
+        # Exercise every hostile scalar through both direct plan surfaces.
+        for value in oversized_values:
+            # Identify only the scalar type in focused diagnostics.
+            with self.subTest(surface="outcome", value_type=type(value).__name__):
+                # Require direct outcome reconstruction to enforce canonical bounds.
+                with self.assertRaises(ValidationError):
+                    # Construct the plan directly with the hostile scalar outcome.
+                    GameActionPlan(outcome=value)
+            # Exercise the direct state-update surface independently.
+            with self.subTest(surface="state_update", value_type=type(value).__name__):
+                # Require direct state reconstruction to enforce canonical bounds.
+                with self.assertRaises(ValidationError):
+                    # Construct one otherwise valid plan with the hostile state scalar.
+                    GameActionPlan(
+                        # Use an exact valid immutable canonical outcome.
+                        outcome=FrozenObject(()),
+                        # Supply the hostile scalar in one direct state update.
+                        state_updates=(("example-state:player-a", value),),
+                    )
 
     # Prove immutable receipts reject inconsistent projections and assignment.
     def test_receipt_is_immutable_and_rejects_inconsistent_after_snapshot(self):
