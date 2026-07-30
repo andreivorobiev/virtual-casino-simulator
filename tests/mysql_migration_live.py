@@ -141,7 +141,7 @@ def _proof(connection, config, directory: Path, name: str) -> Path:
     return proof_path
 
 
-# Attempt one apply from a separate process while another connection owns the target lock.
+# Attempt one held apply from a separate process without inheriting connection state.
 def _locked_apply_worker(database: str, proof_path: str) -> str:
     # Build the exact process-local migration config.
     config = _migration_config(database)
@@ -151,7 +151,7 @@ def _locked_apply_worker(database: str, proof_path: str) -> str:
     try:
         # Start protected apply so the fixed lock result can be returned.
         try:
-            # Use a one-second lock wait against the parent-held lock.
+            # Use a one-second timeout value that must remain unused by held policy.
             mysql_migrations.apply_migrations(connection, config, Path(proof_path), 1)
         # Capture only the fixed migration-policy diagnostic.
         except mysql_migrations.MigrationError as exc:
@@ -163,6 +163,28 @@ def _locked_apply_worker(database: str, proof_path: str) -> str:
     finally:
         # Release all process-owned resources.
         connection.close()
+
+
+# Seed one reviewed catalog prefix solely inside the disposable test fixture.
+def _seed_catalog_prefix(connection, migrations, through_version: int) -> None:
+    # Disable autocommit for migration metadata history/state DML.
+    connection.autocommit = False
+    # Establish the exact metadata boundary through the existing repository seam.
+    mysql_migrations._initialize_metadata(connection, migrations)
+    # Open one cursor for immutable fixture migration statements.
+    cursor = connection.cursor()
+    # Apply only the selected contiguous prefix in reviewed order.
+    for migration in migrations[:through_version]:
+        # Re-read the clean source prefix before each fixture transition.
+        source_state = mysql_migrations.inspect_schema(connection, migrations)
+        # Persist the exact applying marker before application DDL.
+        mysql_migrations._mark_applying(connection, source_state, migration)
+        # Execute every checksum-verified statement in the selected migration.
+        for statement in migration.statements:
+            # Apply one exact driver statement without SQL splitting.
+            cursor.execute(statement)
+        # Persist exact immutable history only after all statements succeed.
+        mysql_migrations._mark_complete(connection, migration, migrations)
 
 
 # Recreate only explicitly validated disposable databases and synthetic accounts.
@@ -350,24 +372,66 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 lock_cursor.execute("SELECT GET_LOCK(%s, 0)", (lock_name,))
                 # Require successful parent lock ownership.
                 assert lock_cursor.fetchone()[0] == 1
-                # Start a separate process that must time out on the same target lock.
+                # Start a separate process that must refuse before attempting the held target lock.
                 with ProcessPoolExecutor(max_workers=1) as executor:
                     # Capture only the fixed child outcome.
                     locked_result = executor.submit(_locked_apply_worker, base_database, str(base_proof)).result(timeout=30)
-                # Require advisory serialization across processes.
-                assert "advisory lock is unavailable" in locked_result
+                # Require the child to return the catalog hold rather than lock contention.
+                assert "apply policy is held" in locked_result
                 # Release the parent-owned target lock.
                 lock_cursor.execute("SELECT RELEASE_LOCK(%s)", (lock_name,))
-                # Require release confirmation before normal apply.
+                # Require release confirmation before fixture-only schema seeding.
                 assert lock_cursor.fetchone()[0] == 1
-                # Apply clean empty 0-to-1-to-2-to-3 under the real runner.
-                final_state = mysql_migrations.apply_migrations(base_connection, base_config, base_proof)
+                # Require direct public apply to refuse with the target still empty.
+                try:
+                    # Attempt the bridge-held public mutation boundary.
+                    mysql_migrations.apply_migrations(base_connection, base_config, base_proof)
+                # Accept only the fixed catalog policy result.
+                except mysql_migrations.MigrationError as exc:
+                    # Require exact held-policy semantics.
+                    assert "apply policy is held" in str(exc)
+                # Fail if bridge source applied any migration.
+                else:
+                    # Surface one fixed category.
+                    raise AssertionError("held migration application was permitted")
+                # Prove no metadata or application table was created by the held call.
+                empty_cursor = base_connection.cursor()
+                # Count only Casino-owned tables in the disposable database.
+                empty_cursor.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'casino\\_%' ESCAPE '\\\\'")
+                # Require exact zero state before fixture-only DDL.
+                assert int(empty_cursor.fetchone()[0]) == 0
+                # Seed the checksum-verified full chain solely for runtime compatibility proof.
+                migrations, _, _, _ = mysql_migrations.load_catalog()
+                # Apply the complete fixture prefix through existing private test seams.
+                _seed_catalog_prefix(base_connection, migrations, 3)
+                # Inspect exact runtime state after fixture seeding.
+                final_state = mysql_migrations.verify_runtime_compatibility(base_connection)
                 # Require exact schema version three.
                 assert final_state.current_version == 3 and final_state.status == "clean"
                 # Require exact applied migration sequence.
                 assert [item[0] for item in final_state.applied] == [1, 2, 3]
-                # Prove repeat-safe exact recheck needs no backup proof or DDL.
-                assert mysql_migrations.apply_migrations(base_connection, base_config, None).current_version == 3
+                # Open a fresh process-independent connector to model schema-three restart readiness.
+                restarted_three = _connector().connect(**base_config.kwargs())
+                # Always close the restarted schema-three connection.
+                try:
+                    # Require the complete chain to remain runtime compatible after reconnection.
+                    assert mysql_migrations.verify_runtime_compatibility(restarted_three).current_version == 3
+                # Release the restarted connection.
+                finally:
+                    # Close all connector-owned state.
+                    restarted_three.close()
+                # Prove held apply remains closed even at the complete schema-three tail.
+                try:
+                    # Attempt a no-proof application call at the full chain.
+                    mysql_migrations.apply_migrations(base_connection, base_config, None)
+                # Accept the same fixed hold.
+                except mysql_migrations.MigrationError as exc:
+                    # Require exact policy identity.
+                    assert "apply policy is held" in str(exc)
+                # Fail if full-chain state bypassed the hold.
+                else:
+                    # Surface one fixed category.
+                    raise AssertionError("held migration tail recheck was permitted")
             # Always close the base migrator connection.
             finally:
                 # Release all base connection resources.
@@ -410,6 +474,18 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 version_two = mysql_migrations.inspect_schema(upgrade_connection, migrations)
                 # Prove only migration three remains pending.
                 assert version_two.current_version == 2 and version_two.status == "clean"
+                # Prove bridge runtime readiness accepts the exact immutable schema-two prefix.
+                assert mysql_migrations.verify_runtime_compatibility(upgrade_connection).current_version == 2
+                # Open a fresh connector to model schema-two application restart readiness.
+                restarted_two = _connector().connect(**upgrade_config.kwargs())
+                # Always close the restarted schema-two connection.
+                try:
+                    # Require exact prefix compatibility after reconnection.
+                    assert mysql_migrations.verify_runtime_compatibility(restarted_two).current_version == 2
+                # Release the restarted connection.
+                finally:
+                    # Close all connector-owned state.
+                    restarted_two.close()
                 # Mark the exact next transition dirty to prove automatic replay refusal.
                 cursor.execute("UPDATE casino_schema_migration_state SET status = 'dirty', applying_version = 3 WHERE state_id = 1")
                 # Persist the intentional interrupted-state fixture.
@@ -442,10 +518,30 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 cursor.execute("UPDATE casino_schema_migration_state SET status = 'clean', applying_version = NULL WHERE state_id = 1")
                 # Commit source restoration before proof construction.
                 upgrade_connection.commit()
-                # Create a new exact schema-two backup/restore proof.
-                upgrade_proof = _proof(upgrade_connection, upgrade_config, proof_root, "upgrade")
-                # Apply only the pending 2-to-3 suffix through the public runner.
-                assert mysql_migrations.apply_migrations(upgrade_connection, upgrade_config, upgrade_proof).current_version == 3
+                # Require held policy to continue refusing from clean schema two.
+                try:
+                    # Attempt the pending suffix through the public runner.
+                    mysql_migrations.apply_migrations(upgrade_connection, upgrade_config, None)
+                # Accept only the fixed catalog hold.
+                except mysql_migrations.MigrationError as exc:
+                    # Require exact held-policy identity.
+                    assert "apply policy is held" in str(exc)
+                # Fail if the bridge applied schema three.
+                else:
+                    # Surface one fixed category.
+                    raise AssertionError("schema-two held suffix was applied")
+                # Seed only migration three through the disposable fixture seam.
+                source_state = mysql_migrations.inspect_schema(upgrade_connection, migrations)
+                # Mark exact schema three applying for fixture setup.
+                mysql_migrations._mark_applying(upgrade_connection, source_state, migrations[2])
+                # Execute the one checksum-verified schema-three statement.
+                for statement in migrations[2].statements:
+                    # Apply one exact driver statement in the disposable target.
+                    cursor.execute(statement)
+                # Complete the exact full-chain fixture state.
+                mysql_migrations._mark_complete(upgrade_connection, migrations[2], migrations)
+                # Require runtime readiness to accept the complete schema-three chain.
+                assert mysql_migrations.verify_runtime_compatibility(upgrade_connection).current_version == 3
                 # Capture exact immutable rows for corruption/refusal cases.
                 applied_rows = [(item.version, item.name, item.checksum) for item in migrations]
                 # Corrupt one checksum in the disposable metadata.

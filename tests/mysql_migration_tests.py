@@ -8,6 +8,12 @@ import io
 from contextlib import redirect_stderr, redirect_stdout
 # Import source inspection for the runtime DDL-free invariant.
 import inspect
+# Import environment copying for isolated direct-script execution.
+import os
+# Import a listener-free child process for extracted-release import proof.
+import subprocess
+# Import the active interpreter path for exact child execution.
+import sys
 # Import temporary files for synthetic proof records outside the repository.
 import tempfile
 # Import UTC time values for deterministic proof windows.
@@ -193,10 +199,12 @@ class MySQLMigrationTests(unittest.TestCase):
     def test_catalog_contract_is_exact(self):
         # Load the verified immutable migration catalog.
         migrations, expected, minimum, catalog_sha256 = mysql_migrations.load_catalog()
-        # Require the three explicit sequential migrations and exact-only compatibility.
+        # Require the three explicit sequential migrations and bridge runtime window.
         self.assertEqual([item.version for item in migrations], [1, 2, 3])
         # Require the separately versioned runtime window.
-        self.assertEqual((minimum, expected), (3, 3))
+        self.assertEqual((minimum, expected), (2, 3))
+        # Require the public contract to bind the closed apply policy.
+        self.assertEqual(mysql_migrations.schema_contract()["apply_policy"], "held")
         # Require canonical SHA-256 identities.
         self.assertRegex(catalog_sha256, r"^[0-9a-f]{64}$")
         # Require every listed migration to retain a distinct checksum.
@@ -213,6 +221,38 @@ class MySQLMigrationTests(unittest.TestCase):
         self.assertEqual(mysql_migrations.migration_chain_digest(migrations, 2), "72fa8f8918022d5bcd29ba286bd96ab6f319ea0ea6aee5e376e1ff71c2eeedd8")
         # Require one reviewed complete chain identity for the new catalog tail.
         self.assertEqual(mysql_migrations.migration_chain_digest(migrations), "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
+
+    # Prove catalog loading rejects absent or alternate apply policy.
+    def test_catalog_apply_policy_is_exact_and_closed(self):
+        # Parse the canonical catalog fixture once.
+        canonical = json.loads(mysql_migrations.CATALOG_PATH.read_text(encoding="utf-8"))
+        # Exercise a missing policy and an unreviewed enabling value.
+        for policy in (None, "automatic"):
+            # Allocate an isolated catalog directory.
+            with self.subTest(policy=policy), tempfile.TemporaryDirectory() as temporary:
+                # Resolve the synthetic migration root.
+                migration_root = Path(temporary)
+                # Copy every immutable migration byte-for-byte.
+                for row in canonical["migrations"]:
+                    # Preserve the exact checksum-selected file.
+                    (migration_root / row["file"]).write_bytes((mysql_migrations.MIGRATION_ROOT / row["file"]).read_bytes())
+                # Copy the catalog object before one policy mutation.
+                altered = dict(canonical)
+                # Remove or replace the policy as selected.
+                if policy is None:
+                    # Model an unbound legacy catalog.
+                    altered.pop("apply_policy")
+                else:
+                    # Model a migration-enabling catalog.
+                    altered["apply_policy"] = policy
+                # Persist the synthetic catalog.
+                catalog_path = migration_root / "catalog.json"
+                # Write deterministic JSON bytes.
+                catalog_path.write_text(json.dumps(altered), encoding="utf-8")
+                # Require refusal before any database seam is available.
+                with self.assertRaisesRegex(mysql_migrations.MigrationError, "apply policy"):
+                    # Load the hostile catalog.
+                    mysql_migrations.load_catalog(catalog_path)
 
     # Prove schema three adds one bounded exact-scope receipt-capacity table and no journal.
     def test_schema_three_receipt_boundary_is_exact_and_bounded(self):
@@ -259,54 +299,25 @@ class MySQLMigrationTests(unittest.TestCase):
         # Reject any trigger, routine, saga, compensation, or journal object in this capacity slice.
         self.assertTrue(all(term not in " ".join(migration.statements).lower() for term in ("trigger", "procedure", "function", "journal", "saga", "compensation")))
 
-    # Prove the public migration runner applies exact 0-to-3 and 2-to-3 suffixes.
-    def test_public_apply_supports_fresh_and_schema_two_upgrade(self):
-        # Load the immutable plan used by both synthetic application paths.
-        migrations, _, _, _ = mysql_migrations.load_catalog()
-        # Build the exact states needed after each public runner transition.
-        version_zero = clean_schema_state(migrations, 0)
-        # Model a genuinely empty target before metadata initialization.
-        uninitialized = clean_schema_state(migrations, 0, initialized=False)
-        # Build every clean applied prefix.
-        version_one = clean_schema_state(migrations, 1)
-        # Preserve exact schema-two upgrade provenance.
-        version_two = clean_schema_state(migrations, 2)
-        # Preserve the final schema-three state.
-        version_three = clean_schema_state(migrations, 3)
-        # Exercise both the empty and exact schema-two source in one bounded table.
-        cases = (
-            # Fresh apply initializes metadata and executes all application migrations.
-            ("fresh", [uninitialized, version_zero, version_one, version_two, version_three], migrations, True),
-            # Exact upgrade executes only the additive schema-three tail.
-            ("upgrade", [version_two, version_three], migrations[2:], False),
-        )
-        # Run each source-state transition independently.
-        for label, states, expected_migrations, initializes in cases:
-            # Allocate one statement-recording connector boundary.
-            connection = FailureConnection()
-            # Patch state/proof seams while exercising the real public apply loop.
-            with self.subTest(label=label), mock.patch.object(mysql_migrations, "inspect_schema", side_effect=states), mock.patch.object(mysql_migrations, "schema_state_digest", return_value="b" * 64), mock.patch.object(mysql_migrations, "validate_backup_proof", return_value={}), mock.patch.object(mysql_migrations, "_initialize_metadata") as initialize, mock.patch.object(mysql_migrations, "_mark_applying") as mark_applying, mock.patch.object(mysql_migrations, "_mark_complete") as mark_complete, mock.patch.object(mysql_migrations, "verify_runtime_compatibility", return_value=version_three):
-                # Apply through the unchanged production migration state machine.
-                result = mysql_migrations.apply_migrations(connection, synthetic_config(), Path("synthetic-proof"))
-            # Require exact clean schema-three completion.
-            self.assertEqual((result.current_version, result.status), (3, "clean"))
-            # Require metadata initialization only for the empty target.
-            self.assertEqual(initialize.call_count, int(initializes))
-            # Require applying and completion markers for the exact pending suffix.
-            self.assertEqual([call.args[2] for call in mark_applying.call_args_list], list(expected_migrations))
-            # Require exact completion records for the same suffix.
-            self.assertEqual([call.args[1] for call in mark_complete.call_args_list], list(expected_migrations))
-            # Extract only immutable application statements between lock operations.
-            application_statements = [statement for statement, _ in connection.statements if not statement.startswith("SELECT ")]
-            # Require exact statement order and no invented repair or journal SQL.
-            self.assertEqual(application_statements, [statement for migration in expected_migrations for statement in migration.statements])
+    # Prove held application refuses before connection state, lock, DDL, or metadata mutation.
+    def test_public_apply_is_held_before_connection_access(self):
+        # Allocate one hostile connection whose attributes and methods must stay untouched.
+        connection = mock.Mock()
+        # Require the fixed catalog-owned hold result.
+        with self.assertRaisesRegex(mysql_migrations.MigrationError, "apply policy is held"):
+            # Attempt application with otherwise complete synthetic inputs.
+            mysql_migrations.apply_migrations(connection, synthetic_config(), Path("synthetic-proof"))
+        # Require no cursor, autocommit assignment, lock, DDL, or state write.
+        self.assertEqual(connection.mock_calls, [])
 
     # Prove release packaging binds and requires the exact schema-three inventory.
     def test_package_inventory_requires_schema_three(self):
         # Calculate release schema provenance from the selected source tree.
         inventory = package_app.mysql_schema_inventory(package_app.ROOT)
-        # Require exact-only schema-three runtime compatibility.
-        self.assertEqual((inventory["minimum_version"], inventory["expected_version"]), (3, 3))
+        # Require the schema-two-to-three bridge runtime window.
+        self.assertEqual((inventory["minimum_version"], inventory["expected_version"]), (2, 3))
+        # Require package provenance to bind the held application policy.
+        self.assertEqual(inventory["apply_policy"], "held")
         # Require the same deterministic chain as the migration runtime.
         self.assertEqual(inventory["migration_chain_sha256"], "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
         # Require every immutable migration path in the archive's mandatory allowlist.
@@ -384,6 +395,31 @@ class MySQLMigrationTests(unittest.TestCase):
         self.assertNotIn("private-driver-sentinel", output)
         # Require no hostile SQL fragment in output.
         self.assertNotIn("secret_sql", output)
+
+    # Prove the deployment bridge checker requires exact schema two and no migration identity.
+    def test_bridge_cli_checks_exact_schema_two_with_runtime_identity_only(self):
+        # Import the deployment CLI after repository configuration is ready.
+        from scripts import mysql_migrate
+        # Load immutable prefixes for exact sanitized state fixtures.
+        migrations, _, _, _ = mysql_migrations.load_catalog()
+        # Exercise the allowed bridge state and the rejected schema-three state.
+        for version, expected_status in ((2, 0), (3, 2)):
+            # Build one exact clean prefix.
+            state = clean_schema_state(migrations, version)
+            # Allocate a closeable runtime connection sentinel.
+            connection = mock.Mock()
+            # Capture machine-readable output.
+            stdout = io.StringIO()
+            # Patch only the fixed runtime connection and SELECT-backed compatibility result.
+            with self.subTest(version=version), mock.patch("sys.argv", ["mysql_migrate.py", "bridge-check-schema2"]), mock.patch.object(mysql_migrate, "_connect_runtime", return_value=connection), mock.patch.object(mysql_migrate, "verify_runtime_compatibility", return_value=state), mock.patch.object(mysql_migrate.MigrationConfig, "from_env") as migration_config, redirect_stdout(stdout):
+                # Require the exact stable CLI status.
+                self.assertEqual(mysql_migrate.main(), expected_status)
+            # Require deployment-only migration credentials to remain unread.
+            migration_config.assert_not_called()
+            # Require connection cleanup on success and refusal.
+            connection.close.assert_called_once()
+            # Require policy output to carry no target data.
+            self.assertNotIn("127.0.0.1", stdout.getvalue())
 
     # Prove the disposable live harness refuses remote or split service tuples before connecting.
     def test_disposable_live_guard_requires_matching_loopback(self):
@@ -540,28 +576,45 @@ class MySQLMigrationTests(unittest.TestCase):
         # Require the only database command to be SELECT.
         self.assertTrue(cursor.execute.call_args.args[0].startswith("SELECT"))
 
-    # Prove connection loss after DDL does not claim dirty-state persistence.
-    def test_connection_loss_reports_unconfirmed_dirty_state(self):
-        # Load the immutable catalog for the exact schema-two upgrade state.
-        migrations, _, _, _ = mysql_migrations.load_catalog()
-        # Model the clean schema-two source whose only pending migration is version three.
-        state = clean_schema_state(migrations, 2)
-        # Build the connection that loses transport on application SQL.
-        connection = FailureConnection(fail_application_statement=True)
-        # Capture the exact interrupted migration passed to dirty-state persistence.
-        dirty_marker = mock.Mock(side_effect=ConnectionError("synthetic marker loss"))
-        # Replace preflight/state helpers so this test targets failure semantics only.
-        with mock.patch.object(mysql_migrations, "inspect_schema", return_value=state), mock.patch.object(mysql_migrations, "schema_state_digest", return_value="b" * 64), mock.patch.object(mysql_migrations, "validate_backup_proof", return_value={}), mock.patch.object(mysql_migrations, "_mark_applying", return_value=None), mock.patch.object(mysql_migrations, "_mark_dirty", dirty_marker):
-            # Require the explicit unknown-dirty-state outcome.
-            with self.assertRaisesRegex(mysql_migrations.MigrationError, "dirty state could not be confirmed"):
-                # Apply against synthetic proof while all real connection identifiers remain unused.
-                mysql_migrations.apply_migrations(connection, synthetic_config(), Path("synthetic-proof"))
-        # Require the fail-closed marker to name only the interrupted schema-three migration.
-        self.assertEqual(dirty_marker.call_args.args[1], migrations[2])
-        # Require apply to force non-autocommit before the failed statement.
-        self.assertFalse(connection.autocommit)
-        # Require advisory lock release to be attempted after the primary failure.
-        self.assertTrue(any(statement.startswith("SELECT RELEASE_LOCK") for statement, _ in connection.statements))
+    # Prove the CLI apply path refuses before credentials, connector import, or database access.
+    def test_cli_apply_is_held_before_configuration_or_connection(self):
+        # Import the deployment CLI without executing its command boundary.
+        from scripts import mysql_migrate
+        # Capture the fixed machine-readable result.
+        stdout = io.StringIO()
+        # Patch hostile seams that must remain unreachable.
+        with mock.patch("sys.argv", ["mysql_migrate.py", "apply"]), mock.patch.object(mysql_migrate.MigrationConfig, "from_env") as config, mock.patch.object(mysql_migrate, "_connect") as connect, redirect_stdout(stdout):
+            # Require the documented policy failure status.
+            self.assertEqual(mysql_migrate.main(), 2)
+        # Require neither migration credentials nor a connector to be touched.
+        config.assert_not_called()
+        # Require no network-capable connector call.
+        connect.assert_not_called()
+        # Require only the fixed held-policy error.
+        self.assertIn("apply policy is held", stdout.getvalue())
+
+    # Prove absolute script execution binds imports to its release root from an unrelated cwd.
+    def test_absolute_cli_script_resolves_release_modules_from_unrelated_cwd(self):
+        # Resolve the exact candidate script under test.
+        script = package_app.ROOT / "scripts" / "mysql_migrate.py"
+        # Copy the process environment without adding an import path.
+        environment = os.environ.copy()
+        # Remove caller import-path influence.
+        environment.pop("PYTHONPATH", None)
+        # Prevent user-site packages from masking candidate import defects.
+        environment["PYTHONNOUSERSITE"] = "1"
+        # Prevent bytecode residue in the unrelated working directory.
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        # Allocate a disposable unrelated working directory.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Run only argument help, which imports all candidate modules but opens no connector.
+            result = subprocess.run([sys.executable, "-B", str(script), "--help"], cwd=temporary, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        # Require successful direct-script import and argument construction.
+        self.assertEqual(result.returncode, 0, result.stderr)
+        # Require the candidate bridge command in the resolved script output.
+        self.assertIn("bridge-check-schema2", result.stdout)
+        # Reject the reproduced ambient-cwd import failure.
+        self.assertNotIn("ModuleNotFoundError", result.stderr)
 
     # Prove a persisted schema-two/applying-three dirty boundary never replays automatically.
     def test_dirty_schema_two_applying_three_requires_forward_fix(self):
@@ -573,31 +626,44 @@ class MySQLMigrationTests(unittest.TestCase):
         dirty = mysql_migrations.SchemaState(True, 2, "dirty", 3, mysql_migrations.migration_chain_digest(migrations, 2), applied, True)
         # Record every lock and potential application statement.
         connection = FailureConnection()
-        # Return only the dirty state after the advisory lock is acquired.
+        # Replace inspection to prove the held guard precedes even dirty-state reads.
         with mock.patch.object(mysql_migrations, "inspect_schema", return_value=dirty):
-            # Require a reviewed forward-fix rather than replay.
-            with self.assertRaisesRegex(mysql_migrations.MigrationError, "forward-fix"):
+            # Require the catalog-level hold before any replay decision.
+            with self.assertRaisesRegex(mysql_migrations.MigrationError, "apply policy is held"):
                 # Attempt normal apply without bypass evidence.
                 mysql_migrations.apply_migrations(connection, synthetic_config(), None)
-        # Require no application statement or migration metadata mutation.
-        self.assertTrue(all(statement.startswith("SELECT ") for statement, _ in connection.statements))
+        # Require no lock, read, DDL, or metadata statement.
+        self.assertEqual(connection.statements, [])
 
-    # Prove unconfirmed advisory-lock release fails a successful no-op recheck.
-    def test_lock_release_failure_fails_closed(self):
-        # Load the exact expected state.
-        migrations, expected, _, _ = mysql_migrations.load_catalog()
-        # Build complete applied history.
-        applied = tuple((item.version, item.name, item.checksum) for item in migrations)
-        # Model exact clean compatibility.
-        state = mysql_migrations.SchemaState(True, expected, "clean", None, mysql_migrations.migration_chain_digest(migrations), applied, True)
-        # Build a connection that cannot confirm release.
-        connection = FailureConnection(release_result=0)
-        # Replace only schema reads because the test targets lock behavior.
-        with mock.patch.object(mysql_migrations, "inspect_schema", return_value=state), mock.patch.object(mysql_migrations, "verify_runtime_compatibility", return_value=state):
-            # Require the combined fail-closed release diagnostic.
-            with self.assertRaisesRegex(mysql_migrations.MigrationError, "release could not be confirmed"):
-                # Run the repeat-safe apply path with no pending migrations.
-                mysql_migrations.apply_migrations(connection, synthetic_config(), None)
+    # Prove clean schema-two and schema-three prefixes are both runtime compatible.
+    def test_runtime_accepts_only_clean_exact_schema_two_or_three_prefixes(self):
+        # Load the checksum-bound complete catalog.
+        migrations, _, _, _ = mysql_migrations.load_catalog()
+        # Exercise both reviewed runtime versions.
+        for version in (2, 3):
+            # Build one exact clean prefix state.
+            state = clean_schema_state(migrations, version)
+            # Patch only the SELECT-backed state reader.
+            with self.subTest(version=version), mock.patch.object(mysql_migrations, "inspect_schema", return_value=state):
+                # Require the runtime verifier to return the same exact version.
+                self.assertEqual(mysql_migrations.verify_runtime_compatibility(mock.Mock()).current_version, version)
+        # Reject old, future, and dirty states through the same fixed boundary.
+        refused = (
+            # Schema one is below the closed bridge window.
+            clean_schema_state(migrations, 1),
+            # Schema four is an unknown future state.
+            mysql_migrations.SchemaState(True, 4, "clean", None, "0" * 64, tuple(), True),
+            # Applying schema three is not runtime-visible.
+            mysql_migrations.SchemaState(True, 2, "applying", 3, mysql_migrations.migration_chain_digest(migrations, 2), tuple(), True),
+            # Dirty schema three is not runtime-visible.
+            mysql_migrations.SchemaState(True, 2, "dirty", 3, mysql_migrations.migration_chain_digest(migrations, 2), tuple(), True),
+        )
+        # Require every unreviewed runtime state to fail closed.
+        for state in refused:
+            # Patch only the already checksum-valid state result.
+            with self.subTest(version=state.current_version, status=state.status), mock.patch.object(mysql_migrations, "inspect_schema", return_value=state), self.assertRaisesRegex(mysql_migrations.MigrationError, "not compatible"):
+                # Exercise the public readiness boundary.
+                mysql_migrations.verify_runtime_compatibility(mock.Mock())
 
     # Prove runtime readiness source contains no DDL or migration-state DML.
     def test_runtime_readiness_is_ddl_free(self):

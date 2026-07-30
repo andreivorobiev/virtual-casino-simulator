@@ -143,6 +143,35 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         # Reject a nested shell command boundary for any root-managed monitor value.
         self.assertNotIn("bash -lc", text)
 
+    # Prove the bridge deployment keeps schema two unchanged and never invokes migration.
+    def test_workflow_checks_schema_two_before_and_after_cutover_without_migration(self):
+        # Read the inert workflow source.
+        text = self.workflow_text()
+        # Pin the command-scoped candidate-root binding used by both checks.
+        bound_check = 'PYTHONPATH="${release_root}" /opt/casino/venv/bin/python "${release_root}/scripts/mysql_migrate.py" bridge-check-schema2'
+        # Require exactly one pre-cutover and one post-activation proof.
+        self.assertEqual(text.count(bound_check), 2)
+        # Locate the pre-cutover proof.
+        candidate_check = text.index(bound_check)
+        # Locate the post-activation proof independently.
+        activated_check = text.rindex(bound_check)
+        # Require the candidate proof before rollback activation or production mutation.
+        self.assertLess(candidate_check, text.index("trap rollback ERR"))
+        # Require the post-activation proof after service restart and edge monitoring.
+        self.assertGreater(activated_check, text.index("/opt/casino/current/scripts/run_edge_monitor.py"))
+        # Require active selector identity to equal the same selected release root.
+        selector_identity = 'test "$(readlink -f /opt/casino/current)" = "${release_root}"'
+        # Prove selector identity before the second schema check.
+        self.assertLess(text.index(selector_identity), activated_check)
+        # Require both proofs before staging cleanup and trap removal.
+        self.assertLess(activated_check, text.index('rm -rf "${staging}" "${prior_env}"'))
+        # Reject any migration apply command in the production workflow.
+        self.assertNotIn("mysql_migrate.py apply", text)
+        # Reject backup proof or migration identity plumbing in the activation job.
+        self.assertNotIn("--backup-proof", text)
+        # Reject database rollback commands or server-global changes.
+        self.assertNotIn("SET GLOBAL", text.upper())
+
     # Prove the workflow requires scoped SSH secrets and does not embed host identities.
     def test_workflow_requires_scoped_ssh_secrets(self):
         # Read the workflow source as inert text.
