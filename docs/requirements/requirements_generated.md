@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.53.30
+- application: 9.54.0
 - core: 9.35.0
 - ledger: 9.1.1
 - players: 9.1.0

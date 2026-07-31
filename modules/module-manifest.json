@@ -2,7 +2,7 @@
   "application": "0.9.5.43",
   "source_baseline": "9.1.0",
   "modules": {
-    "application": "9.53.30",
+    "application": "9.54.0",
     "core": "9.35.0",
     "ledger": "9.1.1",
     "players": "9.1.0",
