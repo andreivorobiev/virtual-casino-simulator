@@ -1362,8 +1362,18 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(auth_013), 1)
         # Require the policy requirement to remain Core-owned.
         self.assertEqual(auth_013[0]["module"], "Core")
+        # Count the owner-only enrollment-policy transaction requirement.
+        auth_014 = [row for row in requirements if row.get("id") == "AUTH-014"]
+        # Require exactly one permanent owner-transaction allocation.
+        self.assertEqual(len(auth_014), 1)
+        # Require the owner-transaction requirement to remain Core-owned.
+        self.assertEqual(auth_014[0]["module"], "Core")
+        # Require strict provider code and evidence to stay inside the existing AUTH allocation.
+        self.assertEqual({"casino/core/storage.py", "tests/storage_tests.py"} <= set(auth_014[0]["implementation_files"]), True)
         # Parse the core descriptor for the enrollment-policy compatible addition.
         core_module = json.loads((ROOT / "modules" / "core.json").read_text(encoding="utf-8"))
+        # Parse the Admin descriptor for the additive owner-only routes.
+        admin_module = json.loads((ROOT / "modules" / "admin.json").read_text(encoding="utf-8"))
         # Parse the tests descriptor.
         tests_module = json.loads((ROOT / "modules" / "tests.json").read_text(encoding="utf-8"))
         # Parse the docs descriptor independently.
@@ -1373,12 +1383,14 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the tooling descriptor for the compatible bridge addition.
         tooling_module = json.loads((ROOT / "modules" / "tooling.json").read_text(encoding="utf-8"))
         # Require the exact compatible core minor allocation.
-        self.assertEqual(core_module["version"], "9.34.0")
+        self.assertEqual(core_module["version"], "9.35.0")
+        # Require the exact compatible Admin minor allocation.
+        self.assertEqual(admin_module["version"], "1.14.0")
         # Require the exact shared tests patch allocation.
-        self.assertEqual(tests_module["version"], "1.64.49")
+        self.assertEqual(tests_module["version"], "1.64.50")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.49")
+        self.assertEqual(docs_module["version"], "1.64.50")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.52.1")
+        self.assertEqual(contracts_module["version"], "1.53.0")
         # Require the compatible tooling minor allocation.
         self.assertEqual(tooling_module["version"], "1.23.0")

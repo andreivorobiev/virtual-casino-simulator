@@ -12494,14 +12494,26 @@
     {
       "id": "AUTH-013",
       "module": "Core",
-      "description": "Enrollment policy resolution reads one durable provider-backed document with exact closed, invite-only, and self-signup modes plus independent public-method flags; absent, non-mapping, or unowned-schema documents preserve the deployed environment seed/fallback with strict booleans and no widening beyond it, schema-owned unknown modes fail public mutation routes to their safe denial envelopes, and public email signup plus invitation redemption emit only closed-vocabulary operational decisions whose logging must succeed before mutation.",
+      "description": "Enrollment policy resolution reads one durable provider-backed document with exact closed, invite-only, and self-signup modes plus independent public-method flags; absent, non-mapping, or unowned-schema documents preserve the deployed environment seed/fallback with strict booleans and no widening beyond it, schema-owned malformed documents fail closed for operator recovery without read-side repair, and public email signup plus invitation redemption emit only closed-vocabulary operational decisions whose logging must succeed before mutation.",
       "status": "PASS",
       "api_tests": ["API-ENROLLMENT-POLICY-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/enrollment_policy.py", "casino/app.py", "contracts/openapi/auth.v2.yaml", "contracts/compatibility/restricted-preview-security.json", "tests/enrollment_policy_tests.py", "tests/account_spine_tests.py", "tests/run_tests.py"],
       "introduced_in": "issue-333-enrollment-policy-slice1",
       "changed_in": "issue-333-enrollment-policy-slice2",
-      "notes": "This slice enforces only existing public email-signup and invitation-redemption routes while preserving the shipped default-off restricted-preview configuration, deployed environment fallback semantics, generic redemption denial, existing login behavior, and frozen v1 API. The existing JSONL sink is operational enrollment-decision logging, not immutable/provider-backed actor/change audit; that audit remains deferred to the separately governed #528 Admin-write transaction. No Admin write, readiness, RBAC, UI, OAuth/provider, live enablement, provider network, public exposure, deployment, or issue-closure authority is added, and #333 remains open."
+      "notes": "This slice enforces only existing public email-signup and invitation-redemption routes while preserving the shipped default-off restricted-preview configuration, deployed environment fallback semantics, generic redemption denial, existing login behavior, and frozen v1 API. The existing JSONL sink remains operational enrollment-decision logging, not immutable/provider-backed actor/change audit; the separate owner transaction and audit are governed by AUTH-014. No readiness, UI, OAuth/provider, live enablement, provider network, public exposure, deployment, or issue-closure authority is added, and #333 remains open."
+    },
+    {
+      "id": "AUTH-014",
+      "module": "Core",
+      "description": "Only the current active platform owner can strictly read, preview, or apply the additive v2 enrollment-policy Admin transaction; preview returns a deterministic revision bound to the validated policy plus verified audit count and head, apply requires that exact revision with exact boolean confirmation and a nonempty printable reason of at most 256 characters, and the provider transaction rejects stale revisions before proposal, logging, policy, or audit mutation. A successful transaction atomically commits the exact policy plus an append-only hash-linked opaque-actor change record while returning the consumed and new revisions with the exact prior policy for application rollback.",
+      "status": "PASS",
+      "api_tests": ["API-ENROLLMENT-POLICY-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/admin.py", "casino/core/enrollment_policy.py", "casino/core/storage.py", "contracts/openapi/admin-users.v2.yaml", "contracts/openapi/auth.v2.yaml", "contracts/compatibility/restricted-preview-security.json", "tests/enrollment_policy_tests.py", "tests/storage_tests.py", "tests/run_tests.py"],
+      "introduced_in": "issue-333-enrollment-policy-slice3",
+      "changed_in": "issue-333-enrollment-policy-slice3",
+      "notes": "The immutable actor/change history is stored beside the policy under one JSON cross-process or MySQL row-locking document transaction and is verified before every policy visibility or later mutation. Only FileNotFoundError selects the reviewed default; malformed schema-owned bytes, duplicate keys, access failures, audit mismatch, and capacity failure preserve exact provider state without fallback, backup, normalization, or read-side write. Ordinary Admin access is insufficient. This source slice does not itself invoke the route, enable signup or providers in production, add readiness or UI controls, change login or frozen v1 behavior, authorize OAuth/provider/mail/DNS/billing/public exposure, close #333, or release/deploy an application."
     },
     {
       "id": "ADMIN-028",

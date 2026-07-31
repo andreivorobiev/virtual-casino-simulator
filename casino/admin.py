@@ -12,7 +12,7 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings
+from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import the invitation lifecycle for the Admin invitation-by-email section. (issue #332)
@@ -270,6 +270,34 @@ def _current_platform_owner(actor: dict | None) -> dict:
     auth.require_platform_owner(current or {})
     # Return the current actor for transaction-scoped validation and audit attribution.
     return current
+
+
+# Extract one sparse proposal or exact rollback document from an owner Admin request. (AUTH-014)
+def _enrollment_policy_changes(body, *, apply_request: bool):
+    # Require one JSON object so arbitrary request bodies cannot control membership checks.
+    if not isinstance(body, dict):
+        # Fail through the standard validation envelope before provider access.
+        raise ValidationError("enrollment policy request must be an object")
+    # Name the request controls accepted by preview and apply.
+    allowed = {"changes", "policy"}
+    # Include exact confirmation, bounded reason, and preview revision only on the applying route.
+    if apply_request:
+        # Extend the allowlist without accepting any future field implicitly.
+        allowed.update({"confirm", "reason", "revision"})
+    # Reject arbitrary readiness, role, provider, or public-control fields.
+    if set(body) - allowed:
+        # Return a value-free unsupported-field diagnostic.
+        raise ValidationError("enrollment policy request contains unsupported fields")
+    # Require exactly one proposal representation.
+    if ("changes" in body) == ("policy" in body):
+        # Refuse missing or ambiguous proposal sources.
+        raise ValidationError("enrollment policy request requires exactly one policy or changes object")
+    # Convert an exact prior-policy response into a complete rollback change.
+    if "policy" in body:
+        # Reuse the module-owned exact policy validator.
+        return enrollment_policy.changes_for_policy(body["policy"])
+    # Return the sparse proposal for validation by the shared preview/apply computation.
+    return body["changes"]
 
 
 # Build the transaction validator for owner-authorized role mutations. (ADMIN-028)
@@ -709,6 +737,43 @@ def register(router):
     def admin_feedback_cleanup_v2(body, query):
         # Return only policy and deletion counts.
         return {"cleanup": feedback.cleanup_retention()}
+
+    # Register the owner-only coherent policy and immutable actor/change audit view. (AUTH-014)
+    @router.get(r"/api/v2/admin/enrollment-policy")
+    # Require current canonical owner authority even though the route is read-only.
+    def admin_enrollment_policy_read_v2(body, query, context):
+        # Resolve current durable owner authority rather than trusting a stale session payload.
+        _current_platform_owner(context.get("user"))
+        # Return one provider-coherent policy, capability, vocabulary, and verified audit snapshot.
+        return enrollment_policy.owner_view()
+
+    # Register owner-only policy impact preview without provider mutation. (AUTH-014)
+    @router.post(r"/api/v2/admin/enrollment-policy/preview")
+    # Compute the exact capability effect through the same pure function used by apply.
+    def admin_enrollment_policy_preview_v2(body, query, context):
+        # Reject ordinary Admins before validating proposal fields.
+        _current_platform_owner(context.get("user"))
+        # Extract one sparse proposal or exact prior-policy rollback document.
+        changes = _enrollment_policy_changes(body, apply_request=False)
+        # Return the exact current/proposed policies and shared capability impact without writing.
+        return enrollment_policy.propose(changes)
+
+    # Register owner-only confirmed policy apply with provider-backed actor/change evidence. (AUTH-014)
+    @router.post(r"/api/v2/admin/enrollment-policy")
+    # Commit policy and immutable audit inside one provider transaction.
+    def admin_enrollment_policy_apply_v2(body, query, context):
+        # Reject ordinary Admins before confirming or validating proposal fields.
+        owner = _current_platform_owner(context.get("user"))
+        # Require the exact boolean confirmation rather than a truthy alias.
+        if not isinstance(body, dict) or body.get("confirm") is not True:
+            # Refuse accidental or ambiguous mutation requests.
+            raise ValidationError("enrollment policy change requires explicit confirmation")
+        # Extract the proposal only after current owner authority and confirmation succeed.
+        changes = _enrollment_policy_changes(body, apply_request=True)
+        # Atomically commit policy plus immutable actor/change evidence with the canonical owner id.
+        result = enrollment_policy.update(changes, actor_id=owner.get("user_id"), reason=body.get("reason"), expected_revision=body.get("revision"))
+        # Return the exact prior policy for direct application rollback plus the committed receipt.
+        return {"policy": result["current"], "previous": result["previous"], "previous_revision": result["previous_revision"], "revision": result["revision"], "impact": result["impact"], "audit": result["audit"]}
 
     # Attach the v2 Admin summary route required for additive guest-trial reporting.
     @router.get(r"/api/v2/admin/guest-trials")

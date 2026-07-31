@@ -1,6 +1,6 @@
 {
   "artifact": "restricted-preview-security",
-  "version": 3,
+  "version": 4,
   "stage": "restricted-preview",
   "canonical_origin": "https://casino.tiltseven.com",
   "enrollment_policy": {
@@ -8,8 +8,9 @@
     "modes": ["closed", "invite-only", "self-signup"],
     "environment_seed": true,
     "environment_fallback": true,
-    "absent_malformed_or_unowned_document": "deployed-environment-baseline",
-    "schema_v1_unknown_mode": "safe-route-denial",
+    "absent_nonmapping_or_unowned_document": "deployed-environment-baseline",
+    "schema_v1_malformed_document": "fixed-operator-recovery-without-read-side-write",
+    "schema_v1_unknown_mode": "fixed-operator-recovery-without-read-side-write",
     "public_methods_default_enabled": false,
     "enforced_routes": ["/api/v2/auth/signup", "/api/v2/auth/redeem-invitation"],
     "decision_logging": {
@@ -22,9 +23,31 @@
       "reasons": ["allowed", "mode_closed", "self_signup_disabled", "method_disabled", "invitations_disabled", "unknown_route"],
       "fail_closed_before_mutation": true,
       "immutable_actor_change_audit": false,
-      "immutable_audit_deferred_to": "#528 Admin-write transaction"
+      "separate_owner_change_audit": "provider-backed-hash-linked-policy-transaction"
     },
-    "admin_write_available": false,
+    "admin_write": {
+      "routes": ["/api/v2/admin/enrollment-policy", "/api/v2/admin/enrollment-policy/preview"],
+      "authority": "current-active-platform-owner",
+      "ordinary_admin_write": false,
+      "confirmation": "exact-true",
+      "reason": "required-printable-1-through-256",
+      "preview_apply_computation": "shared-resolved-capability-function",
+      "preview_revision": "sha256-canonical-policy-plus-verified-audit-count-and-head",
+      "apply_revision_required": true,
+      "stale_preview": "fixed-conflict-no-state-disclosure-no-write-no-operational-log",
+      "strict_document_read": "missing-default-owned-schema-malformed-operator-recovery-no-read-side-write",
+      "rejected_mutation": "no-policy-audit-or-operational-log-write",
+      "rollback": "exact-prior-policy-plus-current-revision",
+      "audit": {
+        "provider_backed": true,
+        "same_document_transaction": true,
+        "append_only": true,
+        "hash_linked": true,
+        "actor": "canonical-opaque-platform-owner-id",
+        "prior_and_current_policy": true
+      }
+    },
+    "admin_write_available": true,
     "live_enablement_authorized": false,
     "api_v1_unchanged": true
   },
