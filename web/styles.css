@@ -412,6 +412,7 @@ label {
 }
 
 .wallet-pill {
+  position: relative;
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -427,6 +428,105 @@ label {
     linear-gradient(135deg, rgba(255, 59, 107, 0.12), transparent 48%),
     rgba(20, 10, 34, 0.9);
   box-shadow: inset 0 0 22px rgba(255, 59, 107, 0.06), 0 10px 26px rgba(0, 0, 0, 0.22);
+}
+
+/* Layer wallet gains above the stable pill without changing its layout or authoritative number. (UX-023) */
+.wallet-pill.wallet-celebration-gain::after,
+.wallet-pill.wallet-celebration-big::after {
+  position: absolute;
+  z-index: 4;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  content: "";
+  box-shadow: 0 0 24px 2px rgba(232, 199, 96, 0.58), inset 0 0 16px rgba(232, 199, 96, 0.2);
+  animation: wallet-celebration-glow 1.2s ease-out both;
+}
+
+/* Give reviewed large gains a stronger glow while preserving the same bounded footprint. */
+.wallet-pill.wallet-celebration-big::after {
+  box-shadow: 0 0 38px 4px rgba(232, 199, 96, 0.76), inset 0 0 22px rgba(232, 199, 96, 0.26);
+}
+
+/* Add a scale pulse only to the rendered wallet box, never to surrounding shell tracks. */
+.wallet-pill.wallet-celebration-big {
+  animation: wallet-celebration-pulse 1.2s ease-out both;
+}
+
+/* Keep the exact positive delta inside the wallet's transient presentation layer. */
+.wallet-gain {
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  right: 12px;
+  pointer-events: none;
+  color: var(--metal-gold, #e8c760);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.66);
+  animation: wallet-celebration-rise 1.2s ease-out both;
+}
+
+/* Own every large-gain coin in one fixed noninteractive layer outside shell overflow. */
+.wallet-coin-layer {
+  position: fixed;
+  z-index: 60;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* Render each bounded coin from controller-supplied safe arc variables. */
+.wallet-coin {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border: 1px solid rgba(255, 243, 194, 0.72);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #fff3c2, var(--metal-gold, #e8c760) 55%, #a9791f);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.48);
+  animation: wallet-celebration-coin .98s cubic-bezier(.2, .7, .3, 1) var(--wallet-coin-delay) both;
+}
+
+/* Fade the decorative glow without changing the wallet's persistent base shadow. */
+@keyframes wallet-celebration-glow {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Scale a large gain inside a four-percent bound that does not reflow shell chrome. */
+@keyframes wallet-celebration-pulse {
+  0%, 100% { transform: scale(1); }
+  24% { transform: scale(1.04); }
+}
+
+/* Raise and fade the exact positive delta while leaving the wallet number untouched. */
+@keyframes wallet-celebration-rise {
+  0% { opacity: 0; transform: translateY(6px) scale(.9); }
+  18% { opacity: 1; transform: translateY(-2px) scale(1); }
+  100% { opacity: 0; transform: translateY(-28px) scale(1); }
+}
+
+/* Move each decorative coin through one bounded rise-and-fall arc. */
+@keyframes wallet-celebration-coin {
+  0% { opacity: 0; transform: translate(0, 0) scale(.4) rotate(0deg); }
+  15% { opacity: 1; }
+  42% { transform: translate(var(--wallet-coin-x), var(--wallet-coin-y)) scale(1) rotate(var(--wallet-coin-rotation)); }
+  100% { opacity: 0; transform: translate(var(--wallet-coin-x-final), calc(var(--wallet-coin-y) + 150px)) scale(.9) rotate(var(--wallet-coin-rotation)); }
+}
+
+/* Remove every celebration animation defensively when the controller selects reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .wallet-pill.wallet-celebration-gain::after,
+  .wallet-pill.wallet-celebration-big::after,
+  .wallet-pill.wallet-celebration-big,
+  .wallet-gain,
+  .wallet-coin {
+    animation: none;
+  }
 }
 
 .wallet-pill::before {

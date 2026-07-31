@@ -9,6 +9,8 @@ import { getLocaleState, initI18n, onLocaleChange, registerI18nDomains, setLocal
 import { initPwa } from './core/pwa.js';
 // Import the active brand and its runtime token applier so one config skins the app.
 import { activeBrand, applyBrand } from './core/brand.js';
+// Import the session-owned wallet celebration controller without adding game or API authority. (UX-023)
+import { createWalletCelebration, createWalletCelebrationLifecycle } from './core/celebrate.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
 // Import the registered-user problem-report dialog without adding feedback code to the shared shell.
@@ -26,6 +28,19 @@ let latestState = null;
 let shellConnected = false;
 // Cache the authenticated current-user payload so wallet and profile UI stay consistent.
 let currentSession = null;
+// Own BFCache-safe wallet controller replacement for the complete application module lifetime.
+const walletCelebrationLifecycle = createWalletCelebrationLifecycle({
+  // Bind pagehide and pageshow to the current browser document.
+  lifecycleTarget: window,
+  // Create each authenticated-session controller from the current persistent wallet nodes.
+  createController: () => createWalletCelebration({ amountNode: document.getElementById('balance'), walletNode: document.querySelector('.wallet-pill'), documentRef: document, formatAmount: tokens }),
+  // Read only the latest normalized current-session amount for BFCache restoration.
+  currentBalance: () => currentTokenBalance(currentSession),
+  // Restore the exact authoritative display once before a BFCache baseline is seeded.
+  settleDisplay: () => renderTokenBalance(currentSession),
+  // Remount only while an authenticated, terms-complete session still owns the shell.
+  shouldMount: () => Boolean(currentSession && !currentSession.terms?.required),
+});
 // Track the active game-rail observer so navigation never leaves duplicate mutation listeners.
 let gameRailObserver = null;
 // Track the current lobby search without encoding transient filters into game routes.
@@ -38,7 +53,19 @@ const oauthCompletion = readOAuthCompletion();
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
 // Keep the shell's private session cache synchronized when game helpers refresh current-user state.
-window.addEventListener('casino-current-user', event => { currentSession = normalizeCurrentUser(event.detail); });
+window.addEventListener('casino-current-user', event => {
+  // Normalize the exact current-user payload published by the shared wallet helper.
+  const nextSession = normalizeCurrentUser(event.detail);
+  // Adopt the refreshed session before any queued wallet presentation work can run.
+  currentSession = nextSession;
+  // Run after refreshBalance performs its single synchronous authoritative wallet render.
+  queueMicrotask(() => {
+    // Ignore a stale event after logout, another refresh, or authenticated-session replacement.
+    if (currentSession !== nextSession) return;
+    // Decorate only the exact latest server-settled amount without writing wallet text again.
+    walletCelebrationLifecycle.update(currentTokenBalance(nextSession));
+  });
+});
 // Report top-level browser errors through the client log API for admin visibility.
 window.addEventListener('error', event => logClient('window_error', { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno }));
 // Report unhandled promise rejections through the client log API for admin visibility.
@@ -62,6 +89,18 @@ function normalizeCurrentUser(payload) {
   const termsRequired = typeof terms.required === 'boolean' ? terms.required : user.terms_required === true || data.terms_required === true || terms.accepted === false;
   // Return a normalized current-user session object for shell rendering.
   return { ...data, user, player, terms: { ...terms, required: termsRequired } };
+}
+
+// Resolve the same current-user play-token field precedence used by the shared wallet renderer.
+function currentTokenBalance(session) {
+  // Read the normalized player payload when the current contract supplies one.
+  const player = session?.player || {};
+  // Read the normalized user payload for compatible early contract shapes.
+  const user = session?.user || {};
+  // Resolve the established compatible token fields without reading rendered DOM text.
+  const value = player.token_balance ?? player.tokens ?? user.token_balance ?? user.tokens ?? session?.token_balance ?? session?.tokens?.balance ?? 0;
+  // Return the numeric value consumed by renderTokenBalance and the decoration controller.
+  return Number(value || 0);
 }
 
 // Convert one public API catalog row into the shell's route and presentation descriptor.
@@ -241,6 +280,8 @@ function isGuestSession() {
 
 // Clear every shell-owned authenticated cache before showing any logged-out gate.
 function clearAuthenticatedShellState() {
+  // Dispose the session-owned celebration before a game or logged-out surface can remount.
+  walletCelebrationLifecycle.unmount('session-cleared');
   // Stop observing game-only rails before the authenticated route outlet is replaced.
   gameRailObserver?.disconnect();
   // Unmount the active game when its lifecycle hook exists so stale rerenders cannot survive sign-out.
@@ -273,8 +314,10 @@ function updateCurrentUserShell() {
   window.CasinoCurrentUser = currentSession;
   // Expose problem reporting only to authenticated persistent accounts.
   syncFeedbackReporter(currentSession?.user);
-  // Render the fake-token balance with the required token glyph.
-  const amount = renderTokenBalance(currentSession);
+  // Resolve the authoritative amount independently from any transient presentation.
+  const amount = currentTokenBalance(currentSession);
+  // Settle the exact display once through the active controller, or directly before it is mounted.
+  if (walletCelebrationLifecycle.snapshot().mounted) walletCelebrationLifecycle.update(amount, () => renderTokenBalance(currentSession)); else renderTokenBalance(currentSession);
   // Read the logout button reserved by index.html.
   const logoutButton = document.getElementById('logout-btn');
   // Read the registered-user-only token-credit menu from the persistent shell.
@@ -649,6 +692,8 @@ function renderTermsGate(session) {
 
 // Enter the authenticated casino shell after login and terms are complete.
 async function enterAuthenticated(session) {
+  // Dispose any prior session generation before adopting a login, reconnect, or guest identity.
+  walletCelebrationLifecycle.unmount('session-replaced');
   // Store the normalized current user for shell rendering.
   currentSession = normalizeCurrentUser(session);
   // Branch to terms acceptance before showing the casino shell.
@@ -657,8 +702,10 @@ async function enterAuthenticated(session) {
   if (currentSession.user?.role === 'admin') await loadVoiceSettings();
   // Reveal the casino chrome now that the browser session is authenticated.
   document.body.classList.remove('auth-locked');
-  // Update the persistent wallet, logout, and locale controls.
-  updateCurrentUserShell();
+  // Update the persistent wallet, logout, and locale controls without celebrating initial load.
+  const initialBalance = updateCurrentUserShell();
+  // Bind one controller to the persistent wallet nodes and this exact authenticated session.
+  walletCelebrationLifecycle.mount(initialBalance);
   // Load casino state for status rail and initial lobby counts.
   await refreshShellState();
   // Resolve a bookmarked, reloaded, or already-active route after the catalog is available.
@@ -993,6 +1040,8 @@ export async function navigate(route, options = {}) {
   if (!currentSession || currentSession.terms?.required) return;
   // Store the requested route for error reporting.
   let targetRoute = route;
+  // End any in-flight shell celebration before game teardown or route remount can replace content.
+  walletCelebrationLifecycle.interrupt('navigation');
   // Start protected navigation so failures render inside the route outlet.
   try {
     // Store the previous route so mounted games can unmount before route changes.
