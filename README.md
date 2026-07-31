@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.40`
+Packaged application release: `0.9.5.41`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.40 carries the accepted read-only, default-off enrollment-policy foundation for issue #333. The additive `/api/v2` policy response declares a closed `enrollment_mode` vocabulary, resolves through one durable provider-backed policy document, and accepts stored overrides only from the exact schema-v1 shape; malformed, absent, boolean, string, old, and future documents preserve the deployed restricted-preview baseline. `/api/v1`, enrollment enforcement, Admin mutation, readiness policy, RBAC, UI, provider enablement, public exposure, signup, OAuth, mail, and invitation behavior remain unchanged. The release retains the MySQL schema-two/schema-three rollback bridge, with migration application held and production remaining at schema 2 so exact v0.9.5.39 remains eligible for application-only rollback. Schema-3 production migration, MySQL composite execution, receipt-table grant hardening, remaining enrollment enforcement and administration, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity remain separately governed. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.41 carries the accepted issue #333 enrollment-policy enforcement slice for public email signup and invitation redemption. Both public mutation routes enforce the same provider-backed policy published by the additive `/api/v2` response, retain the exact schema-v1 gate and deployed environment fallback, preserve existing login and frozen `/api/v1` behavior, and map unknown schema-v1 modes to existing safe denial envelopes before mutation. Operational decision logging uses reviewed bounded values and must succeed before account or invitation mutation; it is not immutable provider-backed actor/change audit, which remains deferred to issue #528. Admin mutation, readiness policy, RBAC, UI, OAuth/provider enablement, provider network, public exposure, credential, DNS, billing, and mail behavior remain unchanged. The release retains the MySQL schema-two/schema-three rollback bridge, with migration application held and production remaining at schema 2 so exact v0.9.5.40 remains eligible for application-only rollback. Schema-3 production migration, MySQL composite execution, receipt-table grant hardening, remaining enrollment administration, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity remain separately governed. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
