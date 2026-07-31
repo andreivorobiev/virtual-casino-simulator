@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.42 Release Notes
+# Virtual Casino Simulator v0.9.5.43 Release Notes
+
+## Bounded Roulette and Slots presentation
+
+- Preserves Roulette's exact linear 3.6-second and twenty-one-stop compatibility curves while adding route-owned rotor, ball, capture, and true reduced-motion presentation.
+- Preserves Slots' fast 180-millisecond unattended path while adding five deterministic staggered strips, anticipation presentation, and a strip-free reduced-motion path.
+- Uses the existing motion scope for every awaited timer and follow-up so disposal settles exactly once rather than leaving a pending action or stale continuation.
+- Proves real mount, unmount, and remount behavior across API, landing, delayed-wallet, and delayed-bot boundaries without stale DOM, shared-wallet, sound, voice, bot, refund, toast, telemetry, or duplicate-continuation effects.
+- Maps `ROU-072` to listener-free `UI-ROU-PRESENTATION-001` and existing `BR-ROU-REDUCED-MOTION-001`, and maps `SLOT-037` to listener-free `UI-SLOT-PRESENTATION-001` and existing `BR-SLOT-ECONOMICS-001`, without allocating a generic TEST or Browser case.
+- Requires source-bound hosted normal and reduced actions for both games in English and Russian across desktop-primary, desktop-compact, tablet, and mobile.
+- Makes no authoritative game-engine, economy, ledger, API, provider, public-policy, or production change.
+- Keeps full pacing, adoption, one-hundred-spin, and video gates planned; issues #168, #169, #170, and #74 remain open and `MOTION-006..011` remain planned.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.42 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
 
 ## Revision-bound enrollment-policy owner transaction
 
