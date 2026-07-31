@@ -1,4 +1,16 @@
-# Virtual Casino Simulator v0.9.5.43 Release Notes
+# Virtual Casino Simulator v0.9.5.44 Release Notes
+
+## Catalog-derived shell labels
+
+- Packages the accepted application `9.54.0` shell-label integration through sole content PR #548; the release-only application revision advances mechanically to `9.54.1`.
+- Adds the 40 previously missing static `games.<id>.label` resources to each locale so all 46 catalog games resolve before catalog hydration.
+- Derives every English value from the current canonical game descriptor and every Russian value from its reviewed `ru-RU` translation.
+- Keeps cold-open and deep-link fallback labels identical to the hydrated catalog labels without changing route logic, game behavior, API envelopes, or contracts.
+- Records that original PR #539 was marked merged only because ancestry shell `088e3c1c` made its contributor head reachable; PR #548 is the sole content integration and no second #539 content merge occurred.
+- Keeps dependent PR #525 open and held until this unique release is terminal-green deployed.
+- Adds no requirement ID, test ID, API case, game behavior, provider, public-policy, readiness, production, or issue-closure claim.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.43 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
 
 ## Bounded Roulette and Slots presentation
 

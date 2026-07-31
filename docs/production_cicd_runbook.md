@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.43`; `0.9.6.0` remains reserved until the frozen open-PR cohort is fully resolved.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.44`; `0.9.6.0` remains reserved until the frozen open-PR cohort is fully resolved.
 
 ## What happens after a merge
 
@@ -142,7 +142,7 @@ v0.9.5.35 carries the accepted listener-free request-latency baseline for issue 
 
 v0.9.5.38 carries the accepted #430 Phase 0c JSON-provider recoverable game-action journal, immutable paid and zero-cost receipts, cross-process storage gate, and failure-atomic Admin reset boundary. It preserves the route-free provider-neutral contract while excluding schema-3, the MySQL composite transaction, routes, games, Slots adoption, ledger behavior, provider scaling, and all-provider atomicity claims. Its compatibility record retains exact immutable v0.9.5.37 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
-v0.9.5.43 carries the accepted #527 bounded Roulette and Slots presentation and lifecycle slice while retaining the #430 MySQL rollback-compatibility bridge. Roulette preserves its exact 3.6-second and twenty-one-stop curves; Slots preserves its fast 180-millisecond path; both add true reduced-motion and stale-safe route teardown without changing engine, economy, ledger, or API authority. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record declares rollback at unchanged schema 2 and retains exact immutable v0.9.5.42 as the application-only predecessor; database rollback remains prohibited. A later separately governed migration release may apply schema 3 only after backup, quiescence, grant and drift proof, and must retain a schema-3-capable predecessor.
+v0.9.5.44 carries the accepted catalog-derived shell-label integration from sole content PR #548 while retaining the #430 MySQL rollback-compatibility bridge. Both locales supply static fallback labels for all 46 catalog games without changing route logic, API, game, economy, ledger, provider, or public-policy authority; original PR #539 is ancestry-reachable rather than a second content merge, and dependent PR #525 remains held through terminal deployment. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record declares rollback at unchanged schema 2 and retains exact immutable v0.9.5.43 as the application-only predecessor; database rollback remains prohibited. A later separately governed migration release may apply schema 3 only after backup, quiescence, grant and drift proof, and must retain a schema-3-capable predecessor.
 
 ## Historical first-rollout blocker
 
