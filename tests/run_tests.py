@@ -3437,7 +3437,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
     # Make the active reporter, shard partition, and affected-game selection visible to the shared run_case helper.
     global ACTIVE_PROGRESS,BROWSER_SHARD_CASES,BROWSER_CASE_SEQ,BROWSER_AFFECTED_GAMES
     # Start protected logic so failures can be handled safely.
-    try: from playwright.sync_api import sync_playwright
+    try: from playwright.sync_api import TimeoutError as PlaywrightTimeoutError,sync_playwright
     # Handle the expected failure path for the protected logic.
     except Exception:
         # Write diagnostic output so the current operation can be inspected.
@@ -3607,10 +3607,56 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             offline_result=pwa_page.evaluate("async () => { try { const mod=await import('/core/api.js'); await mod.addUserTokens({amount:1}); return {ok:true}; } catch(error){ return {ok:false,code:error.code||'',message:error.message}; } }")
                             # Require a fail-closed error before any queued or replayable mutation.
                             assert offline_result['ok'] is False and offline_result['code']=='OFFLINE',offline_result
-                            # Navigate while truly offline so only the cached index and exact static module allowlist can reconstruct the shell.
-                            pwa_page.goto(f'{base}/games/roulette',wait_until='domcontentloaded',timeout=10000)
-                            # Require the cached shell, PWA controller, and localization runtime without accepting stale authoritative game state.
-                            pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='offline' && document.body?.dataset.testid==='pwa-shell' && Boolean(window.CasinoI18n)",timeout=8000)
+                            # Bound failure-only page exceptions captured during offline shell reconstruction.
+                            pwa_page_errors=[]
+                            # Bound failure-only console errors captured during offline shell reconstruction.
+                            pwa_console_errors=[]
+                            # Normalize one diagnostic value without retaining local origins, roots, newlines, or unbounded text.
+                            def pwa_diagnostic_text(value):
+                                # Replace the ephemeral server origin before the diagnostic can enter an artifact.
+                                text=str(value).replace(base,'<origin>')
+                                # Replace the local checkout path before the diagnostic can enter an artifact.
+                                text=text.replace(str(ROOT),'<root>')
+                                # Collapse whitespace and retain only a bounded diagnostic prefix.
+                                return re.sub(r'\s+',' ',text).strip()[:240]
+                            # Retain at most eight sanitized page errors around the failed predicate.
+                            def capture_pwa_page_error(error):
+                                # Append one bounded error only while the reviewed cardinality remains available.
+                                if len(pwa_page_errors)<8: pwa_page_errors.append(pwa_diagnostic_text(error))
+                            # Retain at most eight sanitized error-level console messages around the failed predicate.
+                            def capture_pwa_console_error(message):
+                                # Ignore non-error console traffic and bound the retained diagnostic cardinality.
+                                if message.type=='error' and len(pwa_console_errors)<8: pwa_console_errors.append(pwa_diagnostic_text(message.text))
+                            # Observe page exceptions only across the exact offline navigation and readiness boundary.
+                            pwa_page.on('pageerror',capture_pwa_page_error)
+                            # Observe error-level console output only across the exact offline navigation and readiness boundary.
+                            pwa_page.on('console',capture_pwa_console_error)
+                            # Bound listener cleanup around the unchanged offline navigation and readiness wait.
+                            try:
+                                # Navigate while truly offline so only the cached index and exact static module allowlist can reconstruct the shell.
+                                pwa_page.goto(f'{base}/games/roulette',wait_until='domcontentloaded',timeout=10000)
+                                # Preserve the original single wait, predicate, ordering, and eight-second budget.
+                                try:
+                                    # Require the cached shell, PWA controller, and localization runtime without accepting stale authoritative game state.
+                                    pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='offline' && document.body?.dataset.testid==='pwa-shell' && Boolean(window.CasinoI18n)",timeout=8000)
+                                # Add evidence only when the existing readiness wait times out.
+                                except PlaywrightTimeoutError:
+                                    # Inspect bounded predicate, document, worker, cache, and passive module-resource state without retrying readiness.
+                                    try: pwa_timeout_state=pwa_page.evaluate("""async () => { const pwaState=window.CasinoPwa?.state?.()??null; const shellMarker=document.body?.dataset?.testid??null; const i18nPresent=Boolean(window.CasinoI18n); const controller=navigator.serviceWorker.controller; const cacheNames=(await caches.keys()).filter(name => name.startsWith('casino-static-shell-v')).slice(0,4); const cachedResponse=await caches.match('/core/celebrate.js'); const celebrateResources=performance.getEntriesByType('resource').filter(entry => { try { return new URL(entry.name).pathname==='/core/celebrate.js'; } catch (_) { return false; } }); const celebrateResource=celebrateResources.at(-1); const falsePredicates=[]; if (pwaState!=='offline') falsePredicates.push('pwaState'); if (shellMarker!=='pwa-shell') falsePredicates.push('shellMarker'); if (!i18nPresent) falsePredicates.push('i18nPresent'); return {falsePredicates,pwaState,shellMarker,i18nPresent,documentReadyState:document.readyState,online:navigator.onLine,controllerPresent:Boolean(controller),controllerScript:controller?new URL(controller.scriptURL).pathname:null,controllerState:controller?.state??null,relevantCacheNames:cacheNames,relevantCachePresent:cacheNames.length>0,celebrateCached:Boolean(cachedResponse),celebrateResourceObserved:Boolean(celebrateResource),celebrateResourceCount:Math.min(celebrateResources.length,4),celebrateResourceCompleted:Boolean(celebrateResource?.responseEnd)}; }""")
+                                    # Normalize a diagnostic-evaluation failure without hiding the original readiness failure.
+                                    except Exception as diagnostic_error: pwa_timeout_state={'diagnosticError':pwa_diagnostic_text(diagnostic_error)}
+                                    # Bind the bounded page and console observations to the exact timeout snapshot.
+                                    pwa_timeout_state['pageErrors']=pwa_page_errors
+                                    # Bind only bounded error-level console observations to the exact timeout snapshot.
+                                    pwa_timeout_state['consoleErrors']=pwa_console_errors
+                                    # Fail with the same Playwright timeout class and sanitized low-cardinality evidence.
+                                    raise PlaywrightTimeoutError('PWA offline readiness timeout diagnostic '+json.dumps(pwa_timeout_state,sort_keys=True,separators=(',',':'))) from None
+                            # Always remove diagnostic listeners so the successful path retains no later output or state.
+                            finally:
+                                # Release the page-error listener installed only for this readiness boundary.
+                                pwa_page.remove_listener('pageerror',capture_pwa_page_error)
+                                # Release the console listener installed only for this readiness boundary.
+                                pwa_page.remove_listener('console',capture_pwa_console_error)
                             # Prove a direct authoritative API request is unavailable rather than served from the worker cache.
                             direct_offline_api=pwa_page.evaluate("async () => { try { await fetch('/api/v1/casino/state',{credentials:'include'}); return true; } catch (_) { return false; } }")
                             # Reject any offline API replay or cached authoritative response.
