@@ -4776,7 +4776,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Apply the real media preference before triggering the controller branch.
                             page.emulate_media(reduced_motion='reduce' if reduced else 'no-preference')
                             # Open the registered-user wallet menu when the prior successful action closed it.
-                            if page.locator('.wallet-menu').get_attribute('open') is None: page.get_by_test_id('wallet-menu-summary').click()
+                            if page.locator('.wallet-menu').get_attribute('open') is None: page.locator('#wallet-menu-summary').click()
                             # Fill the deterministic ordinary or large gain amount.
                             page.locator('#add-token-amount').fill(str(amount))
                             # Observe the exact current-user mutation while activating the visible action.
