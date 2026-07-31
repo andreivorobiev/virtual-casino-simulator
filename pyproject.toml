@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virtual-casino-simulator"
-version = "0.9.5.45"
+version = "0.9.5.46"
 description = "Local fake-money virtual casino simulator with isolated modules and GitHub/Codex governance."
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"

@@ -1,35 +1,34 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-31T19:27:01Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-31T21:05:59Z.
 
 ## Current branch / active Codex work
 
-- Terminal-green protected/main/tag/release/live production is exact v0.9.5.45 `3d30ebc9e08ca6db344f852b4d7acfbc100e69ad`; MySQL remains clean at schema 2 and the held schema-3 migration was not invoked.
-- `codex/521-wallet-celebration-controller` preserves accepted ancestry shell `f1b1826d`, whose ordered parents are exact v45 main first and immutable contributor head `b9f1f539` second while its tree remains byte-identical to v45.
-- The isolated controller is mutable and local-only pending independent Worker-B source, governance, and exact-head audit. It has no upstream or remote branch and no push, PR, hosted-check, merge, release, or deployment authority.
+- Protected main is exact sole content merge `7aa059e62ae971bf6c4c64bdbb16afd168c9ef6d`, whose ordered parents are terminal v0.9.5.45 main `3d30ebc9e08ca6db344f852b4d7acfbc100e69ad` first and accepted PR #552 head `92c71f1b07bd3b2563136bd972e9758500845222` second.
+- Terminal production remains exact v0.9.5.45 at clean MySQL schema 2 with schema-3 application held; no release or deployment claim is made for the local v0.9.5.46 packet.
+- `codex/release-v0.9.5.46` serializes only the standard local release packet from exact merged main. It has no upstream or remote ref and no push, PR, tag, publication, or deployment authority.
 
 ## Live queue snapshot
 
-- Durable #74 comment `5146412975` and #521 comment `5146413599` release this P1 `stack-rank:020` wallet-celebration lane while keeping #74 OPEN and the eventual controller PR non-closing.
-- Durable amendment comments #74 `5146449210` and #521 `5146449775` replace collided `UX-008` with unique permanent `UX-023` and reserve only application `9.55.0`, tests `1.65.2`, and docs `1.64.56` subject to the final exact-head audit.
-- External PR #521 and branch/worktree remain unchanged at contributor `b9f1f539`; #481 and #518 remain held behind this lane because they overlap `web/styles.css`. Every other merge remains held and #450 is excluded.
+- PR #552 is the sole wallet-celebration content integration. Durable PR #521 comment `5147419893` records accepted ancestry shell `f1b1826d` as reachability-only with no second content merge.
+- Durable issue #74 comment `5147420421` records the partial slice and keeps #74 OPEN at P1 and `stack-rank:020` through a unique terminal v0.9.5.46 deployment.
+- #481 and #518 remain held behind this release lane; every other merge remains serialized and #450 remains excluded.
 
 ## Requirement / version claims
 
-- Proposed `UX-023` maps only to existing `BR-LOBBY-001`; it allocates no generic TEST or Browser case ID and adds no API or contract mapping.
-- The mutable controller settles the exact latest server-owned wallet display before decoration, keeps initial render silent, gives loss an immediate clean completion, and bounds normal ordinary or large-gain presentation to one timer, one chip, and at most twelve coins.
-- Overlap, navigation, session replacement, pagehide, BFCache pageshow, reduced motion, and remount have explicit lifecycle ownership. The controller uses no wallet MutationObserver or animation-frame loop and stale callbacks cannot write the wallet or affect a later controller generation.
-- Only application `9.55.0`, tests `1.65.2`, and docs `1.64.56` advance. Package, core, Admin, tooling, contracts, games, and every unrelated module remain unchanged.
+- Retained permanent requirement `UX-023` maps only to existing `BR-LOBBY-001`; this release packet allocates no new requirement, Browser, generic TEST, API, or contract identifier.
+- The accepted application behavior keeps the latest server-owned wallet display authoritative, leaves initial load silent, settles losses immediately, and bounds normal ordinary or threshold gain decoration with explicit overlap, navigation, pagehide, BFCache, reduced-motion, and remount ownership.
+- Release-owned versions advance only to package `0.9.5.46`, application `9.55.1`, contracts `1.53.5`, tests `1.65.3`, and docs `1.64.57`; tooling remains `1.24.0` and every unrelated module remains unchanged.
 
 ## File claims / collision notes
 
-- Direct feature authority is limited to `tests/pwa_tests.py`, `web/app.js`, new `web/core/celebrate.js`, `web/styles.css`, and `web/sw.js`; all are rebuilt from exact v45 rather than copied from the stale contributor base.
-- Minimal governance is limited to `UX-023`, the three module revisions and manifest, the existing Lobby Browser mapping, the shell visual-matrix states, deterministic version fixture, generated requirements/index, one evidence README, and this append-only coordination record.
-- Hosted exact-head Browser evidence must execute thirty-two real wallet-gain cells: English and Russian, all four governed viewports, ordinary and threshold-level gains, and normal and reduced motion. No local Playwright, Chromium, or heavy QA is authorized.
+- The mutable packet is limited to the repository-standard twenty-six release-only paths with new `contracts/compatibility/app-0.9.5.46.json`; it touches no casino runtime, game, workflow, provider, migration, API, ledger, or database source.
+- Exact v0.9.5.45 predecessor pins are source `3d30ebc9e08ca6db344f852b4d7acfbc100e69ad`, archive `fb3841aac3ff6908c1ef0e29dad528b1f874ce5914ed588bda4a1670393aa7ec`, and manifest `0cac490a1ebb7d7ea100ccd49145b58b450cd77e27c509e21751b1e8f5cd6a50`.
+- Fresh protected-main and open-head scans reserve the release tuple uniquely. No stale shared hunk from #481, #518, or another open PR enters this packet.
 
 ## Decisions / handbacks
 
-- The application owns the exact wallet value; celebration code owns decoration only and never derives authority from rendered text.
-- BFCache restoration disposes and forgets the page-hidden controller, ignores hidden-period decoration, settles the current authoritative value once on pageshow, and silently seeds a fresh generation before later updates.
-- This slice changes no game result, wager, payout, economy, ledger, API, contract, provider, signup, OAuth, mail, public policy, DNS, billing, database, package, release, or deployment behavior.
-- #74 remains OPEN; #481/#518 reconcile after this lane; every merge remains serialized until this controller receives independent acceptance and its own unique terminal deployment.
+- Hosted evidence for the accepted slice covers thirty-two English/Russian, four-viewport, ordinary/threshold, normal/reduced cells; this release makes no local Browser or heavy-QA claim.
+- The reconstructed-offline PWA harness fix changes qualification event order only, and the route-qualified Teen Patti mobile rule preserves the fixed-control lane without changing game source, math, result, wager, payout, or economy.
+- Rollback remains application-only at unchanged MySQL schema 2 to exact v0.9.5.45; database rollback is prohibited, runtime minimum/expected remains 2/3, and migration application remains held.
+- This packet makes no game-math, economy, ledger, API, provider, signup, OAuth, mail, public-policy, DNS, billing, database, migration, full-#74, issue-closure, readiness, publication, release-activation, or deployment claim.
