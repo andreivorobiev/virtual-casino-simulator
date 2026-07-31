@@ -106,6 +106,28 @@ class MySQLConfig:  # Group environment-derived MySQL connection settings.
         return {"host": self.host, "port": self.port, "user": self.user, "password": self.password, "database": self.database}
 
 
+# Apply one caller-owned strict document-shape predicate with a fixed recovery boundary.
+def _validated_strict_document(value: Any, validator: Callable[[Any], bool] | None) -> Any:
+    # Return the decoded provider value unchanged when no strict shape was requested.
+    if validator is None:
+        # Preserve ordinary provider behavior for all existing document callers.
+        return value
+    # Start protected validation so caller exceptions cannot disclose stored values or paths.
+    try:
+        # Require the security predicate to affirm the complete decoded value explicitly.
+        valid = validator(value) is True
+    # Collapse every validator failure into one fixed provider-owned recovery error.
+    except Exception:
+        # Preserve the stored document and hide validator or payload details.
+        raise RuntimeError("Stored document requires operator recovery") from None
+    # Reject every false or non-boolean predicate result.
+    if not valid:
+        # Preserve the stored document and return no payload-specific detail.
+        raise RuntimeError("Stored document requires operator recovery")
+    # Return the exact decoded value only after strict validation.
+    return value
+
+
 # Define the StorageProvider interface used by core modules.
 class StorageProvider:
     # Store a human-readable provider name for diagnostics and tests.
@@ -194,13 +216,18 @@ class StorageProvider:
         # Raise because concrete providers must persist settings documents.
         raise NotImplementedError
 
+    # Read one security-sensitive document without corruption fallback or read-side writes.
+    def read_document_strict(self, key: str, default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
+        # Raise because concrete providers must own strict missing/corrupt distinctions.
+        raise NotImplementedError
+
     # Write a named JSON document such as audio settings.
     def write_document(self, key: str, data: Any) -> None:
         # Raise because concrete providers must persist settings documents.
         raise NotImplementedError
 
     # Mutate one named JSON document atomically under the provider's cross-process transaction boundary.
-    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
         # Raise because concrete providers must own their read-modify-write concurrency semantics.
         raise NotImplementedError
 
@@ -2507,6 +2534,41 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 # Reuse the local JSON helper for settings documents.
                 return self._read_json(self.document_path(key), default)
 
+    # Read one local security document strictly without fallback backups or normalization.
+    def read_document_strict(self, key: str, default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
+        # Guard recovery and strict document reads from concurrent local threads.
+        with self.lock:
+            # Bridge the provider-wide and shipped per-document process locks.
+            with self._document_process_lock(key):
+                # Complete every recoverable action before exposing documents.
+                self._recover_all_json_actions_locked()
+                # Resolve the exact durable document path once under both locks.
+                path = self.document_path(key)
+                # Read actual bytes so only FileNotFoundError can select the reviewed default.
+                try:
+                    # Read the exact stored payload without a separate existence check.
+                    encoded = path.read_bytes()
+                # Treat only a truly absent path as the missing-document compatibility case.
+                except FileNotFoundError:
+                    # Preserve lazy default-factory behavior without creating the document.
+                    value = default() if callable(default) else default
+                # Collapse every other filesystem failure without leaking its path or detail.
+                except OSError:
+                    # Refuse with one fixed value-free operator-recovery boundary.
+                    raise RuntimeError("Stored document requires operator recovery") from None
+                # Decode bytes that were read successfully without invoking backup behavior.
+                else:
+                    # Start protected decoding while preserving the original bytes on failure.
+                    try:
+                        # Decode UTF-8 JSON with exact duplicate-key rejection.
+                        value = json.loads(encoded.decode("utf-8"), object_pairs_hook=self._unique_json_object)
+                    # Collapse malformed text, duplicate-key, deep, and numeric-limit failures.
+                    except (UnicodeError, ValueError, RecursionError):
+                        # Refuse with one fixed value-free operator-recovery boundary.
+                        raise RuntimeError("Stored document requires operator recovery") from None
+                # Require any caller-owned security shape without reflecting its contents.
+                return _validated_strict_document(value, validator)
+
     # Write a named JSON document to local storage.
     def write_document(self, key: str, data: Any) -> None:
         # Reject provider mutation attempted from inside a planner.
@@ -2521,7 +2583,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 self._write_json(self.document_path(key), data)
 
     # Mutate one local document under the provider lock for direct provider callers.
-    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
         # Reject provider mutation attempted from inside a planner.
         self._reject_planner_mutation()
         # Serialize the direct provider read-modify-write inside this process.
@@ -2532,17 +2594,41 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 self._recover_all_json_actions_locked()
                 # Resolve the exact document path once under the cross-process lock.
                 path = self.document_path(key)
-                # Evaluate the default only when the durable document is absent.
-                if not path.exists():
-                    # Preserve lazy default-factory behavior for new documents.
-                    current = default() if callable(default) else default
-                # Parse an existing document strictly so malformed evidence is never replaced by a default.
-                else:
-                    # Start protected parsing while keeping the original file untouched on failure.
+                # Use the no-side-effect decoder only for a validator-bound security transaction.
+                if validator is not None:
+                    # Read actual text so only FileNotFoundError can select the default.
                     try:
-                        # Decode the current durable payload inside the complete mutation boundary.
+                        # Read the exact current text while both process locks remain held.
+                        encoded = path.read_bytes()
+                    # Treat only a truly absent document as the reviewed initial state.
+                    except FileNotFoundError:
+                        # Preserve lazy default-factory behavior for a new document.
+                        current = default() if callable(default) else default
+                    # Collapse every other filesystem failure without path disclosure.
+                    except OSError:
+                        # Abort without a backup, temp, normalization, or mutator invocation.
+                        raise RuntimeError("Stored document requires operator recovery") from None
+                    # Decode an existing security document strictly under the update lock.
+                    else:
+                        # Start protected parsing while preserving the exact source bytes.
+                        try:
+                            # Reject invalid UTF-8, invalid JSON, and duplicate object keys.
+                            current = json.loads(encoded.decode("utf-8"), object_pairs_hook=self._unique_json_object)
+                        # Collapse every bounded parser failure into the fixed recovery boundary.
+                        except (UnicodeError, ValueError, RecursionError):
+                            # Abort without a backup, temp, normalization, or mutator invocation.
+                            raise RuntimeError("Stored document requires operator recovery") from None
+                # Preserve the legacy ordinary update decoder and corruption-backup semantics.
+                elif not path.exists():
+                    # Preserve lazy default-factory behavior for ordinary new documents.
+                    current = default() if callable(default) else default
+                # Parse an existing ordinary document through its unchanged last-key-wins decoder.
+                else:
+                    # Start protected legacy parsing.
+                    try:
+                        # Decode with the established ordinary document behavior.
                         current = json.loads(path.read_text(encoding="utf-8"))
-                    # Preserve malformed state and publish an operator-recovery failure.
+                    # Preserve malformed state through the established backup path.
                     except json.JSONDecodeError:
                         # Copy the malformed payload for explicit recovery without replacing the source.
                         backup = path.with_suffix(path.suffix + f".corrupt-{int(time.time())}")
@@ -2550,6 +2636,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                         shutil.copy2(path, backup)
                         # Abort without invoking the mutator or writing a normalized document.
                         raise RuntimeError("Stored document requires operator recovery") from None
+                # Validate the current security document while the complete transaction remains held.
+                current = _validated_strict_document(current, validator)
                 # Apply the caller-owned mutation while both process and thread locks are held.
                 updated = mutator(current)
                 # Atomically replace the complete JSON document only after successful validation and mutation.
@@ -3141,6 +3229,19 @@ class MySQLStorageProvider(StorageProvider):
             # Close the MySQL connection for this operation.
             connection.close()
 
+    # Read one MySQL security document through the existing strict decoder and shape boundary.
+    def read_document_strict(self, key: str, default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
+        # Start protected decoding so malformed provider JSON uses the fixed recovery boundary.
+        try:
+            # Reuse the existing query, missing-row default, and strict MySQL JSON decoder.
+            value = self.read_document(key, default)
+        # Collapse only JSON text/type/limit failures without changing connection behavior.
+        except (UnicodeError, ValueError, TypeError, RecursionError):
+            # Preserve the stored row and return one value-free operator-recovery failure.
+            raise RuntimeError("Stored document requires operator recovery") from None
+        # Apply the same provider-neutral caller-owned shape contract.
+        return _validated_strict_document(value, validator)
+
     # Write a named JSON document to MySQL.
     def write_document(self, key: str, data: Any) -> None:
         # Ensure schema exists before writing the document.
@@ -3164,7 +3265,7 @@ class MySQLStorageProvider(StorageProvider):
             connection.close()
 
     # Mutate one document in a single row-locking MySQL transaction. (OTT-001)
-    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
         # Verify the exact schema before opening a mutation transaction.
         self.ensure_ready()
         # Evaluate the default once so retries and the persisted seed share one canonical value.
@@ -3186,8 +3287,20 @@ class MySQLStorageProvider(StorageProvider):
             cursor.execute("SELECT payload_json FROM casino_documents WHERE document_key = %s FOR UPDATE", (key,))
             # Read the row that the preceding upsert guarantees exists.
             row = cursor.fetchone()
-            # Decode a detached current document for the caller-owned mutation.
-            current = _decode_json(row["payload_json"])
+            # Start protected strict decoding for an optional security-document validator.
+            try:
+                # Decode a detached current document for the caller-owned mutation.
+                current = _decode_json(row["payload_json"])
+            # Collapse malformed MySQL JSON only when strict security validation was requested.
+            except (UnicodeError, ValueError, TypeError, RecursionError):
+                # Preserve ordinary update exceptions for callers without the strict seam.
+                if validator is None:
+                    # Re-raise the original decoder failure unchanged.
+                    raise
+                # Abort this row transaction with one fixed operator-recovery failure.
+                raise RuntimeError("Stored document requires operator recovery") from None
+            # Validate the security document while the database row remains locked.
+            current = _validated_strict_document(current, validator)
             # Apply the mutation while the row remains locked against every other process.
             updated = mutator(current)
             # Persist the complete updated document before releasing the row lock.

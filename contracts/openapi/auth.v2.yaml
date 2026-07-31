@@ -6,13 +6,20 @@ info:
 servers:
   - url: /api/v2
 x-casino-enrollment-policy:
-  revision: 3
+  revision: 5
   enforced_routes: [/api/v2/auth/signup, /api/v2/auth/redeem-invitation]
-  absent-malformed-or-unowned-document: deployed-environment-baseline
-  schema-v1-unknown-mode: safe-route-denial
+  absent-nonmapping-or-unowned-document: deployed-environment-baseline
+  schema-v1-malformed-document: fixed-operator-recovery-without-read-side-write
+  schema-v1-unknown-mode: fixed-operator-recovery-without-read-side-write
   decision_logging: operational-jsonl
   logging_failure: deny-before-mutation
-  immutable_actor_change_audit: deferred-to-pr-528-admin-write-transaction
+  owner_admin_routes: [/api/v2/admin/enrollment-policy, /api/v2/admin/enrollment-policy/preview]
+  owner_role: platform_owner
+  owner_change_confirmation: exact-true-plus-bounded-reason
+  owner_preview_binding: canonical-policy-plus-audit-count-and-head-sha256
+  owner_stale_preview: fixed-conflict-without-write-or-log
+  immutable_actor_change_audit: provider-backed-hash-linked-policy-transaction
+  live_enablement_authorized: false
   api_v1_unchanged: true
 paths:
   # Guest entry is repository-only restricted-preview behavior and does not authorize public launch.

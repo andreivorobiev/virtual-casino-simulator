@@ -71,6 +71,7 @@
     "contracts/openapi/transactional-mail.v2.yaml"
   ],
   "core": [
+    "contracts/openapi/admin-users.v2.yaml",
     "contracts/openapi/auth.v2.yaml",
     "contracts/openapi/feedback.v2.yaml",
     "contracts/openapi/invitations.v2.yaml",

@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Virtual Casino admin user-management API
+  title: Virtual Casino owner and Admin management API
   version: v2
-  description: Additive v2 contract for Admin-role-authorized private beta user administration, terms status, locale, and token/player inspection. Every operation requires active Admin access, while Admin-role grant or revoke additionally requires the bootstrap-managed platform owner.
+  description: Additive v2 contract for private beta user administration plus platform-owner enrollment-policy control. User operations require active Admin access; Admin-role delegation and every enrollment-policy read, preview, or apply operation require the current active bootstrap-managed platform owner.
 servers:
   - url: /api/v2
 paths:
@@ -129,6 +129,110 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserStateEnvelope'
+  /admin/enrollment-policy:
+    get:
+      summary: Strictly read one coherent policy, ABA-safe revision, resolved capabilities, and verified immutable actor/change audit as the current platform owner.
+      operationId: admin_enrollment_policy_v2_read
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying one provider-coherent owner policy view.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentPolicyOwnerEnvelope'
+        '403':
+          description: The current authenticated account is not the active platform owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The stored security document or actor/change audit requires operator recovery; the provider state is preserved without read-side repair.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      summary: Apply one confirmed owner policy change and immutable actor/change audit in the same provider transaction.
+      operationId: admin_enrollment_policy_v2_apply
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentPolicyApplyRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the exact committed and prior rollback policies, impact, and immutable audit receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentPolicyApplyEnvelope'
+        '400':
+          description: Confirmation, reason, revision, policy, or change validation failed without a provider write.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: The supplied preview revision is stale; no alternate current state is disclosed and no policy, audit, or operational-log side effect occurs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: The current authenticated account is not the active platform owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The stored security document or actor/change audit requires operator recovery; the exact prior provider state is preserved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /admin/enrollment-policy/preview:
+    post:
+      summary: Preview one owner policy proposal and ABA-safe current revision through the exact resolved-capability computation used by apply, without writing.
+      operationId: admin_enrollment_policy_v2_preview
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentPolicyPreviewRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying exact prior and proposed policy snapshots plus their resolved capability impact.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentPolicyPreviewEnvelope'
+        '400':
+          description: The proposal is malformed or outside the governed policy fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: The current authenticated account is not the active platform owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The stored security document or actor/change audit requires operator recovery; preview performs no repair or write.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   securitySchemes:
     cookieSession:
@@ -143,6 +247,248 @@ components:
       schema:
         type: string
   schemas:
+    EnrollmentMethods:
+      type: object
+      required: [email, google, facebook]
+      additionalProperties: false
+      properties:
+        email:
+          type: boolean
+        google:
+          type: boolean
+        facebook:
+          type: boolean
+    EnrollmentMethodChanges:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: boolean
+        google:
+          type: boolean
+        facebook:
+          type: boolean
+    EnrollmentPolicyDocument:
+      type: object
+      required: [schema_version, mode, methods, invitations_enabled]
+      additionalProperties: false
+      properties:
+        schema_version:
+          type: integer
+          enum: [1]
+        mode:
+          type: string
+          enum: [closed, invite-only, self-signup]
+        methods:
+          $ref: '#/components/schemas/EnrollmentMethods'
+        invitations_enabled:
+          type: boolean
+    EnrollmentPolicyChanges:
+      type: object
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum: [closed, invite-only, self-signup]
+        methods:
+          $ref: '#/components/schemas/EnrollmentMethodChanges'
+        invitations_enabled:
+          type: boolean
+    EnrollmentCapabilities:
+      type: object
+      required: [mode, signup_enabled, invitation_enrollment_enabled, methods]
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum: [closed, invite-only, self-signup]
+        signup_enabled:
+          type: boolean
+        invitation_enrollment_enabled:
+          type: boolean
+        methods:
+          $ref: '#/components/schemas/EnrollmentMethods'
+    EnrollmentPolicyImpact:
+      type: object
+      required: [changed, methods_changed, before, after]
+      additionalProperties: false
+      properties:
+        changed:
+          type: array
+          items:
+            type: string
+            enum: [mode, signup_enabled, invitation_enrollment_enabled]
+        methods_changed:
+          type: array
+          items:
+            type: string
+            enum: [email, google, facebook]
+        before:
+          $ref: '#/components/schemas/EnrollmentCapabilities'
+        after:
+          $ref: '#/components/schemas/EnrollmentCapabilities'
+    EnrollmentPolicyAudit:
+      type: object
+      required: [audit_version, audit_id, actor_id, reason, at, previous, current, impact, previous_digest, digest]
+      additionalProperties: false
+      properties:
+        audit_version:
+          type: integer
+          enum: [1]
+        audit_id:
+          type: string
+          pattern: '^enrollaudit_[0-9a-f]{16}$'
+        actor_id:
+          type: string
+          pattern: '^user_[0-9a-f]{16}$'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 256
+        at:
+          type: string
+          format: date-time
+        previous:
+          $ref: '#/components/schemas/EnrollmentPolicyDocument'
+        current:
+          $ref: '#/components/schemas/EnrollmentPolicyDocument'
+        impact:
+          $ref: '#/components/schemas/EnrollmentPolicyImpact'
+        previous_digest:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        digest:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+    EnrollmentPolicyPreviewRequest:
+      type: object
+      additionalProperties: false
+      oneOf:
+        - required: [changes]
+        - required: [policy]
+      properties:
+        changes:
+          $ref: '#/components/schemas/EnrollmentPolicyChanges'
+        policy:
+          $ref: '#/components/schemas/EnrollmentPolicyDocument'
+    EnrollmentPolicyApplyRequest:
+      type: object
+      required: [revision, confirm, reason]
+      additionalProperties: false
+      oneOf:
+        - required: [changes]
+        - required: [policy]
+      properties:
+        changes:
+          $ref: '#/components/schemas/EnrollmentPolicyChanges'
+        policy:
+          $ref: '#/components/schemas/EnrollmentPolicyDocument'
+        revision:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        confirm:
+          type: boolean
+          enum: [true]
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 256
+    EnrollmentPolicyOwnerEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [policy, capabilities, modes, methods, audit, revision]
+          additionalProperties: false
+          properties:
+            policy:
+              $ref: '#/components/schemas/EnrollmentPolicyDocument'
+            capabilities:
+              $ref: '#/components/schemas/EnrollmentCapabilities'
+            modes:
+              type: array
+              items:
+                type: string
+                enum: [closed, invite-only, self-signup]
+            methods:
+              type: array
+              items:
+                type: string
+                enum: [email, google, facebook]
+            audit:
+              type: array
+              maxItems: 4096
+              items:
+                $ref: '#/components/schemas/EnrollmentPolicyAudit'
+            revision:
+              type: string
+              pattern: '^[0-9a-f]{64}$'
+    EnrollmentPolicyPreviewEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [previous, policy, impact, revision]
+          additionalProperties: false
+          properties:
+            previous:
+              $ref: '#/components/schemas/EnrollmentPolicyDocument'
+            policy:
+              $ref: '#/components/schemas/EnrollmentPolicyDocument'
+            impact:
+              $ref: '#/components/schemas/EnrollmentPolicyImpact'
+            revision:
+              type: string
+              pattern: '^[0-9a-f]{64}$'
+    EnrollmentPolicyApplyEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [policy, previous, previous_revision, revision, impact, audit]
+          additionalProperties: false
+          properties:
+            policy:
+              $ref: '#/components/schemas/EnrollmentPolicyDocument'
+            previous:
+              $ref: '#/components/schemas/EnrollmentPolicyDocument'
+            previous_revision:
+              type: string
+              pattern: '^[0-9a-f]{64}$'
+            revision:
+              type: string
+              pattern: '^[0-9a-f]{64}$'
+            impact:
+              $ref: '#/components/schemas/EnrollmentPolicyImpact'
+            audit:
+              $ref: '#/components/schemas/EnrollmentPolicyAudit'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
     CreateUserRequest:
       type: object
       required: [username, password]

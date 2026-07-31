@@ -14,6 +14,8 @@ import tempfile
 from pathlib import Path
 # Import monotonic timing for disposable MySQL 1/2/4/8 aggregate measurements.
 import time
+# Import bounded patching for strict filesystem-failure normalization proof.
+from unittest import mock
 
 # Import required dependency so storage tests can resolve repository files.
 ROOT = Path(__file__).resolve().parents[1]
@@ -458,6 +460,125 @@ def run_json_provider_parity():
             reloaded = settings.audio_settings()
             # Verify settings persisted in the provider document.
             assert reloaded["master_enabled"] is False and reloaded["voice_volume"] == 0.4
+            # Name one isolated security-document key for strict provider proof.
+            strict_key = "auth/strict_document_test"
+            # Resolve its exact local path before any document exists.
+            strict_path = provider.document_path(strict_key)
+            # Track lazy missing-default evaluation.
+            default_calls = []
+            # Return one reviewed missing-document default.
+            def strict_default():
+                # Record the sole lazy evaluation.
+                default_calls.append("called")
+                # Return one exact object accepted by the test shape predicate.
+                return {"schema_version": 1}
+            # Read the absent document through the strict provider seam.
+            missing = provider.read_document_strict(strict_key, strict_default, lambda value: isinstance(value, dict))
+            # Require the reviewed default exactly once and no document creation.
+            assert missing == {"schema_version": 1} and default_calls == ["called"] and not strict_path.exists()
+            # Persist one valid object through the ordinary provider write abstraction.
+            provider.write_document(strict_key, {"schema_version": 1, "mode": "closed"})
+            # Require the strict provider seam to return the valid decoded object.
+            assert provider.read_document_strict(strict_key, {}, lambda value: isinstance(value, dict)) == {"schema_version": 1, "mode": "closed"}
+            # Enumerate invalid UTF-8, truncated JSON, duplicate keys, and invalid object shape.
+            hostile_payloads = (
+                # Refuse text that cannot decode as UTF-8.
+                b"\xff\xfe\xfa",
+                # Refuse syntactically truncated JSON.
+                b'{"schema_version":1',
+                # Refuse duplicate keys instead of last-value-wins interpretation.
+                b'{"schema_version":1,"schema_version":2}',
+                # Refuse a syntactically valid array under the object predicate.
+                b"[]",
+            )
+            # Exercise every hostile durable byte sequence independently.
+            for hostile in hostile_payloads:
+                # Write the exact hostile bytes outside the provider abstraction.
+                strict_path.write_bytes(hostile)
+                # Snapshot every provider and control file after hostile setup.
+                before_inventory = {path.relative_to(Path(tmp)).as_posix(): path.read_bytes() for path in Path(tmp).rglob("*") if path.is_file()}
+                # Require strict read to use one fixed value-free recovery error.
+                try:
+                    # Attempt the strict security-document read.
+                    provider.read_document_strict(strict_key, {}, lambda value: isinstance(value, dict))
+                # Accept only the fixed provider-owned recovery boundary.
+                except RuntimeError as exc:
+                    # Require no path, payload, parser, or duplicate key detail.
+                    assert str(exc) == "Stored document requires operator recovery"
+                # Fail if hostile state was accepted or normalized.
+                else:
+                    # Surface one fixed assertion without hostile content.
+                    raise AssertionError("strict JSON document corruption was accepted")
+                # Track whether the strict update mutator was invoked.
+                mutator_calls = []
+                # Define one mutator that must remain unreachable.
+                def forbidden_mutator(current):
+                    # Record any incorrect invocation.
+                    mutator_calls.append(current)
+                    # Return a value that must never be written.
+                    return {}
+                # Require strict update to refuse under the same held document transaction.
+                try:
+                    # Attempt validator-bound mutation of the hostile document.
+                    provider.update_document(strict_key, forbidden_mutator, {}, lambda value: isinstance(value, dict))
+                # Accept only the same fixed provider-owned recovery boundary.
+                except RuntimeError as exc:
+                    # Require no path, payload, parser, or duplicate key detail.
+                    assert str(exc) == "Stored document requires operator recovery"
+                # Fail if strict update reached or replaced hostile state.
+                else:
+                    # Surface one fixed assertion without hostile content.
+                    raise AssertionError("strict JSON document update accepted corruption")
+                # Require the mutator to remain unreachable.
+                assert mutator_calls == []
+                # Snapshot exact state after both refused operations.
+                after_inventory = {path.relative_to(Path(tmp)).as_posix(): path.read_bytes() for path in Path(tmp).rglob("*") if path.is_file()}
+                # Require byte-identical state with no backup, temp, or normalization artifact.
+                assert after_inventory == before_inventory
+            # Restore one readable document for filesystem-failure injection.
+            strict_path.write_text('{"schema_version":1}', encoding="utf-8")
+            # Capture exact bytes before simulated read failure.
+            strict_bytes = strict_path.read_bytes()
+            # Track whether an access failure is incorrectly treated as an absent document.
+            failure_defaults = []
+            # Define a default factory that must remain unreachable on OSError.
+            def forbidden_default():
+                # Record any incorrect missing-document fallback.
+                failure_defaults.append("called")
+                # Return a value that must never be observed.
+                return {}
+            # Replace only path byte reads with a synthetic filesystem failure.
+            with mock.patch.object(Path, "read_bytes", side_effect=OSError("synthetic-hidden-path")):
+                # Require strict read to collapse filesystem detail.
+                try:
+                    # Attempt the injected failing read.
+                    provider.read_document_strict(strict_key, forbidden_default, lambda value: isinstance(value, dict))
+                # Accept only the fixed provider recovery boundary.
+                except RuntimeError as exc:
+                    # Require one value-free message.
+                    assert str(exc) == "Stored document requires operator recovery"
+                # Fail if the filesystem error escaped or was ignored.
+                else:
+                    # Surface one fixed assertion.
+                    raise AssertionError("strict JSON filesystem failure was accepted")
+            # Track strict-update mutator reachability under read-text failure.
+            failed_update_calls = []
+            # Replace only path byte reads with a synthetic filesystem failure.
+            with mock.patch.object(Path, "read_bytes", side_effect=OSError("synthetic-hidden-path")):
+                # Require strict update to collapse filesystem detail.
+                try:
+                    # Attempt the injected failing validator-bound update.
+                    provider.update_document(strict_key, lambda current: failed_update_calls.append(current), forbidden_default, lambda value: isinstance(value, dict))
+                # Accept only the fixed provider recovery boundary.
+                except RuntimeError as exc:
+                    # Require one value-free message.
+                    assert str(exc) == "Stored document requires operator recovery"
+                # Fail if the filesystem error escaped or mutation continued.
+                else:
+                    # Surface one fixed assertion.
+                    raise AssertionError("strict JSON update filesystem failure was accepted")
+            # Require no mutator invocation and exact source bytes after injected failures.
+            assert failure_defaults == [] and failed_update_calls == [] and strict_path.read_bytes() == strict_bytes
             # Verify the JSON fallback still creates the familiar local files.
             assert (data_root / "players.json").exists() and (data_root / "ledger.jsonl").exists() and (data_root / "history.csv").exists()
         # Always clear provider injection after the isolated test run.
@@ -697,6 +818,108 @@ def run_mysql_schema_provider_path():
     assert "start_transaction" in document_source and "FOR UPDATE" in document_source
     # Require absent-row materialization, locked update, commit, and rollback behavior.
     assert "INSERT INTO casino_documents" in document_source and "UPDATE casino_documents" in document_source and "connection.commit()" in document_source and "connection.rollback()" in document_source
+    # Construct an uninitialized provider for bounded MySQL-like seam injection.
+    strict_provider = object.__new__(storage.MySQLStorageProvider)
+    # Return one valid driver-decoded object through the existing read behavior.
+    strict_provider.read_document = lambda key, default: {"schema_version": 1}
+    # Require strict read to preserve valid MySQL-decoded provider values.
+    assert strict_provider.read_document_strict("auth/strict", {}, lambda value: isinstance(value, dict)) == {"schema_version": 1}
+    # Return one invalid driver-decoded shape without opening a live connection.
+    strict_provider.read_document = lambda key, default: []
+    # Require strict MySQL-like shape refusal to use the fixed recovery boundary.
+    try:
+        # Attempt the invalid strict read.
+        strict_provider.read_document_strict("auth/strict", {}, lambda value: isinstance(value, dict))
+    # Accept only the fixed provider-owned recovery failure.
+    except RuntimeError as exc:
+        # Require no payload or connector detail.
+        assert str(exc) == "Stored document requires operator recovery"
+    # Fail if the invalid shape was returned.
+    else:
+        # Surface one fixed assertion.
+        raise AssertionError("strict MySQL document shape was accepted")
+    # Raise one synthetic decoder failure through the existing MySQL read seam.
+    strict_provider.read_document = lambda key, default: (_ for _ in ()).throw(ValueError("synthetic-payload-detail"))
+    # Require decoder detail to remain value-free.
+    try:
+        # Attempt the failing strict read.
+        strict_provider.read_document_strict("auth/strict", {}, lambda value: isinstance(value, dict))
+    # Accept only the fixed provider-owned recovery failure.
+    except RuntimeError as exc:
+        # Require no payload or connector detail.
+        assert str(exc) == "Stored document requires operator recovery"
+    # Fail if the decoder exception escaped.
+    else:
+        # Surface one fixed assertion.
+        raise AssertionError("strict MySQL decoder failure escaped")
+    # Define one cursor that returns an invalid locked document row.
+    class StrictMySQLCursor:
+        # Initialize executed statement evidence.
+        def __init__(self):
+            # Retain exact SQL verbs for no-update proof.
+            self.statements = []
+        # Record each statement without performing database work.
+        def execute(self, statement, parameters):
+            # Retain the statement text only.
+            self.statements.append(statement)
+        # Return the one invalid provider-decoded row after the lock query.
+        def fetchone(self):
+            # Model a JSON column the driver decoded as an array.
+            return {"payload_json": []}
+    # Define one connection that records transaction cleanup decisions.
+    class StrictMySQLConnection:
+        # Initialize one cursor and terminal counters.
+        def __init__(self):
+            # Own the single fake cursor.
+            self.cursor_instance = StrictMySQLCursor()
+            # Start without a transaction marker.
+            self.started = False
+            # Start without commit, rollback, or close.
+            self.committed = self.rolled_back = self.closed = False
+        # Record explicit transaction start.
+        def start_transaction(self):
+            # Mark the transaction active.
+            self.started = True
+        # Return the single fake dictionary cursor.
+        def cursor(self, dictionary=False):
+            # Preserve the production call shape without changing results.
+            return self.cursor_instance
+        # Record an impossible successful commit.
+        def commit(self):
+            # Mark any incorrect commit.
+            self.committed = True
+        # Record required failure rollback.
+        def rollback(self):
+            # Mark transaction rollback.
+            self.rolled_back = True
+        # Record required connection cleanup.
+        def close(self):
+            # Mark connection close.
+            self.closed = True
+    # Build one isolated fake connection.
+    strict_connection = StrictMySQLConnection()
+    # Bypass live readiness without altering the production class.
+    strict_provider.ensure_ready = lambda: None
+    # Return only the fake row-lock connection.
+    strict_provider.connect = lambda: strict_connection
+    # Track whether the caller mutator was reached.
+    strict_mutator_calls = []
+    # Require invalid shape to fail and roll back inside the row transaction.
+    try:
+        # Invoke the actual MySQL update implementation with strict validation.
+        strict_provider.update_document("auth/strict", lambda current: strict_mutator_calls.append(current), {}, lambda value: isinstance(value, dict))
+    # Accept only the fixed provider-owned recovery failure.
+    except RuntimeError as exc:
+        # Require no payload or connector detail.
+        assert str(exc) == "Stored document requires operator recovery"
+    # Fail if the invalid shape crossed the locked validator.
+    else:
+        # Surface one fixed assertion.
+        raise AssertionError("strict MySQL update accepted invalid shape")
+    # Require start, rollback, and close without commit or mutator invocation.
+    assert strict_connection.started and strict_connection.rolled_back and strict_connection.closed and not strict_connection.committed and strict_mutator_calls == []
+    # Require no durable document UPDATE statement after strict shape refusal.
+    assert all(not statement.lstrip().upper().startswith("UPDATE CASINO_DOCUMENTS") for statement in strict_connection.cursor_instance.statements)
     # Read the storage-enforced action transaction implementation source.
     action_source = inspect.getsource(storage.MySQLStorageProvider.transact_ledger_once)
     # Verify action replay lookup occurs after a wallet row lock in one explicit transaction.
