@@ -26,7 +26,7 @@ collision and dependency planning but do not treat them as merged behavior.
 
 ## Current release context
 
-- Packaged application release: `0.9.5.44`
+- Packaged application release: `0.9.5.45`
 - Historical source baseline: `9.1.0`
 - Canonical aggregate source: `modules/module-manifest.json`
 - Independent source-module revisions: `modules/*.json`
@@ -82,7 +82,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md) — Engineering practices
 - [`FIRST_PROMPT_FOR_CODEX.md`](FIRST_PROMPT_FOR_CODEX.md) — First prompt for Codex
 - [`README.md`](README.md) — Virtual Casino Simulator
-- [`RELEASE_NOTES.md`](RELEASE_NOTES.md) — Virtual Casino Simulator v0.9.5.44 Release Notes
+- [`RELEASE_NOTES.md`](RELEASE_NOTES.md) — Virtual Casino Simulator v0.9.5.45 Release Notes
 
 ### GitHub contribution templates
 
