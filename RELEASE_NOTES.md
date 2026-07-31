@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.45 Release Notes
+# Virtual Casino Simulator v0.9.5.46 Release Notes
+
+## Bounded shared-wallet celebration
+
+- Packages the accepted shared-wallet presentation and lifecycle slice from sole content PR #552; the release-only application revision advances mechanically to `9.55.1`.
+- Keeps the latest server-owned wallet value authoritative while initial load remains silent, losses settle immediately, and ordinary or threshold gains use bounded decoration only.
+- Prevents overlap, navigation, pagehide, BFCache restoration, reduced motion, stale callback replay, and remount from leaking timers, nodes, classes, observers, or wallet writes into a later generation.
+- Requires source-bound hosted evidence across English and Russian, all four governed viewports, ordinary and threshold gains, and normal and reduced motion for exactly thirty-two cells.
+- Aligns the PWA qualification harness with the reconstructed offline document by waiting once for its runtime, shell, and localization readiness before dispatching that document's offline event; product PWA behavior and the single eight-second budget remain unchanged.
+- Gives Teen Patti's mobile deal control the existing fixed-report clearance lane without moving or hiding the report control and without changing game source, result, wager, payout, or economy behavior.
+- Records durable PR #521 comment `5147419893` and issue #74 comment `5147420421`; ancestry shell `f1b1826d` makes the contributor reachable, PR #552 is the sole content integration, and no second #521 content merge occurred.
+- Keeps issue #74 OPEN at P1 and `stack-rank:020`; #481 and #518 remain held and #450 remains excluded.
+- Adds no API, contract, provider, signup, OAuth, mail, public-policy, DNS, billing, database, migration, ledger, full-#74, issue-closure, release-activation, or deployment claim.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.45 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
 
 ## Deterministic six-runner Browser balancing
 
