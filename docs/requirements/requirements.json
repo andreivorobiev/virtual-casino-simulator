@@ -12720,6 +12720,50 @@
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
       "changed_in": "issue-430-mysql-schema-rollback-bridge",
       "notes": "The bridge rejects an exact-schema-three candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three release rollback to a schema-three-capable bridge. The separately governed v0.9.5.39 through v0.9.5.42 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three production activation, or issue closure."
+    },
+    {
+      "id": "ROU-072",
+      "module": "Roulette",
+      "description": "Roulette preserves the frozen linear 3.6-second, twenty-one-stop rotor and ball compatibility curves while bounded honest-landing wrappers carry the authoritative result into a physically coherent pocket presentation, true reduced motion suppresses both curves and every wrapper transition, and route-owned action identity makes API, landing, wallet, sound, bot, refund, teardown, and remount continuation exactly once and stale-safe.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-PRESENTATION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/games/roulette/test_frontend.mjs",
+        "tests/run_tests.py",
+        "docs/evidence/roulette/README.md"
+      ],
+      "introduced_in": "issue-527-roulette-slots-presentation",
+      "changed_in": "issue-527-roulette-slots-presentation",
+      "notes": "Listener-free tests dispose the real route-owned timer scope through actual Roulette mount, unmount, and remount cycles at API, landing, and delayed-wallet boundaries. Hosted exact-head Browser evidence executes normal and reduced public spins in English and Russian at all four governed viewports. This bounded presentation slice does not claim the planned ROU-063 through ROU-068 Authentic/Quick pacing or video-adoption gates, and issues #168, #169, and #74 remain open."
+    },
+    {
+      "id": "SLOT-037",
+      "module": "Slots",
+      "description": "Slots preserves the existing fast 180-millisecond unattended hold while attended normal motion uses five independent deterministic decorative strips with staggered deceleration and bounded anticipation over the authoritative grid, true reduced motion uses a strip-free comfort hold, and route-owned action identity makes API, landing, wallet, sound, voice, teardown, and remount continuation exactly once and stale-safe.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-SLOT-PRESENTATION-001"
+      ],
+      "browser_tests": [
+        "BR-SLOT-ECONOMICS-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json",
+        "tests/games/slots/test_frontend.mjs",
+        "tests/run_tests.py",
+        "docs/evidence/slots/README.md"
+      ],
+      "introduced_in": "issue-527-roulette-slots-presentation",
+      "changed_in": "issue-527-roulette-slots-presentation",
+      "notes": "Listener-free tests dispose the real route-owned timer scope through actual Slots mount, unmount, and remount cycles at API, landing, and delayed-wallet boundaries. Hosted exact-head Browser evidence executes normal and reduced public spins in English and Russian at all four governed viewports. This bounded presentation slice does not claim the planned SLOT-030 through SLOT-035 full pacing, adoption, one-hundred-spin, or video gates, and issues #170 and #74 remain open."
     }
   ]
 }

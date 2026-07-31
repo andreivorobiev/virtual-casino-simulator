@@ -1370,6 +1370,18 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(auth_014[0]["module"], "Core")
         # Require strict provider code and evidence to stay inside the existing AUTH allocation.
         self.assertEqual({"casino/core/storage.py", "tests/storage_tests.py"} <= set(auth_014[0]["implementation_files"]), True)
+        # Count the bounded Roulette presentation requirement.
+        roulette_072 = [row for row in requirements if row.get("id") == "ROU-072"]
+        # Require exactly one permanent Roulette allocation.
+        self.assertEqual(len(roulette_072), 1)
+        # Require the presentation requirement to remain Roulette-owned.
+        self.assertEqual(roulette_072[0]["module"], "Roulette")
+        # Count the bounded Slots presentation requirement.
+        slot_037 = [row for row in requirements if row.get("id") == "SLOT-037"]
+        # Require exactly one permanent Slots allocation.
+        self.assertEqual(len(slot_037), 1)
+        # Require the presentation requirement to remain Slots-owned.
+        self.assertEqual(slot_037[0]["module"], "Slots")
         # Parse the core descriptor for the enrollment-policy compatible addition.
         core_module = json.loads((ROOT / "modules" / "core.json").read_text(encoding="utf-8"))
         # Parse the Admin descriptor for the additive owner-only routes.
@@ -1382,15 +1394,23 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         contracts_module = json.loads((ROOT / "modules" / "contracts.json").read_text(encoding="utf-8"))
         # Parse the tooling descriptor for the compatible bridge addition.
         tooling_module = json.loads((ROOT / "modules" / "tooling.json").read_text(encoding="utf-8"))
+        # Parse the Roulette descriptor for the compatible presentation addition.
+        roulette_module = json.loads((ROOT / "modules" / "roulette.json").read_text(encoding="utf-8"))
+        # Parse the Slots descriptor for the compatible presentation addition.
+        slots_module = json.loads((ROOT / "modules" / "slots.json").read_text(encoding="utf-8"))
         # Require the exact compatible core minor allocation.
         self.assertEqual(core_module["version"], "9.35.0")
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.14.0")
         # Require the exact shared tests patch allocation.
-        self.assertEqual(tests_module["version"], "1.64.51")
+        self.assertEqual(tests_module["version"], "1.64.52")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.51")
+        self.assertEqual(docs_module["version"], "1.64.52")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.53.1")
         # Require the compatible tooling minor allocation.
         self.assertEqual(tooling_module["version"], "1.23.0")
+        # Require the exact compatible Roulette presentation minor.
+        self.assertEqual(roulette_module["version"], "9.5.0")
+        # Require the exact compatible Slots presentation minor.
+        self.assertEqual(slots_module["version"], "9.4.0")
