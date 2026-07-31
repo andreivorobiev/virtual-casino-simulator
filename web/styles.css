@@ -1850,6 +1850,12 @@ label {
     min-width: 0;
   }
 
+  /* Reserve the fixed report control's 160px mobile lane for Teen Patti's deal action. */
+  body:has(.teenp) .tp-btn.deal {
+    width: calc(100% - 160px);
+    max-width: calc(100% - 160px);
+  }
+
   /* Reserve the fixed report control's mobile column across the new catalog panels so game actions and
      localized paytable copy remain visible and operable instead of sitting beneath the shared affordance. */
   :is(.pd-panel, .bl-panel, .fr-panel, .teq-panel, .pk-panel, .cp-panel, .mr-panel, .lg-panel, .dd-panel, .fcp-panel) {
