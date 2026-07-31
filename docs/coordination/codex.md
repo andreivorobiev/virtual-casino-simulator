@@ -1,36 +1,34 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-31T03:18:11Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-31T05:22:31Z.
 
 ## Current branch / active Codex work
 
-- PR #544 merged normally as protected main `8c8f3efa` after exact-head controller review, all nine required workflow families, source-bound Browser/Long/release-candidate artifacts, and zero review state.
-- Terminal-green published/released/live production remains exact v0.9.5.41 `1248b94a`; MySQL remains clean at schema 2 and the held schema-3 migration was not invoked.
-- `codex/release-v0.9.5.42` serializes the unique immutable release for the accepted owner-only enrollment-policy transaction. No other merge may advance until v0.9.5.42 is terminal green through the trusted deployment route.
+- Terminal-green protected/released/live main is exact v0.9.5.42 `0b24361c674faff2ae0a60169743c7cacc143f1f`.
+- `codex/526-roulette-slots-controller` starts with an ancestry-only merge whose first parent is exact v42 main and whose second parent is immutable contributor head `e8641d4517c387c609fa205ac5b440a72a69d9a2`; that merge tree is byte-identical to v42.
+- The bounded #527 controller slice reconciles only Roulette and Slots presentation, lifecycle evidence, exact governance, and generated evidence catalog surfaces. The external contributor branch and worktree remain unchanged.
 
 ## Live queue snapshot
 
-- #435 rank 001 remains externally blocked; #471 rank 003 remains architecture-blocked on separately governed #430 work.
-- #333 rank 007 remains open after the owner-only policy transaction; external #528 remains open pending terminal release and durable ancestry disposition.
-- Open #518, #539, #526, #525, and every older shared-governance head remain held and must rebase or serialize later.
-- #450 remains held/excluded; no provider, OAuth, live policy change, child-stack, public-enable, or production configuration worktree is part of this release lane.
+- #527 / external PR #526 is the sole authorized controller lane; #481 retains a direct game-JavaScript collision and must serialize after this lane.
+- #539 and the stale #525/#518 shared-governance heads remain held and contribute no requirements, manifest, tests/docs-version, or coordination hunk.
+- Issues #168, #169, #170, and #74 remain open; `MOTION-006..011` remain PLANNED. #450 remains held and excluded.
 
 ## Requirement / version claims
 
-- Merged main owns `AUTH-014` beside retained `AUTH-013` on existing listener-free case `API-ENROLLMENT-POLICY-001`; no generic TEST, STORAGE, or other permanent ID was allocated.
-- The merged enrollment revisions remain core `9.35.0`, admin `1.14.0`, and contracts `1.53.0`, with tests/docs `1.64.50`.
-- This release packet alone advances package `0.9.5.42`, application `9.53.29`, contracts `1.53.1`, and tests/docs `1.64.51`; tooling `1.23.0` and every unrelated module remain unchanged.
+- New `ROU-072` maps only to `UI-ROU-PRESENTATION-001` and existing `BR-ROU-REDUCED-MOTION-001`; new `SLOT-037` maps only to `UI-SLOT-PRESENTATION-001` and existing `BR-SLOT-ECONOMICS-001`. No generic TEST ID or Browser case is allocated.
+- Proposed compatible versions are Roulette `9.5.0`, Slots `9.4.0`, and tests/docs `1.64.52`.
+- Package `0.9.5.42`, application `9.53.29`, core `9.35.0`, admin `1.14.0`, tooling `1.23.0`, contracts `1.53.1`, and every unrelated module remain unchanged.
 
 ## File claims / collision notes
 
-- The release branch contains only the standard release contract, documentation, localization, version, predecessor-test, PWA-version, and coordination surfaces.
-- It imports no stale contributor hunk and changes no casino source, enrollment implementation, route, provider, migration, ledger, grant, secret, or production workflow.
-- Every open shared or stacked head must rebase and recalculate after terminal deployment.
+- The final ceiling is exactly twenty paths: the authorized nineteen presentation/governance surfaces plus generator-owned `CODEX_START_HERE.md`.
+- `CODEX_START_HERE.md` may change only through `scripts/generate_docs.py` and only for the Roulette and Slots evidence catalog entries and current generated metadata.
+- No game engine, ledger, API/OpenAPI, provider, package, release, deployment, compatibility, visual-matrix, or production surface is in scope.
 
 ## Decisions / handbacks
 
-- v0.9.5.42 packages the owner-only GET/preview/apply boundary with its strict provider read and revision-bound actor/change audit; it invokes no live policy change.
-- Existing login, public signup/invitation enforcement, operational decision logging, legacy non-mapping/unowned-schema fallback, and frozen `/api/v1` remain unchanged.
-- Its compatibility record binds exact immutable v0.9.5.41 as the application-only schema-2 predecessor; database rollback is prohibited and schema migration remains held.
-- Hosted publication may create immutable assets, but unchanged hosted SSH activation must be cancelled before cutover. Trusted deployment must prove schema 2 before and after activation and invoke no migration.
-- Readiness, UI, OAuth/provider, live enablement, provider network, public exposure, MySQL composite execution, schema-3 activation, issue closure, and held #450 remain separately governed.
+- Roulette retains its exact linear 3.6-second and twenty-one-stop compatibility curves while route-owned landing wrappers and true reduced motion receive bounded presentation proof.
+- Slots retains its fast 180-millisecond unattended path while attended motion uses five deterministic staggered strips and reduced motion uses a strip-free comfort hold.
+- Actual game mount, unmount, and remount tests dispose the real motion scope during API, landing, and delayed-wallet waits; stale work cannot update a remounted DOM, shared wallet, sound, voice, bot, refund, or continuation.
+- Hosted exact-head Browser acceptance must execute real normal and reduced public actions for both games in English and Russian across desktop-primary, desktop-compact, tablet, and mobile. This slice makes no full pacing, adoption, one-hundred-spin, or video-gate claim.

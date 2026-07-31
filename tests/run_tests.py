@@ -89,7 +89,7 @@ BROWSER_CASE_AFFINITY_GROUPS={
     # Keep login, terms, wallet, shell, catalog, and responsive lobby state on shard zero.
     'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
     # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
-    'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
+    'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
     # Keep Bingo, Blackjack, Baccarat, feedback, Admin, audio, and i18n state on shard three.
     'bingo_admin':('BR-BINGO-PURCHASE-001','BR-BINGO-001','BR-BJ-NATURAL-PAYOUT-001','BR-BJ-001','BR-BJ-I18N-001','BR-BJ-INSURANCE-NET-001','BR-BAC-COPY-001','BR-BAC-FRESH-SHOE-001','BR-BAC-MUTATION-001','BR-BAC-001','BR-I18N-ROUTES-001','BR-FEEDBACK-001','BR-ADMIN-NAV-AUTH-001','BR-ADMIN-001','BR-ADMIN-LEDGER-LABELS-001','BR-ADMIN-FEEDBACK-001','BR-ADMIN-OAUTH-001','BR-ADMIN-MAIL-001','BR-INVITE-001','BR-OPS-001','BR-ADMIN-PRACTICE-OPPONENT-001','BR-ADMIN-USERS-001','BR-ADMIN-GUEST-001','BR-AUDIO-001','BR-I18N-FOUNDATION-001','BR-I18N-ADMIN-001'),
 }
@@ -1331,6 +1331,18 @@ def run_api_tests():
             raise AssertionError('roulette motion compatibility suite failed')
     # Record the listener-free anti-strobe, whole-turn, and reduced-motion proof.
     run_case('UI-ROU-MOTION-001',['ROU-069','ROU-070','TEST-102'],run_roulette_motion_tests)
+    # Execute one dependency-light Node frontend suite without opening a listener or browser.
+    def run_game_frontend_node_test(relative_path, failure_message):
+        # Let controlled local environments point at the bundled runtime while hosted CI uses its ordinary node command.
+        node_binary=os.environ.get('CASINO_NODE_BINARY','node')
+        # Run exactly one game-owned test module through the dependency-free Node test runner.
+        result=subprocess.run([node_binary,'--test',str(ROOT/relative_path)],cwd=str(ROOT),capture_output=True,text=True,timeout=120)
+        # Fail the named central case with a bounded diagnostic tail when focused behavior regresses.
+        if result.returncode!=0: raise AssertionError(f'{failure_message}: {(result.stdout+result.stderr)[-1800:]}')
+    # Record deterministic landing, API/timer teardown, exactly-once completion, and clean-remount Roulette proof.
+    run_case('UI-ROU-PRESENTATION-001',['ROU-072'],lambda: run_game_frontend_node_test(Path('tests/games/roulette/test_frontend.mjs'),'Roulette presentation suite failed'))
+    # Record deterministic strips, stagger/anticipation, API/landing teardown, and clean-remount Slots proof.
+    run_case('UI-SLOT-PRESENTATION-001',['SLOT-037'],lambda: run_game_frontend_node_test(Path('tests/games/slots/test_frontend.mjs'),'Slots presentation suite failed'))
     # Execute the personal-settings, shared pagination, contract, and privacy proof without a listener.
     def run_user_settings_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -7538,8 +7550,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     def roulette_reduced_motion_runtime():
                         # Require both mounted Roulette motion channels to be suppressed by the actual media state.
                         assert roulette_reduced_motion=={'rotor':'none','ball':'none'}
-                    # Extend the focused runtime case with the actual reduced-motion media query result.
-                    run_case('BR-ROU-REDUCED-MOTION-001',['ROU-070','TEST-102'],roulette_reduced_motion_runtime)
                     # Restore English before expanding shared controls and capturing route-return evidence.
                     page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                     # Expand autoplay through its player-facing disclosure control.
@@ -7626,6 +7636,58 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.wait_for_timeout(1200)
                     # Capture route-return evidence after the complete unmount and remount cycle.
                     shot('roulette-premium-route-return.png')
+                    # Define the complete exact-head Roulette normal/reduced evidence matrix required by the bounded presentation slice. (ROU-072)
+                    def roulette_presentation_evidence_matrix():
+                        # Read all four governed viewport dimensions from the authoritative visual matrix.
+                        presentation_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                        # Require the exact desktop-primary, desktop-compact, tablet, and mobile inventory.
+                        assert set(presentation_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                        # Exercise real normal and true reduced-motion spins as separate media states.
+                        for motion_mode,reduced_setting in (('normal','no-preference'),('reduced','reduce')):
+                            # Exercise both supported player locales through the visible shell control.
+                            for locale in ('en-US','ru-RU'):
+                                # Capture every governed responsive layout through a fresh real action.
+                                for viewport_id,viewport in presentation_viewports.items():
+                                    # Apply the exact preference, locale, and viewport before starting the action.
+                                    page.emulate_media(reduced_motion=reduced_setting); page.set_viewport_size(viewport); page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                                    # Place the smallest visible straight bet so each evidence row drives the real public action.
+                                    page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
+                                    # Capture the authoritative response while starting the actual spin.
+                                    with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/spin') and response.request.method=='POST') as presentation_spin_response:
+                                        # Use the dominant game action rather than a synthetic CSS toggle.
+                                        page.get_by_test_id('roulette-spin').click()
+                                    # Wait for the actual mounted spinning presentation.
+                                    page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'spinning'",timeout=3000)
+                                    # Let the backend response enter the normal wrapper landing or reduced hold branch.
+                                    page.wait_for_timeout(140)
+                                    # Read live classes and computed motion without mutating the DOM under test.
+                                    diagnostics=page.evaluate("""() => { const root=document.querySelector('[data-testid="roulette-premium"]'); const wheel=document.querySelector('[data-testid="roulette-wheel"]'); const result=document.querySelector('[data-testid="roulette-result-region"]'); const rotor=document.querySelector('[data-testid="roulette-rotor"]'); const ball=document.querySelector('[data-testid="roulette-ball"]'); const orient=document.querySelector('[data-testid="roulette-wheel-orient"]'); const orbit=document.querySelector('[data-testid="roulette-ball-orbit"]'); const radial=document.querySelector('[data-testid="roulette-ball-radial"]'); const motion={rotor:getComputedStyle(rotor).animationName,ball:getComputedStyle(ball).animationName,orient:getComputedStyle(orient).transitionDuration,orbit:getComputedStyle(orbit).transitionDuration,radial:getComputedStyle(radial).transitionDuration}; return {visible:Boolean(root&&root.getClientRects().length),phase:result?.dataset.phase,reduced:wheel?.dataset.reducedMotion,rotorSpinning:rotor?.classList.contains('spinning'),ballSpinning:ball?.classList.contains('spinning'),motion,noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1}; }""")
+                                    # Require the real action to remain mounted in its in-progress phase and inside the viewport.
+                                    assert diagnostics['visible'] and diagnostics['phase']=='spinning' and diagnostics['rotorSpinning'] and diagnostics['ballSpinning'] and diagnostics['noOverflow'],diagnostics
+                                    # Require the live route to report the exact media preference used for this evidence row.
+                                    assert diagnostics['reduced']==('true' if motion_mode=='reduced' else 'false'),diagnostics
+                                    # Require normal motion to run both tracked curves and at least one live landing-wrapper transition.
+                                    if motion_mode=='normal': assert diagnostics['motion']['rotor']!='none' and diagnostics['motion']['ball']!='none' and any(diagnostics['motion'][key]!='0s' for key in ('orient','orbit','radial')),diagnostics
+                                    # Require reduced motion to suppress both tracked curves and every landing-wrapper transition.
+                                    if motion_mode=='reduced': assert diagnostics['motion']['rotor']=='none' and diagnostics['motion']['ball']=='none' and all(diagnostics['motion'][key]=='0s' for key in ('orient','orbit','radial')),diagnostics
+                                    # Capture one source-bound sidecar while the changed branch is actively mounted.
+                                    game_evidence(f'after-pass-roulette-presentation-{motion_mode}-{locale}-{viewport_id}.png','roulette',['spinning',f'{motion_mode}_motion'],locale,viewport_id)
+                                    # Read the authoritative result from the exact response used by this evidence row.
+                                    presentation_result=str(presentation_spin_response.value.json()['data']['round']['result'])
+                                    # Wait for the actual action to settle before starting the next matrix row.
+                                    page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'",timeout=7000)
+                                    # Require result panel and wheel identity to converge on the response after the changed branch completes.
+                                    assert page.get_by_test_id('roulette-result-region').get_attribute('data-result-number')==presentation_result and page.get_by_test_id('roulette-wheel').get_attribute('data-selected-result')==presentation_result
+                        # Restore the ordinary English primary-desktop route for downstream Roulette checks.
+                        page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size(presentation_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    # Execute both the legacy curve suppression check and the real sixteen-combination presentation matrix under one permanent case.
+                    def roulette_reduced_motion_and_presentation():
+                        # Preserve the existing exact reduced-motion runtime assertion.
+                        roulette_reduced_motion_runtime()
+                        # Execute the new real normal/reduced action matrix inside the same permanent owner case.
+                        roulette_presentation_evidence_matrix()
+                    # Extend the existing permanent reduced-motion case without adding a new Browser inventory row.
+                    run_case('BR-ROU-REDUCED-MOTION-001',['ROU-070','ROU-072','TEST-102'],roulette_reduced_motion_and_presentation)
                     # Resize to the authoritative desktop-compact matrix viewport.
                     page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(350)
                     # Verify the compact desktop layout keeps the dominant stage between two subordinate rails.
@@ -7778,14 +7840,64 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         game_evidence('after-pass-slots-paylines-en-US-desktop_primary-zoomed.png','slots',['win','multi_win','zoomed'], 'en-US','desktop_primary')
                         # Restore normal zoom before exercising the operating-system reduced-motion preference.
                         page.evaluate("document.body.style.zoom=''"); page.emulate_media(reduced_motion='reduce'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
-                        # Require the reduced-motion rerender to expose static paths with the same exact geometry.
-                        reduced_diagnostics=audit_payline_geometry(); require_payline_acceptance(reduced_diagnostics); assert reduced_diagnostics['reduced']=='true' and page.locator('[data-testid="slots-payline"] polyline').first.evaluate("path => { const style=getComputedStyle(path); return style.animationName==='none' && style.transitionDuration==='0s'; }")
-                        # Capture the clear non-animated win treatment as governed after-pass evidence.
-                        game_evidence('after-pass-slots-paylines-en-US-desktop_primary-reduced-motion.png','slots',['win','multi_win','reduced_motion','route_restored'],'en-US','desktop_primary')
+                        # Exercise true reduced motion across both supported locales and every governed viewport.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch through the visible shell so reduced-motion copy and layout follow the supported locale path.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
+                            # Exercise every exact visual-matrix size under reduced motion.
+                            for viewport_id,viewport in payline_viewports.items():
+                                # Resize the mounted route and let its observer realign the static overlay.
+                                page.set_viewport_size(viewport)
+                                # Require the reduced-motion rerender to expose static paths with the same exact geometry.
+                                reduced_diagnostics=audit_payline_geometry(); require_payline_acceptance(reduced_diagnostics); assert reduced_diagnostics['reduced']=='true' and page.locator('[data-testid="slots-payline"] polyline').first.evaluate("path => { const style=getComputedStyle(path); return style.animationName==='none' && style.transitionDuration==='0s'; }")
+                                # Capture the clear non-animated win treatment for this exact locale and viewport.
+                                game_evidence(f'after-pass-slots-paylines-{locale}-{viewport_id}-reduced-motion.png','slots',['win','multi_win','reduced_motion','route_restored'],locale,viewport_id)
                         # Restore the default media preference and route state for the existing Slots regression sequence.
-                        page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000); require_payline_acceptance(audit_payline_geometry())
+                        page.emulate_media(reduced_motion='no-preference'); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(payline_viewports['desktop_primary']); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000); require_payline_acceptance(audit_payline_geometry())
                     # Execute the payline-to-reel alignment regression.
                     run_case('BR-SLOTS-PAYLINE-001',['SLOT-029','I18N-010','TEST-077','TEST-117'],slots_payline_alignment)
+                    # Exercise the changed Slots action branches across the complete exact-head normal/reduced evidence matrix. (SLOT-037)
+                    def slots_presentation_evidence_matrix():
+                        # Read all four governed viewport dimensions from the authoritative visual matrix.
+                        presentation_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                        # Require the exact desktop-primary, desktop-compact, tablet, and mobile inventory.
+                        assert set(presentation_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                        # Exercise real normal and true reduced-motion spins as separate action paths.
+                        for motion_mode,reduced_setting in (('normal','no-preference'),('reduced','reduce')):
+                            # Apply the operating-system motion preference before every route action in this group.
+                            page.emulate_media(reduced_motion=reduced_setting)
+                            # Exercise both supported player locales through the visible shell control.
+                            for locale in ('en-US','ru-RU'):
+                                # Capture every governed responsive layout through a fresh real spin.
+                                for viewport_id,viewport in presentation_viewports.items():
+                                    # Apply the exact locale and viewport before starting the action.
+                                    page.set_viewport_size(viewport); page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                                    # Use the smallest bounded fake-money setup for this presentation-only action.
+                                    page.get_by_test_id('slots-lines').select_option('1'); page.get_by_test_id('slots-line-bet').fill('0.01')
+                                    # Capture the authoritative response while starting the actual public spin.
+                                    with page.expect_response(lambda response: response.url.endswith('/api/v1/games/slots/spin') and response.request.method=='POST') as presentation_spin_response:
+                                        # Use the dominant game action rather than a synthetic motion helper.
+                                        page.get_by_test_id('slots-spin').click()
+                                    # Wait for the committed action and its backend result to enter the landing or comfort-hold branch.
+                                    page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === true",timeout=3000); presentation_spin_response.value
+                                    # Let the real landing setup or reduced hold paint one frame before inspection.
+                                    page.wait_for_timeout(40)
+                                    # Read live action classes and computed motion without mutating the DOM under test.
+                                    diagnostics=page.evaluate("""() => { const root=document.querySelector('[data-testid="slots-premium"]'); const spin=document.querySelector('[data-testid="slots-spin"]'); const cells=[...document.querySelectorAll('.slots-symbol.spinning')]; const layer=document.querySelector('[data-testid="slots-reel-motion"]'); const strips=[...document.querySelectorAll('.slots-reel-strip')]; const reels=[...document.querySelectorAll('.slots-reel')]; const firstStrip=strips[0]; const firstCell=cells[0]; return {visible:Boolean(root&&root.getClientRects().length),disabled:Boolean(spin?.disabled),reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,spinningCells:cells.length,layer:Boolean(layer),stripCount:strips.length,reelCount:reels.length,flying:strips.filter(strip => strip.classList.contains('is-flying')).length,stripTransition:firstStrip?getComputedStyle(firstStrip).transitionDuration:'0s',cellAnimation:firstCell?getComputedStyle(firstCell).animationName:'none',noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1}; }""")
+                                    # Require the real action to remain mounted in its in-progress phase and inside the viewport.
+                                    assert diagnostics['visible'] and diagnostics['disabled'] and diagnostics['spinningCells']==15 and diagnostics['noOverflow'],diagnostics
+                                    # Require the live route to report the exact media preference used for this evidence row.
+                                    assert diagnostics['reduced']==(motion_mode=='reduced'),diagnostics
+                                    # Require normal motion to mount all five real landing strips with active travel.
+                                    if motion_mode=='normal': assert diagnostics['layer'] and diagnostics['stripCount']==5 and diagnostics['reelCount']==5 and diagnostics['flying']>0 and diagnostics['stripTransition']!='0s',diagnostics
+                                    # Require reduced motion to execute the bounded hold without any decorative strip overlay or cell animation.
+                                    if motion_mode=='reduced': assert not diagnostics['layer'] and diagnostics['stripCount']==0 and diagnostics['reelCount']==0 and diagnostics['cellAnimation']=='none',diagnostics
+                                    # Capture one source-bound sidecar while the changed branch is actively mounted.
+                                    game_evidence(f'after-pass-slots-presentation-{motion_mode}-{locale}-{viewport_id}.png','slots',['spinning',f'{motion_mode}_motion'],locale,viewport_id)
+                                    # Wait for the real action to settle before starting the next matrix row.
+                                    page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === false",timeout=7000)
+                        # Restore the ordinary English primary-desktop route for downstream Slots checks.
+                        page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size(presentation_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
                     # Define the focused line-bet regression using real visible controls and backend requests.
                     def slots_line_bet_validation():
                         # Track only Slots spin requests so input edits can prove they never move tokens by themselves.
@@ -8076,8 +8188,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === false",timeout=5000)
                         # Restore English, primary desktop, normal motion, and normal zoom for downstream cases.
                         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(matrix_viewports['desktop_primary']); page.emulate_media(reduced_motion='no-preference'); page.evaluate("document.body.style.zoom=''")
-                    # Execute full engine/config/copy/state geometry and visual-matrix evidence.
-                    run_case('BR-SLOT-ECONOMICS-001',['SLOT-010','SLOT-011','SLOT-012','SLOT-013','SLOT-014','SLOT-015','SLOT-016','SLOT-017','SLOT-018','SLOT-019','SLOT-036'],slots_economics_visual_matrix)
+                    # Execute the existing economics matrix plus the real normal/reduced presentation matrix under one permanent case.
+                    def slots_economics_and_presentation():
+                        # Preserve the complete engine, configuration, copy, state, and geometry matrix.
+                        slots_economics_visual_matrix()
+                        # Execute the new real normal/reduced action matrix inside the same permanent owner case.
+                        slots_presentation_evidence_matrix()
+                    # Extend the existing permanent economics case without adding a new Browser inventory row.
+                    run_case('BR-SLOT-ECONOMICS-001',['SLOT-010','SLOT-011','SLOT-012','SLOT-013','SLOT-014','SLOT-015','SLOT-016','SLOT-017','SLOT-018','SLOT-019','SLOT-036','SLOT-037'],slots_economics_and_presentation)
                     # Refresh idle boxes after the focused real spin so the existing animation comparison uses one baseline.
                     idle_box=page.get_by_test_id('slots-cabinet').bounding_box(); idle_result_box=page.get_by_test_id('slots-result').bounding_box()
                     # Start one real spin through the browser-visible control.
