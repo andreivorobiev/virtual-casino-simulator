@@ -1,4 +1,19 @@
-# Virtual Casino Simulator v0.9.5.41 Release Notes
+# Virtual Casino Simulator v0.9.5.42 Release Notes
+
+## Revision-bound enrollment-policy owner transaction
+
+- Restricts enrollment-policy read, preview, and apply to the current active platform owner; ordinary Admin and stale owner-shaped sessions remain denied.
+- Returns a deterministic preview revision bound to the strictly validated canonical policy plus verified provider-backed audit head and count.
+- Requires apply to provide that exact revision, exact boolean confirmation, and a bounded nonempty reason.
+- Compares the revision inside the provider transaction before proposal, operational logging, policy mutation, or audit append, rejecting stale, ABA, and concurrent re-use with a fixed conflict.
+- Atomically commits the exact policy plus a bounded hash-linked opaque-actor prior/current change record and returns the exact prior policy, consumed revision, and new revision for explicit application rollback.
+- Treats only a truly missing security document as the reviewed fallback; malformed schema-owned bytes, duplicate JSON keys, access failures, audit mismatch, and capacity failure preserve exact JSON or MySQL state without backup, normalization, read-side write, or mutation.
+- Keeps `AUTH-014` beside retained `AUTH-013` on existing central case `API-ENROLLMENT-POLICY-001` without a generic TEST or STORAGE identifier.
+- Preserves existing login, public signup and invitation enforcement, bounded operational decision logging, legacy non-mapping or unowned-schema environment fallback, and frozen `/api/v1`.
+- Invokes no live policy change and adds no readiness, UI, OAuth/provider enablement, provider network, public exposure, credential, DNS, billing, mail, migration, grant, or issue-closure authority.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.41 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
+- Keeps issue #333 and issues #430/#471 open.
 
 ## Bounded enrollment-policy enforcement
 
