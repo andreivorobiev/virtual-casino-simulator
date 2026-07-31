@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.43`
+Packaged application release: `0.9.5.44`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.43 carries the accepted issue #527 bounded Roulette and Slots presentation and lifecycle slice. Roulette retains its exact linear 3.6-second and twenty-one-stop compatibility curves while adding route-owned rotor, ball, capture, and true reduced-motion presentation. Slots retains its fast 180-millisecond unattended path while adding five deterministic staggered strips, anticipation presentation, and a strip-free reduced-motion path. Real mount, unmount, and remount coverage proves awaited API, landing, wallet, sound, voice, bot, refund, and continuation work cannot mutate a replacement route after disposal, and source-bound hosted evidence executes normal and reduced actions in English and Russian across four governed viewports. Authoritative engine, economy, ledger, and API behavior remain unchanged; full pacing, adoption, one-hundred-spin, and video gates remain planned under their open issues. The release retains the MySQL schema-two/schema-three rollback bridge, with migration application held and production remaining at schema 2 so exact v0.9.5.42 remains eligible for application-only rollback. Schema-3 production migration, provider/public changes, and all broader runtime authority remain separately governed. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.44 carries the accepted catalog-derived shell-label integration from sole content PR #548. Both locales now provide static `games.<id>.label` resources for all 46 catalog games, adding the 40 previously missing rows from the canonical English descriptors and reviewed Russian translations so cold-open and deep-link fallback rendering matches hydrated catalog labels. The original PR #539 was marked merged only because its contributor head became reachable through the ancestry-preserving controller; no second content merge occurred. Dependent PR #525 remains open and held until terminal deployment. The release changes no API, route logic, game engine, economy, ledger, provider, public policy, readiness, or production configuration. It retains the MySQL schema-two/schema-three rollback bridge, with migration application held and production remaining at schema 2 so exact v0.9.5.43 remains eligible for application-only rollback; database rollback remains prohibited. Schema-3 production migration, provider/public changes, and all broader runtime authority remain separately governed. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
