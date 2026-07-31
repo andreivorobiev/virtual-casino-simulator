@@ -12767,6 +12767,29 @@
       "introduced_in": "issue-527-roulette-slots-presentation",
       "changed_in": "issue-527-roulette-slots-presentation",
       "notes": "Listener-free tests dispose the real route-owned timer scope through actual Slots mount, unmount, and remount cycles at API, landing, and delayed-wallet boundaries. Hosted exact-head Browser evidence executes normal and reduced public spins in English and Russian at all four governed viewports. This bounded presentation slice does not claim the planned SLOT-030 through SLOT-035 full pacing, adoption, one-hundred-spin, or video gates, and issues #170 and #74 remain open."
+    },
+    {
+      "id": "UX-023",
+      "module": "Application",
+      "description": "The authenticated shared wallet settles each latest server-owned play-token balance exactly once and decorates genuine gains with one bounded ordinary or large-gain presentation while initial load, loss, overlap, navigation, page departure, session disposal, remount, and reduced motion preserve the authoritative value and leave no stale timer, node, class, observer, callback, or later-route effect.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/core/celebrate.js",
+        "web/styles.css",
+        "web/sw.js",
+        "tests/pwa_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json",
+        "docs/evidence/wallet-celebration/README.md"
+      ],
+      "introduced_in": "issue-74-wallet-celebration",
+      "changed_in": "issue-74-wallet-celebration",
+      "notes": "Listener-free tests execute the real controller with deterministic timer, randomness, motion, DOM, and lifecycle seams; it uses no wallet-text observer or animation-frame loop and never rewrites a newer authoritative value. Existing BR-LOBBY-001 produces thirty-two exact-head cells for ordinary and threshold-level gains in English and Russian at all four governed viewports under normal and reduced motion. This presentation slice changes no wallet arithmetic, game outcome, economy, ledger, API, contract, provider, public policy, PWA version, release, or deployment behavior; issue #74 remains open and held #481/#518 reconcile the shared stylesheet later."
     }
   ]
 }

@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.54.2
+- application: 9.55.0
 - core: 9.35.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.65.1
-- docs: 1.64.55
+- tests: 1.65.2
+- docs: 1.64.56
 - contracts: 1.53.4
 - tooling: 1.24.0
 - commenting_policy: 1.0.0
@@ -947,3 +947,4 @@ Historical source baseline: 9.1.0
 - **TOOL-011** (Tooling) - PASS: Release and predecessor tooling authenticate the application-only, database-rollback-prohibited, retained-predecessor compatibility policy and rollback schema declaration, require that schema to fit both candidate and predecessor runtime windows, and make bridge deployment prove exact schema two before and after cutover without invoking migration.
 - **ROU-072** (Roulette) - PASS: Roulette preserves the frozen linear 3.6-second, twenty-one-stop rotor and ball compatibility curves while bounded honest-landing wrappers carry the authoritative result into a physically coherent pocket presentation, true reduced motion suppresses both curves and every wrapper transition, and route-owned action identity makes API, landing, wallet, sound, bot, refund, teardown, and remount continuation exactly once and stale-safe.
 - **SLOT-037** (Slots) - PASS: Slots preserves the existing fast 180-millisecond unattended hold while attended normal motion uses five independent deterministic decorative strips with staggered deceleration and bounded anticipation over the authoritative grid, true reduced motion uses a strip-free comfort hold, and route-owned action identity makes API, landing, wallet, sound, voice, teardown, and remount continuation exactly once and stale-safe.
+- **UX-023** (Application) - PASS: The authenticated shared wallet settles each latest server-owned play-token balance exactly once and decorates genuine gains with one bounded ordinary or large-gain presentation while initial load, loss, overlap, navigation, page departure, session disposal, remount, and reduced motion preserve the authoritative value and leave no stale timer, node, class, observer, callback, or later-route effect.

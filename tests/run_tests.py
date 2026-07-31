@@ -3437,7 +3437,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
     # Make the active reporter, shard partition, and affected-game selection visible to the shared run_case helper.
     global ACTIVE_PROGRESS,BROWSER_SHARD_CASES,BROWSER_CASE_SEQ,BROWSER_AFFECTED_GAMES
     # Start protected logic so failures can be handled safely.
-    try: from playwright.sync_api import sync_playwright
+    try: from playwright.sync_api import TimeoutError as PlaywrightTimeoutError,sync_playwright
     # Handle the expected failure path for the protected logic.
     except Exception:
         # Write diagnostic output so the current operation can be inspected.
@@ -3607,10 +3607,62 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             offline_result=pwa_page.evaluate("async () => { try { const mod=await import('/core/api.js'); await mod.addUserTokens({amount:1}); return {ok:true}; } catch(error){ return {ok:false,code:error.code||'',message:error.message}; } }")
                             # Require a fail-closed error before any queued or replayable mutation.
                             assert offline_result['ok'] is False and offline_result['code']=='OFFLINE',offline_result
-                            # Navigate while truly offline so only the cached index and exact static module allowlist can reconstruct the shell.
-                            pwa_page.goto(f'{base}/games/roulette',wait_until='domcontentloaded',timeout=10000)
-                            # Require the cached shell, PWA controller, and localization runtime without accepting stale authoritative game state.
-                            pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='offline' && document.body?.dataset.testid==='pwa-shell' && Boolean(window.CasinoI18n)",timeout=8000)
+                            # Bound failure-only page exceptions captured during offline shell reconstruction.
+                            pwa_page_errors=[]
+                            # Bound failure-only console errors captured during offline shell reconstruction.
+                            pwa_console_errors=[]
+                            # Normalize one diagnostic value without retaining local origins, roots, newlines, or unbounded text.
+                            def pwa_diagnostic_text(value):
+                                # Replace the ephemeral server origin before the diagnostic can enter an artifact.
+                                text=str(value).replace(base,'<origin>')
+                                # Replace the local checkout path before the diagnostic can enter an artifact.
+                                text=text.replace(str(ROOT),'<root>')
+                                # Collapse whitespace and retain only a bounded diagnostic prefix.
+                                return re.sub(r'\s+',' ',text).strip()[:240]
+                            # Retain at most eight sanitized page errors around the failed predicate.
+                            def capture_pwa_page_error(error):
+                                # Append one bounded error only while the reviewed cardinality remains available.
+                                if len(pwa_page_errors)<8: pwa_page_errors.append(pwa_diagnostic_text(error))
+                            # Retain at most eight sanitized error-level console messages around the failed predicate.
+                            def capture_pwa_console_error(message):
+                                # Ignore non-error console traffic and bound the retained diagnostic cardinality.
+                                if message.type=='error' and len(pwa_console_errors)<8: pwa_console_errors.append(pwa_diagnostic_text(message.text))
+                            # Observe page exceptions only across the exact offline navigation and readiness boundary.
+                            pwa_page.on('pageerror',capture_pwa_page_error)
+                            # Observe error-level console output only across the exact offline navigation and readiness boundary.
+                            pwa_page.on('console',capture_pwa_console_error)
+                            # Bound listener cleanup around the unchanged offline navigation and readiness wait.
+                            try:
+                                # Navigate while truly offline so only the cached index and exact static module allowlist can reconstruct the shell.
+                                pwa_page.goto(f'{base}/games/roulette',wait_until='domcontentloaded',timeout=10000)
+                                # Preserve one eight-second wait while proving only reconstructed-document readiness.
+                                try:
+                                    # Require the reconstructed PWA controller, cached shell, and localization runtime before dispatching the new document's event.
+                                    pwa_page.wait_for_function("() => Boolean(window.CasinoPwa) && document.body?.dataset.testid==='pwa-shell' && Boolean(window.CasinoI18n)",timeout=8000)
+                                # Add evidence only when the existing readiness wait times out.
+                                except PlaywrightTimeoutError:
+                                    # Inspect bounded predicate, document, worker, cache, and passive module-resource state without retrying readiness.
+                                    try: pwa_timeout_state=pwa_page.evaluate("""async () => { const pwaPresent=Boolean(window.CasinoPwa); const pwaState=window.CasinoPwa?.state?.()??null; const shellMarker=document.body?.dataset?.testid??null; const i18nPresent=Boolean(window.CasinoI18n); const controller=navigator.serviceWorker.controller; const cacheNames=(await caches.keys()).filter(name => name.startsWith('casino-static-shell-v')).slice(0,4); const cachedResponse=await caches.match('/core/celebrate.js'); const celebrateResources=performance.getEntriesByType('resource').filter(entry => { try { return new URL(entry.name).pathname==='/core/celebrate.js'; } catch (_) { return false; } }); const celebrateResource=celebrateResources.at(-1); const falsePredicates=[]; if (!pwaPresent) falsePredicates.push('pwaPresent'); if (shellMarker!=='pwa-shell') falsePredicates.push('shellMarker'); if (!i18nPresent) falsePredicates.push('i18nPresent'); return {falsePredicates,pwaPresent,pwaState,shellMarker,i18nPresent,documentReadyState:document.readyState,online:navigator.onLine,controllerPresent:Boolean(controller),controllerScript:controller?new URL(controller.scriptURL).pathname:null,controllerState:controller?.state??null,relevantCacheNames:cacheNames,relevantCachePresent:cacheNames.length>0,celebrateCached:Boolean(cachedResponse),celebrateResourceObserved:Boolean(celebrateResource),celebrateResourceCount:Math.min(celebrateResources.length,4),celebrateResourceCompleted:Boolean(celebrateResource?.responseEnd)}; }""")
+                                    # Normalize a diagnostic-evaluation failure without hiding the original readiness failure.
+                                    except Exception as diagnostic_error: pwa_timeout_state={'diagnosticError':pwa_diagnostic_text(diagnostic_error)}
+                                    # Bind the bounded page and console observations to the exact timeout snapshot.
+                                    pwa_timeout_state['pageErrors']=pwa_page_errors
+                                    # Bind only bounded error-level console observations to the exact timeout snapshot.
+                                    pwa_timeout_state['consoleErrors']=pwa_console_errors
+                                    # Fail with the same Playwright timeout class and sanitized low-cardinality evidence.
+                                    raise PlaywrightTimeoutError('PWA offline readiness timeout diagnostic '+json.dumps(pwa_timeout_state,sort_keys=True,separators=(',',':'))) from None
+                                # Dispatch exactly one offline event to the reconstructed window whose listeners now exist.
+                                pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))")
+                                # Read the synchronously committed reconstructed-document state without adding another wait.
+                                reconstructed_offline_state=pwa_page.evaluate("() => ({pwaState:window.CasinoPwa?.state?.()??null,shellMarker:document.body?.dataset?.testid??null,i18nPresent:Boolean(window.CasinoI18n)})")
+                                # Require the new window to settle offline while preserving the reconstructed shell and localization runtime.
+                                assert reconstructed_offline_state=={'pwaState':'offline','shellMarker':'pwa-shell','i18nPresent':True},reconstructed_offline_state
+                            # Always remove diagnostic listeners so the successful path retains no later output or state.
+                            finally:
+                                # Release the page-error listener installed only for this readiness boundary.
+                                pwa_page.remove_listener('pageerror',capture_pwa_page_error)
+                                # Release the console listener installed only for this readiness boundary.
+                                pwa_page.remove_listener('console',capture_pwa_console_error)
                             # Prove a direct authoritative API request is unavailable rather than served from the worker cache.
                             direct_offline_api=pwa_page.evaluate("async () => { try { await fetch('/api/v1/casino/state',{credentials:'include'}); return true; } catch (_) { return false; } }")
                             # Reject any offline API replay or cached authoritative response.
@@ -3854,6 +3906,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Build the complete after-pass evidence metadata required by VIS-EVIDENCE-001.
                 metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
                 # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+            # Capture live wallet motion without fast-forwarding the finite celebration animations. (UX-023)
+            def wallet_evidence(name, states, locale, viewport_id):
+                # Resolve the PNG target under the standard browser artifact directory.
+                target=screenshots/name
+                # Capture the complete shell while allowing the changed wallet animation to remain visible.
+                page.screenshot(path=str(target),full_page=True,animations='allow',style='#toast, .status-bar { visibility: hidden !important; }')
+                # Record the exact active viewport dimensions beside its governed identifier.
+                viewport=page.viewport_size
+                # Record the current focus target without requiring the transient effect to accept input.
+                focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || ''")
+                # Bind source, state, locale, viewport, path, and focus to the after-pass artifact.
+                metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'shell_lobby','states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
+                # Write the exact-head metadata next to the live-motion screenshot.
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Capture the visible status-footer region together with the exact accepted geometry diagnostics. (UX-016, TEST-085)
             def footer_evidence(name, states, locale, viewport_id, geometry):
@@ -4747,6 +4813,73 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_test_id('open-roulette').is_visible()
                         # Verify the catalog advertises one authoritative game count with no contradictory roadmap target. (issue #235)
                         assert page.get_by_test_id('catalog-capacity').inner_text()==f'{len(casino_config.GAMES)} available'
+                        # Read every governed viewport from the executable visual matrix for wallet evidence. (UX-023)
+                        celebration_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                        # Require the complete desktop, compact, tablet, and mobile viewport contract.
+                        assert set(celebration_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                        # Resolve one numeric wallet value from the exact shared two-decimal display.
+                        def rendered_wallet_amount():
+                            # Parse grouping separators without changing the rendered authoritative text.
+                            return page.evaluate("() => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, ''))")
+                        # Execute one real current-user credit through the visible wallet and prove its effect branch.
+                        def capture_wallet_gain(locale,viewport_id,amount,state,reduced):
+                            # Capture the exact authoritative value before the server-owned credit.
+                            before=rendered_wallet_amount()
+                            # Apply the real media preference before triggering the controller branch.
+                            page.emulate_media(reduced_motion='reduce' if reduced else 'no-preference')
+                            # Open the registered-user wallet menu when the prior successful action closed it.
+                            if page.locator('.wallet-menu').get_attribute('open') is None: page.locator('#wallet-menu-summary').click()
+                            # Fill the deterministic ordinary or large gain amount.
+                            page.locator('#add-token-amount').fill(str(amount))
+                            # Observe the exact current-user mutation while activating the visible action.
+                            with page.expect_response(lambda response: response.url.endswith('/api/v2/me/tokens/add') and response.request.method=='POST'):
+                                # Submit the ledger-backed fake-token credit through the shared shell.
+                                page.get_by_test_id('add-tokens').click()
+                            # Calculate the exact authoritative display expected from that server response.
+                            expected=round(before+amount,2)
+                            # Wait until both the private current-user cache and visible wallet publish the same value.
+                            page.wait_for_function("expected => { const session=window.CasinoCurrentUser||{}; const player=session.player||{}; const value=Number(player.token_balance ?? player.tokens ?? session.token_balance ?? session.tokens?.balance ?? 0); const rendered=Number(String(document.querySelector('#balance')?.textContent||'').replace(/[^0-9.-]/g,'')); return value===expected && rendered===expected; }",arg=expected,timeout=5000)
+                            # Branch between visible normal motion and intentionally animation-free reduced motion.
+                            if reduced:
+                                # Require the comfort path to allocate no chip, coin layer, marker, or animation class.
+                                assert page.evaluate("() => { const wallet=document.querySelector('.wallet-pill'); return !wallet?.hasAttribute('data-wallet-celebration') && !wallet?.classList.contains('wallet-celebration-gain') && !wallet?.classList.contains('wallet-celebration-big') && !document.querySelector('.wallet-gain') && !document.querySelector('.wallet-coin-layer'); }")
+                            else:
+                                # Wait for the exact ordinary or large-gain marker before taking live-motion evidence.
+                                page.wait_for_function("state => document.querySelector('.wallet-pill')?.getAttribute('data-wallet-celebration') === state",arg='big-gain' if state=='wallet_big_win' else 'gain',timeout=3000)
+                                # Require one gain chip and the magnitude-appropriate bounded coin layer.
+                                transient=page.evaluate("() => ({ chips:document.querySelectorAll('.wallet-gain').length, layers:document.querySelectorAll('.wallet-coin-layer').length, coins:document.querySelectorAll('.wallet-coin').length })")
+                                # Reject missing, duplicate, or unbounded normal-motion transient presentation.
+                                assert transient==({'chips':1,'layers':1,'coins':12} if state=='wallet_big_win' else {'chips':1,'layers':0,'coins':0}),transient
+                            # Name reduced-motion evidence separately while retaining the exact magnitude state.
+                            evidence_states=[f'{state}_reduced_motion' if reduced else state]
+                            # Record one source-bound locale, viewport, magnitude, and motion artifact.
+                            wallet_evidence(f"after-pass-wallet-celebration-{locale.lower()}-{viewport_id}-{'reduced' if reduced else 'normal'}-{'big' if state=='wallet_big_win' else 'ordinary'}.png",evidence_states,locale,viewport_id)
+                            # Wait for normal-motion lifecycle completion, while reduced motion is already clean.
+                            page.wait_for_function("() => { const wallet=document.querySelector('.wallet-pill'); return !wallet?.hasAttribute('data-wallet-celebration') && !document.querySelector('.wallet-gain') && !document.querySelector('.wallet-coin-layer'); }",timeout=4000)
+                            # Require the exact authoritative value to survive cleanup without a stale rewrite.
+                            assert rendered_wallet_amount()==expected
+                        # Exercise both installed locales through the visible shell control.
+                        for celebration_locale in ('en-US','ru-RU'):
+                            # Select the exact locale before its complete viewport and motion matrix.
+                            page.get_by_test_id('shell-locale-select').select_option(celebration_locale)
+                            # Wait for locale state and lobby remount before opening wallet controls.
+                            page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"lobby\"]')",arg=celebration_locale,timeout=5000)
+                            # Exercise every governed viewport without substituting primary-only evidence.
+                            for celebration_viewport_id,celebration_viewport in celebration_viewports.items():
+                                # Resize to the exact visual-matrix dimensions before each wallet branch.
+                                page.set_viewport_size(celebration_viewport); page.wait_for_timeout(80)
+                                # Require the persistent wallet and amount to remain visible and horizontally contained.
+                                assert page.get_by_test_id('premium-wallet').is_visible() and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                                # Exercise normal and reduced motion independently at this locale and viewport.
+                                for celebration_reduced in (False,True):
+                                    # Capture an ordinary real gain under this exact matrix cell.
+                                    capture_wallet_gain(celebration_locale,celebration_viewport_id,25,'wallet_gain',celebration_reduced)
+                                    # Capture a threshold-level large gain under this exact matrix cell.
+                                    capture_wallet_gain(celebration_locale,celebration_viewport_id,250,'wallet_big_win',celebration_reduced)
+                        # Restore normal motion, English, and the primary desktop for downstream browser cases.
+                        page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size(celebration_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US')
+                        # Wait for the canonical English lobby after the matrix completes.
+                        page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US' && document.querySelector('[data-testid=\"lobby\"]')")
                         # Load the paired shell copy so localized lobby expectations stay sourced from canonical resources. (issue #236)
                         lobby_shell_copy={loc:read_i18n_json(ROOT/'web'/'i18n'/loc/'shell.json') for loc in ('en-US','ru-RU')}
                         # Prove the Play buttons and hero eyebrow render the localized strings, capturing EN/RU evidence without raw resource keys.
@@ -4782,7 +4915,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Confirm the English lobby copy is restored for downstream browser cases.
                         assert_lobby_localized('en-US')
                     # Execute this statement as part of the module's documented control flow.
-                    run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008','I18N-004','TEST-069','UX-012','TEST-072'],premium_lobby)
+                    run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008','UX-023','I18N-004','TEST-069','UX-012','TEST-072'],premium_lobby)
                     # Define catalog_navigation to cover search and category facets from module metadata.
                     def catalog_navigation():
                         # Filter by a game label through the visible search control.
