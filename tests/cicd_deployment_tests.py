@@ -2,6 +2,8 @@
 
 # Import Python syntax inspection for listener-free browser ownership policy tests.
 import ast
+# Import modules from exact file paths for isolated generator hostile tests.
+import importlib.util
 # Import JSON encoding for synthetic fail-closed shard evidence.
 import json
 # Import path helpers so assertions read the checked-in workflow from any cwd.
@@ -327,8 +329,28 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
         # Require the current exact suite inventory after the Keno economics proof joined its edge owner case.
         self.assertEqual(len(case_ids), 107)
-        # Compute the same half-open contiguous partition used by the production runner.
-        ranges = [(0, 27), (27, 54), (54, 81), (81, 107)]
+        # Import the listener-free runner module so the test uses its exact reviewed packer.
+        from tests import run_tests as browser_runner_module
+        # Compute the same deterministic six-runner partition used by the workflow.
+        shard_sets = browser_runner_module.browser_shard_case_sets(6)
+        # Recompute from identical inputs to prove packing replay is deterministic.
+        replayed_shard_sets = browser_runner_module.browser_shard_case_sets(6)
+        # Require exact ordered ownership equality across repeated packing.
+        self.assertEqual(replayed_shard_sets, shard_sets)
+        # Require every approved ordinary runner to own at least one case.
+        self.assertTrue(all(shard_sets))
+        # Load the reviewed profile through the production strict validator.
+        durations = browser_runner_module.browser_case_durations()
+        # Apply the production median rule for any future unmeasured literal case.
+        default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
+        # Compute each ordered shard's reviewed aggregate weight.
+        shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
+        # Pin the exact accepted current-profile distribution across six runners.
+        self.assertEqual(shard_loads, (178, 178, 177, 176, 177, 176))
+        # Reject a degenerate or materially imbalanced assignment even if union remains exact.
+        self.assertLessEqual(max(shard_loads) - min(shard_loads), 2)
+        # Require exact union and nonduplication across all declared owners.
+        self.assertEqual(sorted(case_id for shard_cases in shard_sets for case_id in shard_cases), sorted(case_ids))
         # Locate the one permanent Keno owner call that carries both edge and economics acceptance.
         keno_owner_call = next(node for node in ast.walk(runner) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run_case" and ast.literal_eval(node.args[0]) == "BR-KENO-EDGE-001")
         # Read the owner call's permanent requirement mapping without executing Browser code.
@@ -359,8 +381,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             positions = [case_ids.index(case_id) for case_id in group_case_ids]
             # Require one contiguous source range so bulk skip accounting cannot hide unrelated cases.
             self.assertEqual(positions, list(range(positions[0], positions[0] + len(positions))), group_name)
-            # Resolve the deterministic owner of each position.
-            owners = {index for position in positions for index, shard_range in enumerate(ranges) if shard_range[0] <= position < shard_range[1]}
+            # Resolve the deterministic packed owner of each grouped case.
+            owners = {index for index, shard_cases in enumerate(shard_sets) for case_id in group_case_ids if case_id in shard_cases}
             # Require all producers and consumers to execute on one shard.
             self.assertEqual(len(owners), 1, group_name)
             # Guest loops retain unconditional run_case accounting through owner-conditioned iterables.
@@ -373,6 +395,186 @@ class CiQualificationWorkflowTests(unittest.TestCase):
                 self.assertIn(f"if browser_shard_owns_group('{group_name}'):", source)
                 # Require unowned guarded bodies to advance their exact literal positions.
                 self.assertIn(f"skip_browser_affinity('{group_name}')", source)
+
+    # Prove hostile duration profile values fail with one fixed diagnostic and no mutation.
+    def test_browser_duration_profile_is_strict_bounded_and_value_free(self):
+        # Import the listener-free runner module without starting Browser or a server.
+        from tests import run_tests as browser_runner_module
+        # Preserve the tracked path and shared runner state across isolated hostile inputs.
+        original_path = browser_runner_module.BROWSER_DURATION_PROFILE_PATH
+        # Snapshot mutable globals that strict profile reads must never change.
+        original_results = list(browser_runner_module.RESULTS)
+        # Build exact hostile JSON bytes, including an integer too large for float coercion.
+        hostile_payloads = (
+            b'{"BR-AB-001": true}',
+            ('{"BR-AB-001": %s}' % (10 ** 400)).encode("ascii"),
+            b'{"BR-AB-001": NaN}',
+            b'{"BR-AB-001": Infinity}',
+            b'{"BR-AB-001": 0}',
+            b'{"BR-AB-001": 3601}',
+            b'{"BR-AB-001": "12"}',
+            b'{"BR-AB-001": 12, "BR-AB-001": 13}',
+            b'{"BR-NOT-A-CASE": 12}',
+            b'[',
+        )
+        # Guarantee shared module restoration even if one hostile assertion fails.
+        try:
+            # Use one disposable path so tracked profile bytes remain untouched.
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Point the strict loader at a task-local synthetic profile.
+                profile_path = Path(temp_dir) / "browser_case_durations.json"
+                # Route every isolated call to the disposable profile.
+                browser_runner_module.BROWSER_DURATION_PROFILE_PATH = profile_path
+                # Exercise every malformed or hostile value independently.
+                for payload in hostile_payloads:
+                    # Persist the exact hostile bytes for this read.
+                    profile_path.write_bytes(payload)
+                    # Require the one fixed value-free failure, including for the huge integer.
+                    with self.assertRaisesRegex(AssertionError, "^browser duration profile is invalid$") as raised:
+                        # Invoke the production strict profile reader directly.
+                        browser_runner_module.browser_case_durations()
+                    # Require dynamic parser or filesystem causes to remain suppressed.
+                    self.assertIsNone(raised.exception.__cause__)
+                    # Prove a rejected read preserved the exact hostile bytes.
+                    self.assertEqual(profile_path.read_bytes(), payload)
+                    # Prove no result evidence was mutated by a rejected read.
+                    self.assertEqual(browser_runner_module.RESULTS, original_results)
+                # Build a syntactically oversized payload before any JSON parse.
+                oversized = b" " * (browser_runner_module.BROWSER_DURATION_PROFILE_MAX_BYTES + 1)
+                # Persist the exact oversized bytes.
+                profile_path.write_bytes(oversized)
+                # Require the same fixed value-free failure.
+                with self.assertRaisesRegex(AssertionError, "^browser duration profile is invalid$") as raised:
+                    # Invoke the production strict profile reader.
+                    browser_runner_module.browser_case_durations()
+                # Require no dynamic exception cause for oversized input either.
+                self.assertIsNone(raised.exception.__cause__)
+                # Prove oversized input remains byte-identical.
+                self.assertEqual(profile_path.read_bytes(), oversized)
+        # Restore the tracked path before any later test can import this shared module.
+        finally:
+            # Rebind the exact original tracked profile path.
+            browser_runner_module.BROWSER_DURATION_PROFILE_PATH = original_path
+
+    # Prove the regeneration tool rejects hostile measurements before changing its profile.
+    def test_browser_duration_generator_rejects_hostile_measurements_atomically(self):
+        # Resolve the reviewed generator source inside the approved tooling path.
+        generator_path = ROOT / "scripts" / "generate_browser_durations.py"
+        # Build an isolated module spec without invoking the CLI writer.
+        spec = importlib.util.spec_from_file_location("browser_duration_generator_test", generator_path)
+        # Require the exact tracked module to be importable.
+        self.assertIsNotNone(spec)
+        # Create the isolated module object.
+        generator = importlib.util.module_from_spec(spec)
+        # Execute only the generator definitions.
+        spec.loader.exec_module(generator)
+        # Use disposable profile and evidence paths so the tracked file cannot change.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Point the module at a valid one-row synthetic profile.
+            profile_path = Path(temp_dir) / "browser_case_durations.json"
+            # Seed one exact reviewed weight.
+            profile_path.write_text('{"BR-AB-001": 13}\n', encoding="utf-8")
+            # Replace only this imported module's tracked output path.
+            generator.PROFILE_PATH = profile_path
+            # Create a disposable shard evidence directory.
+            evidence_dir = Path(temp_dir) / "evidence"
+            # Materialize the directory before writing one artifact.
+            evidence_dir.mkdir()
+            # Bind one hostile huge integer measurement to a known Browser case.
+            hostile = '{"results":[{"test_id":"BR-AB-001","duration_seconds":%s}]}' % (10 ** 400)
+            # Persist the hostile shard artifact.
+            (evidence_dir / "browser_results_shard_0_of_6.json").write_text(hostile, encoding="utf-8")
+            # Capture the exact profile bytes before validation.
+            before = profile_path.read_bytes()
+            # Require the fixed value-free evidence error without OverflowError.
+            with self.assertRaisesRegex(ValueError, "^browser duration evidence is invalid$"):
+                # Validate and collect without opening the tracked output.
+                generator.collect(evidence_dir)
+            # Prove the hostile measurement did not change the profile.
+            self.assertEqual(profile_path.read_bytes(), before)
+
+    # Prove duration evidence is additive only to active Browser result rows.
+    def test_browser_duration_publication_preserves_other_result_schemas(self):
+        # Import the shared listener-free runner helpers without starting a server.
+        from tests import run_tests as browser_runner_module
+        # Preserve every shared runner global this focused test changes.
+        original_results = browser_runner_module.RESULTS
+        # Preserve the active reporter exactly.
+        original_progress = browser_runner_module.ACTIVE_PROGRESS
+        # Preserve packed shard ownership exactly.
+        original_shard_cases = browser_runner_module.BROWSER_SHARD_CASES
+        # Preserve affected-game filtering exactly.
+        original_affected_games = browser_runner_module.BROWSER_AFFECTED_GAMES
+        # Preserve source-order accounting exactly.
+        original_sequence = browser_runner_module.BROWSER_CASE_SEQ
+
+        # Provide the minimal Browser reporter surface used by run_case.
+        class FakeBrowserProgress:
+            # Accept one case-start notification without side effects.
+            def start_item(self, _test_id):
+                # Return no value just like the production reporter.
+                return None
+
+            # Accept one terminal notification without side effects.
+            def finish_item(self, _status):
+                # Return no value just like the production reporter.
+                return None
+
+        # Raise one fixed live Browser failure for FAIL timing coverage.
+        def failing_case():
+            # Exercise the raising case-body branch.
+            raise RuntimeError("browser failure")
+
+        # Guarantee every shared global is restored even if an assertion fails.
+        try:
+            # Isolate result collection from the imported runner's prior evidence.
+            browser_runner_module.RESULTS = []
+            # Disable Browser instrumentation for an ordinary shared run_case call.
+            browser_runner_module.ACTIVE_PROGRESS = None
+            # Disable packed ownership and affected-game filtering.
+            browser_runner_module.BROWSER_SHARD_CASES = None
+            # Keep all cases selected.
+            browser_runner_module.BROWSER_AFFECTED_GAMES = None
+            # Execute one ordinary non-Browser case.
+            browser_runner_module.run_case("UNIT-DURATION-SHAPE", ["TEST-002"], lambda: True)
+            # Require the exact historical row schema with no duration field.
+            self.assertEqual(browser_runner_module.RESULTS, [{"test_id": "UNIT-DURATION-SHAPE", "requirements": ["TEST-002"], "status": "PASS", "message": ""}])
+            # Reset only the isolated result list before Browser branch coverage.
+            browser_runner_module.RESULTS = []
+            # Activate the Browser reporter context that authorizes duration evidence.
+            browser_runner_module.ACTIVE_PROGRESS = FakeBrowserProgress()
+            # Exercise one passing Browser case.
+            browser_runner_module.run_case("BR-DURATION-PASS", ["TEST-010"], lambda: True)
+            # Exercise one raising Browser case.
+            with self.assertRaisesRegex(RuntimeError, "^browser failure$"):
+                # Run the fixed failing body.
+                browser_runner_module.run_case("BR-DURATION-FAIL", ["TEST-010"], failing_case)
+            # Exercise one predicate-failure Browser case.
+            with self.assertRaisesRegex(AssertionError, "case predicate returned False"):
+                # Return False so run_case owns the failure record.
+                browser_runner_module.run_case("BR-DURATION-PREDICATE", ["TEST-010"], lambda: False)
+            # Require timing on PASS, raising FAIL, and predicate FAIL rows.
+            self.assertEqual([row["test_id"] for row in browser_runner_module.RESULTS], ["BR-DURATION-PASS", "BR-DURATION-FAIL", "BR-DURATION-PREDICATE"])
+            # Inspect every Browser row's bounded numeric measurement.
+            for row in browser_runner_module.RESULTS:
+                # Require a non-boolean integer or float duration.
+                self.assertIn(type(row.get("duration_seconds")), (int, float))
+                # Require the emitted duration to stay within the governed Browser bound.
+                self.assertGreaterEqual(row["duration_seconds"], 0)
+                # Require the emitted duration to stay within the existing suite timeout budget.
+                self.assertLessEqual(row["duration_seconds"], browser_runner_module.BROWSER_DURATION_MAX_SECONDS)
+        # Restore the shared runner exactly for every later focused test.
+        finally:
+            # Restore the original result-list identity.
+            browser_runner_module.RESULTS = original_results
+            # Restore the original reporter.
+            browser_runner_module.ACTIVE_PROGRESS = original_progress
+            # Restore the original packed ownership.
+            browser_runner_module.BROWSER_SHARD_CASES = original_shard_cases
+            # Restore the original affected-game selection.
+            browser_runner_module.BROWSER_AFFECTED_GAMES = original_affected_games
+            # Restore the original source-order position.
+            browser_runner_module.BROWSER_CASE_SEQ = original_sequence
 
     # Prove inline assertions cannot execute outside an owning shard or callback.
     def test_browser_inline_assertions_are_affinity_owned(self):
@@ -525,26 +727,28 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         game_cases = ast.literal_eval(mapping_node.value)
         # Keep shared cases and the one selected game's dedicated case.
         expected = [case_id for case_id in case_ids if case_id not in set(game_cases.values()) or case_id == game_cases["acey_deucey"]]
-        # Create one disposable four-shard result packet.
+        # Import the listener-free runner module so synthetic declarations match real packing.
+        from tests import run_tests as browser_runner_module
+        # Compute the exact six-runner governed ownership declarations.
+        shard_sets = browser_runner_module.browser_shard_case_sets(6)
+        # Create one disposable six-shard result packet.
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Write each deterministic contiguous shard result with an exact self-description.
-            for index in range(4):
-                # Split the selected inventory into the same balanced contiguous shape.
-                start = (len(expected) * index) // 4
-                # Resolve the exclusive shard boundary.
-                stop = (len(expected) * (index + 1)) // 4
-                # Build passing evidence for this shard's exact selected cases.
-                results = [{"test_id": case_id, "status": "PASS"} for case_id in expected[start:stop]]
-                # Retain the detector selection beside the synthetic case evidence.
-                payload = {"affected_games": ["acey_deucey"], "results": results}
+            # Write each deterministic packed shard result with an exact self-description.
+            for index, owned_set in enumerate(shard_sets):
+                # Sort the governed ownership exactly as the real runner writes it.
+                owned = sorted(owned_set)
+                # Build passing evidence for owned cases that survive detector selection.
+                results = [{"test_id": case_id, "status": "PASS"} for case_id in owned if case_id in set(expected)]
+                # Bind worker identity, detector selection, and exact ownership beside its results.
+                payload = {"shard_index": index, "shard_count": 6, "affected_games": ["acey_deucey"], "owned_cases": owned, "results": results}
                 # Write the exact filename consumed by the aggregate verifier.
-                (Path(temp_dir) / f"browser_results_shard_{index}_of_4.json").write_text(json.dumps(payload), encoding="utf-8")
+                (Path(temp_dir) / f"browser_results_shard_{index}_of_6.json").write_text(json.dumps(payload), encoding="utf-8")
             # Run the real aggregate CLI without invoking a browser or listener.
-            verified = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "4", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            verified = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require exact selected-case coverage to pass.
             self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
             # Forge one shard's declaration while keeping all case rows unchanged.
-            forged_path = Path(temp_dir) / "browser_results_shard_0_of_4.json"
+            forged_path = Path(temp_dir) / "browser_results_shard_0_of_6.json"
             # Read the existing evidence before changing only its self-description.
             forged = json.loads(forged_path.read_text(encoding="utf-8"))
             # Claim a different detector selection to simulate an untrusted artifact.
@@ -552,22 +756,44 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Persist the forged declaration for the negative regression.
             forged_path.write_text(json.dumps(forged), encoding="utf-8")
             # Re-run the real aggregate verifier against the same expected detector input.
-            rejected = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "4", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            rejected = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require the forged shard selection to fail closed.
             self.assertNotEqual(rejected.returncode, 0, rejected.stdout + rejected.stderr)
             # Retain a focused diagnostic proving the expected-selection mismatch was detected.
             self.assertIn("affected games", rejected.stdout)
+            # Restore the exact detector selection before forging only ownership.
+            forged["affected_games"] = ["acey_deucey"]
+            # Remove one governed case while keeping the declaration otherwise well formed.
+            forged["owned_cases"] = forged["owned_cases"][1:]
+            # Persist the missing-owner forgery.
+            forged_path.write_text(json.dumps(forged), encoding="utf-8")
+            # Re-run the real aggregate verifier against the incomplete declaration.
+            missing_owner = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            # Require each shard's exact owned_cases declaration, not merely result union.
+            self.assertNotEqual(missing_owner.returncode, 0, missing_owner.stdout + missing_owner.stderr)
+            # Pin the bounded ownership diagnostic.
+            self.assertIn("owned_cases mismatch", missing_owner.stdout)
+            # Duplicate one remaining owned id to test declaration-level nonduplication.
+            forged["owned_cases"] = sorted(shard_sets[0]) + [sorted(shard_sets[0])[0]]
+            # Persist the duplicate-owner forgery.
+            forged_path.write_text(json.dumps(forged), encoding="utf-8")
+            # Re-run aggregate verification against the duplicated declaration.
+            duplicate_owner = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            # Require duplicate ownership to fail closed.
+            self.assertNotEqual(duplicate_owner.returncode, 0, duplicate_owner.stdout + duplicate_owner.stderr)
+            # Pin the fixed declaration diagnostic.
+            self.assertIn("invalid owned_cases", duplicate_owner.stdout)
 
     # Prove ordinary sharding does not alter formal 50k or sustained Baccarat governance.
     def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
         # Read the complete workflow as inert text.
         workflow_text = self.workflow_text(BROWSER_WORKFLOW)
-        # Require exactly four ordinary browser shard identities.
-        self.assertIn("shard: [0, 1, 2, 3]", workflow_text)
+        # Require exactly six duration-balanced ordinary Browser workers. (issue #502)
+        self.assertIn("shard: [0, 1, 2, 3, 4, 5]", workflow_text)
         # Require exact aggregate result accounting through the historical branch-protection context.
         self.assertIn("      - browser_tests_shard", workflow_text)
         # Require literal-case union verification after every shard succeeds.
-        self.assertIn("--verify-browser-shards logs/test-runs --shard-count 4", workflow_text)
+        self.assertIn("--verify-browser-shards logs/test-runs --shard-count 6", workflow_text)
         # Preserve the explicit formal 50,000-cycle authorization input and exact aggregate.
         self.assertIn("formal_ui_50000:", workflow_text)
         # Preserve the exact formal cycle count and source-commit-bound aggregate.
