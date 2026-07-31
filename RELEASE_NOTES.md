@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.44 Release Notes
+# Virtual Casino Simulator v0.9.5.45 Release Notes
+
+## Deterministic six-runner Browser balancing
+
+- Packages the accepted Browser qualification tooling from sole content PR #550; the release-only application revision advances mechanically to `9.54.2`.
+- Assigns all 107 permanent Browser cases deterministically across six nonempty runners using the governed duration profile and the reviewed load tuple `178/178/177/176/177/176`.
+- Rejects boolean, nonfinite, huge, overflow, oversized, duplicate-key, unknown-key, malformed, and unreadable duration profiles with one fixed value-free diagnostic before output mutation.
+- Publishes bounded duration evidence only for Browser cases, preserving existing API, storage, unit, and other result-row schemas.
+- Makes the aggregate verify every shard's exact sorted `owned_cases`, pairwise nonduplication, full union, result ownership, and exact expected PASS coverage.
+- Records that original PR #525 was marked merged only because ancestry shell `6fc0814d` made its contributor head reachable; PR #550 is the sole content integration and no second #525 content merge occurred.
+- Records durable PR #525 comment `5141718412` and issue #502 comment `5141718883`; issue #502 was reopened after stale closing text and remains OPEN at `stack-rank:024`.
+- Adds no requirement ID, test ID, gameplay, product, public, provider, API, database, migration, ledger, shell-label, or application-visible behavior claim.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.44 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
 
 ## Catalog-derived shell labels
 

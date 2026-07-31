@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.44`
+Packaged application release: `0.9.5.45`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.44 carries the accepted catalog-derived shell-label integration from sole content PR #548. Both locales now provide static `games.<id>.label` resources for all 46 catalog games, adding the 40 previously missing rows from the canonical English descriptors and reviewed Russian translations so cold-open and deep-link fallback rendering matches hydrated catalog labels. The original PR #539 was marked merged only because its contributor head became reachable through the ancestry-preserving controller; no second content merge occurred. Dependent PR #525 remains open and held until terminal deployment. The release changes no API, route logic, game engine, economy, ledger, provider, public policy, readiness, or production configuration. It retains the MySQL schema-two/schema-three rollback bridge, with migration application held and production remaining at schema 2 so exact v0.9.5.43 remains eligible for application-only rollback; database rollback remains prohibited. Schema-3 production migration, provider/public changes, and all broader runtime authority remain separately governed. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.45 carries the accepted deterministic six-runner Browser shard rebalance from sole content PR #550. A governed duration profile assigns all 107 permanent Browser cases to six nonempty owners with deterministic replay and reviewed balanced loads; strict fixed-diagnostic validation rejects malformed profile input before output mutation, and the aggregate verifies every shard's exact owned-case declaration, nonduplication, full union, ownership, and expected PASS coverage. Browser timing evidence remains Browser-only, so API, storage, unit, and other result-row schemas stay unchanged. Original PR #525 was marked merged only because its contributor head became reachable through ancestry shell `6fc0814d`; PR #550 is the sole content integration, issue #502 has been reopened and remains open, and no second #525 content merge occurred. The release changes no gameplay, product, public, provider, API, database, migration, ledger, shell-label, or application-visible behavior. It retains the MySQL schema-two/schema-three rollback bridge, with migration application held and production remaining at schema 2 so exact v0.9.5.44 remains eligible for application-only rollback; database rollback remains prohibited. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
