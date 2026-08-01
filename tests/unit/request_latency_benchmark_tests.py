@@ -2,6 +2,8 @@
 
 # Import syntax-tree inspection for network and selector policy proof.
 import ast
+# Import module loading so the standalone terminology validator can be exercised without a subprocess.
+import importlib.util
 # Import callable signature inspection for the optional MySQL callback seam.
 import inspect
 # Import JSON parsing for atomic evidence assertions.
@@ -1328,6 +1330,45 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require fixed timeout and launch failure handling.
         self.assertIn("except (subprocess.TimeoutExpired,OSError):", provenance)
 
+    # Prove the terminology gate accepts only an owned direct formatter delegation or an inline token mark.
+    def test_token_terminology_money_delegation_is_exact(self) -> None:
+        # Resolve the standalone validator from this exact checkout.
+        validator_path = ROOT / "scripts" / "validate_token_terminology.py"
+        # Build an isolated import specification without changing package state.
+        validator_spec = importlib.util.spec_from_file_location("token_terminology_task_555", validator_path)
+        # Fail clearly if the standard loader cannot describe the repository script.
+        self.assertIsNotNone(validator_spec)
+        # Fail clearly if the import specification has no executable loader.
+        self.assertIsNotNone(validator_spec.loader)
+        # Create the isolated validator module from the checked specification.
+        validator = importlib.util.module_from_spec(validator_spec)
+        # Execute the validator definitions without invoking its command-line entry point.
+        validator_spec.loader.exec_module(validator)
+        # Allocate disposable formatter sources so production files remain untouched.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Resolve the temporary repository root through a portable path.
+            temporary_root = Path(temp_dir)
+            # Create the exact shared-formatter directory expected by the validator.
+            core_dir = temporary_root / "web" / "core"
+            # Materialize the nested directory before writing controlled sources.
+            core_dir.mkdir(parents=True)
+            # Keep the authoritative i18n formatter token-marked in every scenario.
+            (core_dir / "i18n.js").write_text(f"export const formatMoney = amount => `{validator.TOKEN_MARK}${{amount}}`;\n", encoding="utf-8")
+            # Point only this imported validator at the disposable source tree.
+            with mock.patch.object(validator, "ROOT", temporary_root):
+                # Write the exact direct delegation used by the current shared helper.
+                (core_dir / "ui.js").write_text("export const money = amount => formatMoney(amount);\n", encoding="utf-8")
+                # Accept argument-preserving delegation because the i18n formatter owns the mark.
+                self.assertEqual(validator.check_required_token_mark(), [])
+                # Write an unrelated formatter reference that must not satisfy the helper contract.
+                (core_dir / "ui.js").write_text("import { formatMoney } from './i18n.js';\nexport const money = amount => amount;\n", encoding="utf-8")
+                # Require the fixed path-only diagnostic instead of accepting a substring false positive.
+                self.assertEqual(validator.check_required_token_mark(), ["web/core/ui.js: money() must prefix amounts with ◈ or directly delegate to formatMoney()"])
+                # Write a self-contained inline token-mark formatter as the supported legacy alternative.
+                (core_dir / "ui.js").write_text(f"export const money = amount => `{validator.TOKEN_MARK}${{amount}}`;\n", encoding="utf-8")
+                # Preserve compatibility with an inline token-mark helper.
+                self.assertEqual(validator.check_required_token_mark(), [])
+
     # Prove the current governance allocations and module revisions remain exact.
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
@@ -1422,17 +1463,17 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(core_module["version"], "9.35.0")
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.14.0")
-        # Require the exact compatible tests minor allocation.
-        self.assertEqual(tests_module["version"], "1.66.1")
+        # Require the exact compatible tests revision allocation.
+        self.assertEqual(tests_module["version"], "1.66.2")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.60")
+        self.assertEqual(docs_module["version"], "1.64.62")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.53.6")
-        # Require the compatible tooling minor allocation.
-        self.assertEqual(tooling_module["version"], "1.24.0")
+        # Require the exact compatible tooling revision allocation.
+        self.assertEqual(tooling_module["version"], "1.24.1")
         # Require the exact compatible Roulette presentation minor.
         self.assertEqual(roulette_module["version"], "9.5.0")
         # Require the exact compatible Slots presentation minor.
         self.assertEqual(slots_module["version"], "9.4.0")
-        # Require the exact compatible Application minor for shared-wallet presentation.
-        self.assertEqual(application_module["version"], "9.56.1")
+        # Require the exact compatible Application revision for the front-door documentation change.
+        self.assertEqual(application_module["version"], "9.56.2")

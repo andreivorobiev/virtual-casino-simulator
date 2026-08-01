@@ -6,9 +6,14 @@ Historical source baseline: `9.1.0`
 
 Local play-token browser casino simulator with a descriptor-driven catalog of isolated games (Roulette, Slots, Blackjack, Baccarat, Keno, American Bingo and many more; the canonical catalog is discovered from the `modules/*.json` descriptors), isolated game state, ledger-backed wallet accounting, authenticated private-beta users, Admin telemetry, and optional JSON or MySQL persistence.
 
-## Current repository status
+## Design decisions
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.47 carries the accepted semantic game-color foundation from sole content PR #556. Shared styling gives Roulette, Color Wheel, Marble Race, and Keno real semantic red, felt green, and metallic gold while preserving rose brand chrome and playing-card suits. Source-bound hosted evidence covers English and Russian across all four governed viewports in exactly thirty-two cells. Qualification preserves Color Wheel's route-owned gradients, aligns the Keno visual fixture, keeps computed-style receipt identity scalar and complete, and makes the existing token-credit readiness wait for both the canonical balance and cleared amount field without changing product behavior or timeouts. Original PR #481 is ancestry-reachable through shell `cf7ebbdd`; PR #556 is the sole content integration, issues #74 and #554 remain open, and no second #481 content merge occurred. The release changes no game source, math, outcome, economy, ledger, API, provider, public policy, database, or migration behavior. It retains the MySQL schema-two/schema-three rollback bridge, with migration application held and production remaining at schema 2 so exact v0.9.5.46 remains eligible for application-only rollback; database rollback remains prohibited. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+- **Descriptor-driven game catalog.** Each game owns a `modules/<id>.json` descriptor for its identifier, routes, backend callable, and frontend module. Runtime catalog consumers discover the game set from those descriptors instead of maintaining a separate hardcoded list.
+- **Game isolation enforced by CI.** `scripts/validate_module_boundaries.py` scans Python and JavaScript imports and rejects cross-game dependencies rather than relying on review alone.
+- **Shared exactly-once settlement path.** Games built on `casino/core/simple_game.py` commit round entropy with the ledger transaction, so an exact retry replays the recorded outcome instead of redrawing it.
+- **Server-authoritative game intent.** Routed game actions pass through `sanitize_game_intent()`, which strips client-authored outcome fields, while the generated `server-authority-matrix.json` records and validates each module's boundary.
+- **Compliance as a build gate.** `scripts/validate_token_terminology.py` runs in CI and rejects real-money wording in active user-facing copy across English and Russian resources.
+- **Separated author and integration duties.** Contributor branches carry authored changes, while an independent controller review and merge path is recorded in `docs/claude_codex_work_division.md`.
 
 ## Version sources
 
