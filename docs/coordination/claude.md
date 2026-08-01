@@ -8,6 +8,7 @@ States follow `docs/coordination/codex.md`; #481 and #518 are held behind the re
 
 | PR | Branch | What it is | State |
 |---|---|---|---|
+| #562 | `claude/legacy-settlement-keno-baccarat` | Program task 5: keno+baccarat entropy-committed exactly-once settlement (#555, advances #430), stacked on #561 | open draft, ready for review |
 | #561 | `claude/guest-endpoint-hardening` | Program task 4: per-source guest-creation rate limit + bounded source log (#555), stacked on #559 | open draft, ready for review |
 | #559 | `claude/arch-diagram` | Program task 2: ARCHITECTURE.md request-path Mermaid diagram (#555), stacked on #558 | open draft, ready for review |
 | #558 | `claude/readme-front-door` | Program task 1: README Design decisions + RELEASE_NOTES status archive + token-validator repair/CI wiring (#555) | open draft, ready for review |
