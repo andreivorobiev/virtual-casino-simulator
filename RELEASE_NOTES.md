@@ -1,4 +1,16 @@
-# Virtual Casino Simulator v0.9.5.47 Release Notes
+# Virtual Casino Simulator v0.9.5.48 Release Notes
+
+## README front door and terminology enforcement
+
+- Packages the accepted #555 task-1 documentation and tooling slice from sole content PR #563; the release-only application revision advances mechanically to `9.56.3`.
+- Moves the former per-release README status prose verbatim into the dated release archive and keeps the README front door focused on six durable design decisions.
+- Corrects the token-terminology validator's exact `formatMoney` delegation check and runs that validator in the existing comment-density workflow.
+- Keeps the focused terminology oracle aligned with the validator without adding a permanent requirement, Browser, API, contract, or game identifier.
+- Records durable issue #555 comment `5149895749`, PR #558 comment `5149896533`, and merged PR #563 comment `5149897511`; ancestry shell `93035ae1` and contributor `ed82cd35` are reachability-only, PR #563 is the sole task-1 content integration, and no second #558 content merge occurred.
+- Keeps issue #555 OPEN and incomplete; stacked drafts #559, #561, #562, and #564 remain external, held, and untouched, while #518 and every other merge remain held and #450 remains excluded.
+- Adds no casino runtime, product, game source, game math, economy, ledger, API, provider, public-policy, database, migration, full-issue, issue-closure, publication, release-activation, or deployment claim.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.47 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
 
 ## Semantic game-color foundation
 
