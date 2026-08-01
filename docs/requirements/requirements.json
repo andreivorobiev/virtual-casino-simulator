@@ -12791,6 +12791,45 @@
       "introduced_in": "issue-74-wallet-celebration",
       "changed_in": "issue-74-wallet-celebration",
       "notes": "Listener-free tests execute the real controller with deterministic timer, randomness, motion, DOM, and lifecycle seams; it uses no wallet-text observer or animation-frame loop and never rewrites a newer authoritative value. Existing BR-LOBBY-001 produces thirty-two exact-head cells for ordinary and threshold-level gains in English and Russian at all four governed viewports under normal and reduced motion. This presentation slice changes no wallet arithmetic, game outcome, economy, ledger, API, contract, provider, public policy, PWA version, release, or deployment behavior; issue #74 remains open and held #481/#518 reconcile the shared stylesheet later."
+    },
+    {
+      "id": "UX-024",
+      "module": "Application",
+      "description": "Shared application styling exposes real semantic game red, casino-felt green, and metallic gold independently from brand chrome aliases while preserving the existing playing-card suit palette across Roulette, Color Wheel, Marble Race, and Keno.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-GAME-COLOR-001"
+      ],
+      "implementation_files": [
+        "web/styles.css",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json",
+        "docs/evidence/semantic-game-colors/README.md"
+      ],
+      "introduced_in": "issue-554-semantic-game-colors",
+      "changed_in": "issue-554-semantic-game-colors",
+      "notes": "The bounded shared-token repair changes no game source, game module version, wager, payout, result, economy, ledger, API, contract, provider, public policy, package, release, or deployment behavior. Hosted exact-head evidence computes the rendered semantic colors in English and Russian at all four governed viewports, checks brand and playing-card invariants, restores route, locale, and viewport state, and keeps issues #74 and #554 open."
+    },
+    {
+      "id": "TEST-149",
+      "module": "Tests",
+      "description": "One permanent Browser case produces a source-bound thirty-two-cell matrix for four semantic-color game surfaces in English and Russian at every governed viewport, verifies rendered red, green, and gold values plus brand and card-suit invariants, and restores shared browser state.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-GAME-COLOR-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/browser_case_durations.json",
+        "tests/visual/visual_matrix.json",
+        "docs/evidence/semantic-game-colors/README.md"
+      ],
+      "introduced_in": "issue-554-semantic-game-colors",
+      "changed_in": "issue-554-semantic-game-colors",
+      "notes": "BR-GAME-COLOR-001 maps only UX-024 and TEST-149, writes bounded computed-style diagnostics beside exact-head screenshots, and adds no generic TEST, API, contract, game, provider, workflow, or release identifier. Browser and heavy qualification are hosted-only for this slice."
     }
   ]
 }
