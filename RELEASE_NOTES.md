@@ -1,4 +1,19 @@
-# Virtual Casino Simulator v0.9.5.46 Release Notes
+# Virtual Casino Simulator v0.9.5.47 Release Notes
+
+## Semantic game-color foundation
+
+- Packages the accepted semantic game-color and evidence slice from sole content PR #556; the release-only application revision advances mechanically to `9.56.1`.
+- Separates real semantic red, casino-felt green, and metallic gold from rose brand chrome while preserving playing-card suit colors.
+- Preserves Color Wheel's route-owned red and green production gradients over the shared semantic fallbacks.
+- Aligns the Keno visual fixture without changing a game source file, result, wager, payout, or economy rule.
+- Requires exactly thirty-two source-bound hosted cells across Roulette, Color Wheel, Marble Race, and Keno in English and Russian at all four governed viewports.
+- Keeps computed-style evidence receipt identity scalar, unique, and complete while retaining the full nested color diagnostics.
+- Makes the existing token-credit readiness predicate require both the canonical balance and cleared amount field under the unchanged timeout.
+- Records durable issue #74 comment `5148860461`, PR #481 comment `5148860670`, and issue #554 comment `5148860881`; ancestry shell `cf7ebbdd` makes the contributor reachable, PR #556 is the sole content integration, and no second #481 content merge occurred.
+- Keeps issues #74 and #554 OPEN; held draft #558 must reconcile after terminal v0.9.5.47, #518 and every other merge remain held, and #450 remains excluded.
+- Adds no game source, game math, economy, ledger, API, provider, public-policy, database, migration, full-issue, issue-closure, publication, release-activation, or deployment claim.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.46 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
 
 ## Bounded shared-wallet celebration
 

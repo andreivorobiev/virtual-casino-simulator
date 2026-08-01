@@ -1,33 +1,33 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-31T23:36:40Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-01T01:36:39Z.
 
 ## Current branch / active Codex work
 
-- Protected main and terminal production are exact v0.9.5.46 source `7262638f0356779a87b17d416da41eddc5036b0c`; MySQL remains clean schema 2 with schema-3 application held.
-- `codex/481-semantic-game-color-controller` starts at accepted ancestry shell `cf7ebbddbb10d5d012752a0b9b56958b663f79ee`, whose first parent is exact v46 main and whose second parent is immutable contributor `52e6ebe66e4be0ae30eb451752b4cc3630ae1596`; the shell tree equals main and its base diff is empty.
-- This controller has no upstream or remote ref and has no commit, push, PR, check-dispatch, merge, release, or deployment authority before mutable and immutable audit acceptance.
+- Protected main is exact sole-content merge `fb4bb274e347b8c787992b731c300b45bd01b547`, with ordered parents prior v46 main `7262638f0356779a87b17d416da41eddc5036b0c` then accepted #556 controller head `8728b9cb1ce465b1701a425523a786784320e512`.
+- Terminal production remains exact v0.9.5.46 at clean MySQL schema 2 with the schema-3 application held; no v0.9.5.47 publication, activation, or deployment is claimed.
+- Local-only `codex/release-v0.9.5.47` prepares the repository-standard release packet from exact current main and has no commit, push, PR, tag, publication, or deployment authority before separate audits.
 
 ## Live queue snapshot
 
-- Durable issue #74 comments `5148176374` and `5148204744` and PR #481 comments `5148176775` and `5148205085` authorize only the amended #554 semantic game-color foundation.
-- Original PR #481 remains OPEN at immutable contributor head and is preserved as ancestry only; issues #74 and #554 remain OPEN and the eventual controller body must be non-closing.
-- #481 serializes before held #518; every other merge remains held and #450 remains excluded.
+- Durable comments #74 `5148860461`, #481 `5148860670`, and #554 `5148860881` record #556 as the sole semantic-color content merge; ancestry shell `cf7ebbddbb10d5d012752a0b9b56958b663f79ee` is reachability-only and did not produce a second #481 content merge.
+- Issues #74 and #554 remain OPEN at P1/stack-rank:020 and P2/stack-rank:077 respectively; the release wording and any later draft remain non-closing.
+- Diverged draft #558 at `ed82cd35` overlaps nine standard release paths and remains held for reconciliation after terminal v0.9.5.47; no #558 hunk is imported. #518 and every other merge remain held, and #450 remains excluded.
 
 ## Requirement / version claims
 
-- Permanent `UX-024` and `TEST-149` map only to new `BR-GAME-COLOR-001`; no other requirement, Browser, generic TEST, API, contract, provider, game, workflow, or release identifier is allocated.
-- The Browser owner computes real red, felt green, and metallic gold across Roulette, Color Wheel, Marble Race, and Keno while proving shared rose brand chrome and playing-card suit styling remain unchanged.
-- Compatible versions advance only to application `9.56.0`, tests `1.66.0`, and docs `1.64.58`; package `0.9.5.46`, core `9.35.0`, contracts `1.53.5`, tooling `1.24.0`, and every game module remain unchanged.
+- The release retains `UX-024`, `TEST-149`, and `BR-GAME-COLOR-001`; it allocates no new permanent requirement, test, Browser, API, contract, provider, or game identifier.
+- Accepted delivery is limited to the shared semantic red, felt-green, and metallic-gold foundation, route-qualified Color Wheel cascade preservation, the aligned Keno visual fixture, thirty-two hosted color cells, evidence-receipt identity repair, and the BR-TOKEN readiness-ordering repair.
+- Release versions advance only to package `0.9.5.47`, application `9.56.1`, contracts `1.53.6`, tests `1.66.1`, and docs `1.64.60`; tooling remains `1.24.0` and all unrelated and game-module versions remain unchanged.
 
-## File claims / collision notes
+## File claims / predecessor contract
 
-- Product source is exactly `web/styles.css`; the contributor's other twenty-eight changed paths, every game source/module/version hunk, and all stale shared governance bytes are excluded.
-- Current-main governance is limited to requirements source/generated output, application/tests/docs descriptors and manifest, Browser case/duration/count fixtures, the existing allocation fixture, visual matrix, one evidence README, generator-owned evidence catalog, and append-only coordination.
-- Fresh protected-main and open-head scans must keep `UX-024`, `TEST-149`, `BR-GAME-COLOR-001`, application `9.56.0`, tests `1.66.0`, and docs `1.64.58` unique before any freeze.
+- The mutable packet is restricted to the standard twenty-six release-owned paths with new `contracts/compatibility/app-0.9.5.47.json`; it changes no casino runtime, game, workflow, provider, migration, API, ledger, or database source.
+- The compatibility record binds exact v46 predecessor source `7262638f0356779a87b17d416da41eddc5036b0c`, archive SHA-256 `0fcb5c1edd31662dd74d91111e0c7cda97adcb33c84c5c975b4f7e3c0843c85e`, and manifest SHA-256 `771aee41e2b25d7a4c0a77a7ed8847b19e8cbb4eb2ee8eb5c96db16b6099e8ca`.
+- Rollback remains application-only at schema 2, database rollback remains prohibited, and the runtime window remains minimum 2 / expected 3 / apply held with no migration.
 
 ## Decisions / handbacks
 
-- Hosted exact-head evidence must produce thirty-two unique cells: four real game routes × English/Russian × all four governed viewports, with bounded computed-style diagnostics and restored locale, viewport, and route state.
-- No local Browser, Chromium, or heavy-QA run is authorized; focused source, Browser-inventory, governance, generator, and browser-free validation own the local packet.
-- This packet changes no game source, math, outcome, wager, payout, economy, ledger, API, contract, provider, public policy, database, migration, package, release, deployment, full-#74, or issue-closure behavior.
+- All generated requirements, manifests, version fixtures, release documentation, PWA metadata, and locale surfaces must derive only from exact current main; stale shared hunks from #558 are excluded.
+- Local validation is browser-free only. No local Browser, Chromium, heavy-QA, game-math, economy, ledger, API, provider, public-policy, database, migration, full-issue, issue-closure, publication, readiness, activation, or deployment claim is authorized.
+- Worker B must independently accept the exact mutable twenty-six-path byte packet before any immutable commit is created.

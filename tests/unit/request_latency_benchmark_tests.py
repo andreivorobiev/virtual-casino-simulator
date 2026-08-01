@@ -1423,11 +1423,11 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.14.0")
         # Require the exact compatible tests minor allocation.
-        self.assertEqual(tests_module["version"], "1.66.0")
+        self.assertEqual(tests_module["version"], "1.66.1")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.58")
+        self.assertEqual(docs_module["version"], "1.64.60")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.53.5")
+        self.assertEqual(contracts_module["version"], "1.53.6")
         # Require the compatible tooling minor allocation.
         self.assertEqual(tooling_module["version"], "1.24.0")
         # Require the exact compatible Roulette presentation minor.
@@ -1435,4 +1435,4 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Slots presentation minor.
         self.assertEqual(slots_module["version"], "9.4.0")
         # Require the exact compatible Application minor for shared-wallet presentation.
-        self.assertEqual(application_module["version"], "9.56.0")
+        self.assertEqual(application_module["version"], "9.56.1")
