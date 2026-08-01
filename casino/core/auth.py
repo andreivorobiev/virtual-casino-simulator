@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 # Import required dependency so this module can use its public functions or constants.
 from http.cookies import SimpleCookie
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_MAX_ACTIONS, GUEST_MAX_ACTIVE, GUEST_STARTING_BALANCE, GUEST_TERMS_VERSION, GUEST_TRIALS_ENABLED, SCHEMA_VERSION
+from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_CREATE_WINDOW_SECONDS, GUEST_CREATES_PER_IP, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_MAX_ACTIONS, GUEST_MAX_ACTIVE, GUEST_STARTING_BALANCE, GUEST_TERMS_VERSION, GUEST_TRIALS_ENABLED, SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import players
 # Import the de-identified guest-trial telemetry recorder for the Admin Guest Trials section. (issue #317)
@@ -36,6 +36,10 @@ from casino.errors import ConflictError, ForbiddenError, RateLimitError, Unautho
 USERS_PATH = DATA_DIR / "auth" / "users.json"
 # Set SESSIONS_PATH to the value needed for the next operation.
 SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
+# Point the bounded per-source guest-creation record store at the auth-owned data tree. (issue #555)
+GUEST_CREATION_LOG_PATH = DATA_DIR / "auth" / "guest_creation_log.json"
+# Bound the durable guest-creation log to a fixed tail so anonymous traffic cannot grow it without limit.
+MAX_GUEST_CREATION_RECORDS = 2_000
 # Set PASSWORD_ITERATIONS to the value needed for the next operation.
 PASSWORD_ITERATIONS = 120_000
 # Set PUBLIC_API_PATHS to the value needed for the next operation.
@@ -458,6 +462,43 @@ def guest_session_expiry() -> str:
     # Cap the guest at the configured absolute lifetime regardless of activity.
     return (utc_datetime() + timedelta(seconds=GUEST_LIFETIME_SECONDS)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
+# Provide the empty schema for the bounded guest-creation source log. (issue #555)
+def default_guest_creation_log() -> dict:
+    # Start with a versioned document and an empty bounded record list.
+    return {"schema_version": SCHEMA_VERSION, "creations": []}
+
+# Read the bounded guest-creation source log through the provider-aware store boundary. (issue #555)
+def load_guest_creation_log() -> dict:
+    # Return the durable record document so callers never touch provider paths directly.
+    return read_json(GUEST_CREATION_LOG_PATH, default_guest_creation_log)
+
+# Enforce the per-source creation window and append the bounded source record in one atomic mutation. (issue #555)
+def enforce_guest_creation_source(client: str, locale: str, device: str) -> None:
+    # Normalize an absent adapter client so the window key and the stored record stay stable.
+    source = str(client or "").strip() or "unknown"
+    # Capture one instant shared by the window decision and the appended record.
+    now = utc_datetime()
+    # Apply the decision and the record inside one atomic mutation, mirroring the durable feedback rate window.
+    def record(state: dict) -> dict:
+        # Normalize malformed state before reading the bounded record list.
+        if not isinstance(state, dict) or not isinstance(state.get("creations"), list):
+            # Rebuild the versioned empty document so a corrupt store fails safe.
+            state = default_guest_creation_log()
+        # Retain only parseable records inside the rolling window for the rate decision.
+        recent = [row for row in state["creations"] if isinstance(row, dict) and row.get("at") and (now - parse_time(row["at"])).total_seconds() <= GUEST_CREATE_WINDOW_SECONDS]
+        # Reject this source before any wallet, identity, or analytics allocation.
+        if sum(1 for row in recent if row.get("client") == source) >= GUEST_CREATES_PER_IP:
+            # Keep the fixed secret-safe diagnostic shape used by every platform rate limit.
+            raise RateLimitError("Guest trial creation rate limit is active")
+        # Append the accepted attempt as the durable creation-source record.
+        state["creations"].append({"at": utc_now(), "client": source, "locale": locale, "device": device, "outcome": "accepted"})
+        # Trim the log to its bounded tail so the store cannot grow without limit.
+        state["creations"] = state["creations"][-MAX_GUEST_CREATION_RECORDS:]
+        # Return the mutated log document for atomic persistence.
+        return state
+    # Persist the decision and the record through the shared atomic store helper.
+    update_json(GUEST_CREATION_LOG_PATH, record, default_guest_creation_log)
+
 # Create one isolated, disposable guest-trial principal, wallet, and browser session. (issue #317)
 def create_guest(client: str = "", accepted: bool = False, terms_version: str = "", locale: str = "en-US", device: str = "unknown") -> dict:
     # Fail closed when the configuration-driven account-free entry is disabled.
@@ -468,6 +509,8 @@ def create_guest(client: str = "", accepted: bool = False, terms_version: str = 
     if accepted is not True or str(terms_version or "").strip() != GUEST_TERMS_VERSION:
         # Reject missing, stale, or implied consent without creating a wallet, identity, or analytics row.
         raise ValidationError("Current guest-trial terms must be accepted")
+    # Bound per-source creation and record the attempt before allocating any state. (issue #555)
+    enforce_guest_creation_source(client, locale, device)
     # End time-bounded trials before enforcing the anonymous-principal capacity limit.
     expire_overdue_guests()
     # Retain created objects outside the atomic mutation without publishing them before capacity succeeds.

@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.55.2
-- core: 9.35.0
+- core: 9.35.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.65.5
-- docs: 1.64.59
+- tests: 1.65.6
+- docs: 1.64.60
 - contracts: 1.53.5
 - tooling: 1.24.1
 - commenting_policy: 1.0.0
@@ -733,7 +733,7 @@ Historical source baseline: 9.1.0
 - **UX-018** (UX) - PASS: Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.
 - **TEST-089** (Tests) - PASS: Listener-free and MySQL-live evidence verifies the one-time-token lifecycle: deterministic issue and consume, generic rejection, strict purpose, subject, and session binding, replay, expiry, revocation, bounded attempts, retention, atomic reissue, cross-process exactly-once consumption, and absence of raw bearer, subject, session, or digest material from public results and audit events.
 - **TEST-087** (Tests) - PASS: Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
-- **GUEST-001** (Core) - PASS: Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.
+- **GUEST-001** (Core) - PASS: Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-source creation-rate, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.
 - **GUEST-002** (Application) - PASS: The en-US and ru-RU login surface discloses disposable play-token-only guest terms and requires affirmative consent; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.
 - **GUEST-003** (Core) - PASS: Guest telemetry stores only an unrelated analytics id, server timestamps, bounded lifecycle reason, locale, coarse device class, registered game slug, named journey milestones, allowlisted action/error categories, coarse latency buckets, fake-token-only aggregates, and bounded event/counter summaries; it never stores user, player, auth-session, cookie, browser-proof, email, network, or user-agent identifiers, retains raw rows for 30 days and daily aggregates for 400 days, and exposes sanitized cleanup success and failure health.
 - **GUEST-004** (Admin) - PASS: The centrally Admin-gated Guest Trials v2 surface provides the named nine-stage funnel; duration, games-per-trial, rounds-per-trial, error-free, and fake-token-only totals; complete per-game engagement, round, error, latency, and action-category metrics; time, lifecycle, game, locale, device, completion, and error filters; bounded recent rows and allowlisted drill-down; and retention health in en-US and ru-RU, including keyboard-scrollable tables, the governed mobile viewport, reduced motion, and 200 percent zoom.

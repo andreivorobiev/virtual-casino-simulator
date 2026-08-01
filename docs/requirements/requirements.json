@@ -9186,7 +9186,7 @@
     {
       "id": "GUEST-001",
       "module": "Core",
-      "description": "Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.",
+      "description": "Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-source creation-rate, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.",
       "status": "PASS",
       "api_tests": [
         "API-GUEST-LIFECYCLE-001"
@@ -9202,7 +9202,7 @@
         "casino/wsgi.py"
       ],
       "introduced_in": "issue-317-guest-trials",
-      "changed_in": "issue-317-guest-trials",
+      "changed_in": "issue-555-guest-endpoint-hardening",
       "notes": "Issue #317 is repository-only restricted-preview scope and does not alter unrestricted-public-launch issue #209."
     },
     {

@@ -890,6 +890,46 @@ def validate_guest_lifecycle():
     finally:
         # Return the auth service to its configured resource policy.
         auth_core.GUEST_MAX_ACTIONS=original_action_limit
+    # Preserve the configured per-source creation window before exercising its fail-closed boundary. (issue #555)
+    original_window_limit=auth_core.GUEST_CREATES_PER_IP
+    # Start protected window validation so module configuration is always restored.
+    try:
+        # Allow exactly one creation per source inside the rolling window.
+        auth_core.GUEST_CREATES_PER_IP=1
+        # Consume the only allowance for the probed source address.
+        limited=auth_core.create_guest('rate-window-probe',True,'private-beta-1','en-US','desktop')
+        # Start bounded teardown so the probe guests never linger in shared state.
+        try:
+            # Attempt one excess creation from the same source address.
+            try:
+                # Require the shared creation gate to fail closed before any allocation.
+                auth_core.create_guest('rate-window-probe',True,'private-beta-1','en-US','desktop')
+            # Accept only the standard sanitized rate-limit response.
+            except RateLimitError:
+                # Continue after observing the per-source creation ceiling.
+                pass
+            # Fail if the excess anonymous creation obtains another principal.
+            else:
+                # Raise a stable assertion without exposing the configured ceiling.
+                raise AssertionError('guest creation rate limit was not enforced')
+            # Prove a distinct source stays unaffected by the exhausted window.
+            other=auth_core.create_guest('rate-window-probe-2',True,'private-beta-1','en-US','desktop')
+            # Remove the distinct-source probe immediately after the boundary proof.
+            auth_core.end_guest_trial(other['user'],'revoked')
+            # Read the bounded source log through the provider-aware loader.
+            creation_log=auth_core.load_guest_creation_log()
+            # Prove the accepted attempt is recorded with its bounded source fields.
+            assert any(row.get('client')=='rate-window-probe' and row.get('outcome')=='accepted' and row.get('locale')=='en-US' and row.get('device')=='desktop' for row in creation_log.get('creations',[]))
+            # Prove the distinct source record exists and the store honors its bounded tail.
+            assert any(row.get('client')=='rate-window-probe-2' for row in creation_log.get('creations',[])) and len(creation_log.get('creations',[]))<=auth_core.MAX_GUEST_CREATION_RECORDS
+        # Remove the window probe principal even when focused assertions fail.
+        finally:
+            # End the probed guest so capacity checks below see only their own state.
+            auth_core.end_guest_trial(limited['user'],'revoked')
+    # Restore the configured window even when focused assertions fail.
+    finally:
+        # Return the auth service to its configured per-source creation policy.
+        auth_core.GUEST_CREATES_PER_IP=original_window_limit
     # Preserve the configured capacity before exercising its fail-closed boundary.
     original_capacity=auth_core.GUEST_MAX_ACTIVE
     # Start protected capacity validation so module configuration is always restored.

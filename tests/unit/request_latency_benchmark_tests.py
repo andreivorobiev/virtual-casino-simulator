@@ -1407,13 +1407,13 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the Application descriptor for the compatible shared-wallet addition.
         application_module = json.loads((ROOT / "modules" / "application.json").read_text(encoding="utf-8"))
         # Require the exact compatible core minor allocation.
-        self.assertEqual(core_module["version"], "9.35.0")
+        self.assertEqual(core_module["version"], "9.35.1")
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.14.0")
         # Require the exact compatible tests minor allocation.
-        self.assertEqual(tests_module["version"], "1.65.5")
+        self.assertEqual(tests_module["version"], "1.65.6")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.59")
+        self.assertEqual(docs_module["version"], "1.64.60")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.53.5")
         # Require the compatible tooling minor allocation.
