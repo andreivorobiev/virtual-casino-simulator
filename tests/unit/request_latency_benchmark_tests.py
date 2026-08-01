@@ -1411,9 +1411,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.14.0")
         # Require the exact compatible tests minor allocation.
-        self.assertEqual(tests_module["version"], "1.65.4")
+        self.assertEqual(tests_module["version"], "1.65.5")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.58")
+        self.assertEqual(docs_module["version"], "1.64.59")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.53.5")
         # Require the compatible tooling minor allocation.
