@@ -4583,8 +4583,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     with page.expect_response(lambda response: response.url.endswith('/api/v2/me/tokens/add') and response.request.method == 'POST') as token_add_info:
                         # Submit the visible token-add request.
                         page.get_by_test_id('add-tokens').click()
-                    # Wait until the wallet reflects the real ledger-backed token addition.
-                    page.wait_for_function("() => document.querySelector('#balance')?.textContent === '5,250.50'")
+                    # Wait until the wallet reflects the real ledger-backed token addition and clears the submitted amount.
+                    page.wait_for_function("() => document.querySelector('#balance')?.textContent === '5,250.50' && document.querySelector('#add-token-amount')?.value === ''")
                     # Read the real ledger after the visible token-add action.
                     ledger_after_add=page.evaluate("async playerId => (await (await fetch(`/api/v1/players/${playerId}/ledger`, {credentials:'include'})).json()).data.ledger",browser_player_id)
                     # Define auth_tokens_real_backend for exact wallet and ledger assertions.
