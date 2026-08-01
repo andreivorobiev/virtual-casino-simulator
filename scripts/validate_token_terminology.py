@@ -14,6 +14,8 @@ TOKEN_MARK = "◈"
 BANNED_TEXT_RE = re.compile(r"\b(fake[- ]money|dollars?|usd)\b", re.IGNORECASE)
 # Set DOLLAR_AMOUNT_RE to detect visible dollar-prefixed amounts without matching JS interpolation.
 DOLLAR_AMOUNT_RE = re.compile(r"(?<!\{)\$\s*\d")
+# Match only an exported money helper that passes its own argument directly to the approved formatter.
+MONEY_DELEGATION_RE = re.compile(r"\bexport\s+const\s+money\s*=\s*([A-Za-z_$][\w$]*)\s*=>\s*formatMoney\s*\(\s*\1\s*\)\s*;")
 # Set TEXT_PATHS to active owned source/resource files for this terminology worker.
 TEXT_PATHS = [
     # Include the README summary because it is a current user-facing entry point.
@@ -99,10 +101,10 @@ def check_required_token_mark():
     ui_text = (ROOT / "web" / "core" / "ui.js").read_text(encoding="utf-8")
     # Read the i18n numeric formatter.
     i18n_text = (ROOT / "web" / "core" / "i18n.js").read_text(encoding="utf-8")
-    # Branch when the legacy formatter is missing the approved mark.
-    if f"`{TOKEN_MARK}${{" not in ui_text:
+    # Accept an inline token mark or exact argument-preserving delegation to the separately checked formatter.
+    if f"`{TOKEN_MARK}${{" not in ui_text and not MONEY_DELEGATION_RE.search(ui_text):
         # Record the missing mark in the legacy formatter.
-        errors.append("web/core/ui.js: money() must prefix amounts with ◈")
+        errors.append("web/core/ui.js: money() must prefix amounts with ◈ or directly delegate to formatMoney()")
     # Branch when the i18n formatter is missing the approved mark.
     if f"`{TOKEN_MARK}${{" not in i18n_text:
         # Record the missing mark in the i18n formatter.
