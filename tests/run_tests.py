@@ -5376,12 +5376,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     if color_game=='keno':
                                         # Compare the actual selected state and fully resolved catch foreground/background.
                                         assert color_diagnostic['game']=={'gold':'rgb(232, 199, 96)','green':'rgb(8, 122, 67)','catchText':'rgb(244, 238, 255)'},color_diagnostic
-                                    # Retain the bounded receipt for exact matrix cardinality.
-                                    color_receipts.append({'game':color_game,'locale':color_locale,'viewport':color_viewport_id,**color_diagnostic})
+                                    # Retain scalar cell identity separately from the nested computed game-color mapping.
+                                    color_receipts.append({**color_diagnostic,'game':color_game,'locale':color_locale,'viewport':color_viewport_id,'computed_game_colors':color_diagnostic['game']})
                                     # Capture one exact-head artifact for this real route, locale, and viewport cell.
                                     game_evidence(f'after-pass-game-color-{color_game}-{color_locale.lower()}-{color_viewport_id}.png',color_game,['semantic_game_colors'],color_locale,color_viewport_id,color_diagnostic)
-                        # Require the complete four-game, two-locale, four-viewport matrix exactly once.
-                        assert len(color_receipts)==32 and len({(row['game'],row['locale'],row['viewport']) for row in color_receipts})==32,color_receipts
+                        # Define the complete four-game, two-locale, four-viewport identity set from governed inputs.
+                        expected_color_receipts={(game,locale,viewport) for game,_ready_testid in color_routes for locale in ('en-US','ru-RU') for viewport in color_viewports}
+                        # Require scalar identities while retaining every computed game-color mapping under its fixed nested key.
+                        assert all(all(isinstance(row[key],str) for key in ('game','locale','viewport')) and isinstance(row['computed_game_colors'],dict) for row in color_receipts),color_receipts
+                        # Require all 32 governed identity tuples to be present exactly once.
+                        assert len(color_receipts)==32 and {(row['game'],row['locale'],row['viewport']) for row in color_receipts}==expected_color_receipts,color_receipts
                     # Restore shared locale, viewport, and route ownership for later Browser cases.
                     finally:
                         # Restore English through the visible shell selector.
