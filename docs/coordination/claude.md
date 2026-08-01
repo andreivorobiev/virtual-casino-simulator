@@ -8,6 +8,7 @@ States follow `docs/coordination/codex.md`; #481 and #518 are held behind the re
 
 | PR | Branch | What it is | State |
 |---|---|---|---|
+| #558 | `claude/readme-front-door` | Program task 1: README Design decisions + RELEASE_NOTES status archive + token-validator repair/CI wiring (#555) | open draft, ready for review |
 | #454 | `claude/452-bingo-paytable` | Bingo paytable house-side rebalance + guaranteed competitor field (#452) | open draft; governance re-splice on Codex merge signal (owner 2026-07-28 hold decision) |
 | #460 | `claude/457-admin-empty-pages` | Admin console empty-page fixes (#457) | open draft; same hold |
 | #506 | `claude/456-admin-rtp-view` | Admin per-game payout-rate view (#456 phase 3), stacked on #460 | open draft; same hold |
@@ -20,7 +21,7 @@ The owner asked for a bounded polish-and-hardening pass before an external techn
 
 1. `claude/readme-front-door` — README "Current repository status" prose moved verbatim into a dated `RELEASE_NOTES.md` archive section; README gains a six-bullet "Design decisions" section. **Note for release packets: README no longer carries per-release status prose — release status belongs in `RELEASE_NOTES.md` only; please stop rewriting that README section at release time.**
 2. ARCHITECTURE.md gains one Mermaid request-path diagram near the top (docs only).
-3. Featured-game smoke pass (roulette, slots, blackjack, baccarat, keno, bingo): full round + mid-round reload recovery; fixes only for real breakage found in those six.
+3. Featured-game smoke pass — DONE 2026-07-31, all six clean (full round, balance math exact, mid-round reload recovery verified per game); no fix PR needed. One out-of-scope find filed as #557 (wallet add-tokens #247 guard races behind refreshShellState; also the root cause of local BR-TOKEN-001 flakiness).
 4. Guest-trial endpoint hardening: per-IP rate limit on `POST /api/v2/auth/guest` reusing the existing `casino/core/security.py` limiter pattern and error taxonomy, plus a bounded guest-creation source record. No `GUEST_STARTING_BALANCE` or gameplay changes.
 5. Legacy settlement migration (limited): 2-3 of the six original games move onto `casino/core/simple_game.py` exactly-once settlement, with retry-safety tests; ARCHITECTURE.md "Known gap" updated to match. The remaining originals stay legacy and stay documented as such.
 6. Comment quality in five high-traffic files (simple_game.py, auth.py, validate_module_boundaries.py, validate_token_terminology.py, verify_keno_economics_artifact.py): tautological comments replaced with purpose/why comments; if density drops below the gate, a documented per-path exemption list is added to `check_comment_density.py` instead of lowering the global threshold.
