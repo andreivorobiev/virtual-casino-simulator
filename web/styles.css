@@ -119,6 +119,10 @@
   --green: var(--accent);
   --ok: #5ef0c8;
   --bad: #ff8fae;
+  /* Keep metallic gold and casino-felt green game semantics independent from brand chrome aliases. */
+  --metal-gold: #e8c760;
+  --metal-gold-deep: #bf9330;
+  --felt-green: #087a43;
   --admin-blue: #0b1b2a;
   --shadow: rgba(6, 2, 16, 0.6);
   --font-ui: "Segoe UI", Inter, Arial, sans-serif;
@@ -2190,7 +2194,8 @@ h3 {
 }
 
 .red {
-  background: var(--red) !important;
+  /* Render semantic game red as a real table color without recoloring the rose brand chrome. */
+  background: #a91622 !important;
 }
 
 .black {
@@ -2198,7 +2203,18 @@ h3 {
 }
 
 .green {
-  background: var(--green) !important;
+  /* Render semantic game green as felt rather than the mint accent reserved for brand chrome. */
+  background: var(--felt-green) !important;
+}
+
+/* Preserve Color Wheel's route-owned real-red gradient over the shared semantic fallback. */
+.color-wheel .cw-bet.red {
+  background: linear-gradient(180deg, #d6323d, #8e1822) !important;
+}
+
+/* Preserve Color Wheel's route-owned felt-green gradient over the shared semantic fallback. */
+.color-wheel .cw-bet.green {
+  background: linear-gradient(180deg, #0f9c4c, #0a5f2e) !important;
 }
 
 /* Roulette table, wheel, chips, and statistics primitives. */
@@ -2327,11 +2343,16 @@ h3 {
   border: 4px dashed rgba(70, 40, 0, .75);
   border-radius: 50%;
   color: #1e1300;
-  background: radial-gradient(circle, #fff 0 25%, var(--gold) 26% 55%, #9b6800 56%);
+  background: radial-gradient(circle, #fff 0 25%, var(--metal-gold) 26% 55%, #9b6800 56%);
   box-shadow: 0 4px 12px #0009;
   font-size: 11px;
   font-weight: 1000;
   pointer-events: none;
+}
+
+/* Keep premium Roulette chips metallic when the route's later style block resolves the legacy brand-gold alias. */
+.roulette-premium .bet-chip {
+  background: radial-gradient(circle, #fffdf4 0 24%, var(--metal-gold) 25% 54%, var(--metal-gold-deep) 55% 72%, #5d3c03 73%) !important;
 }
 
 .roulette-table-board.hide-spots .spot {
@@ -2481,7 +2502,7 @@ h3 {
 
 .keno-num.selected {
   color: #1d1300;
-  background: var(--gold);
+  background: var(--metal-gold);
 }
 
 .keno-num.drawn {
@@ -2489,8 +2510,8 @@ h3 {
 }
 
 .keno-num.catch {
-  color: #0a0712;
-  background: var(--ok);
+  color: #f4eeff;
+  background: var(--felt-green);
 }
 
 .called-balls {

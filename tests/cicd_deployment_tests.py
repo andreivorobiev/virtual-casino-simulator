@@ -319,6 +319,30 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Parse the source as data so ownership checks cannot execute browser code.
         return source, ast.parse(source)
 
+    # Prove the shared semantic fallbacks cannot flatten Color Wheel's route-owned gradients.
+    def test_semantic_game_color_cascade_preserves_color_wheel_gradients(self):
+        # Read the shared stylesheet as inert text so the focused oracle opens no listener or browser.
+        stylesheet = self.workflow_text(ROOT / "web" / "styles.css")
+        # Read Color Wheel's production stylesheet source as the canonical gradient owner.
+        color_wheel_source = self.workflow_text(ROOT / "web" / "games" / "color_wheel.js")
+        # Bind each route-qualified override to its exact existing production gradient stops.
+        expected_overrides = {
+            # Preserve the production red wager gradient with an explicit shared-cascade override.
+            ".color-wheel .cw-bet.red": ("linear-gradient(180deg, #d6323d, #8e1822)", "linear-gradient(180deg,#d6323d,#8e1822)"),
+            # Preserve the production green wager gradient with an explicit shared-cascade override.
+            ".color-wheel .cw-bet.green": ("linear-gradient(180deg, #0f9c4c, #0a5f2e)", "linear-gradient(180deg,#0f9c4c,#0a5f2e)"),
+        }
+        # Check both semantic colors through one symmetric static oracle.
+        for selector, (shared_gradient, production_gradient) in expected_overrides.items():
+            # Require one route-qualified shared override so no unrelated red or green control is recolored.
+            self.assertEqual(stylesheet.count(selector), 1)
+            # Isolate the exact override body without depending on unrelated stylesheet ordering.
+            rule_body = stylesheet.split(selector, 1)[1].split("}", 1)[0]
+            # Require the shared fallback conflict to be resolved without flattening the gradient.
+            self.assertIn(f"background: {shared_gradient} !important;", rule_body)
+            # Require the copied stops to remain byte-for-byte aligned with Color Wheel's production source.
+            self.assertIn(f"background:{production_gradient};", color_wheel_source)
+
     # Prove declared producer/consumer groups fit one deterministic shard and guard their bodies.
     def test_browser_shard_affinity_groups_are_contiguous_and_guarded(self):
         # Parse the exact browser runner source without importing it.
@@ -327,8 +351,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Extract permanent literal IDs in deterministic source order.
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Require the current exact suite inventory after the Keno economics proof joined its edge owner case.
-        self.assertEqual(len(case_ids), 107)
+        # Require the current exact suite inventory after adding one permanent semantic-color owner.
+        self.assertEqual(len(case_ids), 108)
         # Import the listener-free runner module so the test uses its exact reviewed packer.
         from tests import run_tests as browser_runner_module
         # Compute the same deterministic six-runner partition used by the workflow.
@@ -346,7 +370,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
         # Pin the exact accepted current-profile distribution across six runners.
-        self.assertEqual(shard_loads, (178, 178, 177, 176, 177, 176))
+        self.assertEqual(shard_loads, (184, 185, 184, 184, 185, 184))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 2)
         # Require exact union and nonduplication across all declared owners.
@@ -361,6 +385,14 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertIsInstance(keno_owner_call.args[2], ast.Name)
         # Pin the callback identity so a later refactor cannot silently drop either economics body.
         self.assertEqual(keno_owner_call.args[2].id, "keno_complete_acceptance")
+        # Locate the one permanent semantic game-color Browser owner.
+        color_owner_call = next(node for node in ast.walk(runner) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run_case" and ast.literal_eval(node.args[0]) == "BR-GAME-COLOR-001")
+        # Require the new Browser owner to map only its authorized product and test requirements.
+        self.assertEqual(ast.literal_eval(color_owner_call.args[1]), ["UX-024", "TEST-149"])
+        # Require the owner to invoke the complete named 32-cell callback.
+        self.assertIsInstance(color_owner_call.args[2], ast.Name)
+        # Pin the callback identity so the evidence body cannot be replaced by a shallow predicate.
+        self.assertEqual(color_owner_call.args[2].id, "semantic_game_colors")
         # Locate the complete callback inside the Browser runner.
         keno_complete_callback = next(node for node in ast.walk(runner) if isinstance(node, ast.FunctionDef) and node.name == "keno_complete_acceptance")
         # Read every direct helper call from the complete callback in source order.
@@ -373,6 +405,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         affinity_groups = ast.literal_eval(affinity_node.value)
         # Require every producer/consumer group introduced by the controller repair.
         self.assertEqual(set(affinity_groups), {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette_slots_keno", "bingo_admin"})
+        # Keep the independent semantic-color matrix outside every legacy producer/consumer affinity group.
+        self.assertNotIn("BR-GAME-COLOR-001", {case_id for group_case_ids in affinity_groups.values() for case_id in group_case_ids})
         # Validate every group against exact case identity and one-shard ownership.
         for group_name, group_case_ids in affinity_groups.items():
             # Reject a misspelled, duplicated, or removed permanent case.

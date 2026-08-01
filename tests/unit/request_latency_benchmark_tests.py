@@ -1388,6 +1388,18 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(ux_023), 1)
         # Require the wallet presentation to remain Application-owned.
         self.assertEqual(ux_023[0]["module"], "Application")
+        # Count the semantic game-color application requirement.
+        ux_024 = [row for row in requirements if row.get("id") == "UX-024"]
+        # Require exactly one permanent semantic game-color allocation.
+        self.assertEqual(len(ux_024), 1)
+        # Require semantic game colors to remain Application-owned.
+        self.assertEqual(ux_024[0]["module"], "Application")
+        # Count the sole Browser evidence requirement for semantic game colors.
+        test_149 = [row for row in requirements if row.get("id") == "TEST-149"]
+        # Require exactly one permanent semantic-color test allocation.
+        self.assertEqual(len(test_149), 1)
+        # Require the evidence requirement to remain Tests-owned.
+        self.assertEqual(test_149[0]["module"], "Tests")
         # Parse the core descriptor for the enrollment-policy compatible addition.
         core_module = json.loads((ROOT / "modules" / "core.json").read_text(encoding="utf-8"))
         # Parse the Admin descriptor for the additive owner-only routes.
@@ -1411,9 +1423,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.14.0")
         # Require the exact compatible tests minor allocation.
-        self.assertEqual(tests_module["version"], "1.65.3")
+        self.assertEqual(tests_module["version"], "1.66.0")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.57")
+        self.assertEqual(docs_module["version"], "1.64.58")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.53.5")
         # Require the compatible tooling minor allocation.
@@ -1423,4 +1435,4 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Slots presentation minor.
         self.assertEqual(slots_module["version"], "9.4.0")
         # Require the exact compatible Application minor for shared-wallet presentation.
-        self.assertEqual(application_module["version"], "9.55.1")
+        self.assertEqual(application_module["version"], "9.56.0")

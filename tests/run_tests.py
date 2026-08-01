@@ -3894,7 +3894,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Capture one game viewport with the complete metadata required by the visual evidence gate.
-            def game_evidence(name, surface, states, locale, viewport_id):
+            def game_evidence(name, surface, states, locale, viewport_id, diagnostics=None):
                 # Resolve the PNG target under the standard browser test artifact directory.
                 target=screenshots/name
                 # Capture the visible shared shell and game stage without transient status overlays.
@@ -3905,6 +3905,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || document.activeElement?.getAttribute('data-action') || document.activeElement?.getAttribute('data-hold-position') || ''")
                 # Build the complete after-pass evidence metadata required by VIS-EVIDENCE-001.
                 metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
+                # Attach bounded computed-style diagnostics only when a specialized evidence case supplies them.
+                if diagnostics is not None:
+                    # Preserve the sanitized semantic values beside their exact-head screenshot.
+                    metadata['diagnostics']=diagnostics
                 # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Capture live wallet motion without fast-forwarding the finite celebration animations. (UX-023)
@@ -5241,6 +5245,157 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 else:
                     # Advance the complete contiguous auth/lobby affinity range.
                     skip_browser_affinity('auth_lobby')
+                # Prove semantic game colors remain distinct from shared brand chrome and playing-card suit styling. (UX-024, TEST-149)
+                def semantic_game_colors():
+                    # Resolve the exact governed viewport dimensions from the visual matrix.
+                    color_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Declare the four real game routes and their stable ready markers.
+                    color_routes=(('roulette','roulette-premium'),('color_wheel','color-wheel'),('marble_race','marble-race'),('keno','keno-premium-hero'))
+                    # Retain one sanitized computed-style receipt for every required evidence cell.
+                    color_receipts=[]
+                    # Restore shared shell state even when one semantic assertion fails.
+                    try:
+                        # Exercise the installed English and Russian locales symmetrically.
+                        for color_locale in ('en-US','ru-RU'):
+                            # Select the locale through the visible shared-shell control.
+                            page.get_by_test_id('shell-locale-select').select_option(color_locale)
+                            # Wait until the installed locale owns subsequent game renders.
+                            page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=color_locale)
+                            # Exercise every viewport governed by the visual standard.
+                            for color_viewport_id,color_viewport in color_viewports.items():
+                                # Apply the exact governed dimensions before mounting each game.
+                                page.set_viewport_size(color_viewport)
+                                # Visit all four affected game surfaces through their real shell controls.
+                                for color_game,ready_testid in color_routes:
+                                    # Open the game through its catalog-owned navigation button.
+                                    page.get_by_test_id(f'nav-{color_game}').click()
+                                    # Wait for the game's real route surface to own the outlet.
+                                    page.get_by_test_id(ready_testid).wait_for(timeout=5000)
+                                    # Put Keno into its real selected-number state without starting a wager.
+                                    if color_game=='keno':
+                                        # Resolve the first numbered board control for a deterministic metallic-gold selection.
+                                        keno_number=page.get_by_test_id('keno-num-1')
+                                        # Select the number only when the route did not preserve it from an earlier cell.
+                                        if keno_number.get_attribute('aria-pressed')!='true':
+                                            # Activate the real board control so computed style is read from production state.
+                                            keno_number.click()
+                                    # Read only bounded computed styles and temporary cascade probes from the mounted document.
+                                    color_diagnostic=page.evaluate("""gameId => {
+                                      // Resolve a rendered node or fail the owning Browser case immediately.
+                                      const styleFor = selector => {
+                                        // Select the first production node matching the governed selector.
+                                        const node = document.querySelector(selector);
+                                        // Reject a missing semantic surface instead of substituting a fallback value.
+                                        if (!node) throw new Error(`missing semantic color node: ${selector}`);
+                                        // Return the browser's authoritative computed style for this rendered node.
+                                        return getComputedStyle(node);
+                                      };
+                                      // Read the shared semantic tokens from the actual document root.
+                                      const rootStyle = getComputedStyle(document.documentElement);
+                                      // Create an off-screen playing-card probe that exercises the production cascade without changing game state.
+                                      const cardProbe = document.createElement('span');
+                                      // Apply the exact shared suit classes whose appearance must remain unchanged.
+                                      cardProbe.className = 'playing-card red';
+                                      // Give the probe a real suit glyph so inherited color and card background both resolve.
+                                      cardProbe.textContent = '♥';
+                                      // Keep the probe out of screenshots and layout while it remains style-computable.
+                                      cardProbe.style.cssText = 'position:fixed;left:-10000px;top:-10000px';
+                                      // Attach the probe to the mounted route for production cascade resolution.
+                                      document.body.appendChild(cardProbe);
+                                      // Capture the unchanged suit foreground and card-face background.
+                                      const cardStyle = getComputedStyle(cardProbe);
+                                      // Build the bounded common receipt before removing the temporary probe.
+                                      const receipt = {
+                                        tokens:{metalGold:rootStyle.getPropertyValue('--metal-gold').trim(),metalGoldDeep:rootStyle.getPropertyValue('--metal-gold-deep').trim(),feltGreen:rootStyle.getPropertyValue('--felt-green').trim()},
+                                        brand:styleFor('.brand-mark').backgroundImage,
+                                        card:{color:cardStyle.color,background:cardStyle.backgroundColor}
+                                      };
+                                      // Remove the temporary suit probe before evidence capture.
+                                      cardProbe.remove();
+                                      // Capture Roulette's rendered red and green pockets plus a production-cascade wager-chip probe.
+                                      if (gameId === 'roulette') {
+                                        // Create a noninteractive off-screen chip under the real premium table cascade.
+                                        const chipProbe = document.createElement('span');
+                                        // Apply the exact production chip class.
+                                        chipProbe.className = 'bet-chip';
+                                        // Keep the probe outside layout and screenshot bounds.
+                                        chipProbe.style.cssText = 'position:fixed;left:-10000px;top:-10000px';
+                                        // Attach it beneath the actual route so the late premium style block participates.
+                                        document.querySelector('.roulette-premium').appendChild(chipProbe);
+                                        // Preserve the fully resolved metallic chip gradient with the real pocket colors.
+                                        receipt.game={red:styleFor('.roulette-premium .table-cell.red').backgroundImage,green:styleFor('.roulette-premium .table-cell.green').backgroundImage,gold:getComputedStyle(chipProbe).backgroundImage};
+                                        // Remove the temporary chip before the screenshot is captured.
+                                        chipProbe.remove();
+                                      }
+                                      // Capture Color Wheel's real red, green, and gold betting controls.
+                                      if (gameId === 'color_wheel') receipt.game={red:styleFor('.cw-bet.red').backgroundImage,green:styleFor('.cw-bet.green').backgroundImage,gold:styleFor('.cw-bet.gold').backgroundImage};
+                                      // Capture Marble Race's rendered red, green, and gold/yellow marbles in catalog order.
+                                      if (gameId === 'marble_race') {
+                                        // Read all six rendered marble tokens from the actual track.
+                                        const marbles = [...document.querySelectorAll('.mr-marble')].map(node => getComputedStyle(node).backgroundColor);
+                                        // Preserve the red, green, and gold/yellow entries only.
+                                        receipt.game={red:marbles[0],green:marbles[2],gold:marbles[3]};
+                                      }
+                                      // Capture Keno's real selected number plus a production-cascade catch-state probe.
+                                      if (gameId === 'keno') {
+                                        // Create one off-screen number using the exact catch classes without changing a draw outcome.
+                                        const catchProbe = document.createElement('span');
+                                        // Apply the production number and catch classes.
+                                        catchProbe.className = 'keno-num catch';
+                                        // Keep the probe style-computable but outside layout and screenshots.
+                                        catchProbe.style.cssText = 'position:fixed;left:-10000px;top:-10000px';
+                                        // Attach the probe under the actual premium Keno board cascade.
+                                        document.querySelector('.keno-premium-board').appendChild(catchProbe);
+                                        // Preserve the actual selected gold plus resolved catch foreground and felt background.
+                                        receipt.game={gold:styleFor('.keno-num.selected').backgroundColor,green:getComputedStyle(catchProbe).backgroundColor,catchText:getComputedStyle(catchProbe).color};
+                                        // Remove the temporary catch probe before evidence capture.
+                                        catchProbe.remove();
+                                      }
+                                      // Return only fixed, value-bounded computed-style strings.
+                                      return receipt;
+                                    }""",color_game)
+                                    # Require the shared game tokens to remain exact and independent from brand aliases.
+                                    assert color_diagnostic['tokens']=={'metalGold':'#e8c760','metalGoldDeep':'#bf9330','feltGreen':'#087a43'},color_diagnostic
+                                    # Require the shared brand mark to retain its rose chrome gradient.
+                                    assert 'rgb(255, 59, 107)' in color_diagnostic['brand'] and 'rgb(224, 30, 82)' in color_diagnostic['brand'],color_diagnostic
+                                    # Require playing-card suit red and the ivory card face to remain unchanged.
+                                    assert color_diagnostic['card']=={'color':'rgb(177, 0, 32)','background':'rgb(251, 247, 233)'},color_diagnostic
+                                    # Require Roulette's rendered pockets to preserve true table red and green.
+                                    if color_game=='roulette':
+                                        # Match both pocket gradients and the resolved metallic-gold wager chip.
+                                        assert all(value in color_diagnostic['game']['red'] for value in ('rgb(194, 36, 51)','rgb(124, 18, 32)')) and all(value in color_diagnostic['game']['green'] for value in ('rgb(15, 145, 82)','rgb(6, 90, 49)')) and all(value in color_diagnostic['game']['gold'] for value in ('rgb(232, 199, 96)','rgb(191, 147, 48)')),color_diagnostic
+                                    # Require Color Wheel's rendered betting controls to retain real red, green, and gold.
+                                    if color_game=='color_wheel':
+                                        # Match the leading semantic color of all three production gradients.
+                                        assert 'rgb(214, 50, 61)' in color_diagnostic['game']['red'] and 'rgb(15, 156, 76)' in color_diagnostic['game']['green'] and 'rgb(240, 196, 93)' in color_diagnostic['game']['gold'],color_diagnostic
+                                    # Require Marble Race's production marbles to retain real red, green, and gold/yellow.
+                                    if color_game=='marble_race':
+                                        # Compare exact solid fills from the rendered track.
+                                        assert color_diagnostic['game']=={'red':'rgb(214, 50, 61)','green':'rgb(15, 156, 76)','gold':'rgb(231, 189, 88)'},color_diagnostic
+                                    # Require Keno's selected number to use metallic gold and its catch semantic to bind felt green.
+                                    if color_game=='keno':
+                                        # Compare the actual selected state and fully resolved catch foreground/background.
+                                        assert color_diagnostic['game']=={'gold':'rgb(232, 199, 96)','green':'rgb(8, 122, 67)','catchText':'rgb(244, 238, 255)'},color_diagnostic
+                                    # Retain the bounded receipt for exact matrix cardinality.
+                                    color_receipts.append({'game':color_game,'locale':color_locale,'viewport':color_viewport_id,**color_diagnostic})
+                                    # Capture one exact-head artifact for this real route, locale, and viewport cell.
+                                    game_evidence(f'after-pass-game-color-{color_game}-{color_locale.lower()}-{color_viewport_id}.png',color_game,['semantic_game_colors'],color_locale,color_viewport_id,color_diagnostic)
+                        # Require the complete four-game, two-locale, four-viewport matrix exactly once.
+                        assert len(color_receipts)==32 and len({(row['game'],row['locale'],row['viewport']) for row in color_receipts})==32,color_receipts
+                    # Restore shared locale, viewport, and route ownership for later Browser cases.
+                    finally:
+                        # Restore English through the visible shell selector.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US')
+                        # Wait for the English runtime to finish its installed-resource swap.
+                        page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                        # Restore the primary desktop dimensions.
+                        page.set_viewport_size({'width':1920,'height':1080})
+                        # Return to the shared lobby route.
+                        page.get_by_test_id('nav-lobby').click()
+                        # Require the lobby to own the route before the case terminalizes.
+                        page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Register one new permanent Browser case with only its authorized product and test requirements.
+                run_case('BR-GAME-COLOR-001',['UX-024','TEST-149'],semantic_game_colors)
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
                 def catalog_route_discovery():
                     # Select a catalog game with a route id that differs from its display label for loader-copy coverage. (UX-011)

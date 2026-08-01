@@ -507,7 +507,7 @@ class KenoEconomicsTests(TestCase):
         # Resolve the single Keno matrix entry.
         keno_surface = next(surface for surface in visual["surfaces"] if surface["id"] == "keno")
         # Require all eight owner-approved states.
-        self.assertEqual(keno_surface["states"], ["selection", "drawing", "result", "edge_idle", "edge_selected_focus_visible", "edge_final_caught", "route_restored", "repeat_available"])
+        self.assertEqual(keno_surface["states"], ["selection", "drawing", "result", "edge_idle", "edge_selected_focus_visible", "edge_final_caught", "route_restored", "semantic_game_colors", "repeat_available"])
         # Require both installed locales and all four global viewports.
         self.assertEqual((keno_surface["locales"], keno_surface["viewports"]), (["en-US", "ru-RU"], ["desktop_primary", "desktop_compact", "tablet", "mobile"]))
         # Read the hosted Browser harness as an inert policy artifact.

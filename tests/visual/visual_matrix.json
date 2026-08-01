@@ -419,7 +419,8 @@
         "keyboard_focus",
         "spinning",
         "settled",
-        "route_restored"
+        "route_restored",
+        "semantic_game_colors"
       ],
       "locales": [
         "en-US",
@@ -428,10 +429,12 @@
       "viewports": [
         "desktop_primary",
         "desktop_compact",
-        "tablet"
+        "tablet",
+        "mobile"
       ],
       "gates": [
         "VIS-COPY-001",
+        "VIS-TOKEN-002",
         "VIS-LAYOUT-001",
         "VIS-LAYOUT-002",
         "VIS-LAYOUT-003",
@@ -439,6 +442,7 @@
         "VIS-SCROLL-002",
         "VIS-HIERARCHY-001",
         "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001",
         "VIS-CATALOG-001"
       ]
     },
@@ -490,7 +494,8 @@
         "edge_idle",
         "edge_selected_focus_visible",
         "edge_final_caught",
-        "route_restored"
+        "route_restored",
+        "semantic_game_colors"
       , "repeat_available"],
       "locales": [
         "en-US",
@@ -504,12 +509,14 @@
         ],
       "gates": [
         "VIS-COPY-001",
+        "VIS-TOKEN-002",
         "VIS-LAYOUT-001",
         "VIS-LAYOUT-002",
         "VIS-LAYOUT-003",
         "VIS-SCROLL-001",
         "VIS-HIERARCHY-001",
         "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001",
         "VIS-CATALOG-001"
       ]
     },
@@ -1085,7 +1092,7 @@
       "id": "color_wheel",
       "route": "/games/color_wheel",
       "selector": "[data-testid='color-wheel']",
-      "states": ["ready", "repeat_available"],
+      "states": ["ready", "repeat_available", "semantic_game_colors"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1148,7 +1155,7 @@
       "id": "marble_race",
       "route": "/games/marble_race",
       "selector": "[data-testid='marble-race']",
-      "states": ["ready", "repeat_available"],
+      "states": ["ready", "repeat_available", "semantic_game_colors"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
