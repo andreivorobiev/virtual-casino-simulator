@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.55.2
-- core: 9.35.1
+- core: 9.35.2
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.65.7
+- tests: 1.65.8
 - docs: 1.64.61
 - contracts: 1.53.5
-- tooling: 1.24.1
+- tooling: 1.24.2
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0

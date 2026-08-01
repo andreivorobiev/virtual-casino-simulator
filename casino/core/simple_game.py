@@ -16,22 +16,14 @@ The contract this core guarantees:
 - A request_id reused with different wager content fails closed as a conflict rather than double-spending.
 """
 
-# Import hashing for the deterministic round identity.
 import hashlib
-# Import bounded request-id validation.
 import re
-# Import cryptographic bounded random draws for production entropy.
 import secrets
-# Import a process-local reentrant lock for exactly-once local settlement.
 import threading
 
-# Import the shared ledger and player services without mutating balances directly.
 from casino.core import ledger, players
-# Import the shared UTC clock for stable settled-response timestamps.
 from casino.core.clock import utc_now
-# Import player-scoped persistence for authenticated session isolation.
 from casino.core.state_store import load_player_game_state, save_player_game_state
-# Import the public conflict and validation errors for safe API boundaries.
 from casino.errors import ConflictError, ValidationError
 
 # Bound request identifiers to conservative URL-safe characters and length.
@@ -73,19 +65,15 @@ class _LedgerGateway:
         rows = ledger.read_recent(player_id, LEDGER_PROOF_SCAN_LIMIT)
         # Scan newest-first for the deterministic action identity.
         for event in reversed(rows):
-            # Read event details once for action-key and fingerprint checks.
             details = event.get("details") or {}
             # Skip rows that do not match every immutable action dimension.
             if not (event.get("player_id") == player_id and event.get("game") == self.game_id and event.get("round_id") == round_id and event.get("transaction_type") == transaction_type and details.get("idempotency_key") == action_key):
-                # Continue until a row satisfies every ownership dimension.
                 continue
             # Reject the same action identity reused for different wager content.
             if details.get("request_fingerprint") != request_fingerprint:
                 # Fail closed instead of returning or duplicating a conflicting event.
                 raise ConflictError(f"{self.game_id} request_id conflicts with committed ledger proof")
-            # Return the fully matched committed ledger event.
             return event
-        # Report no proof when the requested action has never committed.
         return None
 
     # Commit one debit or credit exactly once for the local simulator process.
@@ -106,11 +94,9 @@ class _LedgerGateway:
             event_details = {**details, "idempotency_key": action_key, "request_fingerprint": request_fingerprint}
             # Start protected storage-enforced settlement so a concurrent process cannot double-spend.
             try:
-                # Route a negative signed amount through the storage-atomic debit identity.
                 if amount < 0:
                     # Commit or replay the aggregate wager debit across threads, processes, and providers.
                     return ledger.debit_once(player_id, abs(amount), transaction_type, action_key, self.game_id, round_id, event_details)
-                # Route a positive signed amount through the storage-atomic credit identity.
                 # Commit or replay the aggregate settlement credit across threads, processes, and providers.
                 return ledger.credit_once(player_id, amount, transaction_type, action_key, self.game_id, round_id, event_details)
             # Recover a same-request race whose losing caller proposed different tentative entropy.
@@ -170,20 +156,14 @@ class SimpleWagerGame:
 
     # Build the public state payload for one authenticated player.
     def state(self, player_id: str) -> dict:
-        # Load the player's current document.
         current = self._state_loader(player_id)
-        # Publish the compact game state, wallet, and bet catalog.
         return {"game": self.game_id, "state": current, "player": self._get_player(player_id), "bet_catalog": self._public_bet_catalog()}
 
     # Locate a prior round in state for replay detection.
     def _find_round(self, state: dict, request_id: str):
-        # Scan the retained recent rounds for the matching request id.
         for round_row in state.get("recent_rounds", []):
-            # Return the first round created by this request id.
             if round_row.get("request_id") == request_id:
-                # Report the existing round for replay handling.
                 return round_row
-        # Report no prior round for a first-time request.
         return None
 
     # Execute or replay one atomic wager, entropy draw, and settlement for a player.
@@ -236,7 +216,6 @@ class SimpleWagerGame:
                 raise ConflictError(f"{self.game_id} committed wager proof is incomplete")
             # Resolve the deterministic outcome from the committed wager and committed entropy.
             settlement = self._resolve(committed_wager, entropy)
-            # Read the total return the resolver computed.
             total_return = round(float(settlement.get("total_return", 0)), 2)
             # Apply the aggregate settlement credit exactly once when the round returned value.
             if total_return > 0:
@@ -244,7 +223,6 @@ class SimpleWagerGame:
                 settlement_details = {"request_id": request_id, "entropy": entropy, "total_return": total_return, "outcome": settlement.get("outcome")}
                 # Commit the single aggregate credit exactly once.
                 self._ledger_gateway.apply_once(player_id=player_id, amount=total_return, transaction_type=self.settlement_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "settlement"), request_fingerprint=fingerprint, details=settlement_details)
-            # Build the public round record retained in compact player state.
             public_round = {"round_id": round_id, "wager": committed_wager, "wager_total": wager_total, "entropy": entropy, "total_return": total_return, "outcome": settlement.get("outcome"), "detail": settlement.get("detail", {}), "net": round(total_return - wager_total, 2), "settled_at": settled_at}
             # Build the compact stored round with replay and fingerprint bookkeeping.
             stored_round = {"request_id": request_id, "request_fingerprint": fingerprint, "round_id": round_id, "total_return": total_return, "public": public_round}
@@ -252,23 +230,17 @@ class SimpleWagerGame:
             state["recent_rounds"] = ([stored_round] + state.get("recent_rounds", []))[:RECENT_ROUND_LIMIT]
             # Persist only this player's document.
             self._state_saver(player_id, state)
-            # Rebuild the freshly committed ledger events for the response.
             ledger_events = self._round_ledger(player_id, stored_round)
-            # Return the settled round, its ledger proof, and the refreshed public state.
             return {"round": public_round, "replayed": wager_replayed, "ledger": ledger_events, **self.state(player_id)}
 
     # Rebuild the committed ledger events for one round from stored proof.
     def _round_ledger(self, player_id: str, stored_round: dict) -> dict:
-        # Resolve the round identity and fingerprint once.
         round_id = stored_round["round_id"]
         fingerprint = stored_round["request_fingerprint"]
-        # Find the committed wager debit for this round.
         wager_event = self._ledger_gateway.find(player_id=player_id, round_id=round_id, transaction_type=self.wager_transaction_type, action_key=self._action_key(round_id, "wager"), request_fingerprint=fingerprint)
         # Start with no settlement proof for a losing round.
         settlement_event = None
         # Find a credit proof only when the round returned value.
         if stored_round.get("total_return", 0) > 0:
-            # Resolve the committed settlement credit for this round.
             settlement_event = self._ledger_gateway.find(player_id=player_id, round_id=round_id, transaction_type=self.settlement_transaction_type, action_key=self._action_key(round_id, "settlement"), request_fingerprint=fingerprint)
-        # Return both committed events under stable keys.
         return {"wager": wager_event, "settlement": settlement_event}

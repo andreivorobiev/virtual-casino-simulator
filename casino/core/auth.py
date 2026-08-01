@@ -1,48 +1,39 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Comment policy: comments state intent and constraints; self-evident lines stay bare.
+# This file is on the audited-quality exemption list in check_comment_density.py (issue #555).
 import base64
-# Import required dependency so this module can use its public functions or constants.
 import hashlib
-# Import required dependency so this module can use its public functions or constants.
 import hmac
 # Import regular expressions for exact reviewed public OAuth route matching.
 import re
 # Import process environment access for the root-managed deployment monitor credential.
 import os
-# Import required dependency so this module can use its public functions or constants.
 import secrets
-# Import required dependency so this module can use its public functions or constants.
 from datetime import datetime, timedelta, timezone
-# Import required dependency so this module can use its public functions or constants.
 from http.cookies import SimpleCookie
-# Import required dependency so this module can use its public functions or constants.
 from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_CREATE_WINDOW_SECONDS, GUEST_CREATES_PER_IP, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_MAX_ACTIONS, GUEST_MAX_ACTIVE, GUEST_STARTING_BALANCE, GUEST_TERMS_VERSION, GUEST_TRIALS_ENABLED, SCHEMA_VERSION
-# Import required dependency so this module can use its public functions or constants.
 from casino.core import players
 # Import the de-identified guest-trial telemetry recorder for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
 # Import normal and strict document boundaries so session control preserves corrupt evidence.
 from casino.core.state_store import read_json, read_json_strict, write_json, update_json, update_json_strict
 # Import restricted-preview cookie helpers without coupling the auth store to WSGI.
 from casino.core.security import csrf_cookie_header, new_csrf_token
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import ConflictError, ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 
-# Set USERS_PATH to the value needed for the next operation.
 USERS_PATH = DATA_DIR / "auth" / "users.json"
-# Set SESSIONS_PATH to the value needed for the next operation.
 SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
 # Point the bounded per-source guest-creation record store at the auth-owned data tree. (issue #555)
 GUEST_CREATION_LOG_PATH = DATA_DIR / "auth" / "guest_creation_log.json"
 # Bound the durable guest-creation log to a fixed tail so anonymous traffic cannot grow it without limit.
 MAX_GUEST_CREATION_RECORDS = 2_000
-# Set PASSWORD_ITERATIONS to the value needed for the next operation.
+# PBKDF2 work factor: high enough to slow offline guessing of local-account passwords,
+# low enough that interactive sign-in stays responsive on the single-node preview host.
 PASSWORD_ITERATIONS = 120_000
-# Set PUBLIC_API_PATHS to the value needed for the next operation.
+# The complete anonymous-route allowlist. Three layers must agree byte-for-byte: this set,
+# casino/wsgi.py _validate_restricted_preview_routes (checked at worker boot), and
+# contracts/compatibility/restricted-preview-security.json (checked by validate_contracts and run_tests).
 PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}
 # Bound the accepted session lifetime to the restricted-preview review interval.
 MAX_SESSION_TTL_SECONDS = 86_400
@@ -71,83 +62,52 @@ ADMIN_SESSION_AUTH_METHODS = frozenset({"local", "google", "facebook"})
 # Publish only reviewed lifecycle classes instead of arbitrary stored strings. (SESSION-008)
 ADMIN_SESSION_STATUSES = frozenset({"active", "revoked"})
 
-# Define the utc_datetime function used by this module.
 def utc_datetime() -> datetime:
-    # Return the computed value to the caller.
     return datetime.now(timezone.utc)
 
-# Define the parse_time function used by this module.
 def parse_time(value: str) -> datetime:
-    # Return the computed value to the caller.
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
-# Define the default_users function used by this module.
 def default_users() -> dict:
-    # Return the computed value to the caller.
     return {"schema_version": SCHEMA_VERSION, "users": [], "reservations": []}
 
-# Define the default_sessions function used by this module.
 def default_sessions() -> dict:
-    # Return the computed value to the caller.
     return {"schema_version": SCHEMA_VERSION, "sessions": []}
 
-# Define the load_users function used by this module.
 def load_users() -> dict:
-    # Set state to the value needed for the next operation.
     state = read_json(USERS_PATH, default_users)
-    # Branch when the following condition is true.
     if not isinstance(state, dict) or "users" not in state:
-        # Set state to the value needed for the next operation.
         state = default_users()
     # Add the compatible reservation collection when reading a pre-invitation identity document.
     state.setdefault("reservations", [])
-    # Return the computed value to the caller.
     return state
 
-# Define the save_users function used by this module.
 def save_users(state: dict) -> None:
-    # Set state["schema_version"] to the value needed for the next operation.
     state["schema_version"] = SCHEMA_VERSION
-    # Execute this statement as part of the module's documented control flow.
     write_json(USERS_PATH, state)
 
-# Define the load_sessions function used by this module.
 def load_sessions() -> dict:
-    # Set state to the value needed for the next operation.
     state = read_json(SESSIONS_PATH, default_sessions)
-    # Branch when the following condition is true.
     if not isinstance(state, dict) or "sessions" not in state:
-        # Set state to the value needed for the next operation.
         state = default_sessions()
-    # Return the computed value to the caller.
     return state
 
-# Define the save_sessions function used by this module.
 def save_sessions(state: dict) -> None:
-    # Set state["schema_version"] to the value needed for the next operation.
     state["schema_version"] = SCHEMA_VERSION
-    # Execute this statement as part of the module's documented control flow.
     write_json(SESSIONS_PATH, state)
 
-# Define the export_auth_state function used by this module.
 def export_auth_state() -> dict:
-    # Return the computed value to the caller.
     return {"users": load_users(), "sessions": load_sessions()}
 
-# Define the import_auth_state function used by this module.
 def import_auth_state(snapshot: dict) -> None:
     # Branch when the snapshot includes user data to restore.
     if snapshot.get("users"):
-        # Execute this statement as part of the module's documented control flow.
         save_users(snapshot["users"])
     # Branch when the snapshot includes session data to restore.
     if snapshot.get("sessions"):
-        # Execute this statement as part of the module's documented control flow.
         save_sessions(snapshot["sessions"])
 
-# Define the normalize_email function used by this module.
 def normalize_email(email: str) -> str:
-    # Return the computed value to the caller.
     return (email or "").strip().lower()
 
 # Enforce the explicit password policy used only by public invitation enrollment. (INVITE-003)
@@ -163,26 +123,19 @@ def validate_enrollment_password(password: str) -> None:
         # Keep the policy error free of supplied password details.
         raise ValidationError("password does not meet enrollment policy")
 
-# Define the hash_password function used by this module.
 def hash_password(password: str, salt: bytes | None = None) -> str:
     # Branch when the caller did not provide a salt.
     if salt is None:
-        # Set salt to the value needed for the next operation.
         salt = secrets.token_bytes(16)
-    # Set digest to the value needed for the next operation.
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PASSWORD_ITERATIONS)
-    # Return the computed value to the caller.
     return f"pbkdf2_sha256${PASSWORD_ITERATIONS}${base64.b64encode(salt).decode('ascii')}${base64.b64encode(digest).decode('ascii')}"
 
-# Define the verify_password function used by this module.
 def verify_password(password: str, encoded: str) -> bool:
     # Start protected logic so malformed hashes fail closed.
     try:
-        # Set algorithm,iterations,salt_text,digest_text to the value needed for the next operation.
         algorithm, iterations, salt_text, digest_text = encoded.split("$", 3)
         # Branch when the stored algorithm is unsupported.
         if algorithm != "pbkdf2_sha256":
-            # Return the computed value to the caller.
             return False
         # Decode canonical base64 verifiers while retaining compatibility with the legacy Admin hex format.
         legacy_hex = len(salt_text) == 24 and len(digest_text) == 64
@@ -190,16 +143,11 @@ def verify_password(password: str, encoded: str) -> bool:
         salt = salt_text.encode("ascii") if legacy_hex else base64.b64decode(salt_text.encode("ascii"))
         # Decode the expected digest using the same stored verifier format.
         expected = bytes.fromhex(digest_text) if legacy_hex else base64.b64decode(digest_text.encode("ascii"))
-        # Set actual to the value needed for the next operation.
         actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(iterations))
-        # Return the computed value to the caller.
         return hmac.compare_digest(actual, expected)
-    # Handle the expected failure path for the protected logic.
     except Exception:
-        # Return the computed value to the caller.
         return False
 
-# Define the public_user function used by this module.
 def public_user(user: dict) -> dict:
     # Copy the durable identity without exposing its password verifier or internal analytics binding.
     result = {key: value for key, value in user.items() if key not in ("password_hash", "guest_analytics_id")}
@@ -216,41 +164,24 @@ def public_user(user: dict) -> dict:
     # Return the contract-compatible identity summary.
     return result
 
-# Define the find_user_by_email function used by this module.
 def find_user_by_email(email: str) -> dict | None:
-    # Set target to the value needed for the next operation.
     target = normalize_email(email)
-    # Iterate through the collection to process each item.
     for user in load_users().get("users", []):
-        # Branch when the following condition is true.
         if user.get("email") == target:
-            # Return the computed value to the caller.
             return user
-    # Return the computed value to the caller.
     return None
 
-# Define the find_user_by_id function used by this module.
 def find_user_by_id(user_id: str) -> dict | None:
-    # Iterate through the collection to process each item.
     for user in load_users().get("users", []):
-        # Branch when the following condition is true.
         if user.get("user_id") == user_id:
-            # Return the computed value to the caller.
             return user
-    # Return the computed value to the caller.
     return None
 
-# Define the create_user function used by this module.
 def create_user(email: str, password: str, display_name: str, role: str = "player", player_id: str | None = None, terms_required: bool = True, locale: str = "en-US") -> dict:
-    # Set normalized to the value needed for the next operation.
     normalized = normalize_email(email)
-    # Branch when the following condition is true.
     if not normalized:
-        # Raise an error so invalid input or state is reported explicitly.
         raise ValidationError("email is required")
-    # Branch when the following condition is true.
     if not password:
-        # Raise an error so invalid input or state is reported explicitly.
         raise ValidationError("password is required")
     # Read current uniqueness and invitation reservations before allocating a player wallet.
     current_state = load_users()
@@ -262,11 +193,8 @@ def create_user(email: str, password: str, display_name: str, role: str = "playe
     if any(reservation.get("email") == normalized for reservation in current_state.get("reservations", [])):
         # Prevent the normal account path from racing the invitation saga.
         raise ConflictError("email is reserved by an enrollment operation")
-    # Set bound_player to the value needed for the next operation.
     bound_player = players.ensure_player_for_user(normalized, display_name, player_id)
-    # Set now to the value needed for the next operation.
     now = utc_now()
-    # Set user to the value needed for the next operation.
     user = {"user_id": new_id("user"), "email": normalized, "username": normalized, "display_name": display_name.strip() or normalized, "role": role, "roles": [role], "status": "active", "player_id": bound_player["player_id"], "password_hash": hash_password(password), "terms_required": terms_required, "terms_accepted_at": None, "locale": locale or "en-US", "language": locale or "en-US", "created_at": now, "updated_at": now, "identity_provider": "local"}
     # Serialize email uniqueness with invitation reservations instead of using a stale load/save pair.
     def append_user(state: dict) -> dict:
@@ -292,7 +220,6 @@ def create_user(email: str, password: str, display_name: str, role: str = "playe
         return state
     # Publish the unique identity through the JSON/MySQL document transaction.
     update_json(USERS_PATH, append_user, default_users)
-    # Return the computed value to the caller.
     return user
 
 # Reserve one email for a recoverable invitation saga without creating an account. (INVITE-003)
@@ -331,7 +258,6 @@ def reserve_invited_identity(email: str, invitation_id: str, user_id: str, playe
         reservations.append(reservation)
         # Publish only the successfully committed metadata to the caller.
         result.update(reservation)
-        # Return the complete identity document.
         return state
     # Persist the account-free reservation through the provider transaction.
     update_json(USERS_PATH, reserve, default_users)
@@ -360,7 +286,6 @@ def release_invited_identity(invitation_id: str) -> bool:
         result["released"] = len(retained) != len(reservations)
         # Store the retained reservation collection.
         state["reservations"] = retained
-        # Return the complete identity document.
         return state
     # Publish the release through the atomic document boundary.
     update_json(USERS_PATH, release, default_users)
@@ -417,7 +342,6 @@ def provision_invited_user(email: str, password: str, display_name: str, locale:
         state["users"].append(user)
         # Publish the first provisioning result.
         result.update(user)
-        # Return the complete identity document.
         return state
     # Persist or replay the inactive identity under the email reservation.
     update_json(USERS_PATH, provision, default_users)
@@ -445,7 +369,6 @@ def provision_invited_user(email: str, password: str, display_name: str, locale:
         result.clear()
         # Copy the complete active identity for the internal saga.
         result.update(user)
-        # Return the complete identity document.
         return state
     # Commit activation and reservation cleanup atomically.
     update_json(USERS_PATH, activate, default_users)
@@ -736,25 +659,15 @@ def guest_cookie_headers(session: dict, same_site: str = "Lax", secure: bool = F
     # Return the guest session cookie set for response context extension.
     return headers
 
-# Define the set_user_status function used by this module.
 def set_user_status(email: str, status: str) -> dict:
-    # Set normalized to the value needed for the next operation.
     normalized = normalize_email(email)
-    # Set state to the value needed for the next operation.
     state = load_users()
-    # Iterate through the collection to process each item.
     for user in state.get("users", []):
-        # Branch when the following condition is true.
         if user.get("email") == normalized:
-            # Set user["status"] to the value needed for the next operation.
             user["status"] = status
-            # Set user["updated_at"] to the value needed for the next operation.
             user["updated_at"] = utc_now()
-            # Execute this statement as part of the module's documented control flow.
             save_users(state)
-            # Return the computed value to the caller.
             return user
-    # Raise an error so invalid input or state is reported explicitly.
     raise ValidationError("user was not found")
 
 
@@ -855,9 +768,7 @@ def accept_terms(user_id: str, terms_version: str | None = None, accepted: bool 
     # Store acceptance or revocation on the canonical identity record.
     return update_user_by_id(user_id, lambda user: user.update({"terms_required": not accepted, "terms_accepted_at": utc_now() if accepted else None, "terms_accepted_version": terms_version if accepted else None, "terms_acceptance_source": source if accepted else None}))
 
-# Define the bootstrap_admin_from_env function used by this module.
 def bootstrap_admin_from_env() -> dict:
-    # Set existing to the value needed for the next operation.
     existing = find_user_by_email(AUTH_BOOTSTRAP_ADMIN_EMAIL)
     # Branch when the configured bootstrap identity already exists.
     if existing:
@@ -872,9 +783,7 @@ def bootstrap_admin_from_env() -> dict:
     # Add owner authority atomically so ordinary account creation can never request it.
     return update_user_by_id(created["user_id"], lambda user: user.update({"role": "admin", "roles": ["admin", PLATFORM_OWNER_ROLE]}))
 
-# Define the session_expiry function used by this module.
 def session_expiry() -> str:
-    # Return the computed value to the caller.
     return (utc_datetime() + timedelta(seconds=AUTH_SESSION_TTL_SECONDS)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 # Validate the configured session lifetime before the production worker becomes ready.
@@ -899,13 +808,9 @@ def _session_is_active(session: dict, now: datetime) -> bool:
         # Avoid retaining a session whose expiration cannot be proven.
         return False
 
-# Define the prune_sessions function used by this module.
 def prune_sessions(state: dict) -> dict:
-    # Set now to the value needed for the next operation.
     now = utc_datetime()
-    # Set state["sessions"] to the value needed for the next operation.
     state["sessions"] = [session for session in state.get("sessions", []) if isinstance(session, dict) and _session_is_active(session, now)][-MAX_STORED_SESSIONS:]
-    # Return the computed value to the caller.
     return state
 
 # Evict the least-recently-used active predecessors once one identity exceeds the per-user cap. (SESSION-007)
@@ -925,9 +830,7 @@ def _evict_user_sessions_over_cap(state: dict, user_id: str) -> None:
     # Drop only the evicted predecessors while preserving every other stored session.
     state["sessions"] = [session for session in state.get("sessions", []) if session.get("session_id") not in evicted_ids]
 
-# Define the create_session function used by this module.
 def create_session(user: dict, client: str = "", auth_method: str = "local") -> dict:
-    # Set now to the value needed for the next operation.
     now = utc_now()
     # Accept only password or reviewed provider methods in durable session metadata.
     if auth_method not in {"local", "google", "facebook"}:
@@ -956,7 +859,6 @@ def create_session(user: dict, client: str = "", auth_method: str = "local") -> 
     # Return the issued session to the caller.
     return session
 
-# Define the public_session function used by this module.
 def public_session(session: dict) -> dict:
     # Copy public session metadata without exposing the bearer token, client, or guest proof digest.
     result = {key: value for key, value in session.items() if key not in {"token", "client", "guest_browser_nonce_hash", "guest_departed_at", "guest_action_count"}}
@@ -965,23 +867,18 @@ def public_session(session: dict) -> dict:
     # Return the contract-compatible session summary.
     return result
 
-# Define the login function used by this module.
 def login(email: str, password: str, client: str = "") -> dict:
-    # Set user to the value needed for the next operation.
     user = find_user_by_email(email)
     # Branch when credentials do not match an active local user.
     if not user or not verify_password(password or "", user.get("password_hash", "")):
-        # Raise an error so invalid input or state is reported explicitly.
         raise UnauthorizedError("Invalid email or password")
     # Branch when the user was disabled by an administrator.
     if user.get("status") != "active":
-        # Raise an error so invalid input or state is reported explicitly.
         raise ForbiddenError("User is inactive")
     # Keep the restricted preview on manually provisioned local identities only.
     if str(user.get("identity_provider") or "local").lower() != "local":
         # Reject linked-provider identities until the separately held public-launch gate.
         raise ForbiddenError("Local invite access is required")
-    # Set session to the value needed for the next operation.
     session = create_session(user, client)
     # Build the same canonical current-user payload used by session and shell refreshes.
     result = current_user_payload(session, user)
@@ -990,15 +887,11 @@ def login(email: str, password: str, client: str = "") -> dict:
     # Return one authenticated source of truth for identity and wallet state.
     return result
 
-# Define the extract_bearer_token function used by this module.
 def extract_bearer_token(headers) -> str:
-    # Set auth_header to the value needed for the next operation.
     auth_header = headers.get("Authorization", "")
     # Branch when the header includes a bearer token.
     if auth_header.lower().startswith("bearer "):
-        # Return the computed value to the caller.
         return auth_header.split(" ", 1)[1].strip()
-    # Return the computed value to the caller.
     return ""
 
 
@@ -1050,15 +943,11 @@ def authenticate_monitor_headers(headers, path: str, environ=None) -> tuple[dict
     return session, user
 
 
-# Define the extract_cookie_token function used by this module.
 def extract_cookie_token(headers) -> str:
-    # Set cookie_header to the value needed for the next operation.
     cookie_header = headers.get("Cookie", "")
     # Branch when the request has no cookies.
     if not cookie_header:
-        # Return the computed value to the caller.
         return ""
-    # Set cookie to the value needed for the next operation.
     # Start protected parsing so malformed hostile cookies fail as unauthenticated.
     try:
         # Parse request cookies without logging or reflecting their raw value.
@@ -1067,9 +956,7 @@ def extract_cookie_token(headers) -> str:
     except Exception:
         # Return the same sentinel used when no cookie is present.
         return ""
-    # Set morsel to the value needed for the next operation.
     morsel = cookie.get(AUTH_SESSION_COOKIE)
-    # Return the computed value to the caller.
     return morsel.value if morsel else ""
 
 
@@ -1100,23 +987,18 @@ def csrf_token_for_session_cookie(headers) -> str:
     # Return no proof when the cookie is expired, revoked, or unknown.
     return ""
 
-# Define the authenticate_token function used by this module.
 def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict, dict]:
     # Branch when the token is missing.
     if not token:
-        # Raise an error so invalid input or state is reported explicitly.
         raise UnauthorizedError()
     # Read a pruned in-memory view without persisting so concurrent logins are not clobbered. (SESSION-007)
     state = prune_sessions(load_sessions())
-    # Iterate through the collection to process each item.
     for session in state.get("sessions", []):
         # Branch when the session token matches.
         if hmac.compare_digest(session.get("token", ""), token):
-            # Set user to the value needed for the next operation.
             user = find_user_by_id(session.get("user_id", ""))
             # Branch when the session has no active user.
             if not user or user.get("status") != "active":
-                # Raise an error so invalid input or state is reported explicitly.
                 raise ForbiddenError("User is inactive")
             # Recheck external-provider rollback, link ownership, and active configuration on every request.
             if session.get("auth_method", "local") in {"google", "facebook"}:
@@ -1168,22 +1050,16 @@ def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict,
                 session["updated_at"] = activity_now
                 # Touch only the one-way analytics id; the summary never stores user, player, or session identifiers.
                 guest_analytics.record_event(user.get("guest_analytics_id"))
-            # Return the computed value to the caller.
             return session, user
-    # Raise an error so invalid input or state is reported explicitly.
     raise UnauthorizedError("Session is invalid or expired")
 
-# Define the authenticate_headers function used by this module.
 def authenticate_headers(headers) -> tuple[dict, dict]:
-    # Set token to the value needed for the next operation.
     token = extract_bearer_token(headers) or extract_cookie_token(headers)
-    # Return the computed value to the caller.
     # Read the browser-context proof case-insensitively without retaining any other request header.
     guest_browser_nonce = next((str(value) for name, value in headers.items() if str(name).lower() == "x-guest-browser-nonce"), "")
     # Authenticate the credential and its optional guest-only browser binding together.
     return authenticate_token(token, guest_browser_nonce)
 
-# Define the logout function used by this module.
 def logout(token: str) -> dict:
     # Track whether any stored session matched the supplied bearer token.
     changed = {"value": False}
@@ -1193,13 +1069,10 @@ def logout(token: str) -> dict:
         if not isinstance(state, dict) or "sessions" not in state:
             # Reset to a fresh default sessions document before mutation.
             state = default_sessions()
-        # Iterate through the collection to process each item.
         for session in state.get("sessions", []):
             # Branch when the session token matches.
             if token and hmac.compare_digest(session.get("token", ""), token):
-                # Set session["status"] to the value needed for the next operation.
                 session["status"] = "revoked"
-                # Set session["updated_at"] to the value needed for the next operation.
                 session["updated_at"] = utc_now()
                 # Record that at least one matching session was revoked.
                 changed["value"] = True
@@ -1209,7 +1082,6 @@ def logout(token: str) -> dict:
         return state
     # Persist the revocation atomically so a concurrent login is never clobbered. (SESSION-007)
     update_json(SESSIONS_PATH, mutate, default_sessions)
-    # Return the computed value to the caller.
     return {"logged_out": changed["value"]}
 
 # Revoke every active session owned by one account after a privilege change.
@@ -1453,25 +1325,18 @@ def revoke_sessions_for_user_method(user_id: str, auth_method: str) -> int:
     # Return only the number of revoked sessions.
     return changed["value"]
 
-# Define the current_user_payload function used by this module.
 def current_user_payload(session: dict, user: dict) -> dict:
-    # Set player to the value needed for the next operation.
     player = players.get_player(user["player_id"])
     # Publish one authenticated player summary with an explicit play-token balance field.
     player_summary = {**player, "token_balance": round(float(player.get("balance", 0)), 2), "token_label": "play tokens"}
     # Return the canonical current-user payload used by login, session, shell, and wallet refreshes.
     return {"user": public_user(user), "session": public_session(session), "player": player_summary, "terms": terms_status(user)}
 
-# Define the terms_status function used by this module.
 def terms_status(user: dict) -> dict:
-    # Set required to the value needed for the next operation.
     required = bool(user.get("terms_required", True)) and not bool(user.get("terms_accepted_at"))
-    # Set accepted_at to the value needed for the next operation.
     accepted_at = user.get("terms_accepted_at")
-    # Return the computed value to the caller.
     return {"required": required, "required_version": "private-beta-1", "accepted": not required, "accepted_version": user.get("terms_accepted_version"), "accepted_at": accepted_at}
 
-# Define the cookie_header function used by this module.
 def cookie_header(token: str, same_site: str = "Lax", secure: bool = False) -> tuple[str, str]:
     # Add Secure for every production cookie while preserving local HTTP developer compatibility.
     secure_attribute = "; Secure" if secure else ""
@@ -1489,7 +1354,6 @@ def session_cookie_headers(session: dict, same_site: str = "Lax", secure: bool =
     # Return a fresh list suitable for response context extension.
     return headers
 
-# Define the clear_cookie_header function used by this module.
 def clear_cookie_header(same_site: str = "Lax", secure: bool = False) -> tuple[str, str]:
     # Add Secure consistently with the credential being removed.
     secure_attribute = "; Secure" if secure else ""
@@ -1507,7 +1371,6 @@ def clear_cookie_headers(same_site: str = "Lax", secure: bool = False, include_c
     # Return the complete ordered logout header set.
     return headers
 
-# Define the is_public_api_path function used by this module.
 def is_public_api_path(path: str) -> bool:
     # Keep fixed public routes on the explicit allowlist.
     if path in PUBLIC_API_PATHS:
