@@ -99,10 +99,10 @@ def check_required_token_mark():
     ui_text = (ROOT / "web" / "core" / "ui.js").read_text(encoding="utf-8")
     # Read the i18n numeric formatter.
     i18n_text = (ROOT / "web" / "core" / "i18n.js").read_text(encoding="utf-8")
-    # Branch when the legacy formatter is missing the approved mark.
-    if f"`{TOKEN_MARK}${{" not in ui_text:
+    # Accept either an inline token-mark template or delegation to the i18n formatter, whose own mark is checked below.
+    if f"`{TOKEN_MARK}${{" not in ui_text and "formatMoney(" not in ui_text:
         # Record the missing mark in the legacy formatter.
-        errors.append("web/core/ui.js: money() must prefix amounts with ◈")
+        errors.append("web/core/ui.js: money() must prefix amounts with ◈ or delegate to formatMoney()")
     # Branch when the i18n formatter is missing the approved mark.
     if f"`{TOKEN_MARK}${{" not in i18n_text:
         # Record the missing mark in the i18n formatter.

@@ -1,62 +1,40 @@
 # Claude status
 
-Written by Claude only. Codex reads this; do not edit it. Last updated 2026-07-26.
+Written by Claude only. Codex reads this; do not edit it. Last updated 2026-07-31.
 
 ## Pull requests I authored (drafts; I never merge)
 
-One open draft (the #438 fix below). States below follow `docs/coordination/codex.md`.
+States follow `docs/coordination/codex.md`; #481 and #518 are held behind the release lane per that file.
 
 | PR | Branch | What it is | State |
 |---|---|---|---|
-| #440 | `claude/438-logout-csrf-rotation` | P1 #438: logout/guest-end now rotate the `casino_csrf` double-submit cookie to a fresh anonymous token instead of clearing it, so sign-in after logout works without a shell reload | open draft, awaiting Codex review |
-| #377 | `claude/magic-link` | Disabled passwordless magic-link login service (#337); inert, no routes, follows the password-reset precedent | merged 2026-07-25; #337 still open for the broader magic-link item |
-| #379 | `claude/guest-conversion` | Explicit idempotent Guest Trial → full account conversion (#378); adopts guest player_id so wallet/ledger preserved with zero migration | closed unmerged 2026-07-25; #378 still open with no attached PR |
-| #381 | `claude/game-catalog-expansion` | Game catalog expansion (#73); shared exactly-once settlement core plus the first tranche of games | merged 2026-07-26 as settlement core + 12 games; #73 still open for the rest of the catalog |
+| #454 | `claude/452-bingo-paytable` | Bingo paytable house-side rebalance + guaranteed competitor field (#452) | open draft; governance re-splice on Codex merge signal (owner 2026-07-28 hold decision) |
+| #460 | `claude/457-admin-empty-pages` | Admin console empty-page fixes (#457) | open draft; same hold |
+| #506 | `claude/456-admin-rtp-view` | Admin per-game payout-rate view (#456 phase 3), stacked on #460 | open draft; same hold |
+| #481 | `claude/game-real-red-green` | Post-rebrand game colours: real red/green, metallic gold | open; held behind release lane |
+| #518 | `identity-admin-redesign` | Identity/admin redesign: session timeouts, nested console, Sessions page | open; held behind release lane |
 
-## Active work
+## Active work — reviewer-readiness program (owner-directed, 2026-07-31)
 
-- **Logout CSRF rotation (#438, P1).** Owner-reported: every sign-in after logout failed with
-  "CSRF validation failed" until a manual reload, because logout expired the `casino_csrf`
-  double-submit cookie and only an `index.html` load re-issues one. Fix rotates the cookie to a
-  fresh anonymous bootstrap token on `/api/v2/auth/logout` and `/api/v2/auth/guest/end` (shared
-  `clear_cookie_headers` helper). Versions recalculated around in-flight claims: core 9.24.5
-  (9.24.3/9.24.4 absorb #428/#429), tests/docs 1.60.38 (1.60.37 is #439's). Will re-bump on rebase
-  if those land differently.
+The owner asked for a bounded polish-and-hardening pass before an external technical review of the repository on 2026-08-07. Six small sequential PRs, one task each. Constraints: no new features, no new games, no renames, no `contracts/` schema or server-authority generation changes, every PR keeps the full suite green.
 
-- **Game catalog expansion (#73).** The single-PR plan is finished: #381 merged on 2026-07-26 with
-  Wave 0 (the `casino/core/simple_game.py` settlement core) plus 12 games. The remaining games did
-  not land on that branch — they shipped as separate PRs #389, #390, #391, and #392. #73 stays open
-  for the rest of the catalog work. The catalog has already grown past the original 18-game backlog
-  plan; the live game set is discovered from `casino.config.GAMES` / `casino/games/`, so read it
-  there rather than trusting a count written here.
+1. `claude/readme-front-door` — README "Current repository status" prose moved verbatim into a dated `RELEASE_NOTES.md` archive section; README gains a six-bullet "Design decisions" section. **Note for release packets: README no longer carries per-release status prose — release status belongs in `RELEASE_NOTES.md` only; please stop rewriting that README section at release time.**
+2. ARCHITECTURE.md gains one Mermaid request-path diagram near the top (docs only).
+3. Featured-game smoke pass (roulette, slots, blackjack, baccarat, keno, bingo): full round + mid-round reload recovery; fixes only for real breakage found in those six.
+4. Guest-trial endpoint hardening: per-IP rate limit on `POST /api/v2/auth/guest` reusing the existing `casino/core/security.py` limiter pattern and error taxonomy, plus a bounded guest-creation source record. No `GUEST_STARTING_BALANCE` or gameplay changes.
+5. Legacy settlement migration (limited): 2-3 of the six original games move onto `casino/core/simple_game.py` exactly-once settlement, with retry-safety tests; ARCHITECTURE.md "Known gap" updated to match. The remaining originals stay legacy and stay documented as such.
+6. Comment quality in five high-traffic files (simple_game.py, auth.py, validate_module_boundaries.py, validate_token_terminology.py, verify_keno_economics_artifact.py): tautological comments replaced with purpose/why comments; if density drops below the gate, a documented per-path exemption list is added to `check_comment_density.py` instead of lowering the global threshold.
 
-## File claims / high collision risk — please coordinate
+## File claims / high collision risk
 
-- On `claude/438-logout-csrf-rotation` I hold **`casino/core/auth.py`** (cookie helper),
-  **`casino/core/security.py`** (removed the now-unused `clear_csrf_cookie_header`),
-  **`tests/security/test_policy.py`**, **`tests/security/security_wsgi_probe.py`**, plus the shared
-  governance files (`requirements.json`, generated docs, `modules/core|tests|docs.json`,
-  `module-manifest.json`). Metadata-only overlap expected with #428/#429/#439 — I claimed
-  collision-free version numbers, and I will re-splice on whichever merges first.
-- On `claude/game-catalog-expansion` I will repeatedly edit **`modules/module-manifest.json`** and
-  **`tests/run_tests.py`** (one edit per game) plus add new `modules/<game>.json`,
-  `casino/games/<game>/`, and `web/games/<game>.js`. These shared manifest/test-discovery files are
-  the game-integration lane. The owner has authorized these edits. **If Codex is landing games or
-  touching the manifest/test-discovery in parallel, please post the game ids / files you are working
-  so I can avoid the same slots; otherwise expect at least one hard rebase of #381.**
+- PR 1 (this branch): `README.md`, `RELEASE_NOTES.md` (append-only archive at EOF), `modules/application.json` (9.55.2), `modules/docs.json` (1.64.58), `modules/module-manifest.json`, regenerated `CODEX_START_HERE.md` + `requirements_generated.md`, this file.
+- Upcoming claims: `ARCHITECTURE.md` (PRs 2 and 5, different sections); `casino/core/auth.py` + `casino/core/security.py` + `tests/security/` (PR 4); `casino/games/<2-3 legacy games>` + `tests/games/<same>` (PR 5, exact games named in that PR); `scripts/check_comment_density.py` + the five listed files (PR 6).
+- Version claims: application 9.55.2, docs 1.64.58 (PR 1). Later PRs claim sequentially above current main at open time; I re-bump on rebase if a release lands in between.
 
 ## Questions / requests for Codex
 
-- Merge sequencing for my three open PRs: they each append to the shared governance files
-  (`requirements.json`, `module-manifest.json`, `run_tests.py`), so they conflict against each other
-  and against every release. Suggested order, least- to most-entangled: **#377 → #379 → #381**. If
-  you rebase-and-merge one, the others need a quick governance re-splice; ping me here and I will do
-  it rather than have you resolve my splices.
-- When you rename requirement/TEST IDs at merge, a one-line note in `codex.md` (old → new) lets me
-  keep future PRs collision-free without guessing the next free id.
+- Merge order for the program PRs: sequential oldest-first preferred but not required; PRs 2 and 5 both touch `ARCHITECTURE.md` in different sections and merge cleanly in either order.
 
 ## Blockers I am waiting on (owner or Codex)
 
-- None hard right now. Standing items from earlier passes: #77 registry-ownership confirmation would
-  unblock the Admin catalog curator (#166); #163 handoff needs a security review before build; the
-  origin-cutover app change (drafted, held) awaits owner go on opening its PR.
+- None.
