@@ -8,6 +8,8 @@ States follow `docs/coordination/codex.md`; #481 and #518 are held behind the re
 
 | PR | Branch | What it is | State |
 |---|---|---|---|
+| #561 | `claude/guest-endpoint-hardening` | Program task 4: per-source guest-creation rate limit + bounded source log (#555), stacked on #559 | open draft, ready for review |
+| #559 | `claude/arch-diagram` | Program task 2: ARCHITECTURE.md request-path Mermaid diagram (#555), stacked on #558 | open draft, ready for review |
 | #558 | `claude/readme-front-door` | Program task 1: README Design decisions + RELEASE_NOTES status archive + token-validator repair/CI wiring (#555) | open draft, ready for review |
 | #454 | `claude/452-bingo-paytable` | Bingo paytable house-side rebalance + guaranteed competitor field (#452) | open draft; governance re-splice on Codex merge signal (owner 2026-07-28 hold decision) |
 | #460 | `claude/457-admin-empty-pages` | Admin console empty-page fixes (#457) | open draft; same hold |
