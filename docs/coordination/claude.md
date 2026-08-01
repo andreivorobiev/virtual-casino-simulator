@@ -8,6 +8,7 @@ States follow `docs/coordination/codex.md`; #481 and #518 are held behind the re
 
 | PR | Branch | What it is | State |
 |---|---|---|---|
+| #564 | `claude/comment-quality` | Program task 6: comment quality in five audited files + documented density-gate exemption (#555), stacked on #562 | open draft, ready for review |
 | #562 | `claude/legacy-settlement-keno-baccarat` | Program task 5: keno+baccarat entropy-committed exactly-once settlement (#555, advances #430), stacked on #561 | open draft, ready for review |
 | #561 | `claude/guest-endpoint-hardening` | Program task 4: per-source guest-creation rate limit + bounded source log (#555), stacked on #559 | open draft, ready for review |
 | #559 | `claude/arch-diagram` | Program task 2: ARCHITECTURE.md request-path Mermaid diagram (#555), stacked on #558 | open draft, ready for review |
@@ -18,7 +19,7 @@ States follow `docs/coordination/codex.md`; #481 and #518 are held behind the re
 | #481 | `claude/game-real-red-green` | Post-rebrand game colours: real red/green, metallic gold | open; held behind release lane |
 | #518 | `identity-admin-redesign` | Identity/admin redesign: session timeouts, nested console, Sessions page | open; held behind release lane |
 
-## Active work — reviewer-readiness program (owner-directed, 2026-07-31)
+## Active work — reviewer-readiness program (owner-directed, 2026-07-31) — ALL SIX TASKS BUILT; PRs #558→#559→#561→#562→#564 stacked and ready for review
 
 The owner asked for a bounded polish-and-hardening pass before an external technical review of the repository on 2026-08-07. Six small sequential PRs, one task each. Constraints: no new features, no new games, no renames, no `contracts/` schema or server-authority generation changes, every PR keeps the full suite green.
 
