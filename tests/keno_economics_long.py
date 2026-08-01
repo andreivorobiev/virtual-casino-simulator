@@ -73,7 +73,7 @@ class KenoEconomicsLongTests(unittest.TestCase):
                 # Replace only the production entropy seam for this exact action.
                 with mock.patch.object(engine, "_SYSTEM_RANDOM", ScriptedBalls(drawn)):
                     # Execute the production draw and capture its one result.
-                    result = engine.draw(state)["results"][0]
+                    result = engine.commit_draw(state)["results"][0]
                 # Require production entropy identity after every completed class.
                 self.assertIs(engine._SYSTEM_RANDOM, original_rng)
                 # Resolve the expected authoritative multiplier.
@@ -114,7 +114,7 @@ class KenoEconomicsLongTests(unittest.TestCase):
             # Replace only the entropy seam for the failing action.
             with mock.patch.object(engine, "_SYSTEM_RANDOM", FailingBalls()):
                 # Execute a valid one-ticket state that reaches the injected failure.
-                engine.draw({"open_tickets": [{"ticket_id": "long-failure", "player_id": "human", "spots": [1], "amount": 1}], "last_draws": []})
+                engine.commit_draw({"open_tickets": [{"ticket_id": "long-failure", "player_id": "human", "spots": [1], "amount": 1}], "last_draws": []})
         # Require production entropy identity after the injected failure.
         self.assertIs(engine._SYSTEM_RANDOM, original_rng)
         # Create the uploaded artifact directory only after every invariant passes.
