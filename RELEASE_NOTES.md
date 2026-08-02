@@ -1,4 +1,15 @@
-# Virtual Casino Simulator v0.9.5.48 Release Notes
+# Virtual Casino Simulator v0.9.5.49 Release Notes
+
+## Request-path architecture documentation
+
+- Packages the accepted #555 task-2 documentation and qualification slice from sole content PR #566; the release-only application revision advances mechanically to `9.56.4`.
+- Documents the existing request path from both HTTP adapters through `ROUTER.dispatch`, server-authority sanitization, descriptor-owned game dispatch, server-side outcomes, exactly-once ledger settlement, and the JSON or MySQL storage boundary.
+- Preserves the contributor's exact bounded twenty-line Mermaid/caption intent while rebuilding all shared release, generated, and version surfaces from current v0.9.5.48 main.
+- Records ancestry shell `330c7b88` as main-identical with immutable contributor #559 head `49b68418` as its second parent; PR #566 is the sole task-2 content integration and no second #559 content merge occurs.
+- Keeps issue #555 OPEN and incomplete; stacked drafts #561, #562, and #564 remain external, held, and untouched, while #518 and every other merge remain held and #450 remains excluded.
+- Adds no permanent requirement, Browser, API, contract, game, runtime, game-math, economy, ledger-behavior, provider, security-policy, public-policy, database, migration, full-issue, issue-closure, publication, release-activation, or deployment claim.
+- Retains the MySQL schema-two/schema-three bridge with migration application held and production at schema 2.
+- Retains exact immutable v0.9.5.48 as the application-only schema-2 rollback predecessor; database rollback is prohibited.
 
 ## README front door and terminology enforcement
 
