@@ -6,6 +6,26 @@ Describes the architecture of the current packaged release. The authoritative ve
 For the per-release record see `RELEASE_NOTES.md`; for contributor workflow see `AGENTS.md`,
 `CONTRIBUTING.md`, and `ENGINEERING_PRACTICES.md`.
 
+## Request path
+
+One path serves every game request, from either HTTP adapter through settlement:
+
+```mermaid
+flowchart LR
+    C["Browser client"] --> A["HTTP adapter<br/>casino/app.py dev<br/>casino/wsgi.py prod: origin, CSRF,<br/>body caps, rate limit"]
+    A --> R["ROUTER.dispatch<br/>casino/router.py"]
+    R --> S["sanitize_game_intent()<br/>strips client-authored outcome fields;<br/>session identity overwrites player_id"]
+    S --> G["Catalog route<br/>modules/*.json descriptor →<br/>casino/games/&lt;id&gt;/api.py"]
+    G --> E["Game engine<br/>server-side outcome"]
+    E --> K["casino.core<br/>simple_game.py exactly-once wager/settle<br/>ledger.py debits and credits"]
+    K --> P["StorageProvider<br/>JSON + write-ahead journal<br/>or MySQL row-locked transaction"]
+    P --> W[("Wallet balance and<br/>ledger rows")]
+```
+
+The sanitize-and-bind step runs inside `ROUTER.dispatch` for every `/api/v1/games/` request
+before route matching (`casino/router.py`), so no game handler ever sees client-authored
+outcome fields or an unverified `player_id`.
+
 ## Principle
 
 Each game is isolated from every other game. Shared concerns — players, wallet ledger, storage,
