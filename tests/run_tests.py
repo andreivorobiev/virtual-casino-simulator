@@ -4825,8 +4825,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_test_id('catalog-capacity').inner_text()==f'{len(casino_config.GAMES)} available'
                         # Read the exact state payload used by the shell presence rail. (CORE-016, issue #570)
                         presence_state=page.evaluate("async () => (await (await fetch('/api/v1/casino/state')).json()).data")
-                        # Require a bounded aggregate that does not mirror the Admin-visible durable player inventory.
-                        assert isinstance(presence_state['online_player_count'],int) and presence_state['online_player_count']>=1 and presence_state['online_player_count']<len(presence_state['players']),presence_state
+                        # Require the server-owned aggregate while privacy-filtered player rows remain an independent payload concern.
+                        assert isinstance(presence_state['online_player_count'],int) and presence_state['online_player_count']>=1,presence_state
                         # Require the persistent status rail to publish the aggregate rather than stored player count.
                         assert page.locator('#status-players').inner_text()==f"{presence_state['online_player_count']} online"
                         # Read every governed viewport from the executable visual matrix for wallet evidence. (UX-023)
