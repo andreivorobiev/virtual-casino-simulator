@@ -9722,9 +9722,15 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Capture the owner policy and keyboard state.
                                     game_evidence(f'after-pass-admin-session-policy-owner-{locale}-{viewport_id}.png','BR-ADMIN-SESSION-POLICY-001',['owner_policy','keyboard_focus'],locale,viewport_id)
                                     # Submit values outside reviewed bounds through the real UI control.
-                                    page.get_by_test_id('admin-sessions-idle').fill('0'); page.get_by_test_id('admin-sessions-absolute').fill('99'); page.get_by_test_id('admin-sessions-admin-idle').fill('5000'); page.get_by_test_id('admin-sessions-admin-stricter').uncheck(); page.get_by_test_id('admin-save-sessions').click()
+                                    page.get_by_test_id('admin-sessions-idle').fill('0'); page.get_by_test_id('admin-sessions-absolute').fill('99'); page.get_by_test_id('admin-sessions-admin-idle').fill('5000'); page.get_by_test_id('admin-sessions-admin-stricter').uncheck()
+                                    # Bind the real Save action to completion of its exact owner-policy POST.
+                                    with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/session-settings') and response.request.method=='POST',timeout=5000):
+                                        # Trigger the asynchronous save while its response observer is armed.
+                                        page.get_by_test_id('admin-save-sessions').click()
                                     # Rerender from the persisted deterministic response.
-                                    page.get_by_test_id('admin-tab-sessions').click(); page.get_by_test_id('admin-sessions-policy').wait_for(timeout=5000)
+                                    page.get_by_test_id('admin-tab-sessions').click()
+                                    # Wait for all exact clamped controls instead of the already-visible stale panel.
+                                    page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '1' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '24' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '1440' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === false""",timeout=5000)
                                     # Require exact clamped values and boolean persistence.
                                     assert page.get_by_test_id('admin-sessions-idle').input_value()=='1' and page.get_by_test_id('admin-sessions-absolute').input_value()=='24' and page.get_by_test_id('admin-sessions-admin-idle').input_value()=='1440' and not page.get_by_test_id('admin-sessions-admin-stricter').is_checked()
                                     # Capture clamped and saved policy evidence.
