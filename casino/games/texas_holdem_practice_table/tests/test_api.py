@@ -179,9 +179,9 @@ class TexasHoldemPracticeTableApiTests(unittest.TestCase):
             # Apply one call and all server-managed opponent actions.
             result = self.controller.act("bound-player", started["hand"]["hand_id"], "call", f"action-call-{index:03d}", phase)
         # Verify all four escrows and the human's winning pot credit were committed.
-        self.assertEqual([-5.0, -5.0, -5.0, -5.0, 20.0], [event["amount"] for event in self.ledger.events])
-        # Verify the terminal four-wallet settlement conserves the total token supply.
-        self.assertEqual(300_200.0, sum(self.ledger.balances.values()))
+        self.assertEqual([-5.0, -5.0, -5.0, -5.0, 19.0], [event["amount"] for event in self.ledger.events])  # Winner receives the 20 pot less the 5% house rake. (issue #456)
+        # Verify the terminal four-wallet settlement removes exactly the house rake from the total token supply. (issue #456)
+        self.assertEqual(300_199.0, sum(self.ledger.balances.values()))
         # Verify the terminal hand was archived only after payout reconciliation.
         self.assertEqual("settled", result["hand"]["phase"])
         # Simulate loss of every durable marker after ledger rows committed.

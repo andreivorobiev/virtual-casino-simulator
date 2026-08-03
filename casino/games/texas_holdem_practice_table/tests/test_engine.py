@@ -105,7 +105,7 @@ class TexasHoldemPracticeTableEngineTests(unittest.TestCase):
             # Apply one human and automatic opponent decision sequence.
             self.call_street(hand, index)
         # Verify the shared evaluator identifies the human pair as strongest.
-        self.assertEqual(("win", "one_pair", 20.0), (hand["result"]["human_outcome"], hand["result"]["hand_ranks"]["human"]["name"], hand["result"]["human_payout"]))
+        self.assertEqual(("win", "one_pair", 19.0), (hand["result"]["human_outcome"], hand["result"]["hand_ranks"]["human"]["name"], hand["result"]["human_payout"]))  # 20 pot less the 5% house rake. (issue #456)
         # Verify all four reserves precede the human's distinct pot payout.
         self.assertEqual(["TEXAS_HOLDEM_ESCROW_DEBIT", "PRACTICE_OPPONENT_ESCROW_DEBIT", "PRACTICE_OPPONENT_ESCROW_DEBIT", "PRACTICE_OPPONENT_ESCROW_DEBIT", "TEXAS_HOLDEM_PAYOUT_CREDIT"], [intent["transaction_type"] for intent in hand["ledger_intents"]])
         # Verify every fixed opponent intent names its real funded wallet and owner context.

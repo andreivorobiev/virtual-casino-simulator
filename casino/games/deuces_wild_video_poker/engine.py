@@ -42,7 +42,7 @@ PAYTABLE = {
     "wild_royal_flush": 25,  # Return twenty-five credits for a royal completed by deuces.
     "five_of_a_kind": 15,  # Return fifteen credits for five equal ranks using wild deuces.
     "straight_flush": 9,  # Return nine credits for a non-royal straight flush.
-    "four_of_a_kind": 5,  # Return five credits for four equal ranks.
+    "four_of_a_kind": 4,  # Return four credits for four equal ranks; the canonical deuces house-edge lever. (issue #456)
     "full_house": 3,  # Return three credits for a three-plus-two grouping.
     "flush": 2,  # Return two credits for five cards of one suit.
     "straight": 2,  # Return two credits for five consecutive ranks.

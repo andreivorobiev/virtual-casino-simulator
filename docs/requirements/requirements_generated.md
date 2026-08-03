@@ -30,7 +30,7 @@ Historical source baseline: 9.1.0
 - hi_lo: 1.1.1
 - three_card_poker: 1.1.0
 - jacks_or_better_video_poker: 1.1.0
-- deuces_wild_video_poker: 1.1.0
+- deuces_wild_video_poker: 1.1.1
 - scratch_cards: 1.1.0
 - sic_bo: 1.1.0
 - chuck_a_luck: 1.1.0
@@ -47,12 +47,12 @@ Historical source baseline: 9.1.0
 - double_bonus_video_poker: 1.1.0
 - mississippi_stud: 1.1.0
 - joker_poker: 1.1.0
-- texas_holdem_practice_table: 1.1.0
+- texas_holdem_practice_table: 1.1.1
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.67.3
-- docs: 1.65.3
-- contracts: 1.54.3
+- tests: 1.67.4
+- docs: 1.65.4
+- contracts: 1.54.4
 - tooling: 1.25.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
@@ -554,7 +554,7 @@ Historical source baseline: 9.1.0
 - **JOBVP-003** (Jacks or Better Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw action identities.
 - **JOBVP-004** (Application) - PASS: Jacks or Better supplies complete English and Russian copy with responsive, accessible, reduced-motion-safe play across required viewports.
 - **JOBVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Jacks or Better with requirement, module, version, and visual traceability.
-- **DWVP-001** (Deuces Wild Video Poker) - PASS: Single-hand full-pay Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable.
+- **DWVP-001** (Deuces Wild Video Poker) - PASS: Single-hand house-edged Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable, with the four-of-a-kind return reduced so optimal play is no longer player-positive.
 - **DWVP-002** (Deuces Wild Video Poker) - PASS: Authenticated sessions own isolated reload-safe active hands, holds, history, and canonical route restoration.
 - **DWVP-003** (Deuces Wild Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw identities.
 - **DWVP-004** (Application) - PASS: Deuces Wild supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.
@@ -639,7 +639,7 @@ Historical source baseline: 9.1.0
 - **SEC-007** (Core) - PASS: At least twenty-five simultaneous duplicate submissions per debit, payout, refund, and settlement family commit at most once across supported storage processes.
 - **SEC-008** (Core) - PASS: Admin and operations authority is enforced by authenticated server routes, and normal players cannot obtain global game, ledger, history, user, or control state.
 - **SEC-009** (Core) - PASS: The certification inventory covers every registered catalog game and action, and an authoritative refresh replaces tampered client wallet presentation without changing server state.
-- **THPT-001** (Texas Hold'em Practice Table) - PASS: Fixed-limit Texas Hold'em deals one authenticated human and three server-managed opponents through shared card and poker primitives with call-or-fold streets and transparent showdown settlement.
+- **THPT-001** (Texas Hold'em Practice Table) - PASS: Fixed-limit Texas Hold'em deals one authenticated human and three server-managed opponents through shared card and poker primitives with call-or-fold streets and transparent showdown settlement that rakes each pot so the table holds a house edge against best play.
 - **THPT-002** (Texas Hold'em Practice Table) - PASS: Authenticated sessions own private reload-safe hands, decisions, compact replay receipts, settled history, and canonical route restoration without exposing active opponent cards or another user's state.
 - **THPT-003** (Texas Hold'em Practice Table) - PASS: The human and all three funded opponent accounts reserve maximum exposure and receive unused escrow and pot shares only through storage-enforced ledger action identities with Admin-auditable owner context.
 - **THPT-004** (Application) - PASS: Texas Hold'em Practice Table supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play across all governed viewports.
