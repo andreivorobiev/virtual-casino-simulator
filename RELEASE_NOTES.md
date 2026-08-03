@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.52 Release Notes
+
+## Palette restoration and practice-game policies
+
+- Packages the accepted consolidated restoration packet from sole normal content PR #581; the release-only application revision advances mechanically to `9.56.8`.
+- Restores twenty-eight branded game palettes while preserving playing-card, Roulette, Color Wheel, Marble Race, Keno, and other game-owned semantic colors.
+- Preserves the bounded per-source guest-creation-window proof without changing guest identity, wallet allocation, or public API behavior.
+- Adds explicit Deuces Wild house-edge policy and Texas Hold'em practice-table rake behavior with focused production, API, economics, settlement-conservation, OpenAPI, and compatibility evidence.
+- Retains exactly 888 permanent requirements; only `DWVP-001` and `THPT-001` were amended by the accepted content packet, while the release allocates no identifier.
+- Records contributor PRs #573, #574, and #580 as ancestry-only inputs; PR #581 is the sole current-main content integration and no contributor content is imported a second time.
+- Keeps issues #456 and #555 OPEN and incomplete.
+- Makes no migration, provider, public-policy, database, broader-issue, publication, or deployment claim.
+- Retains the MySQL schema-two/schema-three runtime bridge with minimum 2, expected 3, application held, and production rollback fixed at schema 2.
+- Retains exact immutable v0.9.5.51 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.51 Release Notes
 
 ## Roulette layout, API rate budget, and live presence
