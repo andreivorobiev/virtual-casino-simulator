@@ -1,27 +1,28 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-02T23:32:07Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-03T02:37:15Z.
 
 ## Current branch / active Codex work
 
-- Protected main, tag, published release, and terminal production are exact v0.9.5.49 source `bca3e3564b04ddb4b05914f59556876f6dea73c8`.
-- Local-only `codex/remaining-open-prs-batch-controller` starts from accepted main-identical shell `e4102242a18d851939174bda0720ad2d6ef099e0`; its first parent is exact v49 main and its five later parents preserve the accepted #518, #564, #483, #454, and #506 contributor ancestry without importing their stale trees.
-- The mutable aggregate is capped at the exact owner-authorized fifty-four paths, with fifty-three effective changes because `docs/coordination/claude.md` remains byte-identical. It has no commit, push, PR, workflow, merge, release, deployment, production-contact, or issue-disposition authority before separate immutable audits.
+- Protected main is exact sole omnibus content merge `dca8cf4679e6fb1ffd79e8e7ca7a040666902890`, with ordered parents prior v49 main `bca3e3564b04ddb4b05914f59556876f6dea73c8` then accepted #568 controller head `16316558955b11f3f780febecf1e3a84872e5f25` and tree `be440a7931a37dcb2f58d7d92035c4de3d60171b`.
+- Terminal production remains exact v0.9.5.49 at clean MySQL schema 2 with schema-3 application held; no v0.9.5.50 publication, activation, or deployment is claimed.
+- Local-only `codex/release-v0.9.5.50` prepares the repository-standard release packet from exact current main and has no commit, push, PR, tag, publication, or deployment authority before separate audits.
 
 ## Accepted scope and requirements
 
-- Frozen source slices cover per-source guest creation rate limiting; registered-account timeout enforcement; Baccarat and Keno commitment-before-credit recovery; Bingo fixed-field house-sided economics; complete Andar Bahar Python discovery; and coherent Admin diagnostics, economics, owner-only session-policy API/UI, localization, contracts, and hosted-evidence inventory.
-- The canonical registry amends only `GUEST-001`, `LEDGER-030`, `BINGO-025`, and `AB-005`, then appends exactly `BINGO-026`, `ADMIN-029`, `TEST-145`, `ADMIN-030`, `TEST-146`, `SESSION-009`, `ADMIN-031`, and `TEST-150` for 888 unique rows. Historical `TEST-144` is not reused.
-- The three new Browser rows are `BR-ADMIN-DIAGNOSTICS-001`, `BR-ADMIN-ECONOMICS-001`, and `BR-ADMIN-SESSION-POLICY-001`; local authoring remains browser-free and hosted qualification is still required after publication.
+- Sole content PR #568 integrates bounded guest throttling, registered-session policy, commitment-safe Baccarat and Keno recovery, fixed-field Bingo economics, complete Andar Bahar test discovery, and coherent owner-gated Admin diagnostics, economics, and session-policy API/UI qualification.
+- Main-identical ancestry shell `e4102242a18d851939174bda0720ad2d6ef099e0` preserves the accepted contributor heads only for reachability; PR #568 is the sole omnibus content integration and no contributor content is imported a second time.
+- The registry remains exactly 888 unique requirements. The release retains the eight already-integrated new IDs `BINGO-026`, `ADMIN-029`, `TEST-145`, `ADMIN-030`, `TEST-146`, `SESSION-009`, `ADMIN-031`, and `TEST-150`, plus amended `GUEST-001`, `LEDGER-030`, `BINGO-025`, and `AB-005`, without allocating another ID.
 
 ## Version and contract allocation
 
-- Packaged application `0.9.5.49` and application module `9.56.4` remain unchanged.
-- Central revisions are `admin 1.15.0`, `core 9.36.0`, `bingo 9.3.2`, `baccarat 9.1.10`, `keno 9.3.3`, `contracts 1.54.0`, `tests 1.67.0`, `docs 1.65.0`, and `tooling 1.25.0`; every unlisted module remains exact v49.
-- Admin v1 adds bounded read-only economics summary/detail contracts. Admin users v2 adds owner-only provider-backed registered-session policy reads and sparse writes; frozen v1 compatibility, standard envelopes, POST CSRF, and `contracts/compatibility/module-api-matrix.json` remain unchanged.
+- Release versions advance only to package `0.9.5.50`, application `9.56.5`, contracts `1.54.1`, tests `1.67.1`, and docs `1.65.1`; tooling remains `1.25.0`.
+- Accepted central versions remain `admin 1.15.0`, `core 9.36.0`, `bingo 9.3.2`, `baccarat 9.1.10`, and `keno 9.3.3`; every other module remains exact current main.
+- The new compatibility record binds exact v0.9.5.49 source `bca3e3564b04ddb4b05914f59556876f6dea73c8`, archive SHA-256 `3e5790f3528ac7a134d9a3cf873cd84b314e105289cd5b395fe2c5bf548650cc`, and manifest SHA-256 `bb4e907feaa2b306231b40d48371f397ebc52c4a74be321f9b131b7c3d368379`.
 
-## Queue and handback
+## Rollback, queue, and handback
 
-- Issue #555 remains OPEN and incomplete. #388 remains OPEN because this packet delivers only its bounded session-policy subset; #430 and #434 remain OPEN. #450 stays excluded.
-- Contributor #559 is already delivered and excluded from this content tree. The accepted #561/#562 ancestry inside #564 plus #518, #483, #454, #460/#506 remain reachability-only until Integration's later normal merge decision.
-- Worker B rolling slices 1, 2, and 3 are accepted. Complete mutable acceptance still requires the exact generated requirements, manifests, coordination append, version fixture, focused API/storage/governance/contracts results, frozen-blob readback, and clean controller/external-state guard.
+- Rollback remains application-only at exact schema 2; database rollback is prohibited outside `TOOL-003`. The migration catalog remains minimum 2 / expected 3 / apply held with catalog SHA-256 `0697ec36c1787bb5a0773b4f3c3e6db732fd4e231a69cff9b0d0625618a41bc3` and chain SHA-256 `083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b`; no migration changes.
+- Issues #388, #430, #434, #456, and #555 remain OPEN and incomplete. #450 remains excluded. The six current open PRs remain externally held and untouched.
+- The mutable packet is restricted to the standard twenty-six release-owned paths with new `contracts/compatibility/app-0.9.5.50.json`; it changes no casino runtime, game source, workflow, provider, migration, API, ledger, or database source.
+- Local validation is browser-free only. No local Browser, Chromium, heavy-QA, issue closure, publication, readiness, activation, or deployment claim is authorized. Worker B must independently accept the exact mutable packet before any immutable commit.
