@@ -3,7 +3,7 @@
 import { t } from './i18n.js';
 
 // Match the canonical packaged application release used by the service-worker cache identity.
-export const PWA_APP_VERSION = '0.9.5.50';
+export const PWA_APP_VERSION = '0.9.5.51';
 // Name the session marker that distinguishes a cold shell boot from a same-context warm boot.
 const WARM_START_KEY = 'casino.pwa.warmStart';
 // Bound controls whose actions require an authoritative server response while offline.

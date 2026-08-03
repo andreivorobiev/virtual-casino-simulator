@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.51 Release Notes
+
+## Roulette layout, API rate budget, and live presence
+
+- Packages the accepted production-polish fixes from sole normal content PR #571; the release-only application revision advances mechanically to `9.56.7`.
+- Moves Roulette into its compact premium layout before the hosted `1706x900` viewport can crop the betting board, while preserving the wheel, controls, betting grid, and bet slip.
+- Keeps safe static GET asset delivery outside the API action rate budget so page resources cannot exhaust the capacity reserved for real API calls and mutations.
+- Reports a privacy-safe count of unique active, unexpired sessions instead of deriving the footer and lobby value from the caller-filtered player list.
+- Preserves the accepted hosted containment, static/API isolation, and active-session evidence already integrated on exact main.
+- Keeps issue #570 open until exact v0.9.5.51 production deployment and public verification.
+- Makes no migration, provider, public-policy, database, issue-closure, or deployment claim.
+- Retains the MySQL schema-two/schema-three runtime bridge with minimum 2, expected 3, application held, and production rollback fixed at schema 2.
+- Retains exact immutable v0.9.5.50 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.50 Release Notes
 
 ## Bounded reliability and Admin operations bundle
