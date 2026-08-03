@@ -9654,7 +9654,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Apply exact visual geometry.
                                     page.set_viewport_size(viewport)
                                     # Render the complete summary.
-                                    mode['value']='populated'; page.get_by_test_id('admin-tab-economics').click(); page.get_by_test_id('admin-economics').wait_for(timeout=5000)
+                                    mode['value']='populated'; page.get_by_test_id('admin-tab-economics').click(); page.locator('[data-economics-game="buggy_game"]').wait_for(timeout=5000)
                                     # Require player-positive and zero-wager formatting plus containment.
                                     economics_text=page.get_by_test_id('admin-economics').inner_text(); assert '150.0%' in economics_text and '—' in economics_text and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
                                     # Focus the real drill-down control for keyboard evidence.
