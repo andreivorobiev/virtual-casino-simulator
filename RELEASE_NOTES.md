@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.49 Release Notes
+# Virtual Casino Simulator v0.9.5.50 Release Notes
+
+## Bounded reliability and Admin operations bundle
+
+- Packages the accepted omnibus and qualification bundle from sole normal content PR #568; the release-only application revision advances mechanically to `9.56.5`.
+- Adds a durable per-source guest-creation throttle before identity or wallet allocation and preserves registered-session timeout enforcement outside the guest lifecycle.
+- Carries commitment-before-credit recovery for Baccarat and Keno, fixed-field house-sided Bingo economics, and complete Andar Bahar Python test discovery without changing public game contracts or game math beyond the accepted bounded fixes.
+- Adds owner-gated Admin session policy, diagnostics, and bounded ledger-derived economics with aligned v1/v2 OpenAPI contracts, localization, responsive presentation, and hosted evidence inventory.
+- Preserves the eight new permanent IDs `BINGO-026`, `ADMIN-029`, `TEST-145`, `ADMIN-030`, `TEST-146`, `SESSION-009`, `ADMIN-031`, and `TEST-150`, plus the four amended IDs `GUEST-001`, `LEDGER-030`, `BINGO-025`, and `AB-005`, already integrated on exact main; the release allocates no ID.
+- Records main-identical ancestry shell `e4102242` as reachability-only for the accepted contributor heads; PR #568 is the sole omnibus content integration and no contributor content is imported a second time.
+- Keeps issues #388, #430, #434, #456, and #555 OPEN and incomplete, and keeps #450 excluded.
+- Makes no new migration, provider, public-policy, live-security, database, full-issue, issue-closure, publication, release-activation, or deployment claim.
+- Retains the MySQL schema-two/schema-three runtime bridge with minimum 2, expected 3, application held, and production rollback fixed at schema 2.
+- Retains exact immutable v0.9.5.49 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
 
 ## Request-path architecture documentation
 
