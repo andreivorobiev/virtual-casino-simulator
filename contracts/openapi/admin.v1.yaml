@@ -59,6 +59,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/economics:
+    get:
+      # Additive owner-visible payout-rate summary from player-facing ledger rows. (ADMIN-030)
+      summary: GET /api/v1/admin/economics
+      operationId: admin_GET_api_v1_admin_economics
+      responses:
+        '200':
+          description: Standard API envelope carrying bounded per-game payout rates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/economics/{game}:
+    get:
+      # Additive single-game transaction breakdown from the same bounded ledger window. (ADMIN-030)
+      summary: GET /api/v1/admin/economics/{game}
+      operationId: admin_GET_api_v1_admin_economics_game
+      parameters:
+        - name: game
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9_]+$'
+      responses:
+        '200':
+          description: Standard API envelope carrying one game's economics detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
   /api/v1/admin/logs:
     get:
       summary: GET /api/v1/admin/logs

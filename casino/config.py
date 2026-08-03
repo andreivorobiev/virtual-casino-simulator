@@ -120,6 +120,10 @@ GUEST_INACTIVITY_SECONDS = int(os.environ.get("CASINO_GUEST_INACTIVITY_SECONDS",
 GUEST_LIFETIME_SECONDS = int(os.environ.get("CASINO_GUEST_LIFETIME_SECONDS", "14400"))
 # Bound simultaneous disposable principals so anonymous entry cannot exhaust preview storage.
 GUEST_MAX_ACTIVE = int(os.environ.get("CASINO_GUEST_MAX_ACTIVE", "100"))
+# Bound guest creations per trusted source address inside the rolling window so one source cannot burn the active-principal capacity. (GUEST-001)
+GUEST_CREATES_PER_IP = int(os.environ.get("CASINO_GUEST_CREATES_PER_IP", "30"))
+# Set the rolling per-source guest-creation window length in seconds. (GUEST-001)
+GUEST_CREATE_WINDOW_SECONDS = int(os.environ.get("CASINO_GUEST_CREATE_WINDOW_SECONDS", "900"))
 # Bound accepted game mutations in one disposable session so anonymous traffic cannot grow state indefinitely.
 GUEST_MAX_ACTIONS = int(os.environ.get("CASINO_GUEST_MAX_ACTIONS", "1000"))
 # Bound one guest autoplay registration to a conservative number of rounds.

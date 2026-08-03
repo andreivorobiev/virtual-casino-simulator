@@ -18,6 +18,10 @@ _rng = random.SystemRandom()
 MAX_CALLS_DEFAULT = 50
 # Give blackout a longer 60-draw budget because covering all 24 numbers needs a deeper ball stream. (issue #405)
 MAX_CALLS_BLACKOUT = 60
+# Record measured P(human wins) per pattern at the guaranteed four-card field from a seeded Monte Carlo (40k-300k trials). (issue #452)
+MEASURED_WIN_PROBABILITY = {"line": 0.262, "four_corners": 0.142, "postage_stamp": 0.254, "blackout": 0.00136}
+# Pay roughly 0.9 / P per pattern so every pattern carries a modest ~10% house edge instead of the prior player-positive returns. (issue #452)
+PAYTABLE = {"line": 3.4, "four_corners": 6.3, "postage_stamp": 3.5, "blackout": 650}
 
 # Define the call_cap_for function used by this module.
 def call_cap_for(pattern):
@@ -70,7 +74,7 @@ def start_session(state, player_id, amount, pattern="line", bot_players=None):
     # Iterate through the collection to process each item.
     for bp in bot_players or []:
         # Execute this statement as part of the module's documented control flow.
-        cards.append({"card_id": new_id("card"), "player_id": bp["player_id"], "amount": bp["amount"], "card": make_card(), "status":"active", "winner": False, "payout":0, "source":"bot"})
+        cards.append({"card_id": new_id("card"), "player_id": bp["player_id"], "amount": bp["amount"], "card": make_card(), "status":"active", "winner": False, "payout":0, "source": bp.get("source", "bot")})
     # Stamp the bounded ball budget at start so a session can no longer draw forever toward a guaranteed win. (issue #405)
     sess = {"session_id": new_id("bingo"), "player_id": player_id, "amount": amount, "pattern": pattern, "card": cards[0]["card"], "cards": cards, "called": [], "status":"active", "created_at": utc_now(), "winner": None, "winning_card_id": None, "payout": 0, "max_calls": call_cap_for(pattern)}
     # Set state["active_session"] to the value needed for the next operation.
@@ -184,8 +188,8 @@ def has_pattern(sess):
 
 # Define the payout_for function used by this module.
 def payout_for(pattern, amount):
-    # Return the computed value to the caller.
-    return round(float(amount) * {"line": 10, "four_corners": 12, "postage_stamp": 15, "blackout": 50}.get(pattern, 10), 2)
+    # Return the house-edged total return for a winning card from the calibrated paytable. (issue #452)
+    return round(float(amount) * PAYTABLE.get(pattern, PAYTABLE["line"]), 2)
 
 # Define the finish_no_win function used by this module.
 def finish_no_win(state, sess):
@@ -234,8 +238,10 @@ def call_next(state):
         card["winning_coords"] = coords if ok else []
         # Branch when the following condition is true.
         if ok and card.get("status") == "active":
+            # A house spoiler card can end the human's session but is never paid, so no uncharged card ever collects. (issue #452)
+            card_payout = payout_for(sess["pattern"], card["amount"]) if card.get("source") != "house" else 0
             # Set card["status"] to the value needed for the next operation.
-            card["status"] = "won"; card["winner"] = True; card["payout"] = payout_for(sess["pattern"], card["amount"]); winners.append(card)
+            card["status"] = "won"; card["winner"] = True; card["payout"] = card_payout; winners.append(card)
     # Branch when the following condition is true.
     if winners:
         # Set win to the value needed for the next operation.

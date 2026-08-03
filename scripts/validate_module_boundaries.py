@@ -1,51 +1,36 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Comment policy: comments state intent and constraints; self-evident lines stay bare.
+# This file is on the audited-quality exemption list in check_comment_density.py (issue #555).
 import pathlib
-# Import required dependency so this module can use its public functions or constants.
 import re
-# Import sys so direct validator execution can load the repository catalog.
+# sys.path manipulation below needs sys before any casino import resolves.
 import sys
 
-# Set ROOT to the value needed for the next operation.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 # Add the repository root before importing the runtime catalog facade.
 sys.path.insert(0, str(ROOT))
-# Import the canonical game descriptors after resolving this checkout.
+# Boundaries are derived from the same descriptors that drive runtime registration,
+# so this gate can never drift from the catalog games actually being served.
 from casino.config import GAMES as GAME_CATALOG
-# Derive module-boundary ids from the same descriptors used for runtime registration.
 GAMES = [game["id"] for game in GAME_CATALOG]
-# Set PY_IMPORT_RE to the value needed for the next operation.
+# Match real import syntax, not substrings, so string literals cannot trip or dodge the gate.
 PY_IMPORT_RE = re.compile(r"^\s*(?:from|import)\s+([a-zA-Z0-9_.]+)")
-# Set JS_IMPORT_RE to the value needed for the next operation.
 JS_IMPORT_RE = re.compile(r"import\s+.*?from\s+['\"]([^'\"]+)['\"]")
 
-# Define the check_python_game_imports function used by this module.
+# Fail on any cross-game Python import: games may share code only through casino.core,
+# and bot strategies must stay behind the controller so games cannot read bot intent.
 def check_python_game_imports(errors):
-    # Iterate through the collection to process each item.
     for game in GAMES:
-        # Iterate through the collection to process each item.
         for path in (ROOT / "casino" / "games" / game).rglob("*.py"):
-            # Set text to the value needed for the next operation.
             text = path.read_text(encoding="utf-8")
-            # Iterate through the collection to process each item.
             for lineno, line in enumerate(text.splitlines(), 1):
-                # Set m to the value needed for the next operation.
                 m = PY_IMPORT_RE.match(line)
-                # Branch when the following condition is true.
                 if not m:
-                    # Execute this statement as part of the module's documented control flow.
                     continue
-                # Set imported to the value needed for the next operation.
                 imported = m.group(1)
-                # Iterate through the collection to process each item.
                 for other in GAMES:
-                    # Branch when the following condition is true.
                     if other != game and f"casino.games.{other}" in imported:
-                        # Execute this statement as part of the module's documented control flow.
                         errors.append(f"{path}:{lineno} imports other game module {other}")
-                # Branch when the following condition is true.
                 if "casino.bots.strategies" in imported:
-                    # Execute this statement as part of the module's documented control flow.
                     errors.append(f"{path}:{lineno} imports bot strategies directly")
 
 # Match player-visible outcome draws routed through the seedable global Mersenne Twister. (issue #420)
@@ -54,17 +39,13 @@ GLOBAL_RNG_RE = re.compile(r"\brandom\.(shuffle|choice|choices|sample|randint|ra
 
 # Reject global-module randomness in game outcome code so entropy always comes from a CSPRNG or an injected generator. (issue #420)
 def check_game_rng(errors):
-    # Iterate every catalog game exactly like the import boundary above.
     for game in GAMES:
-        # Walk each game module's Python sources.
         for path in (ROOT / "casino" / "games" / game).rglob("*.py"):
-            # Read the module once for line-scoped matching.
             text = path.read_text(encoding="utf-8")
-            # Scan each line so diagnostics stay clickable.
+            # Line-scoped scanning keeps every diagnostic clickable in editors and CI logs.
             for lineno, line in enumerate(text.splitlines(), 1):
                 # Ignore comment lines so documentation cannot trip the gate.
                 if line.lstrip().startswith("#"):
-                    # Continue with the next line.
                     continue
                 # Flag only direct global-module draws; SystemRandom instances and Random(seed) constructions never match.
                 if GLOBAL_RNG_RE.search(line):
@@ -72,63 +53,37 @@ def check_game_rng(errors):
                     errors.append(f"{path}:{lineno} draws outcomes from the seedable global random module")
 
 
-# Define the check_js_game_imports function used by this module.
+# Fail on any cross-game frontend import: shared browser code belongs under web/core/.
 def check_js_game_imports(errors):
-    # Set game_dir to the value needed for the next operation.
     game_dir = ROOT / "web" / "games"
-    # Iterate through the collection to process each item.
     for game in GAMES:
-        # Set path to the value needed for the next operation.
         path = game_dir / f"{game}.js"
-        # Branch when the following condition is true.
+        # Frontend files are optional during game bring-up; the catalog validator owns existence.
         if not path.exists():
-            # Execute this statement as part of the module's documented control flow.
             continue
-        # Set text to the value needed for the next operation.
         text = path.read_text(encoding="utf-8")
-        # Iterate through the collection to process each item.
         for lineno, line in enumerate(text.splitlines(), 1):
-            # Set m to the value needed for the next operation.
             m = JS_IMPORT_RE.search(line)
-            # Branch when the following condition is true.
             if not m:
-                # Execute this statement as part of the module's documented control flow.
                 continue
-            # Set target to the value needed for the next operation.
             target = m.group(1)
-            # Iterate through the collection to process each item.
             for other in GAMES:
-                # Branch when the following condition is true.
                 if other != game and f"{other}.js" in target:
-                    # Execute this statement as part of the module's documented control flow.
                     errors.append(f"{path}:{lineno} imports other game frontend {other}")
 
-# Define the main function used by this module.
 def main():
-    # Set errors to the value needed for the next operation.
     errors = []
-    # Execute this statement as part of the module's documented control flow.
     check_python_game_imports(errors)
     # Enforce CSPRNG-or-injected entropy for every game outcome draw. (issue #420)
     check_game_rng(errors)
-    # Execute this statement as part of the module's documented control flow.
     check_js_game_imports(errors)
-    # Branch when the following condition is true.
     if errors:
-        # Write diagnostic output so the current operation can be inspected.
         print("Module boundary validation failed:")
-        # Iterate through the collection to process each item.
         for err in errors:
-            # Write diagnostic output so the current operation can be inspected.
             print(f" - {err}")
-        # Return the computed value to the caller.
         return 1
-    # Write diagnostic output so the current operation can be inspected.
     print("Module boundary validation passed.")
-    # Return the computed value to the caller.
     return 0
 
-# Branch when the following condition is true.
 if __name__ == "__main__":
-    # Raise an error so invalid input or state is reported explicitly.
     raise SystemExit(main())

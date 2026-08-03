@@ -99,19 +99,19 @@ def remove_ticket(state, ticket_id, player_id):
     # Raise an error so invalid input or state is reported explicitly.
     raise ValidationError("Keno ticket was not found")
 
-# Define the draw function used by this module.
-def draw(state):
-    # Branch when the following condition is true.
+# Sample and price one draw without applying its terminal state mutations, so the caller can persist the committed entropy before any credit is issued. (issues #430, #555)
+def commit_draw(state):
+    # Refuse to sample entropy for an empty round.
     if not state.get("open_tickets"):
         # Raise an error so invalid input or state is reported explicitly.
         raise ValidationError("Buy a Keno ticket first")
     # Draw twenty unique balls from the CSPRNG so results cannot be predicted from seeded Mersenne Twister state. (issue #420)
     drawn = sorted(_SYSTEM_RANDOM.sample(range(1,81), 20))
-    # Set rid to the value needed for the next operation.
+    # Mint the durable round identity that every settlement row of this draw will carry.
     rid = new_id("kendraw")
     # Set results to the value needed for the next operation.
     results=[]
-    # Iterate through the collection to process each item.
+    # Price every open ticket against the committed sample so a resumed retry replays identical payouts.
     for t in state["open_tickets"]:
         # Set catches to the value needed for the next operation.
         catches = sorted(set(t["spots"]) & set(drawn))
@@ -125,13 +125,16 @@ def draw(state):
         payout = round(float(t["amount"])*mult, 2)
         # Execute this statement as part of the module's documented control flow.
         results.append({"ticket": t, "catches": catches, "catch_count": caught, "multiplier": mult, "payout": payout})
-    # Set draw to the value needed for the next operation.
-    draw = {"round_id": rid, "timestamp": utc_now(), "drawn": drawn, "results": results}
-    # Set state["open_tickets"] to the value needed for the next operation.
+    # Return the complete committed draw; the caller persists it as the pending settlement before crediting.
+    return {"round_id": rid, "timestamp": utc_now(), "drawn": drawn, "results": results}
+
+# Apply one committed draw's terminal mutations exactly once and release the settlement commitment. (issue #555)
+def finalize_draw(state, draw):
+    # Clear every settled ticket so the next round starts empty.
     state["open_tickets"] = []
-    # Execute this statement as part of the module's documented control flow.
+    # Append the settled draw to the recent history.
     state.setdefault("last_draws", []).append(draw)
-    # Set state["last_draws"] to the value needed for the next operation.
+    # Trim the recent history to its bounded tail.
     state["last_draws"] = state["last_draws"][-100:]
-    # Return the computed value to the caller.
-    return draw
+    # Release the commitment so the next draw samples fresh entropy.
+    state.pop("pending_draw", None)

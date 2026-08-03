@@ -318,8 +318,8 @@ class KenoEconomicsTests(TestCase):
                 ticket = engine.add_ticket(state, "human", selected, 0.03, source="economics-proof")
                 # Patch only the production RNG object for this exact class.
                 with mock.patch.object(engine, "_SYSTEM_RANDOM", ScriptedBalls(drawn)):
-                    # Execute the real engine draw.
-                    result = engine.draw(state)["results"][0]
+                    # Execute the real engine draw commitment, which prices every result. (issue #555)
+                    result = engine.commit_draw(state)["results"][0]
                 # Require the production RNG identity to be restored after every class.
                 self.assertIs(engine._SYSTEM_RANDOM, original_rng)
                 # Require exact catches and count from the deterministic draw.
@@ -339,7 +339,7 @@ class KenoEconomicsTests(TestCase):
             # Patch the RNG only for the failing action.
             with mock.patch.object(engine, "_SYSTEM_RANDOM", FailingBalls()):
                 # Execute a draw that reaches the injected sample failure.
-                engine.draw({"open_tickets": [{"ticket_id": "failure", "player_id": "human", "spots": [1], "amount": 1}], "last_draws": []})
+                engine.commit_draw({"open_tickets": [{"ticket_id": "failure", "player_id": "human", "spots": [1], "amount": 1}], "last_draws": []})
         # Require the production RNG identity after the failing context exits.
         self.assertIs(engine._SYSTEM_RANDOM, original_rng)
 
@@ -427,8 +427,8 @@ class KenoEconomicsTests(TestCase):
                 self.assertEqual(players.get_player("human")["balance"], round(starting_balance - float(scenario["amount"]) + payout, 2))
                 # Require finite public result fields at representative and maximum scale.
                 self.assertTrue(all(math.isfinite(float(result[key])) for key in ("multiplier", "payout")))
-                # Require one state save for purchase and one for draw.
-                self.assertEqual(self.saved_state.call_count, 2)
+                # Require one save for purchase, one for the entropy commitment, and one for finalize. (issue #555)
+                self.assertEqual(self.saved_state.call_count, 3)
                 # Require existing response state, player, players, and paytable keys after mutation.
                 self.assertTrue({"draw", "settlements", "bot_tickets", "state", "player", "players", "paytable"}.issubset(response))
 

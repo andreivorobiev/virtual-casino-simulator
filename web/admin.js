@@ -87,6 +87,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'players') return playersBots();
     // Branch to the Admin beta-user renderer.
     if (tab === 'users') return users();
+    // Await the owner-gated session policy so authorization errors stay inside the localized boundary. (SESSION-009)
+    if (tab === 'sessions') return await sessions();
     // Await private invitation controls so rejected v2 requests stay inside the localized load-error boundary. (INVITE-005)
     if (tab === 'invitations') return await invitations();
     // Await Guest Trials so rejected Admin requests stay inside the localized load-error boundary. (issue #317)
@@ -103,6 +105,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'operations') return operations();
     // Branch to the game state renderer.
     if (tab === 'states') return states();
+    // Await the payout-rate economics renderer inside the shared load-error boundary. (ADMIN-030)
+    if (tab === 'economics') return await economics();
     // Branch to the audio renderer.
     if (tab === 'audio') return audio();
     // Branch to the browser-local language renderer.
@@ -511,12 +515,14 @@ async function ledger() {
 
 // Define history to show cross-game history rows.
 async function history() {
-  // Set the existing history title and subtitle.
-  setTitle('History', 'Cross-game CSV history rows.');
+  // Set the localized history title and subtitle.
+  setTitle(t('history.title', {}, 'admin'), t('history.subtitle', {}, 'admin'));
   // Load history rows through the existing Admin endpoint.
   const data = await api('/api/v1/admin/history?limit=500');
-  // Render history diagnostics.
-  view.innerHTML = `<section class="admin-card"><h3>History</h3>${pre(data.history || [])}</section>`;
+  // Normalize rows into a readable newest-first list. (ADMIN-029)
+  const rows = (data.history || []).slice().reverse();
+  // Render a table with an explicit empty state instead of a raw JSON dump. (ADMIN-029)
+  view.innerHTML = `<section class="admin-card"><h3>${safe(t('history.heading', {}, 'admin'))}</h3>${rows.length ? table([t('history.time', {}, 'admin'), t('history.player', {}, 'admin'), t('history.game', {}, 'admin'), t('history.bet', {}, 'admin'), t('history.amount', {}, 'admin'), t('history.payout', {}, 'admin'), t('history.outcome', {}, 'admin'), t('history.balance', {}, 'admin')], rows.map(row => `<tr><td>${safe(row.timestamp)}</td><td>${safe(row.player_id)}</td><td>${safe(humanLabel(row.game))}</td><td>${safe(row.bet_label || row.bet_type)}</td><td>${formatMoney(Number(row.amount))}</td><td>${formatMoney(Number(row.payout))}</td><td>${safe(row.outcome)}</td><td>${formatMoney(Number(row.balance_after))}</td></tr>`)) : emptyState(t('history.emptyTitle', {}, 'admin'), t('history.emptyDetail', {}, 'admin'), 'admin-history-empty')}</section>`;
 }
 
 // Define telemetry to show server and client logs.
@@ -625,14 +631,45 @@ async function operations() {
   }
 }
 
+// Format a payout ratio as a readable percentage or a dash when no wagers anchor it. (ADMIN-030)
+const ratePercent = value => (value === null || value === undefined) ? '—' : `${(value * 100).toFixed(1)}%`;
+
+// Render continuous per-game payout-rate telemetry with a drill-down. (ADMIN-030)
+async function economics() {
+  // Set the localized economics title and subtitle.
+  setTitle(t('economics.title', {}, 'admin'), t('economics.subtitle', {}, 'admin'));
+  // Load aggregated payout rates from the owner-visible Admin endpoint.
+  const data = await api('/api/v1/admin/economics');
+  // Sort active games by wager volume for operator scanning.
+  const games = (data.games || []).slice().sort((a, b) => (b.wagered || 0) - (a.wagered || 0));
+  // Render summary rows, player-positive warnings, and deterministic drill-down controls.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-economics"><h3>${safe(t('economics.heading', {}, 'admin'))}</h3><p class="muted">${safe(t('economics.window', { count: data.window }, 'admin'))}</p>${games.length ? table([t('economics.game', {}, 'admin'), t('economics.wagered', {}, 'admin'), t('economics.returned', {}, 'admin'), t('economics.payoutRate', {}, 'admin'), t('economics.houseEdge', {}, 'admin'), t('economics.status', {}, 'admin'), ''], games.map(row => `<tr${row.player_positive ? ' class="danger"' : ''}><td>${safe(humanLabel(row.game))}</td><td>${safe(row.wagered)}</td><td>${safe(row.returned)}</td><td>${safe(ratePercent(row.payout_rate))}</td><td>${safe(ratePercent(row.house_edge))}</td><td>${safe(t(row.player_positive ? 'economics.playerPositive' : 'economics.houseSide', {}, 'admin'))}</td><td><button type="button" data-economics-game="${safe(row.game)}">${safe(t('economics.drillDown', {}, 'admin'))}</button></td></tr>`)) : emptyState(t('economics.emptyTitle', {}, 'admin'), t('economics.emptyDetail', {}, 'admin'), 'admin-economics-empty')}</section>`;
+  // Bind each drill-down to the exact canonical game id published by the backend.
+  view.querySelectorAll('[data-economics-game]').forEach(button => { button.onclick = () => economicsDetail(button.dataset.economicsGame); });
+}
+
+// Render one game's payout-rate breakdown and recent bounded evidence. (ADMIN-030)
+async function economicsDetail(game) {
+  // Set the detail title while retaining the canonical game label.
+  setTitle(t('economics.title', {}, 'admin'), t('economics.detailSubtitle', { game: humanLabel(game) }, 'admin'));
+  // Load the single-game detail through the allowlisted route segment.
+  const data = await api(`/api/v1/admin/economics/${encodeURIComponent(game)}`);
+  // Render aggregate, type breakdown, and recent events with a deterministic back control.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-economics-detail"><div class="row"><button id="economics-back" type="button">${safe(t('economics.back', {}, 'admin'))}</button><span class="badge">${safe(humanLabel(game))}</span>${data.player_positive ? `<span class="badge danger">${safe(t('economics.playerPositive', {}, 'admin'))}</span>` : ''}</div><p>${safe(t('economics.detailSummary', { rate: ratePercent(data.payout_rate), edge: ratePercent(data.house_edge), wagered: data.wagered, returned: data.returned, events: data.events }, 'admin'))}</p><h3>${safe(t('economics.byType', {}, 'admin'))}</h3>${(data.by_transaction_type || []).length ? table([t('economics.transactionType', {}, 'admin'), t('economics.count', {}, 'admin'), t('economics.netTotal', {}, 'admin')], data.by_transaction_type.map(economicsRow => `<tr><td>${safe(humanLabel(economicsRow.transaction_type))}</td><td>${safe(economicsRow.count)}</td><td>${safe(economicsRow.total)}</td></tr>`)) : emptyState(t('economics.noActivity', {}, 'admin'), t('economics.noActivityDetail', {}, 'admin'), 'admin-economics-detail-empty')}<h3>${safe(t('economics.recent', {}, 'admin'))}</h3>${(data.recent || []).length ? table([t('economics.player', {}, 'admin'), t('economics.transactionType', {}, 'admin'), t('economics.amount', {}, 'admin')], data.recent.map(economicsRow => `<tr><td>${safe(economicsRow.player_id)}</td><td>${safe(humanLabel(economicsRow.transaction_type))}</td><td>${safe(economicsRow.amount)}</td></tr>`)) : emptyState(t('economics.noRecent', {}, 'admin'), t('economics.noRecentDetail', {}, 'admin'), 'admin-economics-recent-empty')}</section>`;
+  // Return to the live summary when the operator activates Back.
+  view.querySelector('#economics-back').onclick = () => economics();
+}
+
 // Define states to show isolated game state files.
 async function states() {
-  // Set the existing states title and subtitle.
-  setTitle('Game States', 'Isolated game state files.');
+  // Set the localized state-diagnostics title and subtitle.
+  setTitle(t('states.title', {}, 'admin'), t('states.subtitle', {}, 'admin'));
   // Load game states through the existing Admin endpoint.
   const data = await api('/api/v1/admin/game-states');
-  // Render game state diagnostics.
-  view.innerHTML = `<section class="admin-card"><h3>States</h3>${pre(data.states)}</section>`;
+  // Normalize per-game and per-player state documents into stable table rows. (ADMIN-029)
+  const entries = Object.entries(data.states || {});
+  // Render expandable state detail or an explicit empty state. (ADMIN-029)
+  view.innerHTML = `<section class="admin-card"><h3>${safe(t('states.heading', {}, 'admin'))}</h3>${entries.length ? table([t('states.state', {}, 'admin'), t('states.keys', {}, 'admin'), t('states.detail', {}, 'admin')], entries.map(([key, info]) => `<tr><td>${safe(key)}</td><td>${safe(Object.keys(info.state || {}).length)}</td><td><details><summary>${safe(t('states.view', {}, 'admin'))}</summary>${pre(info.state)}</details></td></tr>`)) : emptyState(t('states.emptyTitle', {}, 'admin'), t('states.emptyDetail', {}, 'admin'), 'admin-game-states-empty')}</section>`;
 }
 
 // Define audio to preserve global sound and voice settings.
@@ -669,6 +706,30 @@ async function saveAudio() {
   await saveVoiceSettings(payload);
   // Show existing save feedback.
   toast('Audio settings saved.', true);
+}
+
+// Render the owner-facing registered-session timeout policy. (SESSION-009, ADMIN-031)
+async function sessions() {
+  // Set the localized session-policy title and helper text.
+  setTitle(t('sessions.title', {}, 'admin'), t('sessions.subtitle', {}, 'admin'));
+  // Load the current owner-gated policy document.
+  const data = await api('/api/v2/admin/session-settings');
+  // Read the settings under a safe empty fallback for error-boundary rendering.
+  const s = data.settings || {};
+  // Render the three bounded numeric controls and stricter-admin toggle.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-sessions-policy"><h3>${safe(t('sessions.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('sessions.idle', {}, 'admin'))}<input id="idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.idle_timeout_minutes)}" data-testid="admin-sessions-idle"></label><label>${safe(t('sessions.absolute', {}, 'admin'))}<input id="absolute_timeout_hours" type="number" min="1" max="24" value="${safe(s.absolute_timeout_hours)}" data-testid="admin-sessions-absolute"></label><label>${safe(t('sessions.adminIdle', {}, 'admin'))}<input id="admin_idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.admin_idle_timeout_minutes)}" data-testid="admin-sessions-admin-idle"></label></div><label><input id="admin_stricter" type="checkbox" ${s.admin_stricter ? 'checked' : ''} data-testid="admin-sessions-admin-stricter"> ${safe(t('sessions.adminStricter', {}, 'admin'))}</label><p class="muted">${safe(t('sessions.help', {}, 'admin'))}</p><div class="row"><button id="saveSessions" data-testid="admin-save-sessions" class="gold">${safe(t('sessions.save', {}, 'admin'))}</button></div></section>`;
+  // Bind the owner save action after rendering.
+  view.querySelector('#saveSessions').onclick = saveSessions;
+}
+
+// Persist the owner-authored session policy through the additive v2 contract.
+async function saveSessions() {
+  // Build the policy payload from the three numeric fields and the strict boolean toggle.
+  const payload = { idle_timeout_minutes: Number(view.querySelector('#idle_timeout_minutes').value), absolute_timeout_hours: Number(view.querySelector('#absolute_timeout_hours').value), admin_idle_timeout_minutes: Number(view.querySelector('#admin_idle_timeout_minutes').value), admin_stricter: view.querySelector('#admin_stricter').checked };
+  // Persist the bounded settings through the owner-only route.
+  await api('/api/v2/admin/session-settings', { method: 'POST', body: payload });
+  // Confirm the save without exposing policy internals.
+  toast(t('sessions.saved', {}, 'admin'), true);
 }
 
 // Define previewVoice to speak a short sample with the saved voice settings.
@@ -805,12 +866,14 @@ async function requirements() {
 
 // Define tests to show latest test results.
 async function tests() {
-  // Set the existing tests title and subtitle.
-  setTitle(t('nav.tests', {}, 'admin'), 'Latest API/browser test results.');
+  // Set the localized tests title and subtitle.
+  setTitle(t('tests.title', {}, 'admin'), t('tests.subtitle', {}, 'admin'));
   // Load latest test results through the existing Admin endpoint.
   const data = await api('/api/v1/admin/test-results');
-  // Render test diagnostics.
-  view.innerHTML = `<section class="admin-card"><h3>Latest results</h3>${pre(data.results)}</section>`;
+  // Normalize the recorded result document so an empty run history is explicit. (ADMIN-029)
+  const results = data.results || {};
+  // Render readable expandable evidence or a labelled empty state. (ADMIN-029)
+  view.innerHTML = `<section class="admin-card"><h3>${safe(t('tests.heading', {}, 'admin'))}</h3>${Object.keys(results).length ? `<details open><summary>${safe(t('tests.resultFields', { count: Object.keys(results).length }, 'admin'))}</summary>${pre(results)}</details>` : emptyState(t('tests.emptyTitle', {}, 'admin'), t('tests.emptyDetail', {}, 'admin'), 'admin-tests-empty')}</section>`;
 }
 
 // Define system to show module revisions and raw overview data.
@@ -825,10 +888,53 @@ async function system() {
   view.innerHTML = `<section class="admin-card"><h3>Module revisions</h3>${table(['Module', 'Revision'], (data.module_revisions || []).map(module => `<tr><td>${safe(module.module)}</td><td>${safe(module.revision)}</td></tr>`))}</section><section class="admin-card"><h3>Raw overview</h3>${pre(data)}</section>`;
 }
 
+// Declare the nested Admin navigation so current and added surfaces remain registry-driven. (ADMIN-031)
+const MENU = [
+  // Overview owns the landing dashboard.
+  { id: 'overview', label: 'nav.section.overview', items: [{ tab: 'dashboard', label: 'nav.dashboard', domain: 'admin' }] },
+  // Identity groups accounts, session policy, invitations, and disposable guests.
+  { id: 'identity', label: 'nav.section.identity', items: [{ tab: 'users', label: 'nav.users', domain: 'admin' }, { tab: 'sessions', label: 'nav.sessions', domain: 'admin' }, { tab: 'invitations', label: 'nav.invitations', domain: 'admin' }, { tab: 'guests', label: 'nav.guests', domain: 'admin' }] },
+  // Players and economy groups wallet activity, outcomes, rates, and autoplay.
+  { id: 'players', label: 'nav.section.players', items: [{ tab: 'players', label: 'nav.players', domain: 'admin' }, { tab: 'ledger', label: 'nav.ledger', domain: 'admin' }, { tab: 'history', label: 'nav.history', domain: 'admin' }, { tab: 'economics', label: 'nav.economics', domain: 'admin' }, { tab: 'autoplay', label: 'nav.autoplay', domain: 'admin' }] },
+  // Content and support groups game state, problem reports, audio, and locale.
+  { id: 'content', label: 'nav.section.content', items: [{ tab: 'states', label: 'nav.states', domain: 'admin' }, { tab: 'feedback', label: 'feedback.admin.title', domain: 'feedback' }, { tab: 'audio', label: 'nav.audio', domain: 'admin' }, { tab: 'language', label: 'nav.language', domain: 'admin' }] },
+  // System and operations groups health, telemetry, requirements, tests, and modules.
+  { id: 'system', label: 'nav.section.system', items: [{ tab: 'operations', label: 'nav.operations', domain: 'admin' }, { tab: 'telemetry', label: 'nav.telemetry', domain: 'admin' }, { tab: 'requirements', label: 'nav.requirements', domain: 'admin' }, { tab: 'tests', label: 'nav.tests', domain: 'admin' }, { tab: 'system', label: 'nav.system', domain: 'admin' }] },
+];
+
+// Render the nested sidebar while preserving exact data-tab and test hooks.
+function renderNav() {
+  // Resolve the navigation container owned by admin.html.
+  const nav = document.getElementById('adminNav');
+  // Stop safely if an unexpected legacy shell omits the container.
+  if (!nav) return;
+  // Build each localized collapsible group from the fixed registry.
+  nav.innerHTML = MENU.map(section => {
+    // Build item buttons with stable tab, test, and translation attributes.
+    const items = section.items.map(item => `<button data-tab="${item.tab}" data-testid="admin-tab-${item.tab}" data-i18n="${item.label}" data-i18n-domain="${item.domain}">${item.tab}</button>`).join('');
+    // Wrap the section heading and its item list in one accessible group.
+    return `<div class="admin-nav-group" data-group="${section.id}"><button type="button" class="admin-nav-section" data-group-toggle="${section.id}" data-testid="admin-section-${section.id}" aria-expanded="true"><span data-i18n="${section.label}" data-i18n-domain="admin">${section.id}</span><span class="admin-nav-chevron" aria-hidden="true">▾</span></button><div class="admin-nav-items">${items}</div></div>`;
+  }).join('');
+}
+
+// Collapse or expand one navigation group.
+function toggleGroup(header) {
+  // Resolve the owning group from the activated header.
+  const group = header.closest('.admin-nav-group');
+  // Stop when the header is detached.
+  if (!group) return;
+  // Flip the visual collapsed state.
+  const collapsed = group.classList.toggle('collapsed');
+  // Mirror the result through the accessible expanded state.
+  header.setAttribute('aria-expanded', String(!collapsed));
+}
+
 // Define bindChrome to attach static Admin chrome event handlers.
 function bindChrome() {
   // Bind every sidebar tab to the shared activator.
   document.querySelectorAll('[data-tab]').forEach(button => button.onclick = () => activate(button.dataset.tab));
+  // Bind every group heading to its disclosure behavior.
+  document.querySelectorAll('[data-group-toggle]').forEach(header => header.onclick = () => toggleGroup(header));
   // Bind refresh to rerender the current tab.
   document.getElementById('refreshAdmin').onclick = () => load(current);
   // Bind Back to Casino without inline HTML handlers.
@@ -872,14 +978,16 @@ async function start() {
   injectResponsiveAdminStyles();
   // Load common and Admin dictionaries before rendering text.
   await initI18n({ domains: ['admin', 'feedback'] });
-  // Apply declarative translations to static Admin chrome.
+  // Build nested navigation before applying translations to its generated labels.
+  renderNav();
+  // Apply declarative translations to static and generated Admin chrome.
   applyTranslations(document);
   // Bind Admin chrome controls after translations are ready.
   bindChrome();
   // Subscribe to locale changes so the current tab rerenders in place.
   onLocaleChange(() => { applyTranslations(document); load(current); });
-  // Render the initial dashboard tab.
-  load('dashboard');
+  // Mark and render the initial dashboard tab.
+  activate('dashboard');
 }
 
 // Start the Admin module.

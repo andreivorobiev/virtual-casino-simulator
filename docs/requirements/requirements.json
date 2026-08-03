@@ -7916,7 +7916,7 @@
       "id": "AB-004", "module": "Application", "description": "Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with unobscured wallet and feedback controls.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-AB-001"], "implementation_files": ["web/games/andar_bahar.js", "web/i18n/en-US/games/andar_bahar.json", "web/i18n/ru-RU/games/andar_bahar.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-andar-bahar", "changed_in": "issue-409-andar-bahar-side-pricing", "notes": "Governed hosted evidence covers EN/RU at desktop-primary, desktop-compact, tablet, and mobile while rejecting feedback or wallet overlap."
     },
     {
-      "id": "AB-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-AB-001"], "implementation_files": ["modules/andar_bahar.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/andar_bahar.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-andar-bahar", "changed_in": "game-expansion-andar-bahar", "notes": "Descriptor sort order 250 and the catalog-discovered long driver are canonical."
+      "id": "AB-005", "module": "Tests", "description": "Catalog, contract, browser, per-game Python, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-AB-001"], "implementation_files": ["modules/andar_bahar.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "scripts/validate_game_catalog.py", "tests/game_drivers/andar_bahar.py", "tests/games/andar_bahar/__init__.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-andar-bahar", "changed_in": "issue-434-complete-game-test-discovery", "notes": "Descriptor sort order 250 and the catalog-discovered long driver are canonical; catalog validation now fails closed if a test-bearing game package lacks the marker required by CI unittest discovery."
     },
     {
       "id": "AD-001", "module": "Acey-Deucey", "description": "Two free exposed boundaries precede a pass or wager decision; a play requires at least one strict inside rank and settles at the server-owned spread price that holds a constant target house edge, while outside ranks and boundary ties lose.", "status": "PASS", "api_tests": ["API-AD-001"], "browser_tests": ["BR-AD-001"], "implementation_files": ["casino/games/acey_deucey/engine.py", "casino/games/acey_deucey/service.py", "contracts/openapi/acey_deucey.v1.yaml", "contracts/compatibility/acey-deucey-spread-pricing.json", "tests/game_drivers/acey_deucey.py", "tests/games/acey_deucey/test_api.py", "tests/games/acey_deucey/test_engine.py", "web/games/acey_deucey.js"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "issue-408-acey-spread-pricing", "notes": "The compatible frozen-v1 repair retains the deprecated scalar rules field, adds the authoritative complete paytable and target edge, and makes equal or adjacent boundaries pass-only before reveal or ledger movement."
@@ -9189,7 +9189,7 @@
     {
       "id": "GUEST-001",
       "module": "Core",
-      "description": "Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.",
+      "description": "Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-source creation-rate, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.",
       "status": "PASS",
       "api_tests": [
         "API-GUEST-LIFECYCLE-001"
@@ -9205,7 +9205,7 @@
         "casino/wsgi.py"
       ],
       "introduced_in": "issue-317-guest-trials",
-      "changed_in": "issue-317-guest-trials",
+      "changed_in": "issue-555-guest-endpoint-hardening",
       "notes": "Issue #317 is repository-only restricted-preview scope and does not alter unrestricted-public-launch issue #209."
     },
     {
@@ -12452,13 +12452,13 @@
       "id": "SEC-012", "module": "Core", "description": "Every game outcome draw uses a non-seedable operating-system CSPRNG or an explicitly injected test generator, never the seedable global Mersenne Twister, and the module-boundary validator rejects any global random-module draw inside game code.", "status": "PASS", "api_tests": ["API-LEGACY-SETTLE-001", "API-LEGACY-SETTLE-002"], "browser_tests": [], "implementation_files": ["casino/games/blackjack/engine.py", "casino/games/baccarat/engine.py", "casino/games/bingo/engine.py", "casino/games/keno/engine.py", "casino/games/roulette/engine.py", "casino/games/slots/engine.py", "scripts/validate_module_boundaries.py"], "introduced_in": "issue-420-game-entropy", "changed_in": "issue-420-game-entropy", "notes": "Roulette's forced_result deterministic test hook and the modern Random(seed)-injection idiom remain the sanctioned test seams; bot strategy selection outside casino/games/ is intentionally out of scope."
     },
     {
-      "id": "LEDGER-030", "module": "Ledger", "description": "Legacy blackjack, baccarat, roulette, keno, and bingo settlement and refund credits commit through storage-atomic exactly-once action keys derived from identifiers durable at placement, with history and counters gated on first commitment, so concurrent requests and crash-window recoveries can never double-pay a wager.", "status": "PASS", "api_tests": ["API-LEGACY-SETTLE-001", "API-LEGACY-SETTLE-002", "API-BINGO-ECONOMICS-001"], "browser_tests": [], "implementation_files": ["casino/games/blackjack/api.py", "casino/games/baccarat/api.py", "casino/games/roulette/api.py", "casino/games/keno/api.py", "casino/games/bingo/api.py", "casino/core/ledger.py"], "introduced_in": "issue-403-legacy-settlement-idempotency", "changed_in": "issue-403-legacy-settlement-idempotency", "notes": "A racing rebuild that mints a different outcome fails closed as a conflict rather than replaying another coup's money; the slots free-spins counter race settles per-spin and is tracked as its own follow-up issue."
+      "id": "LEDGER-030", "module": "Ledger", "description": "Legacy blackjack, baccarat, roulette, keno, and bingo settlement and refund credits commit through storage-atomic exactly-once action keys derived from identifiers durable at placement, with history and counters gated on first commitment, so concurrent requests and crash-window recoveries can never double-pay a wager.", "status": "PASS", "api_tests": ["API-LEGACY-SETTLE-001", "API-LEGACY-SETTLE-002", "API-BINGO-ECONOMICS-001"], "browser_tests": [], "implementation_files": ["casino/games/blackjack/api.py", "casino/games/baccarat/api.py", "casino/games/roulette/api.py", "casino/games/keno/api.py", "casino/games/bingo/api.py", "casino/core/ledger.py"], "introduced_in": "issue-403-legacy-settlement-idempotency", "changed_in": "issue-555-legacy-entropy-commitment", "notes": "A racing rebuild that mints a different outcome fails closed as a conflict rather than replaying another coup's money; keno and baccarat additionally commit each round's entropy into the player game-state document before any credit so interrupted settlements replay under their original round identity instead of redrawing; the slots free-spins counter race settles per-spin and is tracked as its own follow-up issue."
     },
     {
       "id": "STORAGE-009", "module": "Storage", "description": "JSON ledger reads serve from a stat-guarded incremental tail cache with per-player indexing that stays byte-equivalent to a full reparse, including malformed-line skipping, external appends, and truncation resets, and bootstrap seeding is idempotent per row on both providers.", "status": "PASS", "api_tests": ["STORAGE-LEDGER-CACHE-001"], "browser_tests": [], "implementation_files": ["casino/core/storage.py", "casino/games/craps/api.py"], "introduced_in": "issue-412-ledger-tail-cache", "changed_in": "issue-412-ledger-tail-cache", "notes": "The Craps recovery window continues widening without a fixed horizon so exactly-once evidence cannot age out, while the JSON tail cache prevents each wider read from reparsing ledger bytes; committed-action retention semantics are deliberately untouched."
     },
     {
-      "id": "BINGO-025", "module": "Bingo", "description": "Bingo sessions seat ledger-funded bot competitor cards and bound calls per pattern, ending as no_win with no payout at the cap, so a session has a real losing outcome, calls are never unbounded, and bot wins pay bot wallets.", "status": "PASS", "api_tests": ["API-BINGO-ECONOMICS-001"], "browser_tests": [], "implementation_files": ["casino/games/bingo/api.py", "casino/games/bingo/engine.py"], "introduced_in": "issue-405-bingo-economics", "changed_in": "issue-405-bingo-economics", "notes": "An unfundable bot shrinks the field fail-closed rather than seating an uncharged card; persisted pre-cap sessions migrate to the default cap on load. The line-pattern paytable remains mildly player-positive pending an owner rebalance decision tracked as a follow-up."
+      "id": "BINGO-025", "module": "Bingo", "description": "Bingo sessions seat ledger-funded bot competitor cards and bound calls per pattern, ending as no_win with no payout at the cap, so a session has a real losing outcome, calls are never unbounded, and bot wins pay bot wallets.", "status": "PASS", "api_tests": ["API-BINGO-ECONOMICS-001"], "browser_tests": [], "implementation_files": ["casino/games/bingo/api.py", "casino/games/bingo/engine.py"], "introduced_in": "issue-405-bingo-economics", "changed_in": "issue-452-bingo-paytable", "notes": "Unfilled competitor seats are now filled with synthetic house spoiler cards so the field is always full; persisted pre-cap sessions migrate to the default cap on load. The formerly player-positive paytable was rebalanced house-side under issue #452 (see BINGO-026)."
     },
     {
       "id": "PGP-006", "module": "Pai Gow Poker", "description": "The dealer house way balances toward the strongest legal two-card hand with the five-card hand as tiebreak, so the mirrored maximize-low strategy nets negative for the player under the five percent commission.", "status": "PASS", "api_tests": ["API-PGP-001"], "browser_tests": [], "implementation_files": ["casino/games/pai_gow_poker/engine.py", "tests/games/pai_gow_poker/test_engine.py"], "introduced_in": "issue-407-pai-gow-house-way", "changed_in": "issue-407-pai-gow-house-way", "notes": "The prior objective maximized the five-card hand absolutely and was measured exploitable for about a twenty-four percent player edge; the seeded Monte Carlo evidence asserts the sign inversion directly."
@@ -12833,6 +12833,102 @@
       "introduced_in": "issue-554-semantic-game-colors",
       "changed_in": "issue-554-semantic-game-colors",
       "notes": "BR-GAME-COLOR-001 maps only UX-024 and TEST-149, writes bounded computed-style diagnostics beside exact-head screenshots, and adds no generic TEST, API, contract, game, provider, workflow, or release identifier. Browser and heavy qualification are hosted-only for this slice."
+    },
+    {
+      "id": "BINGO-026",
+      "module": "Bingo",
+      "description": "Every Bingo pattern pays roughly 0.9 divided by its measured win probability at the guaranteed four-card field, giving each pattern a modest single-digit-to-low-double-digit house edge instead of the prior player-positive returns, and the competitor field is always seated at full strength with synthetic house spoiler cards that end sessions but are never credited.",
+      "status": "PASS",
+      "api_tests": ["API-BINGO-ECONOMICS-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/games/bingo/engine.py", "casino/games/bingo/api.py", "tests/bingo_economics_tests.py"],
+      "introduced_in": "issue-452-bingo-paytable",
+      "changed_in": "issue-452-bingo-paytable",
+      "notes": "Multipliers line 3.4, four_corners 6.3, postage_stamp 3.5, and blackout 650 were derived from seeded simulation evidence over the production pattern evaluator. House spoiler cards carry no wallet and are skipped by settlement, so an uncharged card can never collect and the guaranteed field remains house-sided when no configured bot can fund a seat."
+    },
+    {
+      "id": "ADMIN-029",
+      "module": "Admin",
+      "description": "The Admin diagnostic pages render real content instead of raw structures: Game States aggregates per-game and per-player state files from nested subdirectories as well as legacy top-level files, while History and Tests render labelled rows or explicit empty states.",
+      "status": "PASS",
+      "api_tests": ["API-ADMIN-GAME-STATES-001"],
+      "browser_tests": ["BR-ADMIN-DIAGNOSTICS-001"],
+      "implementation_files": ["casino/admin.py", "web/admin.js", "tests/admin_game_states_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-457-admin-empty-pages",
+      "changed_in": "issue-457-admin-empty-pages",
+      "notes": "The Game States endpoint previously used a non-recursive glob that missed per-player documents. Listener-free evidence covers nested, legacy-flat, and empty sources; hosted evidence governs English and Russian presentation at all four viewports."
+    },
+    {
+      "id": "TEST-145",
+      "module": "Tests",
+      "description": "Listener-free and hosted evidence proves recursive nested and legacy-flat Admin state discovery, readable History and Tests results, explicit empty states, safe detail escaping, keyboard navigation, and responsive English and Russian presentation.",
+      "status": "PASS",
+      "api_tests": ["API-ADMIN-GAME-STATES-001"],
+      "browser_tests": ["BR-ADMIN-DIAGNOSTICS-001"],
+      "implementation_files": ["tests/admin_game_states_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json", "web/admin.js"],
+      "introduced_in": "issue-457-admin-empty-pages",
+      "changed_in": "issue-457-admin-empty-pages",
+      "notes": "The listener-free provider test redirects the data root before importing the Admin module. Browser qualification is hosted-only and covers both locales at every governed viewport."
+    },
+    {
+      "id": "ADMIN-030",
+      "module": "Admin",
+      "description": "The Admin console publishes a bounded continuous per-game payout rate from player-facing shared-ledger wager and return rows, flags player-positive games, and drills down to per-transaction-type and recent-row evidence while excluding funded-opponent and non-game movements.",
+      "status": "PASS",
+      "api_tests": ["API-ADMIN-ECONOMICS-001"],
+      "browser_tests": ["BR-ADMIN-ECONOMICS-001"],
+      "implementation_files": ["casino/admin.py", "contracts/openapi/admin.v1.yaml", "web/admin.html", "web/admin.js", "web/i18n/en-US/admin.json", "web/i18n/ru-RU/admin.json", "tests/admin_economics_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-456-admin-economics",
+      "changed_in": "issue-456-admin-economics",
+      "notes": "Ordinary Admin authorization remains sufficient for read-only economics. Zero-wager games expose no invented ratio, malformed rows are ignored, detail is bounded, and hosted evidence covers summary, player-positive, zero-wager, detail, and empty states."
+    },
+    {
+      "id": "TEST-146",
+      "module": "Tests",
+      "description": "Listener-free and hosted evidence proves Admin payout-rate and house-edge arithmetic, exclusion of funded-opponent and non-game movements, zero-wager and player-positive handling, bounded drill-down detail, malformed-row safety, localization, and responsive presentation.",
+      "status": "PASS",
+      "api_tests": ["API-ADMIN-ECONOMICS-001"],
+      "browser_tests": ["BR-ADMIN-ECONOMICS-001"],
+      "implementation_files": ["tests/admin_economics_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-456-admin-economics",
+      "changed_in": "issue-456-admin-economics",
+      "notes": "The listener-free suite drives the production aggregation over a bounded synthetic ledger and starts no HTTP listener. Browser qualification is hosted-only."
+    },
+    {
+      "id": "SESSION-009",
+      "module": "Core",
+      "description": "Registered-account sessions enforce one provider-backed global idle and absolute-lifetime policy, slide activity only for the matching live session, and revoke only the session that crosses either limit while disposable guest trials retain their separate restricted-preview lifetime policy.",
+      "status": "PASS",
+      "api_tests": ["API-ADMIN-SESSION-POLICY-001"],
+      "browser_tests": ["BR-ADMIN-SESSION-POLICY-001"],
+      "implementation_files": ["casino/config.py", "casino/core/auth.py", "casino/core/session_settings.py", "casino/admin.py", "contracts/openapi/admin-users.v2.yaml", "tests/session_timeout_tests.py", "tests/admin_game_states_tests.py", "tests/run_tests.py", "web/admin.js"],
+      "introduced_in": "issue-388-identity-admin-redesign",
+      "changed_in": "issue-388-identity-admin-redesign",
+      "notes": "The bounded additive slice changes no guest timeout behavior and exposes no session secret. Exact JSON and MySQL provider transactions preserve the policy; issue #388 remains open for the larger identity/Admin redesign."
+    },
+    {
+      "id": "ADMIN-031",
+      "module": "Admin",
+      "description": "Only the active platform owner can read or partially update the registered-session idle and absolute timeout policy through additive v2 routes with CSRF protection, strict envelopes, bounded integer clamping, omitted-field preservation, and provider-backed persistence; ordinary Admin users retain diagnostics and economics access but receive FORBIDDEN for session policy.",
+      "status": "PASS",
+      "api_tests": ["API-ADMIN-SESSION-POLICY-001"],
+      "browser_tests": ["BR-ADMIN-SESSION-POLICY-001"],
+      "implementation_files": ["casino/admin.py", "casino/core/session_settings.py", "contracts/openapi/admin-users.v2.yaml", "contracts/compatibility/contract-digests.json", "web/admin.html", "web/admin.js", "web/i18n/en-US/admin.json", "web/i18n/ru-RU/admin.json", "tests/admin_game_states_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-388-identity-admin-redesign",
+      "changed_in": "issue-388-identity-admin-redesign",
+      "notes": "The nested Sessions entry is presented under Identity and access only for the owner, while Economics remains under Players and economy and all v0.9.5.49 Admin destinations remain available. Issue #388 stays open."
+    },
+    {
+      "id": "TEST-150",
+      "module": "Tests",
+      "description": "Listener-free, contract, API, and hosted evidence proves owner-only session-policy reads and sparse writes, numeric clamping and omitted-field preservation, JSON and MySQL persistence, CSRF and standard error envelopes, ordinary-Admin denial, registered timeout enforcement, guest-policy separation, localized navigation, and responsive presentation.",
+      "status": "PASS",
+      "api_tests": ["API-ADMIN-SESSION-POLICY-001"],
+      "browser_tests": ["BR-ADMIN-SESSION-POLICY-001"],
+      "implementation_files": ["tests/session_timeout_tests.py", "tests/admin_game_states_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json", "contracts/openapi/admin-users.v2.yaml"],
+      "introduced_in": "issue-388-identity-admin-redesign",
+      "changed_in": "issue-388-identity-admin-redesign",
+      "notes": "TEST-144 remains historical contributor ancestry and is not reused. TEST-150 is the sole permanent evidence allocation for the owner-gated policy slice; Browser qualification is hosted-only."
     }
   ]
 }

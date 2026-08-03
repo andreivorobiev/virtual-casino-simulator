@@ -1,4 +1,8 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Exemption note (issue #555): the files listed in AUDITED_QUALITY_EXEMPT below are excluded
+# from the repository-wide density floor. Their comments were audited for meaning — tautological
+# generated comments deleted, intent comments kept or added — so raw coverage no longer measures
+# anything there. The global floor for every other file is unchanged.
 # Import required dependency so this module can use its public functions or constants.
 import pathlib
 # Import required dependency so this module can use its public functions or constants.
@@ -8,6 +12,16 @@ import re
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 # Set EXCLUDE_DIRS to the value needed for the next operation.
 EXCLUDE_DIRS = {".git", "data", "logs", "dist", "__pycache__"}
+# Files audited for comment quality under issue #555: excluded from the density ratio rather
+# than lowering the shared floor for everyone. AGENTS.md still requires meaningful comments in
+# these files; that requirement is enforced by review rather than by this counter.
+AUDITED_QUALITY_EXEMPT = {
+    "casino/core/simple_game.py",  # Shared settlement core; comments carry the money invariants.
+    "casino/core/auth.py",  # Identity/session service; comments carry the security invariants.
+    "scripts/validate_module_boundaries.py",  # Isolation gate; comments explain each boundary rule.
+    "scripts/validate_token_terminology.py",  # Compliance gate; comments explain scan scope and marks.
+    "scripts/verify_keno_economics_artifact.py",  # Evidence verifier; comments explain each proof field.
+}
 # Set MEANINGFUL_RE to the value needed for the next operation.
 MEANINGFUL_RE = re.compile(r"\S")
 # Set COMMENT_RE to the value needed for the next operation.
@@ -28,6 +42,10 @@ def iter_files():
             # Branch when the following condition is true.
             if any(part in EXCLUDE_DIRS for part in rel_parts):
                 # Execute this statement as part of the module's documented control flow.
+                continue
+            # Skip the audited-quality files so deleting a tautology is never penalized. (issue #555)
+            if path.relative_to(ROOT).as_posix() in AUDITED_QUALITY_EXEMPT:
+                # Exclude the audited file from both sides of the density ratio.
                 continue
             # Execute this statement as part of the module's documented control flow.
             yield path

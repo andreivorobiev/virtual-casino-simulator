@@ -19,23 +19,8 @@
           <small data-i18n="brand.subtitle" data-i18n-domain="admin">Local control plane</small>
         </div>
       </div>
-      <button data-tab="dashboard" class="gold" data-testid="admin-tab-dashboard" data-i18n="nav.dashboard" data-i18n-domain="admin">Dashboard</button>
-      <button data-tab="players" data-testid="admin-tab-players" data-i18n="nav.players" data-i18n-domain="admin">Players & Bots</button>
-      <button data-tab="users" data-testid="admin-tab-users" data-i18n="nav.users" data-i18n-domain="admin">Users</button>
-      <button data-tab="invitations" data-testid="admin-tab-invitations" data-i18n="nav.invitations" data-i18n-domain="admin">Invitations</button>
-      <button data-tab="guests" data-testid="admin-tab-guests" data-i18n="nav.guests" data-i18n-domain="admin">Guest Trials</button>
-      <button data-tab="feedback" data-testid="admin-tab-feedback" data-i18n="feedback.admin.title" data-i18n-domain="feedback">Problem Reports</button>
-      <button data-tab="ledger" data-i18n="nav.ledger" data-i18n-domain="admin">Ledger</button>
-      <button data-tab="history" data-i18n="nav.history" data-i18n-domain="admin">History</button>
-      <button data-tab="telemetry" data-i18n="nav.telemetry" data-i18n-domain="admin">Telemetry</button>
-      <button data-tab="operations" data-testid="admin-tab-operations" data-i18n="nav.operations" data-i18n-domain="admin">Operations</button>
-      <button data-tab="states" data-i18n="nav.states" data-i18n-domain="admin">Game States</button>
-      <button data-tab="audio" data-testid="admin-tab-audio" data-i18n="nav.audio" data-i18n-domain="admin">Audio & Voice</button>
-      <button data-tab="language" data-testid="admin-tab-language" data-i18n="nav.language" data-i18n-domain="admin">Language / Locale</button>
-      <button data-tab="autoplay" data-testid="admin-tab-autoplay" data-i18n="nav.autoplay" data-i18n-domain="admin">Autoplay</button>
-      <button data-tab="requirements" data-i18n="nav.requirements" data-i18n-domain="admin">Requirements</button>
-      <button data-tab="tests" data-i18n="nav.tests" data-i18n-domain="admin">Tests</button>
-      <button data-tab="system" data-i18n="nav.system" data-i18n-domain="admin">System</button>
+      <!-- Nested navigation is rendered from the reconciled MENU tree in admin.js. -->
+      <nav id="adminNav" class="admin-nav" aria-label="Admin sections"></nav>
       <hr>
       <button id="backToCasino" data-i18n="actions.backToCasino">Back to Casino</button>
     </aside>

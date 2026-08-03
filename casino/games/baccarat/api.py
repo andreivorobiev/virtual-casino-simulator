@@ -35,12 +35,50 @@ def request_player_id(body, query) -> str:
     # Return the explicit player id while preserving the legacy human default.
     return require_player_id({"player_id": body.get("player_id") or query.get("player_id") or "human"})
 
+# Settle one committed coup exactly once, finalize its terminal state, and persist the finalized round. (issues #430, #555)
+def settle_committed_coup(player_id: str, state: dict, coup: dict):
+    # Collect per-bet settlement evidence for the deal response.
+    settlements=[]
+    # Settle every bet snapshotted when the coup's cards were committed.
+    for b in coup["bets"]:
+        # Price the bet against the committed coup under the current table rules.
+        res = engine.settle_bet(b, coup, state.get("rules",{}))
+        # Set credit to the value needed for the next operation.
+        credit = None
+        # Track storage replay evidence so a raced or recovered settlement never repeats side effects. (issue #403)
+        replayed = False
+        # Branch when the following condition is true.
+        if res["credit"] > 0:
+            # Commit or replay the payout under the durable placement-time bet action identity. (issue #403)
+            credit, replayed = ledger.credit_once(b["player_id"], res["credit"], "BACCARAT_SETTLEMENT_CREDIT", f"{b['bet_id']}:settlement", GAME_ID, coup["round_id"], {"bet_id": b["bet_id"], "outcome": res["outcome"]})
+        # Append history only for the committing call so raced or recovered retries cannot duplicate rows. (issue #403)
+        if not replayed:
+            # Set bal to the value needed for the next operation.
+            bal = players.get_player(b["player_id"])["balance"]
+            # Execute this statement as part of the module's documented control flow.
+            append_history(GAME_ID, coup["round_id"], b["player_id"], b["type"], b["label"], b["amount"], res["outcome"], res["credit"], bal, coup)
+        # Execute this statement as part of the module's documented control flow.
+        settlements.append({"bet": b, "settlement": res, "ledger": credit})
+    # Apply the terminal coup mutations exactly once and release the settlement commitment.
+    engine.finalize_coup(state, coup)
+    # Persist the finalized round so the committed settlement can never run twice.
+    save_player_game_state(GAME_ID, player_id, state)
+    # Return the settlement evidence for the deal response.
+    return settlements
+
+# Complete any committed-but-unfinalized coup before a new mutation, so an interrupted settlement is replayed rather than wiped or redealt. (issue #555)
+def resume_pending_coup(player_id: str, state: dict):
+    # Read the coup committed before the interruption, when one exists.
+    pending=state.get("pending_coup")
+    # Replay the committed settlement so its bets settle exactly once against the original cards.
+    if pending: settle_committed_coup(player_id, state, pending)
+
 # Define the payload function used by this module.
 def payload(player_id: str, state=None):
     # Set state to the value needed for the next operation.
     state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
-    # Set public to the value needed for the next operation.
-    public = {k:v for k,v in state.items() if k != "shoe"}
+    # Publish the state without the private shoe or the transient settlement commitment so the response shape stays contract-stable. (issue #555)
+    public = {k:v for k,v in state.items() if k not in ("shoe", "pending_coup")}
     # Set public["shoe_count"] to the value needed for the next operation.
     public["shoe_count"] = len(state.get("shoe",[]))
     # Set visible_players to the value needed for private game payloads.
@@ -84,10 +122,12 @@ def register(router):
         player_id = request_player_id(body, query); amount = require_amount(body.get("amount"))
         # Set state to the value needed for the next operation.
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Complete any interrupted settlement first so finalizing it can never wipe this new bet. (issue #555)
+        resume_pending_coup(player_id, state)
         # Set item to the value needed for the next operation.
         item = engine.add_bet(state, player_id, body.get("bet_type"), amount)
-        # Execute this statement as part of the module's documented control flow.
-        ledger.debit(player_id, amount, "BACCARAT_BET_PLACED", GAME_ID, None, {"bet_id": item["bet_id"], "bet_type": item["type"]})
+        # Debit the stake under its storage-atomic placement-time action identity so a recovered replay cannot double-charge. (issue #555)
+        ledger.debit_once(player_id, amount, "BACCARAT_BET_PLACED", f"{item['bet_id']}:wager", GAME_ID, None, {"bet_id": item["bet_id"], "bet_type": item["type"]})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
@@ -101,10 +141,12 @@ def register(router):
         player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Complete any interrupted settlement first so a settled bet can never be refunded afterwards. (issue #555)
+        resume_pending_coup(player_id, state)
         # Set item to the value needed for the next operation.
         item = engine.remove_bet(state, bet_id, player_id)
-        # Execute this statement as part of the module's documented control flow.
-        ledger.credit(player_id, item["amount"], "BACCARAT_BET_REFUND", GAME_ID, None, {"bet_id": bet_id})
+        # Refund the durable bet exactly once so a replayed clear returns the original event instead of minting a second refund. (issue #555)
+        ledger.credit_once(player_id, item["amount"], "BACCARAT_BET_REFUND", f"{bet_id}:refund", GAME_ID, None, {"bet_id": bet_id})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
@@ -118,32 +160,16 @@ def register(router):
         player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Set coup to the value needed for the next operation.
-        coup = engine.deal_coup(state)
-        # Set settlements to the value needed for the next operation.
-        settlements=[]
-        # Iterate through the collection to process each item.
-        for b in coup["bets"]:
-            # Set res to the value needed for the next operation.
-            res = engine.settle_bet(b, coup, state.get("rules",{}))
-            # Set credit to the value needed for the next operation.
-            credit = None
-            # Track storage replay evidence so a raced or recovered settlement never repeats side effects. (issue #403)
-            replayed = False
-            # Branch when the following condition is true.
-            if res["credit"] > 0:
-                # Commit or replay the payout under the durable placement-time bet action identity. (issue #403)
-                credit, replayed = ledger.credit_once(b["player_id"], res["credit"], "BACCARAT_SETTLEMENT_CREDIT", f"{b['bet_id']}:settlement", GAME_ID, coup["round_id"], {"bet_id": b["bet_id"], "outcome": res["outcome"]})
-            # Append history only for the committing call so raced or recovered retries cannot duplicate rows. (issue #403)
-            if not replayed:
-                # Set bal to the value needed for the next operation.
-                bal = players.get_player(b["player_id"])["balance"]
-                # Execute this statement as part of the module's documented control flow.
-                append_history(GAME_ID, coup["round_id"], b["player_id"], b["type"], b["label"], b["amount"], res["outcome"], res["credit"], bal, coup)
-            # Execute this statement as part of the module's documented control flow.
-            settlements.append({"bet": b, "settlement": res, "ledger": credit})
-        # Execute this statement as part of the module's documented control flow.
-        save_player_game_state(GAME_ID, player_id, state)
+        # Resume the coup committed by an interrupted request instead of dealing fresh cards. (issue #555)
+        coup = state.get("pending_coup")
+        # Branch when no settlement is pending so the dealt cards and consumed shoe commit durably before any credit.
+        if not coup:
+            # Deal and price the coup without mutating terminal state.
+            coup = engine.commit_coup(state)
+            # Persist the committed cards and shoe position atomically before the first settlement side effect.
+            state["pending_coup"] = coup; save_player_game_state(GAME_ID, player_id, state)
+        # Settle every committed bet exactly once and finalize the round.
+        settlements = settle_committed_coup(player_id, state, coup)
         # Set logger.info("baccarat_coup_dealt", round_id to the value needed for the next operation.
         logger.info("baccarat_coup_dealt", round_id=coup["round_id"], winner=coup["winner"], bet_count=len(coup["bets"]))
         # Return the computed value to the caller.

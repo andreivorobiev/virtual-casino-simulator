@@ -96,7 +96,7 @@ def baccarat_tests():
     # Set st to the value needed for the next operation.
     st=bac.default_state(); st['shoe']=['9♠']*200; st['open_bets']=[{'bet_id':'b','player_id':'human','type':'player','amount':1,'label':'Player'}]
     # Set coup to the value needed for the next operation.
-    coup=bac.deal_coup(st); check('BAC-001', 'player_cards' in coup and 'banker_cards' in coup)
+    coup=bac.commit_coup(st); check('BAC-001', 'player_cards' in coup and 'banker_cards' in coup)
     # Set check('BAC-002', len(coup['player_cards'])> to the value needed for the next operation.
     check('BAC-002', len(coup['player_cards'])>=2 and len(coup['banker_cards'])>=2)
     # Set check('BAC-003', bac.value('K♠') to the value needed for the next operation.
@@ -109,7 +109,7 @@ def keno_tests():
     # Set check('KENO-001', set(ke.PAYTABLE.keys()) to the value needed for the next operation.
     check('KENO-001', set(ke.PAYTABLE.keys())==set(range(1,21)))
     # Set st to the value needed for the next operation.
-    st=ke.default_state(); t=ke.add_ticket(st,'human',[1,2,3],5); d=ke.draw(st); check('KENO-002', len(d['drawn'])==20 and not st['open_tickets'])
+    st=ke.default_state(); t=ke.add_ticket(st,'human',[1,2,3],5); d=ke.commit_draw(st); ke.finalize_draw(st,d); check('KENO-002', len(d['drawn'])==20 and not st['open_tickets'])
 
 # Define the bingo_tests function used by this module.
 def bingo_tests():

@@ -117,6 +117,9 @@ def main():
     errors = []  # Collect all catalog drift before returning a status.
     ids = [game["id"] for game in GAMES]  # Preserve ordered catalog ids for duplicate checks.
     discovered_categories = {category for game in GAMES for category in game.get("categories", [])}  # Derive every category from module-owned metadata.
+    game_tests_root = ROOT / "tests" / "games"  # Resolve the shared unittest discovery root once.
+    if not (game_tests_root / "__init__.py").is_file():  # Reject a root package that would hide every per-game suite from CI.
+        errors.append("per-game Python tests lack package marker: tests/games/__init__.py")  # Report the exact missing root discovery boundary.
     if not ids:  # Reject an empty runtime that would hide all games.
         errors.append("game catalog is empty")  # Record the missing catalog foundation.
     if len(ids) != len(set(ids)):  # Reject ambiguous runtime and browser routes.
@@ -125,6 +128,10 @@ def main():
         errors.append("game catalog target must support at least 20 games")  # Report target regression.
     for game in GAMES:  # Validate every module-owned game without a central allowlist.
         game_id = game["id"]  # Cache the id for concise diagnostics.
+        test_package = game_tests_root / game_id  # Resolve the optional per-game Python test package.
+        python_test_files = tuple(test_package.glob("test_*.py")) if test_package.is_dir() else ()  # Discover only direct unittest modules used by the CI command.
+        if python_test_files and not (test_package / "__init__.py").is_file():  # Reject a package that unittest discovery would silently skip.
+            errors.append(f"catalog game {game_id} Python tests lack package marker: tests/games/{game_id}/__init__.py")  # Report the exact missing discovery boundary.
         if game_id not in MODULE_REVISIONS:  # Consume #104 revisions instead of inventing fallback versions.
             errors.append(f"catalog game {game_id} has no canonical module revision")  # Report version drift.
         if game.get("route") != f"/games/{game_id}":  # Require stable reloadable route ownership.

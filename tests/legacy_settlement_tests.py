@@ -331,6 +331,131 @@ class LegacySettlementTests(unittest.TestCase):
         # Require injected shuffles to reorder without adding or dropping any card.
         self.assertEqual(sorted(blackjack_engine.make_shoe(1)), sorted(blackjack_engine.make_shoe(1, rng=random.Random(7))))
 
+    # Wrap the production baccarat state saver so exactly the finalize-phase save crashes once. (issue #555)
+    def baccarat_finalize_crash(self):
+        # Keep the production saver so passthrough calls stay real.
+        real_save = baccarat_api.save_player_game_state
+        # Count saves so only the second save of the interrupted deal request fails.
+        calls = {"count": 0}
+        # Define the injected saver used during the interrupted request.
+        def crashing_save(game_id, player_id, state):
+            # Advance the per-request save counter.
+            calls["count"] += 1
+            # Crash exactly on the finalize save so the commitment survives with credits already applied.
+            if calls["count"] == 2:
+                # Raise the injected interruption the test asserts on.
+                raise RuntimeError("injected finalize crash")
+            # Delegate every other save to the production helper.
+            return real_save(game_id, player_id, state)
+        # Return the counting saver for a patch.object new= injection.
+        return crashing_save
+
+    # Seed the deterministic winning shoe used by the commitment-replay proofs.
+    def seed_winning_shoe(self):
+        # Load the persisted baccarat state for the human player.
+        state = state_store.load_player_game_state("baccarat", "human", baccarat_engine.default_state)
+        # Install the deterministic shoe whose top four cards give Player a nine-to-seven win.
+        state["shoe"] = ["3♣"] * 20 + ["2♦", "K♠", "5♥", "9♠"]
+        # Persist the scripted shoe for the deal under test.
+        state_store.save_player_game_state("baccarat", "human", state)
+
+    # Prove an interrupted baccarat settlement resumes from its committed coup instead of redealing. (issues #430, #555)
+    def test_baccarat_crash_after_commitment_replays_identical_coup(self):
+        # Place the durable player bet whose settlement is interrupted.
+        placed = self.baccarat_router.routes[("POST", r"/api/v1/games/baccarat/bets")]({"player_id": "human", "bet_type": "player", "amount": 10}, {})
+        # Store the durable bet identity minted at placement.
+        bet_id = placed["bet"]["bet_id"]
+        # Install the deterministic winning shoe under the placed bet.
+        self.seed_winning_shoe()
+        # Run the interrupted deal with the finalize-phase save crashing after credits commit.
+        with patch.object(baccarat_api, "save_player_game_state", new=self.baccarat_finalize_crash()):
+            # Require the injected finalize crash to surface to the caller.
+            with self.assertRaises(RuntimeError):
+                # Attempt the deal whose settlement is interrupted after crediting.
+                self.baccarat_router.routes[("POST", r"/api/v1/games/baccarat/deal")]({"player_id": "human"}, {})
+        # Read the committed coup persisted by the interrupted request.
+        pending = state_store.load_player_game_state("baccarat", "human", baccarat_engine.default_state).get("pending_coup")
+        # Require the commitment to carry the dealt cards and durable round identity.
+        self.assertIsNotNone(pending)
+        # Retry the deal as the post-crash recovery request.
+        second = self.baccarat_router.routes[("POST", r"/api/v1/games/baccarat/deal")]({"player_id": "human"}, {})
+        # Require the retry to replay the committed coup under its original round identity.
+        self.assertEqual(second["coup"]["round_id"], pending["round_id"])
+        # Require the retry to replay the committed cards rather than dealing fresh ones.
+        self.assertEqual(second["coup"]["player_cards"], pending["player_cards"])
+        # Require exactly one settlement credit for the durable bet identity.
+        rows = [row for row in self.settlement_rows("BACCARAT_SETTLEMENT_CREDIT") if (row.get("details") or {}).get("bet_id") == bet_id]
+        # Require one credit row across the crash and the retry.
+        self.assertEqual(1, len(rows))
+        # Require the single credit to pay the deterministic player win.
+        self.assertEqual(20.0, rows[0]["amount"])
+        # Require the wallet to reflect one debit and one win credit only.
+        self.assertEqual(5010.0, players.get_player("human")["balance"])
+        # Require replay gating to keep exactly one baccarat outcome history row.
+        self.assertEqual(1, len(history.recent_history(100, "baccarat")))
+        # Read the persisted state after the successful retry.
+        final_state = state_store.load_player_game_state("baccarat", "human", baccarat_engine.default_state)
+        # Require the settlement commitment to be released by the retry.
+        self.assertNotIn("pending_coup", final_state)
+        # Require the shoe to be consumed exactly once across both requests.
+        self.assertEqual(20, len(final_state["shoe"]))
+        # Require exactly one finalized coup for the interrupted round.
+        self.assertEqual(1, len(final_state.get("last_coups", [])))
+
+    # Prove a new baccarat bet resumes a committed settlement first so finalize can never wipe the fresh bet. (issue #555)
+    def test_baccarat_pending_settlement_resumes_before_new_bet(self):
+        # Place the durable bet whose settlement is interrupted.
+        placed = self.baccarat_router.routes[("POST", r"/api/v1/games/baccarat/bets")]({"player_id": "human", "bet_type": "player", "amount": 10}, {})
+        # Store the durable bet identity minted at placement.
+        bet_id = placed["bet"]["bet_id"]
+        # Install the deterministic winning shoe under the placed bet.
+        self.seed_winning_shoe()
+        # Run the interrupted deal with the finalize-phase save crashing after credits commit.
+        with patch.object(baccarat_api, "save_player_game_state", new=self.baccarat_finalize_crash()):
+            # Require the injected finalize crash to surface to the caller.
+            with self.assertRaises(RuntimeError):
+                # Attempt the deal whose settlement is interrupted after crediting.
+                self.baccarat_router.routes[("POST", r"/api/v1/games/baccarat/deal")]({"player_id": "human"}, {})
+        # Place a fresh bet; the handler must settle the committed coup before mutating.
+        follow_up = self.baccarat_router.routes[("POST", r"/api/v1/games/baccarat/bets")]({"player_id": "human", "bet_type": "banker", "amount": 5}, {})
+        # Require the resumed settlement to keep exactly one credit row for the interrupted bet.
+        rows = [row for row in self.settlement_rows("BACCARAT_SETTLEMENT_CREDIT") if (row.get("details") or {}).get("bet_id") == bet_id]
+        # Require one credit row across the crash and the resume.
+        self.assertEqual(1, len(rows))
+        # Read the persisted state after the resume-then-bet request.
+        state = state_store.load_player_game_state("baccarat", "human", baccarat_engine.default_state)
+        # Require the fresh bet to be the only open bet after the resume.
+        self.assertEqual([follow_up["bet"]["bet_id"]], [b["bet_id"] for b in state["open_bets"]])
+        # Require the interrupted coup to be finalized exactly once.
+        self.assertEqual(1, len(state.get("last_coups", [])))
+        # Require the settlement commitment to be released by the resume.
+        self.assertNotIn("pending_coup", state)
+
+    # Prove baccarat bet refunds commit exactly once under the durable refund identity. (issue #555)
+    def test_baccarat_refund_replays_after_crash_window(self):
+        # Place the durable bet that is refunded twice across the crash window.
+        placed = self.baccarat_router.routes[("POST", r"/api/v1/games/baccarat/bets")]({"player_id": "human", "bet_type": "player", "amount": 10}, {})
+        # Store the durable bet identity minted at placement.
+        bet_id = placed["bet"]["bet_id"]
+        # Locate the durable per-player baccarat state document.
+        state_path = state_store.player_game_state_path("baccarat", "human")
+        # Snapshot the pre-clear durable state a crash would leave behind.
+        pre_clear = state_path.read_bytes()
+        # Refund the bet once through the production handler.
+        first = self.baccarat_router.routes[("DELETE", r"/api/v1/games/baccarat/bets/(?P<bet_id>[^/]+)")]({"player_id": "human"}, {}, bet_id)
+        # Restore the pre-clear snapshot to model a crash between refund commit and state save.
+        state_path.write_bytes(pre_clear)
+        # Clear the same durable bet a second time as the interrupted retry.
+        second = self.baccarat_router.routes[("DELETE", r"/api/v1/games/baccarat/bets/(?P<bet_id>[^/]+)")]({"player_id": "human"}, {}, bet_id)
+        # Require both clears to expose the same durable cleared bet.
+        self.assertEqual(first["cleared"]["bet_id"], second["cleared"]["bet_id"])
+        # Require exactly one refund row for the durable bet identity.
+        refunds = [row for row in self.settlement_rows("BACCARAT_BET_REFUND") if (row.get("details") or {}).get("bet_id") == bet_id]
+        # Require one refund row across both clears.
+        self.assertEqual(1, len(refunds))
+        # Require the wallet to end where it started after one debit and one refund.
+        self.assertEqual(5000.0, players.get_player("human")["balance"])
+
 
 # Execute the focused suite when a maintainer invokes this file directly.
 if __name__ == "__main__":
