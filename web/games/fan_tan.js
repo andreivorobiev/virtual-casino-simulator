@@ -27,7 +27,7 @@ const ROUTE_CSS = [
   '.fan-tan__bet input{min-height:44px;min-width:0;}', // Preserve keyboard and touch usability for amount inputs.
   '.fan-tan__play{min-height:46px;border:0;border-radius:12px;color:white;background:#a71922;font-weight:800;}', // Use the shared red primary-action convention.
   '.fan-tan__play:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state readable.
-  '.fan-tan__repeat{min-height:46px;border:1px solid rgba(255,215,128,.55);border-radius:12px;background:transparent;color:#ffd780;font-weight:800;}', // Present the repeat action as a secondary gold-outline control beside the primary count.
+  '.fan-tan__repeat{min-height:46px;border:1px solid var(--gold);border-radius:12px;background:transparent;color:var(--gold);font-weight:800;}', // Present the repeat action as a secondary gold-outline control beside the primary count.
   '.fan-tan__repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the unavailable repeat state readable.
   '.fan-tan__stage{display:grid;place-items:center;gap:14px;overflow:hidden;}', // Center the counting pile without nested scroll.
   '.fan-tan__tray{width:min(64vh,540px);max-width:100%;aspect-ratio:1.4;display:grid;place-items:center;border:2px solid var(--gold);border-radius:18px;background:radial-gradient(circle at center,var(--felt2),var(--bg));}', // Draw the count tray as the dominant stage.
