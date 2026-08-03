@@ -210,7 +210,7 @@ components:
         wild_royal_flush: {type: integer, enum: [25]}
         five_of_a_kind: {type: integer, enum: [15]}
         straight_flush: {type: integer, enum: [9]}
-        four_of_a_kind: {type: integer, enum: [5]}
+        four_of_a_kind: {type: integer, enum: [4]}
         full_house: {type: integer, enum: [3]}
         flush: {type: integer, enum: [2]}
         straight: {type: integer, enum: [2]}

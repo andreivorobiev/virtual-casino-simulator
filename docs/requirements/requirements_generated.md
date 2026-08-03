@@ -16,57 +16,57 @@ Historical source baseline: 9.1.0
 - admin: 1.15.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.5.1
-- slots: 9.4.0
+- roulette: 9.5.2
+- slots: 9.4.1
 - blackjack: 9.1.7
 - baccarat: 9.1.10
-- keno: 9.3.3
-- bingo: 9.3.2
+- keno: 9.3.4
+- bingo: 9.3.3
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
-- big_six_wheel: 1.1.0
+- big_six_wheel: 1.1.1
 - red_dog: 1.1.0
 - dragon_tiger: 1.1.0
 - hi_lo: 1.1.1
-- three_card_poker: 1.1.0
-- jacks_or_better_video_poker: 1.1.0
-- deuces_wild_video_poker: 1.1.0
+- three_card_poker: 1.1.1
+- jacks_or_better_video_poker: 1.1.1
+- deuces_wild_video_poker: 1.1.1
 - scratch_cards: 1.1.0
-- sic_bo: 1.1.0
+- sic_bo: 1.1.1
 - chuck_a_luck: 1.1.0
 - craps: 1.1.0
-- crown_and_anchor: 1.1.0
-- over_under_7: 1.1.0
+- crown_and_anchor: 1.1.1
+- over_under_7: 1.1.1
 - plinko: 1.1.0
-- fan_tan: 1.1.0
-- andar_bahar: 1.1.1
+- fan_tan: 1.1.1
+- andar_bahar: 1.1.2
 - acey_deucey: 1.1.1
 - caribbean_stud: 1.1.0
 - let_it_ride: 1.1.0
 - casino_holdem: 1.1.0
-- double_bonus_video_poker: 1.1.0
-- mississippi_stud: 1.1.0
+- double_bonus_video_poker: 1.1.1
+- mississippi_stud: 1.1.1
 - joker_poker: 1.1.0
-- texas_holdem_practice_table: 1.1.0
-- pai_gow_poker: 1.1.0
-- teen_patti: 1.1.0
-- tests: 1.67.3
-- docs: 1.65.3
-- contracts: 1.54.3
+- texas_holdem_practice_table: 1.1.1
+- pai_gow_poker: 1.1.1
+- teen_patti: 1.1.1
+- tests: 1.67.4
+- docs: 1.65.4
+- contracts: 1.54.4
 - tooling: 1.25.0
 - commenting_policy: 1.0.0
-- color_wheel: 1.1.0
+- color_wheel: 1.1.1
 - poker_dice: 1.1.0
-- boule: 1.1.0
-- faro: 1.1.0
-- trente_et_quarante: 1.1.0
-- pachinko: 1.1.0
-- coin_pusher: 1.1.0
-- marble_race: 1.1.0
-- pattern_draw: 1.1.0
-- lucky_grid: 1.1.0
-- daily_draw_lab: 1.1.0
-- four_card_poker: 1.1.0
+- boule: 1.1.1
+- faro: 1.1.1
+- trente_et_quarante: 1.1.1
+- pachinko: 1.1.1
+- coin_pusher: 1.1.1
+- marble_race: 1.1.1
+- pattern_draw: 1.1.1
+- lucky_grid: 1.1.1
+- daily_draw_lab: 1.1.1
+- four_card_poker: 1.1.1
 
 ## Requirements
 
@@ -554,7 +554,7 @@ Historical source baseline: 9.1.0
 - **JOBVP-003** (Jacks or Better Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw action identities.
 - **JOBVP-004** (Application) - PASS: Jacks or Better supplies complete English and Russian copy with responsive, accessible, reduced-motion-safe play across required viewports.
 - **JOBVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Jacks or Better with requirement, module, version, and visual traceability.
-- **DWVP-001** (Deuces Wild Video Poker) - PASS: Single-hand full-pay Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable.
+- **DWVP-001** (Deuces Wild Video Poker) - PASS: Single-hand house-edged Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable, with the four-of-a-kind return reduced so optimal play is no longer player-positive.
 - **DWVP-002** (Deuces Wild Video Poker) - PASS: Authenticated sessions own isolated reload-safe active hands, holds, history, and canonical route restoration.
 - **DWVP-003** (Deuces Wild Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw identities.
 - **DWVP-004** (Application) - PASS: Deuces Wild supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.
@@ -639,7 +639,7 @@ Historical source baseline: 9.1.0
 - **SEC-007** (Core) - PASS: At least twenty-five simultaneous duplicate submissions per debit, payout, refund, and settlement family commit at most once across supported storage processes.
 - **SEC-008** (Core) - PASS: Admin and operations authority is enforced by authenticated server routes, and normal players cannot obtain global game, ledger, history, user, or control state.
 - **SEC-009** (Core) - PASS: The certification inventory covers every registered catalog game and action, and an authoritative refresh replaces tampered client wallet presentation without changing server state.
-- **THPT-001** (Texas Hold'em Practice Table) - PASS: Fixed-limit Texas Hold'em deals one authenticated human and three server-managed opponents through shared card and poker primitives with call-or-fold streets and transparent showdown settlement.
+- **THPT-001** (Texas Hold'em Practice Table) - PASS: Fixed-limit Texas Hold'em deals one authenticated human and three server-managed opponents through shared card and poker primitives with call-or-fold streets and transparent showdown settlement that rakes each pot so the table holds a house edge against best play.
 - **THPT-002** (Texas Hold'em Practice Table) - PASS: Authenticated sessions own private reload-safe hands, decisions, compact replay receipts, settled history, and canonical route restoration without exposing active opponent cards or another user's state.
 - **THPT-003** (Texas Hold'em Practice Table) - PASS: The human and all three funded opponent accounts reserve maximum exposure and receive unused escrow and pot shares only through storage-enforced ledger action identities with Admin-auditable owner context.
 - **THPT-004** (Application) - PASS: Texas Hold'em Practice Table supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play across all governed viewports.

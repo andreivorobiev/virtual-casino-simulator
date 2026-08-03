@@ -1,6 +1,6 @@
 {
   "module": "pachinko",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": ["casino/games/pachinko/", "web/games/pachinko.js", "web/i18n/en-US/games/pachinko.json", "web/i18n/ru-RU/games/pachinko.json"],
   "requirements_prefixes": ["PACH"],
   "contracts": ["contracts/openapi/pachinko.v1.yaml"],

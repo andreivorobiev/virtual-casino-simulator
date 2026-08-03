@@ -235,6 +235,10 @@ components:
           minimum: 0
         human_net:
           type: number
+        rake:
+          type: number
+          minimum: 0
+          description: House rake withheld from the settled pot to hold the table's edge. (issue #456)
     Hand:
       type: object
       required: [hand_id, base_wager, reserved_amount, phase, community_cards, seats, pot, legal_actions, action_log, settlement, created_at]

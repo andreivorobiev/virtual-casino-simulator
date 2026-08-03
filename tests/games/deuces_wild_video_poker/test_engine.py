@@ -34,7 +34,7 @@ class DeucesWildVideoPokerEngineTests(unittest.TestCase):
             "wild_royal_flush": (["2C", "AS", "KS", "QS", "JS"], 25),  # Rank a wild royal above straight flush and flush.
             "five_of_a_kind": (["2C", "2D", "2H", "KS", "KH"], 15),  # Rank five kings above four of a kind.
             "straight_flush": (["2C", "9S", "8S", "7S", "6S"], 9),  # Rank a suited wild straight above flush and straight.
-            "four_of_a_kind": (["2C", "2D", "KS", "KH", "9C"], 5),  # Complete four kings from two fixed kings.
+            "four_of_a_kind": (["2C", "2D", "KS", "KH", "9C"], 4),  # Complete four kings; house-edged quad pay. (issue #456)
             "full_house": (["2C", "KS", "KH", "9S", "9H"], 3),  # Rank a wild full house above three of a kind.
             "flush": (["2C", "AS", "9S", "6S", "3S"], 2),  # Cover a non-straight wild flush.
             "straight": (["2C", "9S", "8D", "7H", "6S"], 2),  # Cover an unsuited wild straight.

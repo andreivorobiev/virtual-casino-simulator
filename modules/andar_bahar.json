@@ -1,6 +1,6 @@
 {
   "module": "andar_bahar",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": ["casino/games/andar_bahar/", "web/games/andar_bahar.js", "web/i18n/en-US/games/andar_bahar.json", "web/i18n/ru-RU/games/andar_bahar.json"],
   "requirements_prefixes": ["AB"],
   "contracts": ["contracts/openapi/andar_bahar.v1.yaml"],

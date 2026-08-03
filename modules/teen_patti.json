@@ -1,6 +1,6 @@
 {
   "module": "teen_patti",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": ["casino/games/teen_patti/", "web/games/teen_patti.js", "web/i18n/en-US/games/teen_patti.json", "web/i18n/ru-RU/games/teen_patti.json"],
   "requirements_prefixes": ["TEENP"],
   "contracts": ["contracts/openapi/teen_patti.v1.yaml"],
