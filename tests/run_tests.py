@@ -9559,6 +9559,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     def admin_diagnostics_browser():
                         # Store the exact governed Admin visual matrix.
                         viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                        # Bind the deterministic two-field fixture to each authoritative installed locale.
+                        expected_result_fields={'en-US':'2 result fields','ru-RU':'Полей результата: 2'}
                         # Hold the current deterministic response mode for all three diagnostics routes.
                         mode={'value':'populated'}
                         # Serve nested/flat or empty state data without touching provider files.
@@ -9608,7 +9610,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Render and capture the history empty contract.
                                     mode['value']='empty'; page.get_by_test_id('admin-tab-history').click(); page.get_by_test_id('admin-history-empty').wait_for(timeout=5000); game_evidence(f'after-pass-admin-diagnostics-history-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['history_empty'],locale,viewport_id)
                                     # Render the structured test receipt.
-                                    mode['value']='populated'; page.get_by_test_id('admin-tab-tests').click(); page.get_by_text('2 result fields',exact=True).wait_for(timeout=5000)
+                                    mode['value']='populated'; page.get_by_test_id('admin-tab-tests').click(); page.get_by_text(expected_result_fields[locale],exact=True).wait_for(timeout=5000)
                                     # Capture populated test-result evidence.
                                     game_evidence(f'after-pass-admin-diagnostics-tests-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['test_results'],locale,viewport_id)
                                     # Render and capture the test-result empty contract.
