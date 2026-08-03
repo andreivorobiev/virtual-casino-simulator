@@ -921,8 +921,8 @@ function categoryLabel(category) {
 function lobbyHtml(state = latestState) {
   // Count the available games from API state while falling back to the frontend registry.
   const gameCount = Array.isArray(state?.games) ? state.games.length : gameDescriptors.length;
-  // Count visible players so the lobby trust rail reflects the local casino state.
-  const playerCount = Array.isArray(state?.players) ? state.players.length : 0;
+  // Read privacy-safe recent presence instead of counting durable player records. (issue #570)
+  const onlinePlayerCount = Number.isInteger(state?.online_player_count) ? state.online_player_count : 0;
   // Render the filtered game card collection from the API catalog.
   const visibleGames = filteredGames();
   // Render a helpful empty state when no catalog entry matches both filters.
@@ -932,7 +932,7 @@ function lobbyHtml(state = latestState) {
   // Render one accessible category control per discovered category plus the all-games view.
   const categoryButtons = ['all', ...categories].map(category => `<button type="button" class="catalog-category${lobbyCategory === category ? ' active' : ''}" data-catalog-category="${safe(category)}" aria-pressed="${lobbyCategory === category}">${safe(categoryLabel(category))}</button>`).join('');
   // Render the premium trust rail with play-token, bot, autoplay, and ledger cues.
-  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All play tokens'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
+  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All play tokens'), trustItemHtml('LIVE', t('status.online', { count: onlinePlayerCount }, 'shell'), t('lobby.presenceDetail', {}, 'shell')), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
   // Return the complete lobby markup as one route payload.
   return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">${safe(t('lobby.chooseTable', {}, 'shell'))}</p><h1 class="hero-title">${safe(activeBrand.venue)}</h1><div class="hero-rule"><span>${safe(activeBrand.mark)}</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="catalog-region" data-testid="catalog-region" aria-label="${safe(t('catalog.controlsAria', {}, 'shell'))}"><section class="catalog-controls" data-testid="catalog-controls"><label class="catalog-search-label" for="catalog-search">${safe(t('catalog.searchLabel', {}, 'shell'))}</label><input id="catalog-search" data-testid="catalog-search" type="search" value="${safe(lobbySearch)}" placeholder="${safe(t('catalog.searchPlaceholder', {}, 'shell'))}"><div class="catalog-categories" data-testid="catalog-categories" aria-label="${safe(t('catalog.categoriesAria', {}, 'shell'))}">${categoryButtons}</div><p class="catalog-capacity" data-testid="catalog-capacity">${safe(t('catalog.capacity', { current: gameCount }, 'shell'))}</p></section><section class="game-gallery" data-testid="game-gallery" aria-label="${safe(t('catalog.galleryAria', {}, 'shell'))}">${cards}</section></section></section>`;
 }
@@ -967,8 +967,8 @@ function updateShellStatus(state, connected) {
   shellConnected = connected;
   // Resolve the app version string from API state or fallback text.
   const version = state?.version ? `v${state.version}` : t('status.unavailable', {}, 'shell');
-  // Resolve player count text from the state payload.
-  const players = t('status.online', { count: Array.isArray(state?.players) ? state.players.length : 0 }, 'shell');
+  // Resolve privacy-safe recent presence instead of counting durable player records. (issue #570)
+  const players = t('status.online', { count: Number.isInteger(state?.online_player_count) ? state.online_player_count : 0 }, 'shell');
   // Localize the persistent safety rail labels and details.
   setStatusText('status-safe-code', t('status.safeCode', {}, 'shell'));
   // Localize the play-token safety statement.

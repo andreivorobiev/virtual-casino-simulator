@@ -65,6 +65,7 @@
   "catalog.capacity": "Доступно: {current}",
   "catalog.play": "Играть",
   "lobby.chooseTable": "Выберите свой стол",
+  "lobby.presenceDetail": "Недавно активные аккаунты",
   "catalog.searchLabel": "Поиск игр",
   "catalog.searchPlaceholder": "Поиск по игре, функции или категории",
   "games.baccarat.description": "Punto Banco с burn/cut, ставками Player/Banker/Tie, ботами и историей дорог.",

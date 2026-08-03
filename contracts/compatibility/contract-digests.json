@@ -15,7 +15,7 @@
   "contracts/openapi/bots.v1.yaml": "d8e5a6657cbd64479c2c64c98e6c3e43b6b2128cde1ed7df9099145adfdc4c25",
   "contracts/openapi/boule.v1.yaml": "31b1b349ee5574f51eac3a65388e677b0a0a2479755104a1cb8901e225c6ed95",
   "contracts/openapi/caribbean_stud.v1.yaml": "d8c156229a112212b659a9ed1b07deef2ac189892628988e38e89aed815676cf",
-  "contracts/openapi/casino.v1.yaml": "3f47a6f4a0274837aa0d3ddcc79b96b6640fc3c1a37dd84cc2b1ef10fbb1fd85",
+  "contracts/openapi/casino.v1.yaml": "7291216f68cedbece4524109ebb62041d370dee5381a343b1644706fc485d57a",
   "contracts/openapi/casino_holdem.v1.yaml": "57c468c49fd03ed557aef36c924a742c63b6d164aec3e7a01ff501e7e1f03c21",
   "contracts/openapi/casino_war.v1.yaml": "a4f5c8e25148cb8803e3b08574997d4b28f357694c763e8c207658d8012327e8",
   "contracts/openapi/chuck_a_luck.v1.yaml": "b5a17c7c59e434cfbcb8149ba31b983bbb26103f535be29955c4c38045ba9dd2",

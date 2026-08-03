@@ -1489,15 +1489,15 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the Keno descriptor for the compatible commitment-boundary repair.
         keno_module = json.loads((ROOT / "modules" / "keno.json").read_text(encoding="utf-8"))
         # Require the exact compatible core minor allocation.
-        self.assertEqual(core_module["version"], "9.36.0")
+        self.assertEqual(core_module["version"], "9.36.1")
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.15.0")
         # Require the exact compatible tests revision allocation.
-        self.assertEqual(tests_module["version"], "1.67.1")
+        self.assertEqual(tests_module["version"], "1.67.2")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.65.1")
+        self.assertEqual(docs_module["version"], "1.65.2")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.54.1")
+        self.assertEqual(contracts_module["version"], "1.54.2")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.0")
         # Require the exact compatible Baccarat patch allocation.
@@ -1507,8 +1507,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Keno patch allocation.
         self.assertEqual(keno_module["version"], "9.3.3")
         # Require the exact compatible Roulette presentation minor.
-        self.assertEqual(roulette_module["version"], "9.5.0")
+        self.assertEqual(roulette_module["version"], "9.5.1")
         # Require the exact compatible Slots presentation minor.
         self.assertEqual(slots_module["version"], "9.4.0")
         # Require the exact compatible Application revision for the accepted omnibus release packet.
-        self.assertEqual(application_module["version"], "9.56.5")
+        self.assertEqual(application_module["version"], "9.56.6")

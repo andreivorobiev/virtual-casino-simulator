@@ -10,6 +10,8 @@ import os
 import pathlib
 # Import interpreter path control for exact checkout module resolution.
 import sys
+# Import immutable-record replacement for one focused application-limiter policy.
+from dataclasses import replace
 
 # Resolve the exact repository root independently of the caller.
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -18,6 +20,8 @@ sys.path.insert(0, str(ROOT))
 
 # Import the already environment-validated production application.
 from casino.wsgi import application
+# Import the production limiter so static and API accounting can be verified at the adapter boundary. (issue #570)
+from casino.core.security import RateLimiter
 
 # Preserve the synthetic exact origin supplied by the parent test.
 ORIGIN = os.environ["CASINO_CANONICAL_ORIGIN"]
@@ -270,6 +274,29 @@ assert invite_admin_js["status"] == "403 Forbidden" and b"adminView" not in invi
 admin_html = request("GET", "/admin", headers={"Cookie": f"casino_session={admin_token}"})
 # Require the immutable Admin document only after application authorization.
 assert admin_html["status"] == "200 OK" and b"adminView" in admin_html["body"]
+
+# Preserve the production limiter before exercising an isolated one-request budget. (SEC-010, issue #570)
+original_application_limiter = application.rate_limiter
+# Install one fresh limiter so prior matrix traffic cannot affect the accounting proof.
+application.rate_limiter = RateLimiter(replace(application.policy, rate_requests=1))
+# Start protected restoration so later security cases retain their original generous allowance.
+try:
+    # Load one real packaged browser asset that must not consume application/API capacity.
+    static_asset = request("GET", "/app.js")
+    # Require normal static delivery through the production adapter.
+    assert static_asset["status"] == "200 OK" and b"updateShellStatus" in static_asset["body"]
+    # Consume the one configured application allowance through a public API read.
+    first_bounded_api = request("GET", "/api/v2/auth/enrollment-policy")
+    # Require the API call to succeed because static delivery consumed no API allowance.
+    assert first_bounded_api["status"] == "200 OK"
+    # Repeat the same API read inside the unchanged fixed window.
+    limited_api = request("GET", "/api/v2/auth/enrollment-policy")
+    # Require the second application request to retain the standard 429 boundary.
+    assert limited_api["status"] == "429 Too Many Requests" and decoded(limited_api)["error"]["code"] == "RATE_LIMITED"
+# Restore the original limiter even when the focused accounting proof fails.
+finally:
+    # Return the complete security matrix to its original configured allowance.
+    application.rate_limiter = original_application_limiter
 
 # Prove signup remains present only as a disabled enrollment endpoint even for an authenticated Admin request.
 signup = request("POST", "/api/v2/auth/signup", {"email": "held@example.invalid", "password": "held"}, mutation_headers(admin_csrf, admin_token))

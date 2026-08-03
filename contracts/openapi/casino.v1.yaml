@@ -21,11 +21,11 @@ paths:
       operationId: casino_GET_api_v1_casino_state
       responses:
         '200':
-          description: Standard API envelope response
+          description: Standard API envelope with a privacy-safe unique recent-session online count
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiEnvelope'
+                $ref: '#/components/schemas/CasinoStateEnvelope'
   /api/v1/casino/reset:
     post:
       summary: POST /api/v1/casino/reset
@@ -72,6 +72,20 @@ paths:
                 $ref: '#/components/schemas/ApiEnvelope'
 components:
   schemas:
+    CasinoStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [online_player_count]
+              properties:
+                online_player_count:
+                  type: integer
+                  minimum: 0
+                  description: Unique authenticated users active within the server-owned presence window.
     ApiEnvelope:
       type: object
       required: [ok]

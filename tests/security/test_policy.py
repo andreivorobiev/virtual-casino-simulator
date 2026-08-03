@@ -207,6 +207,25 @@ class SessionSecurityTests(unittest.TestCase):
         # Delete the disposable root and all synthetic records.
         self.temporary.cleanup()
 
+    # Count unique recent users while excluding duplicate, stale, revoked, expired, and malformed sessions. (CORE-016, issue #570)
+    def test_online_user_count_uses_recent_unique_active_sessions(self):
+        # Freeze one UTC instant for exact presence-window and expiry comparisons.
+        now = auth.datetime(2026, 8, 3, 6, 0, 0, tzinfo=auth.timezone.utc)
+        # Format one deterministic timestamp offset from the frozen instant.
+        def stamp(seconds):
+            # Return the canonical UTC string used by durable session records.
+            return (now + auth.timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
+        # Build the exact active-session shape needed by the presence aggregator.
+        def session(session_id, user_id, updated_seconds, *, status="active", expires_seconds=3600):
+            # Return one credential-free durable record for aggregate-only testing.
+            return {"session_id": session_id, "user_id": user_id, "status": status, "created_at": stamp(-300), "updated_at": stamp(updated_seconds), "expires_at": stamp(expires_seconds)}
+        # Persist duplicates, a just-inside boundary, exact-boundary stale data, revoked data, expired data, and malformed data.
+        auth.save_sessions({"schema_version": auth.SCHEMA_VERSION, "sessions": [session("a1", "user-a", 0), session("a2", "user-a", -30), session("b1", "user-b", -119), session("stale", "user-stale", -120), session("revoked", "user-revoked", 0, status="revoked"), session("expired", "user-expired", 0, expires_seconds=-1), {"session_id": "malformed", "user_id": "user-malformed", "status": "active", "updated_at": "invalid", "expires_at": stamp(3600)}]})
+        # Freeze the helper's server-owned clock without altering durable timestamps.
+        with mock.patch.object(auth, "utc_datetime", return_value=now):
+            # Require exactly two recently active unique users.
+            self.assertEqual(auth.online_user_count(), 2)
+
     # Retain concurrent same-account sessions and revoke every predecessor on a privilege change. (SESSION-007, SESSION-006, issue #226)
     def test_concurrent_sessions_retained_and_privilege_change_revokes_all(self):
         # Seed one synthetic local identity without creating player state.
