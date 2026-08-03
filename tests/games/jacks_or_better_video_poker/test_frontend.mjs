@@ -89,7 +89,7 @@ assert.match(source, /@media\(prefers-reduced-motion:reduce\)/);
 // Verify independent module identity and the branded compatible patch revision.
 assert.equal(descriptor.module, 'jacks_or_better_video_poker');
 // Require the issue #91 game module to carry the TiltSeven palette patch.
-assert.equal(descriptor.version, '1.1.0');
+assert.equal(descriptor.version, '1.1.1');
 // Preserve the #77 sequencing document's reserved catalog slot.
 assert.equal(descriptor.game.sort_order, 170);
 // Require the canonical reloadable route derived from the game id.
