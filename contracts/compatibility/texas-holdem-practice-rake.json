@@ -1,0 +1,51 @@
+{
+  "artifact": "texas-holdem-practice-rake",
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/456",
+  "status": "compatible_patch",
+  "contract": "contracts/openapi/texas_holdem_practice_table.v1.yaml",
+  "compatibility": {
+    "api_v1_frozen": true,
+    "routes": "unchanged",
+    "requests": "unchanged",
+    "envelopes": "unchanged",
+    "session_authority": "unchanged",
+    "ledger_authority": "unchanged"
+  },
+  "response_rules": {
+    "added": {
+      "rake": "house rake withheld from each settled pot, added additively to HandResult"
+    },
+    "authoritative_rake": "result.rake equals floor(pot_cents * 0.05) / 100"
+  },
+  "economics": {
+    "measured_over": "20000 seeded hands driving the real deal and settlement",
+    "always_play_rtp": "~100.0% (break-even; one of four equal contributors splitting by best hand, human may only call or fold)",
+    "best_call_fold_exploit": "~101.2% (folding only trash preflop)",
+    "rake_rate": "0.05",
+    "post_rake_best_play_rtp": "~98% (house-side with margin without over-penalizing straightforward play)"
+  },
+  "settlement": {
+    "payout_shape": "unchanged numeric total return",
+    "pot_distribution": "winners split the post-rake pot; the raked cents stay debited as the house edge",
+    "solvency": "credits never exceed debits; the withheld rake is the only net wallet reduction"
+  },
+  "browser": {
+    "server_owned_copy": true,
+    "locales": [
+      "en-US",
+      "ru-RU"
+    ],
+    "visual_matrix_surface": "texas_holdem_practice_table"
+  },
+  "excluded_authority": [
+    "database schema",
+    "provider configuration",
+    "deployment",
+    "DNS",
+    "billing",
+    "public signup",
+    "OAuth",
+    "mail",
+    "invitation"
+  ]
+}

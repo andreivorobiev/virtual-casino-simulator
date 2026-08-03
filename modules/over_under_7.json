@@ -1,6 +1,6 @@
 {
   "module": "over_under_7",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": [
     "casino/games/over_under_7/",
     "web/games/over_under_7.js",

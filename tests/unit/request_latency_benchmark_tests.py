@@ -1493,22 +1493,22 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.15.0")
         # Require the exact compatible tests revision allocation.
-        self.assertEqual(tests_module["version"], "1.67.3")
+        self.assertEqual(tests_module["version"], "1.67.4")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.65.3")
+        self.assertEqual(docs_module["version"], "1.65.4")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.54.3")
+        self.assertEqual(contracts_module["version"], "1.54.4")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.0")
         # Require the exact compatible Baccarat patch allocation.
         self.assertEqual(baccarat_module["version"], "9.1.10")
         # Require the exact compatible Bingo patch allocation.
-        self.assertEqual(bingo_module["version"], "9.3.2")
+        self.assertEqual(bingo_module["version"], "9.3.3")
         # Require the exact compatible Keno patch allocation.
-        self.assertEqual(keno_module["version"], "9.3.3")
+        self.assertEqual(keno_module["version"], "9.3.4")
         # Require the exact compatible Roulette presentation minor.
-        self.assertEqual(roulette_module["version"], "9.5.1")
+        self.assertEqual(roulette_module["version"], "9.5.2")
         # Require the exact compatible Slots presentation minor.
-        self.assertEqual(slots_module["version"], "9.4.0")
+        self.assertEqual(slots_module["version"], "9.4.1")
         # Require the exact compatible Application revision for the production-polish release packet.
         self.assertEqual(application_module["version"], "9.56.7")

@@ -31,7 +31,7 @@ const ROUTE_CSS = [
   '.crown-anchor__bet input{min-height:42px;min-width:0;}', // Preserve touch usability.
   '.crown-anchor__play{min-height:46px;border:0;border-radius:8px;color:white;background:#9f1f2e;font-weight:800;}', // Use a strong primary action.
   '.crown-anchor__play:disabled{opacity:.58;cursor:not-allowed;}', // Keep disabled state readable.
-  '.crown-anchor__repeat{min-height:46px;border:1px solid #ffd780;border-radius:8px;color:#ffd780;background:transparent;font-weight:800;}', // Offer a secondary repeat action distinct from the primary play button.
+  '.crown-anchor__repeat{min-height:46px;border:1px solid var(--gold);border-radius:8px;color:var(--gold);background:transparent;font-weight:800;}', // Offer a secondary repeat action distinct from the primary play button.
   '.crown-anchor__repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the repeat disabled state readable.
   '.crown-anchor__stage{display:grid;grid-template-rows:auto auto auto;align-content:center;gap:16px;min-width:0;overflow:hidden;}', // Center complete bounded theater rows without allowing intrinsic width to escape the panel.
   '.crown-anchor__dice{display:grid;grid-template-columns:repeat(3,minmax(74px,1fr));gap:12px;width:100%;min-width:0;}', // Reserve three stable dice slots inside the stage width.

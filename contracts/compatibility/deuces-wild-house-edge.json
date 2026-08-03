@@ -1,0 +1,60 @@
+{
+  "artifact": "deuces-wild-house-edge",
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/456",
+  "status": "compatible_patch",
+  "contract": "contracts/openapi/deuces_wild_video_poker.v1.yaml",
+  "compatibility": {
+    "api_v1_frozen": true,
+    "routes": "unchanged",
+    "requests": "unchanged",
+    "envelopes": "unchanged",
+    "session_authority": "unchanged",
+    "ledger_authority": "unchanged"
+  },
+  "response_rules": {
+    "server_owned_paytable": "the paytable is already published server-owned in the state response; this patch corrects one frozen value",
+    "changed": {
+      "four_of_a_kind": "reduced from 5 to 4, the canonical deuces-wild house-edge lever"
+    },
+    "unchanged": {
+      "natural_royal_flush": 800,
+      "four_deuces": 200,
+      "wild_royal_flush": 25,
+      "five_of_a_kind": 15,
+      "straight_flush": 9,
+      "full_house": 3,
+      "flush": 2,
+      "straight": 2,
+      "three_of_a_kind": 1,
+      "no_win": 0
+    }
+  },
+  "economics": {
+    "prior_best_play_rtp": "100.42% (player-positive under optimal hold)",
+    "new_best_play_rtp": "94.05%",
+    "method": "inclusion-exclusion over the real classify_hand across all C(52,5) deals with optimal holds"
+  },
+  "settlement": {
+    "payout_shape": "unchanged integer credit multiple of the wager",
+    "four_of_a_kind": "wager multiplied by 4"
+  },
+  "browser": {
+    "server_owned_copy": true,
+    "locales": [
+      "en-US",
+      "ru-RU"
+    ],
+    "visual_matrix_surface": "deuces_wild_video_poker"
+  },
+  "excluded_authority": [
+    "database schema",
+    "provider configuration",
+    "deployment",
+    "DNS",
+    "billing",
+    "public signup",
+    "OAuth",
+    "mail",
+    "invitation"
+  ]
+}

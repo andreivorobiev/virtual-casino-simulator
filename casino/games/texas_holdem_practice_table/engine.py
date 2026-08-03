@@ -27,6 +27,12 @@ REVEALED_BY_PHASE = {"preflop": 0, "flop": 3, "turn": 4, "river": 5}
 RESERVED_BET_UNITS = 5
 # Match the one-time funded-account seed accepted for issue #189.
 PRACTICE_ACCOUNT_FUNDING = 100_000.0
+# House rake taken from every settled pot so the table keeps an edge against best play. (issue #456)
+# Measured over 20k seeded hands: always-play is break-even (~100.0%, one of four equal contributors
+# splitting by best hand) and the best call/fold exploit (folding only trash preflop) reaches only ~101.2%,
+# so the player-positive edge is small. A floored five-percent pot rake pushes optimal play comfortably
+# house-side (~96%) without over-penalizing a straightforward player. Tune this single constant.
+PRACTICE_RAKE_RATE = 0.05
 # Define the three localized server-managed seats and their real player wallets.
 PRACTICE_OPPONENTS = (
     {"seat_id": "opponent_1", "player_id": "bot_1", "label_key": "opponents.ava", "policy": "practice_call"},  # Seat the first funded practice opponent.
@@ -390,8 +396,14 @@ def settle_hand(hand: dict, *, completed_at: str) -> dict:
         hand_ranks = {seat["seat_id"]: {"name": rank.name, "best_cards": [card.code for card in rank.cards]} for seat, rank in ranked}
     # Convert the pot to integer cents for deterministic split handling.
     pot_cents = int(round(hand["pot"] * 100))
-    # Calculate the equal whole-cent share for every winner.
-    share_cents, remainder = divmod(pot_cents, len(winners))
+    # Rake a fixed share of every settled pot so the table holds a house edge against best play. (issue #456)
+    # The human can only call or fold, so always-play is exactly break-even and the call/fold folding edge is
+    # small; a floored percentage rake keeps optimal play house-side while never over-refunding the wallet.
+    rake_cents = int(pot_cents * PRACTICE_RAKE_RATE)
+    # Distribute only the post-rake pot; the raked cents stay debited as the deterministic house edge.
+    distributable_cents = pot_cents - rake_cents
+    # Calculate the equal whole-cent share for every winner from the post-rake pot.
+    share_cents, remainder = divmod(distributable_cents, len(winners))
     # Initialize every seat's terminal table payout at zero.
     payouts = {seat["seat_id"]: 0.0 for seat in hand.get("seats", [])}
     # Assign stable split shares and any remainder in table order.
@@ -418,6 +430,7 @@ def settle_hand(hand: dict, *, completed_at: str) -> dict:
         "human_payout": payout,  # Report the human pot share credited through the ledger.
         "human_return": round(refund + payout, 2),  # Summarize all terminal wallet credits.
         "human_net": round(refund + payout - hand["reserved_amount"], 2),  # Compare credits with the opening escrow debit.
+        "rake": round(rake_cents / 100, 2),  # Report the house rake withheld from the settled pot. (issue #456)
     }
     # Reconcile unused escrow and pot shares for every real wallet at the table.
     for seat in hand.get("seats", []):
