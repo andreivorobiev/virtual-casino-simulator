@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.56.8
-- core: 9.36.1
+- application: 9.56.9
+- core: 9.36.2
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -17,14 +17,14 @@ Historical source baseline: 9.1.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.5.2
-- slots: 9.4.1
+- slots: 9.4.2
 - blackjack: 9.1.7
-- baccarat: 9.1.10
+- baccarat: 9.1.11
 - keno: 9.3.4
 - bingo: 9.3.3
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
-- big_six_wheel: 1.1.1
+- big_six_wheel: 1.1.2
 - red_dog: 1.1.0
 - dragon_tiger: 1.1.0
 - hi_lo: 1.1.1
@@ -32,13 +32,13 @@ Historical source baseline: 9.1.0
 - jacks_or_better_video_poker: 1.1.1
 - deuces_wild_video_poker: 1.1.1
 - scratch_cards: 1.1.0
-- sic_bo: 1.1.1
-- chuck_a_luck: 1.1.0
+- sic_bo: 1.1.2
+- chuck_a_luck: 1.1.1
 - craps: 1.1.0
-- crown_and_anchor: 1.1.1
-- over_under_7: 1.1.1
+- crown_and_anchor: 1.1.2
+- over_under_7: 1.1.2
 - plinko: 1.1.0
-- fan_tan: 1.1.1
+- fan_tan: 1.1.2
 - andar_bahar: 1.1.2
 - acey_deucey: 1.1.1
 - caribbean_stud: 1.1.0
@@ -50,22 +50,22 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.1
 - pai_gow_poker: 1.1.1
 - teen_patti: 1.1.1
-- tests: 1.67.5
-- docs: 1.65.5
+- tests: 1.67.6
+- docs: 1.65.6
 - contracts: 1.54.5
 - tooling: 1.25.0
 - commenting_policy: 1.0.0
-- color_wheel: 1.1.1
-- poker_dice: 1.1.0
-- boule: 1.1.1
-- faro: 1.1.1
-- trente_et_quarante: 1.1.1
-- pachinko: 1.1.1
-- coin_pusher: 1.1.1
-- marble_race: 1.1.1
-- pattern_draw: 1.1.1
-- lucky_grid: 1.1.1
-- daily_draw_lab: 1.1.1
+- color_wheel: 1.1.2
+- poker_dice: 1.1.1
+- boule: 1.1.2
+- faro: 1.1.2
+- trente_et_quarante: 1.1.2
+- pachinko: 1.1.2
+- coin_pusher: 1.1.2
+- marble_race: 1.1.2
+- pattern_draw: 1.1.2
+- lucky_grid: 1.1.2
+- daily_draw_lab: 1.1.2
 - four_card_poker: 1.1.1
 
 ## Requirements
@@ -958,3 +958,7 @@ Historical source baseline: 9.1.0
 - **SESSION-009** (Core) - PASS: Registered-account sessions enforce one provider-backed global idle and absolute-lifetime policy, slide activity only for the matching live session, and revoke only the session that crosses either limit while disposable guest trials retain their separate restricted-preview lifetime policy.
 - **ADMIN-031** (Admin) - PASS: Only the active platform owner can read or partially update the registered-session idle and absolute timeout policy through additive v2 routes with CSRF protection, strict envelopes, bounded integer clamping, omitted-field preservation, and provider-backed persistence; ordinary Admin users retain diagnostics and economics access but receive FORBIDDEN for session policy.
 - **TEST-150** (Tests) - PASS: Listener-free, contract, API, and hosted evidence proves owner-only session-policy reads and sparse writes, numeric clamping and omitted-field preservation, JSON and MySQL persistence, CSRF and standard error envelopes, ordinary-Admin denial, registered timeout enforcement, guest-policy separation, localized navigation, and responsive presentation.
+- **LEDGER-031** (Ledger) - PASS: Every response-driven wager presentation renders the matching storage-authored debit event's exact balance_after as soon as the server accepts the atomic action, keeps that committed post-wager balance visible while the result remains concealed or animated, and publishes the final settlement balance only when the authoritative result is visibly revealed; foreign, credit, zero, malformed, and non-finite ledger evidence fails closed.
+- **TEST-151** (Tests) - PASS: Listener-free and hosted browser evidence proves the shared wallet accepts only matching negative storage-authored ledger events, renders exact committed debit balances synchronously, rejects foreign or malformed evidence, verifies all eighteen response-driven game sources apply the shared renderer before final refresh, and verifies Baccarat publishes settlement only from reveal completion.
+- **API-003** (Contracts) - PASS: A stable same-origin /api-docs URL serves a pinned read-only Swagger UI that exposes every governed OpenAPI YAML contract through a traversal-safe /openapi namespace under the existing production content-security policy, with no external validator, remote script, mutation form, application-shell fallback, or undocumented contract omission.
+- **TEST-152** (Tests) - PASS: Listener-free and hosted browser evidence proves the Swagger selector exactly matches every contracts/openapi YAML file, assets and licensing are pinned locally, both HTTP adapters map the stable docs and contract URLs safely, one exact contract serves with YAML media type, and the rendered selector includes the complete governed inventory.

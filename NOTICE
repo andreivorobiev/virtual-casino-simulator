@@ -3,6 +3,10 @@ Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 
 This product includes source code licensed under the Apache License, Version 2.0.
 
+This product includes Swagger UI 5.32.6, Copyright 2026 SmartBear Software Inc.,
+licensed under the Apache License, Version 2.0. Its license is retained at
+web/vendor/swagger-ui/LICENSE.
+
 The end-user private beta terms and privacy notice under docs/legal/ govern use
 of the local toy simulator experience. Those terms do not grant any real-money
 gambling, wagering, redemption, or cash-out rights.

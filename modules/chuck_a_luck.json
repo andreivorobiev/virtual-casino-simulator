@@ -1,6 +1,6 @@
 {
   "module": "chuck_a_luck",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": ["casino/games/chuck_a_luck/", "web/games/chuck_a_luck.js", "web/i18n/en-US/games/chuck_a_luck.json", "web/i18n/ru-RU/games/chuck_a_luck.json"],
   "requirements_prefixes": ["CHUCK"],
   "contracts": ["contracts/openapi/chuck_a_luck.v1.yaml"],

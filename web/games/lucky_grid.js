@@ -2,7 +2,7 @@
 // Import the standard API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import game-domain localization and locale-change subscription helpers.
 import { initI18n, onLocaleChange, t } from '../core/i18n.js';
 
@@ -132,6 +132,8 @@ async function reveal() {
   try {
     // Post the exactly-once reveal with a caller-stable retry id and the chosen picks.
     const response = await post('/api/v1/games/lucky-grid/reveals', { request_id: newRequestId(), picks: [...picks], stake });
+    // Show the committed debit before the selected prize cells reveal. (LEDGER-031, issue #595)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
     const round = response.round;
     // Reveal the authoritative committed prizes and matches.

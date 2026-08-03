@@ -2,7 +2,7 @@
 // Import the standard API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import the merged motion scope so every counting timer has lifecycle cleanup.
 import { createMotionTimerScope } from '../core/motion.js';
 // Import game-domain localization and locale-change subscription helpers.
@@ -252,13 +252,13 @@ async function repeat() {
   await play();
 }
 
-// Load session-bound state from the additive v1 game endpoint.
 // Return the wager map currently in effect, locking to the immutable pending snapshot after an ambiguous failure. (issue #261)
 function activeWagers() {
   // Prefer the frozen pending payload so a retry cannot submit a changed intent under the same identity.
   return pendingPayload?.wagers || wagers;
 }
 
+// Load session-bound state from the additive v1 game endpoint.
 async function load() {
   // Fetch only the authenticated player's state; shared routing supplies the binding.
   gameState = await api('/api/v1/games/fan-tan/state');
@@ -305,6 +305,8 @@ async function play() {
     clearPendingRequest();
     // Stop presentation when shell navigation unmounted or replaced this route during the request.
     if (root !== mountedRoot || motionScope !== activeScope) return;
+    // Show the committed debit before the counted pile exposes its final residue. (LEDGER-031, issue #589)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Store the authoritative settlement before starting decorative presentation.
     latestRound = response.round;
     // Remember the settled wager map so one click can repeat the same round next time.

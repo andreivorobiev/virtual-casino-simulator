@@ -12934,6 +12934,54 @@
       "introduced_in": "issue-388-identity-admin-redesign",
       "changed_in": "issue-388-identity-admin-redesign",
       "notes": "TEST-144 remains historical contributor ancestry and is not reused. TEST-150 is the sole permanent evidence allocation for the owner-gated policy slice; Browser qualification is hosted-only."
+    },
+    {
+      "id": "LEDGER-031",
+      "module": "Ledger",
+      "description": "Every response-driven wager presentation renders the matching storage-authored debit event's exact balance_after as soon as the server accepts the atomic action, keeps that committed post-wager balance visible while the result remains concealed or animated, and publishes the final settlement balance only when the authoritative result is visibly revealed; foreign, credit, zero, malformed, and non-finite ledger evidence fails closed.",
+      "status": "PASS",
+      "api_tests": ["UI-WALLET-TIMING-001"],
+      "browser_tests": ["BR-TOKEN-WALLET-001"],
+      "implementation_files": ["web/core/ui.js", "web/games/slots.js", "web/games/big_six_wheel.js", "web/games/sic_bo.js", "web/games/chuck_a_luck.js", "web/games/crown_and_anchor.js", "web/games/over_under_7.js", "web/games/fan_tan.js", "web/games/boule.js", "web/games/coin_pusher.js", "web/games/color_wheel.js", "web/games/daily_draw_lab.js", "web/games/faro.js", "web/games/lucky_grid.js", "web/games/marble_race.js", "web/games/pachinko.js", "web/games/pattern_draw.js", "web/games/poker_dice.js", "web/games/trente_et_quarante.js", "web/games/baccarat.js"],
+      "introduced_in": "issues-583-601-wallet-timing",
+      "changed_in": "issues-583-601-wallet-timing",
+      "notes": "The cross-game repair changes no wager, outcome, payout, ledger, API, contract, entropy, or retry semantics. Roulette already follows immediate wager-debit presentation and remains the consistency reference; Baccarat already shows its placement debit and now delays only its settlement refresh until card reveal completes."
+    },
+    {
+      "id": "TEST-151",
+      "module": "Tests",
+      "description": "Listener-free and hosted browser evidence proves the shared wallet accepts only matching negative storage-authored ledger events, renders exact committed debit balances synchronously, rejects foreign or malformed evidence, verifies all eighteen response-driven game sources apply the shared renderer before final refresh, and verifies Baccarat publishes settlement only from reveal completion.",
+      "status": "PASS",
+      "api_tests": ["UI-WALLET-TIMING-001"],
+      "browser_tests": ["BR-TOKEN-WALLET-001"],
+      "implementation_files": ["tests/wallet_timing.mjs", "tests/run_tests.py"],
+      "introduced_in": "issues-583-601-wallet-timing",
+      "changed_in": "issues-583-601-wallet-timing",
+      "notes": "The Browser proof reuses the permanent authenticated wallet case without expanding shard inventory; the listener-free source contract enumerates every affected response-driven game and starts no listener or browser."
+    },
+    {
+      "id": "API-003",
+      "module": "Contracts",
+      "description": "A stable same-origin /api-docs URL serves a pinned read-only Swagger UI that exposes every governed OpenAPI YAML contract through a traversal-safe /openapi namespace under the existing production content-security policy, with no external validator, remote script, mutation form, application-shell fallback, or undocumented contract omission.",
+      "status": "PASS",
+      "api_tests": ["API-DOCS-001"],
+      "browser_tests": ["BR-STATIC-CACHE-001"],
+      "implementation_files": ["casino/config.py", "casino/app.py", "casino/wsgi.py", "web/api-docs.html", "web/api-docs.css", "web/api-docs.js", "web/vendor/swagger-ui/", "NOTICE"],
+      "introduced_in": "wallet-timing-swagger",
+      "changed_in": "wallet-timing-swagger",
+      "notes": "Swagger UI 5.32.6 is pinned and licensed beside its vendored assets. Documentation remains descriptive and same-origin; it does not enable an API mutation console, change any frozen API path, or expose runtime secrets."
+    },
+    {
+      "id": "TEST-152",
+      "module": "Tests",
+      "description": "Listener-free and hosted browser evidence proves the Swagger selector exactly matches every contracts/openapi YAML file, assets and licensing are pinned locally, both HTTP adapters map the stable docs and contract URLs safely, one exact contract serves with YAML media type, and the rendered selector includes the complete governed inventory.",
+      "status": "PASS",
+      "api_tests": ["API-DOCS-001"],
+      "browser_tests": ["BR-STATIC-CACHE-001"],
+      "implementation_files": ["tests/api_docs_tests.py", "tests/run_tests.py"],
+      "introduced_in": "wallet-timing-swagger",
+      "changed_in": "wallet-timing-swagger",
+      "notes": "The browser proof reuses the existing exact-static-byte case so no new shard case or duration-profile allocation is required."
     }
   ]
 }

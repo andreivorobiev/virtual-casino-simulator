@@ -66,6 +66,44 @@ export function renderTokenBalance(currentUser){
   // Return the normalized numeric amount for callers that need testable state.
   return Number(amount || 0);
 }
+// Render one server-committed wager debit before a game's result presentation completes. (LEDGER-031)
+export function renderCommittedWagerBalance(event){
+  // Refuse missing, non-object, credit, and zero-value events so settlement rows cannot masquerade as wagers.
+  if(!event || typeof event!=='object' || !Number.isFinite(Number(event.amount)) || Number(event.amount)>=0) return false;
+  // Read only the storage-authored balance after the accepted debit.
+  const amount=Number(event.balance_after);
+  // Reject malformed or negative wallet evidence instead of inventing a client-side value.
+  if(!Number.isFinite(amount) || amount<0) return false;
+  // Normalize the optional ledger owner before matching it to the active browser identity.
+  const eventPlayer=String(event.player_id || '');
+  // Branch when the authenticated shell owns the canonical current-user payload.
+  if(window.CasinoCurrentUser){
+    // Read the active shell player without accepting identity from game-owned state.
+    const activePlayer=String(window.CasinoCurrentUser?.player?.player_id || '');
+    // Refuse a foreign ledger event before it can alter shared wallet presentation.
+    if(eventPlayer && activePlayer && eventPlayer!==activePlayer) return false;
+    // Copy the current session so stale references cannot mutate the prior authoritative payload.
+    const currentUser={...window.CasinoCurrentUser,player:{...(window.CasinoCurrentUser.player || {}),token_balance:amount,balance:amount}};
+    // Publish the committed intermediate wallet as the latest shell-owned session view.
+    window.CasinoCurrentUser=currentUser;
+    // Resolve the event constructor without assuming browser-free seams provide it globally.
+    const CurrentUserEvent=window.CustomEvent || globalThis.CustomEvent;
+    // Notify the shell cache only when the environment provides the standard event constructor.
+    if(CurrentUserEvent) window.dispatchEvent(new CurrentUserEvent('casino-current-user',{detail:currentUser}));
+    // Render the exact committed debit balance synchronously before any reveal timer begins.
+    renderTokenBalance(currentUser);
+    // Confirm that authenticated wallet presentation accepted the ledger event.
+    return true;
+  }
+  // Refuse a foreign legacy-player event before reading the shared wallet node.
+  if(eventPlayer && eventPlayer!==String(currentPlayerId())) return false;
+  // Resolve the persistent wallet amount owned by the application shell.
+  const balance=document.getElementById('balance');
+  // Render the exact server-authored balance without a follow-up request that could expose settlement early.
+  if(balance) balance.textContent=tokenAmount(amount);
+  // Confirm that the valid legacy event was accepted even when the shell node is absent during teardown.
+  return true;
+}
 // Export this symbol so callers can keep using the compatible add-money endpoint for token top-ups.
 export async function addFakeMoney(amount){ const d=await post(`/api/v1/players/${encodeURIComponent(currentPlayerId())}/add-money`,withCurrentPlayer({amount})); await refreshBalance(); return d; }
 // Export this symbol so other modules can use it through the public module boundary.

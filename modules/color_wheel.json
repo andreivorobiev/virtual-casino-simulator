@@ -1,6 +1,6 @@
 {
   "module": "color_wheel",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": ["casino/games/color_wheel/", "web/games/color_wheel.js", "web/i18n/en-US/games/color_wheel.json", "web/i18n/ru-RU/games/color_wheel.json"],
   "requirements_prefixes": ["CWHEEL"],
   "contracts": ["contracts/openapi/color_wheel.v1.yaml"],

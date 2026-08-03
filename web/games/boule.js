@@ -2,7 +2,7 @@
 // Import the standard API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import game-domain localization and locale-change subscription helpers.
 import { initI18n, onLocaleChange, t } from '../core/i18n.js';
 
@@ -136,6 +136,8 @@ async function spin() {
   try {
     // Post the exactly-once spin with a caller-stable retry id and the current selection.
     const response = await post('/api/v1/games/boule/spins', { request_id: newRequestId(), ...selectedBet, stake });
+    // Show the committed debit before the ball exposes the winning number. (LEDGER-031, issue #590)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
     const round = response.round;
     // Wait for the decorative draw to finish before revealing the number.

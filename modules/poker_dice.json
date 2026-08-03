@@ -1,6 +1,6 @@
 {
   "module": "poker_dice",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": ["casino/games/poker_dice/", "web/games/poker_dice.js", "web/i18n/en-US/games/poker_dice.json", "web/i18n/ru-RU/games/poker_dice.json"],
   "requirements_prefixes": ["PDICE"],
   "contracts": ["contracts/openapi/poker_dice.v1.yaml"],

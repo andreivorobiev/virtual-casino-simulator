@@ -2,7 +2,7 @@
 // Import the standard API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import game-domain localization and locale-change subscription helpers.
 import { initI18n, onLocaleChange, t } from '../core/i18n.js';
 
@@ -134,6 +134,8 @@ async function race() {
   try {
     // Post the exactly-once race with a caller-stable retry id and the chosen bet.
     const response = await post('/api/v1/games/marble-race/races', { request_id: newRequestId(), bet: selectedBet, marble: selectedMarble, stake });
+    // Show the committed debit before the finishing order becomes visible. (LEDGER-031, issue #596)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
     const round = response.round;
     // Wait for the decorative race to finish before revealing the order.

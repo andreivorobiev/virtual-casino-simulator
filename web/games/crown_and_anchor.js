@@ -2,7 +2,7 @@
 // Import the frozen API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import game-domain localization and locale-change subscription helpers.
 import { initI18n, onLocaleChange, t } from '../core/i18n.js';
 // Import issue #97 dice primitives for deterministic reduced-motion presentation.
@@ -328,6 +328,8 @@ async function playRound() {
     clearPendingRequest();
     // Stop presentation when shell navigation unmounted or replaced this route during the request.
     if (root !== mountedRoot || motionScope !== activeScope) return;
+    // Show the committed debit before the authoritative dice symbols are revealed. (LEDGER-031, issue #587)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Store the authoritative settlement before starting decorative presentation.
     latestRound = response.round;
     // Remember the exact settled multi-symbol wager map so the next round can repeat it with one click.

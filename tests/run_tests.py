@@ -1506,6 +1506,20 @@ def run_api_tests():
     run_case('UI-ROU-PRESENTATION-001',['ROU-072'],lambda: run_game_frontend_node_test(Path('tests/games/roulette/test_frontend.mjs'),'Roulette presentation suite failed'))
     # Record deterministic strips, stagger/anticipation, API/landing teardown, and clean-remount Slots proof.
     run_case('UI-SLOT-PRESENTATION-001',['SLOT-037'],lambda: run_game_frontend_node_test(Path('tests/games/slots/test_frontend.mjs'),'Slots presentation suite failed'))
+    # Record the shared committed-debit renderer and catalog-wide presentation-order proof.
+    run_case('UI-WALLET-TIMING-001',['LEDGER-031','TEST-151'],lambda: run_game_frontend_node_test(Path('tests/wallet_timing.mjs'),'wallet timing suite failed'))
+    # Execute the complete same-origin Swagger inventory and adapter contract without a listener.
+    def run_api_docs_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import api_docs_tests
+        # Load exactly the documentation inventory and routing assertions.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(api_docs_tests.ApiDocsTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the central case when any contract, asset, or routing assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('same-origin Swagger documentation suite failed')
+    # Record complete read-only API discovery through the stable docs URL.
+    run_case('API-DOCS-001',['API-003','TEST-152'],run_api_docs_tests)
     # Execute the personal-settings, shared pagination, contract, and privacy proof without a listener.
     def run_user_settings_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -4174,10 +4188,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         module_evidence=page.evaluate("""async expectedSource => { const evidence=[]; for(let attempt=0;attempt<2;attempt+=1){ const response=await fetch('/games/big_six_wheel.js'); const source=await response.text(); evidence.push({ ok:response.ok, cacheControl:response.headers.get('cache-control'), sourceMatches:source===expectedSource }); } return evidence; }""",expected_module_source)
                         # Require both lazy-module responses to be successful, uncached by policy, and exact-current.
                         assert len(module_evidence)==2 and all(item=={'ok':True,'cacheControl':'no-store','sourceMatches':True} for item in module_evidence)
+                        # Navigate through the stable same-origin API documentation URL and wait for Swagger initialization.
+                        docs_response=page.goto(base+'/api-docs',wait_until='networkidle'); page.locator('#swagger-ui .download-url-wrapper').wait_for(timeout=10000)
+                        # Require the dedicated documentation bytes rather than an application-shell fallback.
+                        assert docs_response and docs_response.body()==(ROOT/'web'/'api-docs.html').read_bytes()
+                        # Require Swagger's selector to expose every governed contract exactly once.
+                        assert page.locator('#swagger-ui .download-url-wrapper select option').count()==len(list((ROOT/'contracts'/'openapi').glob('*.yaml')))
+                        # Fetch one representative contract through the public namespace and compare exact source bytes.
+                        contract_evidence=page.evaluate("""async () => { const response=await fetch('/openapi/casino.v1.yaml'); return {ok:response.ok,type:response.headers.get('content-type'),body:await response.text()}; }""")
+                        # Require same-origin YAML media type and exact repository contract content.
+                        assert contract_evidence['ok'] and contract_evidence['type'].startswith('application/yaml') and contract_evidence['body']==(ROOT/'contracts'/'openapi'/'casino.v1.yaml').read_text(encoding='utf-8')
+                        # Return to the anonymous application shell for the later visible Auth cases.
+                        page.goto(base,wait_until='networkidle')
                         # Require the reload to restore the visible anonymous shell before later Auth cases continue.
                         page.get_by_test_id('login-gate').wait_for(timeout=5000)
                     # Record exact HTML and lazy JavaScript parity through the supported development browser adapter.
-                    run_case('BR-STATIC-CACHE-001',['CORE-026','TEST-068'],static_cache_parity)
+                    run_case('BR-STATIC-CACHE-001',['CORE-026','TEST-068','API-003','TEST-152'],static_cache_parity)
                     # Validate the checked repository-only TiltSeven scaffold without contacting a public host.
                     def marketing_site_browser():
                         # Define the exact local file used for each governed locale.
@@ -4849,8 +4875,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert '123' in page.locator('#toast').inner_text() and '◈' not in page.locator('#toast').inner_text()
                         # Verify the toast describes play tokens instead of real-money language.
                         assert 'play tokens' in page.locator('#toast').inner_text()
+                        # Exercise the production committed-wager renderer against the authenticated browser shell.
+                        timing=page.evaluate("""async () => { const mod=await import('/core/ui.js'); const player=window.CasinoCurrentUser.player; const before=Number(player.token_balance); const accepted=mod.renderCommittedWagerBalance({player_id:player.player_id,amount:-1,balance_after:before-1}); const rendered=Number(String(document.querySelector('#balance')?.textContent||'').replace(/[^0-9.-]/g,'')); const foreign=mod.renderCommittedWagerBalance({player_id:'foreign',amount:-1,balance_after:0}); await mod.refreshBalance(); return {accepted,rendered,expected:before-1,foreign}; }""")
+                        # Require exact intermediate rendering, foreign-event refusal, and authoritative refresh recovery.
+                        assert timing['accepted'] is True and timing['rendered']==timing['expected'] and timing['foreign'] is False,timing
                     # Execute this statement as part of the module's documented control flow.
-                    run_case('BR-TOKEN-WALLET-001',['TOKEN-001','TOKEN-002','LEDGER-025'],token_wallet)
+                    run_case('BR-TOKEN-WALLET-001',['TOKEN-001','TOKEN-002','LEDGER-025','LEDGER-031','TEST-151'],token_wallet)
                     # Define the premium_lobby function used by this module.
                     def premium_lobby():
                         # Verify the lobby renders one premium card for every current game.

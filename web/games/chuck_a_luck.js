@@ -8,7 +8,7 @@ import { formatNumber, loadI18nDomain, onLocaleChange, t } from '../core/i18n.js
 // Import the #97 lifecycle timer scope and platform reduced-motion query.
 import { createMotionTimerScope, prefersReducedMotion } from '../core/motion.js';
 // Import shared escaping, feedback, and authenticated-wallet refresh helpers.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 
 // Store the game-owned lazy locale domain used by every visible string.
 const DOMAIN = 'games/chuck_a_luck';
@@ -489,6 +489,7 @@ async function roll() {
     clearPendingRequest(); // Treat a parsed success envelope, including replay, as acknowledgement.
     // Stop presentation when navigation replaced or disposed this mount during I/O.
     if (root !== mountedRoot || motionScope !== activeScope) return;
+    renderCommittedWagerBalance(response.ledger?.wager); // Show the committed debit before the dice reveal. (LEDGER-031, issue #586)
     gameState = response?.state && typeof response.state === 'object' ? response.state : gameState; // Adopt returned reload-safe history.
     player = response?.player || player; // Adopt the returned authenticated player summary.
     betCatalog = Array.isArray(response?.bet_catalog) ? response.bet_catalog : betCatalog; // Adopt the returned payout catalog.
