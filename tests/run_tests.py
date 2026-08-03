@@ -9714,7 +9714,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Reset the deterministic policy before this cell.
                                     policy.update({'schema_version':2,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15}); denied['value']=False
                                     # Apply exact visual geometry and render the owner view.
-                                    page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.get_by_test_id('admin-sessions-policy').wait_for(timeout=5000)
+                                    page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '30' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '12' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '15' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === true""",timeout=5000)
                                     # Require the complete owner policy to remain contained.
                                     assert page.get_by_test_id('admin-sessions-idle').input_value()=='30' and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
                                     # Focus the real save action for keyboard evidence.
