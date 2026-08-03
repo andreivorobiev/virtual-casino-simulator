@@ -41,6 +41,8 @@ MAX_SESSION_TTL_SECONDS = 86_400
 MAX_STORED_SESSIONS = 1_000
 # Retain multiple concurrent sessions per account so simultaneous logins never evict each other. (SESSION-007)
 MAX_SESSIONS_PER_USER = 256
+# Treat a user as online only while an authenticated session has touched the server recently. (issue #570)
+ONLINE_PRESENCE_WINDOW_SECONDS = 120
 # Name the bootstrap-only authority that can delegate ordinary Admin access. (AUTH-012)
 PLATFORM_OWNER_ROLE = "platform_owner"
 # Enumerate roles that inherit access to the existing Admin surface. (AUTH-012)
@@ -812,6 +814,31 @@ def prune_sessions(state: dict) -> dict:
     now = utc_datetime()
     state["sessions"] = [session for session in state.get("sessions", []) if isinstance(session, dict) and _session_is_active(session, now)][-MAX_STORED_SESSIONS:]
     return state
+
+# Count unique recently active authenticated users without exposing session or client identity. (issue #570)
+def online_user_count() -> int:
+    # Read one server-owned instant for consistent activity comparisons.
+    now = utc_datetime()
+    # Build a privacy-safe set so concurrent sessions for one account never inflate presence.
+    active_users = set()
+    # Read only active, unexpired sessions from the bounded registry.
+    for session in prune_sessions(load_sessions()).get("sessions", []):
+        # Start protected parsing so malformed activity timestamps fail closed as offline.
+        try:
+            # Measure recent server-observed activity rather than account or wallet existence.
+            elapsed = (now - parse_time(session.get("updated_at") or session.get("created_at"))).total_seconds()
+        # Exclude malformed or missing timestamps without exposing storage details.
+        except (AttributeError, TypeError, ValueError):
+            # Continue to the next bounded session record.
+            continue
+        # Read the durable user identifier only after the session passes lifecycle checks.
+        user_id = str(session.get("user_id") or "")
+        # Count one user only inside the exact recent-activity window.
+        if user_id and 0 <= elapsed < ONLINE_PRESENCE_WINDOW_SECONDS:
+            # Deduplicate simultaneous browser sessions for the same account.
+            active_users.add(user_id)
+    # Publish only the aggregate count, never the contributing identities.
+    return len(active_users)
 
 # Evict the least-recently-used active predecessors once one identity exceeds the per-user cap. (SESSION-007)
 def _evict_user_sessions_over_cap(state: dict, user_id: str) -> None:

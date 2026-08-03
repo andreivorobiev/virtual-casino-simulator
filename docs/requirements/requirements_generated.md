@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.56.5
-- core: 9.36.0
+- application: 9.56.6
+- core: 9.36.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -16,7 +16,7 @@ Historical source baseline: 9.1.0
 - admin: 1.15.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.5.0
+- roulette: 9.5.1
 - slots: 9.4.0
 - blackjack: 9.1.7
 - baccarat: 9.1.10
@@ -50,9 +50,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.67.1
-- docs: 1.65.1
-- contracts: 1.54.1
+- tests: 1.67.2
+- docs: 1.65.2
+- contracts: 1.54.2
 - tooling: 1.25.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
@@ -85,7 +85,7 @@ Historical source baseline: 9.1.0
 - **CORE-013** (Core) - PASS: The server writes no-store cache headers for API responses.
 - **CORE-014** (Core) - PASS: The app supports state reset for testing.
 - **CORE-015** (Core) - PASS: The app preserves compact 1080p layout using panel-level scroll areas.
-- **CORE-016** (Core) - PASS: The casino state endpoint returns games, players, recent history, and ledger.
+- **CORE-016** (Core) - PASS: The casino state endpoint returns games, session-scoped players, a privacy-safe unique recent-session online count, recent history, and ledger.
 - **CORE-017** (Core) - PASS: The app stores persistent data under data/.
 - **CORE-018** (Core) - PASS: The app stores isolated per-game state under data/games/.
 - **CORE-019** (Core) - PASS: The app migrates older v7/v8 data best-effort.
@@ -173,7 +173,7 @@ Historical source baseline: 9.1.0
 - **ROU-040** (Roulette) - PASS: Roulette stats include dozen and column counts.
 - **ROU-041** (Roulette) - PASS: Roulette UI renders a vector wheel.
 - **ROU-042** (Roulette) - PASS: Roulette UI animates wheel and ball while spinning.
-- **ROU-043** (Roulette) - PASS: Roulette UI renders a real table-style layout.
+- **ROU-043** (Roulette) - PASS: Roulette UI renders a real table-style layout whose complete fixed betting board remains contained across governed and scaled mid-desktop viewports.
 - **ROU-044** (Roulette) - PASS: Roulette UI allows clicking number cells for straight bets.
 - **ROU-045** (Roulette) - PASS: Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.
 - **ROU-046** (Roulette) - PASS: Roulette UI draws chips on table spots with amounts.
@@ -658,7 +658,7 @@ Historical source baseline: 9.1.0
 - **TEST-044** (Tests) - PASS: Operations regression evidence covers anonymous and authenticated policy, healthy and degraded dependencies, Admin authorization, EN/RU responsive states, copied deployment, and listener cleanup.
 - **CORE-023** (Core) - PASS: A production WSGI adapter initializes from explicit external runtime configuration, serves the complete same-origin application without invoking the development HTTP server, and is supported only through a fixed-loopback supervised process policy.
 - **TEST-046** (Tests) - PASS: Production-service validation covers listener-free WSGI parity, sanitized probes, authorization propagation, malformed input, fail-closed external configuration, fixed-loopback policy, hardened supervision, clean extracted-release startup, graceful restart, persistence, failure handling, and exact listener closure.
-- **SEC-010** (Core) - PASS: Restricted-preview production requests require exact canonical Host and Origin values, one exact loopback trusted-proxy contract, per-session CSRF proof for every unsafe method, bounded bodies and client windows, hardened response headers, and secret-safe fixed-class security logging.
+- **SEC-010** (Core) - PASS: Restricted-preview production requests require exact canonical Host and Origin values, one exact loopback trusted-proxy contract, per-session CSRF proof for every unsafe method, bounded bodies and API client windows that do not charge safe static GET delivery, hardened response headers, and secret-safe fixed-class security logging.
 - **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing of the session credential with rotation of the browser-readable double-submit cookie onto a fresh anonymous bootstrap token, and revocation after privilege-bearing account changes.
 - **SESSION-007** (Session) - PASS: Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.
 - **SESSION-008** (Core) - PASS: The server-side Admin session-control core keeps disposable guest trials outside retained-account controls, lists at most one hundred sessions for one persistent account through stable one-way aliases and approved timestamp, lifecycle, authentication-method, and coarse-client fields, and provides idempotent targeted or all-session revocation through the existing atomic JSON/MySQL document transaction without exposing or logging raw session identifiers, bearer or CSRF material, user identifiers, IP addresses, or raw client strings.

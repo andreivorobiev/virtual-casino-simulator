@@ -107,8 +107,10 @@ def build_router() -> Router:
         visible_history = recent_history if auth.is_admin(context["user"]) else [row for row in recent_history if row.get("player_id") == player_id]
         # Read only the bound player's ledger for normal authenticated users.
         recent_ledger = ledger.read_recent(None if auth.is_admin(context["user"]) else player_id, 25)
-        # Return the session-scoped casino summary.
-        return {"version": APP_VERSION, "games": list_games(), "catalog": catalog_summary(), "players": visible_players, "recent_history": visible_history, "recent_ledger": recent_ledger}
+        # Count unique recently active sessions independently from durable player records. (issue #570)
+        online_player_count = auth.online_user_count()
+        # Return the session-scoped casino summary with privacy-safe aggregate presence.
+        return {"version": APP_VERSION, "games": list_games(), "catalog": catalog_summary(), "players": visible_players, "online_player_count": online_player_count, "recent_history": visible_history, "recent_ledger": recent_ledger}
 
     # Register additive v2 authenticated manual problem-report submission. (CORE-027, issue #349)
     @router.post(r"/api/v2/feedback/reports")

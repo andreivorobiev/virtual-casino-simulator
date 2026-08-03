@@ -383,9 +383,9 @@ class CasinoWSGIApplication:
             if path in PROBE_PATHS:
                 # Bound each trusted effective client without consuming application allowances.
                 self.probe_rate_limiter.check(effective.client, rotate_capacity=True)
-            # Bound all application and browser traffic independently from probes.
-            else:
-                # Consume one application allowance keyed only by the trusted effective client.
+            # Bound API reads and every mutation independently from probes and immutable browser assets. (issue #570)
+            elif path.startswith("/api/") or method != "GET":
+                # Consume one application allowance only for application work, not safe static delivery.
                 self.rate_limiter.check(effective.client)
             # Record only method and route class, never path, query, headers, body, or credentials.
             logger.info("request_accepted", request_id=request_id, method=method, route_class=route_class)

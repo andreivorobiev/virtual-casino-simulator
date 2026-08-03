@@ -44,6 +44,8 @@ This scope changes no deployment, DNS, TLS, firewall, provider, billing, or publ
 
 ## Response, bounds, and logs
 
-The adapter emits the tracked CSP, anti-framing, MIME-sniffing, referrer, permissions, cross-origin isolation, and HSTS policy on effective HTTPS responses. Request bodies, session retention, and per-client request windows are bounded. Security logs contain only a generated request identifier, method, fixed route class, and status code; they never record request paths, query strings, credentials, cookies, CSRF values, forwarding values, or request bodies.
+The adapter emits the tracked CSP, anti-framing, MIME-sniffing, referrer, permissions, cross-origin isolation, and HSTS policy on effective HTTPS responses. Request bodies, session retention, and per-client request windows are bounded. Probes use a separate limiter, while the application limiter counts API requests and unsafe methods only; same-origin static `GET` delivery does not consume the API action budget. Security logs contain only a generated request identifier, method, fixed route class, and status code; they never record request paths, query strings, credentials, cookies, CSRF values, forwarding values, or request bodies.
+
+The casino-state online count is a privacy-safe aggregate of unique authenticated users whose server-observed session activity is less than 120 seconds old. Multiple sessions for one account count once; stale, expired, revoked, and malformed sessions count zero. The value is not derived from the durable wallet/player registry and exposes no contributing user, session, client, or timestamp.
 
 The compatibility artifact at `contracts/compatibility/restricted-preview-security.json` is the machine-checked access-policy source. The listener-free focused suite and copied production-service tests must pass before issue #201 may release an infrastructure cutover.

@@ -2334,7 +2334,7 @@ def run_api_tests():
             # Verify normal-user player listing and casino state expose only the bound wallet.
             assert [row['player_id'] for row in api(base,'/api/v1/players',auth_token=token_a)['players']]==[user_a['player_id']]
             # Verify casino state keeps global wallet and ledger rows outside the normal session.
-            scoped_state=api(base,'/api/v1/casino/state',auth_token=token_a); assert [row['player_id'] for row in scoped_state['players']]==[user_a['player_id']] and all(row['player_id']==user_a['player_id'] for row in scoped_state['recent_ledger'])
+            scoped_state=api(base,'/api/v1/casino/state',auth_token=token_a); assert [row['player_id'] for row in scoped_state['players']]==[user_a['player_id']] and all(row['player_id']==user_a['player_id'] for row in scoped_state['recent_ledger']) and isinstance(scoped_state['online_player_count'],int) and scoped_state['online_player_count']>=1
             # Verify direct cross-player reads fail with the standard forbidden envelope.
             cross_read=api(base,f'/api/v1/players/{user_b["player_id"]}',ok=False,auth_token=token_a); assert cross_read['error']['code']=='FORBIDDEN'
             # Submit user B's id maliciously; middleware must bind the bet to user A instead.
@@ -4823,6 +4823,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_test_id('open-roulette').is_visible()
                         # Verify the catalog advertises one authoritative game count with no contradictory roadmap target. (issue #235)
                         assert page.get_by_test_id('catalog-capacity').inner_text()==f'{len(casino_config.GAMES)} available'
+                        # Read the exact state payload used by the shell presence rail. (CORE-016, issue #570)
+                        presence_state=page.evaluate("async () => (await (await fetch('/api/v1/casino/state')).json()).data")
+                        # Require a bounded aggregate that does not mirror the Admin-visible durable player inventory.
+                        assert isinstance(presence_state['online_player_count'],int) and presence_state['online_player_count']>=1 and presence_state['online_player_count']<len(presence_state['players']),presence_state
+                        # Require the persistent status rail to publish the aggregate rather than stored player count.
+                        assert page.locator('#status-players').inner_text()==f"{presence_state['online_player_count']} online"
                         # Read every governed viewport from the executable visual matrix for wallet evidence. (UX-023)
                         celebration_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
                         # Require the complete desktop, compact, tablet, and mobile viewport contract.
@@ -4925,7 +4931,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Confirm the English lobby copy is restored for downstream browser cases.
                         assert_lobby_localized('en-US')
                     # Execute this statement as part of the module's documented control flow.
-                    run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008','UX-023','I18N-004','TEST-069','UX-012','TEST-072'],premium_lobby)
+                    run_case('BR-LOBBY-001',['CORE-005','CORE-006','CORE-016','UX-008','UX-023','I18N-004','TEST-069','UX-012','TEST-072'],premium_lobby)
                     # Define catalog_navigation to cover search and category facets from module metadata.
                     def catalog_navigation():
                         # Filter by a game label through the visible search control.
@@ -7789,6 +7795,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_test_id('roulette-bet-slip').evaluate("(el) => [...el.querySelectorAll('.scrollbox,.stable-list')].every(child => !['auto','scroll'].includes(getComputedStyle(child).overflowY))")
                         # Verify the wallet, wager chips, main table, and primary action fit inside the desktop viewport without rail scrolling.
                         assert page.evaluate("() => ['premium-wallet','chip-1','roulette-table','roulette-spin'].every(id => { const el=document.querySelector(`[data-testid=\"${id}\"]`); if(!el)return false; const box=el.getBoundingClientRect(); return box.top>=0 && box.bottom<=window.innerHeight-54; })")
+                        # Reproduce the scaled mid-desktop viewport reported in production. (ROU-043, issue #570)
+                        page.set_viewport_size({'width':1706,'height':900}); page.wait_for_timeout(250)
+                        # Read transformed table and clipping-shell bounds after the compact breakpoint applies.
+                        mid_desktop=page.evaluate("() => { const table=document.querySelector('[data-testid=roulette-table]').getBoundingClientRect(); const shell=document.querySelector('.roulette-table-shell').getBoundingClientRect(); const spin=document.querySelector('[data-testid=roulette-spin]').getBoundingClientRect(); return {table:table.toJSON(),shell:shell.toJSON(),spin:spin.toJSON(),width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth}; }")
+                        # Require every table edge and the primary action to remain visible without page overflow.
+                        assert mid_desktop['scrollWidth']<=mid_desktop['width']+1 and mid_desktop['table']['left']>=mid_desktop['shell']['left']-1 and mid_desktop['table']['right']<=mid_desktop['shell']['right']+1 and mid_desktop['table']['bottom']<=mid_desktop['shell']['bottom']+1 and mid_desktop['spin']['bottom']<=mid_desktop['height']-54,mid_desktop
+                        # Capture after-pass evidence at the exact production-reported width.
+                        page.screenshot(path=str(screenshots/'after-pass-roulette-mid-desktop-contained.png'),full_page=False)
                         # Resize to a tablet viewport so the shared three-zone layout can prove its stacked fallback.
                         page.set_viewport_size({'width':1024,'height':900}); page.wait_for_timeout(250)
                         # Read responsive panel positions after the shared breakpoint stacks the game layout.
