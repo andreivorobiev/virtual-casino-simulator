@@ -59,6 +59,8 @@ ROULETTE_SPIN = r"/api/v1/games/roulette/spin"
 KENO_TICKETS = r"/api/v1/games/keno/tickets"
 # Name the keno draw route once for handler lookups.
 KENO_DRAW = r"/api/v1/games/keno/draw"
+# Name the keno single-ticket clear route once for handler lookups.
+KENO_CLEAR_ONE = r"/api/v1/games/keno/tickets/(?P<ticket_id>[^/]+)"
 
 
 # Capture registered route handlers without booting the full HTTP application.
@@ -340,6 +342,120 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         self.assertEqual(open_bets[0]["layout_kind"], dozen["layout_kind"])
         # Require the catalog to classify dozen bets as outside-layout bets.
         self.assertEqual(dozen["layout_kind"], "outside")
+
+    # Wrap the production keno state saver so exactly the finalize-phase save crashes once. (issue #555)
+    def _keno_finalize_crash(self):
+        # Keep the production saver so passthrough calls stay real.
+        real_save = keno_api.save_player_game_state
+        # Count saves so only the second save of the interrupted draw request fails.
+        calls = {"count": 0}
+        # Define the injected saver used during the interrupted request.
+        def crashing_save(game_id, player_id, state):
+            # Advance the per-request save counter.
+            calls["count"] += 1
+            # Crash exactly on the finalize save so the commitment survives with credits already applied.
+            if calls["count"] == 2:
+                # Raise the injected interruption the test asserts on.
+                raise RuntimeError("injected finalize crash")
+            # Delegate every other save to the production helper.
+            return real_save(game_id, player_id, state)
+        # Return the counting saver for a mock.patch.object new= injection.
+        return crashing_save
+
+    # Prove an interrupted keno settlement resumes from its committed entropy instead of redrawing. (issues #430, #555)
+    def test_keno_crash_after_commitment_replays_identical_draw(self):
+        # Capture the production keno handlers.
+        handlers = self._keno_routes()
+        # Purchase one five-spot ticket before the interrupted draw.
+        purchase = handlers[("POST", KENO_TICKETS)]({"spots": [1, 2, 3, 4, 5], "amount": 5}, {})
+        # Store the durable ticket identity minted at purchase.
+        ticket_id = purchase["ticket"]["ticket_id"]
+        # Require the purchase debit to carry its storage-atomic placement identity.
+        self.assertEqual(len(self._action_rows(f"{ticket_id}:wager")), 1)
+        # Run the interrupted draw with the finalize-phase save crashing after credits commit.
+        with mock.patch.object(keno_api, "save_player_game_state", new=self._keno_finalize_crash()):
+            # Script the committed draw so the replay assertion below can pin its numbers.
+            with mock.patch.object(keno_engine, "_SYSTEM_RANDOM", _ScriptedBalls(list(range(1, 21)))):
+                # Require the injected finalize crash to surface to the caller.
+                with self.assertRaises(RuntimeError):
+                    # Attempt the draw whose settlement is interrupted after crediting.
+                    handlers[("POST", KENO_DRAW)]({}, {})
+        # Retry the draw under a different script to prove the committed entropy wins over fresh sampling.
+        with mock.patch.object(keno_engine, "_SYSTEM_RANDOM", _ScriptedBalls([1, 2, 3] + list(range(21, 38)))):
+            # Resume the committed settlement as the post-crash retry.
+            second = handlers[("POST", KENO_DRAW)]({}, {})
+        # Require the retry to replay the committed twenty-ball sample rather than the new script.
+        self.assertEqual(second["draw"]["drawn"], sorted(range(1, 21)))
+        # Require the retry to mark the ticket settlement as a storage replay.
+        self.assertTrue(second["settlements"][0]["replayed"])
+        # Require exactly one payout credit across the crash and the retry.
+        self.assertEqual(len(self._action_rows(f"{ticket_id}:payout")), 1)
+        # Resolve the authoritative five-catch payout for the wallet assertion.
+        expected_payout = round(5.0 * keno_engine.PAYTABLE[5][5], 2)
+        # Require the wallet to reflect one purchase debit and one payout credit only.
+        self.assertEqual(players.get_player("human")["balance"], 5000.0 - 5.0 + expected_payout)
+        # Require replay gating to keep exactly one keno outcome history row.
+        self.assertEqual(len(history.recent_history(50, "keno")), 1)
+        # Read the persisted keno state after the successful retry.
+        final_state = json.loads(state_store.player_game_state_path("keno", "human").read_text(encoding="utf-8"))
+        # Require the settlement commitment to be released by the retry.
+        self.assertNotIn("pending_draw", final_state)
+        # Require exactly one finalized draw for the interrupted round.
+        self.assertEqual(len(final_state.get("last_draws", [])), 1)
+
+    # Prove a new keno purchase resumes a committed settlement first so finalize can never wipe the fresh ticket. (issue #555)
+    def test_keno_pending_settlement_resumes_before_new_purchase(self):
+        # Capture the production keno handlers.
+        handlers = self._keno_routes()
+        # Purchase the ticket whose settlement will be interrupted.
+        purchase = handlers[("POST", KENO_TICKETS)]({"spots": [1, 2, 3, 4, 5], "amount": 5}, {})
+        # Store the durable ticket identity minted at purchase.
+        ticket_id = purchase["ticket"]["ticket_id"]
+        # Run the interrupted draw with the finalize-phase save crashing after credits commit.
+        with mock.patch.object(keno_api, "save_player_game_state", new=self._keno_finalize_crash()):
+            # Script the committed draw deterministically.
+            with mock.patch.object(keno_engine, "_SYSTEM_RANDOM", _ScriptedBalls(list(range(1, 21)))):
+                # Require the injected finalize crash to surface to the caller.
+                with self.assertRaises(RuntimeError):
+                    # Attempt the draw whose settlement is interrupted after crediting.
+                    handlers[("POST", KENO_DRAW)]({}, {})
+        # Purchase a fresh ticket; the handler must settle the committed draw before mutating.
+        follow_up = handlers[("POST", KENO_TICKETS)]({"spots": [10, 20, 30], "amount": 3}, {})
+        # Require the resumed settlement to keep exactly one payout row for the interrupted ticket.
+        self.assertEqual(len(self._action_rows(f"{ticket_id}:payout")), 1)
+        # Read the persisted keno state after the resume-then-purchase request.
+        state = json.loads(state_store.player_game_state_path("keno", "human").read_text(encoding="utf-8"))
+        # Require the fresh ticket to be the only open ticket after the resume.
+        self.assertEqual([t["ticket_id"] for t in state["open_tickets"]], [follow_up["ticket"]["ticket_id"]])
+        # Require the interrupted draw to be finalized exactly once.
+        self.assertEqual(len(state.get("last_draws", [])), 1)
+        # Require the settlement commitment to be released by the resume.
+        self.assertNotIn("pending_draw", state)
+
+    # Prove keno ticket refunds commit exactly once under the durable refund identity. (issue #555)
+    def test_keno_refund_replays_after_crash_window(self):
+        # Capture the production keno handlers.
+        handlers = self._keno_routes()
+        # Purchase the ticket that will be refunded twice across the crash window.
+        purchase = handlers[("POST", KENO_TICKETS)]({"spots": [7, 14, 21], "amount": 4}, {})
+        # Store the durable ticket identity minted at purchase.
+        ticket_id = purchase["ticket"]["ticket_id"]
+        # Locate the durable per-player keno state document.
+        state_path = state_store.player_game_state_path("keno", "human")
+        # Snapshot the pre-clear durable state a crash would leave behind.
+        pre_clear = state_path.read_bytes()
+        # Refund the ticket once through the production handler.
+        first = handlers[("DELETE", KENO_CLEAR_ONE)]({}, {}, ticket_id)
+        # Restore the pre-clear snapshot to model a crash between refund commit and state save.
+        state_path.write_bytes(pre_clear)
+        # Clear the same durable ticket a second time as the interrupted retry.
+        second = handlers[("DELETE", KENO_CLEAR_ONE)]({}, {}, ticket_id)
+        # Require exactly one refund row for the ticket identity.
+        self.assertEqual(len(self._action_rows(f"{ticket_id}:refund")), 1)
+        # Require both clears to expose the same durable cleared ticket.
+        self.assertEqual(second["cleared"]["ticket_id"], first["cleared"]["ticket_id"])
+        # Require the wallet to end where it started after one debit and one refund.
+        self.assertEqual(players.get_player("human")["balance"], 5000.0)
 
 
 # Run the module directly through the standard unittest entry point.

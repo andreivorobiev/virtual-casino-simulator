@@ -16,6 +16,10 @@ from casino.bots import profiles
 GAME_ID="bingo"
 # Seat at most three competitor cards per session so the human card must genuinely race to win. (issue #405)
 MAX_BOT_CARDS = 3
+# Always present exactly this many competitor cards so the house edge cannot be thinned by disabling bots. (issue #452)
+COMPETITOR_CARDS = 3
+# Own the synthetic house spoiler identity that fills unfunded competitor seats without a wallet or a payout. (issue #452)
+HOUSE_COMPETITOR_ID = "bingo_house"
 
 # Define the fund_bot_players function used by this module.
 def fund_bot_players(player_id, amount, pattern):
@@ -44,6 +48,17 @@ def fund_bot_players(player_id, amount, pattern):
     # Return the funded competitor list to the card purchase flow.
     return funded
 
+# Seat a fixed competitor field so the paytable's house edge holds regardless of the admin bot roster. (issue #452)
+def seat_competitors(player_id, amount, pattern):
+    # Fund real bot competitor cards first so genuine bot wallets carry real stakes and can win real payouts. (issue #405)
+    seats = fund_bot_players(player_id, amount, pattern)
+    # Fill every remaining competitor seat with a synthetic house spoiler card so the field is always full. (issue #452)
+    for _ in range(max(0, COMPETITOR_CARDS - len(seats))):
+        # A house card races the human at the human's stake for display parity but is never funded and never paid. (issue #452)
+        seats.append({"player_id": HOUSE_COMPETITOR_ID, "amount": amount, "source": "house"})
+    # Return the always-full competitor field to the card purchase flow.
+    return seats
+
 # Define the request_player_id function used by this module.
 def request_player_id(body, query) -> str:
     # Return the explicit player id while preserving the legacy human default.
@@ -67,8 +82,8 @@ def settle_if_done(sess):
     if sess and sess.get("status") == "won":
         # Iterate through the collection to process each item.
         for card in sess.get("cards", []):
-            # Branch when the following condition is true.
-            if card.get("status") == "won" and not card.get("credited"):
+            # Credit only a real winning card; synthetic house spoilers end sessions but are never paid. (issue #452)
+            if card.get("status") == "won" and card.get("source") != "house" and not card.get("credited"):
                 # Commit or replay the payout under the durable session-card identity. (issue #403)
                 credit,replayed=ledger.credit_once(card["player_id"], card["payout"], "BINGO_PAYOUT_CREDIT", f"{card['card_id']}:settlement", GAME_ID, sess["session_id"], {"pattern":sess["pattern"], "card_id": card["card_id"]}) if card["payout"] else (None, False)
                 # Append history and expose a new credit only for the storage-committing call. (issue #403)
@@ -112,9 +127,9 @@ def register(router):
         bot_players=[]
         # Start protected logic so failures can be handled safely.
         try:
-            # Fund real competitor cards from bot wallets before the session starts. (issue #405)
-            bot_players=fund_bot_players(player_id, amount, pattern)
-            # Seat the funded competitors so the human card must beat a real field to be paid. (issue #405)
+            # Seat a guaranteed full competitor field: funded bots plus synthetic house spoilers. (issue #405, #452)
+            bot_players=seat_competitors(player_id, amount, pattern)
+            # Seat the competitors so the human card must beat a full field to be paid. (issue #405)
             sess=engine.start_session(state, player_id, amount, pattern, bot_players=bot_players)
         # Handle the expected failure path for the protected logic.
         except Exception:
@@ -122,6 +137,10 @@ def register(router):
             ledger.credit(player_id, amount, "BINGO_CARD_REFUND_AFTER_ERROR", GAME_ID, None, {"pattern":pattern})
             # Iterate through the collection to process each item.
             for bp in bot_players:
+                # Never refund a synthetic house seat: it was never debited from any wallet. (issue #452)
+                if bp.get("source") == "house":
+                    # Skip the unfunded spoiler seat.
+                    continue
                 # Return each already-debited bot stake so a failed start never strands bot funds. (issue #405)
                 ledger.credit(bp["player_id"], bp["amount"], "BOT_BINGO_CARD_REFUND_AFTER_ERROR", GAME_ID, None, {"pattern":pattern, "bot_id": bp.get("bot_id")})
             # Execute this statement as part of the module's documented control flow.
@@ -175,6 +194,10 @@ def register(router):
             if not sess.get("called"):
                 # Iterate through the collection to process each item.
                 for card in sess.get("cards", []):
+                    # Never refund a synthetic house spoiler seat: it was never debited from any wallet. (issue #452)
+                    if card.get("source") == "house":
+                        # Skip the unfunded spoiler card.
+                        continue
                     # Execute this statement as part of the module's documented control flow.
                     refunds.append(ledger.credit(card["player_id"], card["amount"], "BINGO_CARD_REFUND", GAME_ID, sess["session_id"], {"card_id": card["card_id"]}))
                 # Execute this statement as part of the module's documented control flow.

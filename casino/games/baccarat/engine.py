@@ -141,9 +141,9 @@ def remove_bet(state, bet_id, player_id):
     # Raise an error so invalid input or state is reported explicitly.
     raise ValidationError("Baccarat bet was not found")
 
-# Define the deal_coup function used by this module.
-def deal_coup(state, force=None):
-    # Branch when the following condition is true.
+# Deal and price one coup without applying its terminal state mutations, so the caller can persist the committed cards and consumed shoe before any credit is issued. (issues #430, #555)
+def commit_coup(state, force=None):
+    # Refuse to deal a coup with no staked bets.
     if not state.get("open_bets"):
         # Raise an error so invalid input or state is reported explicitly.
         raise ValidationError("Place a baccarat bet before dealing")
@@ -200,14 +200,19 @@ def deal_coup(state, force=None):
     winner = "player" if pt > bt else "banker" if bt > pt else "tie"
     # Set coup to the value needed for the next operation.
     coup = {"round_id": rid, "shoe_id": state.get("shoe_id"), "coup_number": state["coup_number"], "timestamp": utc_now(), "player_cards": player, "banker_cards": banker, "player_total": pt, "banker_total": bt, "winner": winner, "natural": natural, "bets": state.get("open_bets", []), "shoe_remaining": len(state.get("shoe", [])), "burn": state.get("burn")}
-    # Set state["open_bets"] to the value needed for the next operation.
-    state["open_bets"] = []
-    # Execute this statement as part of the module's documented control flow.
-    state.setdefault("last_coups", []).append(coup)
-    # Set state["last_coups"] to the value needed for the next operation.
-    state["last_coups"] = state["last_coups"][-100:]
-    # Return the computed value to the caller.
+    # Return the complete committed coup; the caller persists it and the consumed shoe before settlement.
     return coup
+
+# Apply one committed coup's terminal mutations exactly once and release the settlement commitment. (issue #555)
+def finalize_coup(state, coup):
+    # Clear the settled bets so the next coup starts empty.
+    state["open_bets"] = []
+    # Append the settled coup to the recent history.
+    state.setdefault("last_coups", []).append(coup)
+    # Trim the recent history to its bounded tail.
+    state["last_coups"] = state["last_coups"][-100:]
+    # Release the commitment so the next deal draws from the persisted shoe position.
+    state.pop("pending_coup", None)
 
 # Define the settle_bet function used by this module.
 def settle_bet(bet, coup, rules):

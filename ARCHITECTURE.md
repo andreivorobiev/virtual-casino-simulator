@@ -143,10 +143,18 @@ committed **inside** the wager's ledger row, so a retry after a lost response re
 outcome instead of redrawing it, and settlement uses storage-atomic `debit_once`/`credit_once` keyed
 by a durable action id.
 
-> **Known gap.** The six original games (roulette, slots, blackjack, baccarat, keno, bingo) and
-> several other early modules predate this core and still settle with non-idempotent
-> `ledger.debit`/`ledger.credit` and an unlocked read-modify-write cycle. Migrating them is tracked
-> in the issue tracker; new games must use the shared core.
+> **Known gap.** The six original games (roulette, slots, blackjack, baccarat, keno, bingo) predate
+> this core. Five of those games (roulette, blackjack, baccarat, keno, and bingo) have committed
+> settlement and refund credits through storage-atomic exactly-once action keys keyed on
+> placement-durable identities since #403, and **keno and baccarat** now also
+> commit each round's entropy into the player's game-state document before any credit — the
+> multi-wager adaptation of the core's wager-row commitment — so an interrupted or repeated draw or
+> deal replays the committed outcome under its original round identity instead of redrawing (#555).
+> The remaining gaps are tracked in #430: full `simple_game.py` adoption requires a client-supplied
+> request id that the frozen v1 contracts do not carry, so wager placement in all six still cannot
+> deduplicate client retries; slots' settlement credit is still a plain `ledger.credit`; blackjack
+> moves money mid-round through plain debits with compensating refunds; and bingo's multi-wallet
+> competitor field sits outside the single-wallet core. New games must use the shared core.
 
 ## Server authority
 

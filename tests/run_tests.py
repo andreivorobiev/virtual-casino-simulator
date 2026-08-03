@@ -91,7 +91,7 @@ BROWSER_CASE_AFFINITY_GROUPS={
     # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
     'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
     # Keep Bingo, Blackjack, Baccarat, feedback, Admin, audio, and i18n state on shard three.
-    'bingo_admin':('BR-BINGO-PURCHASE-001','BR-BINGO-001','BR-BJ-NATURAL-PAYOUT-001','BR-BJ-001','BR-BJ-I18N-001','BR-BJ-INSURANCE-NET-001','BR-BAC-COPY-001','BR-BAC-FRESH-SHOE-001','BR-BAC-MUTATION-001','BR-BAC-001','BR-I18N-ROUTES-001','BR-FEEDBACK-001','BR-ADMIN-NAV-AUTH-001','BR-ADMIN-001','BR-ADMIN-LEDGER-LABELS-001','BR-ADMIN-FEEDBACK-001','BR-ADMIN-OAUTH-001','BR-ADMIN-MAIL-001','BR-INVITE-001','BR-OPS-001','BR-ADMIN-PRACTICE-OPPONENT-001','BR-ADMIN-USERS-001','BR-ADMIN-GUEST-001','BR-AUDIO-001','BR-I18N-FOUNDATION-001','BR-I18N-ADMIN-001'),
+    'bingo_admin':('BR-BINGO-PURCHASE-001','BR-BINGO-001','BR-BJ-NATURAL-PAYOUT-001','BR-BJ-001','BR-BJ-I18N-001','BR-BJ-INSURANCE-NET-001','BR-BAC-COPY-001','BR-BAC-FRESH-SHOE-001','BR-BAC-MUTATION-001','BR-BAC-001','BR-I18N-ROUTES-001','BR-FEEDBACK-001','BR-ADMIN-NAV-AUTH-001','BR-ADMIN-001','BR-ADMIN-DIAGNOSTICS-001','BR-ADMIN-ECONOMICS-001','BR-ADMIN-SESSION-POLICY-001','BR-ADMIN-LEDGER-LABELS-001','BR-ADMIN-FEEDBACK-001','BR-ADMIN-OAUTH-001','BR-ADMIN-MAIL-001','BR-INVITE-001','BR-OPS-001','BR-ADMIN-PRACTICE-OPPONENT-001','BR-ADMIN-USERS-001','BR-ADMIN-GUEST-001','BR-AUDIO-001','BR-I18N-FOUNDATION-001','BR-I18N-ADMIN-001'),
 }
 # Set SESSION_TOKEN to the value needed for the next operation.
 SESSION_TOKEN=None
@@ -1359,7 +1359,13 @@ def run_api_tests():
     # Record the roulette and keno exactly-once settlement, layout, and entropy proof. (issues #403, #222, #420)
     run_case('API-LEGACY-SETTLE-002',['LEDGER-030','ROU-071','SEC-012'],lambda: run_unit_module('tests.roulette_keno_settlement_tests','roulette and keno settlement suite failed'))
     # Record the competitive bounded bingo economics proof. (issue #405)
-    run_case('API-BINGO-ECONOMICS-001',['BINGO-025'],lambda: run_unit_module('tests.bingo_economics_tests','bingo economics suite failed'))
+    run_case('API-BINGO-ECONOMICS-001',['BINGO-025','BINGO-026'],lambda: run_unit_module('tests.bingo_economics_tests','bingo economics suite failed'))
+    # Record recursive nested/legacy Admin state discovery and empty-state safety. (ADMIN-029, TEST-145)
+    run_case('API-ADMIN-GAME-STATES-001',['ADMIN-029','TEST-145'],lambda: run_unit_module('tests.admin_game_states_tests.AdminGameStatesTests','Admin diagnostics suite failed'))
+    # Record bounded payout-rate arithmetic, exclusion, malformed-row, and detail evidence. (ADMIN-030, TEST-146)
+    run_case('API-ADMIN-ECONOMICS-001',['ADMIN-030','TEST-146'],lambda: run_unit_module('tests.admin_economics_tests','Admin economics suite failed'))
+    # Record owner-only clamped provider-backed session-policy routes and persistence. (SESSION-009, ADMIN-031, TEST-150)
+    run_case('API-ADMIN-SESSION-POLICY-001',['SESSION-009','ADMIN-031','TEST-150'],lambda: run_unit_module('tests.admin_game_states_tests.AdminSessionSettingsTests','Admin session policy suite failed'))
     # Record the practice-table solvency, compensation, and self-heal proof. (issue #411)
     run_case('API-THPT-ESCROW-001',['THPT-006'],lambda: run_unit_module('tests.thpt_escrow_tests','practice-table escrow suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
@@ -9549,6 +9555,208 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                     # Execute the mapped Admin dashboard and packaged-release browser regression.
                     run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                    # Define responsive diagnostics coverage for nested state, history, tests, and their empty states. (ADMIN-029, TEST-145)
+                    def admin_diagnostics_browser():
+                        # Store the exact governed Admin visual matrix.
+                        viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                        # Bind the deterministic two-field fixture to each authoritative installed locale.
+                        expected_result_fields={'en-US':'2 result fields','ru-RU':'Полей результата: 2'}
+                        # Hold the current deterministic response mode for all three diagnostics routes.
+                        mode={'value':'populated'}
+                        # Serve nested/flat or empty state data without touching provider files.
+                        def states_route(route):
+                            # Select the response from the current visual mode.
+                            states={'bingo/human':{'path':'games/bingo/human.json','state':{'active_session':{'pattern':'line'}}},'roulette':{'path':'games/roulette.json','state':{'open_bets':[]}}} if mode['value']=='populated' else {}
+                            # Fulfill the standard success envelope.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'states':states}}))
+                        # Serve one readable history row or the explicit empty state.
+                        def history_route(route):
+                            # Select one contract-shaped row only for the populated mode.
+                            rows=[{'timestamp':'2026-08-02T00:00:00Z','player_id':'browser-admin','game':'bingo','bet_label':'Line card','bet_type':'card','amount':5,'payout':10,'outcome':'won','balance_after':5005}] if mode['value']=='populated' else []
+                            # Fulfill the standard success envelope.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'history':rows}}))
+                        # Serve one bounded result document or the explicit empty state.
+                        def results_route(route):
+                            # Select a low-cardinality deterministic test receipt.
+                            results={'summary':{'passed':3,'failed':0},'source':'exact-head'} if mode['value']=='populated' else {}
+                            # Fulfill the standard success envelope.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'results':results}}))
+                        # Install the three deterministic route seams for this one case.
+                        page.route('**/api/v1/admin/game-states',states_route); page.route('**/api/v1/admin/history?limit=500',history_route); page.route('**/api/v1/admin/test-results',results_route)
+                        # Guarantee route cleanup even when one governed cell fails.
+                        try:
+                            # Exercise both installed locales.
+                            for locale in ('en-US','ru-RU'):
+                                # Switch the shared Admin runtime without persisting the test choice.
+                                page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                                # Exercise all four governed viewports.
+                                for viewport_id,viewport in viewports.items():
+                                    # Apply exact visual geometry.
+                                    page.set_viewport_size(viewport)
+                                    # Render nested and flat state rows.
+                                    mode['value']='populated'; page.get_by_test_id('admin-tab-states').click(); page.locator('[data-testid="admin-tab-states"]').wait_for(timeout=5000); page.get_by_text('bingo/human',exact=True).wait_for(timeout=5000)
+                                    # Require both state layouts and page containment.
+                                    assert page.get_by_text('roulette',exact=True).is_visible() and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
+                                    # Capture nested and legacy state evidence.
+                                    game_evidence(f'after-pass-admin-diagnostics-states-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['nested_and_flat_states','keyboard_focus'],locale,viewport_id)
+                                    # Render and capture the state empty contract.
+                                    mode['value']='empty'; page.get_by_test_id('admin-tab-states').click(); page.get_by_test_id('admin-game-states-empty').wait_for(timeout=5000); game_evidence(f'after-pass-admin-diagnostics-states-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['empty_states'],locale,viewport_id)
+                                    # Render one readable history row.
+                                    mode['value']='populated'; page.get_by_test_id('admin-tab-history').click(); page.get_by_text('browser-admin',exact=True).wait_for(timeout=5000)
+                                    # Require table copy instead of raw object text.
+                                    assert page.get_by_text('Line card',exact=True).is_visible()
+                                    # Capture populated history evidence.
+                                    game_evidence(f'after-pass-admin-diagnostics-history-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['history_table'],locale,viewport_id)
+                                    # Render and capture the history empty contract.
+                                    mode['value']='empty'; page.get_by_test_id('admin-tab-history').click(); page.get_by_test_id('admin-history-empty').wait_for(timeout=5000); game_evidence(f'after-pass-admin-diagnostics-history-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['history_empty'],locale,viewport_id)
+                                    # Render the structured test receipt.
+                                    mode['value']='populated'; page.get_by_test_id('admin-tab-tests').click(); page.get_by_text(expected_result_fields[locale],exact=True).wait_for(timeout=5000)
+                                    # Capture populated test-result evidence.
+                                    game_evidence(f'after-pass-admin-diagnostics-tests-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['test_results'],locale,viewport_id)
+                                    # Render and capture the test-result empty contract.
+                                    mode['value']='empty'; page.get_by_test_id('admin-tab-tests').click(); page.get_by_test_id('admin-tests-empty').wait_for(timeout=5000); game_evidence(f'after-pass-admin-diagnostics-tests-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['test_results_empty'],locale,viewport_id)
+                        # Remove exactly the routes installed by this case.
+                        finally:
+                            # Restore real diagnostic endpoints for later Admin cases.
+                            page.unroute('**/api/v1/admin/game-states',states_route); page.unroute('**/api/v1/admin/history?limit=500',history_route); page.unroute('**/api/v1/admin/test-results',results_route)
+                        # Restore default Admin geometry and locale.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }"); page.get_by_test_id('admin-tab-dashboard').click()
+                    # Execute the governed diagnostics Browser case.
+                    run_case('BR-ADMIN-DIAGNOSTICS-001',['ADMIN-029','TEST-145'],admin_diagnostics_browser)
+                    # Define responsive economics coverage for summary, player-positive, zero-wager, detail, and empty states. (ADMIN-030, TEST-146)
+                    def admin_economics_browser():
+                        # Store the exact governed Admin visual matrix.
+                        viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                        # Hold summary mode so the same route can show populated and empty states.
+                        mode={'value':'populated'}
+                        # Serve deterministic summary economics under the standard envelope.
+                        def summary_route(route):
+                            # Include house-side, player-positive, and zero-wager rows in the populated state.
+                            games=[{'game':'slots','wagered':100,'returned':92,'events':2,'payout_rate':0.92,'house_edge':0.08,'player_positive':False},{'game':'buggy_game','wagered':100,'returned':150,'events':2,'payout_rate':1.5,'house_edge':-0.5,'player_positive':True},{'game':'credit_only','wagered':0,'returned':10,'events':1,'payout_rate':None,'house_edge':None,'player_positive':False}] if mode['value']=='populated' else []
+                            # Fulfill the standard summary envelope.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'window':100000,'games':games}}))
+                        # Serve one deterministic player-positive detail row.
+                        def detail_route(route):
+                            # Publish aggregate, type breakdown, and recent evidence.
+                            detail={'game':'buggy_game','wagered':100,'returned':150,'events':2,'payout_rate':1.5,'house_edge':-0.5,'player_positive':True,'by_transaction_type':[{'transaction_type':'BUGGY_WAGER_DEBIT','count':1,'total':-100},{'transaction_type':'BUGGY_PAYOUT_CREDIT','count':1,'total':150}],'recent':[{'player_id':'browser-admin','transaction_type':'BUGGY_PAYOUT_CREDIT','amount':150}]}
+                            # Fulfill the standard detail envelope.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':detail}))
+                        # Install both deterministic economics seams.
+                        page.route('**/api/v1/admin/economics',summary_route); page.route('**/api/v1/admin/economics/buggy_game',detail_route)
+                        # Guarantee route cleanup after the governed matrix.
+                        try:
+                            # Exercise both installed locales.
+                            for locale in ('en-US','ru-RU'):
+                                # Switch the shared Admin runtime.
+                                page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                                # Exercise every governed viewport.
+                                for viewport_id,viewport in viewports.items():
+                                    # Apply exact visual geometry.
+                                    page.set_viewport_size(viewport)
+                                    # Render the complete summary.
+                                    mode['value']='populated'; page.get_by_test_id('admin-tab-economics').click(); page.locator('[data-economics-game="buggy_game"]').wait_for(timeout=5000)
+                                    # Require player-positive and zero-wager formatting plus containment.
+                                    economics_text=page.get_by_test_id('admin-economics').inner_text(); assert '150.0%' in economics_text and '—' in economics_text and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
+                                    # Focus the real drill-down control for keyboard evidence.
+                                    page.locator('[data-economics-game="buggy_game"]').focus()
+                                    # Capture summary states together.
+                                    game_evidence(f'after-pass-admin-economics-summary-{locale}-{viewport_id}.png','BR-ADMIN-ECONOMICS-001',['summary','player_positive','zero_wager','keyboard_focus'],locale,viewport_id)
+                                    # Activate the detail by keyboard and wait for its real renderer.
+                                    page.locator('[data-economics-game="buggy_game"]').press('Enter'); page.get_by_test_id('admin-economics-detail').wait_for(timeout=5000)
+                                    # Require bounded type and recent evidence.
+                                    assert page.get_by_text('browser-admin',exact=True).is_visible()
+                                    # Capture the detail state.
+                                    game_evidence(f'after-pass-admin-economics-detail-{locale}-{viewport_id}.png','BR-ADMIN-ECONOMICS-001',['detail'],locale,viewport_id)
+                                    # Render the explicit empty summary.
+                                    mode['value']='empty'; page.get_by_test_id('admin-tab-economics').click(); page.get_by_test_id('admin-economics-empty').wait_for(timeout=5000)
+                                    # Capture the empty economics state.
+                                    game_evidence(f'after-pass-admin-economics-empty-{locale}-{viewport_id}.png','BR-ADMIN-ECONOMICS-001',['empty'],locale,viewport_id)
+                        # Remove exactly the routes installed by this case.
+                        finally:
+                            # Restore real economics endpoints for later Admin cases.
+                            page.unroute('**/api/v1/admin/economics',summary_route); page.unroute('**/api/v1/admin/economics/buggy_game',detail_route)
+                        # Restore default Admin geometry and locale.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }"); page.get_by_test_id('admin-tab-dashboard').click()
+                    # Execute the governed economics Browser case.
+                    run_case('BR-ADMIN-ECONOMICS-001',['ADMIN-030','TEST-146'],admin_economics_browser)
+                    # Define owner-session policy presentation, clamped persistence, denial, and responsive coverage. (SESSION-009, ADMIN-031, TEST-150)
+                    def admin_session_policy_browser():
+                        # Store the exact governed Admin visual matrix.
+                        viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                        # Hold the provider-shaped policy returned by the deterministic endpoint seam.
+                        policy={'schema_version':2,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15}
+                        # Hold whether the next read should model ordinary-Admin denial.
+                        denied={'value':False}
+                        # Serve owner reads/writes and one explicit ordinary-Admin forbidden envelope.
+                        def policy_route(route):
+                            # Return the standard forbidden envelope for the denial visual state.
+                            if denied['value']:
+                                # Fulfill one canonical 403 response.
+                                route.fulfill(status=403,content_type='application/json',body=json.dumps({'ok':False,'error':{'code':'FORBIDDEN','message':'Platform owner role is required'}})); return
+                            # Apply the same reviewed clamps when the visible owner submits POST.
+                            if route.request.method=='POST':
+                                # Read the submitted JSON body.
+                                body=route.request.post_data_json
+                                # Clamp all numeric values and preserve a strict boolean.
+                                policy.update({'idle_timeout_minutes':max(1,min(int(body.get('idle_timeout_minutes',policy['idle_timeout_minutes'])),1440)),'absolute_timeout_hours':max(1,min(int(body.get('absolute_timeout_hours',policy['absolute_timeout_hours'])),24)),'admin_idle_timeout_minutes':max(1,min(int(body.get('admin_idle_timeout_minutes',policy['admin_idle_timeout_minutes'])),1440)),'admin_stricter':body.get('admin_stricter') is True})
+                            # Fulfill the owner success envelope.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'settings':policy}}))
+                        # Install one route seam covering GET and POST.
+                        page.route('**/api/v2/admin/session-settings',policy_route)
+                        # Guarantee route and expected-diagnostic cleanup.
+                        try:
+                            # Exercise both installed locales.
+                            for locale in ('en-US','ru-RU'):
+                                # Switch the shared Admin runtime.
+                                page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                                # Exercise every governed viewport.
+                                for viewport_id,viewport in viewports.items():
+                                    # Reset the deterministic policy before this cell.
+                                    policy.update({'schema_version':2,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15}); denied['value']=False
+                                    # Apply exact visual geometry and render the owner view.
+                                    page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '30' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '12' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '15' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === true""",timeout=5000)
+                                    # Require the complete owner policy to remain contained.
+                                    assert page.get_by_test_id('admin-sessions-idle').input_value()=='30' and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
+                                    # Focus the real save action for keyboard evidence.
+                                    page.get_by_test_id('admin-save-sessions').focus()
+                                    # Capture the owner policy and keyboard state.
+                                    game_evidence(f'after-pass-admin-session-policy-owner-{locale}-{viewport_id}.png','BR-ADMIN-SESSION-POLICY-001',['owner_policy','keyboard_focus'],locale,viewport_id)
+                                    # Submit values outside reviewed bounds through the real UI control.
+                                    page.get_by_test_id('admin-sessions-idle').fill('0'); page.get_by_test_id('admin-sessions-absolute').fill('99'); page.get_by_test_id('admin-sessions-admin-idle').fill('5000'); page.get_by_test_id('admin-sessions-admin-stricter').uncheck()
+                                    # Bind the real Save action to completion of its exact owner-policy POST.
+                                    with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/session-settings') and response.request.method=='POST',timeout=5000):
+                                        # Trigger the asynchronous save while its response observer is armed.
+                                        page.get_by_test_id('admin-save-sessions').click()
+                                    # Rerender from the persisted deterministic response.
+                                    page.get_by_test_id('admin-tab-sessions').click()
+                                    # Wait for all exact clamped controls instead of the already-visible stale panel.
+                                    page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '1' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '24' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '1440' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === false""",timeout=5000)
+                                    # Require exact clamped values and boolean persistence.
+                                    assert page.get_by_test_id('admin-sessions-idle').input_value()=='1' and page.get_by_test_id('admin-sessions-absolute').input_value()=='24' and page.get_by_test_id('admin-sessions-admin-idle').input_value()=='1440' and not page.get_by_test_id('admin-sessions-admin-stricter').is_checked()
+                                    # Capture clamped and saved policy evidence.
+                                    game_evidence(f'after-pass-admin-session-policy-saved-{locale}-{viewport_id}.png','BR-ADMIN-SESSION-POLICY-001',['clamped_values','saved'],locale,viewport_id)
+                            # Record diagnostics before modeling one canonical ordinary-Admin denial.
+                            denial_http_index=len(http_errors); denial_console_index=len(console_errors); denial_page_index=len(page_errors)
+                            # Return the canonical forbidden envelope on the next read.
+                            denied['value']=True; page.get_by_test_id('admin-tab-sessions').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                            # Isolate diagnostics emitted by the deliberate forbidden response.
+                            denial_http=http_errors[denial_http_index:]; denial_console=console_errors[denial_console_index:]; denial_pages=page_errors[denial_page_index:]
+                            # Require one exact forbidden response and no JavaScript exception.
+                            assert denial_pages==[] and len(denial_http)==1 and denial_http[0].startswith('403 ') and denial_http[0].endswith('/api/v2/admin/session-settings'),denial_pages+denial_http
+                            # Allow only the browser's standard failed-resource console message for the controlled 403.
+                            assert len(denial_console)<=1 and all('Failed to load resource' in message for message in denial_console),denial_console
+                            # Capture the non-secret ordinary-Admin denial presentation.
+                            game_evidence('after-pass-admin-session-policy-denied-en-US-desktop_primary.png','BR-ADMIN-SESSION-POLICY-001',['ordinary_admin_denied'],'en-US','desktop_primary')
+                            # Remove only diagnostics caused by the controlled 403.
+                            del http_errors[denial_http_index:]; del console_errors[denial_console_index:]
+                        # Remove exactly the route installed by this case.
+                        finally:
+                            # Restore the real owner-only endpoint.
+                            page.unroute('**/api/v2/admin/session-settings',policy_route)
+                        # Restore default Admin geometry, locale, and Dashboard.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }"); page.get_by_test_id('admin-tab-dashboard').click()
+                    # Execute the governed owner-session policy Browser case.
+                    run_case('BR-ADMIN-SESSION-POLICY-001',['SESSION-009','ADMIN-031','TEST-150'],admin_session_policy_browser)
                     # Define the localized Admin ledger-label and responsive evidence regression. (issue #74)
                     def admin_ledger_labels_browser():
                         # Store the exact governed Admin viewports required by the visual matrix.

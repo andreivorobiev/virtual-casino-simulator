@@ -7,21 +7,21 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.56.4
-- core: 9.35.0
+- core: 9.36.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.4
 - audio: 9.1.1
-- admin: 1.14.0
+- admin: 1.15.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.5.0
 - slots: 9.4.0
 - blackjack: 9.1.7
-- baccarat: 9.1.8
-- keno: 9.3.1
-- bingo: 9.3.0
+- baccarat: 9.1.10
+- keno: 9.3.3
+- bingo: 9.3.2
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
 - big_six_wheel: 1.1.0
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.66.5
-- docs: 1.64.65
-- contracts: 1.53.8
-- tooling: 1.24.1
+- tests: 1.67.0
+- docs: 1.65.0
+- contracts: 1.54.0
+- tooling: 1.25.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -603,7 +603,7 @@ Historical source baseline: 9.1.0
 - **AB-002** (Andar Bahar) - PASS: Authenticated sessions own private reload-safe rounds, durable receipts, settled history, and canonical route restoration.
 - **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with unobscured wallet and feedback controls.
-- **AB-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
+- **AB-005** (Tests) - PASS: Catalog, contract, browser, per-game Python, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
 - **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision; a play requires at least one strict inside rank and settles at the server-owned spread price that holds a constant target house edge, while outside ranks and boundary ties lose.
 - **AD-002** (Acey-Deucey) - PASS: Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.
 - **AD-003** (Acey-Deucey) - PASS: Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
@@ -733,7 +733,7 @@ Historical source baseline: 9.1.0
 - **UX-018** (UX) - PASS: Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.
 - **TEST-089** (Tests) - PASS: Listener-free and MySQL-live evidence verifies the one-time-token lifecycle: deterministic issue and consume, generic rejection, strict purpose, subject, and session binding, replay, expiry, revocation, bounded attempts, retention, atomic reissue, cross-process exactly-once consumption, and absence of raw bearer, subject, session, or digest material from public results and audit events.
 - **TEST-087** (Tests) - PASS: Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
-- **GUEST-001** (Core) - PASS: Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.
+- **GUEST-001** (Core) - PASS: Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-source creation-rate, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.
 - **GUEST-002** (Application) - PASS: The en-US and ru-RU login surface discloses disposable play-token-only guest terms and requires affirmative consent; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.
 - **GUEST-003** (Core) - PASS: Guest telemetry stores only an unrelated analytics id, server timestamps, bounded lifecycle reason, locale, coarse device class, registered game slug, named journey milestones, allowlisted action/error categories, coarse latency buckets, fake-token-only aggregates, and bounded event/counter summaries; it never stores user, player, auth-session, cookie, browser-proof, email, network, or user-agent identifiers, retains raw rows for 30 days and daily aggregates for 400 days, and exposes sanitized cleanup success and failure health.
 - **GUEST-004** (Admin) - PASS: The centrally Admin-gated Guest Trials v2 surface provides the named nine-stage funnel; duration, games-per-trial, rounds-per-trial, error-free, and fake-token-only totals; complete per-game engagement, round, error, latency, and action-category metrics; time, lifecycle, game, locale, device, completion, and error filters; bounded recent rows and allowlisted drill-down; and retention health in en-US and ru-RU, including keyboard-scrollable tables, the governed mobile viewport, reduced motion, and 200 percent zoom.
@@ -950,3 +950,11 @@ Historical source baseline: 9.1.0
 - **UX-023** (Application) - PASS: The authenticated shared wallet settles each latest server-owned play-token balance exactly once and decorates genuine gains with one bounded ordinary or large-gain presentation while initial load, loss, overlap, navigation, page departure, session disposal, remount, and reduced motion preserve the authoritative value and leave no stale timer, node, class, observer, callback, or later-route effect.
 - **UX-024** (Application) - PASS: Shared application styling exposes real semantic game red, casino-felt green, and metallic gold independently from brand chrome aliases while preserving the existing playing-card suit palette across Roulette, Color Wheel, Marble Race, and Keno.
 - **TEST-149** (Tests) - PASS: One permanent Browser case produces a source-bound thirty-two-cell matrix for four semantic-color game surfaces in English and Russian at every governed viewport, verifies rendered red, green, and gold values plus brand and card-suit invariants, and restores shared browser state.
+- **BINGO-026** (Bingo) - PASS: Every Bingo pattern pays roughly 0.9 divided by its measured win probability at the guaranteed four-card field, giving each pattern a modest single-digit-to-low-double-digit house edge instead of the prior player-positive returns, and the competitor field is always seated at full strength with synthetic house spoiler cards that end sessions but are never credited.
+- **ADMIN-029** (Admin) - PASS: The Admin diagnostic pages render real content instead of raw structures: Game States aggregates per-game and per-player state files from nested subdirectories as well as legacy top-level files, while History and Tests render labelled rows or explicit empty states.
+- **TEST-145** (Tests) - PASS: Listener-free and hosted evidence proves recursive nested and legacy-flat Admin state discovery, readable History and Tests results, explicit empty states, safe detail escaping, keyboard navigation, and responsive English and Russian presentation.
+- **ADMIN-030** (Admin) - PASS: The Admin console publishes a bounded continuous per-game payout rate from player-facing shared-ledger wager and return rows, flags player-positive games, and drills down to per-transaction-type and recent-row evidence while excluding funded-opponent and non-game movements.
+- **TEST-146** (Tests) - PASS: Listener-free and hosted evidence proves Admin payout-rate and house-edge arithmetic, exclusion of funded-opponent and non-game movements, zero-wager and player-positive handling, bounded drill-down detail, malformed-row safety, localization, and responsive presentation.
+- **SESSION-009** (Core) - PASS: Registered-account sessions enforce one provider-backed global idle and absolute-lifetime policy, slide activity only for the matching live session, and revoke only the session that crosses either limit while disposable guest trials retain their separate restricted-preview lifetime policy.
+- **ADMIN-031** (Admin) - PASS: Only the active platform owner can read or partially update the registered-session idle and absolute timeout policy through additive v2 routes with CSRF protection, strict envelopes, bounded integer clamping, omitted-field preservation, and provider-backed persistence; ordinary Admin users retain diagnostics and economics access but receive FORBIDDEN for session policy.
+- **TEST-150** (Tests) - PASS: Listener-free, contract, API, and hosted evidence proves owner-only session-policy reads and sparse writes, numeric clamping and omitted-field preservation, JSON and MySQL persistence, CSRF and standard error envelopes, ordinary-Admin denial, registered timeout enforcement, guest-policy separation, localized navigation, and responsive presentation.

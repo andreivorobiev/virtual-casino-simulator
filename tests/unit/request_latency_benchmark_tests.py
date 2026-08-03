@@ -1373,6 +1373,29 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
+        # Require the accepted aggregate to add exactly eight permanent rows to the 880-row v0.9.5.49 registry.
+        self.assertEqual(len(requirements), 888)
+        # Keep the historical contributor reservation out of the canonical registry so it is never reused.
+        self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
+        # Bind every new permanent allocation to its accepted owning module.
+        aggregate_allocations = {
+            "BINGO-026": "Bingo",
+            "ADMIN-029": "Admin",
+            "TEST-145": "Tests",
+            "ADMIN-030": "Admin",
+            "TEST-146": "Tests",
+            "SESSION-009": "Core",
+            "ADMIN-031": "Admin",
+            "TEST-150": "Tests",
+        }
+        # Prove every aggregate identifier is present exactly once and cannot collide silently.
+        for requirement_id, module in aggregate_allocations.items():
+            # Select the sole canonical row for this permanent identifier.
+            allocated = [row for row in requirements if row.get("id") == requirement_id]
+            # Require one row rather than accepting a missing or duplicated allocation.
+            self.assertEqual(len(allocated), 1, requirement_id)
+            # Require the accepted module owner for the row.
+            self.assertEqual(allocated[0]["module"], module, requirement_id)
         # Count permanent TEST-148 allocations.
         test_148 = [row for row in requirements if row.get("id") == "TEST-148"]
         # Require exactly one permanent allocation after governance is spliced.
@@ -1459,18 +1482,30 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         slots_module = json.loads((ROOT / "modules" / "slots.json").read_text(encoding="utf-8"))
         # Parse the Application descriptor for the compatible shared-wallet addition.
         application_module = json.loads((ROOT / "modules" / "application.json").read_text(encoding="utf-8"))
+        # Parse the Baccarat descriptor for the compatible commitment-boundary repair.
+        baccarat_module = json.loads((ROOT / "modules" / "baccarat.json").read_text(encoding="utf-8"))
+        # Parse the Bingo descriptor for the compatible paytable and fixed-field repair.
+        bingo_module = json.loads((ROOT / "modules" / "bingo.json").read_text(encoding="utf-8"))
+        # Parse the Keno descriptor for the compatible commitment-boundary repair.
+        keno_module = json.loads((ROOT / "modules" / "keno.json").read_text(encoding="utf-8"))
         # Require the exact compatible core minor allocation.
-        self.assertEqual(core_module["version"], "9.35.0")
+        self.assertEqual(core_module["version"], "9.36.0")
         # Require the exact compatible Admin minor allocation.
-        self.assertEqual(admin_module["version"], "1.14.0")
+        self.assertEqual(admin_module["version"], "1.15.0")
         # Require the exact compatible tests revision allocation.
-        self.assertEqual(tests_module["version"], "1.66.5")
+        self.assertEqual(tests_module["version"], "1.67.0")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.64.65")
+        self.assertEqual(docs_module["version"], "1.65.0")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.53.8")
+        self.assertEqual(contracts_module["version"], "1.54.0")
         # Require the exact compatible tooling revision allocation.
-        self.assertEqual(tooling_module["version"], "1.24.1")
+        self.assertEqual(tooling_module["version"], "1.25.0")
+        # Require the exact compatible Baccarat patch allocation.
+        self.assertEqual(baccarat_module["version"], "9.1.10")
+        # Require the exact compatible Bingo patch allocation.
+        self.assertEqual(bingo_module["version"], "9.3.2")
+        # Require the exact compatible Keno patch allocation.
+        self.assertEqual(keno_module["version"], "9.3.3")
         # Require the exact compatible Roulette presentation minor.
         self.assertEqual(roulette_module["version"], "9.5.0")
         # Require the exact compatible Slots presentation minor.

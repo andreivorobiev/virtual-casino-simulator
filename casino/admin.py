@@ -1,6 +1,8 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
 import json
+# Import numeric finiteness checks so malformed ledger amounts cannot poison Admin economics.
+import math
 # Import required dependency so this module can use its public functions or constants.
 import secrets
 # Import timestamp parsing for bounded Guest Trials Admin filters.
@@ -12,7 +14,7 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy
+from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, session_settings
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import the invitation lifecycle for the Admin invitation-by-email section. (issue #332)
@@ -622,12 +624,154 @@ def game_states():
         states = {}
         # Branch when the following condition is true.
         if GAME_DATA_DIR.exists():
-            # Iterate through the collection to process each item.
-            for p in sorted(GAME_DATA_DIR.glob("*.json")):
-                # Set states[p.stem] to the value needed for the next operation.
-                states[p.stem] = {"path": str(p), "state": _read_json_file(p, {})}
+            # Recurse so per-game/per-player state files remain visible beside legacy flat files. (ADMIN-029)
+            for p in sorted(GAME_DATA_DIR.rglob("*.json")):
+                # Key each row by its root-relative path so nested player files stay distinct.
+                key = p.relative_to(GAME_DATA_DIR).with_suffix("").as_posix()
+                # Record the provider-stable file path and parsed state under the composite key.
+                states[key] = {"path": str(p), "state": _read_json_file(p, {})}
         # Return the computed value to the caller from within stable visibility.
         return states
+
+
+# Ledger transaction fragments owned by funded opponents or account seeding, excluded from player economics. (ADMIN-030)
+_NON_PLAYER_LEDGER_FRAGMENTS = ("OPPONENT", "FUNDING", "FUND_ACCOUNT")
+# Bound one economics read independently from caller-supplied values.
+_ECONOMICS_MAX_WINDOW = 100_000
+# Bound one detail payload so recent evidence cannot expand without governance.
+_ECONOMICS_MAX_RECENT = 50
+
+
+# Decide whether one ledger event represents a player-facing game movement instead of funding or opponent plumbing.
+def _is_player_facing(event: dict) -> bool:
+    # Read the type defensively so one malformed stored row cannot break the Admin economics view.
+    transaction_type = str(event.get("transaction_type", ""))
+    # Keep only game-bound movements whose type is outside the fixed infrastructure fragments.
+    return bool(event.get("game")) and not any(fragment in transaction_type for fragment in _NON_PLAYER_LEDGER_FRAGMENTS)
+
+
+# Clamp one integer control into its economics evidence range.
+def _economics_bound(value, default: int, maximum: int) -> int:
+    # Start protected coercion so malformed internal callers receive the reviewed default.
+    try:
+        # Parse the candidate into an integer count.
+        parsed = int(value)
+    # Replace missing, non-numeric, or malformed values with the reviewed default.
+    except (TypeError, ValueError):
+        # Return the reviewed default without echoing input.
+        return default
+    # Keep the count inside the one-through-maximum range.
+    return max(1, min(parsed, maximum))
+
+
+# Normalize one stored ledger amount or reject malformed/non-finite evidence.
+def _economics_amount(event: dict):
+    # Reject booleans because Python otherwise treats them as numeric one and zero.
+    if isinstance(event.get("amount"), bool):
+        # Exclude the malformed row.
+        return None
+    # Start protected conversion so hostile historical rows do not break diagnostics.
+    try:
+        # Convert accepted numeric representations to float for stable aggregation.
+        amount = float(event.get("amount", 0) or 0)
+    # Reject objects and text that cannot represent a numeric ledger amount.
+    except (TypeError, ValueError):
+        # Return no value so the entire malformed row is excluded.
+        return None
+    # Reject NaN and infinity because they cannot produce contract-safe JSON ratios.
+    return amount if math.isfinite(amount) else None
+
+
+# Aggregate wagered-versus-returned play tokens from the shared ledger into per-game payout rates. (ADMIN-030)
+def game_economics(window: int = 100_000):
+    # Clamp the window before calling the storage provider.
+    window = _economics_bound(window, _ECONOMICS_MAX_WINDOW, _ECONOMICS_MAX_WINDOW)
+    # Accumulate signed wager and return totals per game over one bounded recent window.
+    by_game = {}
+    # Read the shared ledger once so summary rows share the same source snapshot.
+    for event in ledger.read_recent(limit=window):
+        # Skip non-game and funded-opponent movements so rates reflect player-facing activity only.
+        if not _is_player_facing(event):
+            # Continue with the next event after rejecting infrastructure plumbing.
+            continue
+        # Normalize a missing amount to zero while preserving signed debit and credit semantics.
+        amount = _economics_amount(event)
+        # Exclude malformed or non-finite rows from both counts and totals.
+        if amount is None:
+            # Continue without publishing corrupted evidence.
+            continue
+        # Create the stable aggregate row on first use.
+        aggregate = by_game.setdefault(event["game"], {"wagered": 0.0, "returned": 0.0, "events": 0})
+        # Count every player-facing movement included in the rate window.
+        aggregate["events"] += 1
+        # Treat negative movements as wagered play tokens.
+        if amount < 0:
+            # Accumulate the unsigned wager amount.
+            aggregate["wagered"] += -amount
+        # Treat positive movements as returned play tokens.
+        elif amount > 0:
+            # Accumulate the return amount.
+            aggregate["returned"] += amount
+    # Build deterministic alphabetic output for stable Admin rendering and tests.
+    rows = []
+    # Derive rates for every game represented in the bounded window.
+    for game in sorted(by_game):
+        # Read the accumulated values for this game.
+        aggregate = by_game[game]
+        # Round token totals to the ledger's two-decimal presentation precision.
+        wagered = round(aggregate["wagered"], 2)
+        # Round returns independently before computing the published ratio.
+        returned = round(aggregate["returned"], 2)
+        # Publish no ratio until at least one wager anchors the denominator.
+        rate = round(returned / wagered, 4) if wagered > 0 else None
+        # Append the contract-shaped summary row.
+        rows.append({"game": game, "wagered": wagered, "returned": returned, "events": aggregate["events"], "payout_rate": rate, "house_edge": round(1 - rate, 4) if rate is not None else None, "player_positive": bool(rate is not None and rate > 1.0)})
+    # Publish the fixed window and its deterministic per-game rows.
+    return {"window": window, "games": rows}
+
+
+# Provide one game's payout-rate drill-down with transaction-type counts and bounded recent rows. (ADMIN-030)
+def game_economics_detail(game: str, window: int = 100_000, recent: int = 50):
+    # Clamp the provider window and recent evidence bounds before reading.
+    window = _economics_bound(window, _ECONOMICS_MAX_WINDOW, _ECONOMICS_MAX_WINDOW)
+    # Clamp recent evidence independently from the provider window.
+    recent = _economics_bound(recent, _ECONOMICS_MAX_RECENT, _ECONOMICS_MAX_RECENT)
+    # Retain only the selected game's player-facing movements from the same bounded ledger window.
+    events = [event for event in ledger.read_recent(limit=window) if event.get("game") == game and _is_player_facing(event) and _economics_amount(event) is not None]
+    # Accumulate per-type detail alongside the overall wager and return totals.
+    by_type = {}
+    # Start the wager total at zero for an empty window.
+    wagered = 0.0
+    # Start the return total at zero for an empty window.
+    returned = 0.0
+    # Visit each filtered event once.
+    for event in events:
+        # Normalize a missing transaction type to a stable low-cardinality label.
+        transaction_type = str(event.get("transaction_type", "unknown"))
+        # Normalize a missing amount to zero while retaining its sign.
+        amount = _economics_amount(event)
+        # Create the per-type counter on first use.
+        breakdown = by_type.setdefault(transaction_type, {"count": 0, "total": 0.0})
+        # Count the event in its transaction-type bucket.
+        breakdown["count"] += 1
+        # Accumulate the signed amount for operator inspection.
+        breakdown["total"] += amount
+        # Add negative movements to wagered tokens.
+        if amount < 0:
+            # Convert the debit into a positive wager total.
+            wagered += -amount
+        # Add positive movements to returned tokens.
+        elif amount > 0:
+            # Preserve the credit as a positive return total.
+            returned += amount
+    # Round wagered tokens to display precision.
+    wagered = round(wagered, 2)
+    # Round returned tokens to display precision.
+    returned = round(returned, 2)
+    # Publish no payout ratio until the selected game has a wager.
+    rate = round(returned / wagered, 4) if wagered > 0 else None
+    # Return the summary, deterministic type breakdown, and bounded recent evidence.
+    return {"game": game, "wagered": wagered, "returned": returned, "events": len(events), "payout_rate": rate, "house_edge": round(1 - rate, 4) if rate is not None else None, "player_positive": bool(rate is not None and rate > 1.0), "by_transaction_type": [{"transaction_type": name, "count": data["count"], "total": round(data["total"], 2)} for name, data in sorted(by_type.items())], "recent": events[:recent]}
 
 
 # Define the overview function used by this module.
@@ -837,6 +981,20 @@ def register(router):
     def admin_states(body, query):
         # Return the computed value to the caller.
         return {"states": game_states()}
+
+    # Publish per-game payout-rate telemetry through the Admin v1 contract. (ADMIN-030)
+    @router.get(r"/api/v1/admin/economics")
+    # Return the bounded summary from the shared ledger.
+    def admin_economics(body, query):
+        # Return deterministic per-game payout rates.
+        return game_economics()
+
+    # Publish one game's economics drill-down through the same Admin authorization boundary. (ADMIN-030)
+    @router.get(r"/api/v1/admin/economics/(?P<game>[a-z0-9_]+)")
+    # Return transaction-type and recent-event evidence for one canonical game id.
+    def admin_economics_detail(body, query, game):
+        # Return the selected game's bounded economics detail.
+        return game_economics_detail(game)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/users")
@@ -1105,6 +1263,24 @@ def register(router):
     def save_audio(body, query):
         # Return the computed value to the caller.
         return {"settings": settings.save_audio_settings(body)}
+
+    # Expose the registered-account timeout policy only to the current bootstrap-managed owner. (SESSION-009, ADMIN-031)
+    @router.get(r"/api/v2/admin/session-settings")
+    # Return the provider-backed validated policy under the v2 settings envelope.
+    def get_session_settings(body, query, context=None):
+        # Require current owner authority because the policy controls every registered session lifetime.
+        _current_platform_owner((context or {}).get("user"))
+        # Return the validated settings document.
+        return {"settings": session_settings.session_settings()}
+
+    # Persist an owner-authored timeout-policy update through the additive v2 contract. (SESSION-009, ADMIN-031)
+    @router.post(r"/api/v2/admin/session-settings")
+    # Clamp and persist the supplied settings only after owner authorization.
+    def save_session_settings_route(body, query, context=None):
+        # Reject ordinary Admins before validating or writing policy fields.
+        _current_platform_owner((context or {}).get("user"))
+        # Persist the validated partial update and echo the stored document.
+        return {"settings": session_settings.save_session_settings(body or {})}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/autoplay")
