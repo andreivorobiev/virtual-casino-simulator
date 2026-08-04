@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.53 Release Notes
+
+## Immediate wager balances and complete API documentation
+
+- Packages the accepted wallet-timing and API-documentation packet from sole normal content PR #602; the release-only application revision advances mechanically to `9.56.10`.
+- Shows each accepted wager debit immediately across all eighteen delayed-result browser games, then refreshes the authoritative settled balance after the result reveal without changing ledger, payout, refund, or game-economics behavior.
+- Keeps Baccarat's settlement refresh after the result reveal so its player-facing sequence is consistent with the other delayed-result games.
+- Adds a read-only same-origin `/api-docs` explorer for all 62 published OpenAPI contracts, using the pinned official Swagger UI 5.32.6 bundle, stylesheet, and standalone preset without adding an API route or changing the frozen `/api/v1` contract.
+- Carries permanent requirements `LEDGER-031`, `TEST-151`, `API-003`, and `TEST-152`; the accepted content packet brings the governed total to exactly 892 requirements, while this release allocates no identifier.
+- Resolves the game-specific wallet-timing issues #583 through #600 and the complete API explorer issue #601 through sole content PR #602.
+- Makes no migration, provider, public-policy, database, wagering-economics, frozen-contract, publication, or deployment claim.
+- Retains the MySQL schema-two/schema-three runtime bridge with minimum 2, expected 3, application held, and production rollback fixed at schema 2.
+- Retains exact immutable v0.9.5.52 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.52 Release Notes
 
 ## Palette restoration and practice-game policies
