@@ -1,28 +1,28 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-03T19:43:15Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-04T18:55:55Z.
 
 ## Current branch / active Codex work
 
-- Protected main is exact sole restoration merge `5a72b1fe1109816b5c1bffe3444340db40b4f4e2`, with ordered parents terminal v0.9.5.51 main `dfb1d544e7e062128238c6cdaf7dbc5ca774fae7` then accepted #581 controller head `2a320b1cf69ddd95182d646b6020e98fba7a0efc` and tree `c5f12c4e9e6580946054faad9a4284c200c7746d`.
-- Local-only `codex/release-v0.9.5.52` prepares the repository-standard release packet from exact protected main.
-- Contributor PRs #573, #574, and #580 are ancestry-only inputs through #581; no contributor content is imported a second time.
+- Protected main is exact wallet-timing and API-documentation merge `9ac160b38a6550e67e9030d01f5c933f3dee9164`, with ordered parents terminal v0.9.5.52 main `cfc7b807aa0697c819b9d1a10d17b3a2e81a7bbc` then accepted #602 content head `2c8cc015607ee4240e24fa4a226b55801946db3c` and tree `66e81589cf73a97b14c12e58667957395498d268`.
+- Local-only `codex/release-v0.9.5.53` prepares the repository-standard release packet from exact protected main.
+- PR #602 is the sole current-main content integration for this release; no issue or contributor content is imported a second time.
 
 ## Accepted scope and requirements
 
-- Sole content PR #581 integrates twenty-eight palette-only game-surface restorations, the per-source guest-creation-window proof, and bounded Deuces Wild plus Texas Hold'em practice-table house-edge behavior with focused tests and additive contracts.
-- Requirements remain exactly 888 unique rows. Only `DWVP-001` and `THPT-001` were amended by the content packet; the release allocates no requirement or Browser identifier.
-- Semantic playing-card, Roulette, Color Wheel, Marble Race, Keno, and other game-owned colors remain distinct from brand palette restoration.
+- Sole content PR #602 makes the committed wager debit visible immediately across all eighteen delayed-result browser games and refreshes the authoritative settled balance after each reveal without changing game economics or ledger settlement.
+- The same content PR adds a read-only same-origin `/api-docs` explorer for all 62 published OpenAPI contracts using the pinned official Swagger UI 5.32.6 distribution.
+- Requirements total exactly 892 unique rows after permanent additions `LEDGER-031`, `TEST-151`, `API-003`, and `TEST-152`; this release allocates no requirement or Browser identifier.
 
 ## Version and contract allocation
 
-- Release versions advance only to package `0.9.5.52`, application `9.56.8`, contracts `1.54.5`, tests `1.67.5`, and docs `1.65.5`; tooling remains `1.25.0`.
+- Release versions advance only to package `0.9.5.53`, application `9.56.10`, contracts `1.54.6`, tests `1.67.7`, and docs `1.65.7`; tooling remains `1.25.0`.
 - Core, Admin, all game modules, and every other manifest entry remain exact protected-main values.
-- The new compatibility record binds exact v0.9.5.51 source `dfb1d544e7e062128238c6cdaf7dbc5ca774fae7`, archive SHA-256 `5129f0756bd6e7f1ccb006f58cafa191b79e61374c97294f46bfaf78e66d1d6e`, and manifest SHA-256 `1e04df7e5af572b9defa0753145f252a2e1a2db08979e43f61b99dcc34935919`.
+- The new compatibility record binds exact v0.9.5.52 source `cfc7b807aa0697c819b9d1a10d17b3a2e81a7bbc`, archive SHA-256 `896886acc6416830a48d45a464eff1a297b8d98216e8b1aedd014dada4391026`, and manifest SHA-256 `2ffa20d8c30a7be1fe8002c95a1127a14944ad3cb00a0d4b7c9d969eb964942c`.
 
 ## Rollback, validation, and handback
 
 - Rollback remains application-only at exact schema 2; database rollback is prohibited outside `TOOL-003`. The migration catalog remains minimum 2 / expected 3 / apply held; no migration changes.
-- The mutable packet is restricted to the standard twenty-six release-owned paths with new `contracts/compatibility/app-0.9.5.52.json`; the canonical package inventory is expected to contain 722 regular files.
+- The mutable packet is restricted to the standard twenty-six release-owned paths with new `contracts/compatibility/app-0.9.5.53.json`; the canonical package inventory is expected to contain 732 regular files.
 - Local validation is browser-free: release and predecessor fixtures, requirements, versions, generated docs, contracts, boundaries, catalog, rules, terminology, density, bootstrap, storage/recovery, and diff hygiene.
-- Issues #456 and #555 remain OPEN and incomplete. No commit, push, PR, workflow action, tag, publication, deployment, production action, or issue disposition is claimed by this mutable preparation.
+- Issues #583 through #601 were resolved by sole content PR #602. No commit, push, PR, workflow action, tag, publication, deployment, or production action is claimed by this mutable preparation.

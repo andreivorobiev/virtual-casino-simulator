@@ -31,13 +31,13 @@ class ReleasePredecessorTests(unittest.TestCase):
         self.write_json("migrations/mysql/catalog.json", {"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 2, "expected_version": 3, "apply_policy": "held", "migrations": []})
         # Write the candidate release declaration.
         self.write_json(
-            "contracts/compatibility/app-0.9.5.52.json",
+            "contracts/compatibility/app-0.9.5.53.json",
             {
-                "app_version": "0.9.5.52",
+                "app_version": "0.9.5.53",
                 "rollback": {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True},
                 "predecessor": {
-                    "app_version": "0.9.5.51",
-                    "compatibility_record": "contracts/compatibility/app-0.9.5.51.json",
+                    "app_version": "0.9.5.52",
+                    "compatibility_record": "contracts/compatibility/app-0.9.5.52.json",
                     "required_artifact": "release-manifest.json",
                     "source_commit_sha": "9" * 40,
                     "artifact_sha256": "8" * 64,
@@ -46,7 +46,7 @@ class ReleasePredecessorTests(unittest.TestCase):
             },
         )
         # Write the retained predecessor compatibility record.
-        self.write_json("contracts/compatibility/app-0.9.5.51.json", {"app_version": "0.9.5.51"})
+        self.write_json("contracts/compatibility/app-0.9.5.52.json", {"app_version": "0.9.5.52"})
 
     # Remove the isolated fixture after every assertion.
     def tearDown(self):
@@ -67,14 +67,14 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Pin a syntactically valid manifest digest for resolution-only evidence.
         self.pin_manifest_digest("7" * 64)
         # Resolve the candidate's governed predecessor.
-        tag = resolve_release_predecessor.predecessor_tag("0.9.5.52", self.root)
-        # Require the retained v0.9.5.51 tag rather than release-list ordering.
-        self.assertEqual(tag, "v0.9.5.51")
+        tag = resolve_release_predecessor.predecessor_tag("0.9.5.53", self.root)
+        # Require the retained v0.9.5.52 tag rather than release-list ordering.
+        self.assertEqual(tag, "v0.9.5.52")
 
     # Prove predecessor selection requires the exact no-database-rollback policy tuple.
     def test_rejects_candidate_rollback_policy_drift(self):
         # Resolve and parse the canonical candidate fixture.
-        path = self.root / "contracts" / "compatibility" / "app-0.9.5.52.json"
+        path = self.root / "contracts" / "compatibility" / "app-0.9.5.53.json"
         # Capture the unmodified candidate once.
         baseline = json.loads(path.read_text(encoding="utf-8"))
         # Exercise scope, database authority, retained-manifest, and extra-field drift.
@@ -99,7 +99,7 @@ class ReleasePredecessorTests(unittest.TestCase):
             # Require fixed policy refusal.
             with self.subTest(field=field), self.assertRaises(ValueError):
                 # Resolve through the public predecessor boundary.
-                resolve_release_predecessor.predecessor_tag("0.9.5.52", self.root)
+                resolve_release_predecessor.predecessor_tag("0.9.5.53", self.root)
         # Restore the exact baseline for teardown-independent clarity.
         path.write_text(json.dumps(baseline) + "\n", encoding="utf-8", newline="\n")
 
@@ -107,12 +107,12 @@ class ReleasePredecessorTests(unittest.TestCase):
     def test_rejects_redirected_predecessor_record(self):
         # Replace the candidate with a path that does not match its predecessor version.
         self.write_json(
-            "contracts/compatibility/app-0.9.5.52.json",
+            "contracts/compatibility/app-0.9.5.53.json",
             {
-                "app_version": "0.9.5.52",
+                "app_version": "0.9.5.53",
                 "rollback": {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True},
                 "predecessor": {
-                    "app_version": "0.9.5.51",
+                    "app_version": "0.9.5.52",
                     "compatibility_record": "contracts/compatibility/app-0.9.5.11.json",
                     "required_artifact": "release-manifest.json",
                     "source_commit_sha": "9" * 40,
@@ -124,7 +124,7 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Require resolution to reject the redirected policy input.
         with self.assertRaises(ValueError):
             # Execute the exact public resolver.
-            resolve_release_predecessor.predecessor_tag("0.9.5.52", self.root)
+            resolve_release_predecessor.predecessor_tag("0.9.5.53", self.root)
 
     # Prove downloaded manifests must bind the declared version, tag, and full commit.
     def test_verifies_exact_downloaded_manifest(self):
@@ -132,9 +132,9 @@ class ReleasePredecessorTests(unittest.TestCase):
         manifest = self.write_json(
             "previous-manifest.json",
             {
-                "app_version": "0.9.5.51",
+                "app_version": "0.9.5.52",
                 "source": {
-                    "release_tag": "v0.9.5.51",
+                    "release_tag": "v0.9.5.52",
                     "commit_sha": "9" * 40,
                 },
                 "artifact": {
@@ -147,9 +147,9 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Pin the exact synthetic manifest bytes in the candidate policy.
         self.pin_manifest_digest(hashlib.sha256(manifest.read_bytes()).hexdigest())
         # Verify the manifest against the candidate compatibility record.
-        tag = resolve_release_predecessor.verify_manifest("0.9.5.52", manifest, self.root)
+        tag = resolve_release_predecessor.verify_manifest("0.9.5.53", manifest, self.root)
         # Require the same immutable retained tag.
-        self.assertEqual(tag, "v0.9.5.51")
+        self.assertEqual(tag, "v0.9.5.52")
 
     # Prove a same-version manifest under another tag cannot be substituted.
     def test_rejects_cross_tag_manifest(self):
@@ -157,7 +157,7 @@ class ReleasePredecessorTests(unittest.TestCase):
         manifest = self.write_json(
             "previous-manifest.json",
             {
-                "app_version": "0.9.5.51",
+                "app_version": "0.9.5.52",
                 "source": {
                     "release_tag": "v9.5.51",
                     "commit_sha": "9" * 40,
@@ -174,12 +174,12 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Require the verifier to reject cross-tag substitution.
         with self.assertRaises(ValueError):
             # Exercise the exact public verifier.
-            resolve_release_predecessor.verify_manifest("0.9.5.52", manifest, self.root)
+            resolve_release_predecessor.verify_manifest("0.9.5.53", manifest, self.root)
 
     # Prove exact schema three cannot roll back to an exact-schema-two predecessor.
     def test_rejects_schema_three_to_exact_schema_two_predecessor(self):
         # Read the candidate declaration.
-        candidate_path = self.root / "contracts" / "compatibility" / "app-0.9.5.52.json"
+        candidate_path = self.root / "contracts" / "compatibility" / "app-0.9.5.53.json"
         # Parse the complete candidate policy.
         candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
         # Declare database schema three at the rollback boundary.
@@ -187,26 +187,26 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Persist the candidate policy.
         candidate_path.write_text(json.dumps(candidate) + "\n", encoding="utf-8", newline="\n")
         # Write an exact-schema-two predecessor manifest.
-        manifest = self.write_json("previous-manifest.json", {"app_version": "0.9.5.51", "source": {"release_tag": "v0.9.5.51", "commit_sha": "9" * 40}, "artifact": {"name": "virtual_casino_simulator_package.zip", "sha256": "8" * 64}, "mysql_schema": {"minimum_version": 2, "expected_version": 2}})
+        manifest = self.write_json("previous-manifest.json", {"app_version": "0.9.5.52", "source": {"release_tag": "v0.9.5.52", "commit_sha": "9" * 40}, "artifact": {"name": "virtual_casino_simulator_package.zip", "sha256": "8" * 64}, "mysql_schema": {"minimum_version": 2, "expected_version": 2}})
         # Pin the exact manifest bytes after writing.
         self.pin_manifest_digest(hashlib.sha256(manifest.read_bytes()).hexdigest())
         # Require the cross-window rollback to fail closed.
         with self.assertRaisesRegex(ValueError, "rollback schema is incompatible"):
             # Verify the exact retained predecessor.
-            resolve_release_predecessor.verify_manifest("0.9.5.52", manifest, self.root)
+            resolve_release_predecessor.verify_manifest("0.9.5.53", manifest, self.root)
 
     # Prove a future exact-schema-three release may roll back to the bridge window.
     def test_future_schema_three_candidate_accepts_bridge_predecessor(self):
         # Replace the candidate catalog with an exact-schema-three runtime window.
         self.write_json("migrations/mysql/catalog.json", {"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 3, "expected_version": 3, "apply_policy": "held", "migrations": []})
         # Write the future candidate declaration pointing to the bridge predecessor.
-        self.write_json("contracts/compatibility/app-0.9.5.53.json", {"app_version": "0.9.5.53", "rollback": {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 3, "requires_retained_predecessor_manifest": True}, "predecessor": {"app_version": "0.9.5.52", "compatibility_record": "contracts/compatibility/app-0.9.5.52.json", "required_artifact": "release-manifest.json", "source_commit_sha": "9" * 40, "artifact_sha256": "8" * 64, "manifest_sha256": ""}})
+        self.write_json("contracts/compatibility/app-0.9.5.54.json", {"app_version": "0.9.5.54", "rollback": {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 3, "requires_retained_predecessor_manifest": True}, "predecessor": {"app_version": "0.9.5.53", "compatibility_record": "contracts/compatibility/app-0.9.5.53.json", "required_artifact": "release-manifest.json", "source_commit_sha": "9" * 40, "artifact_sha256": "8" * 64, "manifest_sha256": ""}})
         # Write the bridge predecessor compatibility identity.
-        self.write_json("contracts/compatibility/app-0.9.5.52.json", {"app_version": "0.9.5.52"})
+        self.write_json("contracts/compatibility/app-0.9.5.53.json", {"app_version": "0.9.5.53"})
         # Write a predecessor manifest whose runtime accepts schema three.
-        manifest = self.write_json("bridge-manifest.json", {"app_version": "0.9.5.52", "source": {"release_tag": "v0.9.5.52", "commit_sha": "9" * 40}, "artifact": {"name": "virtual_casino_simulator_package.zip", "sha256": "8" * 64}, "mysql_schema": {"minimum_version": 2, "expected_version": 3, "apply_policy": "held"}})
+        manifest = self.write_json("bridge-manifest.json", {"app_version": "0.9.5.53", "source": {"release_tag": "v0.9.5.53", "commit_sha": "9" * 40}, "artifact": {"name": "virtual_casino_simulator_package.zip", "sha256": "8" * 64}, "mysql_schema": {"minimum_version": 2, "expected_version": 3, "apply_policy": "held"}})
         # Bind the exact manifest digest into future compatibility.
-        future_path = self.root / "contracts" / "compatibility" / "app-0.9.5.53.json"
+        future_path = self.root / "contracts" / "compatibility" / "app-0.9.5.54.json"
         # Parse the future candidate record.
         future = json.loads(future_path.read_text(encoding="utf-8"))
         # Pin exact predecessor bytes.
@@ -214,12 +214,12 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Persist the completed candidate policy.
         future_path.write_text(json.dumps(future) + "\n", encoding="utf-8", newline="\n")
         # Require exact-schema-three rollback into the bridge runtime to be accepted.
-        self.assertEqual(resolve_release_predecessor.verify_manifest("0.9.5.53", manifest, self.root), "v0.9.5.52")
+        self.assertEqual(resolve_release_predecessor.verify_manifest("0.9.5.54", manifest, self.root), "v0.9.5.53")
 
     # Update only the synthetic candidate's retained manifest checksum.
     def pin_manifest_digest(self, digest: str) -> None:
         # Resolve the candidate compatibility record.
-        path = self.root / "contracts" / "compatibility" / "app-0.9.5.52.json"
+        path = self.root / "contracts" / "compatibility" / "app-0.9.5.53.json"
         # Parse its current fixture content.
         value = json.loads(path.read_text(encoding="utf-8"))
         # Replace only the manifest identity pin.
