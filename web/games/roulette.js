@@ -1037,9 +1037,17 @@ function posForBet(bet) {
     // Return the line marker point.
     return { x: BOARD.x0 - 22, y: BOARD.y0 + (row + 1) * BOARD.ch };
   }
-  // Reserve the open top-right felt point for the mode-specific basket so it never overlaps a zero split, trio, or number cell. (issue #348)
-  if (['first_four', 'top_line'].includes(bet.type)) return { x: BOARD.x0 + BOARD.cw * 3 - 5, y: BOARD.y0 - 42 };
-  // Let every zero-adjacent trio use its covered-pocket centroid so distinct combinations receive distinct pointer targets. (issue #348)
+  // Place every zero-zone special on one evenly spaced boundary rail so 24-pixel precision targets never overlap. (UX-025)
+  if (bet.layout_kind === 'zero') {
+    // Read the active mode's complete zero-zone catalog in its stable documented order.
+    const zeroBets = catalog.filter(candidate => candidate.layout_kind === 'zero');
+    // Resolve this target's unique slot on the shared boundary rail.
+    const zeroIndex = zeroBets.findIndex(candidate => candidate.id === bet.id);
+    // Spread the rail across the full three-column table while retaining one target radius at each edge.
+    const zeroSpacing = (BOARD.cw * 3 - SPOT_SIZE) / Math.max(1, zeroBets.length - 1);
+    // Return a non-overlapping point centered on the seam between the zero header and numbered grid.
+    return { x: BOARD.x0 + SPOT_SIZE / 2 + Math.max(0, zeroIndex) * zeroSpacing, y: BOARD.y0 - SPOT_SIZE / 2 };
+  }
   // Return the snake marker location.
   if (bet.type === 'snake') return { x: BOARD.x0 + BOARD.cw * 2.9, y: BOARD.y0 + 12 * BOARD.ch + 40 };
   // Store centers for all covered numbers.
