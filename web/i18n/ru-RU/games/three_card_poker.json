@@ -24,7 +24,7 @@
   "dealer.pending": "Квалификация дилера ещё не определена",
   "dealer.qualifies": "Дилер квалифицируется",
   "errors.generic": "Стол не смог завершить действие. Повторите попытку.",
-  "errors.insufficientFunds": "Для этой ставки недостаточно игровых жетонов.",
+  "errors.insufficientFunds": "Для этой ставки недостаточно игровых токенов.",
   "errors.retryConflict": "Действие больше не соответствует текущему раунду. Перезагрузите состояние стола.",
   "eyebrow": "Классический стол на три карты",
   "handRanks.flush": "Флеш",
@@ -48,7 +48,7 @@
   "outcomes.playerWin": "Игрок выигрывает",
   "outcomes.push": "Ставка возвращена",
   "outcomes.ready": "Стол готов",
-  "outcomes.settling": "Расчёт игровых жетонов",
+  "outcomes.settling": "Расчёт игровых токенов",
   "paytable.anteBonus": "Бонус анте",
   "paytable.hand": "Комбинация",
   "paytable.pairPlus": "Пара плюс",
@@ -57,7 +57,7 @@
   "phases.decision": "Нужно принять решение",
   "phases.ready": "Приём ставок",
   "phases.settled": "Раунд рассчитан",
-  "phases.settling": "Расчёт игровых жетонов",
+  "phases.settling": "Расчёт игровых токенов",
   "phases.working": "Действие выполняется",
   "ranks.10": "10",
   "ranks.2": "2",
@@ -73,7 +73,7 @@
   "ranks.K": "Король",
   "ranks.Q": "Дама",
   "stage.completed": "Завершённая раздача",
-  "stage.fakeMoney": "Учебный стол с игровыми жетонами",
+  "stage.fakeMoney": "Учебный стол с игровыми токенами",
   "stage.inProgress": "Текущая раздача продолжается",
   "stage.ready": "Стол готов к следующей раздаче",
   "stage.tableMark": "Дилер играет с дамой или старше",
@@ -88,5 +88,5 @@
   "summary.pending": "Ожидание",
   "summary.play": "Ставка игры",
   "title": "Трёхкарточный покер",
-  "tokens.amount": "{amount} игровых жетонов"
+  "tokens.amount": "{amount} игровых токенов"
 }

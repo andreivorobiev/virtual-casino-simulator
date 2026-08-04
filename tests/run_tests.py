@@ -1265,6 +1265,14 @@ def validate_guest_admin_api(base):
         duplicate_autoplay=api(base,'/api/v1/autoplay/start','POST',{'game_id':'slots','round_limit':1,'speed':'medium'},ok=False,auth_token=token,extra_headers=guest_headers)
         # Require the standard conflict result rather than another resource registration.
         assert duplicate_autoplay['error']['code']=='CONFLICT'
+        # Stop and finish the Slots session before proving the distinct complete Bingo call ceiling. (BINGO-027)
+        api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':guest_autoplay['autoplay_id']},auth_token=token,extra_headers=guest_headers)
+        # Commit the terminal lifecycle state so the one-concurrent-session boundary remains authoritative.
+        api(base,'/api/v1/autoplay/finish-stop','POST',{'autoplay_id':guest_autoplay['autoplay_id']},auth_token=token,extra_headers=guest_headers)
+        # Request one complete Bingo call plan through the same guest-scoped control-plane route.
+        bingo_autoplay=api(base,'/api/v1/autoplay/start','POST',{'game_id':'bingo','round_limit':999,'speed':'medium','plan':{'type':'auto_call_stepwise'}},auth_token=token,extra_headers=guest_headers)['session']
+        # Require the governed 75-call cap without broadening any other guest autoplay loop.
+        assert bingo_autoplay['round_limit']==casino_config.GUEST_BINGO_AUTOPLAY_MAX_CALLS==75
         # Attempt the registered-user-only play-token credit route with valid guest proofs.
         top_up=api(base,'/api/v2/me/tokens/add','POST',{'amount':1},ok=False,auth_token=token,extra_headers=guest_headers)
         # Prove the disposable starting grant cannot be increased through the normal shell endpoint.

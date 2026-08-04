@@ -13,6 +13,8 @@ BANNED_TEXT_RE = re.compile(r"\b(fake[- ]money|dollars?|usd)\b", re.IGNORECASE)
 # Visible dollar-prefixed amounts; the negative lookbehind spares JS template
 # interpolation like `${value}`, which is syntax rather than copy.
 DOLLAR_AMOUNT_RE = re.compile(r"(?<!\{)\$\s*\d")
+# Reject the retired Russian casino-chip stem so every locale uses the product term "token". (I18N-011)
+RUSSIAN_LEGACY_TOKEN_RE = re.compile(r"жетон", re.IGNORECASE)
 # Match only an exported money helper that passes its own argument directly to the approved formatter.
 MONEY_DELEGATION_RE = re.compile(r"\bexport\s+const\s+money\s*=\s*([A-Za-z_$][\w$]*)\s*=>\s*formatMoney\s*\(\s*\1\s*\)\s*;")
 # Only surfaces that render static user-facing copy are scanned; game copy lives in
@@ -68,6 +70,9 @@ def check_json_file(path):
             errors.append(f"{path.relative_to(ROOT)}:{key}: replace real-money wording")
         if DOLLAR_AMOUNT_RE.search(value):
             errors.append(f"{path.relative_to(ROOT)}:{key}: replace dollar amount with token mark")
+        # Apply the locale-specific terminology guard only to Russian resources.
+        if "ru-RU" in path.parts and RUSSIAN_LEGACY_TOKEN_RE.search(value):
+            errors.append(f"{path.relative_to(ROOT)}:{key}: replace legacy Russian chip wording with token terminology")
     return errors
 
 # The two shared formatters are the chokepoints every game's amount rendering flows

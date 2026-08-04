@@ -27,6 +27,14 @@ const kenoSource = await readFile(path.join(root, 'web', 'games', 'keno.js'), 'u
 const rouletteSource = await readFile(path.join(root, 'web', 'games', 'roulette.js'), 'utf8');
 // Read Teen Patti's mobile action-rail source.
 const teenPattiSource = await readFile(path.join(root, 'web', 'games', 'teen_patti.js'), 'utf8');
+// Read the shared autoplay lifecycle for reconciliation and server-tick contracts.
+const autoplaySource = await readFile(path.join(root, 'web', 'core', 'autoplay.js'), 'utf8');
+// Read Blackjack focus and announcement integration.
+const blackjackSource = await readFile(path.join(root, 'web', 'games', 'blackjack.js'), 'utf8');
+// Read Color Wheel touch-target sizing for the older-game accessibility contract.
+const colorWheelSource = await readFile(path.join(root, 'web', 'games', 'color_wheel.js'), 'utf8');
+// Read Four Card Poker input sizing for the same accessibility contract.
+const fourCardPokerSource = await readFile(path.join(root, 'web', 'games', 'four_card_poker.js'), 'utf8');
 
 // Publish the minimal browser seams required by the real API helper.
 globalThis.document = { cookie: 'casino_csrf=frontend-safety-proof', getElementById: () => null };
@@ -42,8 +50,10 @@ globalThis.location = { href: 'https://casino.tiltseven.com/enroll/invitation?to
 const calls = [];
 // Return a normal API envelope for every captured request.
 globalThis.fetch = async (requestPath, init) => { calls.push({ requestPath, init }); return { ok: true, json: async () => ({ ok: true, data: {} }) }; };
-// Import the exact API helper as an isolated ES module.
-const apiModule = await import(`data:text/javascript;base64,${Buffer.from(apiSource).toString('base64')}`);
+// Replace only the static locale import with a deterministic translation seam for the data-URL module.
+const executableApiSource = apiSource.replace("import { t } from './i18n.js';", "const t = key => key;");
+// Import the exact API logic with its one external dependency replaced by the focused seam.
+const apiModule = await import(`data:text/javascript;base64,${Buffer.from(executableApiSource).toString('base64')}`);
 // Send one client-log event through the public helper.
 await apiModule.logClient('frontend_safety_probe', { safe: true });
 // Require the event to use the frozen client-log endpoint.
@@ -100,6 +110,20 @@ globalThis.clearTimeout = nativeClearTimeout;
 
 // Require the persistent shell outlet to expose stable polite atomic live-region semantics.
 assert.match(indexSource, /<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden><\/div>/);
+// Require the document-lifetime game result outlet that survives route-owned full-root renders. (UX-025)
+assert.match(indexSource, /<div id="game-live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"><\/div>/);
+// Require all five governed games to preserve focus and publish current result status. (UX-025)
+for (const source of [rouletteSource, kenoSource, bingoSource, blackjackSource, baccaratSource]) assert.match(source, /captureGameFocus\(root\)[\s\S]*restoreGameFocus\(root, focus\)[\s\S]*syncGameLiveStatus\(root\)/);
+// Require Roulette precision controls to keep a 24-pixel hit area around the compact marker. (UX-025)
+assert.match(rouletteSource, /const SPOT_SIZE = 24;[\s\S]*\.spot\{display:grid;place-items:center;width:24px;height:24px/);
+// Require shared and route-local controls called out by UX-025 to preserve 44-pixel touch targets.
+assert.match(sharedStyles, /button\s*\{\s*min-height:\s*44px;/); assert.match(baccaratSource, /\.bac-rail-card select\{min-height:44px\}[\s\S]*\.bac-repeat-grid button\{min-height:44px/); assert.match(colorWheelSource, /\.cw-chip\{min-width:44px;min-height:44px/); assert.match(fourCardPokerSource, /\.fcp-field input\{min-height:44px/);
+// Require structured API failures to ignore raw server messages while preserving diagnostic fields. (I18N-011)
+assert.match(apiSource, /playerSafeError\(payload\.error\?\.code, res\.status\)[\s\S]*e\.details = payload\.error\?\.details/);
+// Require autoplay to reconcile authoritative sessions and record every server tick. (AUTO-015)
+assert.match(autoplaySource, /api\('\/api\/v1\/autoplay\/sessions\?active=1'\)[\s\S]*rounds_completed/); assert.match(autoplaySource, /await post\('\/api\/v1\/autoplay\/tick'/);
+// Require Bingo to disclose abandonment and default to one complete call plan. (BINGO-027)
+assert.match(bingoSource, /confirm\(tr\('reset\.confirmAbandon'[\s\S]*defaultRounds: TOTAL_BALLS, roundsLabel: tr\('autoplay\.calls'\)/);
 // Require the shared Slots animation to stop under the platform reduced-motion preference.
 assert.match(sharedStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.slot-symbol\.spinning\s*\{\s*animation:\s*none;/);
 // Require Baccarat reveal animation to stop under reduced motion.
@@ -113,6 +137,6 @@ const guardedActions = ["#mode').onchange = guarded(settings)", "#zero').onchang
 // Require every governed action to stay behind the shared failure guard.
 for (const action of guardedActions) assert.equal(rouletteSource.includes(action), true, action);
 // Require the guard to emit both localized feedback and low-cardinality telemetry.
-assert.match(rouletteSource, /toast\(error\?\.errorKey \? rt\(error\.errorKey\) : rt\('errors\.actionFailed'\)\);[\s\S]*?logClient\('roulette_action_failed', \{ code: error\?\.code \|\| null \}\);/);
+assert.match(rouletteSource, /toast\(error\?\.errorKey \? rt\(error\.errorKey\) : \(error\?\.playerSafe \? error\.message : rt\('errors\.actionFailed'\)\)\);[\s\S]*?logClient\('roulette_action_failed', \{ code: error\?\.code \|\| null \}\);/);
 // Require the mobile Teen Patti action rail to leave the fixed feedback control unobscured.
 assert.match(teenPattiSource, /\.tp-actions\{width:calc\(100% - 160px\);max-width:calc\(100% - 160px\);\}/);

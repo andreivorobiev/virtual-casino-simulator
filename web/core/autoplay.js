@@ -12,7 +12,7 @@ const delayMs = speed => ({slow:2200,medium:900,fast:260}[speed] || 900);
 // Define the dispatch function that implements this UI or API behavior.
 function dispatch(msg){ window.dispatchEvent(new CustomEvent('casino-toast',{detail:{message:msg}})); }
 // Define the getSession function that implements this UI or API behavior.
-function getSession(id){ if(!sessions.has(id)) sessions.set(id,{id,starting:false,running:false,stopRequested:false,remaining:0,speed:'medium',timer:null,serverId:null,boxes:new Set(),onTick:null}); return sessions.get(id); }
+function getSession(id){ if(!sessions.has(id)) sessions.set(id,{id,starting:false,running:false,stopRequested:false,remaining:0,requestedRounds:25,speed:'medium',timer:null,serverId:null,boxes:new Set(),onTick:null}); return sessions.get(id); }
 // Define the setUi function that implements this UI or API behavior.
 function setUi(s){
   // Execute this statement as part of the module's documented control flow.
@@ -33,9 +33,11 @@ function setUi(s){
 }
 // Define the finishStop function that implements this UI or API behavior.
 async function finishStop(s){
-  // Execute this statement as part of the module's documented control flow.
-  if(s.serverId){ try{ await post('/api/v1/autoplay/finish-stop',{autoplay_id:s.serverId}); }catch{} }
-  // Set s.running to the value needed for the next operation.
+  // Complete the authoritative stop before discarding the resumable server identity. (AUTO-015)
+  if(s.serverId) await post('/api/v1/autoplay/finish-stop',{autoplay_id:s.serverId});
+  // Clear the server identity only after the lifecycle endpoint commits successfully. (AUTO-015)
+  s.serverId=null;
+  // Set the truthful idle client state after authoritative completion.
   s.starting=false; s.running=false; s.stopRequested=false; clearTimeout(s.timer); s.timer=null; setUi(s);
 }
 // Define the loop function that implements this UI or API behavior.
@@ -51,7 +53,7 @@ async function loop(s){
     // Set await s.onTick?.({autoplay_id:s.serverId, speed:s.speed, sto to the value needed for the next operation.
     await s.onTick?.({autoplay_id:s.serverId, speed:s.speed, stopRequested:()=>s.stopRequested});
     // Execute this statement as part of the module's documented control flow.
-    if(s.serverId){ try{ await post('/api/v1/autoplay/tick',{autoplay_id:s.serverId}); }catch{} }
+    if(s.serverId) await post('/api/v1/autoplay/tick',{autoplay_id:s.serverId});
     // Set s.remaining - to the value needed for the next operation.
     s.remaining -= 1; setUi(s);
   // Explain this executable/data line so future Codex changes preserve intent.
@@ -62,17 +64,19 @@ async function loop(s){
   s.timer=setTimeout(()=>loop(s), delayMs(s.speed));
 }
 // Export this symbol so other modules can use it through the public module boundary.
-export function stopAutoplay(id){ const s=getSession(id); s.stopRequested=true; clearTimeout(s.timer); s.timer=null; setUi(s); if(s.serverId) post('/api/v1/autoplay/stop',{autoplay_id:s.serverId}).catch(()=>{}); setTimeout(()=>finishStop(s),30); }
+export function stopAutoplay(id){ const s=getSession(id); s.stopRequested=true; clearTimeout(s.timer); s.timer=null; setUi(s); if(s.serverId) post('/api/v1/autoplay/stop',{autoplay_id:s.serverId}).catch(error=>dispatch(error.message)); setTimeout(()=>finishStop(s).catch(error=>dispatch(error.message)),30); }
 // Export this symbol so other modules can use it through the public module boundary.
 export function stopAllAutoplay(){ for(const id of sessions.keys()) stopAutoplay(id); post('/api/v1/autoplay/stop-all',{}).catch(()=>{}); }
 // Export this symbol so other modules can use it through the public module boundary.
-export function renderAutoplay({id,onTick,plan={}}){
+export function renderAutoplay({id,onTick,plan={},defaultRounds=25,roundsLabel='Rounds'}){
   // Store s so later code can read or update this value.
-  const s=getSession(id); s.onTick=onTick;
+  const s=getSession(id); s.onTick=onTick; if(!s.running && !s.starting && s.remaining<=0) s.requestedRounds=defaultRounds;
   // Store box so later code can read or update this value.
   const box=document.createElement('div'); box.className='autoplay'; box.id=`${id}Auto`; box.dataset.testid=`autoplay-${id}`;
   // Set box.innerHTML to the value needed for the next operation.
-  box.innerHTML=`<div class="row"><h3>Auto play</h3><span class="badge">Off</span></div><div class="row"><label>Speed <select class="speed" data-testid="${id}-auto-speed"><option value="slow">Slow</option><option selected value="medium">Medium</option><option value="fast">Fast</option></select></label><label>Rounds <input class="rounds" data-testid="${id}-auto-rounds" type="number" min="1" max="10000" value="25"></label></div><div class="row"><button class="start" data-testid="${id}-auto-start">Start auto</button><button class="stop" data-testid="${id}-auto-stop" disabled>Stop</button></div>`;
+  box.innerHTML=`<div class="row"><h3>Auto play</h3><span class="badge">Off</span></div><div class="row"><label>Speed <select class="speed" data-testid="${id}-auto-speed"><option value="slow">Slow</option><option value="medium">Medium</option><option value="fast">Fast</option></select></label><label>${roundsLabel} <input class="rounds" data-testid="${id}-auto-rounds" type="number" min="1" max="10000" value="${s.requestedRounds}"></label></div><div class="row"><button class="start" data-testid="${id}-auto-start">Start auto</button><button class="stop" data-testid="${id}-auto-stop" disabled>Stop</button></div>`;
+  // Restore the retained speed after a game rerender recreates the widget. (AUTO-015)
+  box.querySelector('.speed').value=s.speed;
   // Execute this statement as part of the module's documented control flow.
   s.boxes.add(box);
   // Set box.querySelector('.start').onclick to the value needed for the next operation.
@@ -80,13 +84,19 @@ export function renderAutoplay({id,onTick,plan={}}){
     // Execute this statement as part of the module's documented control flow.
     if(s.starting || s.running) return;
     // Set s.remaining to the value needed for the next operation.
-    s.remaining=Math.max(1, Number(box.querySelector('.rounds').value||1));
+    s.remaining=Math.max(1, Number(box.querySelector('.rounds').value||1)); s.requestedRounds=s.remaining;
     // Set s.speed to the value needed for the next operation.
     s.speed=box.querySelector('.speed').value;
     // Set s.stopRequested to the value needed for the next operation.
-    s.stopRequested=false; s.serverId=null; s.starting=true; s.running=false; setUi(s);
+    s.stopRequested=false; s.starting=true; s.running=false; setUi(s);
     // Start protected logic so failures can be handled safely.
     try{
+      // Reconcile a retained server session before creating a conflicting duplicate. (AUTO-015)
+      const active=await api('/api/v1/autoplay/sessions?active=1');
+      // Match only the current game and authenticated player scope returned by the server.
+      const retained=(active.sessions || []).find(session=>session.game_id===id && ['running','stop_requested'].includes(session.status));
+      // Resume the authoritative id and remaining count when a prior widget refresh lost local timing state.
+      if(retained){ s.serverId=retained.autoplay_id; s.speed=retained.speed || s.speed; s.remaining=Math.max(0,Number(retained.round_limit || 0)-Number(retained.rounds_completed || 0)); s.requestedRounds=Number(retained.round_limit || s.requestedRounds); s.stopRequested=Boolean(retained.stop_requested); s.starting=false; s.running=!s.stopRequested && s.remaining>0; setUi(s); if(s.running) loop(s); else await finishStop(s); return; }
       // Register server authority before any ledger-bearing game tick can begin.
       const d=await post('/api/v1/autoplay/start',{game_id:id,player_id:currentPlayerId(),speed:s.speed,round_limit:s.remaining,plan});
       // Reject malformed success payloads rather than starting without an autoplay identity.

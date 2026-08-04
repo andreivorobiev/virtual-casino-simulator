@@ -6,7 +6,7 @@
   "phase.settled": "Расчёт завершён",
   "controls.aria": "Управление ставками Big Six",
   "controls.title": "Ставки",
-  "controls.help": "Введите игровые жетоны рядом с каждым выбранным символом.",
+  "controls.help": "Введите игровые токены рядом с каждым выбранным символом.",
   "controls.repeat": "Повторить ставку",
   "stage.aria": "Игровое колесо Big Six",
   "data.aria": "Таблица выплат и история Big Six",
@@ -30,7 +30,7 @@
   "result.waiting": "Готово",
   "result.hint": "Указатель покажет выпавший символ.",
   "result.net": "Итог раунда: {amount}",
-  "units.playTokens": "{amount} игровых жетонов",
+  "units.playTokens": "{amount} игровых токенов",
   "error.wagerRequired": "Введите хотя бы одну положительную ставку.",
   "error.spinFailed": "Не удалось завершить вращение. Запрос можно безопасно повторить."
 }

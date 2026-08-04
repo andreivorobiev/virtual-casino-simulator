@@ -2,7 +2,7 @@
 // Import required dependency so this module can call frozen Roulette API endpoints.
 import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer, logClient } from '../core/api.js';
 // Import shared UI helpers so the Roulette surface matches the premium shell contract.
-import { toast, refreshBalance, renderTokenBalance, tokenAmount, safe } from '../core/ui.js';
+import { toast, refreshBalance, renderTokenBalance, tokenAmount, safe, captureGameFocus, restoreGameFocus, syncGameLiveStatus } from '../core/ui.js';
 // Import autoplay renderer so Roulette keeps using the shared control-plane session behavior.
 import { renderAutoplay } from '../core/autoplay.js';
 // Import voice helpers so spin sounds and announcements preserve existing behavior.
@@ -27,7 +27,7 @@ const PREMIUM_STYLE_ID = 'roulette-premium-style';
 // Store chip denominations so the control rail remains stable across rerenders.
 const CHIP_VALUES = [1, 5, 25, 100, 500, 1000];
 // Store the rendered premium hotspot diameter so inline positions stay centered on their canonical point.
-const SPOT_SIZE = 15;
+const SPOT_SIZE = 24;
 // Store red pockets so wheel, table, and history pills share the same color logic.
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 // Store board geometry so click targets and placed chips remain aligned on the fixed table.
@@ -130,8 +130,9 @@ const PREMIUM_STYLE = [
   '.roulette-result-pocket.green{background:linear-gradient(160deg,#0f9152,#04492a)!important;}', // Match the settled badge to a zero pocket over the shared important brand fallback.
   '.roulette-premium .table-cell.result-cell,.roulette-premium .outside-cell.result-cell{outline:3px solid var(--gold);box-shadow:inset 0 0 26px rgba(255,217,120,.4),0 0 22px rgba(255,217,120,.3);}', // Lock the settled result visibly to the winning table area.
   '.roulette-result-marker{position:absolute;right:5px;bottom:3px;color:var(--gold);font-size:9px;font-weight:1000;}', // Keep the table WIN marker inside its pocket.
-  '.roulette-premium .spot{width:15px;height:15px;border-width:1px;background:rgba(255,217,120,.38);opacity:.2;}', // Make inside-bet hotspots discoverable without cluttering the felt.
-  '.roulette-premium .spot:hover{opacity:1;}', // Reveal inside-bet precision on intent.
+  '.roulette-premium .spot{display:grid;place-items:center;width:24px;height:24px;border:0;background:transparent;opacity:1;}', // Provide a reliable touch target while the visible marker stays compact. (UX-025)
+  '.roulette-premium .spot::after{content:"";width:15px;height:15px;border:1px solid rgba(255,217,120,.66);border-radius:50%;background:rgba(255,217,120,.38);opacity:.32;}', // Preserve the original unobtrusive marker inside the larger hit area. (UX-025)
+  '.roulette-premium .spot:hover::after,.roulette-premium .spot:focus-visible::after{opacity:1;}', // Reveal inside-bet precision on pointer or keyboard intent.
   '.roulette-premium .roulette-table-board.hide-spots .spot{visibility:hidden;pointer-events:none;opacity:0;}', // Remove hidden inside spots from pointer and accessibility actionability instead of leaving invisible controls live.
   '.roulette-premium .bet-chip{animation:rouletteChipPop .18s ease-out;}', // Make placed chips feel physical without layout-changing animation.
   '@keyframes rouletteChipPop{from{transform:scale(.82);opacity:.5;}to{transform:scale(1);opacity:1;}}', // Animate chips with transform and opacity only.
@@ -358,7 +359,8 @@ const guarded = handler => async (...args) => {
   // Surface any rejection through the shared toast outlet.
   } catch (error) {
     // Prefer a localized key the backend named, then the generic action failure text.
-    toast(error?.errorKey ? rt(error.errorKey) : rt('errors.actionFailed'));
+    // Prefer client-owned validation copy, then the shared API helper's localized message. (I18N-011)
+    toast(error?.errorKey ? rt(error.errorKey) : (error?.playerSafe ? error.message : rt('errors.actionFailed')));
     // Report the failure for admin telemetry without altering the player-visible message.
     logClient('roulette_action_failed', { code: error?.code || null });
   }
@@ -1219,18 +1221,18 @@ function colorLabel(color) {
 // Render the result panel under the wheel.
 function resultHtml() {
   // Branch while the animation is intentionally hiding the result.
-  if (uiPhase === 'spinning') return `<div id="result" class="fixed-result" data-testid="roulette-result-region" data-phase="spinning"><span class="roulette-spin-orbit" aria-hidden="true"></span><span class="roulette-result-copy"><b>${text('stage.spinning')}</b><span>${text('result.spinning')}</span></span></div>`;
+  if (uiPhase === 'spinning') return `<div id="result" class="fixed-result" data-game-live-status data-testid="roulette-result-region" data-phase="spinning"><span class="roulette-spin-orbit" aria-hidden="true"></span><span class="roulette-result-copy"><b>${text('stage.spinning')}</b><span>${text('result.spinning')}</span></span></div>`;
   // Branch for a settled spin with an actual backend result.
   if (uiPhase === 'settled' && lastSpinResult !== null) {
     // Store the integrated net summary without repeating every settlement log row.
     const settlementSummary = lastSettlements.length ? `${text('settlement.humanNet')}: ${signedTokenMoney(lastHumanNet)}` : text('result.noHumanBets');
     // Return the settled result console with the authoritative pocket as the visual focus.
-    return `<div id="result" class="fixed-result win" data-testid="roulette-result-region" data-phase="settled" data-result-number="${safe(lastSpinResult)}"><span class="roulette-result-pocket ${numberColorClass(lastSpinResult)}">${safe(lastSpinResult)}</span><span class="roulette-result-copy"><b>${text('result.rolled', { number: lastSpinResult })}</b><span>${safe(colorLabel(lastSpinColor))} · ${settlementSummary}</span></span></div>`;
+    return `<div id="result" class="fixed-result win" data-game-live-status data-testid="roulette-result-region" data-phase="settled" data-result-number="${safe(lastSpinResult)}"><span class="roulette-result-pocket ${numberColorClass(lastSpinResult)}">${safe(lastSpinResult)}</span><span class="roulette-result-copy"><b>${text('result.rolled', { number: lastSpinResult })}</b><span>${safe(colorLabel(lastSpinColor))} · ${settlementSummary}</span></span></div>`;
   }
   // Branch for a loaded state with a real previous result.
-  if (lastSpinResult !== null) return `<div id="result" class="fixed-result" data-testid="roulette-result-region" data-phase="betting" data-result-number="${safe(lastSpinResult)}"><span class="roulette-result-pocket ${numberColorClass(lastSpinResult)}">${safe(lastSpinResult)}</span><span class="roulette-result-copy"><b>${text('result.lastResult', { number: lastSpinResult })}</b><span>${text('stage.placeBets')}</span></span></div>`;
+  if (lastSpinResult !== null) return `<div id="result" class="fixed-result" data-game-live-status data-testid="roulette-result-region" data-phase="betting" data-result-number="${safe(lastSpinResult)}"><span class="roulette-result-pocket ${numberColorClass(lastSpinResult)}">${safe(lastSpinResult)}</span><span class="roulette-result-copy"><b>${text('result.lastResult', { number: lastSpinResult })}</b><span>${text('stage.placeBets')}</span></span></div>`;
   // Return the no-spin state without any fake result.
-  return `<div id="result" class="fixed-result" data-testid="roulette-result-region" data-phase="betting" data-result-number="none"><span class="roulette-result-pocket">—</span><span class="roulette-result-copy"><b>${text('stage.placeBets')}</b><span>${text('result.noSpinYet')}</span></span></div>`;
+  return `<div id="result" class="fixed-result" data-game-live-status data-testid="roulette-result-region" data-phase="betting" data-result-number="none"><span class="roulette-result-pocket">—</span><span class="roulette-result-copy"><b>${text('stage.placeBets')}</b><span>${text('result.noSpinYet')}</span></span></div>`;
 }
 
 // Render the premium route header without exposing internal lifecycle diagnostics.
@@ -1371,10 +1373,14 @@ function wireControls() {
 function render() {
   // Stop when the module has not mounted yet.
   if (!root || !state) return;
+  // Preserve the focused roulette control through the full-root render. (UX-025)
+  const focus = captureGameFocus(root);
   // Replace the route body while preserving JS state caches.
   root.innerHTML = `<section class="roulette-premium" data-testid="roulette-premium">${headerHtml()}<div class="game-layout three-col stable-game" data-testid="roulette-premium-layout">${controlRailHtml()}${stageHtml()}${drawerHtml()}</div></section>`;
   // Wire controls after the DOM has been replaced.
   wireControls();
+  // Restore focus and publish the result through document-lifetime accessibility surfaces. (UX-025)
+  restoreGameFocus(root, focus); syncGameLiveStatus(root);
 }
 
 // Export this symbol so the app shell can mount the Roulette game route.

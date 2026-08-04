@@ -1,4 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+// Import synchronous localization so structured API failures never expose server-English copy. (I18N-011)
+import { t } from './i18n.js';
 // Name the production host-only double-submit cookie without storing its value globally.
 const CSRF_COOKIE = 'casino_csrf';
 // Enumerate browser methods that require exact Origin plus CSRF proof.
@@ -7,6 +9,57 @@ const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const GUEST_NONCE_KEY = 'casino.guestBrowserNonce';
 // Keep public authentication attempts from broadcasting a protected-session expiry event.
 const SESSION_EXPIRY_PUBLIC_PATHS = ['/api/v2/auth/login', '/api/v2/auth/guest'];
+// Map stable server codes to player-safe localized categories without duplicating endpoint prose. (I18N-011)
+const API_ERROR_KEYS = new Map([
+  ['INSUFFICIENT_FUNDS', 'errors.insufficientTokens'],
+  ['VALIDATION_ERROR', 'errors.validation'],
+  ['INVALID_REQUEST', 'errors.validation'],
+  ['CONFLICT', 'errors.conflict'],
+  ['NOT_FOUND', 'errors.notFound'],
+  ['UNAUTHORIZED', 'errors.unauthorized'],
+  ['FORBIDDEN', 'errors.forbidden'],
+  ['RATE_LIMITED', 'errors.rateLimited'],
+  ['OFFLINE', 'errors.offline'],
+  ['CSRF_BOOTSTRAP_UNAVAILABLE', 'errors.security'],
+]);
+
+// Resolve one structured API error into localized player copy while retaining its stable code separately. (I18N-011)
+function localizedApiError(code, status = 0) {
+  // Normalize the server code once so prefix families can share safe localized copy.
+  const normalized = String(code || '').toUpperCase();
+  // Use an exact stable-code mapping when the contract publishes one.
+  let key = API_ERROR_KEYS.get(normalized);
+  // Treat all insufficient-funds variants consistently across isolated game modules.
+  if (!key && normalized.includes('INSUFFICIENT')) key = 'errors.insufficientTokens';
+  // Treat validation and malformed-input variants as one player-action category.
+  if (!key && (normalized.includes('INVALID') || normalized.includes('VALIDATION'))) key = 'errors.validation';
+  // Fall back to transport status only when the server omitted a stable code.
+  if (!key && status === 401) key = 'errors.unauthorized';
+  // Keep permission failures distinct from authentication expiry.
+  if (!key && status === 403) key = 'errors.forbidden';
+  // Keep missing resources distinct from generic server failures.
+  if (!key && status === 404) key = 'errors.notFound';
+  // Keep conflicts distinct so players know to refresh current state.
+  if (!key && status === 409) key = 'errors.conflict';
+  // Keep throttling distinct so a player does not repeatedly retry a blocked action.
+  if (!key && status === 429) key = 'errors.rateLimited';
+  // Use one generic localized failure for unknown codes and server errors.
+  return t(key || 'errors.actionFailed', {}, 'common');
+}
+
+// Build one explicitly player-safe browser error while retaining machine-readable diagnostics separately. (I18N-011)
+function playerSafeError(code, status = 0) {
+  // Create player copy only through the stable localized category resolver.
+  const error = new Error(localizedApiError(code, status));
+  // Retain the low-cardinality code for telemetry and caller policy without server prose.
+  error.code = code || 'ACTION_FAILED';
+  // Retain an optional HTTP status for bounded diagnostics.
+  error.status = status;
+  // Mark only this module's localized errors as safe for direct player presentation.
+  error.playerSafe = true;
+  // Return the fully classified browser error.
+  return error;
+}
 
 // Read one named cookie without exposing the complete cookie string to logs or storage.
 function cookieValue(name) {
@@ -29,9 +82,7 @@ async function ensureCsrfCookie() {
   // Fail closed with a stable code when the browser still holds no proof after one recovery attempt.
   if (!cookieValue(CSRF_COOKIE)) {
     // Use one generic message so no cookie or policy detail reaches player-facing surfaces.
-    const error = new Error('Security token unavailable; reload the page and try again');
-    // Publish a stable low-cardinality code for callers and tests.
-    error.code = 'CSRF_BOOTSTRAP_UNAVAILABLE';
+    const error = playerSafeError('CSRF_BOOTSTRAP_UNAVAILABLE');
     // Stop before the mutation rather than sending an empty proof the server must reject.
     throw error;
   }
@@ -44,9 +95,7 @@ export async function api(path, options = {}) {
   // Fail closed before any authoritative request when the browser is explicitly offline. (PWA-002)
   if (navigator.onLine === false) {
     // Use one generic message because the localized PWA banner owns player-facing explanation.
-    const error = new Error('Server action unavailable while offline');
-    // Publish a stable low-cardinality code for callers and tests without implying success.
-    error.code = 'OFFLINE';
+    const error = playerSafeError('OFFLINE');
     // Stop before fetch so no queued mutation can replay after reconnect.
     throw error;
   }
@@ -64,18 +113,18 @@ export async function api(path, options = {}) {
   const init = { method, headers, credentials: 'include', keepalive: options.keepalive === true };
   // Branch when the following condition is true.
   if (options.body !== undefined) init.body = JSON.stringify(options.body);
-  // Store res so later code can read or update this value.
-  const res = await fetch(path, init);
+  // Retain the response separately so transport rejection can be converted to safe player copy.
+  let res;
+  // Prevent browser or network implementation details from reaching game-facing catch handlers.
+  try { res = await fetch(path, init); } catch (_) { throw playerSafeError('OFFLINE'); }
   // Store payload; so later code can read or update this value.
   let payload;
   // Start protected logic so failures can be handled safely.
-  try { payload = await res.json(); } catch (_) { throw new Error(`Bad JSON from ${path}`); }
+  try { payload = await res.json(); } catch (_) { throw playerSafeError('BAD_RESPONSE', res.status); }
   // Branch when the following condition is true.
   if (!res.ok || !payload.ok) {
     // Store e so later code can read or update this value.
-    const e = new Error(payload.error?.message || `API error ${res.status}`);
-    // Set e.code to the value needed for the next operation.
-    e.code = payload.error?.code;
+    const e = playerSafeError(payload.error?.code, res.status);
     // Set e.details to the value needed for the next operation.
     e.details = payload.error?.details;
     // Detect protected-session expiry without treating login or guest-start rejections as stale sessions.

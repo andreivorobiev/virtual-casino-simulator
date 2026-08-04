@@ -10,12 +10,12 @@
   "controls.repeat": "Повторить ставку",
   "controls.dealing": "Раздача",
   "controls.loading": "Стол загружается",
-  "controls.help": "Выберите Дракона, Тигра или ничью и задайте ставку в игровых жетонах.",
+  "controls.help": "Выберите Дракона, Тигра или ничью и задайте ставку в игровых токенах.",
   "controls.region": "Управление игрой Дракон — Тигр",
   "controls.retry": "Повторить раздачу",
   "controls.retryHelp": "Повтор использует ту же ставку и идентификатор действия, поэтому журнал не спишет её дважды.",
   "controls.title": "Управление игрой",
-  "controls.wager": "Ставка в игровых жетонах",
+  "controls.wager": "Ставка в игровых токенах",
   "data.cardsRemaining": "Карт осталось",
   "data.deckCount": "Колоды",
   "data.region": "Правила и история игры Дракон — Тигр",
@@ -61,5 +61,5 @@
   "summary.return": "Возвращено",
   "summary.wager": "Ставка",
   "title": "Дракон — Тигр",
-  "units.playTokens": "{amount} игровых жетонов"
+  "units.playTokens": "{amount} игровых токенов"
 }

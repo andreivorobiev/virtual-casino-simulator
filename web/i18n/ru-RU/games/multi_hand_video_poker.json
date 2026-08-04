@@ -14,7 +14,7 @@
   "eyebrow": "Валеты или старше",
   "hands.finalCards": "Итоговые карты руки {number}",
   "hands.handNumber": "Рука {number}",
-  "hands.payout": "Возвращённые жетоны",
+  "hands.payout": "Возвращённые токены",
   "modes.handCount": "Рук: {count}",
   "outcomes.flush": "Флеш",
   "outcomes.four_of_a_kind": "Каре",
@@ -27,7 +27,7 @@
   "outcomes.three_of_a_kind": "Тройка",
   "outcomes.two_pair": "Две пары",
   "paytable.multiplier": "возврат {value}×",
-  "paytable.note": "Каждая рука оценивается отдельно. Возвращённые жетоны рассчитываются одной операцией в реестре игровых жетонов.",
+  "paytable.note": "Каждая рука оценивается отдельно. Возвращённые токены рассчитываются одной операцией в реестре игровых токенов.",
   "paytable.result": "Результат",
   "paytable.return": "Возврат",
   "paytable.title": "Таблица выплат",
@@ -38,7 +38,7 @@
   "phases.ready": "Можно раздавать",
   "phases.win": "Выигрышный раунд",
   "stage.finalHands": "Итоговые руки видеопокера",
-  "stage.readyBody": "Выберите 3, 5 или 10 рук и задайте ставку игровыми жетонами на каждую руку.",
+  "stage.readyBody": "Выберите 3, 5 или 10 рук и задайте ставку игровыми токенами на каждую руку.",
   "stage.readyTitle": "Следующая раздача готова",
   "stage.sharedAcross": "Удержанные карты этой исходной руки используются во всех руках: {count}.",
   "stage.sourceHand": "Общая исходная рука видеопокера",
@@ -60,8 +60,8 @@
   "suits.H": "червы",
   "suits.S": "пики",
   "summary.net": "Итог",
-  "summary.payout": "Возвращённые жетоны",
+  "summary.payout": "Возвращённые токены",
   "summary.wager": "Общая ставка",
   "title": "Мультиручный видеопокер",
-  "units.playTokens": "игровых жетонов"
+  "units.playTokens": "игровых токенов"
 }

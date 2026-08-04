@@ -102,6 +102,8 @@
        attributes stay for the document's lifetime and only the text changes, which is what makes the
        announcement reliable. (issue #421) -->
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+  <!-- Keep game results in a document-lifetime live region so full-root renders cannot interrupt announcements. (UX-025) -->
+  <div id="game-live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

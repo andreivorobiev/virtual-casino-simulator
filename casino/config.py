@@ -130,6 +130,8 @@ GUEST_CREATE_WINDOW_SECONDS = int(os.environ.get("CASINO_GUEST_CREATE_WINDOW_SEC
 GUEST_MAX_ACTIONS = int(os.environ.get("CASINO_GUEST_MAX_ACTIONS", "1000"))
 # Bound one guest autoplay registration to a conservative number of rounds.
 GUEST_AUTOPLAY_MAX_ROUNDS = int(os.environ.get("CASINO_GUEST_AUTOPLAY_MAX_ROUNDS", "25"))
+# Allow one complete bounded 75-ball Bingo call plan for disposable guest trials. (BINGO-027)
+GUEST_BINGO_AUTOPLAY_MAX_CALLS = int(os.environ.get("CASINO_GUEST_BINGO_AUTOPLAY_MAX_CALLS", "75"))
 # Publish the exact private-preview terms revision a guest must explicitly accept before creation.
 GUEST_TERMS_VERSION = os.environ.get("CASINO_GUEST_TERMS_VERSION", "private-beta-1").strip()
 # Keep Admin invitation issuance disabled until its separately authorized restricted-preview release. (issue #332)

@@ -6,22 +6,22 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.56.11
-- core: 9.36.2
+- application: 9.56.12
+- core: 9.36.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
-- autoplay: 1.1.4
+- autoplay: 1.1.5
 - audio: 9.1.1
 - admin: 1.15.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.5.2
+- roulette: 9.5.3
 - slots: 9.4.2
-- blackjack: 9.1.7
-- baccarat: 9.1.11
-- keno: 9.3.4
-- bingo: 9.3.3
+- blackjack: 9.1.8
+- baccarat: 9.1.12
+- keno: 9.3.5
+- bingo: 9.3.4
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
 - big_six_wheel: 1.1.2
@@ -50,12 +50,12 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.1
 - pai_gow_poker: 1.1.1
 - teen_patti: 1.1.1
-- tests: 1.67.8
-- docs: 1.65.8
+- tests: 1.67.9
+- docs: 1.65.9
 - contracts: 1.54.7
-- tooling: 1.25.0
+- tooling: 1.25.1
 - commenting_policy: 1.0.0
-- color_wheel: 1.1.2
+- color_wheel: 1.1.3
 - poker_dice: 1.1.1
 - boule: 1.1.2
 - faro: 1.1.2
@@ -66,7 +66,7 @@ Historical source baseline: 9.1.0
 - pattern_draw: 1.1.2
 - lucky_grid: 1.1.2
 - daily_draw_lab: 1.1.2
-- four_card_poker: 1.1.1
+- four_card_poker: 1.1.2
 
 ## Requirements
 
@@ -962,3 +962,11 @@ Historical source baseline: 9.1.0
 - **TEST-151** (Tests) - PASS: Listener-free and hosted browser evidence proves the shared wallet accepts only matching negative storage-authored ledger events, renders exact committed debit balances synchronously, rejects foreign or malformed evidence, verifies all eighteen response-driven game sources apply the shared renderer before final refresh, and verifies Baccarat publishes settlement only from reveal completion.
 - **API-003** (Contracts) - PASS: A stable same-origin /api-docs URL serves a pinned read-only Swagger UI that exposes every governed OpenAPI YAML contract through a traversal-safe /openapi namespace under the existing production content-security policy, with no external validator, remote script, mutation form, application-shell fallback, or undocumented contract omission.
 - **TEST-152** (Tests) - PASS: Listener-free and hosted browser evidence proves the Swagger selector exactly matches every contracts/openapi YAML file, assets and licensing are pinned locally, both HTTP adapters map the stable docs and contract URLs safely, one exact contract serves with YAML media type, and the rendered selector includes the complete governed inventory.
+- **TOKEN-007** (Application) - PASS: A successful wallet top-up clears its amount and closes its popover immediately after the authoritative current-user payload commits, before any secondary shell refresh can race a repeat click.
+- **I18N-011** (Application) - PASS: Player-facing API failures derive localized copy from stable error code or HTTP category while preserving code, details, and status separately, and all Russian resources use the canonical token terminology instead of the retired casino-chip stem.
+- **AUTO-015** (Autoplay) - PASS: Autoplay retains speed and requested count across game rerenders, reconciles an existing authoritative session before creating another, records every server tick, and discards the resumable server id only after finish-stop succeeds.
+- **BINGO-027** (Bingo) - PASS: Bingo autoplay defaults to one complete bounded 75-call plan, including for disposable guests, and resetting a called session requires explicit non-refund confirmation followed by truthful refunded, abandoned, or cleared feedback.
+- **PWA-003** (Application) - PASS: Apply update resolves a worker still transitioning from installing to waiting, sends exactly one SKIP_WAITING command, reloads only after controllerchange, and fails visibly after bounded transition or activation timeouts.
+- **UX-025** (Application) - PASS: Full-root game rerenders preserve stable control focus and mirror authoritative result copy into a document-lifetime live region; ordinary controls provide a 44-pixel minimum target while Roulette precision inside-bet controls provide a 24-pixel hit area with their compact visual marker retained.
+- **TOOL-012** (Tooling) - PASS: Every substantive pull request must list delivered issues under a stable Issues resolved section using GitHub-native closing keywords; standard release-only pull requests must explicitly declare their exception.
+- **TEST-153** (Tests) - PASS: Focused listener-free evidence covers wallet ordering, localized structured errors, Russian token terminology, PWA installing-to-waiting application, autoplay reconciliation, Bingo reset disclosure, persistent game focus and announcements, Roulette hit targets, and PR issue-closing governance.

@@ -229,10 +229,35 @@ export async function reconnectAuthoritatively() {
   }
 }
 
+// Resolve the waiting worker even when the user clicks during the installing-to-waiting transition. (PWA-003)
+async function resolveWaitingWorker() {
+  // Return the already-waiting worker without allocating listeners.
+  if (registration?.waiting) return registration.waiting;
+  // Capture the installing worker because registration.waiting may lag its state transition.
+  const installing = registration?.installing;
+  // Stop when registration has no applicable update worker.
+  if (!installing) return null;
+  // Return a bounded state observer so a failed install cannot strand the Apply button forever.
+  return new Promise(resolve => {
+    // Finish once and remove the observer before resolving.
+    const finish = worker => { installing.removeEventListener('statechange', changed); window.clearTimeout(timeout); resolve(worker); };
+    // Resolve the installed worker through registration.waiting when the browser has promoted it.
+    const changed = () => { if (installing.state === 'installed') finish(registration.waiting || installing); else if (['redundant','activated'].includes(installing.state)) finish(null); };
+    // Bound the transitional wait so update failure remains visible and retryable.
+    const timeout = window.setTimeout(() => finish(null), 4000);
+    // Observe only this update worker's lifecycle.
+    installing.addEventListener('statechange', changed);
+    // Handle a worker that completed between capture and listener registration.
+    changed();
+  });
+}
+
 // Ask the waiting worker to activate, then reload once it takes control.
-function applyUpdate() {
+async function applyUpdate() {
+  // Resolve an installing worker before deciding the update is unavailable. (PWA-003)
+  const worker = await resolveWaitingWorker();
   // Show a failure without reloading when no update is actually waiting.
-  if (!registration || !registration.waiting) { renderPwaState('update-failed'); return; }
+  if (!worker) { renderPwaState('update-failed'); return; }
   // Guard worker messaging so the current application remains usable on failure.
   try {
     // Mark that the next controller change is user-requested and may reload.
@@ -240,7 +265,7 @@ function applyUpdate() {
     // Fail visibly if activation does not complete within one bounded interval.
     updateTimeout = window.setTimeout(() => { applyingUpdate = false; renderPwaState('update-failed'); }, 12000);
     // Instruct the waiting worker to activate.
-    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    worker.postMessage({ type: 'SKIP_WAITING' });
   // Preserve the current application when the browser rejects worker messaging.
   } catch (error) {
     // Clear the applying flag so a later unrelated controller change cannot reload.
