@@ -1,8 +1,8 @@
 {
-  "application": "0.9.5.53",
+  "application": "0.9.5.54",
   "source_baseline": "9.1.0",
   "modules": {
-    "application": "9.56.10",
+    "application": "9.56.11",
     "core": "9.36.2",
     "ledger": "9.1.1",
     "players": "9.1.0",
@@ -46,9 +46,9 @@
     "texas_holdem_practice_table": "1.1.1",
     "pai_gow_poker": "1.1.1",
     "teen_patti": "1.1.1",
-    "tests": "1.67.7",
-    "docs": "1.65.7",
-    "contracts": "1.54.6",
+    "tests": "1.67.8",
+    "docs": "1.65.8",
+    "contracts": "1.54.7",
     "tooling": "1.25.0",
     "commenting_policy": "1.0.0",
     "color_wheel": "1.1.2",

@@ -1,3 +1,15 @@
+# Virtual Casino Simulator v0.9.5.54 Release Notes
+
+## Corrected immutable wallet and API-documentation release
+
+- Supersedes published but never activated v0.9.5.53 after independent public-byte audit found that its descriptive compatibility note counted two intentionally excluded test files in the expected package inventory.
+- Carries the same already-accepted immediate wager-balance and complete read-only Swagger explorer behavior from sole content PR #602; no product source is changed by this correction.
+- Records the exact canonical package inventory as 731 regular files: the 722-file v0.9.5.52 package, seven deployable wallet/API-documentation assets, the retained v0.9.5.53 compatibility record, and this v0.9.5.54 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; tooling, core, all game modules, economics, ledger settlement, and frozen API behavior remain unchanged.
+- Retains exactly 892 permanent requirements and allocates no requirement or Browser identifier.
+- Makes no migration, provider, public-policy, database, publication, or deployment claim.
+- Retains exact immutable and terminal-green v0.9.5.52 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.53 Release Notes
 
 ## Immediate wager balances and complete API documentation
