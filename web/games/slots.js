@@ -2,7 +2,7 @@
 // Import required dependency so this module can use the frozen Slots API envelope.
 import { api, post, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import required dependency so this module can show shared shell feedback and escape API text.
-import { toast, refreshBalance, renderTokenBalance, tokenAmount, safe } from '../core/ui.js';
+import { toast, refreshBalance, renderTokenBalance, renderCommittedWagerBalance, tokenAmount, safe } from '../core/ui.js';
 // Import required dependency so Slots autoplay remains a control-plane feature.
 import { renderAutoplay } from '../core/autoplay.js';
 // Import required dependency so this module can expose true bot capability state.
@@ -588,6 +588,8 @@ async function spin(show = true) {
     const data = await post('/api/v1/games/slots/spin', withCurrentPlayer({ active_lines: selectedLines, line_bet: selectedLineBet }));
     // Reject a late backend response after route disposal without touching a remount.
     if (!completion.isCurrent()) return;
+    // Show the storage-committed wager debit before the decorative reels finish landing. (LEDGER-031, issue #583)
+    renderCommittedWagerBalance(data.debit);
     // Land the decorative strips on the authoritative grid, or hold briefly for comfort and autoplay modes.
     if (animate && root === mountedRoot) await runReelLanding(data.spin);
     // Use the bounded non-animated reveal for reduced-motion and unattended spins.

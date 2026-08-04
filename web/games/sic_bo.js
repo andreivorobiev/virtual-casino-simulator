@@ -3,7 +3,7 @@
 // Import session-aware API helpers so caller identity remains compatibility-only input.
 import { api, post, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import shared shell feedback, escaping, and wallet refresh helpers.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import locale loading, formatting, and lifecycle subscription helpers.
 import { formatNumber, loadI18nDomain, onLocaleChange, t } from '../core/i18n.js';
 // Reuse the merged #97 reduced-motion and route-cleanup timer primitive.
@@ -434,6 +434,8 @@ async function shake() {
     const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ action_id: pendingActionId, wagers: pendingWagers }));
     // Ignore a response delivered after unmount or a later mount generation.
     if (!root || generation !== mountGeneration) return;
+    // Show the committed debit while the dice remain in their decorative rolling phase. (LEDGER-031, issue #585)
+    renderCommittedWagerBalance(payload.ledger?.wager);
     // Schedule the authoritative result reveal through the owned #97 timer scope.
     scheduleReveal({ timerScope: motionScope, onReveal: () => {
       // Ignore a callback cancelled logically by a later route generation.

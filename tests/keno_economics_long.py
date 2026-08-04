@@ -15,6 +15,7 @@ from unittest import mock
 from casino.games.keno import engine
 # Import exact proof helpers shared with the focused browser-free regression.
 from tests.games.keno.test_economics import (
+    # Import the audited low-cent wager set used by exact edge-case proofs.
     LOW_CENT_AMOUNTS,
     MAX_AMOUNT,
     FailingBalls,

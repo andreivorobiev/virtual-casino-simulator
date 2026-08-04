@@ -1,0 +1,10 @@
+/* Keep the documentation header legible without inheriting casino game layout rules. */
+.api-docs-header{align-items:center;background:#160b20;color:#fff;display:flex;gap:1rem;padding:1rem 1.5rem}
+/* Present the brand as a stable return path to the application shell. */
+.api-docs-header>a{color:#ff5b7f;font-size:1.25rem;font-weight:800;text-decoration:none}
+/* Keep the primary documentation heading compact above Swagger's own title. */
+.api-docs-header h1{font:700 1.25rem/1.2 system-ui,sans-serif;margin:0}
+/* Explain the selector's complete-contract scope without crowding the toolbar. */
+.api-docs-header p{color:#d8cfe2;font:400 .9rem/1.4 system-ui,sans-serif;margin:.2rem 0 0}
+/* Remove the browser default margin so Swagger uses the complete viewport width. */
+body{margin:0}

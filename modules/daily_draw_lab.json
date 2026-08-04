@@ -1,6 +1,6 @@
 {
   "module": "daily_draw_lab",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": ["casino/games/daily_draw_lab/", "web/games/daily_draw_lab.js", "web/i18n/en-US/games/daily_draw_lab.json", "web/i18n/ru-RU/games/daily_draw_lab.json"],
   "requirements_prefixes": ["DDLAB"],
   "contracts": ["contracts/openapi/daily_draw_lab.v1.yaml"],

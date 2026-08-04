@@ -38,6 +38,8 @@ def _runtime_directory(environment_key: str, default: Path) -> Path:
 
 # Set WEB_DIR to the value needed for the next operation.
 WEB_DIR = ROOT_DIR / "web"
+# Expose only reviewed OpenAPI source contracts through the same-origin documentation route. (API-003)
+OPENAPI_DIR = ROOT_DIR / "contracts" / "openapi"
 # Resolve persistent state from an external environment setting or the local source-tree default.
 DATA_DIR = _runtime_directory(DATA_DIR_ENV, ROOT_DIR / "data")
 # Set GAME_DATA_DIR to the value needed for the next operation.

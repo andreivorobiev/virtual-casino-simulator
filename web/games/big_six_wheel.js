@@ -2,7 +2,7 @@
 // Import the standard API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import the merged #97 motion scope so every spin timer has lifecycle cleanup.
 import { createMotionTimerScope } from '../core/motion.js';
 // Import game-domain localization and locale-change subscription helpers.
@@ -339,6 +339,8 @@ async function spin() {
     clearPendingRequest();
     // Stop presentation when shell navigation unmounted or replaced this route during the request.
     if (root !== mountedRoot || motionScope !== activeScope) return;
+    // Show the committed debit while the wheel still conceals its authoritative result. (LEDGER-031, issue #584)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Hold the authoritative settlement out of visible result regions until motion completes.
     pendingRound = response.round;
     // Remember the settled wager map so one click can repeat the same spin next round.

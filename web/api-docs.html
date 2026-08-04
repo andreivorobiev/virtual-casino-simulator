@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TiltSeven API documentation</title>
+  <!-- Load the pinned same-origin Swagger UI stylesheet under the production CSP. -->
+  <link rel="stylesheet" href="/vendor/swagger-ui/swagger-ui.css">
+  <!-- Keep documentation-specific colors and spacing separate from the casino shell. -->
+  <link rel="stylesheet" href="/api-docs.css">
+</head>
+<body>
+  <!-- Provide a stable accessible heading before Swagger builds the contract explorer. -->
+  <header class="api-docs-header"><a href="/">TiltSeven</a><div><h1>API documentation</h1><p>All published OpenAPI contracts in one read-only explorer.</p></div></header>
+  <!-- Swagger UI mounts every repository contract through its built-in definition selector. -->
+  <main id="swagger-ui" aria-label="TiltSeven OpenAPI explorer"></main>
+  <!-- Load only pinned same-origin executable assets so the production CSP remains unchanged. -->
+  <script src="/vendor/swagger-ui/swagger-ui-bundle.js"></script>
+  <!-- Enable Swagger's pinned Topbar preset so the complete multi-contract selector is rendered. -->
+  <script src="/vendor/swagger-ui/swagger-ui-standalone-preset.js"></script>
+  <!-- Initialize the reviewed read-only contract inventory after Swagger is available. -->
+  <script src="/api-docs.js"></script>
+</body>
+</html>

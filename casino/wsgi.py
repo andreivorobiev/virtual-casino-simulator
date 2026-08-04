@@ -16,7 +16,7 @@ from pathlib import Path
 # Reuse the canonical route registry and cache contract without starting casino.app's development server.
 from casino.app import CACHE_CONTROL_NO_STORE, ROUTER
 # Import production runtime and packaged-static configuration.
-from casino.config import APP_VERSION, WEB_DIR, validate_bootstrap_for_startup, validate_production_runtime
+from casino.config import APP_VERSION, OPENAPI_DIR, WEB_DIR, validate_bootstrap_for_startup, validate_production_runtime
 # Import standard application errors for stable public envelopes.
 from casino.errors import CasinoError, ForbiddenError, RequestTooLargeError, ValidationError
 # Import strict JSON-number handling shared with the development HTTP adapter.
@@ -314,27 +314,37 @@ class CasinoWSGIApplication:
         if path in ("", "/"):
             # Select the public frontend shell.
             path = "/index.html"
+        # Map the stable human-facing API documentation URL to its packaged Swagger shell.
+        elif path in ("/api-docs", "/api-docs/"):
+            # Select the same-origin Swagger entry document without a redirect.
+            path = "/api-docs.html"
         # Map the stable Admin route to its separate packaged entry document.
         elif path == "/admin":
             # Select the Admin frontend shell without a redirect.
             path = "/admin.html"
-        # Convert the URL path into a relative filesystem path.
-        relative = Path(path.lstrip("/"))
+        # Identify one public contract request before choosing its immutable filesystem root.
+        openapi_request = path.startswith("/openapi/")
+        # Convert the URL path into a relative filesystem path under the selected root.
+        relative = Path(path.removeprefix("/openapi/") if openapi_request else path.lstrip("/"))
         # Accept the existing optional /web prefix without duplicating the on-disk root.
         if relative.parts and relative.parts[0] == "web":
             # Remove only the explicit packaged-static prefix.
             relative = Path(*relative.parts[1:])
         # Resolve the candidate beneath the immutable web root.
-        target = (WEB_DIR / relative).resolve()
+        target = ((OPENAPI_DIR if openapi_request else WEB_DIR) / relative).resolve()
         # Start protected containment handling for traversal attempts.
         try:
             # Require the resolved target to remain within packaged static content.
-            target.relative_to(WEB_DIR.resolve())
+            target.relative_to((OPENAPI_DIR if openapi_request else WEB_DIR).resolve())
         # Return a generic forbidden response for any escape attempt.
         except ValueError:
             # Avoid disclosing filesystem structure in the response.
             return _respond(start_response, 403, b"Forbidden\n", "text/plain; charset=utf-8")
-        # Fall back to the same-origin application shell for client-side routes.
+        # Return missing or non-YAML contract requests without application-shell fallback.
+        if openapi_request and (not target.is_file() or target.suffix != ".yaml"):
+            # Publish a generic not-found response without filesystem details.
+            return _respond(start_response, 404, b"Not found\n", "text/plain; charset=utf-8")
+        # Fall back to the same-origin application shell for ordinary client-side routes.
         if not target.is_file():
             # Select only the known packaged entry document.
             target = WEB_DIR / "index.html"
@@ -353,7 +363,7 @@ class CasinoWSGIApplication:
         # Read immutable asset bytes after containment and existence checks.
         content = target.read_bytes()
         # Derive a content type from the packaged asset name with a safe binary fallback.
-        content_type = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
+        content_type = "application/yaml; charset=utf-8" if openapi_request else (mimetypes.guess_type(str(target))[0] or "application/octet-stream")
         # Return the static asset without adding security policy owned by issue #203.
         return _respond(start_response, 200, content, content_type, extra_headers, effective_scheme)
 

@@ -2,7 +2,7 @@
 // Import the standard API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import game-domain localization and locale-change subscription helpers.
 import { initI18n, onLocaleChange, t } from '../core/i18n.js';
 
@@ -106,6 +106,8 @@ async function draw() {
   try {
     // Post the exactly-once draw with a caller-stable retry id and the chosen pattern.
     const response = await post('/api/v1/games/pattern-draw/draws', { request_id: newRequestId(), bet: selectedBet, stake });
+    // Show the committed debit before the completed grid becomes visible. (LEDGER-031, issue #598)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
     const round = response.round;
     // Reveal the authoritative committed grid so the cells light up.

@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup, PASSKEYS_ENABLED
+from casino.config import DEFAULT_HOST, DEFAULT_PORT, OPENAPI_DIR, WEB_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup, PASSKEYS_ENABLED
 # Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
@@ -902,34 +902,46 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", ""):
             # Set path to the value needed for the next operation.
             path = "/index.html"
+        # Map the stable API-documentation URL to its same-origin packaged Swagger shell.
+        elif path in ("/api-docs", "/api-docs/"):
+            # Select the dedicated documentation entry document without a redirect.
+            path = "/api-docs.html"
         # Branch when the prior condition failed and this condition is true.
         elif path == "/admin":
             # Set path to the value needed for the next operation.
             path = "/admin.html"
-        # Set rel to the value needed for the next operation.
-        rel = Path(path.lstrip("/"))
+        # Identify a reviewed public OpenAPI contract request before choosing its root.
+        openapi_request = path.startswith("/openapi/")
+        # Resolve the relative path beneath only the selected immutable root.
+        rel = Path(path.removeprefix("/openapi/") if openapi_request else path.lstrip("/"))
         # Branch when the following condition is true.
         if rel.parts and rel.parts[0] == "web":
             # Set rel to the value needed for the next operation.
             rel = Path(*rel.parts[1:])
-        # Set target to the value needed for the next operation.
-        target = (WEB_DIR / rel).resolve()
+        # Resolve the target beneath contracts/openapi or packaged web assets as requested.
+        target = ((OPENAPI_DIR if openapi_request else WEB_DIR) / rel).resolve()
         # Start protected logic so failures can be handled safely.
         try:
             # Execute this statement as part of the module's documented control flow.
-            target.relative_to(WEB_DIR.resolve())
+            target.relative_to((OPENAPI_DIR if openapi_request else WEB_DIR).resolve())
         # Handle the expected failure path for the protected logic.
         except Exception:
             # Execute this statement as part of the module's documented control flow.
             self.send_error(403); return
-        # Branch when the following condition is true.
+        # Return missing or non-YAML contracts without falling back to the application shell.
+        if openapi_request and (not target.is_file() or target.suffix != ".yaml"):
+            # Publish one ordinary not-found response without exposing filesystem structure.
+            self.send_error(404)
+            # Stop before any unrelated packaged file is read.
+            return
+        # Fall back only ordinary application routes to the public shell.
         if not target.exists() or not target.is_file():
             # Set target to the value needed for the next operation.
             target = WEB_DIR / "index.html"
         # Set content to the value needed for the next operation.
         content = target.read_bytes()
-        # Set ctype to the value needed for the next operation.
-        ctype = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
+        # Publish YAML contracts explicitly while retaining ordinary MIME discovery.
+        ctype = "application/yaml; charset=utf-8" if openapi_request else (mimetypes.guess_type(str(target))[0] or "application/octet-stream")
         # Execute this statement as part of the module's documented control flow.
         self.send_response(200)
         # Execute this statement as part of the module's documented control flow.

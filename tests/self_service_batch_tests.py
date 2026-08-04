@@ -61,6 +61,7 @@ class ReplayFoundationTests(unittest.TestCase):
     def test_replays_never_return_another_subject(self) -> None:
         # Seed a round for each account with distinguishable trailing references.
         self._round(self.owner["player_id"], "roulette", "round_ownerAAA")
+        # Seed the neighbouring account separately so the privacy assertion can detect cross-subject leakage.
         self._round(self.other["player_id"], "slots", "round_otherBBB", outcome="lose", payout=0.0)
         # Read the owner's replays and collect the published references.
         refs = {artifact["reference"] for artifact in replay.self_replays(self.owner)["replays"]}
@@ -262,6 +263,7 @@ class SelfServiceCopyTests(unittest.TestCase):
     def test_copy_ships_in_both_locales(self) -> None:
         # Load both shipped locales.
         english = json.loads((ROOT / "web" / "i18n" / "en-US" / "shell.json").read_text(encoding="utf-8"))
+        # Load Russian independently so one missing or mismatched locale cannot inherit English evidence.
         russian = json.loads((ROOT / "web" / "i18n" / "ru-RU" / "shell.json").read_text(encoding="utf-8"))
         # Check every namespace this batch introduced.
         keys = [key for key in english if key.split(".")[0] in ("replay", "profile", "compare")]

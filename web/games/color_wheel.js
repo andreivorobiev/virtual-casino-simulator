@@ -2,7 +2,7 @@
 // Import the standard API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import game-domain localization and locale-change subscription helpers.
 import { initI18n, onLocaleChange, t } from '../core/i18n.js';
 
@@ -151,6 +151,8 @@ async function spin() {
   try {
     // Post the exactly-once spin with a caller-stable retry id.
     const response = await post('/api/v1/games/color-wheel/spins', { request_id: newRequestId(), color: selectedColor, stake });
+    // Show the committed debit before the wheel exposes its landed color. (LEDGER-031, issue #592)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative landed segment and outcome.
     const round = response.round;
     // Remember the settled colour and stake so one click can repeat the same bet next spin.

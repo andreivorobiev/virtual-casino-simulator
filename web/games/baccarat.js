@@ -570,6 +570,8 @@ function finishRevealLater(show) {
     render();
     // Restore cached bot panel content in the new render tree.
     updateBotPanel();
+    // Publish the settled wallet only after the cards and result are visible. (LEDGER-031, issue #601)
+    refreshBalance().catch(() => {});
   }, show ? 1050 : 280); // Use a shorter reveal delay during autoplay ticks.
 }
 
@@ -597,8 +599,6 @@ async function dealNow(show = true) {
     render();
     // Refresh bot rows after bot and human actions settle.
     await updateBotPanel();
-    // Refresh the shared wallet after settlement credits are posted.
-    await refreshBalance();
     // Play a reveal sound for manual deals.
     clickSound(760, .08);
     // Speak the result for manual deals only.

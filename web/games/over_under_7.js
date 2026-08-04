@@ -2,7 +2,7 @@
 // Import standard API helpers so requests use the shared envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
-import { refreshBalance, safe, toast } from '../core/ui.js';
+import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import the shared #97 motion scope so dice reveal timers are route-owned.
 import { createMotionTimerScope } from '../core/motion.js';
 // Import game-domain localization and locale-change helpers.
@@ -308,6 +308,8 @@ async function play() {
     clearPendingRequest();
     // Stop if navigation replaced the route.
     if (root !== mountedRoot || motionScope !== activeScope) return;
+    // Show the committed debit before the authoritative dice total is revealed. (LEDGER-031, issue #588)
+    renderCommittedWagerBalance(response.ledger?.wager);
     // Store the authoritative settled round.
     latestRound = response.round;
     // Remember the settled wager map so the next roll can repeat the same bet with one click.

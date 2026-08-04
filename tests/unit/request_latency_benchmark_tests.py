@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregate to add exactly eight permanent rows to the 880-row v0.9.5.49 registry.
-        self.assertEqual(len(requirements), 888)
+        # Require the accepted aggregate plus wallet-timing and API-docs allocations to total exactly 892 permanent rows.
+        self.assertEqual(len(requirements), 892)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1387,6 +1387,10 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "SESSION-009": "Core",
             "ADMIN-031": "Admin",
             "TEST-150": "Tests",
+            "LEDGER-031": "Ledger",
+            "TEST-151": "Tests",
+            "API-003": "Contracts",
+            "TEST-152": "Tests",
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1488,20 +1492,20 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         bingo_module = json.loads((ROOT / "modules" / "bingo.json").read_text(encoding="utf-8"))
         # Parse the Keno descriptor for the compatible commitment-boundary repair.
         keno_module = json.loads((ROOT / "modules" / "keno.json").read_text(encoding="utf-8"))
-        # Require the exact compatible core minor allocation.
-        self.assertEqual(core_module["version"], "9.36.1")
+        # Require the exact compatible core patch allocation for shared committed-wallet rendering.
+        self.assertEqual(core_module["version"], "9.36.2")
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.15.0")
         # Require the exact compatible tests revision allocation.
-        self.assertEqual(tests_module["version"], "1.67.5")
+        self.assertEqual(tests_module["version"], "1.67.6")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.65.5")
+        self.assertEqual(docs_module["version"], "1.65.6")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.54.5")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.0")
         # Require the exact compatible Baccarat patch allocation.
-        self.assertEqual(baccarat_module["version"], "9.1.10")
+        self.assertEqual(baccarat_module["version"], "9.1.11")
         # Require the exact compatible Bingo patch allocation.
         self.assertEqual(bingo_module["version"], "9.3.3")
         # Require the exact compatible Keno patch allocation.
@@ -1509,6 +1513,6 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Roulette presentation minor.
         self.assertEqual(roulette_module["version"], "9.5.2")
         # Require the exact compatible Slots presentation minor.
-        self.assertEqual(slots_module["version"], "9.4.1")
-        # Require the exact compatible Application revision for the restoration release packet.
-        self.assertEqual(application_module["version"], "9.56.8")
+        self.assertEqual(slots_module["version"], "9.4.2")
+        # Require the exact compatible Application revision for Swagger and wallet presentation.
+        self.assertEqual(application_module["version"], "9.56.9")
