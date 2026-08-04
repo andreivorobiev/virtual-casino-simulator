@@ -502,9 +502,9 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.53.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.54.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.53", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.54", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
         self.assertEqual(
             compatibility["predecessor"],
@@ -522,7 +522,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Reject truncated, uppercase, or otherwise noncanonical live predecessor pins.
             self.assertRegex(compatibility["predecessor"][identity_name], r"^[0-9a-f]{64}$")
         # Require the exact current candidate policy to resolve its retained immutable predecessor.
-        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.53"), "v0.9.5.52")
+        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.54"), "v0.9.5.52")
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
         self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
         # Require all broader enrollment surfaces to remain disabled for this release channel.

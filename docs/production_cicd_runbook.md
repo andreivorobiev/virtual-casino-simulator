@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.53`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.54`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -157,6 +157,8 @@ v0.9.5.51 carries the accepted production-polish fixes from sole normal content 
 v0.9.5.52 carries the bounded restoration bundle from sole normal content PR #581: 28 branded game palettes, the guest-lifecycle window proof, and the Deuces Wild and Texas practice house-edge policies with their focused tests and contracts. Contributor PRs #573, #574, and #580 are ancestry-only inputs, not additional content merges. Issues #456 and #555 remain open and incomplete. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record declares rollback at unchanged schema 2 and retains exact immutable v0.9.5.51 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.53 carries the accepted wallet-timing and API-documentation packet from sole normal content PR #602. It exposes the committed wager debit immediately across all eighteen delayed-result browser games, refreshes the authoritative settled balance after reveal, and adds a read-only same-origin Swagger explorer for all 62 published OpenAPI contracts. It changes no wagering economics or frozen API behavior. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record declares rollback at unchanged schema 2 and retains exact immutable v0.9.5.52 as the application-only predecessor; database rollback remains prohibited.
+
+v0.9.5.54 is the immutable inventory-note correction for the same accepted #602 content. v0.9.5.53 was published but never activated after public audit found that its descriptive inventory note counted two test-only files that release packaging intentionally excludes. v0.9.5.54 records the exact 731-file deployable inventory and changes no product source. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.52 as the application-only predecessor; database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
