@@ -12984,6 +12984,102 @@
       "introduced_in": "wallet-timing-swagger",
       "changed_in": "wallet-timing-swagger",
       "notes": "The browser proof reuses the existing exact-static-byte case so no new shard case or duration-profile allocation is required."
+    },
+    {
+      "id": "TOKEN-007",
+      "module": "Application",
+      "description": "A successful wallet top-up clears its amount and closes its popover immediately after the authoritative current-user payload commits, before any secondary shell refresh can race a repeat click.",
+      "status": "PASS",
+      "api_tests": ["UI-WALLET-TIMING-001"],
+      "browser_tests": ["BR-TOKEN-001"],
+      "implementation_files": ["web/app.js", "tests/wallet_timing.mjs"],
+      "introduced_in": "issue-557-wallet-clear-race",
+      "changed_in": "issue-557-wallet-clear-race",
+      "notes": "The server mutation and ledger semantics are unchanged; only the post-success UI ordering is repaired."
+    },
+    {
+      "id": "I18N-011",
+      "module": "Application",
+      "description": "Player-facing API failures derive localized copy from stable error code or HTTP category while preserving code, details, and status separately, and all Russian resources use the canonical token terminology instead of the retired casino-chip stem.",
+      "status": "PASS",
+      "api_tests": ["FRONTEND-SAFETY-001"],
+      "browser_tests": ["BR-I18N-FOUNDATION-001"],
+      "implementation_files": ["web/core/api.js", "web/i18n/en-US/common.json", "web/i18n/ru-RU/common.json", "web/i18n/ru-RU/games/", "scripts/validate_token_terminology.py"],
+      "introduced_in": "issues-575-579-localized-errors",
+      "changed_in": "issues-575-579-localized-errors",
+      "notes": "Raw server messages remain diagnostic data and are never reflected into player copy."
+    },
+    {
+      "id": "AUTO-015",
+      "module": "Autoplay",
+      "description": "Autoplay retains speed and requested count across game rerenders, reconciles an existing authoritative session before creating another, records every server tick, and discards the resumable server id only after finish-stop succeeds.",
+      "status": "PASS",
+      "api_tests": ["API-BINGO-001"],
+      "browser_tests": ["BR-BINGO-001"],
+      "implementation_files": ["web/core/autoplay.js", "tests/run_tests.py"],
+      "introduced_in": "issue-576-bingo-autoplay-resume",
+      "changed_in": "issue-576-bingo-autoplay-resume",
+      "notes": "No game owns an autoplay loop; all actions remain serialized through the shared control plane."
+    },
+    {
+      "id": "BINGO-027",
+      "module": "Bingo",
+      "description": "Bingo autoplay defaults to one complete bounded 75-call plan, including for disposable guests, and resetting a called session requires explicit non-refund confirmation followed by truthful refunded, abandoned, or cleared feedback.",
+      "status": "PASS",
+      "api_tests": ["API-BINGO-001"],
+      "browser_tests": ["BR-BINGO-001"],
+      "implementation_files": ["casino/app.py", "casino/config.py", "web/games/bingo.js", "web/i18n/en-US/games/bingo.json", "web/i18n/ru-RU/games/bingo.json"],
+      "introduced_in": "issues-576-577-bingo-lifecycle",
+      "changed_in": "issues-576-577-bingo-lifecycle",
+      "notes": "The existing server refund-before-first-call and abandon-after-call economics remain authoritative."
+    },
+    {
+      "id": "PWA-003",
+      "module": "Application",
+      "description": "Apply update resolves a worker still transitioning from installing to waiting, sends exactly one SKIP_WAITING command, reloads only after controllerchange, and fails visibly after bounded transition or activation timeouts.",
+      "status": "PASS",
+      "api_tests": ["PWA-001"],
+      "browser_tests": ["BR-PWA-001"],
+      "implementation_files": ["web/core/pwa.js", "tests/pwa_tests.py"],
+      "introduced_in": "issue-578-pwa-one-click",
+      "changed_in": "issue-578-pwa-one-click",
+      "notes": "No forced reload or service-worker cache-policy change is introduced."
+    },
+    {
+      "id": "UX-025",
+      "module": "Application",
+      "description": "Full-root game rerenders preserve stable control focus and mirror authoritative result copy into a document-lifetime live region; ordinary controls provide a 44-pixel minimum target while Roulette precision inside-bet controls provide a 24-pixel hit area with their compact visual marker retained.",
+      "status": "PASS",
+      "api_tests": ["FRONTEND-SAFETY-001"],
+      "browser_tests": ["BR-ROU-PREMIUM-001", "BR-KENO-001", "BR-BINGO-001", "BR-BJ-001", "BR-BAC-001", "BR-GAME-COLOR-001", "BR-CATALOG-EXPANSION-001"],
+      "implementation_files": ["web/index.html", "web/styles.css", "web/core/ui.js", "web/games/roulette.js", "web/games/keno.js", "web/games/bingo.js", "web/games/blackjack.js", "web/games/baccarat.js", "web/games/color_wheel.js", "web/games/four_card_poker.js"],
+      "introduced_in": "issue-421-accessibility-remediation",
+      "changed_in": "issue-421-accessibility-remediation",
+      "notes": "The adopted visual standard uses a 44-pixel ordinary-control floor; the precision Roulette overlay is the bounded 24-pixel exception permitted by WCAG 2.2 target-size minimum spacing."
+    },
+    {
+      "id": "TOOL-012",
+      "module": "Tooling",
+      "description": "Every substantive pull request must list delivered issues under a stable Issues resolved section using GitHub-native closing keywords; standard release-only pull requests must explicitly declare their exception.",
+      "status": "PASS",
+      "api_tests": ["TEST-153"],
+      "browser_tests": [],
+      "implementation_files": ["scripts/validate_pr_issue_lifecycle.py", ".github/pull_request_template.md", ".github/workflows/ci.yml"],
+      "introduced_in": "all-remaining-bugs-ticket-lifecycle",
+      "changed_in": "all-remaining-bugs-ticket-lifecycle",
+      "notes": "The check runs inside the existing CI family and adds no duplicate heavy workflow."
+    },
+    {
+      "id": "TEST-153",
+      "module": "Tests",
+      "description": "Focused listener-free evidence covers wallet ordering, localized structured errors, Russian token terminology, PWA installing-to-waiting application, autoplay reconciliation, Bingo reset disclosure, persistent game focus and announcements, Roulette hit targets, and PR issue-closing governance.",
+      "status": "PASS",
+      "api_tests": ["UI-WALLET-TIMING-001", "FRONTEND-SAFETY-001", "API-BINGO-001"],
+      "browser_tests": ["BR-PWA-001", "BR-BINGO-001", "BR-I18N-FOUNDATION-001"],
+      "implementation_files": ["tests/issue_lifecycle_tests.py", "tests/pwa_tests.py", "tests/frontend_safety.mjs", "tests/wallet_timing.mjs", "tests/run_tests.py"],
+      "introduced_in": "all-remaining-bugs-regression",
+      "changed_in": "all-remaining-bugs-regression",
+      "notes": "Hosted Browser qualification reuses existing permanent cases and creates no new shard inventory owner."
     }
   ]
 }

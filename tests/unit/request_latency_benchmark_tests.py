@@ -1373,24 +1373,32 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregate plus wallet-timing and API-docs allocations to total exactly 892 permanent rows.
-        self.assertEqual(len(requirements), 892)
+        # Require the accepted aggregate plus the consolidated remaining-bug allocations to total exactly 900 permanent rows.
+        self.assertEqual(len(requirements), 900)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
         aggregate_allocations = {
-            "BINGO-026": "Bingo",
-            "ADMIN-029": "Admin",
-            "TEST-145": "Tests",
-            "ADMIN-030": "Admin",
-            "TEST-146": "Tests",
-            "SESSION-009": "Core",
-            "ADMIN-031": "Admin",
-            "TEST-150": "Tests",
-            "LEDGER-031": "Ledger",
-            "TEST-151": "Tests",
-            "API-003": "Contracts",
-            "TEST-152": "Tests",
+            "BINGO-026": "Bingo",  # Preserve the accepted economics owner.
+            "ADMIN-029": "Admin",  # Preserve the diagnostic owner.
+            "TEST-145": "Tests",  # Preserve the diagnostic evidence owner.
+            "ADMIN-030": "Admin",  # Preserve the economics owner.
+            "TEST-146": "Tests",  # Preserve the economics evidence owner.
+            "SESSION-009": "Core",  # Preserve the session-policy owner.
+            "ADMIN-031": "Admin",  # Preserve the Admin session-policy owner.
+            "TEST-150": "Tests",  # Preserve the policy evidence owner.
+            "LEDGER-031": "Ledger",  # Preserve wallet-timing ownership.
+            "TEST-151": "Tests",  # Preserve wallet-timing evidence ownership.
+            "API-003": "Contracts",  # Preserve API-doc ownership.
+            "TEST-152": "Tests",  # Preserve API-doc evidence ownership.
+            "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
+            "I18N-011": "Application",  # Bind shared localized copy to the shell.
+            "AUTO-015": "Autoplay",  # Bind lifecycle reconciliation to the control plane.
+            "BINGO-027": "Bingo",  # Bind call and reset semantics to Bingo.
+            "PWA-003": "Application",  # Bind update application to the shell.
+            "UX-025": "Application",  # Bind shared accessibility behavior to the shell.
+            "TOOL-012": "Tooling",  # Bind ticket closure enforcement to tooling.
+            "TEST-153": "Tests",  # Bind consolidated regression evidence to tests.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1492,27 +1500,35 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         bingo_module = json.loads((ROOT / "modules" / "bingo.json").read_text(encoding="utf-8"))
         # Parse the Keno descriptor for the compatible commitment-boundary repair.
         keno_module = json.loads((ROOT / "modules" / "keno.json").read_text(encoding="utf-8"))
-        # Require the exact compatible core patch allocation for shared committed-wallet rendering.
-        self.assertEqual(core_module["version"], "9.36.2")
+        # Parse the Blackjack descriptor for the compatible focus-preservation repair.
+        blackjack_module = json.loads((ROOT / "modules" / "blackjack.json").read_text(encoding="utf-8"))
+        # Parse the Autoplay descriptor for the compatible lifecycle reconciliation repair.
+        autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
+        # Require the exact compatible core patch allocation for the bounded guest Bingo call ceiling.
+        self.assertEqual(core_module["version"], "9.36.3")
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.15.0")
         # Require the exact compatible tests revision allocation.
-        self.assertEqual(tests_module["version"], "1.67.8")
+        self.assertEqual(tests_module["version"], "1.67.9")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.65.8")
+        self.assertEqual(docs_module["version"], "1.65.9")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.54.7")
         # Require the exact compatible tooling revision allocation.
-        self.assertEqual(tooling_module["version"], "1.25.0")
+        self.assertEqual(tooling_module["version"], "1.25.1")
         # Require the exact compatible Baccarat patch allocation.
-        self.assertEqual(baccarat_module["version"], "9.1.11")
+        self.assertEqual(baccarat_module["version"], "9.1.12")
         # Require the exact compatible Bingo patch allocation.
-        self.assertEqual(bingo_module["version"], "9.3.3")
+        self.assertEqual(bingo_module["version"], "9.3.4")
         # Require the exact compatible Keno patch allocation.
-        self.assertEqual(keno_module["version"], "9.3.4")
+        self.assertEqual(keno_module["version"], "9.3.5")
         # Require the exact compatible Roulette presentation minor.
-        self.assertEqual(roulette_module["version"], "9.5.2")
+        self.assertEqual(roulette_module["version"], "9.5.3")
         # Require the exact compatible Slots presentation minor.
         self.assertEqual(slots_module["version"], "9.4.2")
         # Require the exact compatible Application revision for Swagger and wallet presentation.
-        self.assertEqual(application_module["version"], "9.56.11")
+        self.assertEqual(application_module["version"], "9.56.12")
+        # Require Blackjack to carry the focus and live-result patch.
+        self.assertEqual(blackjack_module["version"], "9.1.8")
+        # Require Autoplay to carry the server-lifecycle reconciliation patch.
+        self.assertEqual(autoplay_module["version"], "1.1.5")

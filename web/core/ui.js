@@ -19,6 +19,49 @@ const toastIsSuccess = variant => variant === true || variant === 'ok' || varian
 // the document; swapping role or aria-live at the same moment the text changes is a known way to make
 // announcements unreliable, so only the text and palette change here. (#421)
 export function toast(message, variant=false){ const t=document.getElementById('toast'); if(!t)return; const ok=toastIsSuccess(variant); t.textContent=message; t.style.background=ok?'#10381f':'#2b1111'; t.style.color=ok?'#c8ffd1':'#ffd3d3'; t.hidden=false; clearTimeout(toast._timer); toast._timer=setTimeout(()=>{t.hidden=true},4500); }
+// Capture a stable game control before full-root rendering replaces its DOM node. (UX-025)
+export function captureGameFocus(root){
+  // Ignore focus outside the route root because shell navigation is persistent.
+  if(!root || typeof root.contains!=='function' || !root.contains(document.activeElement)) return null;
+  // Read the focused control once before the render destroys it.
+  const active=document.activeElement;
+  // Prefer stable public selectors that survive localization and value changes.
+  const selector=active.id?`#${CSS.escape(active.id)}`:active.dataset.testid?`[data-testid="${CSS.escape(active.dataset.testid)}"]`:active.dataset.cellKey?`[data-cell-key="${CSS.escape(active.dataset.cellKey)}"]`:active.name?`[name="${CSS.escape(active.name)}"]`:null;
+  // Preserve text selection when the focused element supports it.
+  const selection=Number.isInteger(active.selectionStart)?{start:active.selectionStart,end:active.selectionEnd}:null;
+  // Return only restorable, non-sensitive presentation state.
+  return selector?{selector,selection}:null;
+}
+// Restore a captured game control after a full-root render without moving focus unexpectedly. (UX-025)
+export function restoreGameFocus(root,snapshot){
+  // Stop when the prior focus had no stable identity.
+  if(!root || typeof root.querySelector!=='function' || !snapshot?.selector) return false;
+  // Resolve only within the current game root so selectors cannot escape the route.
+  const target=root.querySelector(snapshot.selector);
+  // Leave focus unchanged when the control no longer exists or cannot receive focus.
+  if(!target || typeof target.focus!=='function') return false;
+  // Restore the same control without scrolling the game board.
+  target.focus({preventScroll:true});
+  // Restore the text selection when both the old and new controls support it.
+  if(snapshot.selection && typeof target.setSelectionRange==='function') target.setSelectionRange(snapshot.selection.start,snapshot.selection.end);
+  // Confirm that restoration completed for browser-free regression tests.
+  return true;
+}
+// Mirror the current game result into one document-lifetime live region. (UX-025)
+export function syncGameLiveStatus(root){
+  // Locate the persistent outlet that navigation never replaces.
+  const outlet=document.getElementById('game-live-status');
+  // Read only the game-owned status node explicitly marked for announcement.
+  const source=root?.querySelector?.('[data-game-live-status]');
+  // Stop when either side of the accessible announcement contract is absent.
+  if(!outlet || !source) return false;
+  // Normalize whitespace so repeated layout formatting does not create noisy announcements.
+  const message=String(source.textContent || '').replace(/\s+/g,' ').trim();
+  // Update the persistent status only when the meaningful result changed.
+  if(message && outlet.textContent!==message) outlet.textContent=message;
+  // Return whether a meaningful status was available.
+  return Boolean(message);
+}
 // Export this symbol so other modules can use it through the public module boundary.
 export async function refreshBalance(){
   // Branch when the authenticated shell owns wallet rendering.

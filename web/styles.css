@@ -167,7 +167,7 @@ summary.icon-button {
 }
 
 button {
-  min-height: 42px;
+  min-height: 44px;
   padding: 9px 13px;
   border: 1px solid var(--border-soft);
   border-radius: 10px;

@@ -2,7 +2,7 @@
 // Import the frozen API helpers used by this frontend module.
 import { api, post, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import shared shell/UI helpers so formatting, cards, toasts, and wallet refreshes stay consistent.
-import { toast, refreshBalance, cardHtml, safe } from '../core/ui.js';
+import { toast, refreshBalance, cardHtml, safe, captureGameFocus, restoreGameFocus, syncGameLiveStatus } from '../core/ui.js';
 // Import the i18n runtime so Blackjack text can refresh without remounting gameplay state.
 import { initI18n, loadI18nDomain, onLocaleChange, t, formatMoney, formatNumber } from '../core/i18n.js';
 // Import voice helpers so existing Blackjack audio behavior is preserved.
@@ -702,7 +702,7 @@ function renderFelt(roundItem) {
   // Store felt logo text for current phase.
   const [logo, sublogo] = tableLogoText(roundItem);
   // Return the fixed central play stage.
-  return `<section class="panel game-stage" data-testid="blackjack-stage"><div class="row action-row"><div style="margin-right:auto"><span class="badge" data-testid="blackjack-round-id" data-round-id="${safe(roundItem?.round_id || '')}">${safe(roundItem ? T('stage.round', { id: roundItem.round_id }) : T('stage.noRound'))}</span><h2 style="margin:8px 0 0">${safe(roundTitle(roundItem))}</h2></div><span class="badge" data-testid="blackjack-stage-status">${safe(statusLabel(roundItem?.status))}</span></div><div class="result-box" data-testid="blackjack-felt" style="display:grid;grid-template-rows:auto 1fr auto;gap:16px;min-height:560px;padding:16px;background:linear-gradient(135deg, rgba(35,17,61,.82), rgba(21,10,36,.9));border-color:var(--gold);">${renderDealer(roundItem)}<div style="display:grid;place-items:center;min-height:118px;"><div class="result-box" style="display:grid;place-items:center;width:min(70%,310px);min-height:96px;border-radius:50%;text-align:center;color:var(--text);"><b>${safe(logo)}</b><span class="muted">${safe(sublogo)}</span></div></div>${renderHandGrid(roundItem)}</div></section>`;
+  return `<section class="panel game-stage" data-testid="blackjack-stage"><div class="row action-row"><div style="margin-right:auto"><span class="badge" data-testid="blackjack-round-id" data-round-id="${safe(roundItem?.round_id || '')}">${safe(roundItem ? T('stage.round', { id: roundItem.round_id }) : T('stage.noRound'))}</span><h2 style="margin:8px 0 0">${safe(roundTitle(roundItem))}</h2></div><span class="badge" data-game-live-status data-testid="blackjack-stage-status">${safe(statusLabel(roundItem?.status))}</span></div><div class="result-box" data-testid="blackjack-felt" style="display:grid;grid-template-rows:auto 1fr auto;gap:16px;min-height:560px;padding:16px;background:linear-gradient(135deg, rgba(35,17,61,.82), rgba(21,10,36,.9));border-color:var(--gold);">${renderDealer(roundItem)}<div style="display:grid;place-items:center;min-height:118px;"><div class="result-box" style="display:grid;place-items:center;width:min(70%,310px);min-height:96px;border-radius:50%;text-align:center;color:var(--text);"><b>${safe(logo)}</b><span class="muted">${safe(sublogo)}</span></div></div>${renderHandGrid(roundItem)}</div></section>`;
 }
 
 // Define decisionRowsHtml so the drawer exposes legal action affordances in text form.
@@ -767,10 +767,14 @@ function render() {
   if (!root) return;
   // Store the selected round for this render.
   const roundItem = currentRound();
+  // Preserve the focused Blackjack control through the full-root render. (UX-025)
+  const focus = captureGameFocus(root);
   // Replace the full Blackjack surface atomically so rails and drawers stay aligned.
   root.innerHTML = `<div class="game-layout three-col stable-game" data-testid="blackjack-premium">${renderControls(roundItem)}${renderFelt(roundItem)}${renderDrawer(roundItem)}</div>`;
   // Wire controls after markup is present.
   bindControls();
+  // Restore focus and announce the authoritative round status. (UX-025)
+  restoreGameFocus(root, focus); syncGameLiveStatus(root);
 }
 
 // Export this symbol so the app shell can mount Blackjack through the route registry.

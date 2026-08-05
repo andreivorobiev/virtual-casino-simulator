@@ -2,7 +2,7 @@
 // Import required dependency so this module can use the frozen Keno API contract.
 import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import required dependency so this module can reuse shared premium formatting and feedback helpers.
-import { toast, refreshBalance, safe, renderShellMetric } from '../core/ui.js';
+import { toast, refreshBalance, safe, renderShellMetric, captureGameFocus, restoreGameFocus, syncGameLiveStatus } from '../core/ui.js';
 // Import required dependency so Keno autoplay stays inside the shared control plane.
 import { renderAutoplay } from '../core/autoplay.js';
 // Import required dependency so Keno can announce completed draw results without changing game state.
@@ -668,7 +668,7 @@ function resultCopyHtml() {
   // Store selected spots for selection summaries.
   const spots = selectedNumbers();
   // Branch for drawing progress text.
-  if (phase === 'drawing') return `<div class="result-box fixed-result keno-result-copy" data-testid="keno-result"><strong>${safe(tx('status.drawingLead', { count: activeDrawNumbers().length, total: DRAW_TOTAL }))}</strong> ${safe(tx('status.drawingSummary', { catches: visibleCatchSet().size }))}</div>`;
+  if (phase === 'drawing') return `<div class="result-box fixed-result keno-result-copy" data-game-live-status data-testid="keno-result"><strong>${safe(tx('status.drawingLead', { count: activeDrawNumbers().length, total: DRAW_TOTAL }))}</strong> ${safe(tx('status.drawingSummary', { catches: visibleCatchSet().size }))}</div>`;
   // Branch for completed result text.
   if (phase === 'result' && result) {
     // Store net outcome after the already-debited ticket amount.
@@ -676,10 +676,10 @@ function resultCopyHtml() {
     // Select the singular lead copy for a one-catch ticket so the count agrees with the noun. (issue #237)
     const leadKey = result.catch_count === 1 ? 'status.resultLeadOne' : 'status.resultLead';
     // Return the completed result summary.
-    return `<div class="result-box fixed-result keno-result-copy" data-testid="keno-result"><strong>${safe(tx(leadKey, { catches: result.catch_count, spots: result.ticket.spots.length }))}</strong> ${safe(tx('status.resultSummary', { payout: moneyText(result.payout), net: moneyText(net) }))}</div>`;
+    return `<div class="result-box fixed-result keno-result-copy" data-game-live-status data-testid="keno-result"><strong>${safe(tx(leadKey, { catches: result.catch_count, spots: result.ticket.spots.length }))}</strong> ${safe(tx('status.resultSummary', { payout: moneyText(result.payout), net: moneyText(net) }))}</div>`;
   }
   // Return the selected-ticket summary or empty selection prompt.
-  return `<div class="result-box fixed-result keno-result-copy" data-testid="keno-result"><strong>${safe(tx('status.selectedLead'))}</strong> ${safe(spots.length ? tx('status.selectedSummary', { spots: spots.join(', ') }) : tx('status.noSelection'))}</div>`;
+  return `<div class="result-box fixed-result keno-result-copy" data-game-live-status data-testid="keno-result"><strong>${safe(tx('status.selectedLead'))}</strong> ${safe(spots.length ? tx('status.selectedSummary', { spots: spots.join(', ') }) : tx('status.noSelection'))}</div>`;
 }
 
 // Define stageHtml to render the center Keno board and reveal surfaces.
@@ -846,10 +846,14 @@ function bindEvents() {
 function render() {
   // Branch when the route has been unmounted.
   if (!root) return;
+  // Preserve the focused ticket control through the full-root render. (UX-025)
+  const focus = captureGameFocus(root);
   // Set route markup using only the shared #view mount point.
   root.innerHTML = `<section class="keno-premium">${heroHtml()}<div class="game-layout three-col stable-game keno-layout">${ticketPanelHtml()}${stageHtml()}${drawerHtml()}</div></section>`;
   // Bind controls after the markup has been replaced.
   bindEvents();
+  // Restore focus and announce the updated draw/result through persistent surfaces. (UX-025)
+  restoreGameFocus(root, focus); syncGameLiveStatus(root);
 }
 
 // Export this symbol so the shared shell can mount and unmount the Keno route.

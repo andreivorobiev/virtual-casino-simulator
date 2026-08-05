@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import DEFAULT_HOST, DEFAULT_PORT, OPENAPI_DIR, WEB_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup, PASSKEYS_ENABLED
+from casino.config import DEFAULT_HOST, DEFAULT_PORT, OPENAPI_DIR, WEB_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, GUEST_BINGO_AUTOPLAY_MAX_CALLS, validate_bootstrap_for_startup, PASSKEYS_ENABLED
 # Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
@@ -609,8 +609,12 @@ def build_router() -> Router:
             if any(session.get("player_id") == player_id for session in autoplay.list_sessions(active_only=True)):
                 # Return the standard conflict envelope without creating shared control-plane state.
                 raise ConflictError("Guest trial already has an active autoplay session")
-            # Clamp the disposable registration to the configured bounded round count.
-            round_limit = max(1, min(round_limit, GUEST_AUTOPLAY_MAX_ROUNDS))
+            # Detect the bounded Bingo call plan without broadening other guest autoplay loops. (BINGO-027)
+            bingo_call_plan = body.get("game_id") == "bingo" and (body.get("plan") or {}).get("type") == "auto_call_stepwise"
+            # Select the complete 75-call ceiling only for the governed Bingo plan. (BINGO-027)
+            guest_limit = GUEST_BINGO_AUTOPLAY_MAX_CALLS if bingo_call_plan else GUEST_AUTOPLAY_MAX_ROUNDS
+            # Clamp the disposable registration to the applicable configured bounded count.
+            round_limit = max(1, min(round_limit, guest_limit))
         # Return the authenticated, bounded autoplay registration.
         return {"session": autoplay.start(body.get("game_id"), player_id, body.get("speed", "medium"), round_limit, body.get("plan") or {}, body.get("limits") or {})}
 

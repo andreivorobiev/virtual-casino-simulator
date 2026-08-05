@@ -2,7 +2,7 @@
 // Import the frozen API helpers used by the Bingo browser module.
 import { api, post, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import shared premium UI helpers for balance refreshes, escaping, tags, and shell metrics.
-import { refreshBalance, safe, renderPremiumTag, renderShellMetric, toast } from '../core/ui.js';
+import { refreshBalance, safe, renderPremiumTag, renderShellMetric, toast, captureGameFocus, restoreGameFocus, syncGameLiveStatus } from '../core/ui.js';
 // Import the shared autoplay controller so Bingo remains a control-plane loop.
 import { renderAutoplay, stopAutoplay } from '../core/autoplay.js';
 // Import shared sound helpers for the same call feedback used by the legacy Bingo UI.
@@ -327,7 +327,7 @@ function callBayHtml(session) {
   // Store localized descriptive text for the current call bay state.
   const text = key === 'bingo' ? tr('callBay.bingoText', { winner: session?.winner || tr('drawer.noWin'), payout: formatMoney(session?.payout || 0) }) : tr(`callBay.${key}Text`, { label: visibleLabel || tr('callBay.none') });
   // Return the fixed call/result bay below the card.
-  return `<div class="premium-bingo-call-bay fixed-result" data-testid="bingo-call-bay"><div class="premium-bingo-orb ${callBusy ? 'is-calling' : ''}">${safe(orb)}</div><div class="premium-bingo-call-copy"><strong>${safe(tr(`callBay.${key}Title`))}</strong><p>${safe(text)}</p></div></div>`;
+  return `<div class="premium-bingo-call-bay fixed-result" data-testid="bingo-call-bay"><div class="premium-bingo-orb ${callBusy ? 'is-calling' : ''}">${safe(orb)}</div><div class="premium-bingo-call-copy" data-game-live-status><strong>${safe(tr(`callBay.${key}Title`))}</strong><p>${safe(text)}</p></div></div>`;
 }
 
 // Define stageHtml to render the center premium Bingo card and call bay.
@@ -563,6 +563,14 @@ async function call(showVoice = true) {
 
 // Define reset to clear or abandon the current Bingo session through the API.
 async function reset() {
+  // Capture the authoritative active session before reset can remove it from state. (BINGO-027)
+  const active = state?.active_session;
+  // Read the number of committed calls that make the reset an abandonment rather than a refund.
+  const calls = calledCount(active);
+  // Read the human card stake for explicit destructive-action copy.
+  const stake = Number(humanCardRecord(active)?.amount || active?.amount || 0);
+  // Require explicit confirmation before abandoning a called session and its non-refundable stake. (BINGO-027)
+  if (active && calls > 0 && !window.confirm(tr('reset.confirmAbandon', { amount: formatMoney(stake), calls: formatNumber(calls) }))) return;
   // Reset the Bingo table through the frozen v1 endpoint.
   const data = await post('/api/v1/games/bingo/reset', withCurrentPlayer());
   // Store the reset state returned by the API.
@@ -579,6 +587,11 @@ async function reset() {
   await updateBotPanel();
   // Refresh the wallet after possible pre-call refunds.
   await refreshBalance();
+  // Explain whether reset refunded an uncalled card or abandoned a started session. (BINGO-027)
+  // Select the truthful outcome key from server refund evidence and the pre-reset call count.
+  const resetKey = (data.refunds || []).length ? 'reset.refunded' : (calls > 0 ? 'reset.abandoned' : 'reset.cleared');
+  // Use the failure palette for a knowingly abandoned stake and positive feedback otherwise.
+  toast(tr(resetKey, { amount: formatMoney(stake) }), calls === 0 || (data.refunds || []).length > 0);
 }
 
 // Define autoTick so autoplay performs one public call per controller tick.
@@ -606,7 +619,7 @@ function wireControls() {
   // Wire reset to the public reset endpoint.
   root.querySelector('#reset').onclick = reset;
   // Render the shared autoplay controller with the Bingo stepwise plan.
-  autoBox = renderAutoplay({ id: 'bingo', plan: { type: 'auto_call_stepwise' }, onTick: autoTick });
+  autoBox = renderAutoplay({ id: 'bingo', plan: { type: 'auto_call_stepwise' }, defaultRounds: TOTAL_BALLS, roundsLabel: tr('autoplay.calls'), onTick: autoTick });
   // Mount autoplay inside the reserved control rail panel.
   root.querySelector('#auto').append(autoBox);
 }
@@ -619,12 +632,18 @@ function render() {
   ensureStyles();
   // Store the session selected for display.
   const session = currentSession();
+  // Preserve the same control through the full-root rerender. (UX-025)
+  const focus = captureGameFocus(root);
   // Render the premium Bingo shell inside the shared #view outlet.
   root.innerHTML = `<div class="premium-bingo" data-testid="premium-bingo">${heroHtml(session)}<div class="game-layout three-col stable-game premium-bingo-grid">${controlsHtml(session)}${stageHtml(session)}${drawerHtml(session)}</div></div>`;
   // Restore the selected pattern after the select is recreated.
   root.querySelector('#bingoPattern').value = pattern;
   // Attach all event handlers and shared widgets for the new DOM.
   wireControls();
+  // Restore the prior control without scrolling the fixed game board. (UX-025)
+  restoreGameFocus(root, focus);
+  // Mirror the call/result copy into the persistent live region. (UX-025)
+  syncGameLiveStatus(root);
 }
 
 // Export the Bingo game module through the shell's game mount contract.

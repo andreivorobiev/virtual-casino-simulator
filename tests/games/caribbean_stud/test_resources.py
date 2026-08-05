@@ -50,8 +50,8 @@ class CaribbeanStudResourceTests(unittest.TestCase):
         self.assertNotRegex(english_raw + russian_raw, r"Ã|Ð.|Ñ.|ï¿½")
         # Require explicit play-token framing in both locales.
         self.assertIn("play tokens", english["tokens.amount"])
-        # Require the Russian token noun in the token formatter.
-        self.assertIn("жетонов", russian["tokens.amount"])
+        # Require the canonical Russian play-token phrase in the token formatter. (I18N-011)
+        self.assertIn("игровых токенов", russian["tokens.amount"])
 
 
 # Run this focused suite when invoked directly by a worker.

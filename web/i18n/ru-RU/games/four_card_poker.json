@@ -1,6 +1,6 @@
 {
   "title": "Четырёхкарточный покер",
-  "tokens.amount": "{amount} жетонов",
+  "tokens.amount": "{amount} токенов",
   "result.idle": "Задайте анте и раздайте.",
   "result.decide": "Сбросьте или играйте от 1x до 3x анте.",
   "label.your_cards": "Ваши карты",

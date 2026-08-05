@@ -2,6 +2,14 @@
 
 ## Summary
 
+## Issues resolved
+
+- Fixes #
+
+Release-only: no
+
+> Every substantive merge must use `Fixes`, `Closes`, or `Resolves` for each delivered ticket. Standard release-only PRs may set `Release-only: yes`.
+
 ## Authorship and merge handback
 
 - PR author:
@@ -16,7 +24,7 @@
 
 ## Coordination
 
-- Issue:
+- Issue(s), matching the closing references above:
 - Task packet:
 - Branch:
 - Parallel workers or stacked PRs:

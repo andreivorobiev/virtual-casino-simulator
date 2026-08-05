@@ -221,6 +221,14 @@ class PwaFoundationTests(unittest.TestCase):
         api_source = (ROOT / "web" / "core" / "api.js").read_text(encoding="utf-8")
         # Read the application reconnect integration source.
         app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        # Require Apply now to await an installing worker's bounded transition to waiting. (PWA-003)
+        self.assertIn("async function resolveWaitingWorker()", client)
+        # Require the click action to use the resolved worker rather than racing registration.waiting.
+        self.assertIn("const worker = await resolveWaitingWorker()", client)
+        # Require activation to remain explicit and controllerchange-owned.
+        self.assertIn("worker.postMessage({ type: 'SKIP_WAITING' })", client)
+        # Require a bounded transition wait in addition to the existing activation timeout.
+        self.assertIn("window.setTimeout(() => finish(null), 4000)", client)
         # Require native disabled state rather than pointer-only suppression.
         self.assertIn("control.disabled = true", client)
         # Require PWA-owned controls to restore without overwriting application-owned disabled state.
@@ -229,8 +237,10 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertIn("renderPwaState('reconnect-failed')", client)
         # Require offline API calls to fail before fetch and carry a stable code.
         self.assertLess(api_source.index("navigator.onLine === false"), api_source.index("await fetch(path, init)"))
-        # Require the stable no-replay offline error code.
-        self.assertIn("error.code = 'OFFLINE'", api_source)
+        # Require the stable no-replay offline error to flow through the localized safe-error boundary.
+        self.assertIn("playerSafeError('OFFLINE')", api_source)
+        # Require the shared safe-error constructor to preserve the machine-readable code separately.
+        self.assertIn("error.code = code || 'ACTION_FAILED'", api_source)
         # Require application reconnect to revalidate the session through current-user state.
         self.assertIn("const authenticated = await refreshCurrentSession()", app)
         # Require route-aware terminal status after enterAuthenticated remounts the route.

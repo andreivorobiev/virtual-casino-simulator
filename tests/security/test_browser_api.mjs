@@ -21,8 +21,10 @@ const calls = [];
 globalThis.fetch = async (requestPath, init) => { calls.push({ requestPath, init }); return { ok: true, json: async () => ({ ok: true, data: { accepted: true } }) }; };
 // Read the exact tracked browser helper source.
 const source = await readFile(path.join(root, 'web', 'core', 'api.js'), 'utf8');
+// Replace only the relative localization import with a deterministic key-returning seam for data-URL evaluation.
+const isolatedSource = source.replace("import { t } from './i18n.js';", "const t = key => key;");
 // Import the source as an isolated ES module regardless of package metadata.
-const apiModule = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const apiModule = await import(`data:text/javascript;base64,${Buffer.from(isolatedSource).toString('base64')}`);
 // Send one state-changing request through the real helper.
 await apiModule.post('/api/v2/me/tokens/add', { amount: 1 });
 // Require the browser cookie value only in the explicit CSRF header.
@@ -109,8 +111,8 @@ globalThis.fetch = async (requestPath, init) => {
   // Return the standard API envelope shape used by server-side unauthorized responses.
   return { ok: false, status: 401, json: async () => ({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Session is invalid or expired' } }) };
 };
-// Require protected API failures to reject through the normal caller path.
-await assert.rejects(() => apiModule.api('/api/v1/games/slots/state'), /Session is invalid or expired/);
+// Require protected API failures to retain the code while replacing raw server prose with localized player copy.
+await assert.rejects(() => apiModule.api('/api/v1/games/slots/state'), error => error.code === 'UNAUTHORIZED' && error.message === 'errors.unauthorized' && !error.message.includes('Session is invalid'));
 // Let the intentionally deferred shell notification run after the caller catch path.
 await new Promise(resolve => setTimeout(resolve, 0));
 // Require one shell notification so stale authenticated chrome can be cleared.
@@ -121,14 +123,14 @@ assert.equal(sessionExpiredEvents[0].type, 'casino-session-expired');
 assert.deepEqual(sessionExpiredEvents[0].detail, { path: '/api/v1/games/slots/state' });
 // Reset captured events so public auth failures can prove they remain local.
 sessionExpiredEvents.length = 0;
-// Require login failures to reject without broadcasting protected-session expiry.
-await assert.rejects(() => apiModule.login({ email: 'player@example.test', password: 'bad' }), /Session is invalid or expired/);
+// Require login failures to reject with the same safe localized category and no raw server prose.
+await assert.rejects(() => apiModule.login({ email: 'player@example.test', password: 'bad' }), error => error.code === 'UNAUTHORIZED' && error.message === 'errors.unauthorized');
 // Let any accidental public-auth notification attempt run before asserting absence.
 await new Promise(resolve => setTimeout(resolve, 0));
 // Prove invalid login stays inside the login panel instead of remounting the expired-session gate.
 assert.equal(sessionExpiredEvents.length, 0);
-// Require guest-start failures to reject without broadcasting protected-session expiry.
-await assert.rejects(() => apiModule.guestTrial({ accepted: true, terms_version: 'private-beta-1' }), /Session is invalid or expired/);
+// Require guest-start failures to reject with the same safe localized category and no raw server prose.
+await assert.rejects(() => apiModule.guestTrial({ accepted: true, terms_version: 'private-beta-1' }), error => error.code === 'UNAUTHORIZED' && error.message === 'errors.unauthorized');
 // Let any accidental guest-auth notification attempt run before asserting absence.
 await new Promise(resolve => setTimeout(resolve, 0));
 // Prove guest-start rejection stays inside the guest-entry panel.
