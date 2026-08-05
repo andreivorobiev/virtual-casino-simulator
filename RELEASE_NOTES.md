@@ -1,3 +1,16 @@
+# Virtual Casino Simulator v0.9.5.55 Release Notes
+
+## Complete tracked-bug closure and merge-ticket enforcement
+
+- Packages the accepted complete tracked-bug packet from sole normal content PR #605; the release-only application revision advances mechanically to `9.56.13`.
+- Resolves issues #421, #557, and #575 through #579: wallet credit ordering, localized structured errors, Bingo autoplay and reset truth, one-click PWA activation, canonical Russian play-token terminology, persistent result announcements and focus, touch targets, and non-overlapping Roulette precision hotspots.
+- Adds fail-closed pull-request lifecycle governance requiring every substantive merge to list delivered issues with GitHub-native closing keywords, while release-only pull requests declare their explicit exception.
+- Carries permanent requirements `TOKEN-007`, `I18N-011`, `AUTO-015`, `BINGO-027`, `PWA-003`, `UX-025`, `TOOL-012`, and `TEST-153`; the governed total is exactly 900 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 732 regular files: the terminal v0.9.5.54 inventory plus this v0.9.5.55 compatibility record; tests and the pull-request validator remain intentionally outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; content-owned module versions remain exactly those accepted on protected main and tooling remains `1.25.1`.
+- Makes no migration, provider, public-policy, database, wagering-economics, frozen-API, publication, or deployment claim.
+- Retains exact immutable and terminal-green v0.9.5.54 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.54 Release Notes
 
 ## Corrected immutable wallet and API-documentation release
