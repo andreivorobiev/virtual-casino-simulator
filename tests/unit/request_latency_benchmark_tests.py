@@ -1509,11 +1509,11 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.15.0")
         # Require the exact compatible tests revision allocation.
-        self.assertEqual(tests_module["version"], "1.67.9")
+        self.assertEqual(tests_module["version"], "1.67.10")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.65.9")
+        self.assertEqual(docs_module["version"], "1.65.10")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.54.7")
+        self.assertEqual(contracts_module["version"], "1.54.8")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.1")
         # Require the exact compatible Baccarat patch allocation.
@@ -1527,7 +1527,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Slots presentation minor.
         self.assertEqual(slots_module["version"], "9.4.2")
         # Require the exact compatible Application revision for Swagger and wallet presentation.
-        self.assertEqual(application_module["version"], "9.56.12")
+        self.assertEqual(application_module["version"], "9.56.13")
         # Require Blackjack to carry the focus and live-result patch.
         self.assertEqual(blackjack_module["version"], "9.1.8")
         # Require Autoplay to carry the server-lifecycle reconciliation patch.
