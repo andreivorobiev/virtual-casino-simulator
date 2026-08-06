@@ -1,3 +1,15 @@
+# Virtual Casino Simulator v0.9.5.56 Release Notes
+
+## Viewport containment and phase-safe Autoplay recovery
+
+- Packages the accepted viewport-containment/action-stability packet from normal PR #609 and the accepted phase-safe Autoplay rate-limit recovery from normal PR #608; the release-only application revision advances mechanically to `9.57.1`.
+- Closes issues #607 and #555: every one of the 46 game routes now stays inside the governed viewport or a designed scroll region, same-route rerenders preserve scroll and focus, and temporary API rate limits no longer replay a completed ledger-bearing game action.
+- Carries permanent requirements `UX-026`, `UX-027`, `TEST-154`, `TEST-155`, amended `AUTO-015`, and amended `TEST-153`; the governed total remains exactly 904 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 733 regular files: the terminal v0.9.5.55 inventory plus this v0.9.5.56 compatibility record; tests and the pull-request validator remain intentionally outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; content-owned module versions remain exactly those accepted on protected main and tooling remains `1.25.1`.
+- Makes no migration, provider, public-policy, database, wagering-economics, or frozen-API change.
+- Retains exact immutable and terminal-green v0.9.5.55 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.55 Release Notes
 
 ## Complete tracked-bug closure and merge-ticket enforcement
