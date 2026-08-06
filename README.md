@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.56`
+Packaged application release: `0.9.5.57`
 
 Historical source baseline: `9.1.0`
 

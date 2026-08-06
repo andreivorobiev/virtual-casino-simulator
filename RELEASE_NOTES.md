@@ -1,3 +1,15 @@
+# Virtual Casino Simulator v0.9.5.57 Release Notes
+
+## Complete Roulette and Bingo desktop boards
+
+- Packages the accepted P0 desktop bottom-edge containment fix from sole normal content PR #612; the release-only application revision advances mechanically to `9.57.2`.
+- Resolves issue #611: the complete Roulette betting board and Bingo card/call bay remain visible above the fixed desktop footer at governed 1440x900 and 1920x1080 viewports, while tablet and mobile keep their designed document-scrolling behavior.
+- Carries amended permanent requirements `UX-026` and `TEST-154`; the governed total remains exactly 904 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 734 regular files: the terminal v0.9.5.56 inventory plus this v0.9.5.57 compatibility record; tests and the pull-request validator remain intentionally outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; content-owned Roulette `9.6.1` and Bingo `9.3.5` remain exactly those accepted on protected main and tooling remains `1.25.1`.
+- Makes no migration, provider, public-policy, database, wagering-economics, or frozen-API change.
+- Retains exact immutable and terminal-green v0.9.5.56 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.56 Release Notes
 
 ## Viewport containment and phase-safe Autoplay recovery

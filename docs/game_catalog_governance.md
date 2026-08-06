@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.57 release line retains the exact v0.9.5.56 46-game catalog and adds no descriptor, route, or economics change; its accepted P0 fix only keeps the complete Roulette and Bingo desktop boards above the fixed footer.
+
 The v0.9.5.56 release line retains 46 catalog-discovered playable game descriptors and static descriptor-derived shell fallback labels for every game in both locales, the semantic game-color foundation, the bounded shared-wallet celebration with explicit lifecycle and reduced-motion ownership, bounded Roulette and Slots presentation with route-owned lifecycle and reduced-motion evidence, the revision-bound owner-only enrollment-policy transaction, bounded enrollment-policy enforcement at public signup and invitation redemption, the read-only/default-off policy foundation, the held MySQL schema-two/schema-three rollback bridge, the JSON-provider game-action journal and cross-process storage gate, the route-free provider-neutral game-action contract and atomic player game-state update foundations, the listener-free request-latency baseline, authoritative house-side Keno and Slots economics, exact visible-rank Hi-Lo pricing, independent Andar/Bahar side pricing, fail-closed affected-game Browser qualification, the route-free shared settlement-adapter foundation, exact 138-browser full-catalog qualification, all-game desktop control-reachability gate, governed Acey-Deucey spread pricing, accepted runtime-inert settings rule-schema and coercion foundations, and deterministic duration-balanced six-runner Browser qualification workflow. Pull-request selection may omit only dedicated cases owned by unaffected catalog games; shared, unknown, protected-main, release, and authorized formal inputs retain complete coverage. The historical `GAME_CATALOG_TARGET = 20` value remains a release-readiness floor and reporting target, not a cap and not an instruction to add another catalog mechanism.
 
 Issues #73, #77, and #66 therefore should not be read as an active command to add duplicate game-registration infrastructure. Their current shared-architecture meaning is:
@@ -40,6 +42,8 @@ The descriptor contains:
 - `default`: an exceptional documented fallback only when existing engine code already supplies that fallback outside its default-state object.
 
 The validator rejects unknown schema keys, unsafe semantic flags, inverted or non-finite bounds, invalid engine defaults, undeclared settings routes, descriptors without matching routes, and multiple settings routes owned by one descriptor. Internal callable references and rule schemas are stripped from the public game catalog.
+
+v0.9.5.57 also retains the existing behavior-neutral schema and coercion helpers byte-for-byte.
 
 The v0.9.5.56 release line retains behavior-neutral helpers for internal schema lookup, deterministic declared-field discovery, and pure request coercion. On an exact descriptor-owned settings path, the coercer canonicalizes finite numeric strings and numbers, requires exact booleans and closed enum members, applies inclusive bounds, preserves unknown keys for the existing handler allowlist, and never mutates the caller-owned mapping. On every undeclared path, it returns the original request object unchanged.
 
