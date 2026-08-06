@@ -9,10 +9,12 @@ const sessions = window.__casinoAutoplaySessions || new Map();
 window.__casinoAutoplaySessions = sessions;
 // Store delayMs so later code can read or update this value.
 const delayMs = speed => ({slow:2200,medium:900,fast:260}[speed] || 900);
+// Bound exponential rate-limit pauses so a legitimate long autoplay can resume without hammering the API. (AUTO-015)
+const rateLimitDelayMs = attempt => Math.min(15000, 1000 * (2 ** Math.min(attempt, 4)));
 // Define the dispatch function that implements this UI or API behavior.
 function dispatch(msg){ window.dispatchEvent(new CustomEvent('casino-toast',{detail:{message:msg}})); }
 // Define the getSession function that implements this UI or API behavior.
-function getSession(id){ if(!sessions.has(id)) sessions.set(id,{id,starting:false,running:false,stopRequested:false,remaining:0,requestedRounds:25,speed:'medium',timer:null,serverId:null,boxes:new Set(),onTick:null}); return sessions.get(id); }
+function getSession(id){ if(!sessions.has(id)) sessions.set(id,{id,starting:false,running:false,stopRequested:false,remaining:0,requestedRounds:25,speed:'medium',timer:null,serverId:null,rateLimitRetries:0,boxes:new Set(),onTick:null}); return sessions.get(id); }
 // Define the setUi function that implements this UI or API behavior.
 function setUi(s){
   // Execute this statement as part of the module's documented control flow.
@@ -31,14 +33,67 @@ function setUi(s){
     if(speed) speed.disabled=s.starting || s.running;
   }
 }
+// Identify only the stable API rate-limit response that is safe to retry after its bounded pause. (AUTO-015)
+function isRateLimited(error){ return error?.code==='RATE_LIMITED' || error?.status===429; }
+// Preserve the authoritative session and exact resume phase while the shared API window recovers. (AUTO-015)
+function retryAfterRateLimit(s,error,resume){
+  // Let ordinary product, network, and validation failures follow the existing stop path.
+  if(!isRateLimited(error)) return false;
+  // Compute the current bounded delay before advancing the retry counter.
+  const wait=rateLimitDelayMs(s.rateLimitRetries);
+  // Count consecutive limiter responses so subsequent retries back off without becoming unbounded.
+  s.rateLimitRetries += 1;
+  // Replace any older timer so exactly one continuation remains scheduled.
+  clearTimeout(s.timer);
+  // Resume the precise failed phase without replaying a previously completed game action.
+  s.timer=setTimeout(()=>{ s.timer=null; return resume(); },wait);
+  // Keep the UI truthfully running because a bounded continuation now exists.
+  setUi(s);
+  // Tell the caller that the rate-limit response has been safely retained for retry.
+  return true;
+}
 // Define the finishStop function that implements this UI or API behavior.
 async function finishStop(s){
-  // Complete the authoritative stop before discarding the resumable server identity. (AUTO-015)
-  if(s.serverId) await post('/api/v1/autoplay/finish-stop',{autoplay_id:s.serverId});
+  // Start protected lifecycle completion so a temporary limiter response cannot strand a running badge. (AUTO-015)
+  try{
+    // Complete the authoritative stop before discarding the resumable server identity. (AUTO-015)
+    if(s.serverId) await post('/api/v1/autoplay/finish-stop',{autoplay_id:s.serverId});
+  // Preserve the authoritative id and retry only finish-stop when the shared window is temporarily full.
+  }catch(error){ if(retryAfterRateLimit(s,error,()=>finishStop(s).catch(failure=>dispatch(failure.message)))) return; throw error; }
   // Clear the server identity only after the lifecycle endpoint commits successfully. (AUTO-015)
   s.serverId=null;
+  // Reset limiter backoff after the authoritative lifecycle transition succeeds.
+  s.rateLimitRetries=0;
   // Set the truthful idle client state after authoritative completion.
   s.starting=false; s.running=false; s.stopRequested=false; clearTimeout(s.timer); s.timer=null; setUi(s);
+}
+// Record one already-completed game action without ever replaying that ledger-bearing action. (AUTO-015)
+async function recordCompletedTick(s){
+  // Start protected server bookkeeping so a temporary limiter response retains the completed phase.
+  try{
+    // Record exactly one server tick for the game action that already completed successfully.
+    if(s.serverId) await post('/api/v1/autoplay/tick',{autoplay_id:s.serverId});
+  // Retry only bookkeeping after a limiter response because replaying onTick could duplicate a wager.
+  }catch(error){ if(retryAfterRateLimit(s,error,()=>recordCompletedTick(s).catch(failure=>dispatch(failure.message)))) return; await stopAfterFailure(s,error); return; }
+  // Reset limiter backoff only after both the action and its authoritative tick are complete.
+  s.rateLimitRetries=0;
+  // Consume exactly one remaining action after its server tick commits.
+  s.remaining -= 1; setUi(s);
+  // Finish the lifecycle immediately when the requested plan is complete or a stop arrived in flight.
+  if(s.stopRequested || s.remaining<=0){ await finishStop(s); return; }
+  // Schedule the next new game action at the retained player-selected speed.
+  s.timer=setTimeout(()=>loop(s), delayMs(s.speed));
+}
+// Stop a non-rate-limited failed autoplay without changing its existing fail-closed lifecycle semantics.
+async function stopAfterFailure(s,error){
+  // Surface the stable player-safe failure copy supplied by the shared API helper.
+  dispatch(error.message || 'Auto play stopped.');
+  // Keep every mounted badge truthful while authoritative failure cleanup completes.
+  s.stopRequested=true; setUi(s);
+  // Request an authoritative stop when a server session was already registered.
+  if(s.serverId){ try{ await post('/api/v1/autoplay/stop',{autoplay_id:s.serverId}); }catch{} }
+  // Finish the authoritative lifecycle before allowing another autoplay registration.
+  await finishStop(s);
 }
 // Define the loop function that implements this UI or API behavior.
 async function loop(s){
@@ -52,16 +107,10 @@ async function loop(s){
   try{
     // Set await s.onTick?.({autoplay_id:s.serverId, speed:s.speed, sto to the value needed for the next operation.
     await s.onTick?.({autoplay_id:s.serverId, speed:s.speed, stopRequested:()=>s.stopRequested});
-    // Execute this statement as part of the module's documented control flow.
-    if(s.serverId) await post('/api/v1/autoplay/tick',{autoplay_id:s.serverId});
-    // Set s.remaining - to the value needed for the next operation.
-    s.remaining -= 1; setUi(s);
-  // Explain this executable/data line so future Codex changes preserve intent.
-  }catch(e){ dispatch(e.message || 'Auto play stopped.'); if(s.serverId){ try{ await post('/api/v1/autoplay/stop',{autoplay_id:s.serverId}); }catch{} } await finishStop(s); return; }
-  // Set if(s.stopRequested || s.remaining< to the value needed for the next operation.
-  if(s.stopRequested || s.remaining<=0){ await finishStop(s); return; }
-  // Set s.timer to the value needed for the next operation.
-  s.timer=setTimeout(()=>loop(s), delayMs(s.speed));
+  // Retry the game action only when the limiter rejected it before route mutation.
+  }catch(error){ if(retryAfterRateLimit(s,error,()=>loop(s).catch(failure=>dispatch(failure.message)))) return; await stopAfterFailure(s,error); return; }
+  // Continue with tick bookkeeping in a separate phase so this completed action cannot be replayed.
+  await recordCompletedTick(s);
 }
 // Export this symbol so other modules can use it through the public module boundary.
 export function stopAutoplay(id){ const s=getSession(id); s.stopRequested=true; clearTimeout(s.timer); s.timer=null; setUi(s); if(s.serverId) post('/api/v1/autoplay/stop',{autoplay_id:s.serverId}).catch(error=>dispatch(error.message)); setTimeout(()=>finishStop(s).catch(error=>dispatch(error.message)),30); }
@@ -88,7 +137,7 @@ export function renderAutoplay({id,onTick,plan={},defaultRounds=25,roundsLabel='
     // Set s.speed to the value needed for the next operation.
     s.speed=box.querySelector('.speed').value;
     // Set s.stopRequested to the value needed for the next operation.
-    s.stopRequested=false; s.starting=true; s.running=false; setUi(s);
+    s.stopRequested=false; s.rateLimitRetries=0; s.starting=true; s.running=false; setUi(s);
     // Start protected logic so failures can be handled safely.
     try{
       // Reconcile a retained server session before creating a conflicting duplicate. (AUTO-015)

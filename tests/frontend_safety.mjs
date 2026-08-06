@@ -110,6 +110,59 @@ globalThis.setTimeout = nativeSetTimeout;
 // Restore native timer clearing after the deterministic proof.
 globalThis.clearTimeout = nativeClearTimeout;
 
+// Replace the autoplay imports with controlled listener-free seams while retaining exact production control flow. (AUTO-015)
+const executableAutoplaySource = autoplaySource
+  // Route the API imports to deterministic globals owned by this focused proof.
+  .replace("import { api, post, currentPlayerId } from './api.js';", "const api=(...args)=>globalThis.__autoplayApi(...args); const post=(...args)=>globalThis.__autoplayPost(...args); const currentPlayerId=()=>\"proof-player\";")
+  // Replace translation with a stable inert seam because no copy assertion is needed here.
+  .replace("import { t } from './i18n.js';", "const t=key=>key;")
+  // Export only internal lifecycle seams needed to prove phase-safe limiter recovery.
+  .concat('\nexport { getSession, loop };\n');
+// Publish the minimal window surface consumed during autoplay module initialization.
+globalThis.window = { __casinoAutoplaySessions: new Map(), dispatchEvent: () => true };
+// Publish the CustomEvent constructor required by the production toast dispatcher.
+globalThis.CustomEvent = class { constructor(type, init){ this.type=type; this.detail=init?.detail; } };
+// Collect deterministic timers so retry phases can be advanced without sleeping.
+const autoplayTimers = [];
+// Replace timer scheduling with a seam that retains callback and delay for exact assertions.
+globalThis.setTimeout = (callback, wait) => { autoplayTimers.push({ callback, wait }); return autoplayTimers.length; };
+// Keep timer cancellation inert because the proof advances only the current retained callback.
+globalThis.clearTimeout = () => {};
+// Return an authoritative running session for each pre-action reconciliation request.
+globalThis.__autoplayApi = async () => ({ session: { status: 'running', stop_requested: false } });
+// Count ledger-bearing game actions separately from lifecycle bookkeeping requests.
+let autoplayActions = 0;
+// Count tick-bookkeeping attempts so the first completed action can face a later limiter rejection.
+let autoplayTickPosts = 0;
+// Build a stable structured limiter error matching the shared API helper contract.
+const rateLimited = () => Object.assign(new Error('Wait before trying again.'), { code: 'RATE_LIMITED', status: 429 });
+// Reject the first bookkeeping attempt, then accept the exact retry.
+globalThis.__autoplayPost = async requestPath => { assert.equal(requestPath, '/api/v1/autoplay/tick'); autoplayTickPosts += 1; if(autoplayTickPosts===1) throw rateLimited(); return { session: { rounds_completed: 1 } }; };
+// Import the transformed exact autoplay implementation with no browser or network listener.
+const autoplayModule = await import(`data:text/javascript;base64,${Buffer.from(executableAutoplaySource).toString('base64')}`);
+// Create one retained running session through the production session factory.
+const autoplaySession = autoplayModule.getSession('rate-limit-proof');
+// Bind the exact authoritative lifecycle and remaining-count state used by a live loop.
+Object.assign(autoplaySession, { running: true, serverId: 'autoplay-proof', remaining: 2, speed: 'fast' });
+// Reject the first game action before mutation, then allow its phase-safe retry to complete once.
+autoplaySession.onTick = async () => { autoplayActions += 1; if(autoplayActions===1) throw rateLimited(); };
+// Start the production loop and let its first pre-action limiter response schedule recovery.
+await autoplayModule.loop(autoplaySession);
+// Require pre-action rejection to preserve the action count and schedule the first bounded pause.
+assert.deepEqual([autoplayActions, autoplayTickPosts, autoplaySession.remaining, autoplayTimers[0].wait], [1, 0, 2, 1000]);
+// Advance the retained pre-action callback so the game action succeeds exactly once.
+await autoplayTimers.shift().callback();
+// Require the later bookkeeping rejection not to consume remaining count or replay immediately.
+assert.deepEqual([autoplayActions, autoplayTickPosts, autoplaySession.remaining, autoplayTimers[0].wait], [2, 1, 2, 2000]);
+// Advance only the retained bookkeeping callback after the game action has already completed.
+await autoplayTimers.shift().callback();
+// Require bookkeeping retry to decrement once and schedule the next new action without duplication.
+assert.deepEqual([autoplayActions, autoplayTickPosts, autoplaySession.remaining, autoplayTimers[0].wait], [2, 2, 1, 260]);
+// Restore native timer functions after the autoplay recovery proof.
+globalThis.setTimeout = nativeSetTimeout;
+// Restore native timer clearing after the autoplay recovery proof.
+globalThis.clearTimeout = nativeClearTimeout;
+
 // Require the persistent shell outlet to expose stable polite atomic live-region semantics.
 assert.match(indexSource, /<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden><\/div>/);
 // Require the document-lifetime game result outlet that survives route-owned full-root renders. (UX-025)
@@ -122,8 +175,8 @@ assert.match(rouletteSource, /const SPOT_SIZE = 24;[\s\S]*\.spot\{display:grid;p
 assert.match(sharedStyles, /button\s*\{\s*min-height:\s*44px;/); assert.match(baccaratSource, /\.bac-rail-card select\{min-height:44px\}[\s\S]*\.bac-repeat-grid button\{min-height:44px/); assert.match(colorWheelSource, /\.cw-chip\{min-width:44px;min-height:44px/); assert.match(fourCardPokerSource, /\.fcp-field input\{min-height:44px/);
 // Require structured API failures to ignore raw server messages while preserving diagnostic fields. (I18N-011)
 assert.match(apiSource, /playerSafeError\(payload\.error\?\.code, res\.status\)[\s\S]*e\.details = payload\.error\?\.details/);
-// Require autoplay to reconcile authoritative sessions and record every server tick. (AUTO-015)
-assert.match(autoplaySource, /api\('\/api\/v1\/autoplay\/sessions\?active=1'\)[\s\S]*rounds_completed/); assert.match(autoplaySource, /await post\('\/api\/v1\/autoplay\/tick'/);
+// Require autoplay to reconcile authoritative sessions and separate game action from rate-limited tick retry. (AUTO-015)
+assert.match(autoplaySource, /api\('\/api\/v1\/autoplay\/sessions\?active=1'\)[\s\S]*rounds_completed/); assert.match(autoplaySource, /await s\.onTick[\s\S]*await recordCompletedTick\(s\)/); assert.match(autoplaySource, /retryAfterRateLimit\(s,error,\(\)=>recordCompletedTick\(s\)\.catch/);
 // Require Bingo to disclose abandonment and default to one complete call plan. (BINGO-027)
 assert.match(bingoSource, /confirm\(tr\('reset\.confirmAbandon'[\s\S]*defaultRounds: TOTAL_BALLS, roundsLabel: tr\('autoplay\.calls'\)/);
 // Require the shared Slots animation to stop under the platform reduced-motion preference.

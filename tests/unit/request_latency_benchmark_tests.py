@@ -1534,5 +1534,5 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(application_module["version"], "9.57.0")
         # Require Blackjack to carry the focus and live-result patch.
         self.assertEqual(blackjack_module["version"], "9.1.8")
-        # Require Autoplay to carry the server-lifecycle reconciliation patch.
-        self.assertEqual(autoplay_module["version"], "1.1.5")
+        # Require Autoplay to carry phase-safe shared-rate-limit recovery.
+        self.assertEqual(autoplay_module["version"], "1.1.6")
