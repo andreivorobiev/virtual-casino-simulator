@@ -1512,22 +1512,22 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(core_module["version"], "9.36.3")
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.15.0")
-        # Require the exact compatible tests revision allocation.
-        self.assertEqual(tests_module["version"], "1.68.1")
-        # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.66.1")
+        # Require the exact compatible tests revision allocation for desktop bottom-edge containment coverage.
+        self.assertEqual(tests_module["version"], "1.68.2")
+        # Require docs to match the amended desktop containment requirement ownership.
+        self.assertEqual(docs_module["version"], "1.66.2")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.54.9")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.1")
         # Require the exact compatible Baccarat patch allocation.
         self.assertEqual(baccarat_module["version"], "9.1.13")
-        # Require the exact compatible Bingo patch allocation.
-        self.assertEqual(bingo_module["version"], "9.3.4")
+        # Require the exact compatible Bingo patch allocation for stage-owned desktop card sizing.
+        self.assertEqual(bingo_module["version"], "9.3.5")
         # Require the exact compatible Keno patch allocation.
         self.assertEqual(keno_module["version"], "9.3.5")
-        # Require the exact compatible Roulette presentation minor for the measured continuous board fit.
-        self.assertEqual(roulette_module["version"], "9.6.0")
+        # Require the exact compatible Roulette presentation patch for two-axis stage-owned board fit.
+        self.assertEqual(roulette_module["version"], "9.6.1")
         # Require the exact compatible Slots presentation patch for the narrow reel shrink repair.
         self.assertEqual(slots_module["version"], "9.4.3")
         # Require the exact compatible Application minor for render stability and containment telemetry.

@@ -16,12 +16,12 @@ Historical source baseline: 9.1.0
 - admin: 1.15.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.6.0
+- roulette: 9.6.1
 - slots: 9.4.3
 - blackjack: 9.1.8
 - baccarat: 9.1.13
 - keno: 9.3.5
-- bingo: 9.3.4
+- bingo: 9.3.5
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
 - big_six_wheel: 1.1.2
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.1
 - pai_gow_poker: 1.1.1
 - teen_patti: 1.1.1
-- tests: 1.68.1
-- docs: 1.66.1
+- tests: 1.68.2
+- docs: 1.66.2
 - contracts: 1.54.9
 - tooling: 1.25.1
 - commenting_policy: 1.0.0
@@ -968,9 +968,9 @@ Historical source baseline: 9.1.0
 - **BINGO-027** (Bingo) - PASS: Bingo autoplay defaults to one complete bounded 75-call plan, including for disposable guests, and resetting a called session requires explicit non-refund confirmation followed by truthful refunded, abandoned, or cleared feedback.
 - **PWA-003** (Application) - PASS: Apply update resolves a worker still transitioning from installing to waiting, sends exactly one SKIP_WAITING command, reloads only after controllerchange, and fails visibly after bounded transition or activation timeouts.
 - **UX-025** (Application) - PASS: Full-root game rerenders preserve stable control focus and mirror authoritative result copy into a document-lifetime live region; ordinary controls provide a 44-pixel minimum target while Roulette precision inside-bet controls provide a 24-pixel hit area with their compact visual marker retained.
-- **UX-026** (Application) - PASS: Every game and lobby component renders fully inside the viewport or a designed scroll region at all supported viewports from 320 CSS pixels wide upward: the document never scrolls horizontally, meaningful content is never clipped by a hidden-overflow container, fixed-geometry boards scale continuously to their measured shell instead of relying on discrete breakpoints, and the shell reports settled containment loss to Admin telemetry as one bounded layout_overflow client-log event per route-and-viewport cell per session.
+- **UX-026** (Application) - PASS: Every game and lobby component renders fully inside the viewport or a designed scroll region at all supported viewports from 320 CSS pixels wide upward: the document never scrolls horizontally, meaningful content is never clipped by a hidden-overflow container, governed desktop Roulette and Bingo boards consume the exact remaining center-stage height above the fixed status bar, fixed-geometry boards scale continuously to their measured shell instead of relying on discrete breakpoints, and the shell reports settled containment loss to Admin telemetry as one bounded layout_overflow client-log event per route-and-viewport cell per session.
 - **UX-027** (Application) - PASS: An in-game action never reloads the document, never changes the route, and never resets the player's reading position: same-route full-root rerenders preserve the outlet scroll offsets, every scrolled internal rail, and the focused control when it carries a stable identity; a collapse-clamped document scroll is rescued while browser scroll anchoring is otherwise left in charge; stranded keyboard focus parks on the focusable game region instead of the document body; and scroll resets to the top only when navigation intentionally changes the route.
 - **TOOL-012** (Tooling) - PASS: Every substantive pull request must list delivered issues under a stable Issues resolved section using GitHub-native closing keywords; standard release-only pull requests must explicitly declare their exception.
 - **TEST-153** (Tests) - PASS: Focused listener-free evidence covers wallet ordering, localized structured errors, Russian token terminology, PWA installing-to-waiting application, autoplay reconciliation and phase-safe rate-limit recovery, Bingo reset disclosure, persistent game focus and announcements, Roulette hit targets, and PR issue-closing governance.
-- **TEST-154** (Tests) - PASS: One permanent Browser case walks every catalog route at governed and historically clipping viewports, asserts zero document horizontal overflow and zero meaningful-content loss through the shared containment auditor, and separately proves the fixed Roulette board rect stays inside its shell at the exact widths that previously clipped it.
+- **TEST-154** (Tests) - PASS: One permanent Browser case walks every catalog route at governed and historically clipping viewports, asserts zero document horizontal overflow and zero meaningful-content loss through the shared containment auditor, proves the fixed Roulette board rect stays inside its shell on both axes, and verifies complete Roulette and Bingo desktop stages finish above the fixed status bar at 1440 by 900 and 1920 by 1080.
 - **TEST-155** (Tests) - PASS: One permanent Browser case scrolls a mounted game, performs a real settling action, and asserts the document did not navigate or reload, the outlet and internal rail scroll offsets survived the rerender, and keyboard focus stayed inside the game region on the same stable control.

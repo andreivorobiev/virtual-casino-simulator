@@ -5567,9 +5567,35 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Let the measured continuous fit apply before reading rects.
                             page.wait_for_timeout(150)
                             # Read the board and shell rectangles from the live layout.
-                            roulette_fit=page.evaluate("""() => { const shell=document.querySelector('.roulette-table-shell'); const board=document.querySelector('.roulette-table-board'); const sr=shell.getBoundingClientRect(); const br=board.getBoundingClientRect(); return {shellLeft:sr.left,shellRight:sr.right,boardLeft:br.left,boardRight:br.right,scale:board.style.transform}; }""")
-                            # Require the complete scaled board inside its shell with a one-pixel rounding tolerance.
-                            assert roulette_fit['boardLeft']>=roulette_fit['shellLeft']-1 and roulette_fit['boardRight']<=roulette_fit['shellRight']+1,(roulette_width,roulette_height,roulette_fit)
+                            roulette_fit=page.evaluate("""() => { const shell=document.querySelector('.roulette-table-shell'); const board=document.querySelector('.roulette-table-board'); const stage=document.querySelector('[data-testid=roulette-premium-stage]'); const footer=document.querySelector('.status-bar'); const sr=shell.getBoundingClientRect(); const br=board.getBoundingClientRect(); const gr=stage.getBoundingClientRect(); const fr=footer.getBoundingClientRect(); return {shellLeft:sr.left,shellRight:sr.right,shellBottom:sr.bottom,boardLeft:br.left,boardRight:br.right,boardBottom:br.bottom,stageBottom:gr.bottom,footerTop:fr.top,scale:board.style.transform}; }""")
+                            # Require the complete scaled board inside its shell on both axes with a one-pixel rounding tolerance.
+                            assert roulette_fit['boardLeft']>=roulette_fit['shellLeft']-1 and roulette_fit['boardRight']<=roulette_fit['shellRight']+1 and roulette_fit['boardBottom']<=roulette_fit['shellBottom']+1,(roulette_width,roulette_height,roulette_fit)
+                            # Require governed desktop Roulette stages to finish above the fixed status bar instead of clipping their last betting row.
+                            if roulette_width>=1366:
+                                # Compare the actual stage and shell bottoms to the footer boundary rather than trusting ancestor overflow styles.
+                                assert roulette_fit['shellBottom']<=roulette_fit['stageBottom']+1 and roulette_fit['stageBottom']<=roulette_fit['footerTop']+1,(roulette_width,roulette_height,roulette_fit)
+                            # Capture the governed primary-desktop after-state once the complete board has passed containment.
+                            if roulette_width==1920:
+                                # Preserve viewport evidence with the fixed footer visible as the bottom boundary.
+                                page.screenshot(path=str(screenshots/'after-pass-roulette-bottom-contained-1920x1080.png'),full_page=False)
+                        # Re-prove the complete Bingo card and call bay inside the center stage at both governed desktop viewports. (issue #611)
+                        for bingo_width,bingo_height in ((1440,900),(1920,1080)):
+                            # Apply the governed desktop viewport before mounting Bingo.
+                            page.set_viewport_size({'width':bingo_width,'height':bingo_height})
+                            # Mount Bingo through its real navigation control.
+                            page.get_by_test_id('nav-bingo').click()
+                            # Wait for the premium Bingo surface before measuring its complete stage.
+                            page.get_by_test_id('premium-bingo').wait_for(timeout=5000)
+                            # Let desktop grid tracks settle before reading bottom-edge containment.
+                            page.wait_for_timeout(150)
+                            # Read the real card, call bay, stage, outlet, and fixed status-bar boundaries.
+                            bingo_fit=page.evaluate("""() => { const rect=selector=>document.querySelector(selector).getBoundingClientRect(); const stage=rect('.premium-bingo .game-stage'); const card=rect('.premium-bingo .bingo-card'); const callBay=rect('.premium-bingo-call-bay'); const footer=rect('.status-bar'); const outlet=document.querySelector('#view.screen.game-screen'); return {stageBottom:stage.bottom,cardBottom:card.bottom,callBottom:callBay.bottom,footerTop:footer.top,outletClientHeight:outlet.clientHeight,outletScrollHeight:outlet.scrollHeight,scrollWidth:document.documentElement.scrollWidth,width:innerWidth}; }""")
+                            # Require every primary Bingo surface above the footer with no hidden outlet tail or horizontal document overflow.
+                            assert bingo_fit['scrollWidth']<=bingo_fit['width']+1 and bingo_fit['cardBottom']<=bingo_fit['stageBottom']+1 and bingo_fit['callBottom']<=bingo_fit['stageBottom']+1 and bingo_fit['stageBottom']<=bingo_fit['footerTop']+1 and bingo_fit['outletScrollHeight']<=bingo_fit['outletClientHeight']+1,(bingo_width,bingo_height,bingo_fit)
+                            # Capture the governed primary-desktop after-state once the complete Bingo stage has passed containment.
+                            if bingo_width==1920:
+                                # Preserve viewport evidence with the fixed footer visible as the bottom boundary.
+                                page.screenshot(path=str(screenshots/'after-pass-bingo-bottom-contained-1920x1080.png'),full_page=False)
                     # Restore shared viewport and route ownership for later Browser cases.
                     finally:
                         # Restore the primary desktop dimensions.
