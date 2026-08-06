@@ -9199,7 +9199,7 @@
     {
       "id": "GUEST-001",
       "module": "Core",
-      "description": "Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-source creation-rate, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.",
+      "description": "Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 10,000-play-token wallet with no add-token path, enforces a provider-backed owner switch for new-trial admission plus configurable active-principal, per-source creation-rate, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, leaves existing trials untouched when admission pauses, and never accepts caller-authored role, player, balance, expiry, or credential fields.",
       "status": "PASS",
       "api_tests": [
         "API-GUEST-LIFECYCLE-001"
@@ -9210,18 +9210,19 @@
       "implementation_files": [
         "casino/config.py",
         "casino/core/auth.py",
+        "casino/core/guest_settings.py",
         "casino/core/state_store.py",
         "casino/app.py",
         "casino/wsgi.py"
       ],
       "introduced_in": "issue-317-guest-trials",
-      "changed_in": "issue-555-guest-endpoint-hardening",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
       "notes": "Issue #317 is repository-only restricted-preview scope and does not alter unrestricted-public-launch issue #209."
     },
     {
       "id": "GUEST-002",
       "module": "Application",
-      "description": "The en-US and ru-RU login surface discloses disposable play-token-only guest terms and requires affirmative consent; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.",
+      "description": "The en-US and ru-RU login surface discloses the fixed 10,000-token disposable play-only guest terms, requires affirmative consent, and leaves new-trial entry natively disabled with explicit localized copy unless the public provider-backed policy reports admission enabled; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.",
       "status": "PASS",
       "api_tests": [
         "API-GUEST-LIFECYCLE-001"
@@ -9241,7 +9242,7 @@
         "web/i18n/ru-RU/shell.json"
       ],
       "introduced_in": "issue-317-guest-trials",
-      "changed_in": "issue-317-guest-trials",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
       "notes": "Issue #317 browser-close non-resumability uses a server-stored nonce digest plus a raw sessionStorage proof; raw proof material is never stored in analytics."
     },
     {
@@ -9267,7 +9268,7 @@
     {
       "id": "GUEST-004",
       "module": "Admin",
-      "description": "The centrally Admin-gated Guest Trials v2 surface provides the named nine-stage funnel; duration, games-per-trial, rounds-per-trial, error-free, and fake-token-only totals; complete per-game engagement, round, error, latency, and action-category metrics; time, lifecycle, game, locale, device, completion, and error filters; bounded recent rows and allowlisted drill-down; and retention health in en-US and ru-RU, including keyboard-scrollable tables, the governed mobile viewport, reduced motion, and 200 percent zoom.",
+      "description": "The centrally Admin-gated Guest Trials v2 surface provides the named nine-stage funnel; duration, games-per-trial, rounds-per-trial, error-free, and fake-token-only totals; complete per-game engagement, round, error, latency, and action-category metrics; time, lifecycle, game, locale, device, completion, and error filters; bounded recent rows and allowlisted drill-down; retention health; and a current-platform-owner control that pauses or resumes only new trial admission while displaying the fixed 10,000-token grant, all in en-US and ru-RU with keyboard-scrollable tables, the governed mobile viewport, reduced motion, and 200 percent zoom.",
       "status": "PASS",
       "api_tests": [
         "API-ADMIN-GUEST-001"
@@ -9284,13 +9285,13 @@
         "web/i18n/ru-RU/admin.json"
       ],
       "introduced_in": "issue-317-guest-trials",
-      "changed_in": "issue-317-guest-trials",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
       "notes": "Issue #317 Admin analytics accept only the analytics_id route key and low-cardinality locale, device, status, and limit filters."
     },
     {
       "id": "GUEST-005",
       "module": "Contracts",
-      "description": "Guest creation, lifecycle, browser proof, Admin summary/list/detail/cleanup, standard envelopes, restricted-preview access, retention, and forbidden analytics fields are published as additive v2 OpenAPI and compatibility contracts while /api/v1 remains frozen.",
+      "description": "Guest creation, fixed 10,000-token grant, provider-backed admission disclosure and owner update, lifecycle, browser proof, Admin summary/list/detail/cleanup, standard envelopes, restricted-preview access, retention, and forbidden analytics fields are published as additive v2 OpenAPI and compatibility contracts while /api/v1 remains frozen.",
       "status": "PASS",
       "api_tests": [
         "API-GUEST-CONTRACT-001"
@@ -9304,7 +9305,7 @@
         "contracts/compatibility/contract-digests.json"
       ],
       "introduced_in": "issue-317-guest-trials",
-      "changed_in": "issue-317-guest-trials",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
       "notes": "Issue #317 is an additive v2-only surface; frozen /api/v1 receives no Guest Trials route or payload change."
     },
     {
@@ -9332,7 +9333,7 @@
     {
       "id": "TEST-080",
       "module": "Tests",
-      "description": "Focused API tests prove consent rejection creates no state, server-authoritative guest creation, 5,000-token isolation, non-Admin authorization, CSRF and browser-proof enforcement, same-context activity, inactivity and absolute expiry, atomic concurrent capacity, per-session game-action and autoplay bounds, complete-catalog guest state access, irreversible explicit end, wallet and autoplay revocation, and cookie-only non-resumption.",
+      "description": "Focused API tests prove consent rejection creates no state, server-authoritative guest creation, 10,000-token isolation, owner-only admission pause/resume persistence, immediate denial of new trials while paused without revoking an existing trial, non-Admin authorization, CSRF and browser-proof enforcement, same-context activity, inactivity and absolute expiry, atomic concurrent capacity, per-session game-action and autoplay bounds, complete-catalog guest state access, irreversible explicit end, wallet and autoplay revocation, and cookie-only non-resumption.",
       "status": "PASS",
       "api_tests": [
         "API-GUEST-LIFECYCLE-001",
@@ -9345,13 +9346,13 @@
         "tests/security/test_browser_contract.py"
       ],
       "introduced_in": "issue-317-guest-trials",
-      "changed_in": "issue-317-guest-trials",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
       "notes": "Issue #317 lifecycle tests run in bounded isolated temporary state and do not require the formal browser load suite."
     },
     {
       "id": "TEST-081",
       "module": "Tests",
-      "description": "Exact-head browser evidence verifies guest consent, disclosed temporary/no-cash terms, start, refresh preservation, real game-module entry, End trial, no recovery, and the Admin funnel, games, filters, detail, cleanup health, de-identification, keyboard access, reduced motion, 200 percent zoom, and no horizontal overflow in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844.",
+      "description": "Exact-head browser evidence verifies truthful disabled and enabled guest admission, consent, the disclosed fixed 10,000-token temporary/no-cash terms, start, refresh preservation, real game-module entry, End trial, no recovery, and the Admin admission control, funnel, games, filters, detail, cleanup health, de-identification, keyboard access, reduced motion, 200 percent zoom, and no horizontal overflow in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -9364,7 +9365,7 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-317-guest-trials",
-      "changed_in": "issue-317-guest-trials",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
       "notes": "Issue #317 after-pass artifacts must be exact-head CI output; reduced-motion and 200 percent zoom artifacts are named separately, and no known-failing or before-state image is acceptance evidence."
     },
     {
@@ -13090,7 +13091,7 @@
     {
       "id": "UX-027",
       "module": "Application",
-      "description": "An in-game action never reloads the document, never changes the route, and never resets the player's reading position: same-route full-root rerenders preserve the outlet scroll offsets, every scrolled internal rail, and the focused control when it carries a stable identity; a collapse-clamped document scroll is rescued while browser scroll anchoring is otherwise left in charge; stranded keyboard focus parks on the focusable game region instead of the document body; and scroll resets to the top only when navigation intentionally changes the route.",
+      "description": "An in-game action never reloads the document, never changes the route, and never resets the player's reading position: same-route full-root rerenders preserve the outlet scroll offsets, every scrolled internal rail, and the focused control when it carries a stable identity; document scroll is restored synchronously and across the next two layout frames so delayed browser clamps on stacked game pages cannot move the player; stranded keyboard focus parks on the focusable game region instead of the document body; and scroll resets to the top only when navigation intentionally changes the route.",
       "status": "PASS",
       "api_tests": [
         "FRONTEND-SAFETY-001"
@@ -13103,8 +13104,8 @@
         "web/app.js"
       ],
       "introduced_in": "issue-607-viewport-containment-action-stability",
-      "changed_in": "issue-607-viewport-containment-action-stability",
-      "notes": "The shell intercepts route-outlet innerHTML writes once at startup, so all forty-six game modules and the lobby inherit the guarantee without per-game adoption; game-owned UX-025 focus calls remain valid and idempotent on top of it."
+      "changed_in": "issue-614-rate-scroll-guest-admission",
+      "notes": "The shell intercepts route-outlet innerHTML writes once at startup, so all forty-six game modules and the lobby inherit the guarantee without per-game adoption; a render sequence invalidates stale animation-frame callbacks while two deferred restores cover post-setter layout and scroll-anchoring clamps."
     },
     {
       "id": "TOOL-012",
@@ -13150,7 +13151,7 @@
     {
       "id": "TEST-155",
       "module": "Tests",
-      "description": "One permanent Browser case scrolls a mounted game, performs a real settling action, and asserts the document did not navigate or reload, the outlet and internal rail scroll offsets survived the rerender, and keyboard focus stayed inside the game region on the same stable control.",
+      "description": "One permanent Browser case scrolls a mounted game, performs a real settling action while injecting the delayed document clamp observed on stacked routes, and asserts the document did not navigate or reload, the outlet, document, and internal rail scroll offsets survived the settled rerender, and keyboard focus stayed inside the game region on the same stable control.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -13161,8 +13162,84 @@
         "tests/browser_case_durations.json"
       ],
       "introduced_in": "issue-607-viewport-containment-action-stability",
-      "changed_in": "issue-607-viewport-containment-action-stability",
-      "notes": "The case fails on any location change, any beforeunload-visible reload, or any scroll offset drift beyond anchoring tolerance, making UX-027 a hard gate rather than guidance."
+      "changed_in": "issue-614-rate-scroll-guest-admission",
+      "notes": "The case fails on any location change, any beforeunload-visible reload, any delayed clamp to the document top, or any internal scroll offset drift beyond anchoring tolerance, making UX-027 a hard gate rather than guidance."
+    },
+    {
+      "id": "SEC-015",
+      "module": "Core",
+      "description": "The platform owner can adjust the global per-client application request allowance and fixed-window duration without restarting the service; values are provider-backed and bounded to 60 through 10000 requests and 1 through 3600 seconds, default to 1200 requests per 60 seconds, and apply immediately to existing limiter state. The exact owner-only control route uses an independent fixed 60-per-minute recovery bucket while retaining normal authentication and mutation-integrity enforcement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-RATE-LIMITS-001",
+        "API-SEC-PREVIEW-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-SESSION-POLICY-001"
+      ],
+      "implementation_files": [
+        "casino/core/rate_settings.py",
+        "casino/core/security.py",
+        "casino/wsgi.py",
+        "casino/admin.py"
+      ],
+      "introduced_in": "issue-614-rate-scroll-guest-admission",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
+      "notes": "Static assets and probes retain their separate accounting behavior; no counters, client identifiers, or credentials are exposed through Admin."
+    },
+    {
+      "id": "ADMIN-032",
+      "module": "Admin",
+      "description": "The owner-only Sessions and security console displays localized bounded controls for application requests per window and window seconds, while Guest Trials displays the fixed 10,000-token grant and lets the current platform owner pause or resume only new trial admission; both provider-backed policies apply without restart through additive v2 contracts and expose no per-client limiter or guest identity state.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-RATE-LIMITS-001",
+        "API-GUEST-ADMISSION-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-SESSION-POLICY-001",
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "casino/admin.py",
+        "web/admin.js",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json",
+        "contracts/openapi/admin-users.v2.yaml",
+        "casino/core/guest_settings.py",
+        "contracts/openapi/guest-trials.v2.yaml"
+      ],
+      "introduced_in": "issue-614-rate-scroll-guest-admission",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
+      "notes": "Only the active bootstrap-managed platform owner can read or write this global policy."
+    },
+    {
+      "id": "TEST-156",
+      "module": "Tests",
+      "description": "Listener-free provider, limiter, WSGI, contract, and frontend checks prove owner authorization, persistence, clamping, immediate live rate-policy application, recovery-route isolation, a fixed 10,000-token guest grant, no-restart guest admission pause/resume without current-trial revocation, truthful localized login and Admin controls, and delayed-frame document-scroll restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-RATE-LIMITS-001",
+        "FRONTEND-SAFETY-001",
+        "API-SEC-PREVIEW-001",
+        "API-GUEST-ADMISSION-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-SESSION-POLICY-001",
+        "BR-ACTION-STABILITY-001",
+        "BR-GUEST-TRIAL-001",
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "tests/admin_game_states_tests.py",
+        "tests/security/test_policy.py",
+        "tests/security/security_wsgi_probe.py",
+        "tests/frontend_safety.mjs",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-614-rate-scroll-guest-admission",
+      "changed_in": "issue-614-rate-scroll-guest-admission",
+      "notes": "The permanent Browser inventory is reused; no new Browser case or shard-affinity entry is allocated."
     }
   ]
 }

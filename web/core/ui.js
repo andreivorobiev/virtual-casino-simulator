@@ -121,9 +121,8 @@ export function restoreRouteViewportState(root, snapshot){
   }
   // Restore the route outlet's own scroll offsets after content height is available again.
   root.scrollTop=snapshot.rootTop; root.scrollLeft=snapshot.rootLeft;
-  // Rescue the document scroll only from a collapse clamp to the top; smaller shifts stay with the
-  // browser's own scroll anchoring so restoration never fights a silent anchoring adjustment.
-  if(snapshot.winY>24&&window.scrollY<8) window.scrollTo(snapshot.winX,snapshot.winY);
+  // Restore document scroll whenever a full-root render displaced it, including non-zero clamps on stacked game pages. (UX-027)
+  if(Math.abs((window.scrollX||0)-snapshot.winX)>2||Math.abs((window.scrollY||0)-snapshot.winY)>2) window.scrollTo(snapshot.winX,snapshot.winY);
   // Restore keyboard focus through the shared stable-control contract without scrolling the board.
   restoreGameFocus(root, snapshot.focus);
   // Report that restoration ran for browser-free regression tests.
@@ -143,6 +142,8 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
   let lastRouteId=null;
   // Remember the last focusable in-route control so a busy render that disables it cannot strand keyboard focus. (UX-027)
   let stickyFocus=null;
+  // Advance after every outlet write so deferred restoration from an older render can never overwrite newer state.
+  let renderSequence=0;
   // Define the instance-level accessor that wraps only this outlet's writes.
   Object.defineProperty(root,'innerHTML',{
     // Keep the accessor configurable so tests and future shells can uninstall it.
@@ -153,6 +154,8 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
     set(html){
       // Read the shell-owned route identity at write time.
       const routeId=typeof getRouteId==='function'?getRouteId():null;
+      // Claim one render sequence before capture so later writes invalidate this render's deferred restores.
+      const sequence=++renderSequence;
       // Hold the optional restorable state captured before the write.
       let snapshot=null;
       // Capture preservation state defensively so a measurement fault can never block the render itself.
@@ -179,6 +182,8 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
         if(snapshot&&document.activeElement===document.body&&typeof this.focus==='function') this.focus({preventScroll:true});
       // Swallow restoration faults because the fresh markup is already in place and gameplay must continue.
       }catch(_){ }
+      // Repeat restoration after browser layout and scroll anchoring settle, because some stacked pages clamp after the synchronous setter returns. (UX-027)
+      if(snapshot&&typeof requestAnimationFrame==='function') requestAnimationFrame(()=>{ if(sequence!==renderSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreRouteViewportState(root,snapshot); }catch(_){ } requestAnimationFrame(()=>{ if(sequence!==renderSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreRouteViewportState(root,snapshot); }catch(_){ } }); });
       // Remember the route that owns the markup now present in the outlet.
       lastRouteId=routeId;
       // Notify the shell after every write so cross-cutting checks can observe the settled DOM.

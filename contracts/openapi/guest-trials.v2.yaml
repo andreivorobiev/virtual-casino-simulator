@@ -128,6 +128,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  # Admission is readable to Admins, while only the current platform owner may change it.
+  /admin/guest-trials/settings:
+    get:
+      summary: Read whether new guest trials are allowed and their fixed token grant.
+      operationId: guest_trials_v2_settings_read
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying the current guest-trial admission policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestTrialSettingsEnvelope'
+        '401':
+          description: Standard error envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Standard error envelope for an authenticated non-Admin request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      summary: Allow or pause creation of new guest trials without ending current trials.
+      operationId: guest_trials_v2_settings_update
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Standard API envelope carrying the committed guest-trial admission policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestTrialSettingsEnvelope'
+        '400':
+          description: The request is not the exact boolean settings object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Standard error envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: The authenticated user is not the current active platform owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   # Cleanup is idempotent and uses fixed server retention; callers cannot choose paths or cutoffs.
   /admin/guest-trials/cleanup:
     post:
@@ -608,6 +675,33 @@ components:
           properties:
             guest_trial:
               $ref: '#/components/schemas/TrialRow'
+    GuestTrialSettings:
+      type: object
+      additionalProperties: false
+      required: [schema_version, enabled, starting_balance]
+      properties:
+        schema_version:
+          type: integer
+          minimum: 1
+        enabled:
+          type: boolean
+        starting_balance:
+          type: number
+          enum: [10000]
+          description: Fixed non-cashable simulator-token grant for each newly created guest trial.
+    GuestTrialSettingsEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [settings]
+          properties:
+            settings:
+              $ref: '#/components/schemas/GuestTrialSettings'
     CleanupEnvelope:
       type: object
       required: [ok, data]

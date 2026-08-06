@@ -22,7 +22,7 @@ from casino.errors import CasinoError, ForbiddenError, RequestTooLargeError, Val
 # Import strict JSON-number handling shared with the development HTTP adapter.
 from casino.core.validation import reject_nonfinite_json_constant
 # Import authentication and application logging through the existing core boundaries.
-from casino.core import auth, logger, players
+from casino.core import auth, logger, players, rate_settings
 # Import the complete restricted-preview request and response policy.
 from casino.core.security import CSRF_COOKIE, RateLimiter, SecurityPolicy, cookie_value, csrf_cookie_header, effective_request, new_csrf_token, response_security_headers, validate_request_integrity
 # Import provider-neutral bootstrap behavior for a fresh external runtime root.
@@ -38,6 +38,12 @@ PROBE_PATHS = frozenset({"/healthz", "/readyz"})
 ADMIN_STATIC_PATHS = frozenset({"/admin", "/admin.html", "/admin.js", "/web/admin.js"})
 # Name the exact credential-free worker request marker for cookie-free public shell bytes. (PWA-002)
 PWA_PUBLIC_SHELL_HEADER = "X-Casino-Public-Shell"
+# Keep the exact owner-only rate-control route reachable after an over-tight policy exhausts normal API capacity. (SEC-015)
+RATE_LIMIT_CONTROL_PATHS = frozenset({"/api/v2/admin/rate-limits"})
+# Keep recovery controls separately bounded so an exhausted application bucket cannot lock out the owner. (SEC-015)
+RATE_LIMIT_CONTROL_REQUESTS = 60
+# Use a fixed minute for the narrow recovery bucket rather than making its own protection self-adjustable.
+RATE_LIMIT_CONTROL_WINDOW_SECONDS = 60
 
 
 # Classify one request for secret-safe diagnostics without retaining path identifiers.
@@ -274,6 +280,8 @@ class CasinoWSGIApplication:
         self.rate_limiter = RateLimiter(self.policy)
         # Isolate bounded probe traffic so public clients cannot consume application allowances.
         self.probe_rate_limiter = RateLimiter(self.policy)
+        # Isolate the owner recovery route so it stays reachable without becoming an unbounded authentication surface. (SEC-015)
+        self.rate_control_limiter = RateLimiter(self.policy)
 
     # Dispatch one API or probe request through the canonical router and envelope policy.
     def _api(self, environ: dict, start_response, method: str, raw_path: str, path: str, client: str, effective_scheme: str):
@@ -394,9 +402,15 @@ class CasinoWSGIApplication:
                 # Bound each trusted effective client without consuming application allowances.
                 self.probe_rate_limiter.check(effective.client, rotate_capacity=True)
             # Bound API reads and every mutation independently from probes and immutable browser assets. (issue #570)
+            elif path in RATE_LIMIT_CONTROL_PATHS:
+                # Consume the fixed independent recovery allowance before owner authentication and CSRF checks run.
+                self.rate_control_limiter.check(effective.client, requests_per_window=RATE_LIMIT_CONTROL_REQUESTS, window_seconds=RATE_LIMIT_CONTROL_WINDOW_SECONDS)
+            # Bound every other API read and mutation through the owner-adjustable application policy.
             elif path.startswith("/api/") or method != "GET":
+                # Read the validated live policy once so an owner save takes effect without a service restart. (SEC-015)
+                runtime_rate_policy = rate_settings.rate_limits()
                 # Consume one application allowance only for application work, not safe static delivery.
-                self.rate_limiter.check(effective.client)
+                self.rate_limiter.check(effective.client, requests_per_window=runtime_rate_policy["requests_per_window"], window_seconds=runtime_rate_policy["window_seconds"])
             # Record only method and route class, never path, query, headers, body, or credentials.
             logger.info("request_accepted", request_id=request_id, method=method, route_class=route_class)
             # Route APIs, probes, and every non-GET request through application dispatch.

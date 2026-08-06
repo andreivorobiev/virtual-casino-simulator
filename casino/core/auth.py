@@ -10,10 +10,12 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from http.cookies import SimpleCookie
-from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_CREATE_WINDOW_SECONDS, GUEST_CREATES_PER_IP, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_MAX_ACTIONS, GUEST_MAX_ACTIVE, GUEST_STARTING_BALANCE, GUEST_TERMS_VERSION, GUEST_TRIALS_ENABLED, SCHEMA_VERSION
+from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_CREATE_WINDOW_SECONDS, GUEST_CREATES_PER_IP, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_MAX_ACTIONS, GUEST_MAX_ACTIVE, GUEST_STARTING_BALANCE, GUEST_TERMS_VERSION, SCHEMA_VERSION
 from casino.core import players
 # Import the de-identified guest-trial telemetry recorder for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
+# Import the provider-backed admission switch so owner changes apply without restart. (GUEST-001)
+from casino.core import guest_settings
 from casino.core.clock import utc_now
 from casino.core.ids import new_id
 # Import normal and strict document boundaries so session control preserves corrupt evidence.
@@ -426,8 +428,8 @@ def enforce_guest_creation_source(client: str, locale: str, device: str) -> None
 
 # Create one isolated, disposable guest-trial principal, wallet, and browser session. (issue #317)
 def create_guest(client: str = "", accepted: bool = False, terms_version: str = "", locale: str = "en-US", device: str = "unknown") -> dict:
-    # Fail closed when the configuration-driven account-free entry is disabled.
-    if not GUEST_TRIALS_ENABLED:
+    # Fail closed when the current provider-backed account-free entry is disabled.
+    if not guest_settings.trials_enabled():
         # Never mint a guest principal outside the enabled restricted-preview entry.
         raise ForbiddenError("Guest trials are not available")
     # Require the same explicit current-version acceptance used by invited accounts before creating state.

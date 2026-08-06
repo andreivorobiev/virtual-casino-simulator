@@ -340,7 +340,7 @@ function updateCurrentUserShell() {
     logoutButton.setAttribute('data-guest-trial', guest ? 'true' : 'false');
     // Let responsive CSS allocate enough inline space for the localized End-trial label.
     document.body.classList.toggle('guest-trial-active', guest);
-    // Remove the top-up affordance for guests because their one-time 5,000-token grant is fixed and disposable.
+    // Remove the top-up affordance for guests because their one-time 10,000-token grant is fixed and disposable.
     if (walletMenu) walletMenu.hidden = guest;
     // Show the inactivity, lifetime, browser-close, and no-recovery boundary throughout guest play.
     if (guestNotice) { guestNotice.hidden = !guest; guestNotice.textContent = guest ? t('guest.expiryWarning', {}, 'shell') : ''; }
@@ -400,7 +400,7 @@ function renderLoginGate(message = '') {
   // Resolve explicit caller feedback before a fixed provider completion acknowledgement.
   const authMessage = message || oauthCompletionCopy();
   // Render the browser login gate with private-beta toy-simulator acknowledgement.
-  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-signup" data-testid="signup-entry"><a class="secondary" href="/enroll/signup" data-testid="signup-entry-link">${safe(t('signup.cta', {}, 'shell'))}</a><p class="auth-guest-copy">${safe(t('signup.entryCopy', {}, 'shell'))}</p></div><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
+  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-signup" data-testid="signup-entry"><a class="secondary" href="/enroll/signup" data-testid="signup-entry-link">${safe(t('signup.cta', {}, 'shell'))}</a><p class="auth-guest-copy">${safe(t('signup.entryCopy', {}, 'shell'))}</p></div><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button" disabled aria-disabled="true">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
   // Wire the auth-screen locale selector and rerender the gate after switching.
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
@@ -409,8 +409,39 @@ function renderLoginGate(message = '') {
   const guestButton = document.getElementById('guest-trial-button');
   // Start a guest trial on click only when the configuration-driven button is present.
   if (guestButton) guestButton.onclick = handleGuestTrial;
+  // Resolve the durable owner-controlled guest admission switch before enabling anonymous entry. (GUEST-001)
+  void applyGuestTrialPolicy();
   // Resolve provider availability after the password and guest controls are already usable.
   void enableAvailableOAuthSignIn();
+}
+
+// Apply the public guest-admission capability to the logged-out entry without trusting browser state. (GUEST-001)
+async function applyGuestTrialPolicy() {
+  // Resolve the stable button and disclosure from the current login render.
+  const button = document.getElementById('guest-trial-button');
+  // Resolve the copy independently so unavailable state remains explicit to assistive users.
+  const copy = document.querySelector('[data-testid="guest-trial-copy"]');
+  // Stop if route navigation replaced the login gate before this task began.
+  if (!button || !copy) return;
+  // Start protected capability loading so any failure leaves anonymous creation disabled.
+  try {
+    // Read only boolean enrollment capabilities from the public no-state endpoint.
+    const policy = await api('/api/v2/auth/enrollment-policy');
+    // Enable the native control only for an exact server-published true value.
+    button.disabled = policy.guest_trials_enabled !== true;
+    // Mirror native state for assistive technology.
+    button.setAttribute('aria-disabled', String(button.disabled));
+    // Replace the token disclosure only when new guest creation is currently held.
+    copy.textContent = button.disabled ? t('auth.guestUnavailable', {}, 'shell') : t('auth.guestInfo', {}, 'shell');
+  // Keep a failed capability request fail-closed and understandable without exposing transport details.
+  } catch (_) {
+    // Preserve disabled native state when the authoritative policy cannot be read.
+    button.disabled = true;
+    // Preserve matching assistive state.
+    button.setAttribute('aria-disabled', 'true');
+    // Explain temporary unavailability through localized product copy.
+    copy.textContent = t('auth.guestUnavailable', {}, 'shell');
+  }
 }
 
 // Enable only independently released providers while retaining disabled-by-default login behavior. (OAUTH-007)

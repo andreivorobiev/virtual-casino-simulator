@@ -22,6 +22,8 @@ sys.path.insert(0, str(ROOT))
 from casino.wsgi import application
 # Import the production limiter so static and API accounting can be verified at the adapter boundary. (issue #570)
 from casino.core.security import RateLimiter
+# Import the live rate-policy service so the application seam can be isolated without provider mutation. (SEC-015)
+from casino.core import rate_settings
 
 # Preserve the synthetic exact origin supplied by the parent test.
 ORIGIN = os.environ["CASINO_CANONICAL_ORIGIN"]
@@ -277,8 +279,14 @@ assert admin_html["status"] == "200 OK" and b"adminView" in admin_html["body"]
 
 # Preserve the production limiter before exercising an isolated one-request budget. (SEC-010, issue #570)
 original_application_limiter = application.rate_limiter
+# Preserve the live-policy reader before installing one deterministic request allowance.
+original_rate_policy_reader = rate_settings.rate_limits
+# Preserve the provider-backed policy so the focused live update cannot affect later matrix cases.
+original_stored_rate_policy = original_rate_policy_reader()
 # Install one fresh limiter so prior matrix traffic cannot affect the accounting proof.
 application.rate_limiter = RateLimiter(replace(application.policy, rate_requests=1))
+# Return one exact one-request live policy for this listener-free adapter proof.
+rate_settings.rate_limits = lambda: {"schema_version": 2, "requests_per_window": 1, "window_seconds": 60}
 # Start protected restoration so later security cases retain their original generous allowance.
 try:
     # Load one real packaged browser asset that must not consume application/API capacity.
@@ -293,10 +301,28 @@ try:
     limited_api = request("GET", "/api/v2/auth/enrollment-policy")
     # Require the second application request to retain the standard 429 boundary.
     assert limited_api["status"] == "429 Too Many Requests" and decoded(limited_api)["error"]["code"] == "RATE_LIMITED"
+    # Read the owner-only recovery policy through its independent bounded bucket after application exhaustion.
+    recovery_policy = request("GET", "/api/v2/admin/rate-limits", headers={"Authorization": f"Bearer {admin_token}"})
+    # Require the recovery control to remain reachable only through a valid owner session while the focused reader seam stays exact.
+    assert recovery_policy["status"] == "200 OK" and decoded(recovery_policy)["data"]["settings"]["requests_per_window"] == 1
+    # Persist a larger allowance through the real owner mutation while the application bucket remains exhausted.
+    raised_policy = request("POST", "/api/v2/admin/rate-limits", {"requests_per_window": 900, "window_seconds": 60}, mutation_headers(admin_csrf, admin_token))
+    # Require the recovery bucket, owner authorization, CSRF boundary, clamp, and provider write to succeed together.
+    assert raised_policy["status"] == "200 OK" and decoded(raised_policy)["data"]["settings"]["requests_per_window"] == 900
+    # Restore the production reader so the freshly persisted policy governs the next ordinary API request.
+    rate_settings.rate_limits = original_rate_policy_reader
+    # Reuse the existing limiter state to prove the live allowance activates without reconstruction or restart.
+    recovered_api = request("GET", "/api/v2/auth/enrollment-policy")
+    # Require the same client to recover immediately under the raised live allowance.
+    assert recovered_api["status"] == "200 OK"
 # Restore the original limiter even when the focused accounting proof fails.
 finally:
     # Return the complete security matrix to its original configured allowance.
     application.rate_limiter = original_application_limiter
+    # Restore the provider-backed live-policy reader for later matrix cases.
+    rate_settings.rate_limits = original_rate_policy_reader
+    # Restore the exact provider-backed policy that preceded this focused live-update proof.
+    rate_settings.save_rate_limits(original_stored_rate_policy)
 
 # Prove signup remains present only as a disabled enrollment endpoint even for an authenticated Admin request.
 signup = request("POST", "/api/v2/auth/signup", {"email": "held@example.invalid", "password": "held"}, mutation_headers(admin_csrf, admin_token))

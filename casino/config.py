@@ -115,7 +115,7 @@ TOKEN_PURPOSE_TTL_SECONDS = {
 # Enable the account-free disposable guest trial entry within the restricted-preview boundary; configuration-driven per owner-approved #317.
 GUEST_TRIALS_ENABLED = os.environ.get("CASINO_GUEST_TRIALS_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
 # Grant each new guest trial this many free, non-cashable play tokens.
-GUEST_STARTING_BALANCE = float(os.environ.get("CASINO_GUEST_STARTING_BALANCE", "5000"))
+GUEST_STARTING_BALANCE = float(os.environ.get("CASINO_GUEST_STARTING_BALANCE", "10000"))
 # End a guest trial after this many seconds without a server-observed action.
 GUEST_INACTIVITY_SECONDS = int(os.environ.get("CASINO_GUEST_INACTIVITY_SECONDS", "1800"))
 # Cap the absolute lifetime of any guest trial regardless of activity.

@@ -1,6 +1,6 @@
 {
   "artifact": "guest-trials-restricted-preview",
-  "version": 2,
+  "version": 3,
   "stage": "restricted-preview",
   "public_launch_authorized": false,
   "principal": {
@@ -13,7 +13,10 @@
   "entry": {
     "terms_version": "private-beta-1",
     "explicit_acceptance_required": true,
-    "starting_play_tokens": 5000,
+    "starting_play_tokens": 10000,
+    "new_trial_admission": "provider-backed owner switch seeded from deployment configuration",
+    "admission_change_requires_restart": false,
+    "admission_pause_ends_existing_trials": false,
     "cash_value": false,
     "max_active_principals": 100,
     "max_game_actions_per_session": 1000,
@@ -31,7 +34,7 @@
     "autoplay_stopped_on_end": true
   },
   "wallet": {
-    "starting_play_tokens_fixed": 5000,
+    "starting_play_tokens_fixed": 10000,
     "add_tokens_allowed": false,
     "purchase_allowed": false,
     "deposit_allowed": false,
@@ -50,6 +53,8 @@
     "responsive_error_cohort_minimum": 5,
     "fake_tokens_only": true,
     "export_allowed": false,
+    "admission_read_authority": "admin",
+    "admission_write_authority": "current-active-platform-owner",
     "forbidden_fields": ["auth_token", "browser_nonce", "csrf_token", "email", "ip", "player_id", "session_id", "user_id", "user_agent"]
   },
   "compatibility": {

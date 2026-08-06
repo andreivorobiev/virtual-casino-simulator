@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Virtual Casino owner and Admin management API
   version: v2
-  description: Additive v2 contract for private beta user administration plus platform-owner enrollment-policy and registered-session timeout control. User operations require active Admin access; Admin-role delegation and every enrollment-policy or session-settings operation require the current active bootstrap-managed platform owner.
+  description: Additive v2 contract for private beta user administration plus platform-owner enrollment, registered-session timeout, and live application-request policy control. User operations require active Admin access; Admin-role delegation and every enrollment-policy, session-settings, or rate-limits operation require the current active bootstrap-managed platform owner.
 servers:
   - url: /api/v2
 paths:
@@ -168,6 +168,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SessionSettingsEnvelope'
+        '403':
+          description: The current authenticated account is not the active platform owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /admin/rate-limits:
+    get:
+      # Read the live provider-backed application request policy as the platform owner. (SEC-015, ADMIN-032)
+      summary: Read the global live application request rate policy.
+      operationId: admin_rate_limits_v2_read
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying the validated live rate policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitSettingsEnvelope'
+        '403':
+          description: The current authenticated account is not the active platform owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      # Persist a bounded sparse policy update that activates without a service restart. (SEC-015, ADMIN-032)
+      summary: Update the global live application request rate policy.
+      operationId: admin_rate_limits_v2_update
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateLimitSettingsUpdateRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the validated stored live rate policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitSettingsEnvelope'
         '403':
           description: The current authenticated account is not the active platform owner.
           content:
@@ -705,6 +750,44 @@ components:
           properties:
             settings:
               $ref: '#/components/schemas/SessionSettings'
+    RateLimitSettings:
+      # Validated provider-backed policy applied per trusted effective client. (SEC-015)
+      type: object
+      required: [schema_version, requests_per_window, window_seconds]
+      properties:
+        schema_version:
+          type: integer
+          minimum: 2
+        requests_per_window:
+          type: integer
+          minimum: 60
+          maximum: 10000
+        window_seconds:
+          type: integer
+          minimum: 1
+          maximum: 3600
+    RateLimitSettingsUpdateRequest:
+      # Sparse updates preserve omitted fields and clamp supplied numeric values. (ADMIN-032)
+      type: object
+      additionalProperties: false
+      properties:
+        requests_per_window:
+          type: integer
+        window_seconds:
+          type: integer
+    RateLimitSettingsEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [settings]
+          properties:
+            settings:
+              $ref: '#/components/schemas/RateLimitSettings'
     UserListEnvelope:
       type: object
       required: [ok, data]

@@ -300,8 +300,8 @@ async function guests() {
   const params = new URLSearchParams(Object.entries(guestFilters).filter(([name, value]) => name !== 'range' && value));
   // Convert the selected bounded time window into the contract's inclusive UTC lower bound.
   if (guestFilters.range) params.set('since', new Date(Date.now() - Number(guestFilters.range) * 86400000).toISOString());
-  // Load the bounded, non-resumable summary through the Admin-only v2 endpoint.
-  const data = await api(`/api/v2/admin/guest-trials?${params.toString()}`);
+  // Load telemetry and the current admission control together so the Admin view is one coherent snapshot.
+  const [data, settingsData] = await Promise.all([api(`/api/v2/admin/guest-trials?${params.toString()}`), api('/api/v2/admin/guest-trials/settings')]);
   // Stop when another tab took over during the async load.
   if (!isActiveTab('guests')) return;
   // Read the summary totals used by the funnel tiles.
@@ -312,8 +312,12 @@ async function guests() {
   const games = summary.games || [];
   // Read retention health without exposing runtime paths or exception text.
   const cleanup = summary.cleanup || {};
+  // Read the owner-governed admission switch and fixed current token grant.
+  const guestPolicy = settingsData.settings || { enabled: false, starting_balance: 10000 };
   // Render filters, funnel, game aggregates, recent rows, detail, and retention health without identity columns.
   view.innerHTML = `<section class="admin-card guest-filter-card" data-testid="admin-guest-filters"><div class="guest-filter-grid"><label>${safe(t('guests.filterLocale', {}, 'admin'))}<select id="guest-filter-locale">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.locale)}${localeOptions(guestFilters.locale)}</select></label><label>${safe(t('guests.filterDevice', {}, 'admin'))}<select id="guest-filter-device">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.device)}${option('desktop', t('guests.deviceDesktop', {}, 'admin'), guestFilters.device)}${option('tablet', t('guests.deviceTablet', {}, 'admin'), guestFilters.device)}${option('mobile', t('guests.deviceMobile', {}, 'admin'), guestFilters.device)}</select></label><label>${safe(t('guests.filterStatus', {}, 'admin'))}<select id="guest-filter-status">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.status)}${option('active', t('guests.statusActive', {}, 'admin'), guestFilters.status)}${option('ended', t('guests.statusEnded', {}, 'admin'), guestFilters.status)}</select></label><button id="guest-cleanup" type="button" data-testid="admin-guest-cleanup">${safe(t('guests.cleanupRun', {}, 'admin'))}</button></div></section><div class="admin-card-grid" data-testid="admin-guest-summary"><div class="admin-card"><b>${safe(t('guests.started', {}, 'admin'))}</b><h2 data-testid="admin-guest-started">${formatNumber(funnel.started || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.engaged', {}, 'admin'))}</b><h2 data-testid="admin-guest-engaged">${formatNumber(funnel.engaged || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.completed', {}, 'admin'))}</b><h2 data-testid="admin-guest-completed">${formatNumber(funnel.completed_round || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.activeNow', {}, 'admin'))}</b><h2 data-testid="admin-guest-active">${formatNumber(summary.active_now || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.ended', {}, 'admin'))}</b><h2 data-testid="admin-guest-ended">${formatNumber(summary.ended_total || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.expired', {}, 'admin'))}</b><h2 data-testid="admin-guest-expired">${formatNumber(summary.expired_total || 0)}</h2></div></div><section class="admin-card" data-testid="admin-guest-games"><h3>${safe(t('guests.gamesTitle', {}, 'admin'))}</h3>${games.length ? table([t('guests.colGame', {}, 'admin'), t('guests.colTrials', {}, 'admin'), t('guests.colOpens', {}, 'admin'), t('guests.colActions', {}, 'admin'), t('guests.colRounds', {}, 'admin')], games.map(row => `<tr><td>${safe(humanLabel(row.game))}</td><td>${formatNumber(row.trials)}</td><td>${formatNumber(row.opens)}</td><td>${formatNumber(row.actions)}</td><td>${formatNumber(row.rounds_completed)}</td></tr>`)) : emptyState(t('guests.gamesEmpty', {}, 'admin'), t('guests.gamesEmptyDetail', {}, 'admin'), 'admin-guest-games-empty')}</section><section class="admin-card" data-testid="admin-guest-recent"><h3>${safe(t('guests.recentTitle', {}, 'admin'))}</h3>${(summary.recent || []).length ? table([t('guests.colId', {}, 'admin'), t('guests.colStarted', {}, 'admin'), t('guests.colLocale', {}, 'admin'), t('guests.colDevice', {}, 'admin'), t('guests.colReason', {}, 'admin'), t('guests.colActions', {}, 'admin'), t('guests.colRounds', {}, 'admin'), t('guests.colDetail', {}, 'admin')], summary.recent.map(row => `<tr data-testid="admin-guest-row"><td>${safe(row.analytics_id)}</td><td>${safe(row.started_at)}</td><td>${safe(row.locale)}</td><td>${safe(row.device)}</td><td>${safe(row.end_reason || t('guests.statusActive', {}, 'admin'))}</td><td>${formatNumber(row.actions || 0)}</td><td>${formatNumber(row.rounds_completed || 0)}</td><td><button class="guest-detail-button" data-id="${safe(row.analytics_id)}" type="button">${safe(t('guests.viewDetail', {}, 'admin'))}</button></td></tr>`)) : emptyState(t('guests.empty', {}, 'admin'), t('guests.emptyDetail', {}, 'admin'), 'admin-guest-empty')}</section><section id="guest-detail" class="admin-card" data-testid="admin-guest-detail" aria-live="polite"><h3>${safe(t('guests.detailTitle', {}, 'admin'))}</h3><p>${safe(t('guests.detailPrompt', {}, 'admin'))}</p></section><section class="admin-card" data-testid="admin-guest-cleanup-status" data-cleanup-failed="${cleanup.last_error === 'cleanup_failed'}"><h3>${safe(t('guests.cleanupTitle', {}, 'admin'))}</h3><p>${safe(t('guests.cleanupStatus', { raw: cleanup.raw_retention_days || 30, aggregate: cleanup.aggregate_retention_days || 400, time: cleanup.last_success_at || t('guests.cleanupNever', {}, 'admin'), failure: cleanup.last_failure_at || t('guests.cleanupNever', {}, 'admin') }, 'admin'))}</p></section>`;
+  // Insert the owner control before analytics so admission status is immediately visible.
+  view.querySelector('[data-testid="admin-guest-filters"]').insertAdjacentHTML('beforebegin', `<section class="admin-card" data-testid="admin-guest-policy"><h3>${safe(t('guests.policyTitle', {}, 'admin'))}</h3><p>${safe(t('guests.policyCopy', { tokens: formatNumber(guestPolicy.starting_balance || 10000) }, 'admin'))}</p><label class="check-row"><input id="guest-trials-enabled" data-testid="admin-guest-trials-enabled" type="checkbox" ${guestPolicy.enabled ? 'checked' : ''}><span>${safe(t('guests.policyEnabled', {}, 'admin'))}</span></label><button id="guest-policy-save" data-testid="admin-save-guest-policy" type="button">${safe(t('guests.policySave', {}, 'admin'))}</button></section>`);
   // Read the complete product metric summary with safe defaults.
   const metrics = summary.metrics || {};
   // Read percentage rates for every named funnel stage.
@@ -342,6 +346,8 @@ async function guests() {
   view.querySelectorAll('.guest-detail-button').forEach(button => { button.onclick = () => showGuestDetail(button.dataset.id); });
   // Bind the idempotent retention action through the protected v2 endpoint.
   view.querySelector('#guest-cleanup').onclick = async () => { try { await post('/api/v2/admin/guest-trials/cleanup', {}); toast(t('guests.cleanupComplete', {}, 'admin'), true); } catch (_) { toast(t('guests.cleanupFailed', {}, 'admin')); } await guests(); };
+  // Bind the owner-only admission switch without affecting current trial principals.
+  view.querySelector('#guest-policy-save').onclick = async () => { try { await post('/api/v2/admin/guest-trials/settings', { enabled: view.querySelector('#guest-trials-enabled').checked }); toast(t('guests.policySaved', {}, 'admin'), true); } catch (_) { toast(t('guests.policyFailed', {}, 'admin')); } await guests(); };
 }
 
 // Render disabled-by-default private invitation readiness, issuance, and lifecycle controls. (INVITE-001, INVITE-005)
@@ -713,13 +719,17 @@ async function sessions() {
   // Set the localized session-policy title and helper text.
   setTitle(t('sessions.title', {}, 'admin'), t('sessions.subtitle', {}, 'admin'));
   // Load the current owner-gated policy document.
-  const data = await api('/api/v2/admin/session-settings');
+  const [data, rateData] = await Promise.all([api('/api/v2/admin/session-settings'), api('/api/v2/admin/rate-limits')]);
   // Read the settings under a safe empty fallback for error-boundary rendering.
   const s = data.settings || {};
-  // Render the three bounded numeric controls and stricter-admin toggle.
-  view.innerHTML = `<section class="admin-card" data-testid="admin-sessions-policy"><h3>${safe(t('sessions.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('sessions.idle', {}, 'admin'))}<input id="idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.idle_timeout_minutes)}" data-testid="admin-sessions-idle"></label><label>${safe(t('sessions.absolute', {}, 'admin'))}<input id="absolute_timeout_hours" type="number" min="1" max="24" value="${safe(s.absolute_timeout_hours)}" data-testid="admin-sessions-absolute"></label><label>${safe(t('sessions.adminIdle', {}, 'admin'))}<input id="admin_idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.admin_idle_timeout_minutes)}" data-testid="admin-sessions-admin-idle"></label></div><label><input id="admin_stricter" type="checkbox" ${s.admin_stricter ? 'checked' : ''} data-testid="admin-sessions-admin-stricter"> ${safe(t('sessions.adminStricter', {}, 'admin'))}</label><p class="muted">${safe(t('sessions.help', {}, 'admin'))}</p><div class="row"><button id="saveSessions" data-testid="admin-save-sessions" class="gold">${safe(t('sessions.save', {}, 'admin'))}</button></div></section>`;
+  // Read the separately persisted live request policy under the same owner-facing security workspace.
+  const r = rateData.settings || {};
+  // Render the timeout and live request-rate controls as distinct bounded policy cards.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-sessions-policy"><h3>${safe(t('sessions.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('sessions.idle', {}, 'admin'))}<input id="idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.idle_timeout_minutes)}" data-testid="admin-sessions-idle"></label><label>${safe(t('sessions.absolute', {}, 'admin'))}<input id="absolute_timeout_hours" type="number" min="1" max="24" value="${safe(s.absolute_timeout_hours)}" data-testid="admin-sessions-absolute"></label><label>${safe(t('sessions.adminIdle', {}, 'admin'))}<input id="admin_idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.admin_idle_timeout_minutes)}" data-testid="admin-sessions-admin-idle"></label></div><label><input id="admin_stricter" type="checkbox" ${s.admin_stricter ? 'checked' : ''} data-testid="admin-sessions-admin-stricter"> ${safe(t('sessions.adminStricter', {}, 'admin'))}</label><p class="muted">${safe(t('sessions.help', {}, 'admin'))}</p><div class="row"><button id="saveSessions" data-testid="admin-save-sessions" class="gold">${safe(t('sessions.save', {}, 'admin'))}</button></div></section><section class="admin-card" data-testid="admin-rate-limits"><h3>${safe(t('rateLimits.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('rateLimits.requests', {}, 'admin'))}<input id="requests_per_window" type="number" min="60" max="10000" value="${safe(r.requests_per_window)}" data-testid="admin-rate-limit-requests"></label><label>${safe(t('rateLimits.window', {}, 'admin'))}<input id="window_seconds" type="number" min="1" max="3600" value="${safe(r.window_seconds)}" data-testid="admin-rate-limit-window"></label></div><p class="muted">${safe(t('rateLimits.help', {}, 'admin'))}</p><div class="row"><button id="saveRateLimits" data-testid="admin-save-rate-limits" class="gold">${safe(t('rateLimits.save', {}, 'admin'))}</button></div></section>`;
   // Bind the owner save action after rendering.
   view.querySelector('#saveSessions').onclick = saveSessions;
+  // Bind the independent live rate-policy save action after rendering.
+  view.querySelector('#saveRateLimits').onclick = saveRateLimits;
 }
 
 // Persist the owner-authored session policy through the additive v2 contract.
@@ -730,6 +740,16 @@ async function saveSessions() {
   await api('/api/v2/admin/session-settings', { method: 'POST', body: payload });
   // Confirm the save without exposing policy internals.
   toast(t('sessions.saved', {}, 'admin'), true);
+}
+
+// Persist the owner-authored live application request policy without restarting the service. (SEC-015, ADMIN-032)
+async function saveRateLimits() {
+  // Build the sparse bounded policy from the two operational number fields.
+  const payload = { requests_per_window: Number(view.querySelector('#requests_per_window').value), window_seconds: Number(view.querySelector('#window_seconds').value) };
+  // Persist the validated policy through the recovery-safe owner route.
+  await api('/api/v2/admin/rate-limits', { method: 'POST', body: payload });
+  // Confirm activation without exposing any per-client limiter state.
+  toast(t('rateLimits.saved', {}, 'admin'), true);
 }
 
 // Define previewVoice to speak a short sample with the saved voice settings.

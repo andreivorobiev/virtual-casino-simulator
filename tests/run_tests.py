@@ -854,8 +854,8 @@ def validate_guest_lifecycle():
     user,session,nonce=guest['user'],guest['session'],guest['browser_nonce']
     # Prove the disposable principal has no Admin authority, credential, or caller-selected wallet.
     assert auth_core.is_guest(user) and not auth_core.is_admin(user) and not user.get('password_hash')
-    # Prove the wallet is a fresh isolated 5,000-play-token balance.
-    assert auth_core.current_user_payload(session,user)['player']['token_balance']==5000.0
+    # Prove the wallet is a fresh isolated 10,000-play-token balance.
+    assert auth_core.current_user_payload(session,user)['player']['token_balance']==10000.0
     # Prove exact consent metadata and supported locale are stored server-side.
     assert user.get('terms_accepted_version')=='private-beta-1' and user.get('terms_acceptance_source')=='guest_entry' and user.get('locale')=='ru-RU'
     # Read the matching durable session before any teardown.
@@ -1202,14 +1202,14 @@ def validate_guest_contracts():
     guest_contract=json.loads((ROOT/'contracts'/'compatibility'/'guest-trials-restricted-preview.json').read_text(encoding='utf-8'))
     # Prove public creation and both authenticated lifecycle routes are explicitly published.
     assert all(route in auth_contract for route in ('/auth/guest:','/auth/guest/end:','/auth/guest/depart:','GuestBrowserNonce'))
-    # Prove the complete Admin summary/list/detail/cleanup route family is published under v2.
-    assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/cleanup:'))
+    # Prove the complete Admin summary/list/detail/settings/cleanup route family is published under v2.
+    assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/settings:','/admin/guest-trials/cleanup:'))
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
     # Preserve the exact anonymous allowlist including private redemption, disabled enrollment, and reviewed provider-latched OAuth routes. (OAUTH-007)
     assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/oauth/providers','/api/v2/auth/csrf','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
-    # Prove launch stays held and retention/forbidden fields remain exact.
-    assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
+    # Prove launch stays held, the fixed grant and owner admission control are exact, and retention/forbidden fields remain exact.
+    assert guest_contract['public_launch_authorized'] is False and guest_contract['entry']['starting_play_tokens']==10000 and guest_contract['entry']['admission_change_requires_restart'] is False and guest_contract['entry']['admission_pause_ends_existing_trials'] is False and guest_contract['wallet']['starting_play_tokens_fixed']==10000 and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['admission_write_authority']=='current-active-platform-owner' and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
     digests=json.loads((ROOT/'contracts'/'compatibility'/'contract-digests.json').read_text(encoding='utf-8'))
     # Verify both changed v2 contracts match their frozen exact bytes.
@@ -1238,7 +1238,7 @@ def validate_guest_admin_api(base):
         # Prove the guest can read its bound current-user state through the shared protected adapter.
         current=api(base,'/api/v2/me',auth_token=token,extra_headers=guest_headers)
         # Require the non-Admin guest principal and isolated wallet shape.
-        assert current['user']['principal_type']=='guest' and current['player']['token_balance']==5000.0
+        assert current['user']['principal_type']=='guest' and current['player']['token_balance']==10000.0
         # Open Slots through the normal guest-bound game state route.
         guest_state=api(base,'/api/v1/games/slots/state',auth_token=token,extra_headers=guest_headers)
         # Prove server identity replacement returns only the guest-bound wallet.
@@ -1414,6 +1414,10 @@ def run_api_tests():
     run_case('API-ADMIN-ECONOMICS-001',['ADMIN-030','TEST-146'],lambda: run_unit_module('tests.admin_economics_tests','Admin economics suite failed'))
     # Record owner-only clamped provider-backed session-policy routes and persistence. (SESSION-009, ADMIN-031, TEST-150)
     run_case('API-ADMIN-SESSION-POLICY-001',['SESSION-009','ADMIN-031','TEST-150'],lambda: run_unit_module('tests.admin_game_states_tests.AdminSessionSettingsTests','Admin session policy suite failed'))
+    # Run the owner-only live rate-policy provider and route contract. (SEC-015, ADMIN-032, TEST-156)
+    run_case('API-ADMIN-RATE-LIMITS-001',['SEC-015','ADMIN-032','TEST-156'],lambda: run_unit_module('tests.admin_game_states_tests.AdminRateLimitSettingsTests','Admin rate-limit policy suite failed'))
+    # Prove 10,000-token guest grants plus owner pause/resume enforcement without restart. (GUEST-001)
+    run_case('API-GUEST-ADMISSION-001',['GUEST-001','GUEST-004','GUEST-005','TEST-080'],lambda: run_unit_module('tests.admin_game_states_tests.AdminGuestTrialSettingsTests','Guest admission policy suite failed'))
     # Record the practice-table solvency, compensation, and self-heal proof. (issue #411)
     run_case('API-THPT-ESCROW-001',['THPT-006'],lambda: run_unit_module('tests.thpt_escrow_tests','practice-table escrow suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
@@ -2005,7 +2009,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the central failure label stable.
             raise AssertionError('frontend safety suite failed')
     # Record invitation-log, toast, motion, Roulette, mobile, runtime, and autoplay rate-limit recovery proof.
-    run_case('FRONTEND-SAFETY-001',['SEC-013','UX-021','CORE-028','ROU-043','TEENP-002','MOTION-010','AUTO-015','TEST-136','TEST-153'],run_frontend_safety_tests)
+    run_case('FRONTEND-SAFETY-001',['SEC-013','SEC-015','UX-021','UX-027','CORE-028','ROU-043','TEENP-002','MOTION-010','AUTO-015','ADMIN-032','TEST-136','TEST-153','TEST-155','TEST-156'],run_frontend_safety_tests)
     # Execute the complete listener-free catalog repeat-bet contract without opening a listener.
     def run_repeat_bet_tests():
         # Import the focused repeat-bet suite only when its mapped case runs.
@@ -3805,6 +3809,26 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Collect one result row per locale and governed viewport.
             guest_results=[]
+            # Default the admission-UI proof to true for shards that do not own the guest lifecycle group.
+            guest_policy_disabled_result=True
+            # Exercise the truthful disabled login control once on the shard that owns guest lifecycle Browser evidence.
+            if browser_shard_owns_group('guest_lifecycle'):
+                # Create one isolated context so the mocked read-only policy cannot affect real guest creation cases.
+                guest_policy_context=browser.new_context(viewport=guest_viewports['desktop_primary'])
+                # Open one page for the disabled-capability render.
+                guest_policy_page=guest_policy_context.new_page()
+                # Return a complete standard public policy envelope with only guest admission paused.
+                guest_policy_page.route('**/api/v2/auth/enrollment-policy',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'enrollment_mode':'closed','signup_enabled':False,'guest_trials_enabled':False,'invitation_enrollment_enabled':False,'guest_conversion_enabled':True,'passkeys_enabled':False,'canonical_identity':'casino_user_id','shared_auth_origin':'tiltseven_first_party'}})))
+                # Start protected inspection so the isolated browser context always closes.
+                try:
+                    # Navigate to the real login shell and wait for the mocked policy to settle.
+                    guest_policy_page.goto(base,wait_until='networkidle'); guest_policy_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                    # Require native disabled state, matching assistive state, and explicit unavailable copy.
+                    guest_policy_disabled_result=guest_policy_page.get_by_test_id('guest-trial-button').is_disabled() and guest_policy_page.get_by_test_id('guest-trial-button').get_attribute('aria-disabled')=='true' and bool(guest_policy_page.get_by_test_id('guest-trial-copy').inner_text().strip())
+                # Destroy the mocked context before real guest creation begins.
+                finally:
+                    # Close page, routes, cookies, and storage together.
+                    guest_policy_context.close()
             # Exercise both installed locales through their browser-visible selector.
             for guest_locale in (('en-US','ru-RU') if browser_shard_owns_group('guest_lifecycle') else ()):
                 # Exercise every governed viewport from the visual matrix.
@@ -3920,7 +3944,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Destroy the replacement context and its now-revoked cookie.
                 replacement_context.close()
             # Record the full locale, viewport, consent, lifecycle, authorization, refresh, and browser-close matrix.
-            run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','GUEST-006','TEST-081'],lambda: len(guest_results)==8 and all(result['created'] and result['role']=='guest' and result['balance']==5000.0 and result['marker']=='true' and result['top_up_hidden'] and result['expiry_notice'] and result['game_entered'] and result['admin_code']=='FORBIDDEN' and result['ended'] and result['contained'] for result in guest_results) and all(guest_close_results))
+            run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','GUEST-006','TEST-081'],lambda: guest_policy_disabled_result and len(guest_results)==8 and all(result['created'] and result['role']=='guest' and result['balance']==10000.0 and result['marker']=='true' and result['top_up_hidden'] and result['expiry_notice'] and result['game_entered'] and result['admin_code']=='FORBIDDEN' and result['ended'] and result['contained'] for result in guest_results) and all(guest_close_results))
             # Record the separately named same-context refresh and browser-context loss acceptance.
             run_case('BR-GUEST-REFRESH-001',['GUEST-002','TEST-081'],lambda: len(guest_results)==8 and all(result['ended'] for result in guest_results) and all(guest_close_results))
             # Refresh the direct API harness Admin session after the browser login added a concurrent session (issue #226).
@@ -5640,24 +5664,24 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert stability['focusInside'],stability
                         # Reuse the mobile document-scroll composition for the clamp-rescue assertion.
                         page.set_viewport_size({'width':390,'height':844})
-                        # Mount Craps because its wager action settles with a single click.
-                        page.get_by_test_id('nav-craps').click()
-                        # Wait for the Craps play controls before arranging document scroll.
-                        page.wait_for_selector('#view button',timeout=5000)
+                        # Mount Roulette because its stacked route exposed the reported delayed document-scroll clamp.
+                        page.get_by_test_id('nav-roulette').click()
+                        # Wait for the chip controls before arranging document scroll.
+                        page.wait_for_selector('#view [data-chip]',timeout=5000)
                         # Scroll the document deep toward the play controls.
                         page.evaluate("() => window.scrollTo(0,Math.max(0,document.documentElement.scrollHeight-window.innerHeight))")
                         # Record the deep scroll offset the rerender must not clamp to the top.
-                        craps_scroll=page.evaluate("() => Math.round(window.scrollY)")
-                        # Act through the first enabled play control so a full-root rerender settles.
-                        page.evaluate("() => { const button=[...document.querySelectorAll('#view button')].find(candidate => !candidate.disabled); button.click(); }")
+                        roulette_scroll=page.evaluate("() => Math.round(window.scrollY)")
+                        # Schedule the delayed top clamp before a synchronous Roulette chip-selection full-root rerender so frame ordering is deterministic.
+                        page.evaluate("() => { requestAnimationFrame(() => window.scrollTo(0,0)); document.querySelector('#view [data-chip=\"5\"]').click(); }")
                         # Let the settled rerender and any anchoring adjustment finish.
                         page.wait_for_timeout(500)
                         # Read the post-action document offset.
-                        craps_after=page.evaluate("() => Math.round(window.scrollY)")
+                        roulette_after=page.evaluate("() => Math.round(window.scrollY)")
                         # Require a meaningful pre-action offset so the clamp assertion stays honest.
-                        assert craps_scroll>120,(craps_scroll,craps_after)
+                        assert roulette_scroll>120,(roulette_scroll,roulette_after)
                         # Require the rerender not to throw the player back to the top of the document.
-                        assert craps_after>60,(craps_scroll,craps_after)
+                        assert roulette_after>60,(roulette_scroll,roulette_after)
                     # Restore shared viewport and route ownership for later Browser cases.
                     finally:
                         # Restore the primary desktop dimensions.
@@ -9909,6 +9933,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                         # Hold the provider-shaped policy returned by the deterministic endpoint seam.
                         policy={'schema_version':2,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15}
+                        # Hold the provider-shaped live request policy returned beside session controls. (SEC-015, ADMIN-032)
+                        rate_policy={'schema_version':2,'requests_per_window':1200,'window_seconds':60}
                         # Hold whether the next read should model ordinary-Admin denial.
                         denied={'value':False}
                         # Serve owner reads/writes and one explicit ordinary-Admin forbidden envelope.
@@ -9925,8 +9951,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 policy.update({'idle_timeout_minutes':max(1,min(int(body.get('idle_timeout_minutes',policy['idle_timeout_minutes'])),1440)),'absolute_timeout_hours':max(1,min(int(body.get('absolute_timeout_hours',policy['absolute_timeout_hours'])),24)),'admin_idle_timeout_minutes':max(1,min(int(body.get('admin_idle_timeout_minutes',policy['admin_idle_timeout_minutes'])),1440)),'admin_stricter':body.get('admin_stricter') is True})
                             # Fulfill the owner success envelope.
                             route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'settings':policy}}))
+                        # Serve owner reads and writes for the independently persisted live request policy.
+                        def rate_policy_route(route):
+                            # Apply the reviewed live-policy clamps when the owner submits POST.
+                            if route.request.method=='POST':
+                                # Read the submitted JSON body.
+                                body=route.request.post_data_json
+                                # Clamp both operational fields through the exact backend contract bounds.
+                                rate_policy.update({'requests_per_window':max(60,min(int(body.get('requests_per_window',rate_policy['requests_per_window'])),10000)),'window_seconds':max(1,min(int(body.get('window_seconds',rate_policy['window_seconds'])),3600))})
+                            # Fulfill the owner success envelope.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'settings':rate_policy}}))
                         # Install one route seam covering GET and POST.
                         page.route('**/api/v2/admin/session-settings',policy_route)
+                        # Install the paired live request-policy seam.
+                        page.route('**/api/v2/admin/rate-limits',rate_policy_route)
                         # Guarantee route and expected-diagnostic cleanup.
                         try:
                             # Exercise both installed locales.
@@ -9937,8 +9975,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 for viewport_id,viewport in viewports.items():
                                     # Reset the deterministic policy before this cell.
                                     policy.update({'schema_version':2,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15}); denied['value']=False
+                                    # Reset the independent live request policy before this cell.
+                                    rate_policy.update({'schema_version':2,'requests_per_window':1200,'window_seconds':60})
                                     # Apply exact visual geometry and render the owner view.
-                                    page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '30' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '12' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '15' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === true""",timeout=5000)
+                                    page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '30' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '12' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '15' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === true && document.querySelector('[data-testid=\"admin-rate-limit-requests\"]')?.value === '1200' && document.querySelector('[data-testid=\"admin-rate-limit-window\"]')?.value === '60'""",timeout=5000)
                                     # Require the complete owner policy to remain contained.
                                     assert page.get_by_test_id('admin-sessions-idle').input_value()=='30' and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
                                     # Focus the real save action for keyboard evidence.
@@ -9959,6 +9999,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     assert page.get_by_test_id('admin-sessions-idle').input_value()=='1' and page.get_by_test_id('admin-sessions-absolute').input_value()=='24' and page.get_by_test_id('admin-sessions-admin-idle').input_value()=='1440' and not page.get_by_test_id('admin-sessions-admin-stricter').is_checked()
                                     # Capture clamped and saved policy evidence.
                                     game_evidence(f'after-pass-admin-session-policy-saved-{locale}-{viewport_id}.png','BR-ADMIN-SESSION-POLICY-001',['clamped_values','saved'],locale,viewport_id)
+                                    # Submit out-of-range live rate controls through the real owner UI.
+                                    page.get_by_test_id('admin-rate-limit-requests').fill('50000'); page.get_by_test_id('admin-rate-limit-window').fill('0')
+                                    # Bind the real Save action to completion of its exact rate-policy POST.
+                                    with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/rate-limits') and response.request.method=='POST',timeout=5000):
+                                        # Trigger the independent live rate-policy save.
+                                        page.get_by_test_id('admin-save-rate-limits').click()
+                                    # Rerender from both persisted policy responses.
+                                    page.get_by_test_id('admin-tab-sessions').click()
+                                    # Wait for exact backend-equivalent clamps rather than accepting stale controls.
+                                    page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-rate-limit-requests\"]')?.value === '10000' && document.querySelector('[data-testid=\"admin-rate-limit-window\"]')?.value === '1'""",timeout=5000)
+                                    # Require the live policy to display its exact committed values.
+                                    assert page.get_by_test_id('admin-rate-limit-requests').input_value()=='10000' and page.get_by_test_id('admin-rate-limit-window').input_value()=='1'
                             # Record diagnostics before modeling one canonical ordinary-Admin denial.
                             denial_http_index=len(http_errors); denial_console_index=len(console_errors); denial_page_index=len(page_errors)
                             # Return the canonical forbidden envelope on the next read.
@@ -9977,10 +10029,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         finally:
                             # Restore the real owner-only endpoint.
                             page.unroute('**/api/v2/admin/session-settings',policy_route)
+                            # Restore the real owner-only live request-policy endpoint.
+                            page.unroute('**/api/v2/admin/rate-limits',rate_policy_route)
                         # Restore default Admin geometry, locale, and Dashboard.
                         page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }"); page.get_by_test_id('admin-tab-dashboard').click()
                     # Execute the governed owner-session policy Browser case.
-                    run_case('BR-ADMIN-SESSION-POLICY-001',['SESSION-009','ADMIN-031','TEST-150'],admin_session_policy_browser)
+                    run_case('BR-ADMIN-SESSION-POLICY-001',['SESSION-009','ADMIN-031','SEC-015','ADMIN-032','TEST-150','TEST-156'],admin_session_policy_browser)
                     # Define the localized Admin ledger-label and responsive evidence regression. (issue #74)
                     def admin_ledger_labels_browser():
                         # Store the exact governed Admin viewports required by the visual matrix.
@@ -10708,6 +10762,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     page.locator('#guest-filter-error_category').select_option('VALIDATION_ERROR')
                                 # Require the complete funnel and game-engagement sections.
                                 assert int(page.get_by_test_id('admin-guest-started').inner_text().replace(',','').replace('\xa0',''))>=1
+                                # Require the owner-facing admission control and fixed 10,000-token disclosure.
+                                assert page.get_by_test_id('admin-guest-policy').is_visible() and page.get_by_test_id('admin-guest-trials-enabled').is_checked() and '10' in page.get_by_test_id('admin-guest-policy').inner_text()
                                 # Require the engaged and completed-round milestones to include the seeded row.
                                 assert int(page.get_by_test_id('admin-guest-engaged').inner_text().replace(',','').replace('\xa0',''))>=1 and int(page.get_by_test_id('admin-guest-completed').inner_text().replace(',','').replace('\xa0',''))>=1
                                 # Require all named funnel rows, detailed game metrics, and fake-token summary cards.
@@ -10742,7 +10798,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Require page containment plus intentional horizontal containment on table regions.
                                     contained=page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1 && [...document.querySelectorAll('[data-testid=\"admin-guest-funnel\"], [data-testid=\"admin-guest-games\"], [data-testid=\"admin-guest-game-detail\"], [data-testid=\"admin-guest-recent\"]')].every(region => region.scrollWidth >= region.clientWidth)")
                                     # Require every filter and action to meet the approved 42 CSS-pixel floor.
-                                    targets=page.locator('[data-testid="admin-guest-filters"] select, [data-testid="admin-guest-filters"] button, .guest-detail-button')
+                                    targets=page.locator('[data-testid="admin-guest-filters"] select, [data-testid="admin-guest-filters"] button, [data-testid="admin-guest-policy"] input, [data-testid="admin-guest-policy"] button, .guest-detail-button')
                                     # Inspect all rendered Guest Trials interactive controls.
                                     target_floor=all((targets.nth(index).bounding_box() or {}).get('height',0)>=41.5 for index in range(targets.count()))
                                     # Focus the table region for visible keyboard evidence.
@@ -10774,7 +10830,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Restore the exact pre-test de-identified telemetry document after every success or failure.
                             write_json(guest_analytics.TRIALS_PATH,original_analytics)
                     # Execute the de-identified Guest Trials Admin regression.
-                    run_case('BR-ADMIN-GUEST-001',['GUEST-003','GUEST-004','GUEST-005','TEST-081'],admin_guest_trials_browser)
+                    run_case('BR-ADMIN-GUEST-001',['GUEST-001','GUEST-003','GUEST-004','GUEST-005','TEST-081'],admin_guest_trials_browser)
                     # Execute this statement as part of the module's documented control flow.
                     page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
                     # Execute this statement as part of the module's documented control flow.
