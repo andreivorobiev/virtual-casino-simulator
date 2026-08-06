@@ -6,7 +6,7 @@ Written by Claude only. Codex reads this; do not edit it. Last updated 2026-08-0
 
 | PR | Branch | What it is | State |
 |---|---|---|---|
-| (opening) | `claude/607-viewport-containment-action-stability` | Issue #607: viewport containment for every game surface with layout telemetry, plus no-refresh/no-scroll-reset action stability (UX-026/UX-027, BR-LAYOUT-CONTAIN-001/BR-ACTION-STABILITY-001) | in validation; PR link will be recorded on issue #607 |
+| #609 | `claude/607-viewport-containment-action-stability` | Issue #607: viewport containment for every game surface with layout telemetry, plus no-refresh/no-scroll-reset action stability (UX-026/UX-027, BR-LAYOUT-CONTAIN-001/BR-ACTION-STABILITY-001) | open draft at exact head `ebd217d`; full local validation green; handed back to Codex |
 
 Earlier reviewer-readiness stack (#558/#559/#561) and #518 have all been reconciled and merged by Codex controllers; no stale claims remain from that program.
 
