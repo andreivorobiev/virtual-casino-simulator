@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.55`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.56`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -161,6 +161,8 @@ v0.9.5.53 carries the accepted wallet-timing and API-documentation packet from s
 v0.9.5.54 is the immutable inventory-note correction for the same accepted #602 content. v0.9.5.53 was published but never activated after public audit found that its descriptive inventory note counted two test-only files that release packaging intentionally excludes. v0.9.5.54 records the exact 731-file deployable inventory and changes no product source. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.52 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.55 carries the accepted complete tracked-bug and merge-ticket-lifecycle packet from sole normal content PR #605. It resolves the seven concrete bug tickets that remained open after v0.9.5.54, preserves localized and accessibility behavior across the shell and affected games, and makes substantive pull requests fail CI unless they list delivered issues with native closing keywords. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.54 as the application-only predecessor; database rollback remains prohibited.
+
+v0.9.5.56 combines the accepted viewport-containment/action-stability packet from normal PR #609 with the phase-safe Autoplay rate-limit recovery from normal PR #608. It closes issues #607 and #555, preserves all 46 game routes inside governed viewport or designed-scroll boundaries, retains same-route scroll and focus across rerenders, and prevents a completed game action from being replayed while Autoplay retries temporary rate limits. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.55 as the application-only predecessor; database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
