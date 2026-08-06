@@ -1,40 +1,32 @@
 # Claude status
 
-Written by Claude only. Codex reads this; do not edit it. Last updated 2026-07-31.
+Written by Claude only. Codex reads this; do not edit it. Last updated 2026-08-05.
 
 ## Pull requests I authored (drafts; I never merge)
 
-States follow `docs/coordination/codex.md`; the reviewer-readiness stack is serialized behind the current controller reconciliation.
-
 | PR | Branch | What it is | State |
 |---|---|---|---|
-| #558 | `claude/readme-front-door` | Program task 1: README design decisions, release-note status archive, and token-terminology CI repair (#555) | open draft; immutable contributor preserved at `ed82cd35`; controller reconciliation in progress |
-| #559 | `claude/arch-diagram` | Program task 2: bounded architecture request-path diagram | open draft; stacked on #558 and held for current-main reconciliation |
-| #561 | `claude/guest-endpoint-hardening` | Program task 4: bounded guest-trial endpoint hardening | open draft; stacked on #559 and held for current-main reconciliation |
-| #518 | `identity-admin-redesign` | Identity/Admin redesign: session timeouts, nested console, and Sessions page | open draft; held behind the serialized reviewer-readiness and release lanes |
+| (opening) | `claude/607-viewport-containment-action-stability` | Issue #607: viewport containment for every game surface with layout telemetry, plus no-refresh/no-scroll-reset action stability (UX-026/UX-027, BR-LAYOUT-CONTAIN-001/BR-ACTION-STABILITY-001) | in validation; PR link will be recorded on issue #607 |
 
-## Active work — reviewer-readiness program (owner-directed, 2026-07-31)
+Earlier reviewer-readiness stack (#558/#559/#561) and #518 have all been reconciled and merged by Codex controllers; no stale claims remain from that program.
 
-The owner requested a bounded polish-and-hardening pass before an external technical review. Each task remains independently reviewed and serialized; no task closes umbrella issue #555 by itself.
+## Active work — issue #607 (owner-directed, 2026-08-05)
 
-1. `claude/readme-front-door` — move the README's per-release status paragraph verbatim into a dated `RELEASE_NOTES.md` archive, replace it with six durable design decisions, and repair plus wire the play-token terminology validator.
-2. `claude/arch-diagram` — add one bounded request-path architecture diagram; held until task 1 reaches its own terminal release.
-3. Featured-game smoke pass — completed without a product fix; the separate wallet add-token observation was tracked independently.
-4. `claude/guest-endpoint-hardening` — add the bounded guest-trial protection described by its own task; held with the external stack untouched.
-5. Legacy settlement migration — not part of task 1 and not started by this controller.
-6. Comment-quality cleanup — not part of task 1 and not started by this controller.
+Single PR covering both owner asks:
+
+1. **Containment (UX-026).** Measured continuous fit for the fixed Roulette board (replaces the discrete scale ladder; explicit translate centering because grid safe-centering start-pins oversized items), minmax(0,…)/min-width:0 shrink repairs in marble_race, slots, baccarat, boule, faro, daily_draw_lab, a shared `auditLayoutContainment` helper, and `layout_overflow` telemetry through the frozen `/api/v1/log/client` route (Admin Telemetry visible). Evidence: 17-viewport × 46-route headless sweep — 26 flagged cells before, 0 after.
+2. **Action stability (UX-027).** One shell-level route-outlet innerHTML interceptor preserves outlet scroll, internal rail scroll, and stable-identity focus across same-route rerenders for all 46 games and the lobby; collapse-clamp rescue only (never fights scroll anchoring); stranded focus parks on the game region; route changes still reset intentionally. No game render loops modified.
 
 ## File claims / high collision risk
 
-- Task 1 is being reconciled from terminal v0.9.5.47 through controller branch `codex/558-readme-front-door-controller` with ancestry shell `93035ae1`; the immutable contributor remains reachable as the second shell parent.
-- The task-1 ceiling is exactly the README/release notes, comment-density workflow, token validator and its focused fixture, four owned module descriptors plus the aggregate manifest, generated requirements, and two coordination records. It claims no requirement source, contract, casino runtime, web runtime, game source, API, or Browser case.
-- Compatible task-1 allocations are application `9.56.2`, tests `1.66.2`, docs `1.64.62`, and tooling `1.24.1`; packaged application `0.9.5.47` and every unrelated module remain unchanged.
-- PRs #559 and #561 stay at their immutable stacked heads and must regenerate shared metadata from the future current main rather than lending stale hunks to task 1.
+- Owned: `web/core/ui.js`, `web/app.js`, `web/games/{roulette,marble_race,slots,baccarat,boule,faro,daily_draw_lab}.js`, `tests/run_tests.py` (two appended Browser cases only), `tests/frontend_safety.mjs`, `tests/browser_case_durations.json`, `tests/unit/request_latency_benchmark_tests.py` (count + allocation + version literals), `docs/requirements/requirements.json` (+UX-026, UX-027, TEST-154, TEST-155 → 904 rows), `docs/visual_design_standard.md` (new hard-rules section), regenerated `docs/requirements/requirements_generated.md`, module descriptors + aggregate manifest for the versions below, and the two coordination records.
+- Version allocations above v0.9.5.55 main: application `9.57.0`, roulette `9.6.0`, slots `9.4.3`, baccarat `9.1.13`, marble_race/boule/faro `1.1.3`, daily_draw_lab `1.1.3`, tests `1.68.0`, docs `1.66.0`. Packaged application stays `0.9.5.55`; core, admin, contracts, tooling untouched.
+- No contract, API, casino runtime Python, provider, or release-path changes.
 
 ## Questions / requests for Codex
 
-- Keep tasks 2 and 4 held until task 1 receives its unique terminal release and deployment disposition.
+- Review and integrate the #607 PR when it is handed back; oldest-first is fine — it stacks on nothing.
 
 ## Blockers I am waiting on (owner or Codex)
 
-- Task 1 is awaiting independent mutable review after its current-main browser-free validation packet.
+- None.

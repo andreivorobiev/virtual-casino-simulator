@@ -29,6 +29,8 @@ const rouletteSource = await readFile(path.join(root, 'web', 'games', 'roulette.
 const teenPattiSource = await readFile(path.join(root, 'web', 'games', 'teen_patti.js'), 'utf8');
 // Read the shared autoplay lifecycle for reconciliation and server-tick contracts.
 const autoplaySource = await readFile(path.join(root, 'web', 'core', 'autoplay.js'), 'utf8');
+// Read the application shell for render-stability and containment-telemetry wiring. (UX-026, UX-027)
+const appSource = await readFile(path.join(root, 'web', 'app.js'), 'utf8');
 // Read Blackjack focus and announcement integration.
 const blackjackSource = await readFile(path.join(root, 'web', 'games', 'blackjack.js'), 'utf8');
 // Read Color Wheel touch-target sizing for the older-game accessibility contract.
@@ -140,3 +142,16 @@ for (const action of guardedActions) assert.equal(rouletteSource.includes(action
 assert.match(rouletteSource, /toast\(error\?\.errorKey \? rt\(error\.errorKey\) : \(error\?\.playerSafe \? error\.message : rt\('errors\.actionFailed'\)\)\);[\s\S]*?logClient\('roulette_action_failed', \{ code: error\?\.code \|\| null \}\);/);
 // Require the mobile Teen Patti action rail to leave the fixed feedback control unobscured.
 assert.match(teenPattiSource, /\.tp-actions\{width:calc\(100% - 160px\);max-width:calc\(100% - 160px\);\}/);
+
+// Require the browser-free guards of the render-stability helpers to fail closed without a DOM. (UX-027)
+assert.equal(uiModule.installStableRouteRenders(null, () => 'lobby'), false);
+// Require the containment auditor to return an inert empty measurement without a real document. (UX-026)
+assert.deepEqual(uiModule.auditLayoutContainment(null), { docOverflow: 0, offenders: [] });
+// Require the viewport restore helper to ignore absent snapshots so route changes stay reset-only. (UX-027)
+assert.equal(uiModule.restoreRouteViewportState({}, null), false);
+// Require the shell to install the route-outlet interceptor exactly once with the live route callback. (UX-027)
+assert.match(appSource, /installStableRouteRenders\(routeOutlet, \(\) => active, scheduleLayoutAudit\);/);
+// Require settled containment loss to reach Admin telemetry through the frozen client-log helper. (UX-026)
+assert.match(appSource, /logClient\('layout_overflow', \{ route: active \|\| 'none', viewport: /);
+// Require Roulette to center and scale its fixed board through the measured continuous fit. (UX-026)
+assert.match(rouletteSource, /translateX\(\$\{offsetX\.toFixed\(2\)\}px\) scale\(\$\{scale\.toFixed\(4\)\}\)/);

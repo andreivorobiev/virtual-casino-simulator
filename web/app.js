@@ -2,7 +2,7 @@
 // Import required dependency so this module can call the frozen API envelope safely.
 import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout, oauthLinks, oauthProviders, redeemInvitation, startOAuth, unlinkOAuth } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
-import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
+import { renderTokenBalance, toast, tokens, safe, renderPremiumTag, installStableRouteRenders, auditLayoutContainment } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
 import { getLocaleState, initI18n, onLocaleChange, registerI18nDomains, setLocale, t } from './core/i18n.js';
 // Import the offline-safe shell controller for exact-version updates and authoritative reconnects. (PWA-001, PWA-002)
@@ -1138,6 +1138,37 @@ async function init() {
   renderInitialRouteRestore();
   // Recalculate active-route visibility whenever responsive navigation layout changes.
   window.addEventListener('resize', revealActiveNav);
+  // Read the persistent route outlet once for render-stability and containment wiring. (UX-026, UX-027)
+  const routeOutlet = document.getElementById('view');
+  // Remember which route/viewport cells already reported overflow so telemetry stays bounded per session. (UX-026)
+  const reportedOverflowCells = new Set();
+  // Hold the last measurement so only overflow confirmed across two settled audits is reported. (UX-026)
+  let pendingOverflowKey = null;
+  // Hold the debounce timer that lets animations settle before containment is measured.
+  let layoutAuditTimer = null;
+  // Measure containment after renders settle, and report confirmed loss through the frozen client-log route. (UX-026)
+  const runLayoutAudit = () => {
+    // Measure the live route content through the shared bounded auditor.
+    const audit = auditLayoutContainment(routeOutlet);
+    // Build the route-and-viewport cell identity for dedupe and confirmation.
+    const cellKey = `${active || 'none'}|${window.innerWidth}x${window.innerHeight}`;
+    // Clear the pending confirmation when the settled DOM is fully contained.
+    if (audit.docOverflow <= 4 && !audit.offenders.length) { pendingOverflowKey = null; return; }
+    // Arm the confirmation on first sight so one transient animation frame cannot page the owner.
+    if (pendingOverflowKey !== cellKey) { pendingOverflowKey = cellKey; layoutAuditTimer = setTimeout(runLayoutAudit, 1200); return; }
+    // Report each confirmed cell at most once per session so diagnostics stay low-volume.
+    if (reportedOverflowCells.has(cellKey) || reportedOverflowCells.size >= 20) return;
+    // Record the confirmed cell before the asynchronous log write.
+    reportedOverflowCells.add(cellKey);
+    // Publish the bounded overflow evidence to Admin telemetry through the frozen v1 client log.
+    void logClient('layout_overflow', { route: active || 'none', viewport: `${window.innerWidth}x${window.innerHeight}`, doc_overflow: audit.docOverflow, offenders: audit.offenders, app_version: latestState?.version || 'unknown' });
+  };
+  // Schedule one settled containment audit after the latest render or resize. (UX-026)
+  const scheduleLayoutAudit = () => { clearTimeout(layoutAuditTimer); layoutAuditTimer = setTimeout(runLayoutAudit, 700); };
+  // Preserve player scroll and focus across every same-route rerender in all games and the lobby. (UX-027)
+  installStableRouteRenders(routeOutlet, () => active, scheduleLayoutAudit);
+  // Re-measure containment when the viewport itself changes size. (UX-026)
+  window.addEventListener('resize', scheduleLayoutAudit);
   // Repaint persistent shell text when the locale changes.
   onLocaleChange(() => { localizeFeedback(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
   // Restore game routes through browser Back and Forward without remounting stale history entries.

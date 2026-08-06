@@ -26,7 +26,9 @@ export function captureGameFocus(root){
   // Read the focused control once before the render destroys it.
   const active=document.activeElement;
   // Prefer stable public selectors that survive localization and value changes.
-  const selector=active.id?`#${CSS.escape(active.id)}`:active.dataset.testid?`[data-testid="${CSS.escape(active.dataset.testid)}"]`:active.dataset.cellKey?`[data-cell-key="${CSS.escape(active.dataset.cellKey)}"]`:active.name?`[name="${CSS.escape(active.name)}"]`:null;
+  let selector=active.id?`#${CSS.escape(active.id)}`:active.dataset.testid?`[data-testid="${CSS.escape(active.dataset.testid)}"]`:active.dataset.cellKey?`[data-cell-key="${CSS.escape(active.dataset.cellKey)}"]`:active.name?`[name="${CSS.escape(active.name)}"]`:null;
+  // Fall back to the indexed class identity so unlabeled action buttons stay restorable too. (UX-027)
+  if(!selector) selector=stableRouteSelector(root,active);
   // Preserve text selection when the focused element supports it.
   const selection=Number.isInteger(active.selectionStart)?{start:active.selectionStart,end:active.selectionEnd}:null;
   // Return only restorable, non-sensitive presentation state.
@@ -37,7 +39,7 @@ export function restoreGameFocus(root,snapshot){
   // Stop when the prior focus had no stable identity.
   if(!root || typeof root.querySelector!=='function' || !snapshot?.selector) return false;
   // Resolve only within the current game root so selectors cannot escape the route.
-  const target=root.querySelector(snapshot.selector);
+  const target=resolveRouteSelector(root,snapshot.selector);
   // Leave focus unchanged when the control no longer exists or cannot receive focus.
   if(!target || typeof target.focus!=='function') return false;
   // Restore the same control without scrolling the game board.
@@ -61,6 +63,194 @@ export function syncGameLiveStatus(root){
   if(message && outlet.textContent!==message) outlet.textContent=message;
   // Return whether a meaningful status was available.
   return Boolean(message);
+}
+// Build one stable, route-scoped selector for a live element so scroll and focus state can survive a full-root rerender. (UX-027)
+function stableRouteSelector(root, el){
+  // Prefer the element id because it is unique and survives localization.
+  if(el.id) return `#${CSS.escape(el.id)}`;
+  // Prefer the public test identity because acceptance selectors are stability-governed.
+  if(el.dataset && el.dataset.testid) return `[data-testid="${CSS.escape(el.dataset.testid)}"]`;
+  // Fall back to the first two presentation classes shared by the recreated element, dropping empty tokens so a blank class attribute can never build an invalid selector.
+  const classes=typeof el.className==='string'?el.className.trim().split(/\s+/).filter(Boolean).slice(0,2):[];
+  // Refuse elements without any stable identity instead of guessing.
+  if(!classes.length) return null;
+  // Build the class selector once for both matching and disambiguation.
+  const selector=`.${classes.map(c=>CSS.escape(c)).join('.')}`;
+  // Locate the element's position among identical matches so repeated rails restore independently.
+  const index=[...root.querySelectorAll(selector)].indexOf(el);
+  // Refuse detached elements that no longer match their own selector.
+  if(index<0) return null;
+  // Return the selector with its match index for exact reattachment.
+  return `${selector}::${index}`;
+}
+// Resolve one stored route-scoped selector back to a live element after the rerender. (UX-027)
+function resolveRouteSelector(root, stored){
+  // Split the optional match index from the selector text.
+  const [selector,index]=stored.split('::');
+  // Match all candidates so indexed selectors restore the same visual rail.
+  const matches=[...root.querySelectorAll(selector)];
+  // Return the indexed match when present, or the single match, or nothing.
+  return index===undefined?matches[0]||null:matches[Number(index)]||null;
+}
+// Capture the player's viewport state before a full-root rerender replaces the game DOM. (UX-027)
+export function captureRouteViewportState(root){
+  // Record the route outlet's own scroll offsets because the outlet is the primary game scroll region.
+  const snapshot={rootTop:root.scrollTop||0,rootLeft:root.scrollLeft||0,winX:window.scrollX||0,winY:window.scrollY||0,rails:[],focus:captureGameFocus(root)};
+  // Walk every element inside the outlet looking for scrolled internal rails.
+  for(const el of root.querySelectorAll('*')){
+    // Skip elements that have not been scrolled because zero restores itself.
+    if(!(el.scrollTop>0||el.scrollLeft>0)) continue;
+    // Build a stable identity for the rail before the rerender destroys it.
+    const selector=stableRouteSelector(root, el);
+    // Record only rails that can be found again after the rerender.
+    if(selector) snapshot.rails.push({selector,top:el.scrollTop,left:el.scrollLeft});
+  }
+  // Return the complete restorable viewport state.
+  return snapshot;
+}
+// Restore the captured viewport state after a full-root rerender rebuilt the game DOM. (UX-027)
+export function restoreRouteViewportState(root, snapshot){
+  // Ignore absent snapshots so route changes can render without restoration.
+  if(!snapshot) return false;
+  // Restore each recorded internal rail before the outer offsets so nested layout settles inward-first.
+  for(const rail of snapshot.rails){
+    // Find the recreated rail through its stored stable identity.
+    const el=resolveRouteSelector(root, rail.selector);
+    // Restore both scroll axes only when the rail exists again.
+    if(el){ el.scrollTop=rail.top; el.scrollLeft=rail.left; }
+  }
+  // Restore the route outlet's own scroll offsets after content height is available again.
+  root.scrollTop=snapshot.rootTop; root.scrollLeft=snapshot.rootLeft;
+  // Rescue the document scroll only from a collapse clamp to the top; smaller shifts stay with the
+  // browser's own scroll anchoring so restoration never fights a silent anchoring adjustment.
+  if(snapshot.winY>24&&window.scrollY<8) window.scrollTo(snapshot.winX,snapshot.winY);
+  // Restore keyboard focus through the shared stable-control contract without scrolling the board.
+  restoreGameFocus(root, snapshot.focus);
+  // Report that restoration ran for browser-free regression tests.
+  return true;
+}
+// Track outlets that already intercept rerenders so repeated installation stays idempotent. (UX-027)
+const stableRenderRoots=new WeakSet();
+// Make every same-route full-root rerender preserve scroll and focus by intercepting outlet innerHTML writes. (UX-027)
+export function installStableRouteRenders(root, getRouteId, onAfterRender){
+  // Refuse duplicate installation so the native setter is wrapped exactly once.
+  if(!root||stableRenderRoots.has(root)) return false;
+  // Read the native innerHTML accessor pair from the element prototype chain.
+  const native=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
+  // Refuse exotic environments without the standard accessor instead of breaking rendering.
+  if(!native||typeof native.set!=='function') return false;
+  // Remember the route that produced the previous render so route changes reset instead of restore.
+  let lastRouteId=null;
+  // Remember the last focusable in-route control so a busy render that disables it cannot strand keyboard focus. (UX-027)
+  let stickyFocus=null;
+  // Define the instance-level accessor that wraps only this outlet's writes.
+  Object.defineProperty(root,'innerHTML',{
+    // Keep the accessor configurable so tests and future shells can uninstall it.
+    configurable:true,
+    // Delegate reads directly to the native getter.
+    get(){ return native.get.call(this); },
+    // Preserve viewport state around same-route writes and reset intentionally on route changes.
+    set(html){
+      // Read the shell-owned route identity at write time.
+      const routeId=typeof getRouteId==='function'?getRouteId():null;
+      // Hold the optional restorable state captured before the write.
+      let snapshot=null;
+      // Capture preservation state defensively so a measurement fault can never block the render itself.
+      try{
+        // Capture restorable state only when this write rerenders the same route.
+        snapshot=routeId!==null&&routeId===lastRouteId?captureRouteViewportState(this):null;
+        // Drop the remembered control whenever the route changes so focus can never leak across games.
+        if(routeId!==lastRouteId) stickyFocus=null;
+        // Remember the newest identifiable in-route control for later busy-render recovery.
+        if(snapshot?.focus) stickyFocus=snapshot.focus;
+        // Recover from an earlier render that stranded focus on the document body by reusing the remembered control.
+        else if(snapshot&&stickyFocus&&document.activeElement===document.body) snapshot.focus=stickyFocus;
+      // Degrade to an unpreserved render rather than letting a capture fault escape into game code.
+      }catch(_){ snapshot=null; }
+      // Write the new markup through the native setter.
+      native.set.call(this,html);
+      // Restore preservation state defensively so a restore fault can never escape into game code either.
+      try{
+        // Restore scroll and focus for in-route rerenders so actions never send the player to the top.
+        if(snapshot) restoreRouteViewportState(this,snapshot);
+        // Start a fresh route at the top so navigation keeps its expected reading position.
+        else { this.scrollTop=0; this.scrollLeft=0; }
+        // Keep stranded keyboard focus on the focusable game region instead of the document body. (UX-027)
+        if(snapshot&&document.activeElement===document.body&&typeof this.focus==='function') this.focus({preventScroll:true});
+      // Swallow restoration faults because the fresh markup is already in place and gameplay must continue.
+      }catch(_){ }
+      // Remember the route that owns the markup now present in the outlet.
+      lastRouteId=routeId;
+      // Notify the shell after every write so cross-cutting checks can observe the settled DOM.
+      if(typeof onAfterRender==='function') onAfterRender(this,{routeId,preserved:Boolean(snapshot)});
+    }
+  });
+  // Record the wrapped outlet so repeated installation cannot stack accessors.
+  stableRenderRoots.add(root);
+  // Report successful installation for browser-free regression tests.
+  return true;
+}
+// Report whether one element carries player-meaningful content that must never be hidden. (UX-026)
+function carriesMeaningfulContent(el){
+  // Treat interactive controls as always meaningful because hiding them removes gameplay.
+  if(el.matches('button,input,select,textarea,a,[tabindex]')) return true;
+  // Treat containers of interactive controls as meaningful because clipping them clips the controls.
+  if(el.querySelector('button,input,select,textarea,a,[tabindex]')) return true;
+  // Treat leaf elements with visible text as meaningful because clipped copy is lost information.
+  return el.childElementCount===0&&Boolean(el.textContent&&el.textContent.trim());
+}
+// Measure whether any meaningful game content escapes the viewport or its clipping container. (UX-026)
+export function auditLayoutContainment(root){
+  // Read the documentElement once for viewport width and document overflow.
+  const de=document.documentElement;
+  // Prepare the bounded offender list for diagnostics.
+  const offenders=[];
+  // Stop measuring detached roots or browser-free environments without failing shell rendering.
+  if(!de||!root||typeof root.querySelectorAll!=='function') return {docOverflow:0,offenders};
+  // Record document-level horizontal overflow because a sideways-scrolling page is always a defect.
+  const docOverflow=Math.max(de.scrollWidth-de.clientWidth,document.body?document.body.scrollWidth-de.clientWidth:0);
+  // Recognize intentional horizontal scroll rails so designed scrolling is never reported as loss.
+  const isScrollRail=el=>{const s=getComputedStyle(el);return /(auto|scroll)/.test(s.overflowX)&&el.scrollWidth>el.clientWidth+4;};
+  // Recognize horizontal clipping ancestors that can silently hide content.
+  const clipsX=el=>/(hidden|clip)/.test(getComputedStyle(el).overflowX);
+  // Build one short non-sensitive descriptor for diagnostics without serializing markup.
+  const describe=el=>{let d=el.tagName.toLowerCase();if(el.id)d+=`#${el.id}`;else if(el.dataset&&el.dataset.testid)d+=`[tid=${el.dataset.testid}]`;else if(typeof el.className==='string'&&el.className.trim())d+=`.${el.className.trim().split(/\s+/).slice(0,2).join('.')}`;return d.slice(0,80);};
+  // Walk the rendered route content measuring each candidate exactly once.
+  for(const el of root.querySelectorAll('*')){
+    // Measure only real rendered elements.
+    if(!(el instanceof HTMLElement)) continue;
+    // Skip zero-size elements because they present nothing to lose.
+    const rect=el.getBoundingClientRect();
+    // Ignore elements too small to carry visible content.
+    if(rect.width<2||rect.height<2) continue;
+    // Skip decorative art so animated table dressing cannot spam diagnostics.
+    if(!carriesMeaningfulContent(el)) continue;
+    // Walk ancestors to find designed rails or the nearest clipping container.
+    let ancestor=el.parentElement,clipper=null,insideRail=false;
+    // Stop the walk at the document body boundary.
+    while(ancestor&&ancestor!==document.body){
+      // Designed rails legitimately scroll horizontally, so their content is reachable.
+      if(isScrollRail(ancestor)){insideRail=true;break;}
+      // Remember only the nearest clipping ancestor below the route outlet.
+      if(!clipper&&clipsX(ancestor)&&ancestor!==root) clipper=ancestor;
+      // Continue walking toward the document root.
+      ancestor=ancestor.parentElement;
+    }
+    // Reachable rail content is never an offender.
+    if(insideRail) continue;
+    // Compute how many pixels of the element are unreachable.
+    let lost=0,mode='';
+    // Clipped content is measured against its clipping container.
+    if(clipper){const cr=clipper.getBoundingClientRect();const l=Math.round(Math.max(rect.right-cr.right,cr.left-rect.left));if(l>8){lost=l;mode=`clipped-by:${describe(clipper)}`;}}
+    // Unclipped content is measured against the viewport itself.
+    else{const l=Math.round(Math.max(rect.right-de.clientWidth,-rect.left));if(l>8){lost=l;mode='viewport';}}
+    // Record the bounded offender descriptor when meaningful pixels are lost.
+    if(lost>0) offenders.push({sel:describe(el),lost,mode,w:Math.round(rect.width)});
+  }
+  // Keep only the three largest offenders so diagnostics stay bounded.
+  offenders.sort((a,b)=>b.lost-a.lost);
+  // Return the bounded measurement for the shell reporter and browser tests.
+  return {docOverflow:Math.max(0,docOverflow),offenders:offenders.slice(0,3)};
 }
 // Export this symbol so other modules can use it through the public module boundary.
 export async function refreshBalance(){

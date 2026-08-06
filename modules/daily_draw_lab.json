@@ -1,17 +1,73 @@
 {
   "module": "daily_draw_lab",
-  "version": "1.1.2",
-  "paths": ["casino/games/daily_draw_lab/", "web/games/daily_draw_lab.js", "web/i18n/en-US/games/daily_draw_lab.json", "web/i18n/ru-RU/games/daily_draw_lab.json"],
-  "requirements_prefixes": ["DDLAB"],
-  "contracts": ["contracts/openapi/daily_draw_lab.v1.yaml"],
+  "version": "1.1.3",
+  "paths": [
+    "casino/games/daily_draw_lab/",
+    "web/games/daily_draw_lab.js",
+    "web/i18n/en-US/games/daily_draw_lab.json",
+    "web/i18n/ru-RU/games/daily_draw_lab.json"
+  ],
+  "requirements_prefixes": [
+    "DDLAB"
+  ],
+  "contracts": [
+    "contracts/openapi/daily_draw_lab.v1.yaml"
+  ],
   "game": {
-    "id": "daily_draw_lab", "sort_order": 410, "route": "/games/daily_draw_lab", "label": "Daily Draw Lab", "category": "draw", "categories": ["draw", "numbers"],
-    "backend": {"register": "casino.games.daily_draw_lab.api:register"},
-    "frontend": {"module": "./games/daily_draw_lab.js", "export": "DailyDrawLabGame", "ready_testid": "daily-draw-lab", "i18n_domain": "games/daily_draw_lab", "i18n_probe": "action.draw"},
-    "tests": {"long_driver": "tests.game_drivers.daily_draw_lab:play"},
-    "translations": {"ru-RU": {"label": "Лаборатория розыгрышей", "kicker": "Розыгрыши", "description": "Отметьте до пяти чисел из тридцати, разыгрывается пять: попадания оплачиваются по кено-таблице с джекпотом ×10000 за пять из пяти, серверным результатом и расчётом через журнал жетонов."}},
-    "lobby": {"featured": false, "wide": false, "art_class": "daily-draw-lab-art", "symbol": "&#127942;", "kicker": "Daily draw", "description": "Mark up to five of thirty numbers; five are drawn and hits pay on a keno-style table with a x10000 jackpot for five of five, with server-authoritative draws and ledger-backed settlement.", "tags": ["Draw", "Number games", "Ledger-backed"]}
+    "id": "daily_draw_lab",
+    "sort_order": 410,
+    "route": "/games/daily_draw_lab",
+    "label": "Daily Draw Lab",
+    "category": "draw",
+    "categories": [
+      "draw",
+      "numbers"
+    ],
+    "backend": {
+      "register": "casino.games.daily_draw_lab.api:register"
+    },
+    "frontend": {
+      "module": "./games/daily_draw_lab.js",
+      "export": "DailyDrawLabGame",
+      "ready_testid": "daily-draw-lab",
+      "i18n_domain": "games/daily_draw_lab",
+      "i18n_probe": "action.draw"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.daily_draw_lab:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "\u041b\u0430\u0431\u043e\u0440\u0430\u0442\u043e\u0440\u0438\u044f \u0440\u043e\u0437\u044b\u0433\u0440\u044b\u0448\u0435\u0439",
+        "kicker": "\u0420\u043e\u0437\u044b\u0433\u0440\u044b\u0448\u0438",
+        "description": "\u041e\u0442\u043c\u0435\u0442\u044c\u0442\u0435 \u0434\u043e \u043f\u044f\u0442\u0438 \u0447\u0438\u0441\u0435\u043b \u0438\u0437 \u0442\u0440\u0438\u0434\u0446\u0430\u0442\u0438, \u0440\u0430\u0437\u044b\u0433\u0440\u044b\u0432\u0430\u0435\u0442\u0441\u044f \u043f\u044f\u0442\u044c: \u043f\u043e\u043f\u0430\u0434\u0430\u043d\u0438\u044f \u043e\u043f\u043b\u0430\u0447\u0438\u0432\u0430\u044e\u0442\u0441\u044f \u043f\u043e \u043a\u0435\u043d\u043e-\u0442\u0430\u0431\u043b\u0438\u0446\u0435 \u0441 \u0434\u0436\u0435\u043a\u043f\u043e\u0442\u043e\u043c \u00d710000 \u0437\u0430 \u043f\u044f\u0442\u044c \u0438\u0437 \u043f\u044f\u0442\u0438, \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u044b\u043c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u043e\u043c \u0438 \u0440\u0430\u0441\u0447\u0451\u0442\u043e\u043c \u0447\u0435\u0440\u0435\u0437 \u0436\u0443\u0440\u043d\u0430\u043b \u0436\u0435\u0442\u043e\u043d\u043e\u0432."
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "daily-draw-lab-art",
+      "symbol": "&#127942;",
+      "kicker": "Daily draw",
+      "description": "Mark up to five of thirty numbers; five are drawn and hits pay on a keno-style table with a x10000 jackpot for five of five, with server-authoritative draws and ledger-backed settlement.",
+      "tags": [
+        "Draw",
+        "Number games",
+        "Ledger-backed"
+      ]
+    }
   },
-  "depends_on": ["core", "ledger", "players"],
-  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo"
+  ]
 }
