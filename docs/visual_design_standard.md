@@ -49,6 +49,37 @@ The browser page, game layout, and a rail must not become competing primary scro
 - Tablet and mobile use document scrolling with vertically stacked panels. Desktop `100%` row containment must not create empty tails in stacked panels.
 - Page-level horizontal overflow is forbidden at every matrix viewport.
 
+## Render stability and containment (hard rules)
+
+These two rules are permanent requirements, not guidance. They are enforced by
+Browser cases and by runtime telemetry, and a surface that violates either one
+fails review regardless of how it looks in a static screenshot.
+
+**Containment (UX-026, enforced by `BR-LAYOUT-CONTAIN-001`).** Every component
+renders fully inside the viewport or a designed scroll region at every supported
+viewport from 320 CSS pixels wide upward. Meaningful content — controls,
+labels, cards, table cells — must never be clipped by a hidden-overflow
+ancestor or extend past the viewport edge. Fixed-geometry boards (for example
+the Roulette hit-map) scale continuously to their measured shell; discrete
+breakpoint scale ladders are forbidden because every gap between breakpoints is
+a clipping defect. Grid and flex tracks that can receive long or translated
+content use `minmax(0, …)` or `min-width: 0` so localization can never force a
+track past its container. The application shell audits settled renders and
+resizes with `auditLayoutContainment` and reports confirmed loss to Admin
+telemetry as a bounded `layout_overflow` client-log event, so violations in
+real sessions are visible without a bug report.
+
+**Action stability (UX-027, enforced by `BR-ACTION-STABILITY-001`).** An
+in-game action never reloads the document, never changes the route, and never
+sends the player back to the top. Same-route full-root rerenders preserve the
+route outlet's scroll offsets, the scroll position of every internal rail, and
+keyboard focus on the same control whenever it carries a stable identity; when
+the control disappears or is disabled, focus parks on the focusable game region
+rather than the document body. Scroll resets to the top only when navigation
+intentionally changes the route. Game modules inherit this guarantee from the
+shell's route-outlet render interception and must not add competing scroll or
+focus resets of their own.
+
 ## Phase and status language
 
 Headers and status chips show only information a player can act on or understand: accepting wagers, spinning, revealing, awaiting a decision, drawing, settled, won, or complete. Internal state names, translation keys, reserved implementation slots, test IDs, API fields, and debug labels are forbidden in user-facing UI.

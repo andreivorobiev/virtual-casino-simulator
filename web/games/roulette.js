@@ -115,7 +115,7 @@ const PREMIUM_STYLE = [
   '.roulette-spin-orbit{position:relative;width:52px;height:52px;border:2px solid var(--border);border-radius:50%;}', // Reserve a motion indicator in the result console while the outcome is hidden.
   '.roulette-spin-orbit::after{content:"";position:absolute;inset:6px;border-top:3px solid var(--gold);border-radius:50%;animation:rouletteOrbit 1s linear infinite;}', // Animate only transform to signal the reveal phase.
   '.roulette-premium .fixed-result.win{border-color:var(--gold);background:linear-gradient(135deg,rgba(117,25,31,.34),rgba(222,177,70,.09));}', // Give the settled result a composed burgundy-and-gold treatment.
-  '.roulette-table-shell{display:grid;place-items:start center;width:100%;min-width:0;height:590px;overflow:hidden;border-radius:13px;}', // Let the fixed hit-map board scale within responsive stage widths.
+  '.roulette-table-shell{display:grid;place-items:start;width:100%;min-width:0;height:590px;overflow:hidden;border-radius:13px;}', // Pin the oversized board box to the shell start so the measured translate below owns centering; grid safe-centering start-pins oversized items anyway, so relying on it clipped one side. (UX-026)
   '.roulette-premium .roulette-table-board{flex:none;width:760px;height:590px;border:2px solid var(--gold);border-radius:12px;background:radial-gradient(circle at 45% 14%,rgba(255,255,255,.09),transparent 38%),radial-gradient(circle at 50% 115%,rgba(0,0,0,.5),transparent 55%),linear-gradient(145deg,var(--felt2),var(--felt));box-shadow:inset 0 0 60px rgba(0,0,0,.5),inset 0 0 0 6px rgba(255,217,120,.05),0 14px 30px rgba(0,0,0,.28);}', // Give the betting layout deep-pile felt, table lighting, a vignette, and a double gold trim.
   '.roulette-table-board.roulette-board-dimmed{filter:saturate(.72) brightness(.78);}', // Dim the table during the reveal without layout motion.
   '.roulette-premium .table-cell,.roulette-premium .outside-cell{border-color:rgba(255,245,218,.55);border-radius:5px;box-shadow:inset 0 1px rgba(255,255,255,.1),inset 0 -6px 12px rgba(0,0,0,.22);}', // Bevel cell edges like stitched felt lanes while preserving every existing hit target.
@@ -164,12 +164,12 @@ const PREMIUM_STYLE = [
   '.roulette-premium .details-drawer .stat-bars{max-height:110px;overflow:auto;}', // Contain long hot-number output inside the drawer.
   '.roulette-premium .danger{min-width:64px;}', // Keep localized remove controls explicit.
   '@media (min-width:1201px){.roulette-premium .stable-list,.roulette-premium .details-drawer .stat-bars{max-height:none;overflow:visible;}}', // Let drawer data expand into its single governed desktop rail scroll surface.
-  '@media (max-width:1800px){.roulette-premium .game-layout{grid-template-columns:220px minmax(0,1fr) 235px;gap:12px;}.roulette-premium .roulette-stage{grid-template-columns:220px minmax(0,1fr);min-height:440px;}.roulette-premium .wheel-card{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 104px;min-height:440px;}.roulette-premium .roulette-wheel{max-width:214px;}.roulette-table-shell{height:440px;}.roulette-premium .roulette-table-board{transform:scale(.74);transform-origin:top center;}.roulette-premium .control-rail,.roulette-premium .details-drawer{padding:10px;}.roulette-premium .game-title,.roulette-drawer-title h3{font-size:20px;}.roulette-control-section{margin-top:7px;}.roulette-advanced{margin-top:6px;}.roulette-advanced summary{padding:7px 8px;}.roulette-premium .stable-list{min-height:70px;}}', // Compact before the fixed betting board can be clipped at scaled mid-desktop widths. (issue #570)
-  '@media (min-width:1201px) and (max-width:1500px) and (max-height:820px){.roulette-premium .roulette-stage{min-height:360px;}.roulette-premium .wheel-card{min-height:360px;}.roulette-table-shell{height:360px;}.roulette-premium .roulette-table-board{transform:scale(.6);}.roulette-premium .roulette-header{min-height:54px;}.roulette-premium h1{font-size:40px;}}', // Compress the fixed table art vertically at 1366 by 768 without clipping its last betting row behind the status bar.
+  '@media (max-width:1800px){.roulette-premium .game-layout{grid-template-columns:220px minmax(0,1fr) 235px;gap:12px;}.roulette-premium .roulette-stage{grid-template-columns:220px minmax(0,1fr);min-height:440px;}.roulette-premium .wheel-card{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 104px;min-height:440px;}.roulette-premium .roulette-wheel{max-width:214px;}.roulette-table-shell{height:440px;}.roulette-premium .control-rail,.roulette-premium .details-drawer{padding:10px;}.roulette-premium .game-title,.roulette-drawer-title h3{font-size:20px;}.roulette-control-section{margin-top:7px;}.roulette-advanced{margin-top:6px;}.roulette-advanced summary{padding:7px 8px;}.roulette-premium .stable-list{min-height:70px;}}', // Compact before the fixed betting board can be clipped at scaled mid-desktop widths. (issue #570)
+  '@media (min-width:1201px) and (max-width:1500px) and (max-height:820px){.roulette-premium .roulette-stage{min-height:360px;}.roulette-premium .wheel-card{min-height:360px;}.roulette-table-shell{height:360px;}.roulette-premium .roulette-header{min-height:54px;}.roulette-premium h1{font-size:40px;}}', // Compress the fixed table art vertically at 1366 by 768 without clipping its last betting row behind the status bar.
   '@media (max-width:1200px){.casino-page:has(.roulette-premium){overflow:auto;}.game-screen:has(.roulette-premium){height:auto;min-height:calc(100vh - 146px);overflow:visible;}.roulette-premium{height:auto;}.roulette-premium .game-layout{grid-template-columns:1fr;grid-template-rows:auto;height:auto;overflow:visible;contain:none;}.roulette-premium .game-stage{overflow:visible;}.roulette-premium .roulette-stage{grid-template-columns:1fr;}.roulette-premium .wheel-card{grid-template-columns:300px minmax(0,1fr);grid-template-rows:1fr;min-height:300px;}.roulette-premium .roulette-wheel{max-width:286px;}.roulette-premium .control-rail,.roulette-premium .details-drawer{overflow:visible;}}', // Use document scrolling only at the shared stacked-layout breakpoint.
-  '@media (max-width:900px){.roulette-premium .roulette-stage{grid-template-columns:1fr;}.roulette-premium .wheel-card{grid-template-columns:280px minmax(0,1fr);grid-template-rows:1fr;min-height:290px;}.roulette-premium .roulette-wheel{max-width:270px;}.roulette-table-shell{height:520px;}.roulette-premium .roulette-table-board{transform:scale(.88);transform-origin:top center;}.roulette-premium h1{font-size:38px;}}', // Recompose the wheel console and fit the complete table on tablet widths.
-  '@media (max-width:720px){.roulette-premium .wheel-card{grid-template-columns:1fr;grid-template-rows:minmax(260px,1fr) 110px;}.roulette-table-shell{height:461px;}.roulette-premium .roulette-table-board{transform:scale(.78);transform-origin:top center;}.roulette-settings{grid-template-columns:1fr;}}', // Keep Roulette functional on small responsive viewports without page overflow.
-  '@media (max-width:560px){.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions{grid-template-columns:1fr 1fr;}.roulette-table-shell{height:340px;justify-items:start;}.roulette-premium .roulette-table-board{transform:scale(.56);transform-origin:top left;}.roulette-premium .fixed-result{margin-inline:8px;}}', // Scale the fixed hit-map board while retaining every existing selector on narrow screens.
+  '@media (max-width:900px){.roulette-premium .roulette-stage{grid-template-columns:1fr;}.roulette-premium .wheel-card{grid-template-columns:280px minmax(0,1fr);grid-template-rows:1fr;min-height:290px;}.roulette-premium .roulette-wheel{max-width:270px;}.roulette-table-shell{height:520px;}.roulette-premium h1{font-size:38px;}}', // Recompose the wheel console and fit the complete table on tablet widths.
+  '@media (max-width:720px){.roulette-premium .wheel-card{grid-template-columns:1fr;grid-template-rows:minmax(260px,1fr) 110px;}.roulette-table-shell{height:461px;}.roulette-settings{grid-template-columns:1fr;}}', // Keep Roulette functional on small responsive viewports without page overflow.
+  '@media (max-width:560px){.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions{grid-template-columns:1fr 1fr;}.roulette-table-shell{height:340px;}.roulette-premium .fixed-result{margin-inline:8px;}}', // Scale the fixed hit-map board while retaining every existing selector on narrow screens.
 ].join(''); // Combine Roulette-only CSS chunks into one style payload.
 
 // Store the route root so async callbacks can rerender the currently mounted view.
@@ -1378,6 +1378,42 @@ function wireControls() {
 }
 
 // Render the full premium Roulette route without reloading state.
+// Store the native design size of the fixed hit-map board that every scale computation starts from. (UX-026)
+const TABLE_BOARD_NATIVE_WIDTH = 760;
+// Store the native design height matching the absolute cell geometry inside the board. (UX-026)
+const TABLE_BOARD_NATIVE_HEIGHT = 590;
+// Store the debounce timer for viewport-driven refits so resize storms apply one final measurement.
+let boardFitTimer = null;
+// Store the bound resize listener so unmount can remove exactly the handler mount added.
+let boardFitListener = null;
+// Fit the fixed-geometry betting board to its shell continuously so no viewport can clip it. (UX-026)
+function fitTableBoard() {
+  // Stop when the route is unmounted or the premium table is not on this render.
+  const shell = root?.querySelector('.roulette-table-shell');
+  // Read the fixed-size board inside the measured shell.
+  const board = shell?.querySelector('.roulette-table-board');
+  // Stop safely when either element is absent, for example before the first table render.
+  if (!shell || !board) return;
+  // Measure the shell box that must fully contain the scaled board.
+  const availableWidth = shell.clientWidth - 2;
+  // Measure the vertical budget the responsive layout granted the shell.
+  const availableHeight = shell.clientHeight - 2;
+  // Compute one continuous scale bounded by both axes instead of discrete breakpoint guesses.
+  const scale = Math.max(0.1, Math.min(1, availableWidth / TABLE_BOARD_NATIVE_WIDTH, availableHeight / TABLE_BOARD_NATIVE_HEIGHT));
+  // Compute the explicit centering offset because grid safe-centering start-pins any oversized item box.
+  const offsetX = Math.max(0, (shell.clientWidth - TABLE_BOARD_NATIVE_WIDTH * scale) / 2);
+  // Anchor the transform to the start-pinned box corner so translate and scale compose deterministically.
+  board.style.transformOrigin = 'top left';
+  // Apply the measured centering translate and scale so the complete board always renders inside the shell.
+  board.style.transform = `translateX(${offsetX.toFixed(2)}px) scale(${scale.toFixed(4)})`;
+}
+// Schedule one debounced refit after viewport changes settle. (UX-026)
+function scheduleBoardFit() {
+  // Replace any pending refit so only the final size is measured.
+  clearTimeout(boardFitTimer);
+  // Delay slightly so responsive grid tracks finish before the measurement.
+  boardFitTimer = setTimeout(fitTableBoard, 120);
+}
 function render() {
   // Stop when the module has not mounted yet.
   if (!root || !state) return;
@@ -1387,6 +1423,8 @@ function render() {
   root.innerHTML = `<section class="roulette-premium" data-testid="roulette-premium">${headerHtml()}<div class="game-layout three-col stable-game" data-testid="roulette-premium-layout">${controlRailHtml()}${stageHtml()}${drawerHtml()}</div></section>`;
   // Wire controls after the DOM has been replaced.
   wireControls();
+  // Fit the freshly rendered fixed board into the current shell before the frame paints. (UX-026)
+  fitTableBoard();
   // Restore focus and publish the result through document-lifetime accessibility surfaces. (UX-025)
   restoreGameFocus(root, focus); syncGameLiveStatus(root);
 }
@@ -1419,6 +1457,10 @@ export const RouletteGame = {
     activeSpinCompletion = null;
     // Subscribe to locale changes while deferring repaints that would destroy a live spin animation.
     localeUnsubscribe = onLocaleChange(() => { if (spinBusy) { pendingLocaleRender = true; return; } render(); });
+    // Refit the fixed board whenever the viewport changes while this route owns the outlet. (UX-026)
+    boardFitListener = scheduleBoardFit;
+    // Attach the route-owned resize listener that unmount removes symmetrically.
+    window.addEventListener('resize', boardFitListener);
     // Load backend state and render the premium Roulette surface.
     await load();
   },
@@ -1448,6 +1490,10 @@ export const RouletteGame = {
     spinBusy = false;
     // Normalize the phase so a remount never resumes a phantom spin presentation.
     if (uiPhase === 'spinning') uiPhase = 'betting';
+    // Remove the route-owned refit listener so navigation cannot leak viewport handlers. (UX-026)
+    if (boardFitListener) { window.removeEventListener('resize', boardFitListener); boardFitListener = null; }
+    // Cancel any pending debounced refit because the board is leaving the document.
+    clearTimeout(boardFitTimer);
     // Refund any open, un-spun bets so leaving the table never strands already-debited stakes. (issue #246)
     if (humanBets().length && !wasSpinning) {
       // Fire the documented clear/refund endpoint best-effort; the route is leaving, so do not await or rerender, and refresh only the shared wallet.

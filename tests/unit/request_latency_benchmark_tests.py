@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregate plus the consolidated remaining-bug allocations to total exactly 900 permanent rows.
-        self.assertEqual(len(requirements), 900)
+        # Require the accepted aggregate plus the containment and action-stability allocations to total exactly 904 permanent rows.
+        self.assertEqual(len(requirements), 904)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1399,6 +1399,10 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "UX-025": "Application",  # Bind shared accessibility behavior to the shell.
             "TOOL-012": "Tooling",  # Bind ticket closure enforcement to tooling.
             "TEST-153": "Tests",  # Bind consolidated regression evidence to tests.
+            "UX-026": "Application",  # Bind viewport containment and layout telemetry to the shell.
+            "UX-027": "Application",  # Bind action render stability to the shell.
+            "TEST-154": "Tests",  # Bind containment-walk evidence to tests.
+            "TEST-155": "Tests",  # Bind action-stability evidence to tests.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1509,25 +1513,25 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.15.0")
         # Require the exact compatible tests revision allocation.
-        self.assertEqual(tests_module["version"], "1.67.10")
+        self.assertEqual(tests_module["version"], "1.68.0")
         # Require docs to match generated requirement ownership.
-        self.assertEqual(docs_module["version"], "1.65.10")
+        self.assertEqual(docs_module["version"], "1.66.0")
         # Require the exact compatible contracts minor allocation.
         self.assertEqual(contracts_module["version"], "1.54.8")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.1")
         # Require the exact compatible Baccarat patch allocation.
-        self.assertEqual(baccarat_module["version"], "9.1.12")
+        self.assertEqual(baccarat_module["version"], "9.1.13")
         # Require the exact compatible Bingo patch allocation.
         self.assertEqual(bingo_module["version"], "9.3.4")
         # Require the exact compatible Keno patch allocation.
         self.assertEqual(keno_module["version"], "9.3.5")
-        # Require the exact compatible Roulette presentation minor.
-        self.assertEqual(roulette_module["version"], "9.5.3")
-        # Require the exact compatible Slots presentation minor.
-        self.assertEqual(slots_module["version"], "9.4.2")
-        # Require the exact compatible Application revision for Swagger and wallet presentation.
-        self.assertEqual(application_module["version"], "9.56.13")
+        # Require the exact compatible Roulette presentation minor for the measured continuous board fit.
+        self.assertEqual(roulette_module["version"], "9.6.0")
+        # Require the exact compatible Slots presentation patch for the narrow reel shrink repair.
+        self.assertEqual(slots_module["version"], "9.4.3")
+        # Require the exact compatible Application minor for render stability and containment telemetry.
+        self.assertEqual(application_module["version"], "9.57.0")
         # Require Blackjack to carry the focus and live-result patch.
         self.assertEqual(blackjack_module["version"], "9.1.8")
         # Require Autoplay to carry the server-lifecycle reconciliation patch.

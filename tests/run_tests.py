@@ -5536,6 +5536,112 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute catalog-driven frontend driver discovery for all current games.
                 run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042','UX-011'],catalog_route_discovery)
+                # Define layout_containment_walk to prove no meaningful content escapes the viewport or its clipper on any route. (UX-026)
+                def layout_containment_walk():
+                    # Start protected coverage so shared viewport and route state is always restored.
+                    try:
+                        # Walk the full catalog at one narrow-phone and one tall-desktop viewport that historically clipped content.
+                        for containment_width,containment_height in ((390,844),(1280,1024)):
+                            # Apply the governed containment viewport before mounting each route.
+                            page.set_viewport_size({'width':containment_width,'height':containment_height})
+                            # Mount every catalog route through its real navigation control.
+                            for containment_game in casino_config.GAMES:
+                                # Navigate through the generic catalog-owned test id.
+                                page.get_by_test_id(f"nav-{containment_game['id']}").click()
+                                # Wait for the independently declared ready selector before measuring.
+                                page.get_by_test_id(containment_game['frontend']['ready_testid']).wait_for(timeout=5000)
+                                # Let responsive tracks and route-owned fitting settle before the audit.
+                                page.wait_for_timeout(120)
+                                # Measure through the same production auditor that powers runtime telemetry.
+                                containment_audit=page.evaluate("() => import('/core/ui.js').then(module => module.auditLayoutContainment(document.getElementById('view')))")
+                                # Require zero document sideways scroll and zero meaningful clipped or escaped content.
+                                assert containment_audit['docOverflow']<=4 and not containment_audit['offenders'],(containment_width,containment_height,containment_game['id'],containment_audit)
+                        # Re-prove the fixed Roulette board rect inside its shell at every historically clipping width.
+                        for roulette_width,roulette_height in ((320,700),(430,932),(720,900),(1366,768),(1920,1080)):
+                            # Apply the regression viewport before mounting Roulette.
+                            page.set_viewport_size({'width':roulette_width,'height':roulette_height})
+                            # Mount Roulette through its real navigation control.
+                            page.get_by_test_id('nav-roulette').click()
+                            # Wait for the premium Roulette surface before measuring the board.
+                            page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
+                            # Let the measured continuous fit apply before reading rects.
+                            page.wait_for_timeout(150)
+                            # Read the board and shell rectangles from the live layout.
+                            roulette_fit=page.evaluate("""() => { const shell=document.querySelector('.roulette-table-shell'); const board=document.querySelector('.roulette-table-board'); const sr=shell.getBoundingClientRect(); const br=board.getBoundingClientRect(); return {shellLeft:sr.left,shellRight:sr.right,boardLeft:br.left,boardRight:br.right,scale:board.style.transform}; }""")
+                            # Require the complete scaled board inside its shell with a one-pixel rounding tolerance.
+                            assert roulette_fit['boardLeft']>=roulette_fit['shellLeft']-1 and roulette_fit['boardRight']<=roulette_fit['shellRight']+1,(roulette_width,roulette_height,roulette_fit)
+                    # Restore shared viewport and route ownership for later Browser cases.
+                    finally:
+                        # Restore the primary desktop dimensions.
+                        page.set_viewport_size({'width':1920,'height':1080})
+                        # Return to the shared lobby route.
+                        page.get_by_test_id('nav-lobby').click()
+                        # Require the lobby to own the route before the case terminalizes.
+                        page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Register the permanent containment case with only its authorized product and test requirements.
+                run_case('BR-LAYOUT-CONTAIN-001',['UX-026','TEST-154'],layout_containment_walk)
+                # Define action_scroll_focus_stability to prove in-game actions never reload, renavigate, or reset the reading position. (UX-027)
+                def action_scroll_focus_stability():
+                    # Start protected coverage so shared viewport and route state is always restored.
+                    try:
+                        # Use a desktop viewport where Blackjack owns scrollable internal rails.
+                        page.set_viewport_size({'width':1440,'height':860})
+                        # Mount Blackjack through its real navigation control.
+                        page.get_by_test_id('nav-blackjack').click()
+                        # Wait for the Blackjack surface before arranging scroll state.
+                        page.get_by_test_id('blackjack-deal').wait_for(timeout=5000)
+                        # Stamp a document-lifetime marker that any reload or renavigation would destroy.
+                        page.evaluate("() => { window.__uxStabilityMarker='held'; }")
+                        # Record the pre-action route for the no-navigation assertion.
+                        stability_url=page.url
+                        # Scroll the control rail to a deep position a reset would visibly destroy.
+                        page.evaluate("() => { const rail=document.querySelector('#view .control-rail'); rail.scrollTop=260; }")
+                        # Save the table rules through the real control so a full-root busy rerender cycle runs.
+                        page.evaluate("() => { document.getElementById('saveRules').click(); }")
+                        # Wait for the localized success toast that follows the settled rerender.
+                        page.wait_for_function("() => !document.getElementById('toast').hidden")
+                        # Let the trailing enabled-state rerender and focus recovery settle.
+                        page.wait_for_timeout(400)
+                        # Read every stability signal in one settled evaluation.
+                        stability=page.evaluate("""() => { const view=document.getElementById('view'); const rail=view.querySelector('.control-rail'); return {marker:window.__uxStabilityMarker,railTop:rail?rail.scrollTop:null,focusInside:view.contains(document.activeElement)||document.activeElement===view,href:location.href}; }""")
+                        # Require the document to have survived without a reload.
+                        assert stability['marker']=='held',stability
+                        # Require the route to remain unchanged by the action.
+                        assert stability['href']==stability_url,stability
+                        # Require the internal rail to keep its deep scroll position within anchoring tolerance.
+                        assert stability['railTop'] is not None and abs(stability['railTop']-260)<=80,stability
+                        # Require keyboard focus to stay inside the game region instead of the document body.
+                        assert stability['focusInside'],stability
+                        # Reuse the mobile document-scroll composition for the clamp-rescue assertion.
+                        page.set_viewport_size({'width':390,'height':844})
+                        # Mount Craps because its wager action settles with a single click.
+                        page.get_by_test_id('nav-craps').click()
+                        # Wait for the Craps play controls before arranging document scroll.
+                        page.wait_for_selector('#view button',timeout=5000)
+                        # Scroll the document deep toward the play controls.
+                        page.evaluate("() => window.scrollTo(0,Math.max(0,document.documentElement.scrollHeight-window.innerHeight))")
+                        # Record the deep scroll offset the rerender must not clamp to the top.
+                        craps_scroll=page.evaluate("() => Math.round(window.scrollY)")
+                        # Act through the first enabled play control so a full-root rerender settles.
+                        page.evaluate("() => { const button=[...document.querySelectorAll('#view button')].find(candidate => !candidate.disabled); button.click(); }")
+                        # Let the settled rerender and any anchoring adjustment finish.
+                        page.wait_for_timeout(500)
+                        # Read the post-action document offset.
+                        craps_after=page.evaluate("() => Math.round(window.scrollY)")
+                        # Require a meaningful pre-action offset so the clamp assertion stays honest.
+                        assert craps_scroll>120,(craps_scroll,craps_after)
+                        # Require the rerender not to throw the player back to the top of the document.
+                        assert craps_after>60,(craps_scroll,craps_after)
+                    # Restore shared viewport and route ownership for later Browser cases.
+                    finally:
+                        # Restore the primary desktop dimensions.
+                        page.set_viewport_size({'width':1920,'height':1080})
+                        # Return to the shared lobby route.
+                        page.get_by_test_id('nav-lobby').click()
+                        # Require the lobby to own the route before the case terminalizes.
+                        page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Register the permanent action-stability case with only its authorized product and test requirements.
+                run_case('BR-ACTION-STABILITY-001',['UX-027','TEST-155'],action_scroll_focus_stability)
                 # Define the governed ready-state visual proof for the twelve catalog-expansion games. (issue #73)
                 def catalog_expansion_visuals():
                     # Preserve the controller-owned expansion order so missing or duplicate registrations fail closed.

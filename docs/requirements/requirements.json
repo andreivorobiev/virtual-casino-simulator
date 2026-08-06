@@ -13059,6 +13059,51 @@
       "notes": "The adopted visual standard uses a 44-pixel ordinary-control floor; the precision Roulette overlay is the bounded 24-pixel exception permitted by WCAG 2.2 target-size minimum spacing."
     },
     {
+      "id": "UX-026",
+      "module": "Application",
+      "description": "Every game and lobby component renders fully inside the viewport or a designed scroll region at all supported viewports from 320 CSS pixels wide upward: the document never scrolls horizontally, meaningful content is never clipped by a hidden-overflow container, fixed-geometry boards scale continuously to their measured shell instead of relying on discrete breakpoints, and the shell reports settled containment loss to Admin telemetry as one bounded layout_overflow client-log event per route-and-viewport cell per session.",
+      "status": "PASS",
+      "api_tests": [
+        "FRONTEND-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-LAYOUT-CONTAIN-001"
+      ],
+      "implementation_files": [
+        "web/core/ui.js",
+        "web/app.js",
+        "web/games/roulette.js",
+        "web/games/marble_race.js",
+        "web/games/slots.js",
+        "web/games/baccarat.js",
+        "web/games/boule.js",
+        "web/games/faro.js",
+        "web/games/daily_draw_lab.js"
+      ],
+      "introduced_in": "issue-607-viewport-containment-action-stability",
+      "changed_in": "issue-607-viewport-containment-action-stability",
+      "notes": "Telemetry reuses the frozen POST /api/v1/log/client route with sanitized bounded offender descriptors, so no contract surface changes. The Roulette precision inside-bet overlay keeps its UX-025 24-pixel exception; continuous fitting scales the whole board uniformly exactly as the prior breakpoint ladder did."
+    },
+    {
+      "id": "UX-027",
+      "module": "Application",
+      "description": "An in-game action never reloads the document, never changes the route, and never resets the player's reading position: same-route full-root rerenders preserve the outlet scroll offsets, every scrolled internal rail, and the focused control when it carries a stable identity; a collapse-clamped document scroll is rescued while browser scroll anchoring is otherwise left in charge; stranded keyboard focus parks on the focusable game region instead of the document body; and scroll resets to the top only when navigation intentionally changes the route.",
+      "status": "PASS",
+      "api_tests": [
+        "FRONTEND-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-ACTION-STABILITY-001"
+      ],
+      "implementation_files": [
+        "web/core/ui.js",
+        "web/app.js"
+      ],
+      "introduced_in": "issue-607-viewport-containment-action-stability",
+      "changed_in": "issue-607-viewport-containment-action-stability",
+      "notes": "The shell intercepts route-outlet innerHTML writes once at startup, so all forty-six game modules and the lobby inherit the guarantee without per-game adoption; game-owned UX-025 focus calls remain valid and idempotent on top of it."
+    },
+    {
       "id": "TOOL-012",
       "module": "Tooling",
       "description": "Every substantive pull request must list delivered issues under a stable Issues resolved section using GitHub-native closing keywords; standard release-only pull requests must explicitly declare their exception.",
@@ -13081,6 +13126,40 @@
       "introduced_in": "all-remaining-bugs-regression",
       "changed_in": "all-remaining-bugs-regression",
       "notes": "Hosted Browser qualification reuses existing permanent cases and creates no new shard inventory owner."
+    },
+    {
+      "id": "TEST-154",
+      "module": "Tests",
+      "description": "One permanent Browser case walks every catalog route at governed and historically clipping viewports, asserts zero document horizontal overflow and zero meaningful-content loss through the shared containment auditor, and separately proves the fixed Roulette board rect stays inside its shell at the exact widths that previously clipped it.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LAYOUT-CONTAIN-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/browser_case_durations.json"
+      ],
+      "introduced_in": "issue-607-viewport-containment-action-stability",
+      "changed_in": "issue-607-viewport-containment-action-stability",
+      "notes": "The case reuses the production auditLayoutContainment helper so the test and the runtime telemetry can never diverge on what counts as containment loss."
+    },
+    {
+      "id": "TEST-155",
+      "module": "Tests",
+      "description": "One permanent Browser case scrolls a mounted game, performs a real settling action, and asserts the document did not navigate or reload, the outlet and internal rail scroll offsets survived the rerender, and keyboard focus stayed inside the game region on the same stable control.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ACTION-STABILITY-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/browser_case_durations.json"
+      ],
+      "introduced_in": "issue-607-viewport-containment-action-stability",
+      "changed_in": "issue-607-viewport-containment-action-stability",
+      "notes": "The case fails on any location change, any beforeunload-visible reload, or any scroll offset drift beyond anchoring tolerance, making UX-027 a hard gate rather than guidance."
     }
   ]
 }
