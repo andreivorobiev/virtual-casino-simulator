@@ -1513,11 +1513,11 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor allocation.
         self.assertEqual(admin_module["version"], "1.15.0")
         # Require the exact compatible tests revision allocation for desktop bottom-edge containment coverage.
-        self.assertEqual(tests_module["version"], "1.68.2")
+        self.assertEqual(tests_module["version"], "1.68.3")
         # Require docs to match the amended desktop containment requirement ownership.
-        self.assertEqual(docs_module["version"], "1.66.2")
+        self.assertEqual(docs_module["version"], "1.66.3")
         # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.54.9")
+        self.assertEqual(contracts_module["version"], "1.54.10")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.1")
         # Require the exact compatible Baccarat patch allocation.
@@ -1531,7 +1531,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Slots presentation patch for the narrow reel shrink repair.
         self.assertEqual(slots_module["version"], "9.4.3")
         # Require the exact compatible Application minor for render stability and containment telemetry.
-        self.assertEqual(application_module["version"], "9.57.1")
+        self.assertEqual(application_module["version"], "9.57.2")
         # Require Blackjack to carry the focus and live-result patch.
         self.assertEqual(blackjack_module["version"], "9.1.8")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
