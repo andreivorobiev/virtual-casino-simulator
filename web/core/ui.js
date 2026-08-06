@@ -144,6 +144,18 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
   let stickyFocus=null;
   // Advance after every outlet write so deferred restoration from an older render can never overwrite newer state.
   let renderSequence=0;
+  // Advance whenever fresh player input reaches the outlet so delayed restoration cannot overwrite that interaction.
+  let interactionSequence=0;
+  // Mark one player interaction before route descendants handle it and potentially trigger another render.
+  const markInteraction=()=>{ interactionSequence+=1; };
+  // Observe keyboard navigation that can intentionally move focus or scroll a contained game surface.
+  root.addEventListener('keydown',markInteraction,{capture:true});
+  // Observe pointer input before a clicked control can synchronously rerender the route.
+  root.addEventListener('pointerdown',markInteraction,{capture:true});
+  // Observe wheel input so delayed layout repair never reverses a player's manual scroll.
+  root.addEventListener('wheel',markInteraction,{capture:true});
+  // Observe touch input so mobile scrolling remains authoritative over deferred restoration.
+  root.addEventListener('touchstart',markInteraction,{capture:true});
   // Define the instance-level accessor that wraps only this outlet's writes.
   Object.defineProperty(root,'innerHTML',{
     // Keep the accessor configurable so tests and future shells can uninstall it.
@@ -156,6 +168,8 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
       const routeId=typeof getRouteId==='function'?getRouteId():null;
       // Claim one render sequence before capture so later writes invalidate this render's deferred restores.
       const sequence=++renderSequence;
+      // Bind deferred restoration to the latest player interaction observed before this render began.
+      const interaction=interactionSequence;
       // Hold the optional restorable state captured before the write.
       let snapshot=null;
       // Capture preservation state defensively so a measurement fault can never block the render itself.
@@ -183,7 +197,7 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
       // Swallow restoration faults because the fresh markup is already in place and gameplay must continue.
       }catch(_){ }
       // Repeat restoration after browser layout and scroll anchoring settle, because some stacked pages clamp after the synchronous setter returns. (UX-027)
-      if(snapshot&&typeof requestAnimationFrame==='function') requestAnimationFrame(()=>{ if(sequence!==renderSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreRouteViewportState(root,snapshot); }catch(_){ } requestAnimationFrame(()=>{ if(sequence!==renderSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreRouteViewportState(root,snapshot); }catch(_){ } }); });
+      if(snapshot&&typeof requestAnimationFrame==='function') requestAnimationFrame(()=>{ if(sequence!==renderSequence||interaction!==interactionSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreRouteViewportState(root,snapshot); }catch(_){ } requestAnimationFrame(()=>{ if(sequence!==renderSequence||interaction!==interactionSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreRouteViewportState(root,snapshot); }catch(_){ } }); });
       // Remember the route that owns the markup now present in the outlet.
       lastRouteId=routeId;
       // Notify the shell after every write so cross-cutting checks can observe the settled DOM.

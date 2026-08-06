@@ -206,6 +206,8 @@ assert.deepEqual(uiModule.auditLayoutContainment(null), { docOverflow: 0, offend
 assert.equal(uiModule.restoreRouteViewportState({}, null), false);
 // Require same-route render restoration to repeat after browser anchoring settles and to invalidate stale callbacks. (UX-027, TEST-155)
 assert.match(uiSource, /let renderSequence=0;[\s\S]*?requestAnimationFrame\(\(\)=>\{[\s\S]*?requestAnimationFrame\(\(\)=>\{/);
+// Require fresh keyboard, pointer, wheel, or touch input to invalidate both deferred restoration callbacks. (UX-027, TEST-155)
+assert.match(uiSource, /let interactionSequence=0;[\s\S]*?addEventListener\('keydown',markInteraction,[\s\S]*?addEventListener\('pointerdown',markInteraction,[\s\S]*?addEventListener\('wheel',markInteraction,[\s\S]*?addEventListener\('touchstart',markInteraction,[\s\S]*?interaction!==interactionSequence[\s\S]*?interaction!==interactionSequence/);
 // Require the shell to install the route-outlet interceptor exactly once with the live route callback. (UX-027)
 assert.match(appSource, /installStableRouteRenders\(routeOutlet, \(\) => active, scheduleLayoutAudit\);/);
 // Require the owner console to load and save the two bounded live rate-policy fields. (SEC-015, ADMIN-032)

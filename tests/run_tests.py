@@ -10797,8 +10797,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     page.get_by_test_id('admin-guest-row').first.locator('.guest-detail-button').click(); page.get_by_test_id('admin-guest-timeline').wait_for(timeout=5000)
                                     # Require page containment plus intentional horizontal containment on table regions.
                                     contained=page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1 && [...document.querySelectorAll('[data-testid=\"admin-guest-funnel\"], [data-testid=\"admin-guest-games\"], [data-testid=\"admin-guest-game-detail\"], [data-testid=\"admin-guest-recent\"]')].every(region => region.scrollWidth >= region.clientWidth)")
-                                    # Require every filter and action to meet the approved 42 CSS-pixel floor.
-                                    targets=page.locator('[data-testid="admin-guest-filters"] select, [data-testid="admin-guest-filters"] button, [data-testid="admin-guest-policy"] input, [data-testid="admin-guest-policy"] button, .guest-detail-button')
+                                    # Require every filter, clickable checkbox row, and action to meet the approved 42 CSS-pixel floor.
+                                    targets=page.locator('[data-testid="admin-guest-filters"] select, [data-testid="admin-guest-filters"] button, [data-testid="admin-guest-policy"] label.check-row, [data-testid="admin-guest-policy"] button, .guest-detail-button')
                                     # Inspect all rendered Guest Trials interactive controls.
                                     target_floor=all((targets.nth(index).bounding_box() or {}).get('height',0)>=41.5 for index in range(targets.count()))
                                     # Focus the table region for visible keyboard evidence.
