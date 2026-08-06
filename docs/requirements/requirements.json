@@ -13013,14 +13013,14 @@
     {
       "id": "AUTO-015",
       "module": "Autoplay",
-      "description": "Autoplay retains speed and requested count across game rerenders, reconciles an existing authoritative session before creating another, records every server tick, and discards the resumable server id only after finish-stop succeeds.",
+      "description": "Autoplay retains speed and requested count across game rerenders, reconciles an existing authoritative session before creating another, records every server tick, phase-safely retries temporary API rate limits without replaying a completed game action, and discards the resumable server id only after finish-stop succeeds.",
       "status": "PASS",
-      "api_tests": ["API-BINGO-001"],
+      "api_tests": ["API-BINGO-001", "FRONTEND-SAFETY-001"],
       "browser_tests": ["BR-BINGO-001"],
-      "implementation_files": ["web/core/autoplay.js", "tests/run_tests.py"],
+      "implementation_files": ["web/core/autoplay.js", "tests/frontend_safety.mjs", "tests/run_tests.py"],
       "introduced_in": "issue-576-bingo-autoplay-resume",
-      "changed_in": "issue-576-bingo-autoplay-resume",
-      "notes": "No game owns an autoplay loop; all actions remain serialized through the shared control plane."
+      "changed_in": "issue-555-quality-hardening",
+      "notes": "No game owns an autoplay loop; all actions remain serialized through the shared control plane. A pre-action limiter rejection retries the action, while a post-action tick rejection retries bookkeeping only."
     },
     {
       "id": "BINGO-027",
@@ -13118,13 +13118,13 @@
     {
       "id": "TEST-153",
       "module": "Tests",
-      "description": "Focused listener-free evidence covers wallet ordering, localized structured errors, Russian token terminology, PWA installing-to-waiting application, autoplay reconciliation, Bingo reset disclosure, persistent game focus and announcements, Roulette hit targets, and PR issue-closing governance.",
+      "description": "Focused listener-free evidence covers wallet ordering, localized structured errors, Russian token terminology, PWA installing-to-waiting application, autoplay reconciliation and phase-safe rate-limit recovery, Bingo reset disclosure, persistent game focus and announcements, Roulette hit targets, and PR issue-closing governance.",
       "status": "PASS",
       "api_tests": ["UI-WALLET-TIMING-001", "FRONTEND-SAFETY-001", "API-BINGO-001"],
       "browser_tests": ["BR-PWA-001", "BR-BINGO-001", "BR-I18N-FOUNDATION-001"],
       "implementation_files": ["tests/issue_lifecycle_tests.py", "tests/pwa_tests.py", "tests/frontend_safety.mjs", "tests/wallet_timing.mjs", "tests/run_tests.py"],
       "introduced_in": "all-remaining-bugs-regression",
-      "changed_in": "all-remaining-bugs-regression",
+      "changed_in": "issue-555-quality-hardening",
       "notes": "Hosted Browser qualification reuses existing permanent cases and creates no new shard inventory owner."
     },
     {

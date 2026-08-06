@@ -2004,8 +2004,8 @@ def run_api_tests():
         if not result.wasSuccessful():
             # Preserve unittest detail while keeping the central failure label stable.
             raise AssertionError('frontend safety suite failed')
-    # Record the invitation-log, toast, motion, Roulette failure, mobile layout, and runtime-output proof.
-    run_case('FRONTEND-SAFETY-001',['SEC-013','UX-021','CORE-028','ROU-043','TEENP-002','MOTION-010','TEST-136'],run_frontend_safety_tests)
+    # Record invitation-log, toast, motion, Roulette, mobile, runtime, and autoplay rate-limit recovery proof.
+    run_case('FRONTEND-SAFETY-001',['SEC-013','UX-021','CORE-028','ROU-043','TEENP-002','MOTION-010','AUTO-015','TEST-136','TEST-153'],run_frontend_safety_tests)
     # Execute the complete listener-free catalog repeat-bet contract without opening a listener.
     def run_repeat_bet_tests():
         # Import the focused repeat-bet suite only when its mapped case runs.
