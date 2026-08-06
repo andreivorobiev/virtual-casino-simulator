@@ -13062,7 +13062,7 @@
     {
       "id": "UX-026",
       "module": "Application",
-      "description": "Every game and lobby component renders fully inside the viewport or a designed scroll region at all supported viewports from 320 CSS pixels wide upward: the document never scrolls horizontally, meaningful content is never clipped by a hidden-overflow container, fixed-geometry boards scale continuously to their measured shell instead of relying on discrete breakpoints, and the shell reports settled containment loss to Admin telemetry as one bounded layout_overflow client-log event per route-and-viewport cell per session.",
+      "description": "Every game and lobby component renders fully inside the viewport or a designed scroll region at all supported viewports from 320 CSS pixels wide upward: the document never scrolls horizontally, meaningful content is never clipped by a hidden-overflow container, governed desktop Roulette and Bingo boards consume the exact remaining center-stage height above the fixed status bar, fixed-geometry boards scale continuously to their measured shell instead of relying on discrete breakpoints, and the shell reports settled containment loss to Admin telemetry as one bounded layout_overflow client-log event per route-and-viewport cell per session.",
       "status": "PASS",
       "api_tests": [
         "FRONTEND-SAFETY-001"
@@ -13074,6 +13074,7 @@
         "web/core/ui.js",
         "web/app.js",
         "web/games/roulette.js",
+        "web/games/bingo.js",
         "web/games/marble_race.js",
         "web/games/slots.js",
         "web/games/baccarat.js",
@@ -13082,8 +13083,8 @@
         "web/games/daily_draw_lab.js"
       ],
       "introduced_in": "issue-607-viewport-containment-action-stability",
-      "changed_in": "issue-607-viewport-containment-action-stability",
-      "notes": "Telemetry reuses the frozen POST /api/v1/log/client route with sanitized bounded offender descriptors, so no contract surface changes. The Roulette precision inside-bet overlay keeps its UX-025 24-pixel exception; continuous fitting scales the whole board uniformly exactly as the prior breakpoint ladder did."
+      "changed_in": "issue-611-desktop-stage-containment",
+      "notes": "Telemetry reuses the frozen POST /api/v1/log/client route with sanitized bounded offender descriptors, so no contract surface changes. Roulette scales its fixed board against both axes of the actual remaining stage, while Bingo removes contradictory desktop minimums and sizes its card and call bay inside the allocated stage; tablet and mobile retain document scrolling."
     },
     {
       "id": "UX-027",
@@ -13131,7 +13132,7 @@
     {
       "id": "TEST-154",
       "module": "Tests",
-      "description": "One permanent Browser case walks every catalog route at governed and historically clipping viewports, asserts zero document horizontal overflow and zero meaningful-content loss through the shared containment auditor, and separately proves the fixed Roulette board rect stays inside its shell at the exact widths that previously clipped it.",
+      "description": "One permanent Browser case walks every catalog route at governed and historically clipping viewports, asserts zero document horizontal overflow and zero meaningful-content loss through the shared containment auditor, proves the fixed Roulette board rect stays inside its shell on both axes, and verifies complete Roulette and Bingo desktop stages finish above the fixed status bar at 1440 by 900 and 1920 by 1080.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -13142,8 +13143,8 @@
         "tests/browser_case_durations.json"
       ],
       "introduced_in": "issue-607-viewport-containment-action-stability",
-      "changed_in": "issue-607-viewport-containment-action-stability",
-      "notes": "The case reuses the production auditLayoutContainment helper so the test and the runtime telemetry can never diverge on what counts as containment loss."
+      "changed_in": "issue-611-desktop-stage-containment",
+      "notes": "The case reuses the production auditLayoutContainment helper for the catalog walk, then reads the actual Roulette shell/board and Bingo card/call-bay bottom edges so hidden-overflow ancestors cannot mask a desktop clipping regression."
     },
     {
       "id": "TEST-155",
