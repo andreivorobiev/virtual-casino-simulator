@@ -12,7 +12,7 @@ Historical source baseline: 9.1.0
 - players: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.6
-- audio: 9.1.1
+- audio: 9.1.2
 - admin: 1.16.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.1
 - pai_gow_poker: 1.1.1
 - teen_patti: 1.1.1
-- tests: 1.69.0
-- docs: 1.67.0
+- tests: 1.69.1
+- docs: 1.67.1
 - contracts: 1.55.0
 - tooling: 1.25.1
 - commenting_policy: 1.0.0
@@ -447,6 +447,7 @@ Historical source baseline: 9.1.0
 - **TEST-036** (Tests) - PASS: Suite 100 is available as the mandatory long-suite pull request validation path.
 - **AUDIO-008** (Audio) - PASS: Browser audio verification observes voice and sound-effect events without requiring physical speakers.
 - **AUDIO-009** (Audio) - PASS: Repeated Baccarat announcements complete without being cancelled by the next deal.
+- **AUDIO-010** (Audio) - PASS: Fresh installations and frontend fallback state start with master sound, sound effects, voice, and every per-game announcement disabled until the platform owner explicitly enables them, while previously saved owner settings remain authoritative.
 - **AUTH-001** (Auth) - PASS: Protected browser app and API routes require an authenticated private beta session.
 - **AUTH-002** (Auth) - PASS: Login verifies server-side credentials and does not expose public self-signup or external identity-provider flows.
 - **AUTH-003** (Auth) - PLANNED: Bootstrap Admin creation is operator-controlled and separate from public runtime registration.

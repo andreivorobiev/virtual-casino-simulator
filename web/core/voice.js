@@ -4,7 +4,7 @@ import { api, post } from './api.js';
 // Store audioCtx so later code can read or update this value.
 let audioCtx=null;
 // Store AUDIO_SETTINGS so later code can read or update this value.
-let AUDIO_SETTINGS={master_enabled:true,master_volume:.8,sfx_enabled:true,sfx_volume:.7,voice_enabled:true,voice_volume:.85,voice_rate:.95,voice_pitch:1.08,preferred_voice_name:'',auto_nice_lady:true,announce_roulette_results:true,announce_blackjack_results:true,announce_baccarat_results:true,announce_bingo_calls:false,announce_keno_results:false};
+let AUDIO_SETTINGS={master_enabled:false,master_volume:.8,sfx_enabled:false,sfx_volume:.7,voice_enabled:false,voice_volume:.85,voice_rate:.95,voice_pitch:1.08,preferred_voice_name:'',auto_nice_lady:true,announce_roulette_results:false,announce_blackjack_results:false,announce_baccarat_results:false,announce_bingo_calls:false,announce_keno_results:false};
 // Export this symbol so other modules can use it through the public module boundary.
 export function getVoiceSettings(){return {...AUDIO_SETTINGS};}
 // Export this symbol so other modules can use it through the public module boundary.

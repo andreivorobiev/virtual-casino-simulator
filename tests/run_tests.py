@@ -633,7 +633,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     # Map the listener-free recovery suite to the permanent recovery requirements.
     run_case('RECOVERY-POLICY-001',['MYSQL-006','MYSQL-008','TOOL-004','TEST-049'],run_recovery_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
-    run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
+    run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','AUDIO-010','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
     # Execute provider-owned journal recovery, contention, reset, and fail-closed proof. (#430)
@@ -2009,7 +2009,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the central failure label stable.
             raise AssertionError('frontend safety suite failed')
     # Record invitation-log, toast, motion, Roulette, mobile, runtime, and autoplay rate-limit recovery proof.
-    run_case('FRONTEND-SAFETY-001',['SEC-013','SEC-015','UX-021','UX-027','CORE-028','ROU-043','TEENP-002','MOTION-010','AUTO-015','ADMIN-032','TEST-136','TEST-153','TEST-155','TEST-156'],run_frontend_safety_tests)
+    run_case('FRONTEND-SAFETY-001',['SEC-013','SEC-015','UX-021','UX-027','CORE-028','ROU-043','TEENP-002','MOTION-010','AUTO-015','AUDIO-010','ADMIN-032','TEST-136','TEST-153','TEST-155','TEST-156'],run_frontend_safety_tests)
     # Execute the complete listener-free catalog repeat-bet contract without opening a listener.
     def run_repeat_bet_tests():
         # Import the focused repeat-bet suite only when its mapped case runs.
@@ -3149,7 +3149,7 @@ def run_api_tests():
             # Set aud to the value needed for the next operation.
             aud=api(base,'/api/v1/admin/audio-settings'); assert 'master_enabled' in aud['settings']
             # Set aud2 to the value needed for the next operation.
-            aud2=api(base,'/api/v1/admin/audio-settings','POST',{'master_enabled':False,'voice_enabled':True}); assert aud2['settings']['master_enabled'] is False
+            aud2=api(base,'/api/v1/admin/audio-settings','POST',{'master_enabled':False,'voice_enabled':True}); assert aud2['settings']['master_enabled'] is False and aud2['settings']['voice_enabled'] is True
             # Set sess to the value needed for the next operation.
             sess=api(base,'/api/v1/autoplay/start','POST',{'game_id':'roulette','player_id':'human','speed':'medium','round_limit':3,'plan':{'type':'test'}})['session']; assert sess['status']=='running'
             # Set stopped to the value needed for the next operation.
@@ -3157,7 +3157,7 @@ def run_api_tests():
             # Execute this statement as part of the module's documented control flow.
             assert api(base,'/api/v1/admin/autoplay')['sessions']
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-CONTROL-001',['BOT-001','BOT-003','BOT-009','BOT-010','BOT-011','ADMIN-023','AUDIO-001','AUDIO-002','AUTO-001','AUTO-003'],bots_audio_autoplay)
+        run_case('API-CONTROL-001',['BOT-001','BOT-003','BOT-009','BOT-010','BOT-011','ADMIN-023','AUDIO-001','AUDIO-002','AUDIO-010','AUTO-001','AUTO-003'],bots_audio_autoplay)
         # Define the roulette function used by this module.
         def roulette():
             # Set p0 to the value needed for the next operation.

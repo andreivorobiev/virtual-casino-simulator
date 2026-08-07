@@ -6229,6 +6229,27 @@
       "notes": "Voice announcements queue instead of cancelling active speech."
     },
     {
+      "id": "AUDIO-010",
+      "module": "Audio",
+      "description": "Fresh installations and frontend fallback state start with master sound, sound effects, voice, and every per-game announcement disabled until the platform owner explicitly enables them, while previously saved owner settings remain authoritative.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONTROL-001",
+        "STORAGE-JSON-001",
+        "FRONTEND-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/settings.py",
+        "web/core/voice.js",
+        "tests/storage_tests.py",
+        "tests/frontend_safety.mjs"
+      ],
+      "introduced_in": "issue-619-muted-audio-default",
+      "changed_in": "issue-619-muted-audio-default",
+      "notes": "Default flags are fail-closed; volume preferences remain nonzero so an owner can enable a channel without reconstructing its prior level. Explicit provider-backed settings continue to override defaults."
+    },
+    {
       "id": "AUTH-001",
       "module": "Auth",
       "description": "Protected browser app and API routes require an authenticated private beta session.",

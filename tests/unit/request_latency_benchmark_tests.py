@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregate plus live rate-policy and strengthened action-stability allocations to total exactly 907 permanent rows.
-        self.assertEqual(len(requirements), 907)
+        # Require the accepted aggregate plus the muted-audio default allocation to total exactly 908 permanent rows.
+        self.assertEqual(len(requirements), 908)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1406,6 +1406,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "SEC-015": "Core",  # Bind adjustable request policy to the security boundary.
             "ADMIN-032": "Admin",  # Bind owner rate controls to Admin.
             "TEST-156": "Tests",  # Bind rate-policy and deferred-scroll evidence to tests.
+            "AUDIO-010": "Audio",  # Bind silent defaults and explicit owner overrides to Audio.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1491,6 +1492,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         tests_module = json.loads((ROOT / "modules" / "tests.json").read_text(encoding="utf-8"))
         # Parse the docs descriptor independently.
         docs_module = json.loads((ROOT / "modules" / "docs.json").read_text(encoding="utf-8"))
+        # Parse the Audio descriptor for the compatible muted-default repair.
+        audio_module = json.loads((ROOT / "modules" / "audio.json").read_text(encoding="utf-8"))
         # Parse the contracts descriptor for the additive enrollment-mode contract.
         contracts_module = json.loads((ROOT / "modules" / "contracts.json").read_text(encoding="utf-8"))
         # Parse the tooling descriptor for the compatible bridge addition.
@@ -1515,10 +1518,12 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(core_module["version"], "9.37.0")
         # Require the exact compatible Admin minor allocation for the new policy controls.
         self.assertEqual(admin_module["version"], "1.16.0")
-        # Require the exact compatible tests minor allocation for rate and deferred-scroll coverage.
-        self.assertEqual(tests_module["version"], "1.69.0")
-        # Require docs to match the new policy requirements and amended action-stability ownership.
-        self.assertEqual(docs_module["version"], "1.67.0")
+        # Require the exact compatible tests patch for muted-default evidence.
+        self.assertEqual(tests_module["version"], "1.69.1")
+        # Require docs to include the muted-default audio requirement.
+        self.assertEqual(docs_module["version"], "1.67.1")
+        # Require the exact compatible Audio patch for silent fresh and fallback state.
+        self.assertEqual(audio_module["version"], "9.1.2")
         # Require the exact compatible contracts minor allocation for the additive Admin route.
         self.assertEqual(contracts_module["version"], "1.55.0")
         # Require the exact compatible tooling revision allocation.

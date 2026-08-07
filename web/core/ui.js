@@ -146,8 +146,21 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
   let renderSequence=0;
   // Advance whenever fresh player input reaches the outlet so delayed restoration cannot overwrite that interaction.
   let interactionSequence=0;
+  // Distinguish focus restored by this interceptor from a player- or caller-directed focus move that must invalidate pending work.
+  let restorationActive=false;
+  // Restore one snapshot while suppressing the focus event produced by the restoration itself.
+  const restoreSnapshot=(snapshot)=>{
+    // Mark the interceptor-owned focus transition before restoring any saved control.
+    restorationActive=true;
+    // Always release the marker even when a defensive restore fails.
+    try{return restoreRouteViewportState(root,snapshot);}finally{restorationActive=false;}
+  };
   // Mark one player interaction before route descendants handle it and potentially trigger another render.
   const markInteraction=()=>{ interactionSequence+=1; };
+  // Treat an external focus move as authoritative before the next keyboard action reaches the newly focused control.
+  const markFocusInteraction=()=>{ if(!restorationActive) interactionSequence+=1; };
+  // Observe direct focus moves so a pending restore cannot steal focus between focus() and the following key press.
+  root.addEventListener('focusin',markFocusInteraction,{capture:true});
   // Observe keyboard navigation that can intentionally move focus or scroll a contained game surface.
   root.addEventListener('keydown',markInteraction,{capture:true});
   // Observe pointer input before a clicked control can synchronously rerender the route.
@@ -189,7 +202,7 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
       // Restore preservation state defensively so a restore fault can never escape into game code either.
       try{
         // Restore scroll and focus for in-route rerenders so actions never send the player to the top.
-        if(snapshot) restoreRouteViewportState(this,snapshot);
+        if(snapshot) restoreSnapshot(snapshot);
         // Start a fresh route at the top so navigation keeps its expected reading position.
         else { this.scrollTop=0; this.scrollLeft=0; }
         // Keep stranded keyboard focus on the focusable game region instead of the document body. (UX-027)
@@ -197,7 +210,7 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
       // Swallow restoration faults because the fresh markup is already in place and gameplay must continue.
       }catch(_){ }
       // Repeat restoration after browser layout and scroll anchoring settle, because some stacked pages clamp after the synchronous setter returns. (UX-027)
-      if(snapshot&&typeof requestAnimationFrame==='function') requestAnimationFrame(()=>{ if(sequence!==renderSequence||interaction!==interactionSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreRouteViewportState(root,snapshot); }catch(_){ } requestAnimationFrame(()=>{ if(sequence!==renderSequence||interaction!==interactionSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreRouteViewportState(root,snapshot); }catch(_){ } }); });
+      if(snapshot&&typeof requestAnimationFrame==='function') requestAnimationFrame(()=>{ if(sequence!==renderSequence||interaction!==interactionSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreSnapshot(snapshot); }catch(_){ } requestAnimationFrame(()=>{ if(sequence!==renderSequence||interaction!==interactionSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreSnapshot(snapshot); }catch(_){ } }); });
       // Remember the route that owns the markup now present in the outlet.
       lastRouteId=routeId;
       // Notify the shell after every write so cross-cutting checks can observe the settled DOM.
