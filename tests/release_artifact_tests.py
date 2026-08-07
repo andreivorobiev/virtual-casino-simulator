@@ -502,19 +502,19 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.58.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.59.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.58", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.59", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
         self.assertEqual(
             compatibility["predecessor"],
             {
-                "app_version": "0.9.5.57",
-                "compatibility_record": "contracts/compatibility/app-0.9.5.57.json",
+                "app_version": "0.9.5.58",
+                "compatibility_record": "contracts/compatibility/app-0.9.5.58.json",
                 "required_artifact": "release-manifest.json",
-                "source_commit_sha": "80b58cbf5e7c562e01a942e856052228fa8fadbe",
-                "artifact_sha256": "eda0bf1432691761da7deba58973af5db1b4c765fb0cb9c9e115d1f3b4479642",
-                "manifest_sha256": "862907f5a6b8cd3b8d6bcd096a81ff7e24eaa3660572b6b2d38012c514fd6e95",
+                "source_commit_sha": "ee8dfd4c7df3fb723a070f947e644cbce46eebdd",
+                "artifact_sha256": "381dcbb9440d0eb343e75193f0e0d6afa2d2be19fea5c422c54e1ae6a0d5619f",
+                "manifest_sha256": "7ea9d6d4815efcb8969267dd78392b37e03692155c3c8975ccb5014b58f852a2",
             },
         )
         # Require both retained release-asset identities to remain exact lowercase SHA-256 values.
@@ -522,7 +522,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Reject truncated, uppercase, or otherwise noncanonical live predecessor pins.
             self.assertRegex(compatibility["predecessor"][identity_name], r"^[0-9a-f]{64}$")
         # Require the exact current candidate policy to resolve its retained immutable predecessor.
-        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.58"), "v0.9.5.57")
+        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.59"), "v0.9.5.58")
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
         self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
         # Require all broader enrollment surfaces to remain disabled for this release channel.

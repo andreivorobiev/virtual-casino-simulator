@@ -5349,8 +5349,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 assert page.get_by_test_id('catalog-empty').is_visible() and page.locator('[data-testid^="card-"]').count()==0
                                 # Clear the query before the representative category evidence state.
                                 page.get_by_test_id('catalog-search').fill('')
+                                # Wait for the cleared query to own a non-empty catalog before changing its category. (issue #637)
+                                page.wait_for_function("""() => document.querySelector('[data-testid="catalog-search"]')?.value === '' && document.querySelectorAll('[data-testid^="card-"]').length > 0""",timeout=5000)
                                 # Select the table category as a visible representative after every category passed behavior checks.
                                 page.locator('[data-catalog-category="table"]').click()
+                                # Wait for the selected category and its cards to share one completed rerender. (issue #637)
+                                page.wait_for_function("""() => document.querySelector('[data-catalog-category="table"]')?.getAttribute('aria-pressed') === 'true' && document.querySelectorAll('[data-testid^="card-"]').length > 0""",timeout=5000)
                                 # Reach the representative category's last action through the same native End helper.
                                 keyboard_end_to_boundary()
                                 # Require the representative category's final action to remain fully visible.

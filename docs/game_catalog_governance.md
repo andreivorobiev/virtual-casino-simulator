@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.59 release line retains the exact 46-game catalog while converging every player-money path on the shared replay-safe settlement boundary. It adds no descriptor, route, paytable, outcome, or economics change.
+
 The v0.9.5.58 release line retains the exact v0.9.5.57 46-game catalog and adds no descriptor, route, or economics change; its accepted play-control packet changes only shared request policy, same-route interaction stability, guest admission, and silent audio defaults.
 
 The v0.9.5.57 release line retains the exact v0.9.5.56 46-game catalog and adds no descriptor, route, or economics change; its accepted P0 fix only keeps the complete Roulette and Bingo desktop boards above the fixed footer.
@@ -44,6 +46,8 @@ The descriptor contains:
 - `default`: an exceptional documented fallback only when existing engine code already supplies that fallback outside its default-state object.
 
 The validator rejects unknown schema keys, unsafe semantic flags, inverted or non-finite bounds, invalid engine defaults, undeclared settings routes, descriptors without matching routes, and multiple settings routes owned by one descriptor. Internal callable references and rule schemas are stripped from the public game catalog.
+
+v0.9.5.59 also retains the existing behavior-neutral schema and coercion helpers byte-for-byte.
 
 v0.9.5.58 also retains the existing behavior-neutral schema and coercion helpers byte-for-byte.
 

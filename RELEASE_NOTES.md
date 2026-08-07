@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.59 Release Notes
+
+## One replay-safe settlement interface for all games
+
+- Packages the accepted catalog-wide settlement convergence from sole normal content PR #635; the release-only application revision advances mechanically to `9.58.2`.
+- Resolves issues #430 and #621 through #634: all 46 registered games, including Roulette, Slots, Keno, Bingo, Blackjack, and Baccarat, now route player token actions through `GameSettlementGateway` and storage-atomic `SettlementAdapter` actions.
+- Carries permanent requirements `LEDGER-032`, `GAMECORE-004`, and `TEST-157`; the governed total remains exactly 911 requirements and this release allocates no identifier.
+- Adds a catalog-derived prevention gate that rejects direct game imports or calls to ledger money functions, while retaining frozen `/api/v1` envelopes, existing paytables, wager acceptance, reveal timing, payouts, and refunds.
+- Resolves Browser harness issue #637 by waiting for the cleared lobby query and representative category rerenders before asserting final-action reachability; production lobby behavior and acceptance geometry remain unchanged.
+- Records the exact canonical package inventory as 738 regular files: the terminal v0.9.5.58 inventory plus this v0.9.5.59 compatibility record; repository documentation and tests remain intentionally outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; every content-owned game and core revision remains exactly as accepted on protected main and tooling remains `1.25.2`.
+- Makes no migration, provider-account, public-policy, database-schema, wagering-economics, paytable, or frozen-v1-API change.
+- Retains exact immutable and terminal-green v0.9.5.58 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.58 Release Notes
 
 ## Stable play controls, guest admission, and silent defaults
