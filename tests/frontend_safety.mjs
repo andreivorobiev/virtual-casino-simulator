@@ -31,6 +31,10 @@ const teenPattiSource = await readFile(path.join(root, 'web', 'games', 'teen_pat
 const autoplaySource = await readFile(path.join(root, 'web', 'core', 'autoplay.js'), 'utf8');
 // Read the application shell for render-stability and containment-telemetry wiring. (UX-026, UX-027)
 const appSource = await readFile(path.join(root, 'web', 'app.js'), 'utf8');
+// Read the Admin console for owner-adjustable rate-policy wiring. (SEC-015, ADMIN-032)
+const adminSource = await readFile(path.join(root, 'web', 'admin.js'), 'utf8');
+// Read the shared audio helper so its fail-closed fallback remains silent before settings load. (AUDIO-010)
+const voiceSource = await readFile(path.join(root, 'web', 'core', 'voice.js'), 'utf8');
 // Read Blackjack focus and announcement integration.
 const blackjackSource = await readFile(path.join(root, 'web', 'games', 'blackjack.js'), 'utf8');
 // Read Color Wheel touch-target sizing for the older-game accessibility contract.
@@ -202,8 +206,20 @@ assert.equal(uiModule.installStableRouteRenders(null, () => 'lobby'), false);
 assert.deepEqual(uiModule.auditLayoutContainment(null), { docOverflow: 0, offenders: [] });
 // Require the viewport restore helper to ignore absent snapshots so route changes stay reset-only. (UX-027)
 assert.equal(uiModule.restoreRouteViewportState({}, null), false);
+// Require same-route render restoration to repeat after browser anchoring settles and to invalidate stale callbacks. (UX-027, TEST-155)
+assert.match(uiSource, /let renderSequence=0;[\s\S]*?requestAnimationFrame\(\(\)=>\{[\s\S]*?requestAnimationFrame\(\(\)=>\{/);
+// Require external focus plus fresh keyboard, pointer, wheel, or touch input to invalidate both deferred restoration callbacks. (UX-027, TEST-155)
+assert.match(uiSource, /let interactionSequence=0;[\s\S]*?let restorationActive=false;[\s\S]*?addEventListener\('focusin',markFocusInteraction,[\s\S]*?addEventListener\('keydown',markInteraction,[\s\S]*?addEventListener\('pointerdown',markInteraction,[\s\S]*?addEventListener\('wheel',markInteraction,[\s\S]*?addEventListener\('touchstart',markInteraction,[\s\S]*?interaction!==interactionSequence[\s\S]*?interaction!==interactionSequence/);
 // Require the shell to install the route-outlet interceptor exactly once with the live route callback. (UX-027)
 assert.match(appSource, /installStableRouteRenders\(routeOutlet, \(\) => active, scheduleLayoutAudit\);/);
+// Require the owner console to load and save the two bounded live rate-policy fields. (SEC-015, ADMIN-032)
+assert.match(adminSource, /\/api\/v2\/admin\/rate-limits[\s\S]*?admin-rate-limit-requests[\s\S]*?admin-rate-limit-window[\s\S]*?saveRateLimits/);
+// Require every sound channel and game announcement to start disabled in the frontend fallback. (AUDIO-010)
+assert.match(voiceSource, /AUDIO_SETTINGS=\{master_enabled:false,[\s\S]*?sfx_enabled:false,[\s\S]*?voice_enabled:false,[\s\S]*?announce_roulette_results:false,[\s\S]*?announce_blackjack_results:false,[\s\S]*?announce_baccarat_results:false,[\s\S]*?announce_bingo_calls:false,[\s\S]*?announce_keno_results:false\}/);
+// Require the Admin Guest Trials surface to publish and save the owner admission switch. (GUEST-001, GUEST-004)
+assert.match(adminSource, /\/api\/v2\/admin\/guest-trials\/settings[\s\S]*?admin-guest-trials-enabled[\s\S]*?admin-save-guest-policy/);
+// Require anonymous entry to remain disabled until the public provider-backed policy explicitly allows it. (GUEST-001, GUEST-002)
+assert.match(appSource, /guest-trial-button[\s\S]*?disabled aria-disabled="true"[\s\S]*?applyGuestTrialPolicy[\s\S]*?policy\.guest_trials_enabled !== true/);
 // Require settled containment loss to reach Admin telemetry through the frozen client-log helper. (UX-026)
 assert.match(appSource, /logClient\('layout_overflow', \{ route: active \|\| 'none', viewport: /);
 // Require Roulette to center and scale its fixed board through the measured continuous fit. (UX-026)

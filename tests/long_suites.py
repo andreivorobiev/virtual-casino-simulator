@@ -310,7 +310,7 @@ def run_browser_audio_verification(client, repeats, report):
         # Define the auth_payload function used by this module.
         def auth_payload():
             # Return a draft v2 current-user payload for frontend-only long-suite checks.
-            return {"user": {"user_id": "long_suite_user", "username": "long-suite", "display_name": "Long Suite Player", "locale": auth_state["locale"]}, "player": {"player_id": "human", "token_balance": auth_state["tokens"]}, "terms": {"required": False, "version": "private-beta-1"}}  # Mirror the browser-suite mock shape.
+            return {"user": {"user_id": "long_suite_user", "username": "long-suite", "display_name": "Long Suite Player", "locale": auth_state["locale"], "role": "admin", "roles": ["admin"]}, "player": {"player_id": "human", "token_balance": auth_state["tokens"]}, "terms": {"required": False, "version": "private-beta-1"}}  # Mirror the real bootstrap-Admin session that owns the audio settings request.
         # Define the mocked_auth_response function used by this module.
         def mocked_auth_response(ok=True, data=None, message="Unhandled auth mock"):
             # Return a standard API envelope string for Playwright route fulfillment.

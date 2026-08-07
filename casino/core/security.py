@@ -121,7 +121,7 @@ class SecurityPolicy:
         # Parse the request body limit within reviewed lower and upper bounds.
         max_body_bytes = _bounded_integer(current, MAX_BODY_BYTES_ENV, 131_072, 1_024, ABSOLUTE_MAX_BODY_BYTES)
         # Parse the per-client request count within a useful but bounded range.
-        rate_requests = _bounded_integer(current, RATE_REQUESTS_ENV, 120, 1, 10_000)
+        rate_requests = _bounded_integer(current, RATE_REQUESTS_ENV, 1_200, 1, 10_000)
         # Parse the fixed-window duration within one second and one hour.
         rate_window_seconds = _bounded_integer(current, RATE_WINDOW_ENV, 60, 1, 3_600)
         # Return an immutable policy that request handling can safely share across threads.
@@ -389,11 +389,15 @@ class RateLimiter:
                 del self.clients[client]
 
     # Consume one request allowance or raise the standard 429 error.
-    def check(self, client: str, rotate_capacity: bool = False) -> None:
+    def check(self, client: str, rotate_capacity: bool = False, requests_per_window: int | None = None, window_seconds: int | None = None) -> None:
         # Read the monotonic timestamp once for this decision.
         now = float(self.clock())
+        # Resolve the live owner-authored allowance or retain the immutable deployment fallback.
+        allowed_requests = self.policy.rate_requests if requests_per_window is None else max(1, min(10_000, int(requests_per_window)))
+        # Resolve the live owner-authored window or retain the immutable deployment fallback.
+        active_window_seconds = self.policy.rate_window_seconds if window_seconds is None else max(1, min(3_600, int(window_seconds)))
         # Calculate the oldest timestamp still inside the fixed window.
-        cutoff = now - self.policy.rate_window_seconds
+        cutoff = now - active_window_seconds
         # Serialize the complete read-prune-check-append sequence across worker threads.
         with self.lock:
             # Reclaim expired capacity globally before considering a new effective client.
@@ -411,7 +415,7 @@ class RateLimiter:
             # Allocate a bounded timestamp deque for the trusted key.
             entries = self.clients.setdefault(client, deque())
             # Reject when the current window already contains the allowed count.
-            if len(entries) >= self.policy.rate_requests:
+            if len(entries) >= allowed_requests:
                 # Return a fixed diagnostic without exposing client or timing data.
                 raise RateLimitError()
             # Record the accepted request after every validation branch passes.

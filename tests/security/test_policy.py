@@ -369,6 +369,23 @@ class SessionSecurityTests(unittest.TestCase):
 
 # Validate deterministic thread-safe request bounds and capacity recovery.
 class RateLimiterTests(unittest.TestCase):
+    # Apply owner-authored live bounds without replacing or restarting the limiter instance. (SEC-015, TEST-156)
+    def test_live_policy_overrides_apply_to_existing_limiter(self):
+        # Build an immutable deployment fallback with a fixed clock.
+        policy = security.SecurityPolicy.from_environment(policy_environment(CASINO_RATE_LIMIT_REQUESTS="5", CASINO_RATE_LIMIT_WINDOW_SECONDS="10"))
+        # Keep one limiter instance alive across both live-policy decisions.
+        limiter = security.RateLimiter(policy, clock=lambda: 100.0)
+        # Consume two requests through a tighter live allowance.
+        limiter.check("192.0.2.77", requests_per_window=2, window_seconds=30)
+        # Consume the second exact live allowance.
+        limiter.check("192.0.2.77", requests_per_window=2, window_seconds=30)
+        # Reject the next request without reconstructing the limiter.
+        with self.assertRaises(RateLimitError):
+            # Exercise the exhausted live policy.
+            limiter.check("192.0.2.77", requests_per_window=2, window_seconds=30)
+        # Raise the live allowance and admit the same client immediately.
+        limiter.check("192.0.2.77", requests_per_window=3, window_seconds=30)
+
     # Permit exactly the configured number of simultaneous requests for one client.
     def test_concurrent_consumption_is_atomic(self):
         # Build a twenty-request policy with a fixed clock.

@@ -14,15 +14,15 @@ DEFAULT_AUDIO = {
     # Execute this statement as part of the module's documented control flow.
     "schema_version": SCHEMA_VERSION,
     # Execute this statement as part of the module's documented control flow.
-    "master_enabled": True,
+    "master_enabled": False,
     # Execute this statement as part of the module's documented control flow.
     "master_volume": 0.8,
     # Execute this statement as part of the module's documented control flow.
-    "sfx_enabled": True,
+    "sfx_enabled": False,
     # Execute this statement as part of the module's documented control flow.
     "sfx_volume": 0.7,
     # Execute this statement as part of the module's documented control flow.
-    "voice_enabled": True,
+    "voice_enabled": False,
     # Execute this statement as part of the module's documented control flow.
     "voice_volume": 0.85,
     # Execute this statement as part of the module's documented control flow.
@@ -34,11 +34,11 @@ DEFAULT_AUDIO = {
     # Execute this statement as part of the module's documented control flow.
     "auto_nice_lady": True,
     # Execute this statement as part of the module's documented control flow.
-    "announce_roulette_results": True,
+    "announce_roulette_results": False,
     # Execute this statement as part of the module's documented control flow.
-    "announce_blackjack_results": True,
+    "announce_blackjack_results": False,
     # Execute this statement as part of the module's documented control flow.
-    "announce_baccarat_results": True,
+    "announce_baccarat_results": False,
     # Execute this statement as part of the module's documented control flow.
     "announce_bingo_calls": False,
     # Execute this statement as part of the module's documented control flow.

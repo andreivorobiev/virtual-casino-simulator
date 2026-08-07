@@ -121,9 +121,8 @@ export function restoreRouteViewportState(root, snapshot){
   }
   // Restore the route outlet's own scroll offsets after content height is available again.
   root.scrollTop=snapshot.rootTop; root.scrollLeft=snapshot.rootLeft;
-  // Rescue the document scroll only from a collapse clamp to the top; smaller shifts stay with the
-  // browser's own scroll anchoring so restoration never fights a silent anchoring adjustment.
-  if(snapshot.winY>24&&window.scrollY<8) window.scrollTo(snapshot.winX,snapshot.winY);
+  // Restore document scroll whenever a full-root render displaced it, including non-zero clamps on stacked game pages. (UX-027)
+  if(Math.abs((window.scrollX||0)-snapshot.winX)>2||Math.abs((window.scrollY||0)-snapshot.winY)>2) window.scrollTo(snapshot.winX,snapshot.winY);
   // Restore keyboard focus through the shared stable-control contract without scrolling the board.
   restoreGameFocus(root, snapshot.focus);
   // Report that restoration ran for browser-free regression tests.
@@ -143,6 +142,33 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
   let lastRouteId=null;
   // Remember the last focusable in-route control so a busy render that disables it cannot strand keyboard focus. (UX-027)
   let stickyFocus=null;
+  // Advance after every outlet write so deferred restoration from an older render can never overwrite newer state.
+  let renderSequence=0;
+  // Advance whenever fresh player input reaches the outlet so delayed restoration cannot overwrite that interaction.
+  let interactionSequence=0;
+  // Distinguish focus restored by this interceptor from a player- or caller-directed focus move that must invalidate pending work.
+  let restorationActive=false;
+  // Restore one snapshot while suppressing the focus event produced by the restoration itself.
+  const restoreSnapshot=(snapshot)=>{
+    // Mark the interceptor-owned focus transition before restoring any saved control.
+    restorationActive=true;
+    // Always release the marker even when a defensive restore fails.
+    try{return restoreRouteViewportState(root,snapshot);}finally{restorationActive=false;}
+  };
+  // Mark one player interaction before route descendants handle it and potentially trigger another render.
+  const markInteraction=()=>{ interactionSequence+=1; };
+  // Treat an external focus move as authoritative before the next keyboard action reaches the newly focused control.
+  const markFocusInteraction=()=>{ if(!restorationActive) interactionSequence+=1; };
+  // Observe direct focus moves so a pending restore cannot steal focus between focus() and the following key press.
+  root.addEventListener('focusin',markFocusInteraction,{capture:true});
+  // Observe keyboard navigation that can intentionally move focus or scroll a contained game surface.
+  root.addEventListener('keydown',markInteraction,{capture:true});
+  // Observe pointer input before a clicked control can synchronously rerender the route.
+  root.addEventListener('pointerdown',markInteraction,{capture:true});
+  // Observe wheel input so delayed layout repair never reverses a player's manual scroll.
+  root.addEventListener('wheel',markInteraction,{capture:true});
+  // Observe touch input so mobile scrolling remains authoritative over deferred restoration.
+  root.addEventListener('touchstart',markInteraction,{capture:true});
   // Define the instance-level accessor that wraps only this outlet's writes.
   Object.defineProperty(root,'innerHTML',{
     // Keep the accessor configurable so tests and future shells can uninstall it.
@@ -153,6 +179,10 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
     set(html){
       // Read the shell-owned route identity at write time.
       const routeId=typeof getRouteId==='function'?getRouteId():null;
+      // Claim one render sequence before capture so later writes invalidate this render's deferred restores.
+      const sequence=++renderSequence;
+      // Bind deferred restoration to the latest player interaction observed before this render began.
+      const interaction=interactionSequence;
       // Hold the optional restorable state captured before the write.
       let snapshot=null;
       // Capture preservation state defensively so a measurement fault can never block the render itself.
@@ -172,13 +202,15 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
       // Restore preservation state defensively so a restore fault can never escape into game code either.
       try{
         // Restore scroll and focus for in-route rerenders so actions never send the player to the top.
-        if(snapshot) restoreRouteViewportState(this,snapshot);
+        if(snapshot) restoreSnapshot(snapshot);
         // Start a fresh route at the top so navigation keeps its expected reading position.
         else { this.scrollTop=0; this.scrollLeft=0; }
         // Keep stranded keyboard focus on the focusable game region instead of the document body. (UX-027)
         if(snapshot&&document.activeElement===document.body&&typeof this.focus==='function') this.focus({preventScroll:true});
       // Swallow restoration faults because the fresh markup is already in place and gameplay must continue.
       }catch(_){ }
+      // Repeat restoration after browser layout and scroll anchoring settle, because some stacked pages clamp after the synchronous setter returns. (UX-027)
+      if(snapshot&&typeof requestAnimationFrame==='function') requestAnimationFrame(()=>{ if(sequence!==renderSequence||interaction!==interactionSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreSnapshot(snapshot); }catch(_){ } requestAnimationFrame(()=>{ if(sequence!==renderSequence||interaction!==interactionSequence||routeId!==(typeof getRouteId==='function'?getRouteId():null)) return; try{ restoreSnapshot(snapshot); }catch(_){ } }); });
       // Remember the route that owns the markup now present in the outlet.
       lastRouteId=routeId;
       // Notify the shell after every write so cross-cutting checks can observe the settled DOM.

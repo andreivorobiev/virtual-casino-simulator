@@ -182,7 +182,7 @@ def _normalize(state: dict) -> dict:
     return state
 
 # Record the start of one guest trial and return its de-identified analytics id.
-def record_started(locale: str = "en-US", device: str = "unknown", starting_balance: float = 5000.0) -> str:
+def record_started(locale: str = "en-US", device: str = "unknown", starting_balance: float = 10000.0) -> str:
     # Mint an identifier unrelated to user, player, session, network, or browser credentials.
     analytics_id = new_id("gtrial")
     # Capture one timestamp for both the start and first activity marker.

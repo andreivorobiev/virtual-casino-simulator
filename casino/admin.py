@@ -14,7 +14,7 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, session_settings
+from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, session_settings, rate_settings, guest_settings
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import the invitation lifecycle for the Admin invitation-by-email section. (issue #332)
@@ -930,6 +930,22 @@ def register(router):
         # Return the contract-owned summary without auth, player, session, or network identifiers.
         return {"guest_trials": summary}
 
+    # Attach the Admin-readable guest admission state beside its existing telemetry. (GUEST-001, ADMIN-032)
+    @router.get(r"/api/v2/admin/guest-trials/settings")
+    # Publish the current switch and fixed token grant without exposing provider configuration.
+    def admin_guest_trial_settings_read_v2(body, query):
+        # Return the provider-backed setting through the standard Admin envelope.
+        return {"settings": guest_settings.guest_settings()}
+
+    # Attach the owner-only no-restart guest admission update. (GUEST-001, ADMIN-032)
+    @router.post(r"/api/v2/admin/guest-trials/settings")
+    # Persist only the exact boolean gate while leaving current trials untouched.
+    def admin_guest_trial_settings_update_v2(body, query, context):
+        # Resolve current canonical owner authority before validating or writing the policy.
+        _current_platform_owner(context.get("user"))
+        # Commit the exact reviewed switch and return the fixed grant for immediate UI readback.
+        return {"settings": guest_settings.save_guest_settings(body)}
+
     # Attach the v2 recent-session list as an explicit contract surface.
     @router.get(r"/api/v2/admin/guest-trials/sessions")
     # Publish only retained de-identified analytics rows for Admin drill-down. (issue #317)
@@ -1281,6 +1297,24 @@ def register(router):
         _current_platform_owner((context or {}).get("user"))
         # Persist the validated partial update and echo the stored document.
         return {"settings": session_settings.save_session_settings(body or {})}
+
+    # Expose the live application-request rate policy through an owner-only recovery-safe route. (SEC-015, ADMIN-032)
+    @router.get(r"/api/v2/admin/rate-limits")
+    # Return the provider-backed validated rate policy without exposing client counters.
+    def get_rate_limits(body, query, context=None):
+        # Require current platform-owner authority before publishing operational controls.
+        _current_platform_owner((context or {}).get("user"))
+        # Return only the canonical validated global policy.
+        return {"settings": rate_settings.rate_limits()}
+
+    # Persist a bounded live rate-policy update without restarting the application. (SEC-015, ADMIN-032)
+    @router.post(r"/api/v2/admin/rate-limits")
+    # Clamp and store only the reviewed sparse policy fields.
+    def save_rate_limits_route(body, query, context=None):
+        # Require current platform-owner authority before changing global request capacity.
+        _current_platform_owner((context or {}).get("user"))
+        # Persist the validated partial update and echo its effective values.
+        return {"settings": rate_settings.save_rate_limits(body or {})}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/autoplay")

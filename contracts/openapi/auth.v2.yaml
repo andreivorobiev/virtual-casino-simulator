@@ -525,7 +525,7 @@ paths:
   /me/tokens/add:
     post:
       summary: Request a ledger-backed play-token credit for an authenticated registered user's bound player.
-      description: Guest-trial principals are forbidden because their disposable 5,000-token grant cannot be increased, purchased, deposited, transferred, or restored.
+      description: Guest-trial principals are forbidden because their disposable 10,000-token grant cannot be increased, purchased, deposited, transferred, or restored.
       operationId: auth_v2_add_current_user_tokens
       security:
         - cookieSession: []

@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregate plus the containment and action-stability allocations to total exactly 904 permanent rows.
-        self.assertEqual(len(requirements), 904)
+        # Require the accepted aggregate plus the muted-audio default allocation to total exactly 908 permanent rows.
+        self.assertEqual(len(requirements), 908)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1403,6 +1403,10 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "UX-027": "Application",  # Bind action render stability to the shell.
             "TEST-154": "Tests",  # Bind containment-walk evidence to tests.
             "TEST-155": "Tests",  # Bind action-stability evidence to tests.
+            "SEC-015": "Core",  # Bind adjustable request policy to the security boundary.
+            "ADMIN-032": "Admin",  # Bind owner rate controls to Admin.
+            "TEST-156": "Tests",  # Bind rate-policy and deferred-scroll evidence to tests.
+            "AUDIO-010": "Audio",  # Bind silent defaults and explicit owner overrides to Audio.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1488,6 +1492,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         tests_module = json.loads((ROOT / "modules" / "tests.json").read_text(encoding="utf-8"))
         # Parse the docs descriptor independently.
         docs_module = json.loads((ROOT / "modules" / "docs.json").read_text(encoding="utf-8"))
+        # Parse the Audio descriptor for the compatible muted-default repair.
+        audio_module = json.loads((ROOT / "modules" / "audio.json").read_text(encoding="utf-8"))
         # Parse the contracts descriptor for the additive enrollment-mode contract.
         contracts_module = json.loads((ROOT / "modules" / "contracts.json").read_text(encoding="utf-8"))
         # Parse the tooling descriptor for the compatible bridge addition.
@@ -1508,16 +1514,18 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         blackjack_module = json.loads((ROOT / "modules" / "blackjack.json").read_text(encoding="utf-8"))
         # Parse the Autoplay descriptor for the compatible lifecycle reconciliation repair.
         autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
-        # Require the exact compatible core patch allocation for the bounded guest Bingo call ceiling.
-        self.assertEqual(core_module["version"], "9.36.3")
-        # Require the exact compatible Admin minor allocation.
-        self.assertEqual(admin_module["version"], "1.15.0")
-        # Require the exact compatible tests revision allocation for desktop bottom-edge containment coverage.
-        self.assertEqual(tests_module["version"], "1.68.3")
-        # Require docs to match the amended desktop containment requirement ownership.
-        self.assertEqual(docs_module["version"], "1.66.3")
-        # Require the exact compatible contracts minor allocation.
-        self.assertEqual(contracts_module["version"], "1.54.10")
+        # Require the exact compatible core minor allocation for live owner-authored request policy.
+        self.assertEqual(core_module["version"], "9.37.0")
+        # Require the exact compatible Admin minor allocation for the new policy controls.
+        self.assertEqual(admin_module["version"], "1.16.0")
+        # Require the exact compatible tests patch for muted-default evidence.
+        self.assertEqual(tests_module["version"], "1.69.1")
+        # Require docs to include the muted-default audio requirement.
+        self.assertEqual(docs_module["version"], "1.67.1")
+        # Require the exact compatible Audio patch for silent fresh and fallback state.
+        self.assertEqual(audio_module["version"], "9.1.2")
+        # Require the exact compatible contracts minor allocation for the additive Admin route.
+        self.assertEqual(contracts_module["version"], "1.55.0")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.1")
         # Require the exact compatible Baccarat patch allocation.
@@ -1530,8 +1538,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.6.1")
         # Require the exact compatible Slots presentation patch for the narrow reel shrink repair.
         self.assertEqual(slots_module["version"], "9.4.3")
-        # Require the exact compatible Application minor for render stability and containment telemetry.
-        self.assertEqual(application_module["version"], "9.57.2")
+        # Require the exact compatible Application minor for deferred render stability and localized Admin controls.
+        self.assertEqual(application_module["version"], "9.58.0")
         # Require Blackjack to carry the focus and live-result patch.
         self.assertEqual(blackjack_module["version"], "9.1.8")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

@@ -452,14 +452,18 @@ def run_json_provider_parity():
             recent = history.recent_history(5, "storage")
             # Verify history details preserve the CSV-compatible JSON text field.
             assert recent and recent[-1]["details_json"] == '{"provider": "json"}'
+            # Read the absent provider document before any owner setting is persisted. (AUDIO-010)
+            default_audio = settings.audio_settings()
+            # Require every default sound channel and announcement to remain fail-closed. (AUDIO-010)
+            assert all(default_audio[key] is False for key in ("master_enabled", "sfx_enabled", "voice_enabled", "announce_roulette_results", "announce_blackjack_results", "announce_baccarat_results", "announce_bingo_calls", "announce_keno_results"))
             # Persist audio settings through the provider-backed settings service.
-            saved = settings.save_audio_settings({"master_enabled": False, "voice_volume": 0.4})
+            saved = settings.save_audio_settings({"master_enabled": True, "voice_enabled": True, "voice_volume": 0.4})
             # Verify settings writes merge with defaults and normalize booleans/floats.
-            assert saved["master_enabled"] is False and saved["voice_volume"] == 0.4
+            assert saved["master_enabled"] is True and saved["voice_enabled"] is True and saved["voice_volume"] == 0.4
             # Read settings back through the provider document store.
             reloaded = settings.audio_settings()
             # Verify settings persisted in the provider document.
-            assert reloaded["master_enabled"] is False and reloaded["voice_volume"] == 0.4
+            assert reloaded["master_enabled"] is True and reloaded["voice_enabled"] is True and reloaded["voice_volume"] == 0.4
             # Name one isolated security-document key for strict provider proof.
             strict_key = "auth/strict_document_test"
             # Resolve its exact local path before any document exists.
