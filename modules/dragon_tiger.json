@@ -1,6 +1,6 @@
 {
   "module": "dragon_tiger",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": [
     "casino/games/dragon_tiger/",
     "web/games/dragon_tiger.js",

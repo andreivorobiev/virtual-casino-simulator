@@ -12,9 +12,11 @@ import re
 import threading
 
 # Import the only approved wallet mutation service and player reader.
-from casino.core import ledger, players
+from casino.core import players
 # Import the shared UTC clock used by existing game modules.
 from casino.core.clock import utc_now
+# Route every player-wallet movement through the shared exactly-once settlement boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistent state helpers.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import public conflict, funds, lookup, and validation errors.
@@ -25,7 +27,6 @@ from casino.games.caribbean_stud import engine
 # Require bounded log-safe action ids for every public movement or decision.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local ledger history to recover supported simulator retries.
-LEDGER_SCAN_LIMIT = 1_000_000
 # Serialize state and ledger read-before-write sections in the local process.
 _ACTION_LOCK = threading.RLock()
 
@@ -61,65 +62,10 @@ class StateRepository:
         save_player_game_state(engine.GAME_ID, player_id, state)
 
 
-# Adapt the shared ledger to stable apply-once game action keys.
-class CoreLedgerGateway:
-    # Capture injectable shared-ledger functions for focused tests.
-    def __init__(self, *, debit=ledger.debit, credit=ledger.credit, read_recent=ledger.read_recent):
-        # Store the only allowed wager debit operation.
-        self._debit = debit
-        # Store the only allowed returned-token credit operation.
-        self._credit = credit
-        # Store player-scoped ledger lookup for crash recovery.
-        self._read_recent = read_recent
-
-    # Find one previously committed game action key for this player.
-    def find(self, player_id: str, action_key: str):
-        # Read only the current player's ledger rows.
-        rows = self._read_recent(player_id, LEDGER_SCAN_LIMIT)
-        # Search newest-first for this game and stable action key.
-        return next((row for row in reversed(rows) if row.get("game") == engine.GAME_ID and (row.get("details") or {}).get("caribbean_stud_action_key") == action_key), None)
-
-    # Verify that an existing event matches the retried semantic movement.
-    def validate_existing(self, event: dict, *, signed_amount: float, transaction_type: str, round_id: str, fingerprint: str) -> None:
-        # Reject an action key reused for a different amount.
-        if round(float(event.get("amount", 0)), 2) != round(float(signed_amount), 2):
-            # Fail before any duplicate movement.
-            raise ConflictError("Caribbean Stud ledger action conflicts with an existing amount")
-        # Reject an action key reused for another type, round, or game.
-        if event.get("transaction_type") != transaction_type or event.get("round_id") != round_id or event.get("game") != engine.GAME_ID:
-            # Keep one ledger action key bound to one movement.
-            raise ConflictError("Caribbean Stud ledger action conflicts with an existing event")
-        # Read details defensively.
-        details = event.get("details") or {}
-        # Reject conflicting semantic request content.
-        if details.get("request_fingerprint") != fingerprint:
-            # Preserve exactly one semantic movement per public action.
-            raise ConflictError("Caribbean Stud action_id was already used with different settings")
-
-    # Commit or recover one deterministic debit or credit.
-    def apply_once(self, *, player_id: str, signed_amount: float, transaction_type: str, round_id: str, action_key: str, fingerprint: str, details: dict) -> tuple[dict, bool]:
-        # Protect the read-before-write sequence from concurrent duplicate requests.
-        with _ACTION_LOCK:
-            # Find prior append-only proof before touching the balance.
-            existing = self.find(player_id, action_key)
-            # Reuse compatible committed evidence on retry.
-            if existing is not None:
-                # Validate every stable semantic field.
-                self.validate_existing(existing, signed_amount=signed_amount, transaction_type=transaction_type, round_id=round_id, fingerprint=fingerprint)
-                # Return immutable proof and replay evidence.
-                return existing, True
-            # Add stable audit identities to committed ledger details.
-            event_details = {**details, "caribbean_stud_action_key": action_key, "request_fingerprint": fingerprint}
-            # Route negative amounts through the approved debit service.
-            if signed_amount < 0:
-                # Commit the positive magnitude as one shared-ledger debit.
-                event = self._debit(player_id, abs(signed_amount), transaction_type, engine.GAME_ID, round_id, event_details)
-            # Route positive amounts through the approved credit service.
-            else:
-                # Commit the returned stake or payout as one shared-ledger credit.
-                event = self._credit(player_id, signed_amount, transaction_type, engine.GAME_ID, round_id, event_details)
-            # Return the new committed event and non-replay evidence.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old Caribbean Stud key beside canonical action evidence.
+    return GameSettlementGateway(engine.GAME_ID, "caribbean_stud_action_key", **kwargs)
 
 
 # Coordinate player state, deterministic hands, decisions, and ledger movements.

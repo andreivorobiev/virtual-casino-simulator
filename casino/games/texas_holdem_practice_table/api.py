@@ -10,10 +10,12 @@ import re
 # Import a process-local lock for single-server retry serialization.
 import threading
 
-# Import shared ledger, player, and managed-account services without direct balance mutation.
-from casino.core import ledger, players, practice_accounts
+# Import player and managed-account services without a game-owned ledger mutation boundary.
+from casino.core import players, practice_accounts
 # Import the shared clock for persisted hand and action timestamps.
 from casino.core.clock import utc_now
+# Import the one canonical human-wallet game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import the shared id generator for ledger-correlated hand identifiers.
 from casino.core.ids import new_id
 # Import player-scoped persistence so authenticated users never share hands.
@@ -48,6 +50,11 @@ class StateRepository:
 
 # Adapt prepared game intents to the only permitted wallet mutation service.
 class LedgerAdapter:
+    # Bind the human wallet path to the shared settlement adapter.
+    def __init__(self):
+        # Preserve the historical Hold'em action field beside canonical evidence.
+        self._human = GameSettlementGateway(GAME_ID, "texas_holdem_action_id")
+
     # Ensure the three allocated wallets have their one-time issue #189 funding.
     def ensure_accounts(self) -> list[dict]:
         # Collect immutable funding or exact-replay evidence for every fixed seat.
@@ -65,16 +72,8 @@ class LedgerAdapter:
 
     # Find one previously committed movement by its stable game action id.
     def find_action(self, player_id: str, action_id: str):
-        # Scan bounded local history newest-first for crash recovery evidence.
-        for event in reversed(ledger.read_recent(player_id, 1_000_000)):
-            # Read structured details without assuming every legacy row has them.
-            details = event.get("details") or {}
-            # Match the unique action plus player and game ownership dimensions.
-            if event.get("game") == GAME_ID and details.get("texas_holdem_action_id") == action_id:
-                # Return the already-committed append-only event.
-                return event
-        # Report that the prepared movement still needs committing.
-        return None
+        # Delegate player-scoped proof lookup to the shared compatibility reader.
+        return self._human.find_action(player_id, action_id)
 
     # Commit one positive debit or credit intent through casino.core.ledger.
     def transact(self, intent: dict) -> dict:
@@ -86,20 +85,8 @@ class LedgerAdapter:
             result = practice_accounts.transact(intent["player_id"], intent["amount"], intent["transaction_type"], intent["action_id"], intent["game"], intent["round_id"], intent["direction"], controller_action, session_owner_id=intent["details"]["session_owner_id"], component=intent["details"]["component"], details=intent["details"])
             # Return the immutable shared ledger event expected by recovery logic.
             return result["event"]
-        # Route opening escrow through the shared insufficient-funds path.
-        if intent.get("direction") == "debit":
-            # Commit or replay the human debit inside the storage action transaction.
-            event, _replayed = ledger.debit_once(intent["player_id"], intent["amount"], intent["transaction_type"], intent["action_id"], intent["game"], intent["round_id"], intent["details"])
-            # Return the immutable event while player responses retain request-level replay state.
-            return event
-        # Route refund and payout credits through the shared ledger path.
-        if intent.get("direction") == "credit":
-            # Commit or replay the human credit inside the storage action transaction.
-            event, _replayed = ledger.credit_once(intent["player_id"], intent["amount"], intent["transaction_type"], intent["action_id"], intent["game"], intent["round_id"], intent["details"])
-            # Return the immutable event while player responses retain request-level replay state.
-            return event
-        # Reject malformed engine instructions before wallet code is reached.
-        raise ValidationError("Texas Hold'em ledger direction is invalid")
+        # Route every human debit, refund, and payout through one storage-atomic adapter.
+        return self._human.transact(intent)
 
 
 # Coordinate deterministic hands, prepared persistence, and ledger recovery.

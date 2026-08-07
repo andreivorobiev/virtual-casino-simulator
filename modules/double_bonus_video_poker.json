@@ -1,6 +1,6 @@
 {
   "module": "double_bonus_video_poker",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": ["casino/games/double_bonus_video_poker/", "web/games/double_bonus_video_poker.js", "web/i18n/en-US/games/double_bonus_video_poker.json", "web/i18n/ru-RU/games/double_bonus_video_poker.json"],
   "requirements_prefixes": ["DBVP"],
   "contracts": ["contracts/openapi/double_bonus_video_poker.v1.yaml"],

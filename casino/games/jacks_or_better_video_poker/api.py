@@ -10,7 +10,9 @@ import re
 import threading
 
 # Import shared ledger and player services without mutating balances directly.
-from casino.core import ledger, players
+from casino.core import players
+# Route every player-wallet movement through the shared exactly-once settlement boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import the shared clock for persisted round lifecycle timestamps.
 from casino.core.clock import utc_now
 # Import the shared id generator for ledger-correlated round identifiers.
@@ -57,17 +59,18 @@ def require_action_id(value, field_name: str) -> str:
 # Coordinate game state with ledger-only settlement through injectable dependencies.
 class JacksOrBetterVideoPokerService:
     # Store production dependencies while allowing isolated tests to use in-memory adapters.
-    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=ledger.debit, credit=ledger.credit, read_ledger=ledger.read_recent, get_player=players.get_player, clock=utc_now, id_factory=new_id, seed_factory=None):
+    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, id_factory=new_id, seed_factory=None):
         # Store the state loader used for player-scoped documents.
         self._load_state = load_state
         # Store the state writer used for crash-recovery markers.
         self._save_state = save_state
         # Store the only allowed wager debit operation.
-        self._debit = debit
+        settlement = GameSettlementGateway(GAME_ID, debit=debit, credit=credit, read_recent=read_ledger)
+        self._debit = settlement.debit
         # Store the only allowed payout credit operation.
-        self._credit = credit
+        self._credit = settlement.credit
         # Store ledger history lookup for crash-safe replay detection.
-        self._read_ledger = read_ledger
+        self._read_ledger = settlement.read_recent
         # Store player reads for response payloads without balance mutation.
         self._get_player = get_player
         # Store the clock hook for deterministic focused tests.

@@ -1,6 +1,6 @@
 {
   "module": "mississippi_stud",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": ["casino/games/mississippi_stud/", "web/games/mississippi_stud.js", "web/i18n/en-US/games/mississippi_stud.json", "web/i18n/ru-RU/games/mississippi_stud.json"],
   "requirements_prefixes": ["MSTUD"],
   "contracts": ["contracts/openapi/mississippi_stud.v1.yaml"],

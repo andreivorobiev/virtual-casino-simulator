@@ -193,9 +193,9 @@ class DeucesWildVideoPokerApiTests(unittest.TestCase):
         # Verify the internal ledger key is derived from the deterministic round.
         self.assertEqual(f"{first['round']['round_id']}:wager", details["idempotency_key"])
         # Verify the fingerprint binds the normalized wager to the private deal plan.
-        self.assertEqual("2.00", details["request_fingerprint"]["wager"])
+        self.assertEqual("2.00", details["legacy_request_fingerprint"]["wager"])
         # Verify the private deal plan is represented only by a SHA-256 digest.
-        self.assertEqual(64, len(details["request_fingerprint"]["deal_plan"]))
+        self.assertEqual(64, len(details["legacy_request_fingerprint"]["deal_plan"]))
         # Verify the hostile caller never receives a persisted state document.
         self.assertNotIn(self.fake.state_key(engine.GAME_ID, "other-player"), self.fake.states)
 
@@ -372,9 +372,9 @@ class DeucesWildVideoPokerApiTests(unittest.TestCase):
         # Verify payout proof binds game, round, client action, and internal idempotency key.
         self.assertEqual((engine.GAME_ID, round_id, "payout-draw-0001", f"{round_id}:payout"), (credits[0]["game"], credits[0]["round_id"], credits[0]["details"]["client_action_id"], credits[0]["details"]["idempotency_key"]))
         # Verify result and returned-credit values participate in the payout fingerprint.
-        self.assertEqual(result_key, credits[0]["details"]["request_fingerprint"]["result"])
+        self.assertEqual(result_key, credits[0]["details"]["legacy_request_fingerprint"]["result"])
         # Verify the exact returned credits are represented canonically in recovery proof.
-        self.assertEqual("4.00", credits[0]["details"]["request_fingerprint"]["payout"])
+        self.assertEqual("4.00", credits[0]["details"]["legacy_request_fingerprint"]["payout"])
         # Verify the round is no longer active after durable settlement.
         self.assertIsNone(second["state"]["active_round"])
         # Verify the settled round remains available in bounded reload history.
@@ -538,7 +538,7 @@ class DeucesWildVideoPokerApiTests(unittest.TestCase):
         # Remove the cached ledger identity from persisted round state.
         stored["active_round"].pop("wager_ledger_id", None)
         # Alter immutable-looking proof to represent a conflicting prior semantic action.
-        self.fake.events[0]["details"]["request_fingerprint"]["wager"] = "9.99"
+        self.fake.events[0]["details"]["legacy_request_fingerprint"]["wager"] = "9.99"
         # Reconstruct all process-local service state before recovery.
         self.rebuild_runtime()
         # Reject conflicting proof rather than accepting it or issuing another debit.

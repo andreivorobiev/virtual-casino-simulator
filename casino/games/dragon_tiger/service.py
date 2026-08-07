@@ -7,10 +7,12 @@ import re
 # Import process-local locks for single-server exactly-once reconciliation.
 import threading
 
-# Import the only approved wallet mutation service and player reader.
-from casino.core import ledger, players
+# Import the read-only player service without a game-owned ledger mutation boundary.
+from casino.core import players
 # Import the shared UTC clock for deterministic settlement timestamps.
 from casino.core.clock import utc_now
+# Import the one approved play-token settlement compatibility boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistent state helpers.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import public conflict and validation errors.
@@ -20,10 +22,6 @@ from casino.games.dragon_tiger import engine
 
 # Require eight to 128 safe action-ID characters.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
-# Scan all practical local ledger history for restart recovery.
-LEDGER_SCAN_LIMIT = 1_000_000
-# Serialize ledger read-before-write operations in this local process.
-_LEDGER_LOCK = threading.RLock()
 # Serialize state preparation and reconciliation in this local process.
 _ACTION_LOCK = threading.RLock()
 
@@ -53,56 +51,10 @@ class StateRepository:
         save_player_game_state(engine.GAME_ID, player_id, state)
 
 
-# Adapt the shared ledger to stable apply-once game actions.
-class CoreLedgerGateway:
-    # Find one previously committed action for this authenticated player.
-    def find(self, player_id: str, action_key: str) -> dict | None:
-        # Read only the player's own append-only history.
-        events = ledger.read_recent(player_id, LEDGER_SCAN_LIMIT)
-        # Search newest-first for the stable game action key.
-        return next((event for event in reversed(events) if (event.get("details") or {}).get("idempotency_key") == action_key), None)
-
-    # Verify that prior ledger proof matches the retried semantic action.
-    def validate_existing(self, event: dict, *, amount: float, transaction_type: str, round_id: str, fingerprint: str) -> None:
-        # Reject a key reused for a different signed movement.
-        if round(float(event.get("amount", 0)), 2) != round(float(amount), 2):
-            # Fail closed instead of returning unrelated wallet movement.
-            raise ConflictError("Dragon Tiger ledger action conflicts with an existing amount")
-        # Reject a key reused for another event type or round.
-        if event.get("transaction_type") != transaction_type or event.get("round_id") != round_id or event.get("game") != engine.GAME_ID:
-            # Keep action keys one game movement only.
-            raise ConflictError("Dragon Tiger ledger action conflicts with an existing event")
-        # Read structured details defensively.
-        details = event.get("details") or {}
-        # Reject conflicting request content even when amounts match.
-        if details.get("request_fingerprint") != fingerprint:
-            # Preserve one semantic request per public action ID.
-            raise ConflictError("Dragon Tiger action_id was already used with different round settings")
-
-    # Commit or recover one deterministic debit or credit.
-    def apply_once(self, *, player_id: str, amount: float, transaction_type: str, round_id: str, action_key: str, fingerprint: str, details: dict) -> tuple[dict, bool]:
-        # Serialize lookup and mutation in the local single-server process.
-        with _LEDGER_LOCK:
-            # Find prior append-only proof before touching the balance.
-            existing = self.find(player_id, action_key)
-            # Reuse a compatible committed event on retry.
-            if existing:
-                # Validate all stable semantic fields.
-                self.validate_existing(existing, amount=amount, transaction_type=transaction_type, round_id=round_id, fingerprint=fingerprint)
-                # Return original proof and replay status.
-                return existing, True
-            # Add deterministic identity fields to the committed details.
-            event_details = {**details, "idempotency_key": action_key, "request_fingerprint": fingerprint}
-            # Route negative amounts through the shared debit function.
-            if amount < 0:
-                # Commit the atomic wager debit.
-                event = ledger.debit(player_id, abs(amount), transaction_type, engine.GAME_ID, round_id, event_details)
-            # Route positive amounts through the shared credit function.
-            else:
-                # Commit the atomic returned stake and winnings.
-                event = ledger.credit(player_id, amount, transaction_type, engine.GAME_ID, round_id, event_details)
-            # Return new proof and non-replay status.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old idempotency key beside canonical action evidence.
+    return GameSettlementGateway(engine.GAME_ID, "idempotency_key", **kwargs)
 
 
 # Coordinate prepared state, deterministic dealing, and ledger recovery.

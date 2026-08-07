@@ -1750,7 +1750,10 @@ def run_api_tests():
         # Load only the focused storage-atomic adapter class.
         from tests import settlement_core_tests
         # Build the focused listener-free suite explicitly.
+        # Load the low-level adapter contract first.
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(settlement_core_tests.SettlementAdapterTests)
+        # Add the compatibility gateway contract used by every migrated game cohort.
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(settlement_core_tests.GameSettlementGatewayTests))
         # Execute the suite with concise in-process reporting.
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
         # Fail the central named case when any adapter proof failed or errored.
@@ -1759,6 +1762,19 @@ def run_api_tests():
             raise AssertionError('settlement adapter suite failed')
     # Record the additive audit, sign routing, replay, conflict, and bounded recovery proof.
     run_case('API-GAMECORE-002',['GAMECORE-003'],run_settlement_adapter_tests)
+
+    # Prove every registered game remains behind the one shared settlement boundary. (LEDGER-032, GAMECORE-004, TEST-157)
+    def run_catalog_settlement_boundary_tests():
+        # Import the focused gate lazily so ordinary runner startup remains lightweight.
+        from tests import settlement_core_tests
+        # Load the exact catalog-derived source-boundary test.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(settlement_core_tests.CatalogSettlementBoundaryTests)
+        # Execute without opening a listener or provider.
+        result = unittest.TextTestRunner(verbosity=0).run(suite)
+        # Fail this permanent case when any game regresses to a direct ledger path.
+        if not result.wasSuccessful(): raise AssertionError('catalog settlement boundary suite failed')
+    # Register one permanent API evidence id for the 46-game prevention gate.
+    run_case('API-GAMECORE-004',['LEDGER-032','GAMECORE-004','TEST-157'],run_catalog_settlement_boundary_tests)
     # Execute the route-free provider-neutral game-action contract proof without opening a listener.
     def run_game_action_contract_tests():
         # Import the focused contract suite only when its named case runs.

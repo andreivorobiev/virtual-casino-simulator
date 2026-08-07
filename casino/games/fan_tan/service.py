@@ -2,12 +2,10 @@
 
 # Import cryptographic index selection for production pile counts.
 import secrets
-# Import one process-wide reentrant lock for local simulator idempotency checks.
-import threading
 # Import the shared UTC clock for settled response timestamps.
 from casino.core.clock import utc_now
-# Import the only approved play-token mutation service.
-from casino.core import ledger
+# Import the one approved play-token settlement compatibility boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistence helpers without changing shared state code.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import standard conflict and validation errors for request identity enforcement.
@@ -17,47 +15,14 @@ from casino.games.fan_tan import engine
 # Import the stable game identity for every ledger event.
 from casino.games.fan_tan.rules import GAME_ID
 
-# Serialize in-process duplicate detection around the shared ledger call.
-_LEDGER_IDEMPOTENCY_LOCK = threading.RLock()
-# Scan a generous local history window so retries after restart find prior action keys.
-LEDGER_IDEMPOTENCY_SCAN_LIMIT = 1000000
 # Bound caller-supplied action identifiers before persistence.
 MAX_ACTION_ID_LENGTH = 128
 
 
-# Adapt the existing ledger service into an apply-once action interface.
-class CoreLedgerGateway:
-    # Find one previously committed action for the authenticated player.
-    def find(self, player_id: str, action_id: str) -> dict | None:
-        # Read only this player's ledger so cross-session details are never inspected.
-        rows = ledger.read_recent(player_id, LEDGER_IDEMPOTENCY_SCAN_LIMIT)
-        # Scan newest-first for the deterministic action identity.
-        return next((row for row in reversed(rows) if (row.get("details") or {}).get("fan_tan_action_id") == action_id), None)
-
-    # Commit one debit or credit exactly once for the single-process local simulator.
-    def apply_once(self, *, player_id: str, signed_amount: float, transaction_type: str, round_id: str, action_id: str, fingerprint: str, details: dict) -> tuple[dict, bool]:
-        # Serialize the read-before-write sequence against concurrent duplicate requests.
-        with _LEDGER_IDEMPOTENCY_LOCK:
-            # Resolve any committed event before issuing a balance mutation.
-            existing = self.find(player_id, action_id)
-            # Branch when a retry already committed this action.
-            if existing:
-                # Reject one action id reused for a different signed amount or event type.
-                if round(float(existing.get("amount", 0)), 2) != round(float(signed_amount), 2) or existing.get("transaction_type") != transaction_type:
-                    # Fail closed rather than returning an unrelated ledger event.
-                    raise ConflictError("Fan-Tan ledger action identity conflicts with an existing event")
-                # Reject a request fingerprint mismatch even when total amounts happen to match.
-                if (existing.get("details") or {}).get("request_fingerprint") != fingerprint:
-                    # Preserve idempotency identity across semantically different requests.
-                    raise ConflictError("Fan-Tan action_id was already used with different wagers")
-                # Return the original atomic ledger event and replay evidence.
-                return existing, True
-            # Add the action identity and request fingerprint to details before mutation.
-            event_details = {**details, "fan_tan_action_id": action_id, "request_fingerprint": fingerprint}
-            # Route debits and credits through the existing ledger service only.
-            event = ledger.debit(player_id, abs(signed_amount), transaction_type, GAME_ID, round_id, event_details) if signed_amount < 0 else ledger.credit(player_id, signed_amount, transaction_type, GAME_ID, round_id, event_details)
-            # Return the newly committed event and non-replay evidence.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old Fan-Tan key beside canonical action evidence.
+    return GameSettlementGateway(GAME_ID, "fan_tan_action_id", **kwargs)
 
 
 # Coordinate player state, entropy, and exactly-once ledger actions for one Fan-Tan play.

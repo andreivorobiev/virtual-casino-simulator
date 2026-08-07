@@ -4,7 +4,11 @@ from casino.core.state_store import load_player_game_state, save_player_game_sta
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import ledger, players, logger
+from casino.core import players, logger
+# Import the shared id factory so pre-session purchases have stable settlement identities.
+from casino.core.ids import new_id
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
 # Import required dependency so this module can use its public functions or constants.
@@ -14,6 +18,8 @@ from casino.bots import profiles
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID="bingo"
+# Bind every Bingo movement to one storage-atomic settlement adapter.
+SETTLEMENT = GameSettlementGateway(GAME_ID, "card_id")
 # Seat at most three competitor cards per session so the human card must genuinely race to win. (issue #405)
 MAX_BOT_CARDS = 3
 # Always present exactly this many competitor cards so the house edge cannot be thinned by disabling bots. (issue #452)
@@ -22,7 +28,7 @@ COMPETITOR_CARDS = 3
 HOUSE_COMPETITOR_ID = "bingo_house"
 
 # Define the fund_bot_players function used by this module.
-def fund_bot_players(player_id, amount, pattern):
+def fund_bot_players(player_id, amount, pattern, purchase_id):
     # Collect only bots whose card purchase actually debited a bot wallet. (issue #405)
     funded=[]
     # Iterate through the eligible bingo bots, bounded to the per-session seat limit.
@@ -36,7 +42,7 @@ def fund_bot_players(player_id, amount, pattern):
         # Start protected funding so an unfundable bot shrinks the field instead of failing the purchase.
         try:
             # Debit the BOT wallet with the same event type the bot controller uses for mid-session joins.
-            ev = ledger.debit(bot["player_id"], stake, "BOT_BINGO_CARD_PURCHASED", GAME_ID, None, {"bot_id": bot.get("bot_id"), "strategy_id": bot.get("strategy_id"), "pattern": pattern})
+            ev, _replayed = SETTLEMENT.apply_once(player_id=bot["player_id"], signed_amount=-stake, transaction_type="BOT_BINGO_CARD_PURCHASED", round_id=purchase_id, action_key=f"{purchase_id}:bot:{bot['player_id']}:wager", request_fingerprint=f"{purchase_id}:{bot['player_id']}:{pattern}:{stake}", details={"bot_id": bot.get("bot_id"), "strategy_id": bot.get("strategy_id"), "pattern": pattern})
         # Handle the expected failure path for the protected logic.
         except Exception as exc:
             # Fail closed: a wallet that cannot pay gets no card, so no uncharged card can ever win a payout. (issue #405)
@@ -49,9 +55,9 @@ def fund_bot_players(player_id, amount, pattern):
     return funded
 
 # Seat a fixed competitor field so the paytable's house edge holds regardless of the admin bot roster. (issue #452)
-def seat_competitors(player_id, amount, pattern):
+def seat_competitors(player_id, amount, pattern, purchase_id):
     # Fund real bot competitor cards first so genuine bot wallets carry real stakes and can win real payouts. (issue #405)
-    seats = fund_bot_players(player_id, amount, pattern)
+    seats = fund_bot_players(player_id, amount, pattern, purchase_id)
     # Fill every remaining competitor seat with a synthetic house spoiler card so the field is always full. (issue #452)
     for _ in range(max(0, COMPETITOR_CARDS - len(seats))):
         # A house card races the human at the human's stake for display parity but is never funded and never paid. (issue #452)
@@ -85,7 +91,7 @@ def settle_if_done(sess):
             # Credit only a real winning card; synthetic house spoilers end sessions but are never paid. (issue #452)
             if card.get("status") == "won" and card.get("source") != "house" and not card.get("credited"):
                 # Commit or replay the payout under the durable session-card identity. (issue #403)
-                credit,replayed=ledger.credit_once(card["player_id"], card["payout"], "BINGO_PAYOUT_CREDIT", f"{card['card_id']}:settlement", GAME_ID, sess["session_id"], {"pattern":sess["pattern"], "card_id": card["card_id"]}) if card["payout"] else (None, False)
+                credit,replayed=SETTLEMENT.apply_once(player_id=card["player_id"], signed_amount=card["payout"], transaction_type="BINGO_PAYOUT_CREDIT", round_id=sess["session_id"], action_key=f"{card['card_id']}:settlement", request_fingerprint=f"{card['card_id']}:{sess['session_id']}:{card['payout']}", details={"pattern":sess["pattern"], "card_id": card["card_id"]}) if card["payout"] else (None, False)
                 # Append history and expose a new credit only for the storage-committing call. (issue #403)
                 if not replayed:
                     # Read the post-commit wallet balance for the first outcome row.
@@ -121,20 +127,22 @@ def register(router):
         player_id=request_player_id(body, query); amount=require_amount(body.get("amount")); pattern=body.get("pattern","line")
         # Set state to the value needed for the next operation.
         state=load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Execute this statement as part of the module's documented control flow.
-        ledger.debit(player_id, amount, "BINGO_CARD_PURCHASED", GAME_ID, None, {"pattern":pattern})
+        # Allocate one purchase identity before the session exists so every refund is correlated.
+        purchase_id = new_id("bingo-purchase")
+        # Commit the human card stake through the shared settlement boundary.
+        SETTLEMENT.apply_once(player_id=player_id, signed_amount=-amount, transaction_type="BINGO_CARD_PURCHASED", round_id=purchase_id, action_key=f"{purchase_id}:human:wager", request_fingerprint=f"{purchase_id}:{player_id}:{pattern}:{amount}", details={"pattern":pattern})
         # Track funded competitors outside the protected block so the failure path can refund them.
         bot_players=[]
         # Start protected logic so failures can be handled safely.
         try:
             # Seat a guaranteed full competitor field: funded bots plus synthetic house spoilers. (issue #405, #452)
-            bot_players=seat_competitors(player_id, amount, pattern)
+            bot_players=seat_competitors(player_id, amount, pattern, purchase_id)
             # Seat the competitors so the human card must beat a full field to be paid. (issue #405)
             sess=engine.start_session(state, player_id, amount, pattern, bot_players=bot_players)
         # Handle the expected failure path for the protected logic.
         except Exception:
             # Execute this statement as part of the module's documented control flow.
-            ledger.credit(player_id, amount, "BINGO_CARD_REFUND_AFTER_ERROR", GAME_ID, None, {"pattern":pattern})
+            SETTLEMENT.apply_once(player_id=player_id, signed_amount=amount, transaction_type="BINGO_CARD_REFUND_AFTER_ERROR", round_id=purchase_id, action_key=f"{purchase_id}:human:refund", request_fingerprint=f"{purchase_id}:{player_id}:{pattern}:{amount}:refund", details={"pattern":pattern})
             # Iterate through the collection to process each item.
             for bp in bot_players:
                 # Never refund a synthetic house seat: it was never debited from any wallet. (issue #452)
@@ -142,7 +150,7 @@ def register(router):
                     # Skip the unfunded spoiler seat.
                     continue
                 # Return each already-debited bot stake so a failed start never strands bot funds. (issue #405)
-                ledger.credit(bp["player_id"], bp["amount"], "BOT_BINGO_CARD_REFUND_AFTER_ERROR", GAME_ID, None, {"pattern":pattern, "bot_id": bp.get("bot_id")})
+                SETTLEMENT.apply_once(player_id=bp["player_id"], signed_amount=bp["amount"], transaction_type="BOT_BINGO_CARD_REFUND_AFTER_ERROR", round_id=purchase_id, action_key=f"{purchase_id}:bot:{bp['player_id']}:refund", request_fingerprint=f"{purchase_id}:{bp['player_id']}:{pattern}:{bp['amount']}:refund", details={"pattern":pattern, "bot_id": bp.get("bot_id")})
             # Execute this statement as part of the module's documented control flow.
             raise
         # Execute this statement as part of the module's documented control flow.
@@ -199,7 +207,9 @@ def register(router):
                         # Skip the unfunded spoiler card.
                         continue
                     # Execute this statement as part of the module's documented control flow.
-                    refunds.append(ledger.credit(card["player_id"], card["amount"], "BINGO_CARD_REFUND", GAME_ID, sess["session_id"], {"card_id": card["card_id"]}))
+                    event, _replayed = SETTLEMENT.apply_once(player_id=card["player_id"], signed_amount=card["amount"], transaction_type="BINGO_CARD_REFUND", round_id=sess["session_id"], action_key=f"{card['card_id']}:refund", request_fingerprint=f"{card['card_id']}:{sess['session_id']}:{card['amount']}:refund", details={"card_id": card["card_id"]})
+                    # Preserve the historical event list response shape.
+                    refunds.append(event)
                 # Execute this statement as part of the module's documented control flow.
                 append_history(GAME_ID, sess["session_id"], sess["player_id"], "session", sess["pattern"], sess["amount"], "refunded", sum(abs(r["amount"]) for r in refunds), players.get_player(sess["player_id"])["balance"], {"reason":"reset_before_calls"})
             # Handle the fallback branch when prior conditions did not match.

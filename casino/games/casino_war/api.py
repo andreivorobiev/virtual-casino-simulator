@@ -11,8 +11,10 @@ import threading
 # Import action-id validation for bounded idempotency keys.
 import re
 
-# Import the only wallet mutation service allowed by repository policy.
-from casino.core import ledger, players
+# Import the shared player reader without a game-owned wallet mutation boundary.
+from casino.core import players
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped state persistence for reload-safe rounds.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import canonical player validation for direct-router and pre-#110 compatibility.
@@ -43,33 +45,10 @@ class StateRepository:
         save_player_game_state(GAME_ID, player_id, state)
 
 
-# Adapt stable game intents to the shared ledger-only wallet service.
-class LedgerAdapter:
-    # Find a previously committed game action for crash recovery.
-    def find_action(self, player_id: str, action_id: str):
-        # Scan the player's complete local-simulator ledger history newest first.
-        for event in ledger.read_recent(player_id, 1_000_000):
-            # Read structured details without assuming every historical event has them.
-            details = event.get("details") or {}
-            # Return the committed event matching this stable action id.
-            if details.get("casino_war_action_id") == action_id:
-                # Stop at the first newest matching append-only row.
-                return event
-        # Report no prior event when the action still needs applying.
-        return None
-
-    # Commit one debit or credit through casino.core.ledger.
-    def transact(self, intent: dict) -> dict:
-        # Route debit intents through the shared insufficient-funds path.
-        if intent["direction"] == "debit":
-            # Return the committed append-only debit event.
-            return ledger.debit(intent["player_id"], intent["amount"], intent["transaction_type"], intent["game"], intent["round_id"], intent["details"])
-        # Route credit intents through the shared positive-credit path.
-        if intent["direction"] == "credit":
-            # Return the committed append-only credit event.
-            return ledger.credit(intent["player_id"], intent["amount"], intent["transaction_type"], intent["game"], intent["round_id"], intent["details"])
-        # Reject malformed engine instructions before they reach wallet code.
-        raise ValidationError("Casino War ledger direction is invalid")
+# Construct the shared settlement gateway while retaining the controller seam name.
+def LedgerAdapter():
+    # Preserve the old Casino War action field beside canonical action evidence.
+    return GameSettlementGateway(GAME_ID, "casino_war_action_id")
 
 
 # Coordinate pure engine transitions, prepared persistence, and ledger recovery.

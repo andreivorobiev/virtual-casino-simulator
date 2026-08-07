@@ -12,10 +12,12 @@ import re
 # Import a process-local lock for the supported single-process simulator runtime.
 import threading
 
-# Import the only shared wallet mutation and read-only player services allowed to games.
-from casino.core import ledger, players
+# Import the read-only player service without a game-owned wallet mutation boundary.
+from casino.core import players
 # Import the shared clock for deterministic injectable completion timestamps.
 from casino.core.clock import utc_now
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import the shared identifier factory for production round and shoe identities.
 from casino.core.ids import new_id
 # Import player-scoped persistence so authenticated users never share game state.
@@ -48,53 +50,10 @@ class StateRepository:
         save_player_game_state(GAME_ID, player_id, state)
 
 
-# Adapt stable game intents to the shared ledger-only wallet interface.
-class LedgerAdapter:
-    # Calculate the signed amount expected in an append-only ledger event.
-    @staticmethod  # Keep signing independent of adapter instances.
-    def _signed_amount(intent: dict) -> float:  # Return the ledger-signed amount for this intent.
-        # Represent debits as negative events and credits as positive events.
-        return round(-intent["amount"] if intent["direction"] == "debit" else intent["amount"], 2)
-
-    # Find and verify a movement that may have committed before a state-marker crash.
-    def find_action(self, player_id: str, intent: dict):
-        # Scan the player's complete supported local ledger window newest first.
-        for event in ledger.read_recent(player_id, 1_000_000):
-            # Read structured details defensively for historical non-Let-It-Ride rows.
-            details = event.get("details") or {}
-            # Ignore rows without this exact derived ledger action id.
-            if details.get("let_it_ride_action_id") != intent["action_id"]:
-                # Continue scanning older player-owned rows.
-                continue
-            # Verify every ownership and money dimension before accepting replay proof.
-            matches = (
-                event.get("player_id") == player_id  # Require the authenticated player.
-                and event.get("game") == GAME_ID  # Require this game module.
-                and event.get("round_id") == intent["round_id"]  # Require this round.
-                and event.get("transaction_type") == intent["transaction_type"]  # Require this movement type.
-                and round(float(event.get("amount", 0)), 2) == self._signed_amount(intent)  # Require the exact signed amount.
-            )
-            # Reject a reused ledger action id whose immutable fingerprint differs.
-            if not matches:
-                # Fail closed instead of issuing or accepting another movement.
-                raise ConflictError("Let It Ride ledger action conflicts with a committed event")
-            # Return the fully verified append-only event.
-            return event
-        # Report no prior event when the prepared movement still needs applying.
-        return None
-
-    # Commit one prepared debit or credit through casino.core.ledger only.
-    def transact(self, intent: dict) -> dict:
-        # Route opening wagers through shared insufficient-funds handling.
-        if intent["direction"] == "debit":
-            # Return the durable shared-ledger debit event.
-            return ledger.debit(intent["player_id"], intent["amount"], intent["transaction_type"], intent["game"], intent["round_id"], intent["details"])
-        # Route pull refunds and payouts through the shared credit path.
-        if intent["direction"] == "credit":
-            # Return the durable shared-ledger credit event.
-            return ledger.credit(intent["player_id"], intent["amount"], intent["transaction_type"], intent["game"], intent["round_id"], intent["details"])
-        # Reject malformed internal intents before any wallet access.
-        raise ValidationError("Let It Ride ledger direction is invalid")
+# Construct the shared settlement gateway while retaining the controller seam name.
+def LedgerAdapter():
+    # Preserve the old Let It Ride action field beside canonical action evidence.
+    return GameSettlementGateway(GAME_ID, "let_it_ride_action_id")
 
 
 # Coordinate pure engine transitions, prepared persistence, and ledger recovery.

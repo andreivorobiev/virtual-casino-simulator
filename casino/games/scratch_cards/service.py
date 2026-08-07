@@ -7,8 +7,8 @@ import secrets
 # Import one process-wide reentrant lock for local state and ledger idempotency.
 import threading
 
-# Import the only approved play-token mutation service.
-from casino.core import ledger
+# Import the one approved play-token settlement compatibility boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import the shared UTC clock for stable purchase and settlement timestamps.
 from casino.core.clock import utc_now
 # Import player-scoped persistence helpers without changing shared storage code.
@@ -20,8 +20,6 @@ from casino.games.scratch_cards import engine
 
 # Serialize the complete local read-modify-ledger-write path against duplicate requests.
 _ACTION_LOCK = threading.RLock()
-# Scan a generous player-local window so restart retries find committed action keys.
-LEDGER_IDEMPOTENCY_SCAN_LIMIT = 1000000
 
 
 # Reduce one internal ledger event to correlation fields safe for action responses.
@@ -36,49 +34,10 @@ def public_ledger_event(event: dict | None) -> dict | None:
     return {field: event.get(field) for field in public_fields if field in event}
 
 
-# Adapt the existing shared ledger into a game-local apply-once action interface.
-class CoreLedgerGateway:
-    # Find one previously committed action for the authenticated player.
-    def find(self, player_id: str, action_key: str) -> dict | None:
-        # Read only this player's ledger so cross-session details are never inspected.
-        rows = ledger.read_recent(player_id, LEDGER_IDEMPOTENCY_SCAN_LIMIT)
-        # Scan newest-first for the deterministic private action identity.
-        return next((row for row in reversed(rows) if (row.get("details") or {}).get("idempotency_key") == action_key), None)
-
-    # Commit one debit or credit exactly once for the intended single-process simulator.
-    def apply_once(self, *, player_id: str, amount: float, transaction_type: str, card_id: str, action_key: str, details: dict) -> tuple[dict, bool]:
-        # Serialize the ledger read-before-write sequence against concurrent duplicates.
-        with _ACTION_LOCK:
-            # Resolve any committed event before issuing a balance mutation.
-            existing = self.find(player_id, action_key)
-            # Branch when a retry already committed this action.
-            if existing:
-                # Validate player, game, and card ownership before returning an event.
-                if existing.get("player_id") != player_id or existing.get("game") != engine.GAME_ID or existing.get("round_id") != card_id:
-                    # Fail closed rather than returning a colliding ledger row.
-                    raise ConflictError("Scratch Card ledger action identity conflicts with another event")
-                # Reject one action key reused for a different amount or transaction type.
-                if round(float(existing.get("amount", 0)), 2) != round(float(amount), 2) or existing.get("transaction_type") != transaction_type:
-                    # Preserve one immutable financial meaning per idempotency key.
-                    raise ConflictError("Scratch Card ledger action identity conflicts with an existing event")
-                # Read recovered private details once for semantic conflict checks.
-                existing_details = existing.get("details") or {}
-                # Reject a changed purchase fingerprint even when amounts happen to match.
-                if existing_details.get("request_fingerprint") != details.get("request_fingerprint"):
-                    # Preserve purchase identity across semantically different requests.
-                    raise ConflictError("Scratch Card action identity was already used with different content")
-                # Reject a changed public action id on a recovered purchase or payout.
-                if existing_details.get("action_id") != details.get("action_id"):
-                    # Prevent another reveal command from claiming a committed payout.
-                    raise ConflictError("Scratch Card action identity conflicts with the committed ledger event")
-                # Return the original atomic event and explicit replay evidence.
-                return existing, True
-            # Add the private deterministic key before the shared atomic ledger transaction.
-            event_details = {**details, "idempotency_key": action_key}
-            # Route the signed amount through the existing debit or credit service only.
-            event = ledger.debit(player_id, abs(amount), transaction_type, engine.GAME_ID, card_id, event_details) if amount < 0 else ledger.credit(player_id, amount, transaction_type, engine.GAME_ID, card_id, event_details)
-            # Return the newly committed event and non-replay evidence.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old idempotency key beside canonical action evidence.
+    return GameSettlementGateway(engine.GAME_ID, "idempotency_key", **kwargs)
 
 
 # Coordinate private ticket state, deterministic entropy, and ledger-only settlement.

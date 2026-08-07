@@ -6,9 +6,11 @@ import math
 import unittest
 
 # Import the new route-free adapter under direct test.
-from casino.core.settlement import LEDGER_PROOF_SCAN_LIMIT, SettlementAdapter
+from casino.core.settlement import GameSettlementGateway, LEDGER_PROOF_SCAN_LIMIT, SettlementAdapter
 # Import public errors used by the adapter's stable failure contract.
 from casino.errors import ConflictError, ValidationError
+# Import the repository validator so the permanent test exercises its actual catalog-derived gate.
+from scripts import validate_module_boundaries
 
 
 # Build one committed ledger row with the canonical action evidence under test.
@@ -322,6 +324,60 @@ class SettlementAdapterTests(unittest.TestCase):
         self.assertIs(captured.exception, original)
         # Perform one bounded recovery lookup after the provider conflict.
         self.assertEqual(seam.read_calls, [("player-a", LEDGER_PROOF_SCAN_LIMIT)])
+
+
+# Prove the transitional game-call shapes all resolve through the one canonical adapter. (LEDGER-032)
+class GameSettlementGatewayTests(unittest.TestCase):
+    # Build one compatibility gateway over listener-free storage-atomic seams.
+    def _gateway(self):
+        # Retain the seam separately for exact provider-call assertions.
+        seam = _LedgerSeam()
+        # Bind one historical detail key beside canonical evidence.
+        gateway = GameSettlementGateway("example-game", "legacy_action_id", debit_once=seam.debit_once, credit_once=seam.credit_once, read_recent=seam.read_recent)
+        # Return both objects so tests can inspect calls without private adapter access.
+        return gateway, seam
+
+    # Prove a legacy call receives canonical string evidence without losing its old fields.
+    def test_legacy_call_shape_adds_canonical_and_compatibility_evidence(self):
+        # Build isolated seams for one converted game call.
+        gateway, seam = self._gateway()
+        # Apply a legacy signed-amount action with a structured historical fingerprint.
+        gateway.apply_once(player_id="player-a", amount=-5, transaction_type="wager", round_id="round-1", action_id="action-1", fingerprint={"wager": "5.00"}, details={"bet": "red"})
+        # Read the exact provider details emitted by the canonical adapter.
+        details = seam.debit_calls[0]["details"]
+        # Preserve the game-specific compatibility action field for one release.
+        self.assertEqual(details["legacy_action_id"], "action-1")
+        # Publish the same action identity under the universal key.
+        self.assertEqual(details["game_action_key"], "action-1")
+        # Preserve the structured old semantics without occupying the canonical string field.
+        self.assertEqual(details["legacy_request_fingerprint"], {"wager": "5.00"})
+        # Require one portable deterministic fingerprint for storage conflict proof.
+        self.assertRegex(details["request_fingerprint"], r"^[0-9a-f]{64}$")
+        # Preserve unrelated game-owned audit detail.
+        self.assertEqual(details["bet"], "red")
+
+    # Prove the shared gateway routes prepared intent controllers through the same adapter.
+    def test_prepared_intent_routes_through_storage_atomic_adapter(self):
+        # Build isolated seams for one staged controller action.
+        gateway, seam = self._gateway()
+        # Submit the historical intent shape retained by four staged games.
+        gateway.transact({"player_id": "player-a", "amount": 7, "transaction_type": "payout", "game": "example-game", "round_id": "round-1", "action_id": "settle-1", "direction": "credit", "details": {"stage": "settlement"}})
+        # Require the prepared action to use only the atomic credit-once seam.
+        self.assertEqual((len(seam.debit_calls), len(seam.credit_calls)), (0, 1))
+        # Require canonical action evidence on the prepared controller path too.
+        self.assertEqual(seam.credit_calls[0]["details"]["game_action_key"], "settle-1")
+
+
+# Prove future catalog games cannot reintroduce a direct ledger money path. (TEST-157)
+class CatalogSettlementBoundaryTests(unittest.TestCase):
+    # Run the exact production validator against every registered game package.
+    def test_all_registered_games_use_the_shared_settlement_boundary(self):
+        # Collect focused diagnostics rather than trusting a hardcoded 46-game assertion.
+        errors = []
+        # Execute the same source-derived check used by the required validation command.
+        validate_module_boundaries.check_game_settlement_boundary(errors)
+        # Require no direct ledger import or mutation call anywhere under the catalog modules.
+        self.assertEqual(errors, [])
 
 
 # Run this focused checkpoint directly without central registration.

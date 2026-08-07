@@ -21,8 +21,10 @@ import re
 import secrets
 import threading
 
-from casino.core import ledger, players
+from casino.core import players
 from casino.core.clock import utc_now
+# Import the canonical game-money compatibility gateway owned by SettlementAdapter. (GAMECORE-004)
+from casino.core.settlement import GameSettlementGateway
 from casino.core.state_store import load_player_game_state, save_player_game_state
 from casino.errors import ConflictError, ValidationError
 
@@ -30,8 +32,6 @@ from casino.errors import ConflictError, ValidationError
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Serialize state, ledger proof, debit, settlement, and persistence per process.
 _SETTLEMENT_LOCK = threading.RLock()
-# Scan a generous player-local history window for restart-safe ledger proof.
-LEDGER_PROOF_SCAN_LIMIT = 1_000_000
 # Bound the retained per-player recent-round history so state stays compact.
 RECENT_ROUND_LIMIT = 25
 
@@ -52,69 +52,6 @@ def round_id_for(game_id: str, player_id: str, request_id: str) -> str:
     return hashlib.sha256(f"{game_id}\0{player_id}\0{request_id}".encode("utf-8")).hexdigest()[:24]
 
 
-# Adapt the shared ledger into a game-owned apply-once action interface.
-class _LedgerGateway:
-    # Bind the gateway to one game so proof can never be satisfied by another game's rows.
-    def __init__(self, game_id: str) -> None:
-        # Retain the owning game id for the proof predicate.
-        self.game_id = game_id
-
-    # Find one committed action matching every ownership and request dimension.
-    def find(self, *, player_id, round_id, transaction_type, action_key, request_fingerprint):
-        # Read only the authenticated player's recent ledger rows.
-        rows = ledger.read_recent(player_id, LEDGER_PROOF_SCAN_LIMIT)
-        # Scan newest-first for the deterministic action identity.
-        for event in reversed(rows):
-            details = event.get("details") or {}
-            # Skip rows that do not match every immutable action dimension.
-            if not (event.get("player_id") == player_id and event.get("game") == self.game_id and event.get("round_id") == round_id and event.get("transaction_type") == transaction_type and details.get("idempotency_key") == action_key):
-                continue
-            # Reject the same action identity reused for different wager content.
-            if details.get("request_fingerprint") != request_fingerprint:
-                # Fail closed instead of returning or duplicating a conflicting event.
-                raise ConflictError(f"{self.game_id} request_id conflicts with committed ledger proof")
-            return event
-        return None
-
-    # Commit one debit or credit exactly once for the local simulator process.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint, details) -> tuple:
-        # Serialize the proof-before-write sequence against concurrent duplicate requests.
-        with _SETTLEMENT_LOCK:
-            # Resolve any committed action before issuing another balance movement.
-            existing = self.find(player_id=player_id, round_id=round_id, transaction_type=transaction_type, action_key=action_key, request_fingerprint=request_fingerprint)
-            # Reuse exact committed proof for a normal or crash-recovery retry.
-            if existing is not None:
-                # Reject an action-key collision whose signed amount changed unexpectedly.
-                if round(float(existing.get("amount", 0)), 2) != round(float(amount), 2):
-                    # Fail closed because one action identity cannot move two amounts.
-                    raise ConflictError(f"{self.game_id} ledger action amount conflicts with committed proof")
-                # Return the original event and explicit replay evidence.
-                return existing, True
-            # Add action and fingerprint proof to the game-owned audit details.
-            event_details = {**details, "idempotency_key": action_key, "request_fingerprint": request_fingerprint}
-            # Start protected storage-enforced settlement so a concurrent process cannot double-spend.
-            try:
-                if amount < 0:
-                    # Commit or replay the aggregate wager debit across threads, processes, and providers.
-                    return ledger.debit_once(player_id, abs(amount), transaction_type, action_key, self.game_id, round_id, event_details)
-                # Commit or replay the aggregate settlement credit across threads, processes, and providers.
-                return ledger.credit_once(player_id, amount, transaction_type, action_key, self.game_id, round_id, event_details)
-            # Recover a same-request race whose losing caller proposed different tentative entropy.
-            except ConflictError:
-                # Re-read the winning process's immutable proof under the game-owned request fingerprint.
-                recovered = self.find(player_id=player_id, round_id=round_id, transaction_type=transaction_type, action_key=action_key, request_fingerprint=request_fingerprint)
-                # Re-raise a genuine semantic conflict when no compatible proof committed.
-                if recovered is None:
-                    # Preserve the storage provider's fail-closed conflict.
-                    raise
-                # Reject a recovered identity whose signed amount differs from this request.
-                if round(float(recovered.get("amount", 0)), 2) != round(float(amount), 2):
-                    # Fail closed because a raced identity cannot authorize another amount.
-                    raise ConflictError(f"{self.game_id} ledger action amount conflicts with committed proof")
-                # Return the compatible winning event as an explicit replay.
-                return recovered, True
-
-
 # Coordinate authenticated state, server entropy, and exactly-once ledger settlement for one game.
 class SimpleWagerGame:
     # Configure the core with one game's identity, rules, and injectable test seams.
@@ -132,8 +69,8 @@ class SimpleWagerGame:
         self._validate_bet = validate_bet
         # Retain the optional public bet catalog builder for the state payload.
         self._public_bet_catalog = public_bet_catalog or (lambda: {})
-        # Bind the ledger gateway to this game unless a focused test injects one.
-        self._ledger_gateway = ledger_gateway or _LedgerGateway(self.game_id)
+        # Bind every production movement to SettlementAdapter while retaining the old detail key for one release.
+        self._ledger_gateway = ledger_gateway or GameSettlementGateway(self.game_id, "idempotency_key")
         # Use player-scoped production persistence unless a test injects loaders.
         self._state_loader = state_loader or (lambda player_id: load_player_game_state(self.game_id, player_id, self._default_state))
         self._state_saver = state_saver or (lambda player_id, state: save_player_game_state(self.game_id, player_id, state))

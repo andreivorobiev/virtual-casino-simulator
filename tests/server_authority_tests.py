@@ -41,6 +41,8 @@ def validate_server_authority_matrix() -> None:
         assert set(row["assurances"]) == set(MANDATORY_ASSURANCES)
         # Require at least one state-changing action for each playable game.
         assert row["actions"], f"{row['game_id']} has no authority actions"
+        # Require the generated row to identify the common source-proven settlement interface.
+        assert row["settlement_interface"] == "casino.core.settlement.GameSettlementGateway"
         # Verify every referenced evidence file exists in the repository.
         for evidence in row["evidence"]:
             # Fail with the exact missing path for a focused catalog repair.
@@ -51,8 +53,10 @@ def validate_server_authority_matrix() -> None:
             assert action["path"].startswith("/api/v1/games/")
             # Require bounded intent plus all downstream server owners.
             assert action["client_intent"] == "openapi_request_schema_and_path_choices_only"
-            # Require server-side validation, outcome, transaction, and response projection labels.
-            assert all(action[key].startswith(("authenticated_", "server_", "storage_")) for key in ("server_validation", "engine_outcome", "storage_transaction", "response_projection"))
+            # Require ordinary server-side validation, outcome, and response projection labels.
+            assert all(action[key].startswith(("authenticated_", "server_")) for key in ("server_validation", "engine_outcome", "response_projection"))
+            # Bind the financial action owner to the exact source-derived game-row interface.
+            assert action["storage_transaction"] == row["settlement_interface"]
 
 
 # Prove all current games receive identical hostile-field stripping and session precedence.

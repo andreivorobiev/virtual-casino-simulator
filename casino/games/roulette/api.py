@@ -4,7 +4,9 @@ from casino.core.state_store import load_player_game_state, save_player_game_sta
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import ledger, players, logger
+from casino.core import players, logger
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
 # Import required dependency so this module can use its public functions or constants.
@@ -16,6 +18,8 @@ from casino.errors import ValidationError
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "roulette"
+# Bind every Roulette movement to one storage-atomic settlement adapter.
+SETTLEMENT = GameSettlementGateway(GAME_ID, "bet_id")
 
 
 # Define the request_player_id function used by this module.
@@ -96,7 +100,7 @@ def register(router):
         # Set item to the value needed for the next operation.
         item = engine.add_bet_to_state(state, player_id, body.get("bet_type"), amount, [str(x) for x in body.get("covered_numbers", [])], body.get("label"), source="manual")
         # Set led to the value needed for the next operation.
-        led = ledger.debit(player_id, amount, "ROULETTE_BET_PLACED", GAME_ID, item["round_id"], {"bet_id": item["bet_id"], "covered_numbers": item["covered_numbers"], "bet_type": item["type"]})
+        led, _replayed = SETTLEMENT.apply_once(player_id=player_id, signed_amount=-amount, transaction_type="ROULETTE_BET_PLACED", round_id=item["round_id"], action_key=f"{item['bet_id']}:wager", request_fingerprint=f"{item['bet_id']}:{item['type']}:{item['covered_numbers']}:{amount}", details={"bet_id": item["bet_id"], "covered_numbers": item["covered_numbers"], "bet_type": item["type"]})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Set logger.info("roulette_bet_placed", player_id to the value needed for the next operation.
@@ -131,7 +135,9 @@ def register(router):
             # Set item to the value needed for the next operation.
             item = engine.add_bet_to_state(state, player_id, c["type"], float(c["amount"]), [str(x) for x in c["covered_numbers"]], c.get("label"), source="call_bet")
             # Execute this statement as part of the module's documented control flow.
-            ledgers.append(ledger.debit(player_id, float(c["amount"]), "ROULETTE_CALL_BET_PLACED", GAME_ID, item["round_id"], {"call_type": call_type, "bet_id": item["bet_id"], "covered_numbers": item["covered_numbers"]}))
+            event, _replayed = SETTLEMENT.apply_once(player_id=player_id, signed_amount=-float(c["amount"]), transaction_type="ROULETTE_CALL_BET_PLACED", round_id=item["round_id"], action_key=f"{item['bet_id']}:wager", request_fingerprint=f"{item['bet_id']}:{call_type}:{item['covered_numbers']}:{c['amount']}", details={"call_type": call_type, "bet_id": item["bet_id"], "covered_numbers": item["covered_numbers"]})
+            # Retain the historical event list response shape.
+            ledgers.append(event)
             # Execute this statement as part of the module's documented control flow.
             placed.append(item)
         # Execute this statement as part of the module's documented control flow.
@@ -160,7 +166,9 @@ def register(router):
             # Set item to the value needed for the next operation.
             item = engine.add_bet_to_state(state, player_id, t["type"], t["amount"], t["covered_numbers"], t.get("label"), source="rebet")
             # Execute this statement as part of the module's documented control flow.
-            ledgers.append(ledger.debit(player_id, t["amount"], "ROULETTE_REBET_PLACED", GAME_ID, item["round_id"], {"bet_id": item["bet_id"]}))
+            event, _replayed = SETTLEMENT.apply_once(player_id=player_id, signed_amount=-t["amount"], transaction_type="ROULETTE_REBET_PLACED", round_id=item["round_id"], action_key=f"{item['bet_id']}:wager", request_fingerprint=f"{item['bet_id']}:rebet:{t['amount']}", details={"bet_id": item["bet_id"]})
+            # Retain the historical event list response shape.
+            ledgers.append(event)
             # Execute this statement as part of the module's documented control flow.
             placed.append(item)
         # Execute this statement as part of the module's documented control flow.
@@ -179,7 +187,7 @@ def register(router):
         # Set bet to the value needed for the next operation.
         bet = engine.remove_bet_from_state(state, bet_id, player_id)
         # Refund each durable bet exactly once so a replayed clear returns the original event instead of minting a second refund. (issue #403)
-        cred, _replayed = ledger.credit_once(player_id, bet["amount"], "ROULETTE_BET_REFUND", f"{bet_id}:refund", GAME_ID, bet["round_id"], {"bet_id": bet_id})
+        cred, _replayed = SETTLEMENT.apply_once(player_id=player_id, signed_amount=bet["amount"], transaction_type="ROULETTE_BET_REFUND", round_id=bet["round_id"], action_key=f"{bet_id}:refund", request_fingerprint=f"{bet_id}:refund:{bet['amount']}", details={"bet_id": bet_id})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
@@ -202,7 +210,7 @@ def register(router):
             # Execute this statement as part of the module's documented control flow.
             open_round["bets"].remove(b)
             # Refund each durable bet exactly once under the shared per-bet refund identity so replayed or overlapping clears cannot double-refund. (issue #403)
-            ledger.credit_once(player_id, b["amount"], "ROULETTE_BET_REFUND", f"{b['bet_id']}:refund", GAME_ID, b["round_id"], {"bet_id": b["bet_id"]})
+            SETTLEMENT.apply_once(player_id=player_id, signed_amount=b["amount"], transaction_type="ROULETTE_BET_REFUND", round_id=b["round_id"], action_key=f"{b['bet_id']}:refund", request_fingerprint=f"{b['bet_id']}:refund:{b['amount']}", details={"bet_id": b["bet_id"]})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
@@ -241,7 +249,7 @@ def register(router):
             # Branch when the prior condition failed and this condition is true.
             elif res["credit"] > 0:
                 # Credit each durable bet exactly once, keeping volatile result and outcome fields out of the fingerprinted details so a racing spin fails closed on ConflictError instead of double-paying. (issue #403)
-                credit_ev, replayed = ledger.credit_once(bet["player_id"], res["credit"], "ROULETTE_SETTLEMENT_CREDIT", f"{bet['bet_id']}:settlement", GAME_ID, settled["round_id"], {"bet_id": bet["bet_id"]})
+                credit_ev, replayed = SETTLEMENT.apply_once(player_id=bet["player_id"], signed_amount=res["credit"], transaction_type="ROULETTE_SETTLEMENT_CREDIT", round_id=settled["round_id"], action_key=f"{bet['bet_id']}:settlement", request_fingerprint=f"{bet['bet_id']}:{settled['round_id']}:{res['credit']}", details={"bet_id": bet["bet_id"]})
             # Set bal to the value needed for the next operation.
             bal = players.get_player(bet["player_id"])["balance"]
             # Branch so history rows append only for first-time settlements and replays cannot duplicate them. (issue #403)

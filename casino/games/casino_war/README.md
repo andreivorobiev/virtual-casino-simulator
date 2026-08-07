@@ -21,7 +21,7 @@ The additive v1 surface is documented in `contracts/openapi/casino_war.v1.yaml`:
 - `POST /api/v1/games/casino-war/rounds/{round_id}/surrender`
 - `POST /api/v1/games/casino-war/rounds/{round_id}/war`
 
-Every command requires an `action_id`. The controller persists the complete prepared transition before wallet movement, calls only `casino.core.ledger`, stores each committed marker immediately, and scans the append-only player ledger by stable action id during reload recovery. A process-local lock serializes duplicate commands in the local one-process server. This provides exactly-once token movement for retries and crash windows in the supported local runtime. A future multi-process deployment must add an atomic unique idempotency key in the shared ledger provider; that shared-core dependency is recorded in `INTEGRATION.md`.
+Every command requires an `action_id`. The controller persists the complete prepared transition before wallet movement, calls only `casino.core.settlement.GameSettlementGateway`, stores each committed marker immediately, and recovers immutable proof by stable action id. Provider-owned action identity supplies cross-process exactly-once behavior; process-local locking is no longer the money-integrity boundary.
 
 The route adapter prefers #110's `context.resolved_player_id`, then the existing `context.bound_player_id`, before any compatibility body/query value. Normal authenticated users therefore remain session-bound when the shared resolver lands.
 
