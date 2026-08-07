@@ -1,3 +1,15 @@
+# Virtual Casino Simulator v0.9.5.58 Release Notes
+
+## Stable play controls, guest admission, and silent defaults
+
+- Packages the accepted play-control, guest-trial, and audio-default fixes from sole normal content PR #615; the release-only application revision advances mechanically to `9.58.1`.
+- Resolves issues #614, #616, #617, #618, and #619: owner-configurable bounded request policy, stable same-route scroll and focus, fixed 10,000-token guest trials with owner-controlled new-trial admission, and silent fresh/fallback audio until an owner explicitly enables it.
+- Carries permanent requirements `AUDIO-010`, `SEC-015`, `ADMIN-032`, and `TEST-156` plus the accepted guest, security, UI, and test amendments; the governed total remains exactly 908 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 737 regular files: the terminal v0.9.5.57 inventory, the two accepted provider modules, and this v0.9.5.58 compatibility record; tests and the pull-request validator remain intentionally outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; every content-owned module remains exactly as accepted on protected main and tooling remains `1.25.1`.
+- Makes no migration, provider-account, public-policy, database, wagering-economics, or frozen-v1-API change.
+- Retains exact immutable and terminal-green v0.9.5.57 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.57 Release Notes
 
 ## Complete Roulette and Bingo desktop boards

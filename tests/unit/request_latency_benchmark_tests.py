@@ -1518,14 +1518,14 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(core_module["version"], "9.37.0")
         # Require the exact compatible Admin minor allocation for the new policy controls.
         self.assertEqual(admin_module["version"], "1.16.0")
-        # Require the exact compatible tests patch for muted-default evidence.
-        self.assertEqual(tests_module["version"], "1.69.1")
-        # Require docs to include the muted-default audio requirement.
-        self.assertEqual(docs_module["version"], "1.67.1")
+        # Require the exact release-owned tests patch for v0.9.5.58 qualification.
+        self.assertEqual(tests_module["version"], "1.69.2")
+        # Require the exact release-owned docs patch for v0.9.5.58 provenance.
+        self.assertEqual(docs_module["version"], "1.67.2")
         # Require the exact compatible Audio patch for silent fresh and fallback state.
         self.assertEqual(audio_module["version"], "9.1.2")
-        # Require the exact compatible contracts minor allocation for the additive Admin route.
-        self.assertEqual(contracts_module["version"], "1.55.0")
+        # Require the exact release-owned contracts patch for the compatibility record.
+        self.assertEqual(contracts_module["version"], "1.55.1")
         # Require the exact compatible tooling revision allocation.
         self.assertEqual(tooling_module["version"], "1.25.1")
         # Require the exact compatible Baccarat patch allocation.
@@ -1538,8 +1538,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.6.1")
         # Require the exact compatible Slots presentation patch for the narrow reel shrink repair.
         self.assertEqual(slots_module["version"], "9.4.3")
-        # Require the exact compatible Application minor for deferred render stability and localized Admin controls.
-        self.assertEqual(application_module["version"], "9.58.0")
+        # Require the exact release-owned Application patch for the v0.9.5.58 package identity.
+        self.assertEqual(application_module["version"], "9.58.1")
         # Require Blackjack to carry the focus and live-result patch.
         self.assertEqual(blackjack_module["version"], "9.1.8")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

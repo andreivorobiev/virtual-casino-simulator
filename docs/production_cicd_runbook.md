@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.57`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.58`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -165,6 +165,8 @@ v0.9.5.55 carries the accepted complete tracked-bug and merge-ticket-lifecycle p
 v0.9.5.56 combines the accepted viewport-containment/action-stability packet from normal PR #609 with the phase-safe Autoplay rate-limit recovery from normal PR #608. It closes issues #607 and #555, preserves all 46 game routes inside governed viewport or designed-scroll boundaries, retains same-route scroll and focus across rerenders, and prevents a completed game action from being replayed while Autoplay retries temporary rate limits. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.55 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.57 packages the accepted P0 desktop bottom-edge containment fix from sole normal content PR #612. It closes issue #611 and keeps the complete Roulette betting board and Bingo card/call bay visible above the fixed footer at governed desktop viewports without changing mobile scrolling or game economics. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.56 as the application-only predecessor; database rollback remains prohibited.
+
+v0.9.5.58 packages the accepted play-control, guest-trial, and silent-audio packet from sole normal content PR #615. It closes issues #614, #616, #617, #618, and #619; keeps request limits owner-configurable and bounded, preserves same-route scroll/focus, grants fresh guest trials 10,000 play tokens behind an owner admission switch, and defaults all fresh/fallback audio channels to off while preserving explicit owner settings. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.57 as the application-only predecessor; database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
