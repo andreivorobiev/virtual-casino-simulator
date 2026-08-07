@@ -27,3 +27,7 @@ Historical ledger rows are immutable. During the compatibility release, new rows
 `scripts/validate_module_boundaries.py` derives the complete game inventory from the runtime catalog and rejects direct game ledger imports or mutation calls. `API-GAMECORE-004` runs that exact gate. The generated server-authority matrix derives each game's `settlement_interface` from checked-in source and fails generation if any registered game cannot prove the shared boundary.
 
 The game API suites, storage concurrency evidence, required contract validation, and normal Browser workflow remain mandatory before merge. This interface migration does not change paytables, house edge, outcomes, or client-visible animation timing.
+
+## Delivery tickets
+
+Issue #430 owns the catalog-wide contract. The implementation is divided into the fourteen auditable work items #621 through #634: shared-simple migration, direct-once migration, Roulette, Bingo, Blackjack, three direct-raw cohorts, three injected-service cohorts, staged-intent migration, the cross-game prevention gate, and the final governance pack. The pull request must close all fifteen issues together; a deferred cohort keeps #430 and its exact work-item issue open.
