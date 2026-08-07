@@ -13267,6 +13267,65 @@
       "introduced_in": "issue-614-rate-scroll-guest-admission",
       "changed_in": "issue-614-rate-scroll-guest-admission",
       "notes": "The permanent Browser inventory is reused; no new Browser case or shard-affinity entry is allocated."
+    },
+    {
+      "id": "LEDGER-032",
+      "module": "Ledger",
+      "description": "Every accepted game wager, ticket, card purchase, insurance action, split, double, refund, payout, and settlement for all registered games crosses casino.core.settlement.GameSettlementGateway and the storage-atomic SettlementAdapter exactly-once boundary; game modules cannot import or directly call ledger debit, credit, debit-once, or credit-once functions. Canonical game action, request fingerprint, and round evidence is written beside one-release legacy detail keys without rewriting historical rows or changing current API response semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-004",
+        "API-SEC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/settlement.py",
+        "casino/core/simple_game.py",
+        "casino/games/",
+        "scripts/validate_module_boundaries.py",
+        "contracts/compatibility/server-authority-matrix.json"
+      ],
+      "introduced_in": "issue-430-settlement-convergence",
+      "changed_in": "issue-430-settlement-convergence",
+      "notes": "The catalog-wide migration preserves each game's accepted debit timing and final payout or refund behavior. Opponent-only Texas Hold'em practice accounts remain under the separate core practice-account transaction while the human wallet path uses the common gateway."
+    },
+    {
+      "id": "GAMECORE-004",
+      "module": "Core",
+      "description": "The shared game-money compatibility gateway presents one canonical signed settlement contract to direct, shared-simple, staged-intent, and historically injected game service shapes, delegates production value movement only to SettlementAdapter, preserves deterministic replay and changed-meaning conflict behavior, and keeps transitional detail aliases read-compatible for one release.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-002",
+        "API-GAMECORE-004"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/settlement.py",
+        "casino/core/simple_game.py",
+        "tests/settlement_core_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-430-settlement-convergence",
+      "changed_in": "issue-430-settlement-convergence",
+      "notes": "Legacy game-specific method names may remain only as source-local compatibility aliases during the one-release transition; they no longer own production ledger mutation."
+    },
+    {
+      "id": "TEST-157",
+      "module": "Tests",
+      "description": "A catalog-derived source gate and focused settlement suite prove every registered game uses the shared settlement boundary, rejects direct game imports or calls to ledger money functions, preserves canonical and one-release compatibility evidence, and routes both direct actions and staged intents through storage-atomic debit-once or credit-once seams.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-004"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "scripts/validate_module_boundaries.py",
+        "tests/settlement_core_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-430-settlement-convergence",
+      "changed_in": "issue-430-settlement-convergence",
+      "notes": "The gate derives the game inventory from the runtime catalog so a newly registered game cannot ship another money interface without failing required checks."
     }
   ]
 }

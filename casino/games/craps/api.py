@@ -9,10 +9,12 @@ import re
 # Import a process-local settlement lock for exactly-once simulator actions.
 import threading
 
-# Import shared ledger and player services without mutating balances directly.
-from casino.core import ledger, players
+# Import the read-only player service without a game-owned mutation boundary.
+from casino.core import players
 # Import the shared clock for persisted round and roll timestamps.
 from casino.core.clock import utc_now
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import the shared id generator for ledger-correlated round identifiers.
 from casino.core.ids import new_id
 # Import player-scoped state helpers for authenticated reload isolation.
@@ -61,17 +63,19 @@ def require_request_id(value) -> str:
 # Coordinate game state with ledger-only settlement through injectable dependencies.
 class CrapsService:
     # Store production dependencies while isolated tests use in-memory adapters.
-    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=ledger.debit, credit=ledger.credit, read_ledger=ledger.read_recent, get_player=players.get_player, clock=utc_now, id_factory=new_id, roller=roll_two_dice):
+    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, id_factory=new_id, roller=roll_two_dice):
         # Store the state loader used for player-scoped documents.
         self._load_state = load_state
         # Store the state writer used for crash-recovery markers.
         self._save_state = save_state
-        # Store the only allowed wager debit operation.
-        self._debit = debit
-        # Store the only allowed payout and refund credit operation.
-        self._credit = credit
-        # Store ledger history lookup for interrupted-marker recovery.
-        self._read_ledger = read_ledger
+        # Bind production and injected test seams behind the canonical settlement adapter.
+        settlement = GameSettlementGateway(GAME_ID, "idempotency_key", debit=debit, credit=credit, read_recent=read_ledger)
+        # Preserve the historical callback shape while routing through the shared adapter.
+        self._debit = settlement.debit
+        # Preserve the historical credit shape while routing through the shared adapter.
+        self._credit = settlement.credit
+        # Preserve bounded proof reads through the adapter-owned ledger seam.
+        self._read_ledger = settlement.read_recent
         # Store player reads for response payloads without balance mutation.
         self._get_player = get_player
         # Store the clock hook for repeatable focused tests.

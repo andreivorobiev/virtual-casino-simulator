@@ -25,7 +25,7 @@ The additive v1 surface is documented in `contracts/openapi/red_dog.v1.yaml`:
 - `POST /api/v1/games/red-dog/rounds/{round_id}/call`
 - `POST /api/v1/games/red-dog/rounds/{round_id}/raise`
 
-Every command requires an `action_id`. Exact retries replay one prepared transition; reuse with a different command, round, or wager fails closed. The controller persists the prepared transition before wallet movement, calls only `casino.core.ledger`, stores each committed marker immediately, and scans the append-only player ledger by stable action id during reload recovery. A process-local lock serializes duplicate requests in the supported one-process local server.
+Every command requires an `action_id`. Exact retries replay one prepared transition; reuse with a different command, round, or wager fails closed. The controller persists the prepared transition before wallet movement, calls only `casino.core.settlement.GameSettlementGateway`, stores each committed marker immediately, and recovers immutable provider proof by stable action id.
 
 The route adapter consumes the player identity resolved by the authenticated router context. Caller body or query identifiers never replace that bound identity.
 

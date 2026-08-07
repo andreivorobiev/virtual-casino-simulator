@@ -1,6 +1,6 @@
 {
   "module": "caribbean_stud",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": ["casino/games/caribbean_stud/", "web/games/caribbean_stud.js", "web/i18n/en-US/games/caribbean_stud.json", "web/i18n/ru-RU/games/caribbean_stud.json"],
   "requirements_prefixes": ["CS"],
   "contracts": ["contracts/openapi/caribbean_stud.v1.yaml"],

@@ -4,7 +4,9 @@ from casino.core.state_store import load_player_game_state, save_player_game_sta
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_player_id
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import ledger, players
+from casino.core import players
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
 # Import the shared opaque-id helper so debit, spin, credit, and history share one round.
@@ -13,6 +15,8 @@ from casino.core.ids import new_id
 from casino.games.slots import engine
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "slots"
+# Bind every Slots movement to the shared storage-atomic settlement adapter.
+SETTLEMENT = GameSettlementGateway(GAME_ID)
 
 # Define the request_player_id function used by this module.
 def request_player_id(body, query) -> str:
@@ -61,7 +65,7 @@ def register(router):
         # Branch when the following condition is true.
         if cost > 0:
             # Set debit to the value needed for the next operation.
-            debit = ledger.debit(player_id, cost, "SLOTS_SPIN_DEBIT", GAME_ID, round_id, {"active_lines": configuration["active_lines"], "line_bet": configuration["line_bet"], "cost": cost})
+            debit, _debit_replayed = SETTLEMENT.apply_once(player_id=player_id, signed_amount=-cost, transaction_type="SLOTS_SPIN_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=f"{round_id}:{configuration['active_lines']}:{configuration['line_bet']}:{cost}", details={"active_lines": configuration["active_lines"], "line_bet": configuration["line_bet"], "cost": cost})
         # Set result to the value needed for the next operation.
         result = engine.spin(state, active_lines, line_bet, round_id=round_id)
         # Set credit to the value needed for the next operation.
@@ -69,7 +73,7 @@ def register(router):
         # Branch when the following condition is true.
         if result["payout"] > 0:
             # Set credit to the value needed for the next operation.
-            credit = ledger.credit(player_id, result["payout"], "SLOTS_PAYOUT_CREDIT", GAME_ID, result["round_id"], {"wins": result["wins"], "line_payout": result["line_payout"], "scatter_payout": result["scatter_payout"], "progressive_hit": result["progressive_hit"]})
+            credit, _credit_replayed = SETTLEMENT.apply_once(player_id=player_id, signed_amount=result["payout"], transaction_type="SLOTS_PAYOUT_CREDIT", round_id=result["round_id"], action_key=f"{result['round_id']}:settlement", request_fingerprint=f"{result['round_id']}:{result['payout']}", details={"wins": result["wins"], "line_payout": result["line_payout"], "scatter_payout": result["scatter_payout"], "progressive_hit": result["progressive_hit"]})
         # Set bal to the value needed for the next operation.
         bal = players.get_player(player_id)["balance"]
         # Execute this statement as part of the module's documented control flow.

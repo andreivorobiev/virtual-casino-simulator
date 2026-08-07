@@ -15,6 +15,10 @@ GAMES = [game["id"] for game in GAME_CATALOG]
 # Match real import syntax, not substrings, so string literals cannot trip or dodge the gate.
 PY_IMPORT_RE = re.compile(r"^\s*(?:from|import)\s+([a-zA-Z0-9_.]+)")
 JS_IMPORT_RE = re.compile(r"import\s+.*?from\s+['\"]([^'\"]+)['\"]")
+# Match every forbidden game-owned import of the public ledger implementation. (LEDGER-032, TEST-157)
+GAME_LEDGER_IMPORT_RE = re.compile(r"^\s*(?:from\s+casino\.core(?:\.ledger)?\s+import\s+ledger|from\s+casino\.core\.ledger\s+import\s+|import\s+casino\.core\.ledger)\b")
+# Match direct calls through a variable named ledger so aliases cannot preserve the old money boundary. (LEDGER-032, TEST-157)
+DIRECT_GAME_LEDGER_CALL_RE = re.compile(r"\bledger\.(?:debit|credit|debit_once|credit_once)\s*\(")
 
 # Fail on any cross-game Python import: games may share code only through casino.core,
 # and bot strategies must stay behind the controller so games cannot read bot intent.
@@ -32,6 +36,27 @@ def check_python_game_imports(errors):
                         errors.append(f"{path}:{lineno} imports other game module {other}")
                 if "casino.bots.strategies" in imported:
                     errors.append(f"{path}:{lineno} imports bot strategies directly")
+
+
+# Reject game-owned access to ledger mutation functions after the catalog-wide adapter migration. (LEDGER-032, TEST-157)
+def check_game_settlement_boundary(errors):
+    # Inspect every registered game's executable Python sources rather than a hand-maintained list.
+    for game in GAMES:
+        # Walk the complete module because money movement may live in an API or service file.
+        for path in (ROOT / "casino" / "games" / game).rglob("*.py"):
+            # Read the source once so import and call diagnostics share exact line numbers.
+            text = path.read_text(encoding="utf-8")
+            # Check each executable line independently for focused CI output.
+            for lineno, line in enumerate(text.splitlines(), 1):
+                # Ignore comments so historical documentation cannot trip the executable gate.
+                if line.lstrip().startswith("#"):
+                    continue
+                # Require games to obtain money movement only through casino.core.settlement.
+                if GAME_LEDGER_IMPORT_RE.search(line):
+                    errors.append(f"{path}:{lineno} imports the legacy ledger boundary; use GameSettlementGateway")
+                # Reject aliases that still call the old public mutation functions directly.
+                if DIRECT_GAME_LEDGER_CALL_RE.search(line):
+                    errors.append(f"{path}:{lineno} calls the legacy ledger boundary directly; use GameSettlementGateway")
 
 # Match player-visible outcome draws routed through the seedable global Mersenne Twister. (issue #420)
 GLOBAL_RNG_RE = re.compile(r"\brandom\.(shuffle|choice|choices|sample|randint|randrange|random|uniform|betavariate|gauss)\s*\(")
@@ -74,6 +99,8 @@ def check_js_game_imports(errors):
 def main():
     errors = []
     check_python_game_imports(errors)
+    # Enforce the one catalog-wide exactly-once money interface. (LEDGER-032, TEST-157)
+    check_game_settlement_boundary(errors)
     # Enforce CSPRNG-or-injected entropy for every game outcome draw. (issue #420)
     check_game_rng(errors)
     check_js_game_imports(errors)

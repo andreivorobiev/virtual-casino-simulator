@@ -31,6 +31,20 @@ PROTECTED_FIELDS = (
 )
 
 
+# Prove one game module is wired to the shared settlement boundary before certifying it. (LEDGER-032)
+def settlement_boundary(game_id: str) -> str:
+    # Resolve the registered game package without relying on a handwritten cohort table.
+    game_root = ROOT / "casino" / "games" / game_id
+    # Join executable sources so direct and shared-simple game shapes are handled uniformly.
+    source = "\n".join(path.read_text(encoding="utf-8") for path in sorted(game_root.rglob("*.py")))
+    # Accept a direct shared-gateway import or delegation through the shared simple-game core.
+    if "GameSettlementGateway" in source or "SimpleWagerGame" in source:
+        # Publish the exact common owner used by all financial actions.
+        return "casino.core.settlement.GameSettlementGateway"
+    # Fail generation when a registered game can no longer prove the governed interface.
+    raise RuntimeError(f"catalog game {game_id} does not use the shared settlement boundary")
+
+
 # Parse mutation operations from the repository's stable two-space OpenAPI layout.
 def mutation_actions(contract_path: Path) -> list[dict]:
     # Collect explicit method and path pairs in source order.
@@ -104,12 +118,20 @@ def build_matrix() -> dict:
         if not actions:
             # Fail generation with the owning catalog id for a focused repair.
             raise RuntimeError(f"catalog game {game['id']} exposes no certifiable mutation action")
+        # Derive the financial boundary from the registered game's checked-in implementation.
+        game_settlement_boundary = settlement_boundary(game["id"])
+        # Bind every financial action assertion to the exact implementation-derived owner.
+        for action in actions:
+            # Replace the generic historical label with the common settlement interface.
+            action["storage_transaction"] = game_settlement_boundary
         # Add the complete game-level authority and evidence record.
         games.append({
             # Preserve the module-owned catalog identity.
             "game_id": game["id"],
             # Link the inventory to its frozen public contract.
             "contract": contract,
+            # Record the source-proven common money interface for this exact catalog module.
+            "settlement_interface": game_settlement_boundary,
             # Inventory every discovered state-changing action explicitly.
             "actions": actions,
             # Require all hostile-client categories for every registered game.
@@ -138,7 +160,7 @@ def build_matrix() -> dict:
             "identity": "authenticated_server_session",  # Bind identity to authentication middleware.
             "legal_action_and_turn": "server_game_service",  # Bind legal state changes to the service.
             "rng_outcome_and_payout": "server_game_engine",  # Bind random results and math to the engine.
-            "wallet_and_ledger": "server_storage_transaction_and_ledger",  # Bind money to storage and ledger.
+            "wallet_and_ledger": "casino.core.settlement.GameSettlementGateway",  # Bind money to the source-proven shared adapter.
             "receipt": "server_response_projection",  # Bind visible results to the server response.
         },
         # Include only games registered on the protected-main catalog used for this certification.

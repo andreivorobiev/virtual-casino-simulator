@@ -2,12 +2,10 @@
 
 # Import cryptographic randomness for production dice rolls.
 import secrets
-# Import one process-wide lock for local exactly-once ledger checks.
-import threading
 # Import shared clock helper for stable settled timestamps.
 from casino.core.clock import utc_now
-# Import the only approved play-token mutation service.
-from casino.core import ledger
+# Import the one approved play-token settlement compatibility boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistence helpers without changing shared storage code.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import public conflict and validation errors for retry enforcement.
@@ -17,47 +15,14 @@ from casino.games.crown_and_anchor import engine
 # Import stable game id and symbol metadata for ledger details and state payloads.
 from casino.games.crown_and_anchor.rules import GAME_ID, symbol_catalog
 
-# Serialize in-process duplicate detection around shared ledger calls.
-_LEDGER_IDEMPOTENCY_LOCK = threading.RLock()
-# Scan a generous player-owned ledger window to recover committed action keys.
-LEDGER_IDEMPOTENCY_SCAN_LIMIT = 1000000
 # Bound caller-supplied idempotency identities before persistence.
 MAX_CLIENT_REQUEST_ID_LENGTH = 128
 
 
-# Adapt the existing ledger service into an apply-once action gateway.
-class CoreLedgerGateway:
-    # Find one previously committed ledger action for this authenticated player.
-    def find(self, player_id: str, action_key: str) -> dict | None:
-        # Read only this player's ledger rows so cross-session details stay private.
-        rows = ledger.read_recent(player_id, LEDGER_IDEMPOTENCY_SCAN_LIMIT)
-        # Scan newest-first for the deterministic action identity.
-        return next((row for row in reversed(rows) if (row.get("details") or {}).get("idempotency_key") == action_key), None)
-
-    # Commit one debit or credit exactly once for the supported local runtime.
-    def apply_once(self, *, player_id: str, amount: float, transaction_type: str, round_id: str, action_key: str, details: dict) -> tuple[dict, bool]:
-        # Serialize the read-before-write sequence in this process.
-        with _LEDGER_IDEMPOTENCY_LOCK:
-            # Resolve an existing movement before attempting a balance mutation.
-            existing = self.find(player_id, action_key)
-            # Branch when a retry already committed this movement.
-            if existing:
-                # Reject an action-key collision with a different signed amount or movement type.
-                if round(float(existing.get("amount", 0)), 2) != round(float(amount), 2) or existing.get("transaction_type") != transaction_type:
-                    # Fail closed instead of returning unrelated wallet evidence.
-                    raise ConflictError("Crown and Anchor ledger action identity conflicts with an existing event")
-                # Reject semantic reuse under the same action identity.
-                if (existing.get("details") or {}).get("request_fingerprint") != details.get("request_fingerprint"):
-                    # Preserve immutable idempotency for caller retries.
-                    raise ConflictError("Crown and Anchor client_request_id was already used with different wagers")
-                # Return the original event and replay evidence.
-                return existing, True
-            # Add the action identity to durable structured details.
-            event_details = {**details, "idempotency_key": action_key}
-            # Route debits and credits through the shared ledger only.
-            event = ledger.debit(player_id, abs(amount), transaction_type, GAME_ID, round_id, event_details) if amount < 0 else ledger.credit(player_id, amount, transaction_type, GAME_ID, round_id, event_details)
-            # Return the committed event and non-replay evidence.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old idempotency key beside canonical action evidence.
+    return GameSettlementGateway(GAME_ID, "idempotency_key", **kwargs)
 
 
 # Coordinate player state, dice entropy, and exactly-once ledger movement.

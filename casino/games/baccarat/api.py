@@ -4,7 +4,9 @@ from casino.core.state_store import load_player_game_state, save_player_game_sta
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import apply_rule_updates, require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import ledger, players, logger
+from casino.core import players, logger
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
 # Import required dependency so this module can use its public functions or constants.
@@ -14,6 +16,8 @@ from casino.errors import ConflictError
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "baccarat"
+# Bind every Baccarat movement to the shared storage-atomic settlement adapter.
+SETTLEMENT = GameSettlementGateway(GAME_ID, "bet_id")
 
 # Declare the legal domain of every client-settable table rule so the settings route cannot persist a
 # value that settle_bet or make_shoe would then trust. (issue #404)
@@ -50,7 +54,7 @@ def settle_committed_coup(player_id: str, state: dict, coup: dict):
         # Branch when the following condition is true.
         if res["credit"] > 0:
             # Commit or replay the payout under the durable placement-time bet action identity. (issue #403)
-            credit, replayed = ledger.credit_once(b["player_id"], res["credit"], "BACCARAT_SETTLEMENT_CREDIT", f"{b['bet_id']}:settlement", GAME_ID, coup["round_id"], {"bet_id": b["bet_id"], "outcome": res["outcome"]})
+            credit, replayed = SETTLEMENT.apply_once(player_id=b["player_id"], signed_amount=res["credit"], transaction_type="BACCARAT_SETTLEMENT_CREDIT", action_key=f"{b['bet_id']}:settlement", round_id=coup["round_id"], request_fingerprint=f"{b['bet_id']}:{res['outcome']}:{res['credit']}", details={"bet_id": b["bet_id"], "outcome": res["outcome"]})
         # Append history only for the committing call so raced or recovered retries cannot duplicate rows. (issue #403)
         if not replayed:
             # Set bal to the value needed for the next operation.
@@ -127,7 +131,7 @@ def register(router):
         # Set item to the value needed for the next operation.
         item = engine.add_bet(state, player_id, body.get("bet_type"), amount)
         # Debit the stake under its storage-atomic placement-time action identity so a recovered replay cannot double-charge. (issue #555)
-        ledger.debit_once(player_id, amount, "BACCARAT_BET_PLACED", f"{item['bet_id']}:wager", GAME_ID, None, {"bet_id": item["bet_id"], "bet_type": item["type"]})
+        SETTLEMENT.apply_once(player_id=player_id, signed_amount=-amount, transaction_type="BACCARAT_BET_PLACED", action_key=f"{item['bet_id']}:wager", round_id=item["bet_id"], request_fingerprint=f"{item['bet_id']}:{item['type']}:{amount}", details={"bet_id": item["bet_id"], "bet_type": item["type"]})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
@@ -146,7 +150,7 @@ def register(router):
         # Set item to the value needed for the next operation.
         item = engine.remove_bet(state, bet_id, player_id)
         # Refund the durable bet exactly once so a replayed clear returns the original event instead of minting a second refund. (issue #555)
-        ledger.credit_once(player_id, item["amount"], "BACCARAT_BET_REFUND", f"{bet_id}:refund", GAME_ID, None, {"bet_id": bet_id})
+        SETTLEMENT.apply_once(player_id=player_id, signed_amount=item["amount"], transaction_type="BACCARAT_BET_REFUND", action_key=f"{bet_id}:refund", round_id=bet_id, request_fingerprint=f"{bet_id}:refund:{item['amount']}", details={"bet_id": bet_id})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.

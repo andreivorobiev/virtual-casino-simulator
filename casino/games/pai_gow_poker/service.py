@@ -14,9 +14,11 @@ import re
 import threading
 
 # Import the only approved player-balance mutation service.
-from casino.core import ledger, players
+from casino.core import players
 # Import the shared audit clock used by other game modules.
 from casino.core.clock import utc_now
+# Route every player-wallet movement through the shared exactly-once settlement boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistent state without editing shared storage code.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import public conflict, lookup, and validation errors for route boundaries.
@@ -29,7 +31,6 @@ GAME_ID = engine.GAME_ID
 # Bound client retry ids to log-safe characters and a conservative length.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local history to preserve retry recovery for the supported simulator.
-LEDGER_SCAN_LIMIT = 1_000_000
 # Serialize action-id lookup and ledger writes inside the one-process server.
 _ACTION_LOCK = threading.RLock()
 
@@ -52,52 +53,10 @@ def request_fingerprint(payload: dict) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
-# Adapt the shared ledger into a game action-id apply-once interface.
-class CoreLedgerGateway:
-    # Capture injectable shared-ledger functions for focused tests.
-    def __init__(self, *, debit=ledger.debit, credit=ledger.credit, read_recent=ledger.read_recent):
-        # Store the only allowed wager debit operation.
-        self._debit = debit
-        # Store the only allowed returned-token credit operation.
-        self._credit = credit
-        # Store player-scoped ledger lookup for crash recovery.
-        self._read_recent = read_recent
-
-    # Find a committed game action for one authenticated player.
-    def find(self, player_id: str, action_id: str):
-        # Read only the current player's ledger rows.
-        rows = self._read_recent(player_id, LEDGER_SCAN_LIMIT)
-        # Search newest-first for this game and stable action detail.
-        return next((row for row in reversed(rows) if row.get("game") == GAME_ID and (row.get("details") or {}).get("pai_gow_poker_action_id") == action_id), None)
-
-    # Commit or recover one debit or returned-token credit exactly once locally.
-    def apply_once(self, *, player_id: str, signed_amount: float, transaction_type: str, round_id: str, action_id: str, fingerprint: str, details: dict) -> tuple[dict, bool]:
-        # Protect the read-before-write sequence from concurrent duplicate requests.
-        with _ACTION_LOCK:
-            # Find any action already committed under this player and game.
-            existing = self.find(player_id, action_id)
-            # Reuse only an event whose complete semantic identity matches.
-            if existing is not None:
-                # Compare movement, route stage, round, and semantic request content.
-                matches = round(float(existing.get("amount", 0)), 2) == round(float(signed_amount), 2) and existing.get("transaction_type") == transaction_type and existing.get("round_id") == round_id and (existing.get("details") or {}).get("request_fingerprint") == fingerprint
-                # Reject one client identity reused for a different action.
-                if not matches:
-                    # Fail closed before any second balance mutation.
-                    raise ConflictError("action_id was already used for a different Pai Gow Poker action")
-                # Return immutable ledger proof and replay evidence.
-                return existing, True
-            # Add the stable action and fingerprint to complete audit details.
-            event_details = {**details, "pai_gow_poker_action_id": action_id, "request_fingerprint": fingerprint}
-            # Route negative amounts through the approved debit service.
-            if signed_amount < 0:
-                # Commit the positive magnitude as one shared-ledger debit.
-                event = self._debit(player_id, abs(signed_amount), transaction_type, GAME_ID, round_id, event_details)
-            # Route positive returned tokens through the approved credit service.
-            else:
-                # Commit the returned stake, push, or payout as one shared-ledger credit.
-                event = self._credit(player_id, signed_amount, transaction_type, GAME_ID, round_id, event_details)
-            # Return the new committed event and non-replay evidence.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old Pai Gow key beside canonical action evidence.
+    return GameSettlementGateway(GAME_ID, "pai_gow_poker_action_id", **kwargs)
 
 
 # Coordinate player state, deterministic cards, and retry-safe ledger movements.

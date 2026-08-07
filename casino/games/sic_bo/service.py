@@ -7,10 +7,12 @@ import secrets
 # Import one process-wide reentrant lock for state and ledger recovery sequences.
 import threading
 
-# Import the only approved shared balance-movement service and read-only players facade.
-from casino.core import ledger, players
+# Import the read-only players facade without a game-owned ledger mutation boundary.
+from casino.core import players
 # Import the shared clock for persisted round lifecycle timestamps.
 from casino.core.clock import utc_now
+# Import the one approved play-token settlement compatibility boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistence without changing shared storage code.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import public conflict and validation errors for route envelopes.
@@ -22,55 +24,14 @@ from casino.games.sic_bo.rules import GAME_ID
 
 # Serialize state preparation, ledger proof, movement, and archival in this local process.
 _SETTLEMENT_LOCK = threading.RLock()
-# Scan a generous player-owned window so restart retries can recover old action keys.
-LEDGER_IDEMPOTENCY_SCAN_LIMIT = 1000000
 # Restrict client action identities to bounded log-safe characters.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
-# Adapt the existing shared ledger into a deterministic apply-once interface.
-class CoreLedgerGateway:
-    # Find one committed action key in only the authenticated player's ledger.
-    def find(self, player_id: str, action_key: str) -> dict | None:
-        # Read the player-scoped append-only history without inspecting another wallet.
-        events = ledger.read_recent(player_id, LEDGER_IDEMPOTENCY_SCAN_LIMIT)
-        # Scan newest-first for the exact game-owned action identity.
-        return next((event for event in reversed(events) if (event.get("details") or {}).get("sic_bo_action_id") == action_key), None)
-
-    # Commit one signed debit or credit exactly once in the supported local process.
-    def apply_once(self, *, player_id: str, amount: float, transaction_type: str, round_id: str, action_key: str, details: dict) -> tuple[dict, bool]:
-        # Serialize the read-before-write sequence against concurrent duplicate requests.
-        with _SETTLEMENT_LOCK:
-            # Look up a prior committed event before issuing any token movement.
-            existing = self.find(player_id, action_key)
-            # Validate and reuse a prior event when the action was already committed.
-            if existing is not None:
-                # Require the original game and round dimensions to match this recovery attempt.
-                if existing.get("game") != GAME_ID or existing.get("round_id") != round_id:
-                    # Fail closed rather than accepting a cross-game or cross-round collision.
-                    raise ConflictError("Sic Bo ledger action identity conflicts with an existing event")
-                # Require the signed amount and transaction category to remain identical.
-                if round(float(existing.get("amount", 0)), 2) != round(float(amount), 2) or existing.get("transaction_type") != transaction_type:
-                    # Prevent one action key from authorizing different token movement.
-                    raise ConflictError("Sic Bo ledger action identity conflicts with an existing event")
-                # Require semantic wager content to match even when totals happen to be equal.
-                if (existing.get("details") or {}).get("request_fingerprint") != details.get("request_fingerprint"):
-                    # Reject conflicting reuse of one caller action identity.
-                    raise ConflictError("Sic Bo action_id was already used with different wagers")
-                # Return the original event plus explicit replay evidence.
-                return existing, True
-            # Add the stable action identity before the shared atomic ledger mutation.
-            event_details = {**details, "sic_bo_action_id": action_key}
-            # Route a negative signed amount through the shared debit helper.
-            if amount < 0:
-                # Commit the aggregate wager without touching a balance directly.
-                event = ledger.debit(player_id, abs(amount), transaction_type, GAME_ID, round_id, event_details)
-            # Route a positive signed amount through the shared credit helper.
-            else:
-                # Commit the aggregate returned credits after results are known.
-                event = ledger.credit(player_id, amount, transaction_type, GAME_ID, round_id, event_details)
-            # Return the new event and non-replay evidence.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old Sic Bo key beside canonical action evidence.
+    return GameSettlementGateway(GAME_ID, "sic_bo_action_id", **kwargs)
 
 
 # Coordinate player state, dice entropy, and exactly-once settlement.

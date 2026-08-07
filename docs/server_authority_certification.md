@@ -4,9 +4,11 @@ Issue #191 treats every browser, PWA, Android, and iOS client as an untrusted pr
 
 ## Machine-readable inventory
 
-`contracts/compatibility/server-authority-matrix.json` is generated from the canonical registered catalog and each module-owned OpenAPI v1 contract. It explicitly lists every state-changing method/path pair for each currently registered game (the exact total is `catalog_game_count` in that generated artifact) and assigns its client-intent, server-validation, engine-outcome, storage/ledger, and response-projection owners.
+`contracts/compatibility/server-authority-matrix.json` is generated from the canonical registered catalog, each module-owned OpenAPI v1 contract, and each checked-in game implementation. It explicitly lists every state-changing method/path pair for each currently registered game (the exact total is `catalog_game_count` in that generated artifact) and assigns its client-intent, server-validation, engine-outcome, shared settlement interface, and response-projection owners.
 
 Run `python scripts/generate_server_authority_matrix.py` after an authorized catalog or contract mutation. `python scripts/validate_contracts.py` and `API-SEC-001` fail closed when the checked artifact differs from the catalog, a game lacks a mutation action, evidence disappears, or the protected-field policy drifts.
+
+Issue #430 additionally requires every catalog game to prove `casino.core.settlement.GameSettlementGateway` as its financial boundary. Matrix generation fails when a registered module neither imports the gateway nor delegates through `SimpleWagerGame`, and `API-GAMECORE-004` rejects direct game imports or calls to ledger mutation functions.
 
 Texas Hold'em Practice Table extends the accepted certification with its state-changing hand and decision routes, focused session/turn/outcome/ledger/replay evidence, funded-opponent Admin audit, authoritative client-refresh behavior, and catalog-driven Long Suite coverage.
 

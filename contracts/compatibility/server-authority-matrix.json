@@ -73,13 +73,14 @@
     "identity": "authenticated_server_session",
     "legal_action_and_turn": "server_game_service",
     "rng_outcome_and_payout": "server_game_engine",
-    "wallet_and_ledger": "server_storage_transaction_and_ledger",
+    "wallet_and_ledger": "casino.core.settlement.GameSettlementGateway",
     "receipt": "server_response_projection"
   },
   "games": [
     {
       "game_id": "roulette",
       "contract": "contracts/openapi/roulette.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -87,7 +88,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -96,7 +97,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -105,7 +106,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -114,7 +115,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -123,7 +124,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -132,7 +133,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -141,7 +142,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -165,6 +166,7 @@
     {
       "game_id": "slots",
       "contract": "contracts/openapi/slots.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -172,7 +174,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -196,6 +198,7 @@
     {
       "game_id": "keno",
       "contract": "contracts/openapi/keno.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -203,7 +206,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -212,7 +215,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -221,7 +224,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -245,6 +248,7 @@
     {
       "game_id": "bingo",
       "contract": "contracts/openapi/bingo.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -252,7 +256,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -261,7 +265,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -270,7 +274,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -279,7 +283,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -303,6 +307,7 @@
     {
       "game_id": "blackjack",
       "contract": "contracts/openapi/blackjack.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -310,7 +315,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -319,7 +324,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -328,7 +333,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -337,7 +342,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -346,7 +351,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -355,7 +360,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -364,7 +369,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -373,7 +378,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -382,7 +387,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -406,6 +411,7 @@
     {
       "game_id": "baccarat",
       "contract": "contracts/openapi/baccarat.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -413,7 +419,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -422,7 +428,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -431,7 +437,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -440,7 +446,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -464,6 +470,7 @@
     {
       "game_id": "multi_hand_video_poker",
       "contract": "contracts/openapi/multi_hand_video_poker.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -471,7 +478,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -480,7 +487,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -489,7 +496,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -513,6 +520,7 @@
     {
       "game_id": "casino_war",
       "contract": "contracts/openapi/casino_war.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -520,7 +528,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -529,7 +537,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -538,7 +546,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -562,6 +570,7 @@
     {
       "game_id": "big_six_wheel",
       "contract": "contracts/openapi/big_six_wheel.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -569,7 +578,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -593,6 +602,7 @@
     {
       "game_id": "dragon_tiger",
       "contract": "contracts/openapi/dragon_tiger.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -600,7 +610,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -624,6 +634,7 @@
     {
       "game_id": "red_dog",
       "contract": "contracts/openapi/red_dog.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -631,7 +642,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -640,7 +651,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -649,7 +660,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -673,6 +684,7 @@
     {
       "game_id": "hi_lo",
       "contract": "contracts/openapi/hi_lo.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -680,7 +692,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -689,7 +701,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -713,6 +725,7 @@
     {
       "game_id": "scratch_cards",
       "contract": "contracts/openapi/scratch_cards.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -720,7 +733,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -729,7 +742,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -753,6 +766,7 @@
     {
       "game_id": "sic_bo",
       "contract": "contracts/openapi/sic_bo.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -760,7 +774,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -784,6 +798,7 @@
     {
       "game_id": "chuck_a_luck",
       "contract": "contracts/openapi/chuck_a_luck.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -791,7 +806,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -815,6 +830,7 @@
     {
       "game_id": "craps",
       "contract": "contracts/openapi/craps.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -822,7 +838,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -831,7 +847,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -855,6 +871,7 @@
     {
       "game_id": "jacks_or_better_video_poker",
       "contract": "contracts/openapi/jacks_or_better_video_poker.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -862,7 +879,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -871,7 +888,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -880,7 +897,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -904,6 +921,7 @@
     {
       "game_id": "deuces_wild_video_poker",
       "contract": "contracts/openapi/deuces_wild_video_poker.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -911,7 +929,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -920,7 +938,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -929,7 +947,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -953,6 +971,7 @@
     {
       "game_id": "three_card_poker",
       "contract": "contracts/openapi/three_card_poker.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -960,7 +979,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -969,7 +988,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -993,6 +1012,7 @@
     {
       "game_id": "texas_holdem_practice_table",
       "contract": "contracts/openapi/texas_holdem_practice_table.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1000,7 +1020,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1009,7 +1029,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1033,6 +1053,7 @@
     {
       "game_id": "crown_and_anchor",
       "contract": "contracts/openapi/crown_and_anchor.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1040,7 +1061,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1064,6 +1085,7 @@
     {
       "game_id": "over_under_7",
       "contract": "contracts/openapi/over_under_7.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1071,7 +1093,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1095,6 +1117,7 @@
     {
       "game_id": "plinko",
       "contract": "contracts/openapi/plinko.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1102,7 +1125,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1126,6 +1149,7 @@
     {
       "game_id": "fan_tan",
       "contract": "contracts/openapi/fan_tan.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1133,7 +1157,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1157,6 +1181,7 @@
     {
       "game_id": "andar_bahar",
       "contract": "contracts/openapi/andar_bahar.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1164,7 +1189,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1188,6 +1213,7 @@
     {
       "game_id": "acey_deucey",
       "contract": "contracts/openapi/acey_deucey.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1195,7 +1221,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1204,7 +1230,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1213,7 +1239,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1237,6 +1263,7 @@
     {
       "game_id": "caribbean_stud",
       "contract": "contracts/openapi/caribbean_stud.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1244,7 +1271,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1253,7 +1280,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1262,7 +1289,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1286,6 +1313,7 @@
     {
       "game_id": "let_it_ride",
       "contract": "contracts/openapi/let_it_ride.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1293,7 +1321,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1302,7 +1330,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1311,7 +1339,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1335,6 +1363,7 @@
     {
       "game_id": "casino_holdem",
       "contract": "contracts/openapi/casino_holdem.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1342,7 +1371,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1351,7 +1380,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1375,6 +1404,7 @@
     {
       "game_id": "joker_poker",
       "contract": "contracts/openapi/joker_poker.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1382,7 +1412,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1391,7 +1421,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1400,7 +1430,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1424,6 +1454,7 @@
     {
       "game_id": "color_wheel",
       "contract": "contracts/openapi/color_wheel.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1431,7 +1462,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1455,6 +1486,7 @@
     {
       "game_id": "pai_gow_poker",
       "contract": "contracts/openapi/pai_gow_poker.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1462,7 +1494,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1471,7 +1503,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1495,6 +1527,7 @@
     {
       "game_id": "poker_dice",
       "contract": "contracts/openapi/poker_dice.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1502,7 +1535,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1526,6 +1559,7 @@
     {
       "game_id": "boule",
       "contract": "contracts/openapi/boule.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1533,7 +1567,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1557,6 +1591,7 @@
     {
       "game_id": "faro",
       "contract": "contracts/openapi/faro.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1564,7 +1599,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1588,6 +1623,7 @@
     {
       "game_id": "trente_et_quarante",
       "contract": "contracts/openapi/trente_et_quarante.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1595,7 +1631,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1619,6 +1655,7 @@
     {
       "game_id": "pachinko",
       "contract": "contracts/openapi/pachinko.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1626,7 +1663,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1650,6 +1687,7 @@
     {
       "game_id": "coin_pusher",
       "contract": "contracts/openapi/coin_pusher.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1657,7 +1695,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1681,6 +1719,7 @@
     {
       "game_id": "marble_race",
       "contract": "contracts/openapi/marble_race.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1688,7 +1727,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1712,6 +1751,7 @@
     {
       "game_id": "pattern_draw",
       "contract": "contracts/openapi/pattern_draw.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1719,7 +1759,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1743,6 +1783,7 @@
     {
       "game_id": "lucky_grid",
       "contract": "contracts/openapi/lucky_grid.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1750,7 +1791,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1774,6 +1815,7 @@
     {
       "game_id": "daily_draw_lab",
       "contract": "contracts/openapi/daily_draw_lab.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1781,7 +1823,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1805,6 +1847,7 @@
     {
       "game_id": "four_card_poker",
       "contract": "contracts/openapi/four_card_poker.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1812,7 +1855,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1821,7 +1864,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1845,6 +1888,7 @@
     {
       "game_id": "double_bonus_video_poker",
       "contract": "contracts/openapi/double_bonus_video_poker.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1852,7 +1896,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1861,7 +1905,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1885,6 +1929,7 @@
     {
       "game_id": "mississippi_stud",
       "contract": "contracts/openapi/mississippi_stud.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1892,7 +1937,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1901,7 +1946,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],
@@ -1925,6 +1970,7 @@
     {
       "game_id": "teen_patti",
       "contract": "contracts/openapi/teen_patti.v1.yaml",
+      "settlement_interface": "casino.core.settlement.GameSettlementGateway",
       "actions": [
         {
           "method": "POST",
@@ -1932,7 +1978,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         },
         {
@@ -1941,7 +1987,7 @@
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
-          "storage_transaction": "storage_and_ledger_when_financial",
+          "storage_transaction": "casino.core.settlement.GameSettlementGateway",
           "response_projection": "server_authoritative_projection"
         }
       ],

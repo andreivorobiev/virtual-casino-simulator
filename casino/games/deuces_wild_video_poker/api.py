@@ -11,10 +11,12 @@ import re
 # Import a process-local lock for exactly-once simulator settlement paths.
 import threading
 
-# Import shared ledger and player services without exposing balance mutation to the game engine.
-from casino.core import ledger, players
+# Import the read-only player service without exposing a game-owned mutation boundary.
+from casino.core import players
 # Import the shared clock for persisted round lifecycle timestamps.
 from casino.core.clock import utc_now
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import the shared authenticated-player resolver used before every game dispatch.
 from casino.core.request_player import resolve_authenticated_player
 # Import player-scoped persistence so authenticated users never share game state.
@@ -57,17 +59,19 @@ def request_player_id(body: dict, query: dict, context: dict | None = None) -> s
 # Coordinate reload-safe game state with exactly-once ledger-only settlement.
 class DeucesWildVideoPokerService:
     # Store production dependencies while allowing isolated tests to inject in-memory ports.
-    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=ledger.debit, credit=ledger.credit, read_ledger=ledger.read_recent, get_player=players.get_player, clock=utc_now, seed_factory=None):
+    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, seed_factory=None):
         # Store the player-game state loader.
         self._load_state = load_state
         # Store the player-game state writer.
         self._save_state = save_state
-        # Store the only allowed wager debit operation.
-        self._debit = debit
-        # Store the only allowed payout credit operation.
-        self._credit = credit
-        # Store ledger history lookup for crash-window recovery.
-        self._read_ledger = read_ledger
+        # Bind production and injected test seams behind the canonical settlement adapter.
+        settlement = GameSettlementGateway(GAME_ID, IDEMPOTENCY_DETAIL, debit=debit, credit=credit, read_recent=read_ledger)
+        # Preserve the historical callback shape while routing through the shared adapter.
+        self._debit = settlement.debit
+        # Preserve the historical credit shape while routing through the shared adapter.
+        self._credit = settlement.credit
+        # Preserve bounded proof reads through the adapter-owned ledger seam.
+        self._read_ledger = settlement.read_recent
         # Store read-only player lookup for response payloads.
         self._get_player = get_player
         # Store the clock seam for deterministic focused tests.
@@ -120,7 +124,7 @@ class DeucesWildVideoPokerService:
         # Read structured details without assuming unrelated historical rows provide them.
         details = event.get("details") or {}
         # Compare game, round, type, signed amount, key, and semantic fingerprint together.
-        matches = event.get("game") == GAME_ID and event.get("round_id") == round_state["round_id"] and event.get("transaction_type") == transaction_type and round(float(event.get("amount", 0)), 2) == round(float(signed_amount), 2) and details.get(IDEMPOTENCY_DETAIL) == action_key and details.get("request_fingerprint") == fingerprint
+        matches = event.get("game") == GAME_ID and event.get("round_id") == round_state["round_id"] and event.get("transaction_type") == transaction_type and round(float(event.get("amount", 0)), 2) == round(float(signed_amount), 2) and details.get(IDEMPOTENCY_DETAIL) == action_key and details.get("legacy_request_fingerprint", details.get("request_fingerprint")) == fingerprint
         # Reject lookalike or conflicting rows instead of accepting weak ledger proof.
         if not matches:
             # Preserve action identity across every material settlement field.

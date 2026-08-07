@@ -14,7 +14,7 @@ Each round accepts a required bounded `action_id` plus a canonical map of positi
 ## Session, ledger, and reload invariants
 
 - The handler prefers `resolved_player_id` and `bound_player_id` from authenticated request context. Caller body or query IDs remain compatibility-only fallbacks and cannot override a session binding.
-- Every token movement calls `casino.core.ledger`; game code never mutates balances or storage-provider balance fields.
+- Every token movement calls `casino.core.settlement.GameSettlementGateway`; game code never imports the ledger implementation or mutates balances or storage-provider balance fields.
 - Wager and payout events use deterministic `sic_bo_action_id` values derived from a server-bounded round ID.
 - Reusing `action_id` with the same normalized wagers returns the same dice and settlement. Reusing it with different wagers fails closed.
 - Private dice and prepared state persist before debit. Dice remain hidden from the public state shape until ledger proof of the wager exists.

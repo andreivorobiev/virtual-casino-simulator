@@ -26,7 +26,7 @@ At settlement:
 
 Every start and decision command requires an `action_id`. Identical retries return the same logical hand, including after that hand leaves the 20-item public history window; compact sanitized terminal snapshots preserve durable request receipts without retaining every full private hand. Reusing one id for another wager, hand, or action fails closed. The API never accepts a card seed; deterministic cards exist only through injected focused-test dependencies.
 
-Human actions use `ledger.debit_once` and `ledger.credit_once`; opponent movements use `casino.core.practice_accounts`, which consumes the same accepted issue #190 storage transaction. Exact semantics replay the original ledger event, changed key reuse fails closed, and the accepted JSON/MySQL evidence covers restart, lost-response, and process concurrency.
+Human actions use `casino.core.settlement.GameSettlementGateway`; opponent movements use `casino.core.practice_accounts`, which consumes the same accepted issue #190 storage transaction. Exact semantics replay the original ledger event, changed key reuse fails closed, and the accepted JSON/MySQL evidence covers restart, lost-response, and process concurrency.
 
 ## Session and privacy invariants
 

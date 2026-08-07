@@ -11,10 +11,12 @@ import re
 # Import a process-local lock for prepared state and ledger reconciliation.
 import threading
 
-# Import the only shared wallet and player services allowed by policy.
-from casino.core import ledger, players
+# Import the read-only player service without a game-owned wallet mutation boundary.
+from casino.core import players
 # Import the shared clock for injectable lifecycle timestamps.
 from casino.core.clock import utc_now
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import stable server-side identifier generation.
 from casino.core.ids import new_id
 # Import player-scoped persistence through the configured storage provider.
@@ -55,35 +57,10 @@ class StateRepository:
         save_player_game_state(GAME_ID, player_id, state)
 
 
-# Adapt deterministic engine intents to the shared append-only ledger.
-class LedgerAdapter:
-    # Find one previously committed intent for crash recovery.
-    def find_intent(self, intent: dict):
-        # Read a large bounded player window because a pending action may outlive recent UI history.
-        events = ledger.read_recent(intent["player_id"], 1_000_000)
-        # Inspect newest events first as returned by the shared provider.
-        for event in events:
-            # Normalize optional historical details before matching.
-            details = event.get("details") or {}
-            # Match every ownership dimension and the deterministic movement identifier.
-            if event.get("player_id") == intent["player_id"] and event.get("game") == intent["game"] and event.get("round_id") == intent["round_id"] and event.get("transaction_type") == intent["transaction_type"] and details.get("three_card_poker_action_id") == intent["action_id"]:
-                # Return the committed append-only proof.
-                return event
-        # Report that this intent still needs committing.
-        return None
-
-    # Commit exactly one prepared debit or credit.
-    def transact(self, intent: dict) -> dict:
-        # Route debit instructions through insufficient-funds validation.
-        if intent["direction"] == "debit":
-            # Return the committed initial or Play wager event.
-            return ledger.debit(intent["player_id"], intent["amount"], intent["transaction_type"], intent["game"], intent["round_id"], intent["details"])
-        # Route payout instructions through the positive-credit path.
-        if intent["direction"] == "credit":
-            # Return the committed aggregate payout event.
-            return ledger.credit(intent["player_id"], intent["amount"], intent["transaction_type"], intent["game"], intent["round_id"], intent["details"])
-        # Reject malformed internal intent directions.
-        raise ValidationError("Three Card Poker ledger direction is invalid")
+# Construct the shared settlement gateway while retaining the controller seam name.
+def LedgerAdapter():
+    # Preserve the old Three Card Poker field beside canonical action evidence.
+    return GameSettlementGateway(GAME_ID, "three_card_poker_action_id")
 
 
 # Coordinate pure engine transitions, durable state, and ledger replay.

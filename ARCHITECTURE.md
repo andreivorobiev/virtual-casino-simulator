@@ -143,18 +143,14 @@ committed **inside** the wager's ledger row, so a retry after a lost response re
 outcome instead of redrawing it, and settlement uses storage-atomic `debit_once`/`credit_once` keyed
 by a durable action id.
 
-> **Known gap.** The six original games (roulette, slots, blackjack, baccarat, keno, bingo) predate
-> this core. Five of those games (roulette, blackjack, baccarat, keno, and bingo) have committed
-> settlement and refund credits through storage-atomic exactly-once action keys keyed on
-> placement-durable identities since #403, and **keno and baccarat** now also
-> commit each round's entropy into the player's game-state document before any credit — the
-> multi-wager adaptation of the core's wager-row commitment — so an interrupted or repeated draw or
-> deal replays the committed outcome under its original round identity instead of redrawing (#555).
-> The remaining gaps are tracked in #430: full `simple_game.py` adoption requires a client-supplied
-> request id that the frozen v1 contracts do not carry, so wager placement in all six still cannot
-> deduplicate client retries; slots' settlement credit is still a plain `ledger.credit`; blackjack
-> moves money mid-round through plain debits with compensating refunds; and bingo's multi-wallet
-> competitor field sits outside the single-wallet core. New games must use the shared core.
+> **Settlement boundary.** Issue #430 converges all 46 registered games, including the six original
+> games, on `casino.core.settlement.GameSettlementGateway`. Production game modules cannot import or
+> call ledger mutation functions directly. The gateway preserves each frozen v1 API and existing
+> wager/reveal timing while delegating signed actions to the storage-atomic `SettlementAdapter`.
+> Canonical action, fingerprint, and round evidence is written beside one-release legacy detail keys;
+> historical rows remain immutable. The catalog-derived module-boundary gate and generated
+> server-authority matrix prevent a future game from introducing another money interface. See
+> `docs/settlement_interface.md` for the compatibility and deprecation policy.
 
 ## Server authority
 

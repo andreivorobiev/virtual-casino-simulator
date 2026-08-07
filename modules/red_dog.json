@@ -1,6 +1,6 @@
 {
   "module": "red_dog",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "paths": [
     "casino/games/red_dog/",
     "web/games/red_dog.js",

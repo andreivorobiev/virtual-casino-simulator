@@ -4,8 +4,6 @@
 import copy
 # Import the dependency-free standard unit-test runner.
 import unittest
-# Import scoped monkey-patching for the production shared-ledger adapter test.
-from unittest.mock import patch
 
 # Import public errors used by validation, failure, and conflict assertions.
 from casino.errors import ConflictError, InsufficientFundsError, ValidationError
@@ -112,26 +110,24 @@ class CoreLedgerGatewayTests(unittest.TestCase):
             # Return provider evidence to the adapter.
             return event
 
-        # Replace only the imported shared-ledger functions used by this adapter.
-        with patch("casino.games.sic_bo.service.ledger.read_recent", side_effect=read_recent), patch("casino.games.sic_bo.service.ledger.debit", side_effect=debit):
-            # Build the production adapter against the patched shared facade.
-            gateway = CoreLedgerGateway()
-            # Preserve one semantic request fingerprint in ledger details.
-            details = {"request_fingerprint": "a" * 64, "dice": [1, 2, 3]}
-            # Commit the original aggregate wager debit.
-            first, first_replayed = gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
-            # Retry the exact same movement and action identity.
-            replay, replayed = gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
-            # Verify only one event exists and its original identity is returned.
-            self.assertEqual((1, first, False, True), (len(events), replay, first_replayed, replayed))
-            # Reject a different signed amount behind the committed action identity.
-            with self.assertRaises(ConflictError):
-                # Attempt to enlarge the already committed wager.
-                gateway.apply_once(player_id="session-player", amount=-4, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
-            # Reject the same key when a different round dimension is supplied.
-            with self.assertRaises(ConflictError):
-                # Attempt to transplant the action key into another round.
-                gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_other", action_key="sb_core:wager", details=details)
+        # Build the shared adapter against explicit focused-test seams.
+        gateway = CoreLedgerGateway(read_recent=read_recent, debit=debit)
+        # Preserve one semantic request fingerprint in ledger details.
+        details = {"request_fingerprint": "a" * 64, "dice": [1, 2, 3]}
+        # Commit the original aggregate wager debit.
+        first, first_replayed = gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
+        # Retry the exact same movement and action identity.
+        replay, replayed = gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
+        # Verify only one event exists and its original identity is returned.
+        self.assertEqual((1, first, False, True), (len(events), replay, first_replayed, replayed))
+        # Reject a different signed amount behind the committed action identity.
+        with self.assertRaises(ConflictError):
+            # Attempt to enlarge the already committed wager.
+            gateway.apply_once(player_id="session-player", amount=-4, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
+        # Reject the same key when a different round dimension is supplied.
+        with self.assertRaises(ConflictError):
+            # Attempt to transplant the action key into another round.
+            gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_other", action_key="sb_core:wager", details=details)
 
 
 # Build deterministic service dependencies for each recovery scenario.

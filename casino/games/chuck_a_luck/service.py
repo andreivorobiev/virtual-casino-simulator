@@ -7,10 +7,12 @@ import secrets
 # Import a process-local reentrant lock for exactly-once local actions.
 import threading
 
-# Import shared ledger and player services without mutating balances directly.
-from casino.core import ledger, players
+# Import the shared player service without a game-owned ledger mutation boundary.
+from casino.core import players
 # Import the shared UTC clock for stable settled response timestamps.
 from casino.core.clock import utc_now
+# Import the one approved play-token settlement compatibility boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistence helpers for authenticated session isolation.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import public conflict and validation errors for safe API boundaries.
@@ -22,8 +24,6 @@ from casino.games.chuck_a_luck import engine, rules
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Serialize state, ledger proof, debit, settlement, and state-save operations locally.
 _SETTLEMENT_LOCK = threading.RLock()
-# Scan a generous player-local history window for restart-safe ledger proof.
-LEDGER_PROOF_SCAN_LIMIT = 1_000_000
 # Name the single aggregate wager debit consistently across recovery paths.
 WAGER_TRANSACTION_TYPE = "CHUCK_A_LUCK_WAGER_DEBIT"
 # Name the optional stake-plus-winnings aggregate credit consistently.
@@ -40,61 +40,10 @@ def require_request_id(value) -> str:
     return value
 
 
-# Adapt the shared ledger into a game-owned apply-once action interface.
-class CoreLedgerGateway:
-    # Find one committed action matching every ownership and request dimension.
-    def find(self, *, player_id: str, round_id: str, transaction_type: str, action_key: str, request_fingerprint: str):
-        # Read only the authenticated player's recent ledger rows.
-        rows = ledger.read_recent(player_id, LEDGER_PROOF_SCAN_LIMIT)
-        # Scan newest-first for the deterministic action identity.
-        for event in reversed(rows):
-            # Read event details once for action-key and fingerprint checks.
-            details = event.get("details") or {}
-            # Skip rows that do not match every immutable action dimension.
-            if not (
-                event.get("player_id") == player_id  # Match the authenticated player explicitly.
-                and event.get("game") == rules.GAME_ID  # Prevent another game from satisfying proof.
-                and event.get("round_id") == round_id  # Match the stable player-scoped round.
-                and event.get("transaction_type") == transaction_type  # Match wager or settlement purpose.
-                and details.get("idempotency_key") == action_key  # Match the deterministic action key.
-            ):  # Finish the complete ledger-proof ownership predicate.
-                # Continue until a row satisfies every ownership dimension.
-                continue
-            # Reject the same action identity reused for different wager content.
-            if details.get("request_fingerprint") != request_fingerprint:
-                # Fail closed instead of returning or duplicating a conflicting event.
-                raise ConflictError("Chuck-a-Luck request_id conflicts with committed ledger proof")
-            # Return the fully matched committed ledger event.
-            return event
-        # Report no proof when the requested action has never committed.
-        return None
-
-    # Commit one debit or credit exactly once for the local simulator process.
-    def apply_once(self, *, player_id: str, amount: float, transaction_type: str, round_id: str, action_key: str, request_fingerprint: str, details: dict) -> tuple[dict, bool]:
-        # Serialize the proof-before-write sequence against concurrent duplicate requests.
-        with _SETTLEMENT_LOCK:
-            # Resolve any committed action before issuing another balance movement.
-            existing = self.find(player_id=player_id, round_id=round_id, transaction_type=transaction_type, action_key=action_key, request_fingerprint=request_fingerprint)
-            # Reuse exact committed proof for a normal or crash-recovery retry.
-            if existing is not None:
-                # Reject an action-key collision whose signed amount changed unexpectedly.
-                if round(float(existing.get("amount", 0)), 2) != round(float(amount), 2):
-                    # Fail closed because one action identity cannot move two amounts.
-                    raise ConflictError("Chuck-a-Luck ledger action amount conflicts with committed proof")
-                # Return the original event and explicit replay evidence.
-                return existing, True
-            # Add action and fingerprint proof to the game-owned audit details.
-            event_details = {**details, "idempotency_key": action_key, "request_fingerprint": request_fingerprint}
-            # Route a negative signed amount through the only approved debit service.
-            if amount < 0:
-                # Commit the aggregate wager debit with full player/game/round dimensions.
-                event = ledger.debit(player_id, abs(amount), transaction_type, rules.GAME_ID, round_id, event_details)
-            # Route a positive signed amount through the only approved credit service.
-            else:
-                # Commit the aggregate stake-plus-winnings credit with full audit dimensions.
-                event = ledger.credit(player_id, amount, transaction_type, rules.GAME_ID, round_id, event_details)
-            # Return the newly committed event and non-replay evidence.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old idempotency key beside canonical action evidence.
+    return GameSettlementGateway(rules.GAME_ID, "idempotency_key", **kwargs)
 
 
 # Coordinate authenticated state, server entropy, and exactly-once ledger settlement.

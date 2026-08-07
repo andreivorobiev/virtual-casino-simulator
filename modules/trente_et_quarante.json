@@ -1,6 +1,6 @@
 {
   "module": "trente_et_quarante",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "paths": ["casino/games/trente_et_quarante/", "web/games/trente_et_quarante.js", "web/i18n/en-US/games/trente_et_quarante.json", "web/i18n/ru-RU/games/trente_et_quarante.json"],
   "requirements_prefixes": ["TEQ"],
   "contracts": ["contracts/openapi/trente_et_quarante.v1.yaml"],

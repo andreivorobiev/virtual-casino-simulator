@@ -8,9 +8,11 @@ import re
 import threading
 
 # Import the only approved player-balance mutation service.
-from casino.core import ledger, players
+from casino.core import players
 # Import the shared UTC clock for settled round timestamps.
 from casino.core.clock import utc_now
+# Route every player-wallet movement through the shared exactly-once settlement boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistence without shared storage edits.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import shared conflict and validation errors.
@@ -23,7 +25,6 @@ from casino.games.over_under_7.rules import GAME_ID, paytable
 # Bound client action ids to log-safe characters and a conservative length.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local player history to recover retries after normal restarts.
-LEDGER_SCAN_LIMIT = 1_000_000
 # Serialize read-before-write checks in the local one-process simulator.
 _ACTION_LOCK = threading.RLock()
 
@@ -38,52 +39,10 @@ def require_action_id(value) -> str:
     return value
 
 
-# Adapt the shared ledger into a game action-id apply-once interface.
-class CoreLedgerGateway:
-    # Capture injectable shared-ledger functions for focused tests.
-    def __init__(self, *, debit=ledger.debit, credit=ledger.credit, read_recent=ledger.read_recent):
-        # Store the only allowed wager debit operation.
-        self._debit = debit
-        # Store the only allowed returned-token credit operation.
-        self._credit = credit
-        # Store player-scoped ledger lookup for reload recovery.
-        self._read_recent = read_recent
-
-    # Find one committed game action for an authenticated player.
-    def find(self, player_id: str, action_key: str):
-        # Read only this player's append-only ledger rows.
-        rows = self._read_recent(player_id, LEDGER_SCAN_LIMIT)
-        # Scan newest first for this game's stable action detail.
-        return next((row for row in reversed(rows) if row.get("game") == GAME_ID and (row.get("details") or {}).get("over_under_7_action_key") == action_key), None)
-
-    # Commit or recover one signed token movement exactly once.
-    def apply_once(self, *, player_id: str, signed_amount: float, transaction_type: str, round_id: str, action_key: str, fingerprint: str, details: dict) -> tuple[dict, bool]:
-        # Protect the lookup and append sequence from duplicate concurrent requests.
-        with _ACTION_LOCK:
-            # Resolve any previously committed action for this player and game.
-            existing = self.find(player_id, action_key)
-            # Reuse exact matches and reject semantic conflicts.
-            if existing is not None:
-                # Compare amount, type, round, and semantic request content.
-                matches = round(float(existing.get("amount", 0)), 2) == round(float(signed_amount), 2) and existing.get("transaction_type") == transaction_type and existing.get("round_id") == round_id and (existing.get("details") or {}).get("request_fingerprint") == fingerprint
-                # Reject one action key reused for another movement.
-                if not matches:
-                    # Fail closed before changing the wallet.
-                    raise ConflictError("Over/Under 7 ledger action identity conflicts with an existing event")
-                # Return immutable proof and replay evidence.
-                return existing, True
-            # Add stable action metadata to the ledger details.
-            event_details = {**details, "over_under_7_action_key": action_key, "request_fingerprint": fingerprint}
-            # Route debits through the approved ledger debit service.
-            if signed_amount < 0:
-                # Commit the positive debit magnitude.
-                event = self._debit(player_id, abs(signed_amount), transaction_type, GAME_ID, round_id, event_details)
-            # Route returned tokens through the approved ledger credit service.
-            else:
-                # Commit the returned stake or payout.
-                event = self._credit(player_id, signed_amount, transaction_type, GAME_ID, round_id, event_details)
-            # Return the new committed event and non-replay evidence.
-            return event, False
+# Construct the shared settlement gateway while retaining the historical test seam name.
+def CoreLedgerGateway(**kwargs):
+    # Preserve the old Over/Under key beside canonical action evidence.
+    return GameSettlementGateway(GAME_ID, "over_under_7_action_key", **kwargs)
 
 
 # Coordinate state, dice, and retry-safe ledger movements.

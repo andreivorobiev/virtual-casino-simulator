@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.58.1
-- core: 9.37.0
+- core: 9.37.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -16,57 +16,57 @@ Historical source baseline: 9.1.0
 - admin: 1.16.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.6.1
-- slots: 9.4.3
-- blackjack: 9.1.8
-- baccarat: 9.1.13
-- keno: 9.3.5
-- bingo: 9.3.5
-- multi_hand_video_poker: 1.1.0
-- casino_war: 1.1.0
-- big_six_wheel: 1.1.2
-- red_dog: 1.1.0
-- dragon_tiger: 1.1.0
-- hi_lo: 1.1.1
-- three_card_poker: 1.1.1
-- jacks_or_better_video_poker: 1.1.1
-- deuces_wild_video_poker: 1.1.1
-- scratch_cards: 1.1.0
-- sic_bo: 1.1.2
-- chuck_a_luck: 1.1.1
-- craps: 1.1.0
-- crown_and_anchor: 1.1.2
-- over_under_7: 1.1.2
-- plinko: 1.1.0
-- fan_tan: 1.1.2
-- andar_bahar: 1.1.2
-- acey_deucey: 1.1.1
-- caribbean_stud: 1.1.0
-- let_it_ride: 1.1.0
-- casino_holdem: 1.1.0
-- double_bonus_video_poker: 1.1.1
-- mississippi_stud: 1.1.1
-- joker_poker: 1.1.0
-- texas_holdem_practice_table: 1.1.1
-- pai_gow_poker: 1.1.1
-- teen_patti: 1.1.1
-- tests: 1.69.2
-- docs: 1.67.2
-- contracts: 1.55.1
-- tooling: 1.25.1
+- roulette: 9.6.2
+- slots: 9.4.4
+- blackjack: 9.1.9
+- baccarat: 9.1.14
+- keno: 9.3.6
+- bingo: 9.3.6
+- multi_hand_video_poker: 1.1.1
+- casino_war: 1.1.1
+- big_six_wheel: 1.1.3
+- red_dog: 1.1.1
+- dragon_tiger: 1.1.1
+- hi_lo: 1.1.2
+- three_card_poker: 1.1.2
+- jacks_or_better_video_poker: 1.1.2
+- deuces_wild_video_poker: 1.1.2
+- scratch_cards: 1.1.1
+- sic_bo: 1.1.3
+- chuck_a_luck: 1.1.2
+- craps: 1.1.1
+- crown_and_anchor: 1.1.3
+- over_under_7: 1.1.3
+- plinko: 1.1.1
+- fan_tan: 1.1.3
+- andar_bahar: 1.1.3
+- acey_deucey: 1.1.2
+- caribbean_stud: 1.1.1
+- let_it_ride: 1.1.1
+- casino_holdem: 1.1.1
+- double_bonus_video_poker: 1.1.2
+- mississippi_stud: 1.1.2
+- joker_poker: 1.1.1
+- texas_holdem_practice_table: 1.1.2
+- pai_gow_poker: 1.1.2
+- teen_patti: 1.1.2
+- tests: 1.69.3
+- docs: 1.67.3
+- contracts: 1.55.2
+- tooling: 1.25.2
 - commenting_policy: 1.0.0
-- color_wheel: 1.1.3
-- poker_dice: 1.1.1
-- boule: 1.1.3
-- faro: 1.1.3
-- trente_et_quarante: 1.1.2
-- pachinko: 1.1.2
-- coin_pusher: 1.1.2
-- marble_race: 1.1.3
-- pattern_draw: 1.1.2
-- lucky_grid: 1.1.2
-- daily_draw_lab: 1.1.3
-- four_card_poker: 1.1.2
+- color_wheel: 1.1.4
+- poker_dice: 1.1.2
+- boule: 1.1.4
+- faro: 1.1.4
+- trente_et_quarante: 1.1.3
+- pachinko: 1.1.3
+- coin_pusher: 1.1.3
+- marble_race: 1.1.4
+- pattern_draw: 1.1.3
+- lucky_grid: 1.1.3
+- daily_draw_lab: 1.1.4
+- four_card_poker: 1.1.3
 
 ## Requirements
 
@@ -978,3 +978,6 @@ Historical source baseline: 9.1.0
 - **SEC-015** (Core) - PASS: The platform owner can adjust the global per-client application request allowance and fixed-window duration without restarting the service; values are provider-backed and bounded to 60 through 10000 requests and 1 through 3600 seconds, default to 1200 requests per 60 seconds, and apply immediately to existing limiter state. The exact owner-only control route uses an independent fixed 60-per-minute recovery bucket while retaining normal authentication and mutation-integrity enforcement.
 - **ADMIN-032** (Admin) - PASS: The owner-only Sessions and security console displays localized bounded controls for application requests per window and window seconds, while Guest Trials displays the fixed 10,000-token grant and lets the current platform owner pause or resume only new trial admission; both provider-backed policies apply without restart through additive v2 contracts and expose no per-client limiter or guest identity state.
 - **TEST-156** (Tests) - PASS: Listener-free provider, limiter, WSGI, contract, and frontend checks prove owner authorization, persistence, clamping, immediate live rate-policy application, recovery-route isolation, a fixed 10,000-token guest grant, no-restart guest admission pause/resume without current-trial revocation, truthful localized login and Admin controls, and delayed-frame document-scroll restoration.
+- **LEDGER-032** (Ledger) - PASS: Every accepted game wager, ticket, card purchase, insurance action, split, double, refund, payout, and settlement for all registered games crosses casino.core.settlement.GameSettlementGateway and the storage-atomic SettlementAdapter exactly-once boundary; game modules cannot import or directly call ledger debit, credit, debit-once, or credit-once functions. Canonical game action, request fingerprint, and round evidence is written beside one-release legacy detail keys without rewriting historical rows or changing current API response semantics.
+- **GAMECORE-004** (Core) - PASS: The shared game-money compatibility gateway presents one canonical signed settlement contract to direct, shared-simple, staged-intent, and historically injected game service shapes, delegates production value movement only to SettlementAdapter, preserves deterministic replay and changed-meaning conflict behavior, and keeps transitional detail aliases read-compatible for one release.
+- **TEST-157** (Tests) - PASS: A catalog-derived source gate and focused settlement suite prove every registered game uses the shared settlement boundary, rejects direct game imports or calls to ledger money functions, preserves canonical and one-release compatibility evidence, and routes both direct actions and staged intents through storage-atomic debit-once or credit-once seams.

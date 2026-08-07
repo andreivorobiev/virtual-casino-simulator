@@ -4,7 +4,9 @@ from casino.core.state_store import load_player_game_state, save_player_game_sta
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import apply_rule_updates, require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import ledger, players, logger
+from casino.core import players, logger
+# Import the one canonical game-money boundary.
+from casino.core.settlement import GameSettlementGateway
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
 # Import required dependency so this module can use its public functions or constants.
@@ -14,6 +16,8 @@ from casino.errors import ValidationError, ConflictError
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "blackjack"
+# Bind every Blackjack movement to one storage-atomic settlement adapter.
+SETTLEMENT = GameSettlementGateway(GAME_ID, "hand_id")
 
 # Declare the legal domain of every client-settable table rule so the settings route cannot persist a
 # value that settlement math or shoe construction would then trust. (issue #404)
@@ -80,7 +84,7 @@ def finish_if_needed(state, rnd):
             # Branch when the following condition is true.
             if due > 0:
                 # Commit or replay the payout under the durable deal-time round-and-hand action identity. (issue #403)
-                event, replayed = ledger.credit_once(rnd["player_id"], due, "BLACKJACK_SETTLEMENT_CREDIT", f"{rnd['round_id']}:{h['hand_id']}:settlement", GAME_ID, rnd["round_id"], {"hand_id": h["hand_id"], "outcome": h.get("outcome")})
+                event, replayed = SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=due, transaction_type="BLACKJACK_SETTLEMENT_CREDIT", round_id=rnd["round_id"], action_key=f"{rnd['round_id']}:{h['hand_id']}:settlement", request_fingerprint=f"{rnd['round_id']}:{h['hand_id']}:{h.get('outcome')}:{due}", details={"hand_id": h["hand_id"], "outcome": h.get("outcome")})
                 # Report only the newly committed event because a replay was already reported by the winning call. (issue #403)
                 if not replayed:
                     # Execute this statement as part of the module's documented control flow.
@@ -140,18 +144,10 @@ def register(router):
         player_id = request_player_id(body, query); amount = require_amount(body.get("bet_amount"))
         # Set state to the value needed for the next operation.
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Execute this statement as part of the module's documented control flow.
-        ledger.debit(player_id, amount, "BLACKJACK_INITIAL_BET", GAME_ID, None, {})
-        # Start protected logic so failures can be handled safely.
-        try:
-            # Set rnd to the value needed for the next operation.
-            rnd = engine.new_round(state, player_id, amount)
-        # Handle the expected failure path for the protected logic.
-        except Exception:
-            # Execute this statement as part of the module's documented control flow.
-            ledger.credit(player_id, amount, "BLACKJACK_INITIAL_BET_REFUND_AFTER_ERROR", GAME_ID, None, {})
-            # Execute this statement as part of the module's documented control flow.
-            raise
+        # Allocate and validate the authoritative round before attempting its storage-atomic debit.
+        rnd = engine.new_round(state, player_id, amount)
+        # Commit the opening wager under the new round identity through the shared adapter.
+        SETTLEMENT.apply_once(player_id=player_id, signed_amount=-amount, transaction_type="BLACKJACK_INITIAL_BET", round_id=rnd["round_id"], action_key=f"{rnd['round_id']}:wager", request_fingerprint=f"{rnd['round_id']}:{amount}", details={"hand_id": rnd["hands"][0]["hand_id"]})
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
         # Execute this statement as part of the module's documented control flow.
@@ -208,7 +204,7 @@ def register(router):
         # Set original_bet to the value needed for the next operation.
         original_bet = float(h["bet"]); original_hand_id = h["hand_id"]
         # Execute this statement as part of the module's documented control flow.
-        ledger.debit(rnd["player_id"], original_bet, "BLACKJACK_DOUBLE_DEBIT", GAME_ID, round_id, {"hand_id": original_hand_id})
+        SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=-original_bet, transaction_type="BLACKJACK_DOUBLE_DEBIT", round_id=round_id, action_key=f"{round_id}:{original_hand_id}:double", request_fingerprint=f"{round_id}:{original_hand_id}:double:{original_bet}", details={"hand_id": original_hand_id})
         # Start protected logic so failures can be handled safely.
         try:
             # Set rnd to the value needed for the next operation.
@@ -216,7 +212,7 @@ def register(router):
         # Handle the expected failure path for the protected logic.
         except Exception:
             # Execute this statement as part of the module's documented control flow.
-            ledger.credit(rnd["player_id"], original_bet, "BLACKJACK_DOUBLE_REFUND_AFTER_ERROR", GAME_ID, round_id, {"hand_id": original_hand_id})
+            SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=original_bet, transaction_type="BLACKJACK_DOUBLE_REFUND_AFTER_ERROR", round_id=round_id, action_key=f"{round_id}:{original_hand_id}:double-refund", request_fingerprint=f"{round_id}:{original_hand_id}:double-refund:{original_bet}", details={"hand_id": original_hand_id})
             # Execute this statement as part of the module's documented control flow.
             raise
         # Set credits to the value needed for the next operation.
@@ -243,7 +239,7 @@ def register(router):
         # Set original_bet to the value needed for the next operation.
         original_bet = float(h["bet"]); original_hand_id = h["hand_id"]
         # Execute this statement as part of the module's documented control flow.
-        ledger.debit(rnd["player_id"], original_bet, "BLACKJACK_SPLIT_DEBIT", GAME_ID, round_id, {"hand_id": original_hand_id})
+        SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=-original_bet, transaction_type="BLACKJACK_SPLIT_DEBIT", round_id=round_id, action_key=f"{round_id}:{original_hand_id}:split", request_fingerprint=f"{round_id}:{original_hand_id}:split:{original_bet}", details={"hand_id": original_hand_id})
         # Start protected logic so failures can be handled safely.
         try:
             # Set rnd to the value needed for the next operation.
@@ -251,7 +247,7 @@ def register(router):
         # Handle the expected failure path for the protected logic.
         except Exception:
             # Execute this statement as part of the module's documented control flow.
-            ledger.credit(rnd["player_id"], original_bet, "BLACKJACK_SPLIT_REFUND_AFTER_ERROR", GAME_ID, round_id, {"hand_id": original_hand_id})
+            SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=original_bet, transaction_type="BLACKJACK_SPLIT_REFUND_AFTER_ERROR", round_id=round_id, action_key=f"{round_id}:{original_hand_id}:split-refund", request_fingerprint=f"{round_id}:{original_hand_id}:split-refund:{original_bet}", details={"hand_id": original_hand_id})
             # Execute this statement as part of the module's documented control flow.
             raise
         # Set credits to the value needed for the next operation.
@@ -307,13 +303,13 @@ def register(router):
             # Raise an error so invalid input or state is reported explicitly.
             raise ValidationError("Insurance cannot exceed half the initial wager")
         # Execute this statement as part of the module's documented control flow.
-        ledger.debit(rnd["player_id"], amount, "BLACKJACK_INSURANCE_DEBIT", GAME_ID, round_id, {})
+        SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=-amount, transaction_type="BLACKJACK_INSURANCE_DEBIT", round_id=round_id, action_key=f"{round_id}:insurance:wager", request_fingerprint=f"{round_id}:insurance:{amount}", details={})
         # Set dealer_bj to the value needed for the next operation.
         dealer_bj = engine.hand_total(rnd["dealer"]["cards"])["blackjack"]
         # Set payout to the value needed for the next operation.
         payout = amount*3 if dealer_bj else 0
         # Set credit to the value needed for the next operation.
-        credit = ledger.credit(rnd["player_id"], payout, "BLACKJACK_INSURANCE_CREDIT", GAME_ID, round_id, {}) if payout else None
+        credit = SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=payout, transaction_type="BLACKJACK_INSURANCE_CREDIT", round_id=round_id, action_key=f"{round_id}:insurance:settlement", request_fingerprint=f"{round_id}:insurance:settlement:{payout}", details={})[0] if payout else None
         # Set rnd["insurance"] to the value needed for the next operation.
         rnd["insurance"] = {"amount": amount, "dealer_blackjack": dealer_bj, "payout": payout}
         # Execute this statement as part of the module's documented control flow.
