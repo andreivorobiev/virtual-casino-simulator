@@ -1413,12 +1413,70 @@ def revoke_sessions_for_user_method(user_id: str, auth_method: str) -> int:
     # Return only the number of revoked sessions.
     return changed["value"]
 
+# Format one UTC instant using the same Z-suffixed millisecond shape as the rest of the session contract.
+def _iso_z(moment) -> str:
+    # Render the aware datetime and normalize the offset to the trailing Z used by session_expiry.
+    return moment.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+# Compute a safe, read-only view of when the current session will expire and when to warn. (SESSION-011, SESSION-012)
+def session_status_descriptor(session: dict, user: dict) -> dict:
+    # Read one reference instant so every derived bound is computed against the same clock.
+    now = utc_datetime()
+    # Resolve the last-activity and login instants defensively, tolerating a missing stamp.
+    updated_at = parse_time(session.get("updated_at") or session.get("created_at"))
+    # Resolve the login instant used for the absolute cap.
+    created_at = parse_time(session.get("created_at") or session.get("updated_at"))
+    # Resolve the hard token lifetime, which always bounds the effective expiry.
+    hard_expiry = parse_time(session.get("expires_at")) if session.get("expires_at") else created_at + timedelta(seconds=MAX_SESSION_TTL_SECONDS)
+    # Branch on the disposable guest identity, which follows the fixed trial timers rather than the owner policy.
+    if is_guest(user):
+        # Import the guest inactivity window lazily to avoid widening the module import graph.
+        idle_seconds = GUEST_INACTIVITY_SECONDS
+        # Compute the guest absolute expiry from the durable trial deadline when present.
+        absolute_expiry = parse_time(session.get("guest_expires_at")) if session.get("guest_expires_at") else hard_expiry
+        # Reuse the owner-configured warning window purely as a presentation nicety for guests.
+        warn_seconds = _session_warning_seconds(False)
+        # Record that the disposable trial governs this session for the client copy.
+        policy_enabled = True
+    # Otherwise resolve the registered-account bounds from the owner-configured policy.
+    else:
+        # Import the policy resolvers lazily so the core module keeps a flat import graph.
+        from casino.core.session_settings import resolve_timeout_seconds, warning_seconds as _policy_warning_seconds
+        # Resolve the effective idle and absolute limits, honoring the stricter admin policy.
+        idle_seconds, absolute_seconds = resolve_timeout_seconds(is_admin(user))
+        # Compute the absolute expiry from login plus the absolute cap.
+        absolute_expiry = created_at + timedelta(seconds=absolute_seconds)
+        # Resolve the pre-expiration warning window for this account.
+        warn_seconds = _policy_warning_seconds(is_admin(user))
+        # Record whether idle enforcement is currently active for the client copy.
+        from casino.core.session_settings import session_settings as _session_settings
+        # Read the enable flag once for the descriptor.
+        policy_enabled = bool(_session_settings().get("enabled", True))
+    # Compute the idle expiry from the last observed activity plus the idle window.
+    idle_expiry = updated_at + timedelta(seconds=idle_seconds)
+    # The effective expiry is the earliest of idle, absolute, and hard-token bounds.
+    effective_expiry = min(idle_expiry, absolute_expiry, hard_expiry)
+    # Derive the warning instant only when a positive warning window is configured.
+    warn_at = effective_expiry - timedelta(seconds=warn_seconds) if warn_seconds > 0 else None
+    # Publish only non-sensitive scheduling fields; never an actor, token, or reason that leaks state.
+    return {"expires_at": _iso_z(effective_expiry), "idle_expires_at": _iso_z(idle_expiry), "absolute_expires_at": _iso_z(absolute_expiry), "warn_at": _iso_z(warn_at) if warn_at else None, "warning_seconds": warn_seconds, "expires_in_seconds": max(0, int((effective_expiry - now).total_seconds())), "policy_enabled": policy_enabled}
+
+
+# Resolve the guest presentation warning window without importing the policy module at load time.
+def _session_warning_seconds(is_admin_user: bool) -> int:
+    # Import the policy resolver lazily so guest descriptors stay decoupled from module import order.
+    from casino.core.session_settings import warning_seconds
+    # Delegate to the single owner-configured warning resolver.
+    return warning_seconds(is_admin_user)
+
+
 def current_user_payload(session: dict, user: dict) -> dict:
     player = players.get_player(user["player_id"])
     # Publish one authenticated player summary with an explicit play-token balance field.
     player_summary = {**player, "token_balance": round(float(player.get("balance", 0)), 2), "token_label": "play tokens"}
-    # Return the canonical current-user payload used by login, session, shell, and wallet refreshes.
-    return {"user": public_user(user), "session": public_session(session), "player": player_summary, "terms": terms_status(user)}
+    # Return the canonical current-user payload used by login, session, shell, and wallet refreshes, with a safe session-status view. (SESSION-012)
+    return {"user": public_user(user), "session": public_session(session), "player": player_summary, "terms": terms_status(user), "session_status": session_status_descriptor(session, user)}
 
 def terms_status(user: dict) -> dict:
     required = bool(user.get("terms_required", True)) and not bool(user.get("terms_accepted_at"))
