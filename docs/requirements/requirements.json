@@ -6238,16 +6238,21 @@
         "STORAGE-JSON-001",
         "FRONTEND-SAFETY-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ROU-001",
+        "LONG-AUDIO-001"
+      ],
       "implementation_files": [
         "casino/core/settings.py",
         "web/core/voice.js",
         "tests/storage_tests.py",
-        "tests/frontend_safety.mjs"
+        "tests/frontend_safety.mjs",
+        "tests/run_tests.py",
+        "tests/long_suites.py"
       ],
       "introduced_in": "issue-619-muted-audio-default",
       "changed_in": "issue-619-muted-audio-default",
-      "notes": "Default flags are fail-closed; volume preferences remain nonzero so an owner can enable a channel without reconstructing its prior level. Explicit provider-backed settings continue to override defaults."
+      "notes": "Default flags are fail-closed; volume preferences remain nonzero so an owner can enable a channel without reconstructing its prior level. Browser evidence proves silence before opt-in and then verifies announcements after an explicit enable."
     },
     {
       "id": "AUTH-001",

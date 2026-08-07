@@ -8115,6 +8115,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         game_evidence('after-pass-game-polish-focus-roulette-ru-RU-desktop_primary.png','roulette',['betting','keyboard_focus'],'ru-RU','desktop_primary')
                     # Execute this statement as part of the module's documented control flow.
                     run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','I18N-010','ROU-046','TEST-117'],roulette_i18n_state)
+                    # Require the fresh non-Admin shell to remain silent before any explicit audio opt-in. (AUDIO-010)
+                    assert page.evaluate("() => window.__casinoAudioEvents.length") == 0
+                    # Define the exact local audio opt-in used by the announcement-specific regression. (AUDIO-010)
+                    roulette_audio_settings={'master_enabled':True,'sfx_enabled':True,'voice_enabled':True,'announce_roulette_results':True}
+                    # Fulfill only the helper's test-owned settings write without changing backend owner policy.
+                    page.route('**/api/v1/admin/audio-settings',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'settings':roulette_audio_settings}})))
+                    # Apply the explicit opt-in through the same public voice helper used by Admin.
+                    page.evaluate("async settings => { const voice=await import('/core/voice.js'); await voice.saveVoiceSettings(settings); }",roulette_audio_settings)
+                    # Remove the exact route seam before the real spin and all downstream network assertions.
+                    page.unroute('**/api/v1/admin/audio-settings')
                     # Capture the authoritative backend spin response while using the visible Roulette action.
                     with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/spin') and response.request.method == 'POST') as roulette_spin_response_info:
                         # Spin the wheel through the dominant Roulette UI action.
@@ -8198,7 +8208,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Verify recent stats remain visible after settlement.
                         assert page.get_by_test_id('roulette-stats-spark').is_visible()
                     # Execute this statement as part of the module's documented control flow.
-                    run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-042','ROU-043','ROU-044','ROU-046','ROU-049','ROU-050','ROU-052','ROU-053','ROU-054','ROU-055','ROU-056'],premium_roulette_settled)
+                    run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-042','ROU-043','ROU-044','ROU-046','ROU-049','ROU-050','ROU-052','ROU-053','ROU-054','ROU-055','ROU-056','AUDIO-010'],premium_roulette_settled)
                     # Let the short physical ball-settle accent complete before capturing static evidence.
                     page.wait_for_timeout(700)
                     # Capture settled-state visual evidence for the Roulette worker handback.
