@@ -1289,14 +1289,14 @@ def register(router):
         # Return the validated settings document.
         return {"settings": session_settings.session_settings()}
 
-    # Persist an owner-authored timeout-policy update through the additive v2 contract. (SESSION-009, ADMIN-031)
+    # Persist an owner-authored timeout-policy update through the additive v2 contract. (SESSION-009, SESSION-010, ADMIN-031)
     @router.post(r"/api/v2/admin/session-settings")
     # Clamp and persist the supplied settings only after owner authorization.
     def save_session_settings_route(body, query, context=None):
-        # Reject ordinary Admins before validating or writing policy fields.
-        _current_platform_owner((context or {}).get("user"))
-        # Persist the validated partial update and echo the stored document.
-        return {"settings": session_settings.save_session_settings(body or {})}
+        # Reject ordinary Admins before validating or writing policy fields, capturing the owner for provenance.
+        owner = _current_platform_owner((context or {}).get("user"))
+        # Persist the validated partial update, stamping the durable last-updated actor without exposing any secret. (SESSION-010)
+        return {"settings": session_settings.save_session_settings(body or {}, actor_id=owner.get("user_id"))}
 
     # Expose the live application-request rate policy through an owner-only recovery-safe route. (SEC-015, ADMIN-032)
     @router.get(r"/api/v2/admin/rate-limits")
