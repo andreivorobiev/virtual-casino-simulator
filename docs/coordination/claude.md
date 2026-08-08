@@ -1,32 +1,42 @@
 # Claude status
 
-Written by Claude only. Codex reads this; do not edit it. Last updated 2026-08-05.
+Written by Claude only. Codex reads this; do not edit it. Last updated 2026-08-07.
 
 ## Pull requests I authored (drafts; I never merge)
 
 | PR | Branch | What it is | State |
 |---|---|---|---|
-| #609 | `claude/607-viewport-containment-action-stability` | Issue #607: viewport containment for every game surface with layout telemetry, plus no-refresh/no-scroll-reset action stability (UX-026/UX-027, BR-LAYOUT-CONTAIN-001/BR-ACTION-STABILITY-001) | open draft at exact head `ebd217d`; full local validation green; handed back to Codex |
+| (opening) | `claude/account-admin-omnibus` | Account/enrollment/product-admin omnibus (#333, #334/#69, #335, #336, #351, #352, #349, #388, #378, #209) | **draft / WIP**, base `339de540f632c5b2897213b0223e4aa415171c9b`; #388 backend landed; remaining items in progress; not for merge until marked ready |
+| #609 | `claude/607-viewport-containment-action-stability` | Issue #607 containment + action stability | merged |
 
-Earlier reviewer-readiness stack (#558/#559/#561) and #518 have all been reconciled and merged by Codex controllers; no stale claims remain from that program.
+## Active work — account/enrollment/product-admin omnibus (owner-directed 2026-08-07)
 
-## Active work — issue #607 (owner-directed, 2026-08-05)
+One draft PR per the owner packet. Base = exact protected main `339de54`. Constraints: `/api/v1` frozen; all new enrollment/provider behavior disabled by default; no live provider/mail/public/DNS/billing/production action; no touch to `casino/games/**`, `casino/core/ledger.py`, `casino/core/settlement.py`, paytables, deployment, PR #450. Fresh IDs only (TEST-159..168 reserved; main max TEST-157).
 
-Single PR covering both owner asks:
-
-1. **Containment (UX-026).** Measured continuous fit for the fixed Roulette board (replaces the discrete scale ladder; explicit translate centering because grid safe-centering start-pins oversized items), minmax(0,…)/min-width:0 shrink repairs in marble_race, slots, baccarat, boule, faro, daily_draw_lab, a shared `auditLayoutContainment` helper, and `layout_overflow` telemetry through the frozen `/api/v1/log/client` route (Admin Telemetry visible). Evidence: 17-viewport × 46-route headless sweep — 26 flagged cells before, 0 after.
-2. **Action stability (UX-027).** One shell-level route-outlet innerHTML interceptor preserves outlet scroll, internal rail scroll, and stable-identity focus across same-route rerenders for all 46 games and the lobby; collapse-clamp rescue only (never fights scroll anchoring); stranded focus parks on the game region; route changes still reset intentionally. No game render loops modified.
+Ten items and current state:
+1. #388 session-timeout policy — **backend landed** (enabled toggle, warning_minutes 0-10 <idle, updated_at/updated_by provenance, read-only session_status descriptor for registered+guest, Admin route actor stamp). UI + contract + tests + i18n pending.
+2. #351 platform-owner RBAC lifecycle — pending (role_audit hash-chain core, grant/revoke, local-password step-up; provider step-up = recorded blocker).
+3. #334/#69 account recovery — pending (wire existing password_reset service; disabled by default).
+4. #333 enrollment readiness + Admin UI + provider kill switches — pending.
+5. #335 disabled-by-default provider self-signup — pending (scaffolding-to-the-gate; shared identity gate NOT widened — deferred blocker).
+6. #336 provider readiness/revocation/deletion evidence — pending (in-repo scaffolding + runbook + templates; console evidence = owner blocker).
+7. #352 My Settings destination — pending (server foundation exists).
+8. #349 feedback privacy/retention/deletion/export — pending (manual-only; publication adapter excluded — no owner approval).
+9. #378 guest-trial conversion UI + admin-assisted — pending (API exists).
+10. #209 read-only launch-readiness dashboard — pending.
 
 ## File claims / high collision risk
 
-- Owned: `web/core/ui.js`, `web/app.js`, `web/games/{roulette,marble_race,slots,baccarat,boule,faro,daily_draw_lab}.js`, `tests/run_tests.py` (two appended Browser cases only), `tests/frontend_safety.mjs`, `tests/browser_case_durations.json`, `tests/unit/request_latency_benchmark_tests.py` (count + allocation + version literals), `docs/requirements/requirements.json` (+UX-026, UX-027, TEST-154, TEST-155 → 904 rows), `docs/visual_design_standard.md` (new hard-rules section), regenerated `docs/requirements/requirements_generated.md`, module descriptors + aggregate manifest for the versions below, and the two coordination records.
-- Version allocations above v0.9.5.55 main: application `9.57.0`, roulette `9.6.0`, slots `9.4.3`, baccarat `9.1.13`, marble_race/boule/faro `1.1.3`, daily_draw_lab `1.1.3`, tests `1.68.0`, docs `1.66.0`. Packaged application stays `0.9.5.55`; core, admin, contracts, tooling untouched.
-- No contract, API, casino runtime Python, provider, or release-path changes.
+- Will touch: `casino/core/session_settings.py`, `casino/core/auth.py`, `casino/admin.py`, `casino/app.py`, `casino/wsgi.py` (allowlist blocks only, no gate widening), new `casino/core/role_audit.py`, `casino/core/oauth/**` (signup scaffolding), `web/admin.js`, `web/app.js`, `web/core/pwa.js`, `web/i18n/{en-US,ru-RU}/{shell,admin}.json`, `contracts/openapi/*.v2.yaml` + `contracts/compatibility/*`, `docs/requirements/requirements.json` (+ generated), `tests/**`, module descriptors + manifest, these coordination records.
+- No touch: `casino/games/**`, `casino/core/ledger.py`, `casino/core/settlement.py`, paytables, deployment/release paths, `codex.md`.
 
 ## Questions / requests for Codex
 
-- Review and integrate the #607 PR when it is handed back; oldest-first is fine — it stacks on nothing.
+- This is a WIP draft opened for visibility and pipeline entry per the owner packet; please do not integrate until it is marked ready-for-review with a green final head. I will run the full local matrix mirroring all nine workflow families before requesting review.
 
 ## Blockers I am waiting on (owner or Codex)
 
-- None.
+- Live enablement of any enrollment/provider/mail/public behavior: separate Workroom + #209 gate (out of scope for this PR).
+- #336 provider-console/DNS/deletion evidence: provider console (owner).
+- #335 shared-auth-gate widening: deferred follow-up under Workroom approval.
+- #351 provider step-up semantics: recorded owner decision pending.
