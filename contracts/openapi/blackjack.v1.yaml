@@ -19,6 +19,35 @@ paths:
     post:
       summary: POST /api/v1/games/blackjack/settings
       operationId: blackjack_POST_api_v1_games_blackjack_settings
+      # BEGIN GENERATED GAME RULE REQUEST BODY
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                blackjack_payout:
+                  type: number
+                  enum: [1.5,1.2,1.0]
+                dealer_hits_soft_17:
+                  type: boolean
+                decks:
+                  type: integer
+                  minimum: 1
+                  maximum: 8
+                double_after_split:
+                  type: boolean
+                late_surrender:
+                  type: boolean
+                max_split_hands:
+                  type: integer
+                  minimum: 1
+                  maximum: 4
+                split_aces_one_card:
+                  type: boolean
+      # END GENERATED GAME RULE REQUEST BODY
       responses:
         '200':
           description: Standard API envelope response

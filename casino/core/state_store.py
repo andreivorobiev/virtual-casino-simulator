@@ -32,12 +32,16 @@ from typing import Any, Callable
 # Import required dependency so this module can use its public functions or constants.
 from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.clock import utc_now
+from casino.core.clock import utc_now, date_stamp
+# Import descriptor-owned read repair so poisoned game settings fail safe before engine consumption.
+from casino.core.game_rules import clamp_state_rules
 # Import required dependency so JSON-shaped state can use the configured storage provider.
 from casino.core.storage import get_storage_provider, storage_provider_name
 
 # Set _LOCK to the value needed for the next operation.
 _LOCK = threading.RLock()
+# Remember value-free repair notices so a persistently corrupt row cannot flood one process log.
+_RULE_REPAIR_LOGGED = set()
 
 # Convert a data-directory path into the stable provider document key used by MySQL.
 def _provider_document_key(path: Path) -> str | None:
@@ -275,6 +279,27 @@ def append_jsonl(path: Path, event: dict) -> None:
             # Set f.write(json.dumps(event, sort_keys to the value needed for the next operation.
             f.write(json.dumps(event, sort_keys=True) + "\n")
 
+# Clamp one loaded game state and emit at most one value-free repair notice per game/field set. (SEC-014)
+def _repair_loaded_game_rules(game_id: str, state: dict) -> dict:
+    # Apply the descriptor-owned defaults and domains directly to the caller's loaded state.
+    repaired_state, repaired_fields = clamp_state_rules(game_id, state)
+    # Skip logging when the state was already canonical or the game owns no settings schema.
+    if not repaired_fields:
+        # Return the canonical state without creating a log side effect.
+        return repaired_state
+    # Build a stable process-local key that contains no player or supplied value.
+    notice_key = (game_id, repaired_fields)
+    # Serialize notice deduplication with the existing state-store reentrant lock.
+    with _LOCK:
+        # Emit one safe warning only when this game/field repair has not been reported in this process.
+        if notice_key not in _RULE_REPAIR_LOGGED:
+            # Mark the notice before writing so recursive failures cannot duplicate it.
+            _RULE_REPAIR_LOGGED.add(notice_key)
+            # Append the value-free repair record without importing logger back into state_store.
+            append_jsonl(LOG_DIR / f"app-{date_stamp()}.jsonl", {"ts": utc_now(), "level": "WARN", "event": "game_rules_repaired", "game_id": game_id, "fields": list(repaired_fields)})
+    # Return the safe in-memory state; the next normal game save persists the repair atomically.
+    return repaired_state
+
 # Define the game_state_path function used by this module.
 def game_state_path(game_id: str) -> Path:
     # Return the computed value to the caller.
@@ -297,8 +322,8 @@ def load_game_state(game_id: str, default_factory: Callable[[], dict]) -> dict:
         state = default_factory()
     # Execute this statement as part of the module's documented control flow.
     state.setdefault("schema_version", SCHEMA_VERSION)
-    # Return the computed value to the caller.
-    return state
+    # Repair descriptor-owned settings before the legacy state can reach any engine consumer.
+    return _repair_loaded_game_rules(game_id, state)
 
 # Define the load_player_game_state function used by this module.
 def load_player_game_state(game_id: str, player_id: str, default_factory: Callable[[], dict]) -> dict:
@@ -316,8 +341,8 @@ def load_player_game_state(game_id: str, player_id: str, default_factory: Callab
         state = default_factory()
     # Execute this statement as part of the module's documented control flow.
     state.setdefault("schema_version", SCHEMA_VERSION)
-    # Return the computed value to the caller.
-    return state
+    # Repair descriptor-owned settings before player-scoped state reaches any engine consumer.
+    return _repair_loaded_game_rules(game_id, state)
 
 # Apply one player-scoped game-state mutation through the existing atomic JSON/MySQL boundary. (STORAGE-001, STORAGE-002)
 def update_player_game_state(

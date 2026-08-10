@@ -57,6 +57,14 @@ def validate_server_authority_matrix() -> None:
             assert all(action[key].startswith(("authenticated_", "server_")) for key in ("server_validation", "engine_outcome", "response_projection"))
             # Bind the financial action owner to the exact source-derived game-row interface.
             assert action["storage_transaction"] == row["settlement_interface"]
+            # Read the owning internal game descriptor for settings-domain certification.
+            game = next(game for game in GAMES if game["id"] == row["game_id"])
+            # Read the optional rule schema without inventing one for ordinary actions.
+            schema = game.get("rules") if isinstance(game.get("rules"), dict) else None
+            # Require exact descriptor fields only on the matching settings action.
+            expected_fields = sorted(schema["fields"]) if schema and action["path"] == schema["settings_route"] else []
+            # Fail when the compatibility artifact overclaims or omits bounded client intent.
+            assert action["bounded_fields"] == expected_fields
 
 
 # Prove all current games receive identical hostile-field stripping and session precedence.

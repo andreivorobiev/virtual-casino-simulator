@@ -15,6 +15,8 @@ from casino.games.roulette import engine, rules
 from casino.games.roulette.rules import expand_call_bet
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import ValidationError
+# Import the descriptor allowlist so route behavior cannot drift from central coercion metadata.
+from casino.core.game_rules import declared_fields
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "roulette"
@@ -61,16 +63,14 @@ def register(router):
         player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Resolve the canonical settings allowlist once from the module descriptor. (SEC-014)
+        fields = declared_fields(GAME_ID)
         # Branch when the following condition is true.
-        if "mode" in body:
+        if "mode" in fields and "mode" in body:
             # Execute this statement as part of the module's documented control flow.
             engine.set_mode(state, body["mode"])
         # Branch when the following condition is true.
-        if "zero_rule" in body:
-            # Branch when the following condition is true.
-            if body["zero_rule"] not in ("normal", "la_partage", "en_prison"):
-                # Raise an error so invalid input or state is reported explicitly.
-                raise ValidationError("zero_rule must be normal, la_partage, or en_prison")
+        if "zero_rule" in fields and "zero_rule" in body:
             # Set state["zero_rule"] to the value needed for the next operation.
             state["zero_rule"] = body["zero_rule"]
         # Execute this statement as part of the module's documented control flow.

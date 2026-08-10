@@ -89,7 +89,11 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": [
+            "mode",
+            "zero_rule"
+          ]
         },
         {
           "method": "POST",
@@ -98,7 +102,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -107,7 +112,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -116,7 +122,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "DELETE",
@@ -125,7 +132,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -134,7 +142,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -143,7 +152,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -175,7 +185,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -207,7 +218,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "DELETE",
@@ -216,7 +228,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -225,7 +238,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -257,7 +271,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -266,7 +281,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -275,7 +291,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -284,7 +301,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -316,7 +334,16 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": [
+            "blackjack_payout",
+            "dealer_hits_soft_17",
+            "decks",
+            "double_after_split",
+            "late_surrender",
+            "max_split_hands",
+            "split_aces_one_card"
+          ]
         },
         {
           "method": "POST",
@@ -325,7 +352,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -334,7 +362,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -343,7 +372,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -352,7 +382,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -361,7 +392,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -370,7 +402,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -379,7 +412,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -388,7 +422,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -420,7 +455,14 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": [
+            "banker_commission",
+            "cut_cards_remaining",
+            "decks",
+            "tie_behavior",
+            "tie_payout"
+          ]
         },
         {
           "method": "POST",
@@ -429,7 +471,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "DELETE",
@@ -438,7 +481,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -447,7 +491,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -479,7 +524,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -488,7 +534,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -497,7 +544,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -529,7 +577,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -538,7 +587,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -547,7 +597,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -579,7 +630,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -611,7 +663,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -643,7 +696,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -652,7 +706,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -661,7 +716,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -693,7 +749,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -702,7 +759,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -734,7 +792,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -743,7 +802,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -775,7 +835,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -807,7 +868,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -839,7 +901,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -848,7 +911,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -880,7 +944,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -889,7 +954,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -898,7 +964,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -930,7 +997,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -939,7 +1007,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -948,7 +1017,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -980,7 +1050,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -989,7 +1060,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1021,7 +1093,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1030,7 +1103,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1062,7 +1136,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1094,7 +1169,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1126,7 +1202,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1158,7 +1235,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1190,7 +1268,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1222,7 +1301,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1231,7 +1311,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1240,7 +1321,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1272,7 +1354,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1281,7 +1364,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1290,7 +1374,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1322,7 +1407,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1331,7 +1417,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1340,7 +1427,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1372,7 +1460,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1381,7 +1470,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1413,7 +1503,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1422,7 +1513,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1431,7 +1523,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1463,7 +1556,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1495,7 +1589,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1504,7 +1599,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1536,7 +1632,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1568,7 +1665,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1600,7 +1698,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1632,7 +1731,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1664,7 +1764,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1696,7 +1797,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1728,7 +1830,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1760,7 +1863,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1792,7 +1896,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1824,7 +1929,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1856,7 +1962,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1865,7 +1972,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1897,7 +2005,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1906,7 +2015,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1938,7 +2048,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1947,7 +2058,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [
@@ -1979,7 +2091,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         },
         {
           "method": "POST",
@@ -1988,7 +2101,8 @@
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
           "storage_transaction": "casino.core.settlement.GameSettlementGateway",
-          "response_projection": "server_authoritative_projection"
+          "response_projection": "server_authoritative_projection",
+          "bounded_fields": []
         }
       ],
       "assurances": [

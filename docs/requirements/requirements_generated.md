@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.59.3
-- core: 9.38.1
+- core: 9.39.0
 - ledger: 9.1.1
 - players: 9.1.1
 - bots: 1.1.1
@@ -16,10 +16,10 @@ Historical source baseline: 9.1.0
 - admin: 1.17.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.6.2
+- roulette: 9.6.3
 - slots: 9.4.4
-- blackjack: 9.1.9
-- baccarat: 9.1.14
+- blackjack: 9.1.10
+- baccarat: 9.1.15
 - keno: 9.3.6
 - bingo: 9.3.6
 - multi_hand_video_poker: 1.1.1
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.71.3
-- docs: 1.69.3
-- contracts: 1.56.3
-- tooling: 1.26.0
+- tests: 1.72.0
+- docs: 1.70.0
+- contracts: 1.57.0
+- tooling: 1.27.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
@@ -632,9 +632,9 @@ Historical source baseline: 9.1.0
 - **JP-004** (Application) - PASS: Joker Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **JP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Joker Poker with requirement, module, version, and visual traceability.
 - **SEC-001** (Core) - PASS: Every game route resolves player identity from the authenticated server session and preserves complete cross-user isolation.
-- **SEC-002** (Core) - PASS: Game clients submit bounded intent only; privilege, wallet, RNG, outcome, payout, and round-control fields are removed before dispatch.
+- **SEC-002** (Core) - PASS: Game clients submit bounded intent only; privilege, wallet, RNG, outcome, payout, round-control, and descriptor-governed settings fields are centrally removed or validated before dispatch.
 - **SEC-003** (Core) - PASS: Randomness, hidden state, game outcomes, and payouts are selected by server game engines and never by browser or native client payloads.
-- **SEC-004** (Core) - PASS: The server revalidates legal action, round ownership, phase, turn, wager, precision, balance, and game configuration for every catalog action.
+- **SEC-004** (Core) - PASS: The server revalidates legal action, round ownership, phase, turn, wager, precision, balance, and descriptor-governed game configuration for every catalog action.
 - **SEC-005** (Core) - PASS: Every nonzero game debit, credit, refund, and settlement is server-owned and uses the storage transaction and append-only ledger.
 - **SEC-006** (Core) - PASS: Exact action retries replay the original committed receipt, changed action-key reuse conflicts, and restart or lost-response recovery cannot duplicate value.
 - **SEC-007** (Core) - PASS: At least twenty-five simultaneous duplicate submissions per debit, payout, refund, and settlement family commit at most once across supported storage processes.
@@ -908,7 +908,7 @@ Historical source baseline: 9.1.0
 - **ADMIN-027** (Admin) - PASS: Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances.
 - **TEST-132** (Tests) - PASS: Listener-free Python and Node evidence inspects or executes the exact production Admin label helper module and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, and Dashboard/full-Ledger helper wiring. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.
 - **SEC-013** (Application) - PASS: Client error telemetry reduces the current address to origin and path before submission, so invitation, OAuth, password-reset, and other query or fragment bearers can never enter Admin-visible client logs; malformed addresses fail closed to a fixed non-sensitive marker.
-- **SEC-014** (Core) - PASS: Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine or documented fallback defaults pass the catalog validator before the game can ship, and the core exposes pure type-safe coercion that leaves every undeclared path inert.
+- **SEC-014** (Core) - PASS: Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine-owned defaults drive central pre-handler coercion, persisted-state repair, generated request contracts, and compatibility evidence while undeclared paths remain inert.
 - **CORE-028** (Application) - PASS: Mutable players, ledger, history, sessions, per-game state, and other generated runtime outputs remain under the ignored data/ root and are initialized from source defaults, never tracked as repository state or admitted by a broad source add.
 - **UX-021** (Application) - PASS: The persistent shared toast announces feedback through stable polite atomic live-region semantics, classifies only explicit success variants into the success palette, renders string and boolean failures with the error palette, and affected Roulette actions expose localized failures instead of silent rejected promises. Legacy Slots, Baccarat, Bingo, and Keno animation channels stop under reduced motion, and the Teen Patti mobile action rail remains clear of the fixed feedback control.
 - **TEST-136** (Tests) - PASS: Listener-free exact-source evidence executes invitation URL sanitization and toast palette classification, rejects malformed-address disclosure and tracked runtime snapshots, pins stable toast live-region markup, proves affected reduced-motion selectors, requires all governed Roulette actions to use localized rejection handling, and pins Teen Patti mobile action-rail clearance. Hosted exact-head Browser acceptance requalifies the affected English and Russian game surfaces and visual matrix after reconciliation.
@@ -999,4 +999,5 @@ Historical source baseline: 9.1.0
 - **TEST-161** (Tests) - PASS: Descriptor-owned game suite declarations are parsed through a strict dotted-module boundary, require unique permanent case and requirement mappings, reject empty, missing, duplicated, unstable, or failing suites, and preserve deterministic module execution order without a central game allowlist.
 - **STORAGE-012** (Storage) - PASS: Player persistence exposes only explicit row-scoped insertion and provider-owned idempotent bootstrap boundaries: JSON holds one cross-process wallet gate across the complete missing-row batch, MySQL inserts missing primary-key rows inside one rollback-safe transaction, existing wallet and lifecycle fields are never overwritten, player reads perform no seed or commit work, and the retired whole-document save and empty-check seams cannot reintroduce a read-before-write race.
 - **TEST-162** (Tests) - PASS: Browser-free JSON and fake-MySQL evidence proves thread- and process-racing player creation and bootstrap insert each missing identifier once, preserve committed balances and ledger rows, perform byte-identical no-op replay, roll back partial MySQL batches, leave MySQL reads write-free, and statically reject the retired public full-document save and empty-check interfaces.
+- **TEST-163** (Tests) - PASS: Listener-free and integrated API evidence proves descriptor-governed settings reject hostile allocation and settlement values before handlers run, canonicalize accepted values, repair poisoned persisted state to engine-owned defaults, publish exact generated request schemas and bounded-field authority evidence, and reject any return of duplicated per-game rule domains.
 - **TOOL-013** (Tooling) - PASS: A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.

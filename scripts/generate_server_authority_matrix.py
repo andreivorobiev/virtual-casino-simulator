@@ -120,10 +120,14 @@ def build_matrix() -> dict:
             raise RuntimeError(f"catalog game {game['id']} exposes no certifiable mutation action")
         # Derive the financial boundary from the registered game's checked-in implementation.
         game_settlement_boundary = settlement_boundary(game["id"])
+        # Read the optional descriptor-owned settings schema used by the central router.
+        rule_schema = game.get("rules") if isinstance(game.get("rules"), dict) else None
         # Bind every financial action assertion to the exact implementation-derived owner.
         for action in actions:
             # Replace the generic historical label with the common settlement interface.
             action["storage_transaction"] = game_settlement_boundary
+            # Publish exact bounded settings fields only on the descriptor-owned settings action. (SEC-014)
+            action["bounded_fields"] = sorted(rule_schema["fields"]) if rule_schema and action["path"] == rule_schema["settings_route"] else []
         # Add the complete game-level authority and evidence record.
         games.append({
             # Preserve the module-owned catalog identity.

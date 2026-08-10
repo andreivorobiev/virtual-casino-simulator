@@ -8041,13 +8041,13 @@
       "id": "SEC-001", "module": "Core", "description": "Every game route resolves player identity from the authenticated server session and preserves complete cross-user isolation.", "status": "PASS", "api_tests": ["API-SEC-001", "API-PRIVATE-SESSION-001"], "browser_tests": [], "implementation_files": ["casino/router.py", "casino/core/request_player.py", "tests/server_authority_tests.py", "tests/run_tests.py"], "introduced_in": "issue-191-server-authority", "changed_in": "issue-191-server-authority", "notes": "Body and query player identifiers are compatibility inputs only and cannot override a bound session."
     },
     {
-      "id": "SEC-002", "module": "Core", "description": "Game clients submit bounded intent only; privilege, wallet, RNG, outcome, payout, and round-control fields are removed before dispatch.", "status": "PASS", "api_tests": ["API-SEC-001"], "browser_tests": ["BR-SEC-001"], "implementation_files": ["casino/router.py", "casino/core/request_player.py", "contracts/compatibility/server-authority-matrix.json", "tests/server_authority_tests.py"], "introduced_in": "issue-191-server-authority", "changed_in": "issue-191-server-authority", "notes": "Unauthorized fields are safely canonicalized without changing the frozen v1 response envelope."
+      "id": "SEC-002", "module": "Core", "description": "Game clients submit bounded intent only; privilege, wallet, RNG, outcome, payout, round-control, and descriptor-governed settings fields are centrally removed or validated before dispatch.", "status": "PASS", "api_tests": ["API-SEC-001", "API-GAME-RULES-001"], "browser_tests": ["BR-SEC-001"], "implementation_files": ["casino/router.py", "casino/core/request_player.py", "casino/core/game_rules.py", "contracts/compatibility/server-authority-matrix.json", "tests/server_authority_tests.py", "tests/games/test_game_rule_schema.py"], "introduced_in": "issue-191-server-authority", "changed_in": "issue-433-declarative-rule-runtime", "notes": "Unauthorized fields are safely canonicalized, and declared settings values are converted through finite, strict, bounded descriptor domains before handlers run."
     },
     {
       "id": "SEC-003", "module": "Core", "description": "Randomness, hidden state, game outcomes, and payouts are selected by server game engines and never by browser or native client payloads.", "status": "PASS", "api_tests": ["API-SEC-001", "API-PRIVATE-SESSION-001"], "browser_tests": ["BR-SEC-001"], "implementation_files": ["casino/games/roulette/api.py", "casino/core/request_player.py", "contracts/compatibility/server-authority-matrix.json", "tests/run_tests.py"], "introduced_in": "issue-191-server-authority", "changed_in": "issue-191-server-authority", "notes": "The former Roulette force-result HTTP seam is removed; deterministic seams remain internal to tests and engines."
     },
     {
-      "id": "SEC-004", "module": "Core", "description": "The server revalidates legal action, round ownership, phase, turn, wager, precision, balance, and game configuration for every catalog action.", "status": "PASS", "api_tests": ["API-SEC-001", "API-PRIVATE-SESSION-001"], "browser_tests": [], "implementation_files": ["contracts/compatibility/server-authority-matrix.json", "tests/server_authority_tests.py", "tests/run_tests.py"], "introduced_in": "issue-191-server-authority", "changed_in": "issue-191-server-authority", "notes": "The catalog matrix binds every state-changing OpenAPI operation to its server route, service, and engine owners."
+      "id": "SEC-004", "module": "Core", "description": "The server revalidates legal action, round ownership, phase, turn, wager, precision, balance, and descriptor-governed game configuration for every catalog action.", "status": "PASS", "api_tests": ["API-SEC-001", "API-PRIVATE-SESSION-001", "API-GAME-RULES-001"], "browser_tests": [], "implementation_files": ["casino/router.py", "casino/core/game_rules.py", "contracts/compatibility/server-authority-matrix.json", "tests/server_authority_tests.py", "tests/games/test_game_rule_schema.py", "tests/run_tests.py"], "introduced_in": "issue-191-server-authority", "changed_in": "issue-433-declarative-rule-runtime", "notes": "The catalog matrix binds every state-changing OpenAPI operation to its server owners and publishes exact descriptor-owned bounded fields for governed settings actions."
     },
     {
       "id": "SEC-005", "module": "Core", "description": "Every nonzero game debit, credit, refund, and settlement is server-owned and uses the storage transaction and append-only ledger.", "status": "PASS", "api_tests": ["API-SEC-001", "API-PRIVATE-SESSION-001"], "browser_tests": [], "implementation_files": ["casino/core/ledger.py", "casino/core/storage.py", "contracts/compatibility/server-authority-matrix.json", "tests/storage_tests.py", "tests/run_tests.py"], "introduced_in": "issue-191-server-authority", "changed_in": "issue-191-server-authority", "notes": "Wallet refresh and ledger evidence are checked for accepted, rejected, and cross-user attempts."
@@ -12391,23 +12391,29 @@
     {
       "id": "SEC-014",
       "module": "Core",
-      "description": "Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine or documented fallback defaults pass the catalog validator before the game can ship, and the core exposes pure type-safe coercion that leaves every undeclared path inert.",
+      "description": "Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine-owned defaults drive central pre-handler coercion, persisted-state repair, generated request contracts, and compatibility evidence while undeclared paths remain inert.",
       "status": "PASS",
-      "api_tests": [],
+      "api_tests": ["API-GAME-RULES-001", "API-SEC-001"],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/game_rules.py",
+        "casino/core/state_store.py",
+        "casino/router.py",
         "casino/games/registry.py",
         "docs/game_catalog_governance.md",
         "modules/blackjack.json",
         "modules/baccarat.json",
         "modules/roulette.json",
         "scripts/validate_game_catalog.py",
+        "scripts/generate_game_rule_contracts.py",
+        "scripts/generate_server_authority_matrix.py",
+        "scripts/validate_contracts.py",
+        "contracts/compatibility/server-authority-matrix.json",
         "tests/games/test_game_rule_schema.py"
       ],
       "introduced_in": "issue-433-rule-schema-catalog-gate",
-      "changed_in": "issue-433-rule-coercion-core",
-      "notes": "The first two governed slices are deliberately runtime-inert: they mirror the already-merged issue #404 domains, discover routes without a listener, withhold internal schemas from public catalog payloads, and add a pure coercion boundary that is not called by the router. Declared numeric values become finite canonical types, booleans and enums are strict, unknown keys remain available to the existing handler allowlist, and undeclared paths return their exact original object. No request handling, persisted state, frozen v1 behavior, or gameplay changes. Baccarat's explicit descriptor fallback of 14 records the engine's existing cut-card fallback without changing its state projection. SEC-012 is permanently assigned to game entropy and was not reused."
+      "changed_in": "issue-433-declarative-rule-runtime",
+      "notes": "The router now mounts the descriptor boundary before every governed settings handler, state reads repair poisoned fields to engine-owned defaults with value-free diagnostics, generated OpenAPI request bodies and authority-matrix bounded fields derive from the same schema, and retired per-game domains cannot reappear. Unknown compatibility keys remain available for handler allowlists, undeclared paths preserve exact object identity, and the frozen v1 response envelopes remain unchanged."
     },
     {
       "id": "CORE-028",
@@ -13544,6 +13550,18 @@
       "introduced_in": "issue-431-storage-integrity",
       "changed_in": "issue-431-storage-integrity",
       "notes": "The focused case reuses the existing storage-and-ledger guard so historical issue #402 coverage and the completed #431 interface retirement remain one durable acceptance boundary."
+    },
+    {
+      "id": "TEST-163",
+      "module": "Tests",
+      "description": "Listener-free and integrated API evidence proves descriptor-governed settings reject hostile allocation and settlement values before handlers run, canonicalize accepted values, repair poisoned persisted state to engine-owned defaults, publish exact generated request schemas and bounded-field authority evidence, and reject any return of duplicated per-game rule domains.",
+      "status": "PASS",
+      "api_tests": ["API-GAME-RULES-001", "API-SEC-001"],
+      "browser_tests": [],
+      "implementation_files": ["tests/games/test_game_rule_schema.py", "tests/server_authority_tests.py", "tests/storage_tests.py", "tests/legacy_settlement_tests.py", "tests/run_tests.py"],
+      "introduced_in": "issue-433-declarative-rule-runtime",
+      "changed_in": "issue-433-declarative-rule-runtime",
+      "notes": "The permanent cases exercise the real Router dispatch and production state-load repair rather than a parallel test-only validator; contract and matrix drift fail existing repository validators."
     },
     {
       "id": "TOOL-013",

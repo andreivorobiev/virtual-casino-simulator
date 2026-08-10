@@ -11,6 +11,8 @@ from urllib.parse import urlparse, parse_qs
 from casino.errors import CasinoError, NotFoundError
 # Import the shared resolver so every current and future game route is session-bound centrally.
 from casino.core.request_player import resolve_authenticated_player, sanitize_game_intent
+# Import descriptor-owned rule coercion so every settings route shares one server boundary.
+from casino.core import game_rules
 # Import de-identified guest telemetry at the shared route boundary so game modules stay isolated.
 from casino.core import auth, guest_analytics, ledger
 
@@ -232,6 +234,10 @@ class Router:
                 ledger_before = _ledger_snapshot(guest_user.get("player_id")) if guest_analytics_id and method.upper() != "GET" else set()
                 # Start protected handler execution so sanitized guest failures are counted before rethrow.
                 try:
+                    # Coerce descriptor-owned settings inside telemetry protection but before action consumption or handler state checks. (SEC-014)
+                    if path.startswith("/api/v1/games/"):
+                        # Replace only declared settings values with canonical bounded representations.
+                        body = game_rules.coerce_request(path, body)
                     # Consume one disposable-session action allowance before a state-changing game route.
                     if guest_analytics_id and method.upper() != "GET":
                         # Persist the bounded attempt count without affecting registered users.
