@@ -71,3 +71,11 @@ gate.
 ## API changes
 
 Any API change must update the OpenAPI contract and compatibility matrix in the same PR.
+
+## Requirement sources
+
+Do not edit `docs/requirements/requirements.json` directly. Repository-wide requirements live
+in `docs/requirements/requirements-spine.json`; game requirements live in the matching
+`docs/requirements/games/<game-id>.json` shard. Run
+`python scripts/assemble_requirements.py --write` after source edits and include the generated
+aggregate and documentation changes in the same pull request.

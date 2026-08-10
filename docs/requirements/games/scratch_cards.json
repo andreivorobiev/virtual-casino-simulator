@@ -1,0 +1,113 @@
+{
+  "game": "scratch_cards",
+  "requirements_prefixes": [
+    "SCRATCH"
+  ],
+  "requirements": [
+    {
+      "id": "SCRATCH-001",
+      "module": "Scratch Cards",
+      "description": "One private three-by-three card applies the documented match-three prize profile without exposing covered values.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SCRATCH-001"
+      ],
+      "browser_tests": [
+        "BR-SCRATCH-001"
+      ],
+      "implementation_files": [
+        "casino/games/scratch_cards/engine.py",
+        "web/games/scratch_cards.js"
+      ],
+      "introduced_in": "game-expansion-scratch-cards",
+      "changed_in": "game-expansion-scratch-cards",
+      "notes": "Issue #77 allocates the permanent rules and privacy requirement for issue #87."
+    },
+    {
+      "id": "SCRATCH-002",
+      "module": "Scratch Cards",
+      "description": "Authenticated sessions own private reload-safe cards, partial reveals, history, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SCRATCH-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-SCRATCH-001"
+      ],
+      "implementation_files": [
+        "casino/games/scratch_cards/api.py",
+        "casino/games/scratch_cards/service.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-scratch-cards",
+      "changed_in": "game-expansion-scratch-cards",
+      "notes": "Session context overrides caller player ids and covered values remain private."
+    },
+    {
+      "id": "SCRATCH-003",
+      "module": "Scratch Cards",
+      "description": "Each card uses one ledger wager debit and at most one payout credit under stable retry identities.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SCRATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/scratch_cards/service.py",
+        "casino/core/ledger.py",
+        "tests/games/scratch_cards/test_service.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-scratch-cards",
+      "changed_in": "game-expansion-scratch-cards",
+      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "SCRATCH-004",
+      "module": "Application",
+      "description": "Scratch Cards supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SCRATCH-001"
+      ],
+      "implementation_files": [
+        "web/games/scratch_cards.js",
+        "web/i18n/en-US/games/scratch_cards.json",
+        "web/i18n/ru-RU/games/scratch_cards.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-scratch-cards",
+      "changed_in": "game-expansion-scratch-cards",
+      "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "SCRATCH-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery include Scratch Cards with requirement, module, version, and visual traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-SCRATCH-001"
+      ],
+      "implementation_files": [
+        "modules/scratch_cards.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "tests/game_drivers/scratch_cards.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-scratch-cards",
+      "changed_in": "game-expansion-scratch-cards",
+      "notes": "Descriptor sort order 130 and the catalog-discovered long driver are canonical."
+    }
+  ]
+}

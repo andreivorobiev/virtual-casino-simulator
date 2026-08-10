@@ -1,0 +1,131 @@
+{
+  "game": "casino_holdem",
+  "requirements_prefixes": [
+    "CH"
+  ],
+  "requirements": [
+    {
+      "id": "CH-001",
+      "module": "Casino Hold'em",
+      "description": "An ante reveals two player cards and a three-card flop before a fold or call of twice the ante, followed by turn, river, dealer qualification at a pair of fours, and transparent best-five-card settlement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CH-001"
+      ],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "casino/games/casino_holdem/engine.py",
+        "web/games/casino_holdem.js"
+      ],
+      "introduced_in": "game-expansion-casino-holdem",
+      "changed_in": "game-expansion-casino-holdem",
+      "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #139."
+    },
+    {
+      "id": "CH-002",
+      "module": "Casino Hold'em",
+      "description": "Authenticated sessions own private reload-safe decision rounds, hidden dealer cards and unrevealed community cards, durable receipts, settled history, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CH-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "casino/games/casino_holdem/api.py",
+        "casino/games/casino_holdem/service.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-casino-holdem",
+      "changed_in": "game-expansion-casino-holdem",
+      "notes": "Session context overrides caller player ids, private cards remain hidden until settlement, and committed results survive reload and process restart."
+    },
+    {
+      "id": "CH-003",
+      "module": "Casino Hold'em",
+      "description": "Ante and call debits plus returned-token settlement credits use the shared ledger exactly once under durable action identities, while folds add no token movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/casino_holdem/service.py",
+        "casino/core/ledger.py",
+        "tests/games/casino_holdem/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-casino-holdem",
+      "changed_in": "game-expansion-casino-holdem",
+      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "CH-004",
+      "module": "Application",
+      "description": "Casino Hold'em supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "web/games/casino_holdem.js",
+        "web/i18n/en-US/games/casino_holdem.json",
+        "web/i18n/ru-RU/games/casino_holdem.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-casino-holdem",
+      "changed_in": "game-expansion-casino-holdem",
+      "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "CH-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery include Casino Hold'em with requirement, module, version, and visual traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "modules/casino_holdem.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "tests/game_drivers/casino_holdem.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-casino-holdem",
+      "changed_in": "game-expansion-casino-holdem",
+      "notes": "Descriptor sort order 290 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "CH-006",
+      "module": "Casino Hold'em",
+      "description": "The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "web/games/casino_holdem.js",
+        "web/i18n/en-US/games/casino_holdem.json",
+        "web/i18n/ru-RU/games/casino_holdem.json"
+      ],
+      "introduced_in": "issue-253-holdem-paytable",
+      "changed_in": "issue-253-holdem-paytable",
+      "notes": "Issue #253 (Casino Hold'em half): mirrors the merged Caribbean Stud disclosure; the schedule renders only when the server publishes it."
+    }
+  ]
+}

@@ -302,6 +302,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/releases/app/9.1.1/module_version_matrix.md`](docs/releases/app/9.1.1/module_version_matrix.md) — Module version matrix
 - [`docs/releases/app/9.1.1/release_notes.md`](docs/releases/app/9.1.1/release_notes.md) — Changelog
 - [`docs/releases/app/9.1.1/requirements_validation_v9_1_0_baseline_redesigned.md`](docs/releases/app/9.1.1/requirements_validation_v9_1_0_baseline_redesigned.md) — Virtual Casino Simulator 9.1.0 Requirements and Validation Report
+- [`docs/requirements/README.md`](docs/requirements/README.md) — Requirement source ownership
 - [`docs/requirements/requirements.md`](docs/requirements/requirements.md) — Virtual Casino Simulator 9.1.0 Requirements and Validation Report
 - [`docs/requirements/requirements_generated.md`](docs/requirements/requirements_generated.md) — Virtual Casino Requirements and Validation
 - [`docs/requirements_validation_v9_1.md`](docs/requirements_validation_v9_1.md) — Virtual Casino Simulator 9.1.0 Requirements and Validation Report

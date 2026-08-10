@@ -1,0 +1,117 @@
+{
+  "game": "andar_bahar",
+  "requirements_prefixes": [
+    "AB"
+  ],
+  "requirements": [
+    {
+      "id": "AB-001",
+      "module": "Andar Bahar",
+      "description": "Alternating Andar/Bahar deals stop at the first matching rank and settle with exact side prices: Andar returns 1.90x and Bahar returns 2.00x.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AB-001"
+      ],
+      "browser_tests": [
+        "BR-AB-001"
+      ],
+      "implementation_files": [
+        "casino/games/andar_bahar/engine.py",
+        "casino/games/andar_bahar/service.py",
+        "web/games/andar_bahar.js",
+        "tests/games/andar_bahar/test_engine.py"
+      ],
+      "introduced_in": "game-expansion-andar-bahar",
+      "changed_in": "issue-409-andar-bahar-side-pricing",
+      "notes": "Exact enumeration proves Andar wins 429/833 deals and Bahar 404/833; both approved prices leave a positive house edge."
+    },
+    {
+      "id": "AB-002",
+      "module": "Andar Bahar",
+      "description": "Authenticated sessions own private reload-safe rounds, durable receipts, settled history, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AB-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-AB-001"
+      ],
+      "implementation_files": [
+        "casino/games/andar_bahar/api.py",
+        "casino/games/andar_bahar/service.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-andar-bahar",
+      "changed_in": "game-expansion-andar-bahar",
+      "notes": "Session context overrides caller player ids and committed results survive reload and process restart."
+    },
+    {
+      "id": "AB-003",
+      "module": "Andar Bahar",
+      "description": "Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AB-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/andar_bahar/service.py",
+        "casino/core/ledger.py",
+        "tests/games/andar_bahar/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-andar-bahar",
+      "changed_in": "game-expansion-andar-bahar",
+      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "AB-004",
+      "module": "Application",
+      "description": "Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with unobscured wallet and feedback controls.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-AB-001"
+      ],
+      "implementation_files": [
+        "web/games/andar_bahar.js",
+        "web/i18n/en-US/games/andar_bahar.json",
+        "web/i18n/ru-RU/games/andar_bahar.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-andar-bahar",
+      "changed_in": "issue-409-andar-bahar-side-pricing",
+      "notes": "Governed hosted evidence covers EN/RU at desktop-primary, desktop-compact, tablet, and mobile while rejecting feedback or wallet overlap."
+    },
+    {
+      "id": "AB-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, per-game Python, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-AB-001"
+      ],
+      "implementation_files": [
+        "modules/andar_bahar.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "scripts/validate_game_catalog.py",
+        "tests/game_drivers/andar_bahar.py",
+        "tests/games/andar_bahar/__init__.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-andar-bahar",
+      "changed_in": "issue-434-complete-game-test-discovery",
+      "notes": "Descriptor sort order 250 and the catalog-discovered long driver are canonical; catalog validation now fails closed if a test-bearing game package lacks the marker required by CI unittest discovery."
+    }
+  ]
+}

@@ -1,0 +1,474 @@
+{
+  "game": "keno",
+  "requirements_prefixes": [
+    "KENO"
+  ],
+  "requirements": [
+    {
+      "id": "KENO-001",
+      "module": "Keno",
+      "description": "Keno supports numbers 1 through 80.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-002",
+      "module": "Keno",
+      "description": "Keno allows selecting 1 to 20 spots.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-003",
+      "module": "Keno",
+      "description": "Keno draws 20 unique numbers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-004",
+      "module": "Keno",
+      "description": "Keno uses explicit paytable rows for 1-20 spots.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-005",
+      "module": "Keno",
+      "description": "Keno ticket purchase debits immediately.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-006",
+      "module": "Keno",
+      "description": "Keno ticket cancellation refunds before draw.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-007",
+      "module": "Keno",
+      "description": "Keno payout is based on spots, catches, and wager.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-008",
+      "module": "Keno",
+      "description": "Keno stores last draws.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-009",
+      "module": "Keno",
+      "description": "Keno UI has unique test IDs for every number.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-010",
+      "module": "Keno",
+      "description": "Keno UI highlights selected numbers.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-011",
+      "module": "Keno",
+      "description": "Keno UI highlights drawn numbers.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-012",
+      "module": "Keno",
+      "description": "Keno UI highlights catches.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-013",
+      "module": "Keno",
+      "description": "Keno UI displays paytable.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-014",
+      "module": "Keno",
+      "description": "Keno UI displays drawn balls.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-015",
+      "module": "Keno",
+      "description": "Keno draw animation reveals balls.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-016",
+      "module": "Keno",
+      "description": "Keno bots can buy quick-pick tickets.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-017",
+      "module": "Keno",
+      "description": "Keno bot strategies include 3/5/10/20 spot quick picks.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-018",
+      "module": "Keno",
+      "description": "Keno auto play repeats selected ticket.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-019",
+      "module": "Keno",
+      "description": "Keno speed control supports slow/medium/fast.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-020",
+      "module": "Keno",
+      "description": "Keno writes history rows.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-021",
+      "module": "Keno",
+      "description": "Keno remains fake-money only.",
+      "status": "SUPERSEDED",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": "Superseded wording keeps no-real-money gameplay while using play-token terminology.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "LIC-002",
+        "LIC-003",
+        "TOKEN-001"
+      ]
+    },
+    {
+      "id": "KENO-022",
+      "module": "Keno",
+      "description": "Keno browser tests avoid ambiguous text selectors.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "casino/games/keno/api.py",
+        "web/games/keno.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "KENO-023",
+      "module": "Keno",
+      "description": "Keno history rows constrain long draw IDs so they do not overlap the result summary.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-238-keno-history-overflow",
+      "changed_in": "issue-238-keno-history-overflow",
+      "notes": "Browser evidence verifies the history row text column uses hidden overflow, ellipsis, nowrap, and min-width containment."
+    },
+    {
+      "id": "KENO-024",
+      "module": "Keno",
+      "description": "Keno result copy uses the singular catch noun when a completed ticket catches exactly one number.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js",
+        "web/i18n/en-US/games/keno.json",
+        "web/i18n/ru-RU/games/keno.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-237-keno-singular-catch",
+      "changed_in": "issue-237-keno-singular-catch",
+      "notes": "The browser harness seeds a deterministic one-spot, one-catch result and verifies the rendered English lead says 1 catch, not 1 catches."
+    },
+    {
+      "id": "KENO-025",
+      "module": "Keno",
+      "description": "All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320 gives the clip container explicit border-box clearance and scroll padding for outlines, focus rings, transforms, and the largest result glow while preserving intentional keyboard/touch scrolling."
+    },
+    {
+      "id": "KENO-026",
+      "module": "Keno",
+      "description": "The Keno drawn-ball result rail stays bounded to its column and scrolls horizontally rather than clipping. The rail declares min-width:0 and max-width:100% so it cannot expand to its content width inside the fixed stage, and it enables horizontal-scroll overflow so all twenty drawn balls remain reachable; each ball keeps a fixed size so it stays legible while scrolling. Without these the rightmost drawn numbers were clipped off the page by an ancestor overflow boundary.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-KENO-BALL-RAIL-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js",
+        "tests/keno_ball_rail_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-keno-ball-rail-overflow",
+      "changed_in": "issue-keno-ball-rail-overflow",
+      "notes": "The existing Keno final-result visual-matrix state provides exact-head EN/RU after-pass evidence. Hosted geometry verifies the rail stays inside the stage, exposes a localized keyboard-focusable region, keeps the final ball visible when all twenty results fit, and reveals it at the terminal internal-scroll edge when they overflow."
+    },
+    {
+      "id": "KENO-027",
+      "module": "Keno",
+      "description": "Keno uses one server-authoritative, strictly increasing paytable for every legal one-through-twenty-spot ticket, with every positive award at least one times the ticket, strictly increasing full-catch jackpots, exact ideal hypergeometric returns in the approved house-side band except the disclosed one-spot cent-rounding exception, and realized production float-plus-hundredth rounding strictly below one for every frozen-v1 amount from 0.01 through 1,000,000. The state API, current ledger and history equations, browser controls, exact jackpot copy, route restoration, repeat, autoplay, and localized player disclosure all consume the same rules without changing the frozen v1 request, route, envelope, or payout law.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-ECONOMICS-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "web/games/keno.js",
+        "web/i18n/en-US/games/keno.json",
+        "web/i18n/ru-RU/games/keno.json",
+        "scripts/verify_keno_economics_artifact.py",
+        "tests/games/keno/test_economics.py",
+        "tests/keno_economics_long.py",
+        "tests/roulette_keno_settlement_tests.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json",
+        ".github/workflows/long-suite-100.yml"
+      ],
+      "introduced_in": "issue-472-keno-paytable-controller",
+      "changed_in": "issue-472-keno-paytable-controller",
+      "notes": "The owner retained the frozen one-cent minimum and production round(float(amount) * multiplier, 2) behavior. Pick one is the explicit ideal-return exception at 3.49x/87.25 percent so its one-cent realized return is 75 percent rather than 100 percent. Exact Fraction proof covers all 230 outcome classes; production-expression enumeration covers 0.01 through 0.99 and a one-sided IEEE-754 error bound covers every accepted amount at least one play token."
+    }
+  ]
+}

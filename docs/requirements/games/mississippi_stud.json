@@ -1,0 +1,55 @@
+{
+  "game": "mississippi_stud",
+  "requirements_prefixes": [
+    "MSTUD"
+  ],
+  "requirements": [
+    {
+      "id": "MSTUD-001",
+      "module": "Mississippi Stud",
+      "description": "Mississippi Stud is a stateful dealer-less five-card stud where the player builds one hand from two hole cards and three community cards. The player posts an ante, then across three betting streets, before each community card is exposed, either folds and forfeits every wager already made or bets one to three times the ante. The completed five-card hand is paid on the total amount wagered: a pair of jacks or better pays even money, richer hands pay up to five hundred to one for a royal flush, a pair of sixes through tens returns every wager as a push, and a pair of fives or lower or no pair loses the whole stake. Deal and each street decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MISSISSIPPI-STUD-001"
+      ],
+      "browser_tests": [
+        "BR-MSTUD-001"
+      ],
+      "implementation_files": [
+        "casino/games/mississippi_stud/engine.py",
+        "casino/games/mississippi_stud/service.py",
+        "casino/games/mississippi_stud/api.py",
+        "web/games/mississippi_stud.js",
+        "contracts/openapi/mississippi_stud.v1.yaml",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-143-mississippi-stud",
+      "changed_in": "issue-143-mississippi-stud",
+      "notes": "Allocated for GitHub issue #143, a catalog-expansion poker variant. The service reuses shared card primitives, the five-card evaluator, and the ledger for its three-street state machine. Exact-head browser evidence covers ready, all three decision streets, settlement, reduced motion, and route restoration in EN/RU at all four governed viewports."
+    },
+    {
+      "id": "MSTUD-002",
+      "module": "Mississippi Stud",
+      "description": "Mississippi Stud inherits the exactly-once, reload-safe orchestration of the shared ledger across its three betting streets: one caller-stable action id maps to one deal or one street decision, a retry replays the identical advanced or settled round without moving the wallet again, and an action id reused with different wager content fails closed. The community cards stay private and reveal one per settled street, and a fold reveals only the community cards seen so far. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the bet multipliers, the street count, and the winning-hand paytable.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MISSISSIPPI-STUD-001"
+      ],
+      "browser_tests": [
+        "BR-MSTUD-001"
+      ],
+      "implementation_files": [
+        "casino/games/mississippi_stud/service.py",
+        "casino/games/mississippi_stud/api.py",
+        "tests/mississippi_stud_tests.py",
+        "tests/game_drivers/mississippi_stud.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-143-mississippi-stud",
+      "changed_in": "issue-143-mississippi-stud",
+      "notes": "Allocated for GitHub issue #143."
+    }
+  ]
+}

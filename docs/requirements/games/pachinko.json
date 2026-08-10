@@ -1,0 +1,51 @@
+{
+  "game": "pachinko",
+  "requirements_prefixes": [
+    "PACH"
+  ],
+  "requirements": [
+    {
+      "id": "PACH-001",
+      "module": "Pachinko",
+      "description": "Pachinko drops a ball through twelve rows of pins on the shared exactly-once settlement core, bouncing left or right at each row into one of thirteen pockets numbered by the count of right bounces. A drop debits one bounded play-token stake and credits the landing pocket's multiplier. The landing pocket is binomially distributed, so the centre pockets are common and pay little while the outer pockets are rare and pay large, up to a hundred-times jackpot in the two extreme pockets. Across all 4096 equally likely twelve-bounce paths the expected return is 0.9832, a house edge of about 1.68 percent. Non-integer, non-positive, and over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PACHINKO-001"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
+      "implementation_files": [
+        "casino/games/pachinko/rules.py",
+        "casino/games/pachinko/engine.py",
+        "casino/games/pachinko/api.py",
+        "web/games/pachinko.js",
+        "contracts/openapi/pachinko.v1.yaml"
+      ],
+      "introduced_in": "issue-142-pachinko",
+      "changed_in": "issue-142-pachinko",
+      "notes": "Allocated for GitHub issue #142, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "PACH-002",
+      "module": "Pachinko",
+      "description": "Pachinko inherits the shared core's exactly-once settlement: one caller-stable request id maps to one drop, a retry replays the identical committed path and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and drops routes and never alters the frozen shared API. Every drop commits a full twelve-bounce path, and the published catalog reports the honest row count and pocket multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PACHINKO-001"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
+      "implementation_files": [
+        "casino/games/pachinko/api.py",
+        "casino/core/simple_game.py",
+        "tests/pachinko_tests.py",
+        "tests/game_drivers/pachinko.py"
+      ],
+      "introduced_in": "issue-142-pachinko",
+      "changed_in": "issue-142-pachinko",
+      "notes": "Allocated for GitHub issue #142."
+    }
+  ]
+}

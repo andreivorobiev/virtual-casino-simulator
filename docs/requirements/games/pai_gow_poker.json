@@ -1,0 +1,130 @@
+{
+  "game": "pai_gow_poker",
+  "requirements_prefixes": [
+    "PGP"
+  ],
+  "requirements": [
+    {
+      "id": "PGP-001",
+      "module": "Pai Gow Poker",
+      "description": "A 53-card joker deck deals seven player cards set into a five-card high hand and a two-card low hand against a house-way dealer, where the low hand may never outrank the high hand, copies go to the dealer, winning both hands pays even money minus a five percent commission, and the semi-wild joker completes straights and flushes and otherwise plays as an ace.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PGP-001"
+      ],
+      "browser_tests": [
+        "BR-PGP-001"
+      ],
+      "implementation_files": [
+        "casino/games/pai_gow_poker/engine.py",
+        "web/games/pai_gow_poker.js"
+      ],
+      "introduced_in": "game-expansion-pai-gow-poker",
+      "changed_in": "game-expansion-pai-gow-poker",
+      "notes": "Issue #73 allocates the permanent distinct rules requirement for issue #138."
+    },
+    {
+      "id": "PGP-002",
+      "module": "Pai Gow Poker",
+      "description": "Authenticated sessions own private reload-safe setting rounds, hidden dealer cards until showdown, durable action receipts, bounded settled history, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PGP-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-PGP-001"
+      ],
+      "implementation_files": [
+        "casino/games/pai_gow_poker/api.py",
+        "casino/games/pai_gow_poker/service.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-pai-gow-poker",
+      "changed_in": "game-expansion-pai-gow-poker",
+      "notes": "Session context overrides caller player ids, dealer cards remain hidden until settlement, and committed results survive reload and process restart."
+    },
+    {
+      "id": "PGP-003",
+      "module": "Pai Gow Poker",
+      "description": "The ante debit and the returned-token settlement credit use the shared ledger exactly once under durable action identities, while losing rounds add no token movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PGP-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/pai_gow_poker/service.py",
+        "casino/core/ledger.py",
+        "tests/games/pai_gow_poker/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-pai-gow-poker",
+      "changed_in": "game-expansion-pai-gow-poker",
+      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "PGP-004",
+      "module": "Application",
+      "description": "Pai Gow Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-PGP-001"
+      ],
+      "implementation_files": [
+        "web/games/pai_gow_poker.js",
+        "web/i18n/en-US/games/pai_gow_poker.json",
+        "web/i18n/ru-RU/games/pai_gow_poker.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-pai-gow-poker",
+      "changed_in": "pr381-pai-gow-feedback-clearance",
+      "notes": "Evidence covers both locales, every governed viewport, all seven visual states, and fail-closed fixed-feedback non-occlusion geometry, including the desktop-primary Russian settled-history clearance."
+    },
+    {
+      "id": "PGP-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery include Pai Gow Poker with requirement, module, version, and visual traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-PGP-001"
+      ],
+      "implementation_files": [
+        "modules/pai_gow_poker.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "tests/game_drivers/pai_gow_poker.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-pai-gow-poker",
+      "changed_in": "game-expansion-pai-gow-poker",
+      "notes": "Descriptor sort order 310 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "PGP-006",
+      "module": "Pai Gow Poker",
+      "description": "The dealer house way balances toward the strongest legal two-card hand with the five-card hand as tiebreak, so the mirrored maximize-low strategy nets negative for the player under the five percent commission.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PGP-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/pai_gow_poker/engine.py",
+        "tests/games/pai_gow_poker/test_engine.py"
+      ],
+      "introduced_in": "issue-407-pai-gow-house-way",
+      "changed_in": "issue-407-pai-gow-house-way",
+      "notes": "The prior objective maximized the five-card hand absolutely and was measured exploitable for about a twenty-four percent player edge; the seeded Monte Carlo evidence asserts the sign inversion directly."
+    }
+  ]
+}

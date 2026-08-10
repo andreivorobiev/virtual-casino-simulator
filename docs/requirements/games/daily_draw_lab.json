@@ -1,0 +1,51 @@
+{
+  "game": "daily_draw_lab",
+  "requirements_prefixes": [
+    "DDLAB"
+  ],
+  "requirements": [
+    {
+      "id": "DDLAB-001",
+      "module": "Daily Draw Lab",
+      "description": "Daily Draw Lab draws five distinct numbers from one to thirty on the shared exactly-once settlement core. The player marks one to five numbers and a draw debits one bounded play-token stake, settling on a separate keno-style paytable for each pick count by how many marks the draw hits. Larger pick counts carry bigger jackpots, up to ten thousand times the stake for hitting all five marks. Every pick count's expected return is below one, between 0.91 and 0.95, so all five bets are house-positive. Pick sets that are not one to five distinct in-range numbers and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DAILY-DRAW-LAB-001"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
+      "implementation_files": [
+        "casino/games/daily_draw_lab/rules.py",
+        "casino/games/daily_draw_lab/engine.py",
+        "casino/games/daily_draw_lab/api.py",
+        "web/games/daily_draw_lab.js",
+        "contracts/openapi/daily_draw_lab.v1.yaml"
+      ],
+      "introduced_in": "issue-144-daily-draw-lab",
+      "changed_in": "issue-144-daily-draw-lab",
+      "notes": "Allocated for GitHub issue #144, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "DDLAB-002",
+      "module": "Daily Draw Lab",
+      "description": "Daily Draw Lab inherits the shared core's exactly-once settlement: one caller-stable request id maps to one draw, a retry replays the identical committed numbers and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and draws routes and never alters the frozen shared API. Every draw commits five distinct numbers, and the published bet catalog reports the honest pool, draw size, pick bounds, and per-pick-count paytables.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DAILY-DRAW-LAB-001"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
+      "implementation_files": [
+        "casino/games/daily_draw_lab/api.py",
+        "casino/core/simple_game.py",
+        "tests/daily_draw_lab_tests.py",
+        "tests/game_drivers/daily_draw_lab.py"
+      ],
+      "introduced_in": "issue-144-daily-draw-lab",
+      "changed_in": "issue-144-daily-draw-lab",
+      "notes": "Allocated for GitHub issue #144."
+    }
+  ]
+}

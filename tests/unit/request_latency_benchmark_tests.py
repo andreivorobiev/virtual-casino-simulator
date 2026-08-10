@@ -1373,9 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus descriptor-runtime completion to total exactly 931 permanent rows.
-        # Count the two permanent issue-432 index and evidence requirements added after v63.
-        self.assertEqual(len(requirements), 933)
+        # Require the accepted aggregates plus the issue-432 bridge and issue-434 shard gate to total exactly 934 permanent rows.
+        self.assertEqual(len(requirements), 934)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1430,7 +1429,10 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "STORAGE-012": "Storage",  # Bind row-scoped insertion and provider-owned bootstrap.
             "TEST-162": "Tests",  # Bind race, replay, rollback, and read-only storage evidence.
             "TEST-163": "Tests",  # Bind central descriptor runtime and generated-contract evidence.
+            "LEDGER-033": "Ledger",  # Bind the provider-owned action-index compatibility bridge.
+            "TEST-164": "Tests",  # Bind indexed replay and conflict evidence.
             "TOOL-013": "Tooling",  # Bind persistent agent-memory provenance and validation ownership.
+            "TEST-165": "Tests",  # Bind requirement shard assembly and drift rejection.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1552,16 +1554,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.1")
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
-        # Require the compatible tests patch for permanent indexed-provider evidence.
-        self.assertEqual(tests_module["version"], "1.72.3")
-        # Require the docs patch for LEDGER-033 and TEST-164 governance.
-        self.assertEqual(docs_module["version"], "1.70.3")
+        # Require the compatible tests patch for shared discovery and requirement-source evidence.
+        self.assertEqual(tests_module["version"], "1.72.4")
+        # Require the docs patch for independently owned requirement sources.
+        self.assertEqual(docs_module["version"], "1.70.4")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the compatible contracts minor for descriptor-generated request bodies.
         self.assertEqual(contracts_module["version"], "1.57.2")
-        # Require the compatible tooling minor for deterministic rule-contract generation.
-        self.assertEqual(tooling_module["version"], "1.27.0")
+        # Require the compatible tooling patch for deterministic requirement assembly.
+        self.assertEqual(tooling_module["version"], "1.27.1")
         # Require the compatible Baccarat patch for central settings enforcement.
         self.assertEqual(baccarat_module["version"], "9.1.15")
         # Require the exact compatible Bingo settlement-interface patch.

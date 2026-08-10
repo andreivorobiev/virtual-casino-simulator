@@ -1,0 +1,604 @@
+{
+  "game": "slots",
+  "requirements_prefixes": [
+    "SLOT",
+    "SLOTS"
+  ],
+  "requirements": [
+    {
+      "id": "SLOT-001",
+      "module": "Slots",
+      "description": "Slots uses five reels.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-002",
+      "module": "Slots",
+      "description": "Slots uses three visible rows.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-003",
+      "module": "Slots",
+      "description": "Slots uses reel-strip stop positions.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-004",
+      "module": "Slots",
+      "description": "Slots supports 1 payline.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-005",
+      "module": "Slots",
+      "description": "Slots supports 3 paylines.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-006",
+      "module": "Slots",
+      "description": "Slots supports 5 paylines.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-007",
+      "module": "Slots",
+      "description": "Slots supports 9 paylines.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-008",
+      "module": "Slots",
+      "description": "Slots supports 20 paylines.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-009",
+      "module": "Slots",
+      "description": "Slots evaluates wild substitutions.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-010",
+      "module": "Slots",
+      "description": "Slots evaluates scatter payouts.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-011",
+      "module": "Slots",
+      "description": "Slots awards free spins on scatter trigger.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-012",
+      "module": "Slots",
+      "description": "Slots carries free spins in persistent state.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-013",
+      "module": "Slots",
+      "description": "Slots maintains fake progressive jackpot.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-014",
+      "module": "Slots",
+      "description": "Slots resets progressive after jackpot hit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-015",
+      "module": "Slots",
+      "description": "Slots exposes paytable in API.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-016",
+      "module": "Slots",
+      "description": "Slots displays paytable in UI.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-017",
+      "module": "Slots",
+      "description": "Slots debits non-free spin cost immediately.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-018",
+      "module": "Slots",
+      "description": "Slots credits wins after spin evaluation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-019",
+      "module": "Slots",
+      "description": "Slots logs spin history.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-020",
+      "module": "Slots",
+      "description": "Slots UI animates reels.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-021",
+      "module": "Slots",
+      "description": "Slots UI highlights winning symbols.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-022",
+      "module": "Slots",
+      "description": "Slots UI shows recent spins.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-023",
+      "module": "Slots",
+      "description": "Slots auto play repeats selected line setup.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-024",
+      "module": "Slots",
+      "description": "Slots speed control supports slow/medium/fast.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-025",
+      "module": "Slots",
+      "description": "Slots sounds play during spin.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "SLOT-026",
+      "module": "Slots",
+      "description": "Slots remains fake-money only.",
+      "status": "SUPERSEDED",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js"
+      ],
+      "notes": "Superseded wording keeps no-real-money gameplay while using play-token terminology.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "LIC-002",
+        "LIC-003",
+        "TOKEN-001"
+      ]
+    },
+    {
+      "id": "SLOT-028",
+      "module": "Slots",
+      "description": "Slots displays read-only cabinet readiness and win state as non-interactive status instead of a primary action button.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js"
+      ],
+      "introduced_in": "issue-239-slots-status-pill",
+      "changed_in": "issue-239-slots-status-pill",
+      "notes": "The cabinet footer status uses a role=status pill so read-only state no longer looks like a disabled primary command."
+    },
+    {
+      "id": "SLOT-029",
+      "module": "Slots",
+      "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319: ResizeObserver-backed geometry derives each point from the rendered cell center; simultaneous paths expose permanent line numbers, accessible labels, unique color/dash combinations, and exact round/payout identity."
+    },
+    {
+      "id": "SLOT-030",
+      "module": "Slots",
+      "description": "One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/slots.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Permanent allocation for issue #170; no Slots source or frozen v1 contract changes are included in the foundation."
+    },
+    {
+      "id": "SLOT-031",
+      "module": "Slots",
+      "description": "Five Slots reels move independently and continuously through input lock, acceleration, full-speed travel, staggered deceleration, final stop, result evaluation, credit reveal, and optional bonus transition with no whole-grid swap, blank seam, backward jump, or frozen placeholder.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/slots.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Every stopped reel must retain its exact committed symbols while later reels continue."
+    },
+    {
+      "id": "SLOT-032",
+      "module": "Slots",
+      "description": "Slots reaches the final reel stop in 3.8 to 4.8 seconds for Slow, 2.8 to 3.6 seconds for Medium, 1.6 to 2.2 seconds for Fast, and 400 to 800 ms for reduced motion, with adjacent normal-profile stops staggered by 140 to 240 ms.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/slots.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Any committed bonus anticipation is bounded to one additional second and cannot alter the outcome."
+    },
+    {
+      "id": "SLOT-033",
+      "module": "Slots",
+      "description": "Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/slots.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Reel-stop and result sounds follow actual phase events, respect mute, avoid autoplay stacking, and cancel on unmount."
+    },
+    {
+      "id": "SLOT-034",
+      "module": "Slots",
+      "description": "Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/slots.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "The cabinet, action rail, wallet, and result region remain stable without motion-driven scrolling or overflow."
+    },
+    {
+      "id": "SLOT-035",
+      "module": "Tests",
+      "description": "Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/visual/visual_matrix.json",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Static screenshots alone cannot satisfy issue #170."
+    },
+    {
+      "id": "SLOT-036",
+      "module": "Slots",
+      "description": "Slots uses one server-authoritative paytable, scatter award, four-free-spin feature, and constant-size progressive meter; only a paid spin at exactly twenty lines and a 1.00 line bet contributes to or can win the meter, every free spin preserves it, and an earned feature remains locked to its paid-trigger line and stake basis. The frozen v1 cent stake and line-count vocabulary remains accepted, current debit and payout rows reconcile to one result round, and governed evidence proves house-side best play over at least one million paid spins per approved scenario with complete bonus-chain drainage plus localized responsive presentation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [
+        "BR-SLOT-LINE-BET-001",
+        "BR-SLOT-ECONOMICS-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json",
+        "tests/games/slots/test_economics.py",
+        "tests/slots_economics_long.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-471-slots-economics-split-a",
+      "changed_in": "issue-471-slots-economics-split-a",
+      "notes": "The one exact progressive qualifier is twenty lines by a 1.00 line bet. Six real-engine Long scenarios each execute one million paid spins, drain every triggered and retriggered feature chain before the paid-cycle confidence block closes, use paid cost as the denominator, and require every 99 percent upper confidence bound to remain below 1. The nonqualifying one-line strategy and the qualifying twenty-line strategy have separate predeclared near-92-percent acceptance bands. A separate provider transaction dependency remains outside this Split A delivery and is tracked by issue #430 Phase0c."
+    },
+    {
+      "id": "SLOT-037",
+      "module": "Slots",
+      "description": "Slots preserves the existing fast 180-millisecond unattended hold while attended normal motion uses five independent deterministic decorative strips with staggered deceleration and bounded anticipation over the authoritative grid, true reduced motion uses a strip-free comfort hold, and route-owned action identity makes API, landing, wallet, sound, voice, teardown, and remount continuation exactly once and stale-safe.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-SLOT-PRESENTATION-001"
+      ],
+      "browser_tests": [
+        "BR-SLOT-ECONOMICS-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json",
+        "tests/games/slots/test_frontend.mjs",
+        "tests/run_tests.py",
+        "docs/evidence/slots/README.md"
+      ],
+      "introduced_in": "issue-527-roulette-slots-presentation",
+      "changed_in": "issue-527-roulette-slots-presentation",
+      "notes": "Listener-free tests dispose the real route-owned timer scope through actual Slots mount, unmount, and remount cycles at API, landing, and delayed-wallet boundaries. Hosted exact-head Browser evidence executes normal and reduced public spins in English and Russian at all four governed viewports. This bounded presentation slice does not claim the planned SLOT-030 through SLOT-035 full pacing, adoption, one-hundred-spin, or video gates, and issues #170 and #74 remain open."
+    }
+  ]
+}

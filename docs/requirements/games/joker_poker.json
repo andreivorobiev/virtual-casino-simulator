@@ -1,0 +1,113 @@
+{
+  "game": "joker_poker",
+  "requirements_prefixes": [
+    "JP"
+  ],
+  "requirements": [
+    {
+      "id": "JP-001",
+      "module": "Joker Poker",
+      "description": "A 53-card single-hand draw profile contains exactly one wild joker, reload-safe holds, Kings-or-Better qualification, and distinct natural royal, five-of-a-kind, and wild royal paytable rows.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JP-001"
+      ],
+      "browser_tests": [
+        "BR-JP-001"
+      ],
+      "implementation_files": [
+        "casino/games/joker_poker/engine.py",
+        "web/games/joker_poker.js"
+      ],
+      "introduced_in": "game-expansion-joker-poker",
+      "changed_in": "game-expansion-joker-poker",
+      "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #130."
+    },
+    {
+      "id": "JP-002",
+      "module": "Joker Poker",
+      "description": "Authenticated sessions own private reload-safe source hands, hold selections, durable receipts, settled history, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JP-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-JP-001"
+      ],
+      "implementation_files": [
+        "casino/games/joker_poker/api.py",
+        "casino/games/joker_poker/service.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-joker-poker",
+      "changed_in": "game-expansion-joker-poker",
+      "notes": "Session context overrides caller player ids, unused draw cards remain private, and committed results survive reload and process restart."
+    },
+    {
+      "id": "JP-003",
+      "module": "Joker Poker",
+      "description": "One wager debit and at most one returned-token payout credit use the shared ledger exactly once under durable deal and draw action identities.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JP-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/joker_poker/service.py",
+        "casino/core/ledger.py",
+        "tests/games/joker_poker/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-joker-poker",
+      "changed_in": "game-expansion-joker-poker",
+      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "JP-004",
+      "module": "Application",
+      "description": "Joker Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-JP-001"
+      ],
+      "implementation_files": [
+        "web/games/joker_poker.js",
+        "web/i18n/en-US/games/joker_poker.json",
+        "web/i18n/ru-RU/games/joker_poker.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-joker-poker",
+      "changed_in": "game-expansion-joker-poker",
+      "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "JP-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery include Joker Poker with requirement, module, version, and visual traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-JP-001"
+      ],
+      "implementation_files": [
+        "modules/joker_poker.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "tests/game_drivers/joker_poker.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-joker-poker",
+      "changed_in": "game-expansion-joker-poker",
+      "notes": "Descriptor sort order 300 and the catalog-discovered long driver are canonical."
+    }
+  ]
+}

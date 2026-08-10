@@ -1,0 +1,113 @@
+{
+  "game": "red_dog",
+  "requirements_prefixes": [
+    "RD"
+  ],
+  "requirements": [
+    {
+      "id": "RD-001",
+      "module": "Red Dog",
+      "description": "Six-deck Red Dog supports consecutive-card pushes, opening-pair handling, spread decisions, and the approved spread and pair payout schedule.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RD-001"
+      ],
+      "browser_tests": [
+        "BR-RD-001"
+      ],
+      "implementation_files": [
+        "casino/games/red_dog/engine.py",
+        "web/games/red_dog.js"
+      ],
+      "introduced_in": "game-expansion-red-dog",
+      "changed_in": "game-expansion-red-dog",
+      "notes": "Allocated by GitHub issue #77 for issue #84; focused tests cover spread payouts, consecutive pushes, pair returns, three-of-a-kind, call, and matching raise paths."
+    },
+    {
+      "id": "RD-002",
+      "module": "Red Dog",
+      "description": "Authenticated sessions own isolated reload-safe Red Dog state, active decisions, recent rounds, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RD-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-RD-001"
+      ],
+      "implementation_files": [
+        "casino/games/red_dog/api.py",
+        "casino/core/request_player.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-red-dog",
+      "changed_in": "game-expansion-red-dog",
+      "notes": "Normal-user session context overrides caller-supplied player ids, and terminal Red Dog history survives backend restart."
+    },
+    {
+      "id": "RD-003",
+      "module": "Red Dog",
+      "description": "Red Dog ante, optional matching raise, push return, and payout movements use the shared ledger exactly once under stable action identifiers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RD-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/red_dog/api.py",
+        "casino/core/ledger.py",
+        "casino/games/red_dog/tests/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-red-dog",
+      "changed_in": "game-expansion-red-dog",
+      "notes": "Game code never mutates balances directly; replay proof matches immutable Red Dog command fingerprints and verifies complete prepared-versus-committed settlement."
+    },
+    {
+      "id": "RD-004",
+      "module": "Application",
+      "description": "The Red Dog surface provides complete English and Russian copy and remains responsive, accessible, and timer-clean across required desktop, tablet, and mobile viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-RD-001"
+      ],
+      "implementation_files": [
+        "web/games/red_dog.js",
+        "web/i18n/en-US/games/red_dog.json",
+        "web/i18n/ru-RU/games/red_dog.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-red-dog",
+      "changed_in": "game-expansion-red-dog",
+      "notes": "Acceptance evidence covers both locales, all four named viewports, spread decisions, automatic pair and consecutive states, third-card settlement, and canonical route restoration."
+    },
+    {
+      "id": "RD-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery automatically include Red Dog with requirement, module, version, and visual evidence traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-RD-001"
+      ],
+      "implementation_files": [
+        "modules/red_dog.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "tests/game_drivers/red_dog.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-red-dog",
+      "changed_in": "game-expansion-red-dog",
+      "notes": "The descriptor uses sort order 110 and the normalized tests.game_drivers.red_dog:play driver reference released by issue #77."
+    }
+  ]
+}
