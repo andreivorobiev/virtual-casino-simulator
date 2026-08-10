@@ -10568,6 +10568,43 @@
       "notes": "All provider identities and credentials are synthetic; no live provider, browser callback, public enablement, or external account mutation is part of this requirement."
     },
     {
+      "id": "LEDGER-034",
+      "module": "Ledger",
+      "description": "The JSON provider commits new exactly-once money identities and projection acknowledgements through one fsynced append-only journal instead of rewriting all historical actions. Provider-local caches consume only monotonic external tails, crash recovery visits only pending identities, compatible ledger projection checks use an immutable identity index, and bounded compaction replaces settled event copies with verified ledger references while retaining at most 200 bytes per settled action in the checkpoint.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-JSON-IDEMPOTENCY-001",
+        "STORAGE-LEDGER-CACHE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/storage.py"
+      ],
+      "introduced_in": "issue-432-action-journal",
+      "changed_in": "issue-432-action-journal",
+      "notes": "The legacy ledger_actions.json snapshot remains readable without conversion writes. New journal bytes are private storage state, preserve frozen API envelopes and event payloads, fail closed on partial or conflicting records, and are deleted by the existing provider reset boundary."
+    },
+    {
+      "id": "TEST-169",
+      "module": "Tests",
+      "description": "Listener-free isolated JSON evidence proves new exactly-once actions perform zero whole-history action-snapshot rewrites, use one durable commit and one projection append, keep replay byte-identical, preserve pre-journal snapshots across restart, incrementally observe another provider's journal tail, fail closed on partial records, compact below 200 bytes per settled action, and preserve process-racing and lost-response recovery semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-JSON-IDEMPOTENCY-001",
+        "STORAGE-LEDGER-CACHE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/storage_ledger_cache_tests.py",
+        "tests/storage_tests.py",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-432-action-journal",
+      "changed_in": "issue-432-action-journal",
+      "notes": "Deterministic operation and retained-byte assertions are release gates; wall-clock timing remains diagnostic so shared-runner variance cannot weaken or flake the integrity proof."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",

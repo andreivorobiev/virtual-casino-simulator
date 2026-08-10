@@ -637,7 +637,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','AUDIO-010','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
-    run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','LEDGER-033','STORAGE-005','STORAGE-006','TEST-043','TEST-164'],storage_tests.run_json_action_idempotency)
+    run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','LEDGER-033','LEDGER-034','STORAGE-005','STORAGE-006','TEST-043','TEST-164','TEST-169'],storage_tests.run_json_action_idempotency)
     # Execute provider-owned journal recovery, contention, reset, and fail-closed proof. (#430)
     run_case('STORAGE-GAME-ACTION-ONCE-001',['STORAGE-011'],run_json_game_action_provider_tests)
     # Prove player-scoped JSON concurrency, rollback, fallback, isolation, and MySQL delegation.
@@ -1439,7 +1439,7 @@ def run_api_tests():
     # Record deterministic requirement-source partitioning and aggregate drift rejection. (issue #434, TEST-165)
     run_case('GOV-REQUIREMENT-SHARDS-001',['TEST-165'],lambda: run_unit_module('tests.requirements_sharding_tests','requirement sharding suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
-    run_case('STORAGE-LEDGER-CACHE-001',['STORAGE-009','TEST-135'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache and bootstrap race suite failed'))
+    run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
     run_case('API-LEGACY-SETTLE-001',['LEDGER-030','SEC-012'],lambda: run_unit_module('tests.legacy_settlement_tests','blackjack and baccarat settlement suite failed'))
     # Record the roulette and keno exactly-once settlement, layout, and entropy proof. (issues #403, #222, #420)

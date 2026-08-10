@@ -61,6 +61,8 @@ _JSON_GATE_LOCAL = threading.local()
 _GAME_ACTION_STORAGE_VERSION = 1
 # Enumerate the only durable recovery stages accepted from the private journal.
 _GAME_ACTION_STAGES = {"prepared", "planned", "wallet_applied", "state_applied", "receipt_committed"}
+# Compact the append-only ledger-action journal only after a bounded growth interval. (LEDGER-034)
+_LEDGER_ACTION_COMPACT_BYTES = 512 * 1024
 
 
 # Return the process-shared reentrant lock for one exact JSON data root.
@@ -268,12 +270,20 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         self._ledger_cache_rows: list[dict] = []
         # Index cached row references by player so filtered history reads stay O(tail). (issue #412)
         self._ledger_cache_by_player: dict[Any, list[dict]] = {}
+        # Index cached rows by immutable ledger identity so projection checks stay constant-time. (issue #432)
+        self._ledger_cache_by_id: dict[str, dict] = {}
         # Hold rows decoded from an unterminated trailing line without caching them. (issue #412)
         self._ledger_cache_tail_rows: list[dict] = []
-        # Track the (size, mtime_ns) identity of the parsed committed-action registry file. (issue #412)
-        self._actions_cache_stat: tuple[int, int] | None = None
         # Cache the parsed committed-action registry so wallet actions stop re-parsing it. (issue #412)
         self._actions_cache_registry: Any = None
+        # Track the legacy snapshot identity used to seed the append-only action journal cache. (issue #432)
+        self._actions_cache_snapshot_stat: tuple[int, int] | None = None
+        # Track how many complete action-journal bytes have been applied to the cache. (issue #432)
+        self._actions_cache_journal_offset = 0
+        # Track the action-journal file identity at the cached offset. (issue #432)
+        self._actions_cache_journal_stat: tuple[int, int] | None = None
+        # Track the compacted-or-loaded journal size from which bounded growth is measured. (issue #432)
+        self._actions_cache_compaction_floor = 0
 
     # Return the local JSON players path.
     def players_path(self) -> Path:
@@ -289,6 +299,11 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
     def ledger_actions_path(self) -> Path:
         # Return the provider journal that makes action identity durable before projection.
         return self.data_dir / "ledger_actions.json"
+
+    # Return the append-only action journal used for new constant-time commits. (LEDGER-034)
+    def ledger_action_journal_path(self) -> Path:
+        # Keep the journal beside the legacy snapshot so reset and backup semantics remain unchanged.
+        return self.data_dir / "ledger_actions.jsonl"
 
     # Return the cross-process wallet lock path.
     def ledger_lock_path(self) -> Path:
@@ -364,15 +379,23 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         self._ledger_cache_rows = []
         # Discard the per-player index built from the discarded rows.
         self._ledger_cache_by_player = {}
+        # Discard the immutable ledger-id index built from the discarded rows.
+        self._ledger_cache_by_id = {}
         # Discard rows decoded from an unterminated trailing line.
         self._ledger_cache_tail_rows = []
 
     # Forget the cached committed-action registry so the next read reloads from the file. (issue #412)
     def _drop_actions_cache(self) -> None:
-        # Forget the cached registry file identity.
-        self._actions_cache_stat = None
         # Discard the cached parsed registry object.
         self._actions_cache_registry = None
+        # Forget the legacy snapshot identity used by the discarded registry.
+        self._actions_cache_snapshot_stat = None
+        # Restart append-only journal parsing from the first complete record.
+        self._actions_cache_journal_offset = 0
+        # Forget the append-only journal identity used by the discarded registry.
+        self._actions_cache_journal_stat = None
+        # Restart bounded compaction growth accounting from an empty journal.
+        self._actions_cache_compaction_floor = 0
 
     # Clear JSON data while preserving the held legacy lock file and identity.
     def _reset_locked(self) -> None:
@@ -2223,6 +2246,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 self._ledger_cache_rows.append(event)
                 # Index the same row reference by player for O(tail) filtered reads.
                 self._ledger_cache_by_player.setdefault(event.get("player_id"), []).append(event)
+                # Index the same row by immutable ledger identity for O(1) projection proof.
+                self._ledger_cache_by_id[event["ledger_id"]] = event
         # Advance the cache offset past every fully terminated parsed line. (issue #412)
         self._ledger_cache_offset += boundary
         # Remember the file identity that produced the cached content. (issue #412)
@@ -2234,10 +2259,10 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
 
     # Project one durably committed action into players.json and ledger.jsonl.
     def _project_committed_action(self, event: dict) -> None:
-        # Read current append-only rows so recovery never duplicates a ledger event.
-        ledger_ids = {row["ledger_id"] for row in self._ledger_rows()}
+        # Refresh the incremental ledger cache before checking immutable identity membership. (issue #432)
+        self._ledger_rows()
         # Stop when both balance and ledger projection already completed earlier.
-        if event["ledger_id"] in ledger_ids:
+        if event["ledger_id"] in self._ledger_cache_by_id:
             # Treat the ledger row as proof that this action was fully projected.
             return
         # Load the current player document without invoking another process lock.
@@ -2265,85 +2290,357 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         # Append the original committed event after the wallet transition is durable.
         self._append_jsonl(self.ledger_path(), event)
 
-    # Cache one just-written registry object under its durable file identity. (issue #412)
-    def _store_actions_cache(self, registry: dict) -> None:
-        # Start protected stat logic so cache upkeep never fails a completed write.
+    # Read a file identity without requiring the file to exist. (issue #432)
+    def _optional_file_stat(self, path: Path) -> tuple[int, int] | None:
+        # Start protected stat logic so absent compatibility files remain ordinary.
         try:
-            # Read the identity of the file that now contains exactly this registry.
-            stat = os.stat(self.ledger_actions_path())
-        # Fail toward re-reading on the next call instead of caching unverified state.
+            # Read the file size and nanosecond modification identity.
+            stat = os.stat(path)
+        # Treat a missing path as an absent optional source.
         except OSError:
-            # Drop the cache so the next reader consults the file directly.
-            self._drop_actions_cache()
-            # Stop without caching.
+            # Return no identity for an absent optional file.
+            return None
+        # Return the stable pair used by the provider-local cache guard.
+        return stat.st_size, stat.st_mtime_ns
+
+    # Add the in-memory pending set required for bounded crash recovery. (LEDGER-034)
+    def _normalize_actions_registry(self, registry: Any) -> dict:
+        # Fail closed when a durable registry is not the expected object shape.
+        if not isinstance(registry, dict) or not isinstance(registry.get("actions", {}), dict):
+            # Reject inconsistent money-action state instead of silently rearming identities.
+            raise ConflictError("Ledger action index is inconsistent")
+        # Preserve the versioned registry shape used by existing stores.
+        registry.setdefault("schema_version", 1)
+        # Preserve a monotonic next sequence even for a legacy empty snapshot.
+        registry.setdefault("next_sequence", 1)
+        # Index only unprojected identities so steady-state recovery is O(pending), not O(history).
+        registry["_pending"] = {identity for identity, record in registry["actions"].items() if isinstance(record, dict) and record.get("projected") is not True}
+        # Return the normalized mutable in-memory view.
+        return registry
+
+    # Apply one durable append-only action-journal record to the cached registry. (LEDGER-034)
+    def _apply_action_journal_record(self, registry: dict, record: Any) -> None:
+        # Reject malformed records before they can weaken exactly-once identity state.
+        if not isinstance(record, dict) or record.get("op") not in {"commit", "project", "settled"} or not isinstance(record.get("identity"), str):
+            # Fail closed because skipping a corrupt commit could duplicate a money action.
+            raise ConflictError("Ledger action journal is inconsistent")
+        # Read the unambiguous canonical identity shared by both record kinds.
+        identity = record["identity"]
+        # Apply a logical commit before any compatible wallet projection.
+        if record["op"] == "commit":
+            # Read the immutable action record carried by the commit line.
+            action = record.get("action")
+            # Require every committed line to carry a structured event and monotonic sequence.
+            if not isinstance(action, dict) or not isinstance(action.get("event"), dict) or not isinstance(action.get("sequence"), int):
+                # Preserve the journal for operator recovery instead of guessing missing money state.
+                raise ConflictError("Ledger action journal is inconsistent")
+            # Read any previously committed identity from the legacy snapshot or earlier journal tail.
+            existing = registry["actions"].get(identity)
+            # Compare immutable fields while ignoring a later in-memory projection acknowledgement.
+            comparable_existing = ({**existing, "projected": False} if isinstance(existing, dict) else existing)
+            # Permit only byte-semantic duplicate commit records, which are harmless after a lost acknowledgement.
+            if existing is not None and comparable_existing != action:
+                # Reject two different immutable actions under one canonical identity.
+                raise ConflictError("Ledger action journal identity conflicts", {"action_key": action.get("action_key")})
+            # Publish the immutable action record into the provider-owned point index.
+            registry["actions"][identity] = action
+            # Mark the identity pending until a durable project record follows.
+            registry["_pending"].add(identity)
+            # Advance the next sequence beyond every accepted durable commit.
+            registry["next_sequence"] = max(int(registry.get("next_sequence", 1)), int(action["sequence"]) + 1)
+            # Stop after applying the commit record.
             return
-        # Store the registry reference for later stat-matched reuse.
-        self._actions_cache_registry = registry
-        # Store the file identity used to validate later cache hits.
-        self._actions_cache_stat = (stat.st_size, stat.st_mtime_ns)
+        # Rebuild one compacted settled action from its immutable ledger row.
+        if record["op"] == "settled":
+            # Require compact records to retain monotonic order and ledger identity.
+            if not isinstance(record.get("sequence"), int) or not isinstance(record.get("ledger_id"), str):
+                # Fail closed on a compact record that cannot reconstruct exact action state.
+                raise ConflictError("Ledger action journal is inconsistent")
+            # Decode the canonical identity tuple carried unchanged through compaction.
+            try:
+                # Parse the unambiguous player, scope, and action-key fragments.
+                identity_parts = json.loads(identity)
+            # Normalize invalid identity JSON to the action-index recovery boundary.
+            except json.JSONDecodeError:
+                # Preserve compacted bytes for operator inspection.
+                raise ConflictError("Ledger action journal is inconsistent") from None
+            # Require exactly three string identity fragments.
+            if not isinstance(identity_parts, list) or len(identity_parts) != 3 or any(not isinstance(part, str) for part in identity_parts):
+                # Reject an identity that cannot match the provider write seam.
+                raise ConflictError("Ledger action journal is inconsistent")
+            # Refresh the append-only ledger cache before resolving the compact reference.
+            self._ledger_rows()
+            # Resolve the immutable event by its provider-owned ledger identity.
+            event = self._ledger_cache_by_id.get(record["ledger_id"])
+            # Require every settled compact record to reference one durable compatible row.
+            if not isinstance(event, dict):
+                # Fail closed instead of accepting an identity whose replay proof is missing.
+                raise ConflictError("Ledger action journal requires operator recovery")
+            # Read storage-owned fingerprint evidence from the committed event.
+            details = event.get("details") if isinstance(event.get("details"), dict) else {}
+            # Reconstruct the in-memory action record without retaining duplicate event bytes on disk.
+            compact_action = {"sequence": record["sequence"], "player_id": identity_parts[0], "action_scope": identity_parts[1], "action_key": identity_parts[2], "action_fingerprint": details.get("ledger_action_fingerprint"), "projected": True, "event": event}
+            # Read an optional matching legacy snapshot record.
+            existing = registry["actions"].get(identity)
+            # Reject a snapshot/journal disagreement on immutable ledger identity.
+            if isinstance(existing, dict) and isinstance(existing.get("event"), dict) and existing["event"].get("ledger_id") != event.get("ledger_id"):
+                # Preserve both sources for operator recovery.
+                raise ConflictError("Ledger action journal identity conflicts", {"action_key": identity_parts[2]})
+            # Publish the reconstructed point-index record.
+            registry["actions"][identity] = compact_action
+            # Keep the settled identity out of the bounded recovery set.
+            registry["_pending"].discard(identity)
+            # Advance the next sequence beyond the compact record.
+            registry["next_sequence"] = max(int(registry.get("next_sequence", 1)), int(record["sequence"]) + 1)
+            # Stop after applying the compact settled record.
+            return
+        # Read the corresponding committed action before accepting its projection marker.
+        action = registry["actions"].get(identity)
+        # Require a project record to refer to one known immutable commit.
+        if not isinstance(action, dict) or not isinstance(action.get("event"), dict):
+            # Fail closed on orphan projection markers.
+            raise ConflictError("Ledger action journal is inconsistent")
+        # Require the marker to bind the exact committed ledger event identity.
+        if record.get("ledger_id") != action["event"].get("ledger_id"):
+            # Reject a marker that could acknowledge a different wallet transition.
+            raise ConflictError("Ledger action journal projection conflicts", {"action_key": action.get("action_key")})
+        # Mark the compatible-file projection complete after its durable marker is read.
+        action["projected"] = True
+        # Remove the settled identity from the bounded recovery set.
+        registry["_pending"].discard(identity)
 
-    # Read the committed-action registry through a (size, mtime_ns) stat-guarded cache. (issue #412)
+    # Parse complete append-only journal bytes and apply them in durable order. (LEDGER-034)
+    def _apply_action_journal_bytes(self, registry: dict, payload: bytes) -> None:
+        # Require a newline-terminated tail because a partial commit cannot be ignored safely.
+        if payload and not payload.endswith(b"\n"):
+            # Fail closed until an operator resolves the interrupted append.
+            raise ConflictError("Ledger action journal requires operator recovery")
+        # Visit each physical record in append order.
+        for line in payload.splitlines():
+            # Reject blank records because the format is one object per line.
+            if not line:
+                # Preserve the journal rather than accepting an ambiguous gap.
+                raise ConflictError("Ledger action journal is inconsistent")
+            # Start protected JSON decoding for one durable line.
+            try:
+                # Decode the UTF-8 JSON object without replacement semantics.
+                record = json.loads(line.decode("utf-8"))
+            # Normalize malformed bytes to the public fail-closed conflict boundary.
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                # Preserve the journal for explicit operator recovery.
+                raise ConflictError("Ledger action journal is inconsistent") from None
+            # Apply the validated record to the in-memory index.
+            self._apply_action_journal_record(registry, record)
+
+    # Read the committed-action registry from one legacy snapshot plus an incremental journal. (LEDGER-034)
     def _read_actions_registry(self) -> Any:
-        # Stat the registry file so unchanged content skips a full JSON re-parse.
-        try:
-            # Read the current size and modification identity of the registry file.
-            stat = os.stat(self.ledger_actions_path())
-        # Treat a missing registry exactly like the previous per-call default read.
-        except OSError:
-            # Drop any cache tied to a removed registry file.
-            self._drop_actions_cache()
-            # Return a fresh mutable empty registry as the historical default factory did.
-            return self._empty_action_registry()
-        # Serve the cached parsed registry when the file identity is unchanged. (issue #412)
-        if self._actions_cache_registry is not None and self._actions_cache_stat == (stat.st_size, stat.st_mtime_ns):
-            # Return the cached registry object without re-reading the file.
-            return self._actions_cache_registry
-        # Build one call-local sentinel that only the corruption fallback can return.
+        # Discover interrupted compaction files before trusting either durable source.
+        temporaries = tuple(self.data_dir.glob("ledger_actions.jsonl.tmp-*"))
+        # Fail closed while any unpublished checkpoint remains unresolved.
+        if temporaries:
+            # Preserve the old journal and temporary bytes for operator comparison.
+            raise ConflictError("Ledger action journal requires operator recovery")
+        # Capture the optional legacy snapshot identity before deciding whether the cache is reusable.
+        snapshot_stat = self._optional_file_stat(self.ledger_actions_path())
+        # Capture the optional append-only journal identity under the held process lock.
+        journal_stat = self._optional_file_stat(self.ledger_action_journal_path())
+        # Require an absent journal to stay absent, or an existing journal to grow monotonically.
+        journal_monotonic = (journal_stat is None and self._actions_cache_journal_stat is None) or (journal_stat is not None and journal_stat[0] >= self._actions_cache_journal_offset)
+        # Reuse the cached registry when the immutable snapshot is unchanged and the journal only grew.
+        cache_reusable = self._actions_cache_registry is not None and self._actions_cache_snapshot_stat == snapshot_stat and journal_monotonic
+        # Refresh only the new journal tail for the ordinary multi-process append case.
+        if cache_reusable:
+            # Return immediately when the journal identity is byte-for-byte unchanged.
+            if self._actions_cache_journal_stat == journal_stat:
+                # Reuse the existing provider-owned point index.
+                return self._actions_cache_registry
+            # Reject a same-size rewrite because append-only history must never change in place.
+            if journal_stat is not None and journal_stat[0] == self._actions_cache_journal_offset:
+                # Force a complete validation rebuild below.
+                cache_reusable = False
+            # Apply only bytes appended by another process when the file grew monotonically.
+            elif journal_stat is not None:
+                # Open the journal in binary mode so offsets are platform-independent.
+                with self.ledger_action_journal_path().open("rb") as handle:
+                    # Seek to the first unapplied durable byte.
+                    handle.seek(self._actions_cache_journal_offset)
+                    # Read exactly the newly observed append-only tail.
+                    payload = handle.read(journal_stat[0] - self._actions_cache_journal_offset)
+                # Apply the complete tail to the existing point index.
+                self._apply_action_journal_bytes(self._actions_cache_registry, payload)
+                # Advance the parsed offset to the observed durable file size.
+                self._actions_cache_journal_offset = journal_stat[0]
+                # Bind the refreshed cache to the new journal identity.
+                self._actions_cache_journal_stat = journal_stat
+                # Return the incrementally refreshed registry.
+                return self._actions_cache_registry
+            # Return the cached snapshot-derived registry when no journal exists.
+            elif journal_stat is None:
+                # Keep the zero journal offset bound to an absent journal.
+                self._actions_cache_journal_offset = 0
+                # Remember that no journal identity exists.
+                self._actions_cache_journal_stat = None
+                # Return the cached registry without reparsing the snapshot.
+                return self._actions_cache_registry
+        # Build one call-local sentinel that only legacy snapshot corruption can return.
         sentinel = object()
-        # Re-read through the historical corruption-tolerant JSON reader.
-        parsed = self._read_json(self.ledger_actions_path(), lambda: sentinel)
-        # Preserve the historical corrupt-file behavior of backing up and returning a fresh default.
+        # Read the existing compatible snapshot when one exists.
+        parsed = self._read_json(self.ledger_actions_path(), lambda: sentinel) if snapshot_stat is not None else self._empty_action_registry()
+        # Refuse to forget durable identities when the legacy snapshot cannot be decoded.
         if parsed is sentinel:
-            # Never cache a corruption fallback so every later call re-checks the file.
+            # Drop process-local cache state before surfacing the recovery boundary.
             self._drop_actions_cache()
-            # Return a fresh mutable empty registry exactly like the previous implementation.
-            return self._empty_action_registry()
-        # Cache the parsed payload under the pre-read identity so later writes force a reload.
-        self._actions_cache_registry = parsed
-        # Store the file identity used to validate later cache hits.
-        self._actions_cache_stat = (stat.st_size, stat.st_mtime_ns)
-        # Return the freshly parsed registry payload.
-        return parsed
+            # Fail closed instead of returning an empty action registry.
+            raise ConflictError("Ledger action index requires operator recovery")
+        # Normalize the snapshot and build its bounded pending set.
+        registry = self._normalize_actions_registry(parsed)
+        # Apply the complete journal after the legacy snapshot baseline.
+        if journal_stat is not None:
+            # Read the exact bytes observed by the pre-read stat call.
+            with self.ledger_action_journal_path().open("rb") as handle:
+                # Read only the stable length captured while the process lock is held.
+                payload = handle.read(journal_stat[0])
+            # Apply every complete append-only record in order.
+            self._apply_action_journal_bytes(registry, payload)
+        # Cache the combined provider-owned action index.
+        self._actions_cache_registry = registry
+        # Bind the cache to the legacy snapshot identity.
+        self._actions_cache_snapshot_stat = snapshot_stat
+        # Record the complete applied journal length.
+        self._actions_cache_journal_offset = journal_stat[0] if journal_stat is not None else 0
+        # Bind the cache to the append-only journal identity.
+        self._actions_cache_journal_stat = journal_stat
+        # Treat a completely validated restart image as the next bounded-growth baseline.
+        self._actions_cache_compaction_floor = journal_stat[0] if journal_stat is not None else 0
+        # Return the combined compatible registry.
+        return registry
 
-    # Recover every journaled action before allowing a later wallet mutation.
+    # Durably append one action record and update the already-locked cache. (LEDGER-034)
+    def _append_action_journal_record(self, registry: dict, record: dict) -> None:
+        # Reject planner-side mutation before opening the durable journal.
+        self._reject_planner_mutation()
+        # Ensure the ordinary provider directories exist before appending.
+        self.ensure_ready()
+        # Serialize the record deterministically with one platform-independent newline.
+        payload = (json.dumps(record, sort_keys=True, allow_nan=False, separators=(",", ":")) + "\n").encode("utf-8")
+        # Create the target parent without touching any unrelated data path.
+        self.ledger_action_journal_path().parent.mkdir(parents=True, exist_ok=True)
+        # Open the append-only journal in binary mode so byte offsets and newlines are stable.
+        with self.ledger_action_journal_path().open("ab") as handle:
+            # Append the complete logical commit or projection marker in one write call.
+            handle.write(payload)
+            # Flush Python buffering before requesting filesystem durability.
+            handle.flush()
+            # Require the journal bytes to reach the operating-system durable boundary.
+            os.fsync(handle.fileno())
+        # Apply the just-persisted record to the caller's in-memory registry.
+        self._apply_action_journal_record(registry, record)
+        # Refresh the journal identity after the durable append.
+        journal_stat = self._optional_file_stat(self.ledger_action_journal_path())
+        # Fail closed if the just-written journal cannot be stated.
+        if journal_stat is None:
+            # Preserve all files for operator recovery.
+            raise ConflictError("Ledger action journal requires operator recovery")
+        # Cache the caller registry containing this exact durable record.
+        self._actions_cache_registry = registry
+        # Bind the cache to the unchanged legacy snapshot identity.
+        self._actions_cache_snapshot_stat = self._optional_file_stat(self.ledger_actions_path())
+        # Advance the parsed offset to the complete durable journal size.
+        self._actions_cache_journal_offset = journal_stat[0]
+        # Bind the cache to the current journal identity.
+        self._actions_cache_journal_stat = journal_stat
+
+    # Rewrite a bounded journal checkpoint without duplicate settled event payloads. (LEDGER-034)
+    def _compact_action_journal(self, registry: dict) -> None:
+        # Order records by their monotonic logical commit sequence.
+        ordered = sorted(registry.get("actions", {}).items(), key=lambda item: int(item[1].get("sequence", 0)))
+        # Build one compact or pending record for every durable action identity.
+        records = []
+        # Visit each committed identity exactly once.
+        for identity, action in ordered:
+            # Store only a ledger reference after compatible projection is durable.
+            if action.get("projected") is True:
+                # Append one compact settled record without duplicate event bytes.
+                records.append({"op": "settled", "identity": identity, "sequence": int(action["sequence"]), "ledger_id": action["event"]["ledger_id"]})
+            # Preserve the complete immutable event while crash recovery remains pending.
+            else:
+                # Append one full logical commit record for the unresolved crash window.
+                records.append({"op": "commit", "identity": identity, "action": action})
+        # Serialize every checkpoint record with stable binary newlines.
+        payload = b"".join((json.dumps(record, sort_keys=True, allow_nan=False, separators=(",", ":")) + "\n").encode("utf-8") for record in records)
+        # Build a process-and-thread-unique sibling used for atomic publication.
+        tmp = self.ledger_action_journal_path().with_suffix(f".jsonl.tmp-{os.getpid()}-{threading.get_ident()}")
+        # Write the complete checkpoint without exposing partial replacement bytes.
+        with tmp.open("wb") as handle:
+            # Publish the exact compact payload into the private temporary file.
+            handle.write(payload)
+            # Flush Python buffering before the durability boundary.
+            handle.flush()
+            # Require the complete compact checkpoint to reach durable storage.
+            os.fsync(handle.fileno())
+        # Retry bounded Windows sharing violations while preserving atomic replacement.
+        for attempt in range(20):
+            # Start protected replacement so transient scanner handles can release.
+            try:
+                # Atomically replace the old append-only history with its equivalent checkpoint.
+                tmp.replace(self.ledger_action_journal_path())
+                # Stop after successful checkpoint publication.
+                break
+            # Handle only transient Windows sharing failures.
+            except PermissionError:
+                # Surface the final failure without deleting recovery bytes.
+                if attempt == 19:
+                    # Re-raise the original filesystem failure.
+                    raise
+                # Wait one bounded increasing interval before retrying.
+                time.sleep(0.01 * (attempt + 1))
+        # Read the newly published journal identity.
+        journal_stat = self._optional_file_stat(self.ledger_action_journal_path())
+        # Require the checkpoint file to remain visible after atomic publication.
+        if journal_stat is None:
+            # Fail closed while preserving the provider directory for recovery.
+            raise ConflictError("Ledger action journal requires operator recovery")
+        # Keep the already-equivalent in-memory point index cached.
+        self._actions_cache_registry = registry
+        # Bind the cache to the unchanged legacy compatibility snapshot.
+        self._actions_cache_snapshot_stat = self._optional_file_stat(self.ledger_actions_path())
+        # Mark the entire compact checkpoint as parsed.
+        self._actions_cache_journal_offset = journal_stat[0]
+        # Bind the cache to the compact journal identity.
+        self._actions_cache_journal_stat = journal_stat
+        # Measure the next compaction only after another full threshold of append-only growth.
+        self._actions_cache_compaction_floor = journal_stat[0]
+
+    # Compact only after a bounded amount of append-only growth. (LEDGER-034)
+    def _maybe_compact_action_journal(self, registry: dict) -> None:
+        # Read the current journal identity after a completed projection marker.
+        journal_stat = self._optional_file_stat(self.ledger_action_journal_path())
+        # Keep ordinary actions append-only until the configured growth threshold is reached.
+        if journal_stat is None or journal_stat[0] - self._actions_cache_compaction_floor < _LEDGER_ACTION_COMPACT_BYTES:
+            # Return without any whole-history write in the common path.
+            return
+        # Publish one compact equivalent checkpoint at the bounded threshold.
+        self._compact_action_journal(registry)
+
+    # Recover only unprojected journaled actions before allowing a later wallet mutation. (LEDGER-034)
     def _recover_committed_actions(self, registry: dict | None = None) -> dict:
-        # Load the durable registry through the stat-guarded cache when the caller did not pass one. (issue #412)
+        # Load the combined snapshot/journal index when the caller did not pass one.
         registry = registry or self._read_actions_registry()
-        # Normalize malformed registry shapes to a safe empty action map.
-        actions = registry.get("actions", {}) if isinstance(registry, dict) else {}
-        # Track whether recovery completed any previously pending projections.
-        recovered = False
-        # Replay committed transitions in their original monotonic order.
-        for record in sorted(actions.values(), key=lambda item: int(item.get("sequence", 0))):
-            # Skip actions whose compatible files were already projected and acknowledged.
-            if record.get("projected") is True:
-                # Continue without rescanning the append-only ledger for settled actions.
-                continue
-            # Invalidate the registry cache before mutation so a failed projection cannot poison later reads. (issue #412)
-            self._drop_actions_cache()
-            # Project the recorded immutable event exactly once.
-            self._project_committed_action(record["event"])
-            # Mark projection complete only after both compatible files are durable.
-            record["projected"] = True
-            # Remember that the updated journal must be persisted before releasing the lock.
-            recovered = True
-        # Persist recovered projection markers so steady-state wallet reads remain constant-time.
-        if recovered:
-            # Atomically checkpoint the action journal after successful projection.
-            self._write_json(self.ledger_actions_path(), registry)
-            # Re-cache the checkpointed registry under its new durable file identity. (issue #412)
-            self._store_actions_cache(registry)
-        # Return the registry so the transaction can reuse its in-memory view.
+        # Read the canonical action map from the normalized registry.
+        actions = registry.get("actions", {})
+        # Resolve only pending identities in original monotonic order.
+        pending = sorted((actions[identity] for identity in tuple(registry.get("_pending", set()))), key=lambda item: int(item.get("sequence", 0)))
+        # Replay each crash-window transition exactly once.
+        for action in pending:
+            # Project the immutable event into compatible wallet and ledger files.
+            self._project_committed_action(action["event"])
+            # Rebuild the canonical identity used by the journal marker.
+            identity = self._action_identity(action["player_id"], action["action_scope"], action["action_key"])
+            # Durably acknowledge the completed projection without rewriting historical actions.
+            self._append_action_journal_record(registry, {"op": "project", "identity": identity, "ledger_id": action["event"]["ledger_id"]})
+        # Compact only after all recoverable actions have durable projection markers.
+        self._maybe_compact_action_journal(registry)
+        # Return the settled registry so the transaction can reuse its in-memory view.
         return registry
 
     # Execute a ledger transaction after both thread and process locks are held.
@@ -2452,22 +2749,16 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 event = _ledger_event(player_id, amount, transaction_type, before, after, game, round_id, committed_details)
                 # Allocate the next monotonic recovery sequence.
                 sequence = int(registry.get("next_sequence", 1))
-                # Invalidate the registry cache before mutation so an interrupted commit cannot poison later reads. (issue #412)
-                self._drop_actions_cache()
-                # Store the action record as the logical commit before projecting balance and JSONL.
-                registry.setdefault("actions", {})[identity] = {"sequence": sequence, "player_id": player_id, "action_scope": scope, "action_key": action_key, "action_fingerprint": fingerprint, "projected": False, "event": event}
-                # Advance the sequence for the next distinct action.
-                registry["next_sequence"] = sequence + 1
-                # Persist the logical commit atomically before any wallet projection.
-                self._write_json(self.ledger_actions_path(), registry)
+                # Build the immutable action record stored before compatible projection.
+                action = {"sequence": sequence, "player_id": player_id, "action_scope": scope, "action_key": action_key, "action_fingerprint": fingerprint, "projected": False, "event": event}
+                # Append the logical commit durably without rewriting prior action history. (LEDGER-034)
+                self._append_action_journal_record(registry, {"op": "commit", "identity": identity, "action": action})
                 # Project the committed transition into the compatible player and ledger files.
                 self._project_committed_action(event)
-                # Mark the compatible-file projection complete after both writes succeed.
-                registry["actions"][identity]["projected"] = True
-                # Checkpoint the projection marker so later reads skip settled journal entries.
-                self._write_json(self.ledger_actions_path(), registry)
-                # Re-cache the settled registry under its final durable file identity. (issue #412)
-                self._store_actions_cache(registry)
+                # Append one compact marker after both compatible projections succeed. (LEDGER-034)
+                self._append_action_journal_record(registry, {"op": "project", "identity": identity, "ledger_id": event["ledger_id"]})
+                # Compact only after bounded journal growth and a complete settled action.
+                self._maybe_compact_action_journal(registry)
                 # Return the newly committed event with a non-replay marker.
                 return event, False
 
