@@ -13484,6 +13484,18 @@
       "introduced_in": "account-admin-completion",
       "changed_in": "account-admin-completion",
       "notes": "No old Browser artifact is reused; hosted exact-head qualification produces fresh evidence after this source lands."
+    },
+    {
+      "id": "TOOL-013",
+      "module": "Tooling",
+      "description": "A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.",
+      "status": "PASS",
+      "api_tests": ["CI-AGENT-MEMORY-001"],
+      "browser_tests": [],
+      "implementation_files": ["agents/memory/MEMORY_SPEC.md", "agents/memory/repository-facts.md", "agents/memory/task-log-template.md", "scripts/validate_agent_memory.py", ".github/workflows/ci.yml", "AGENTS.md", "tests/unit/request_latency_benchmark_tests.py"],
+      "introduced_in": "agent-memory-v1",
+      "changed_in": "agent-memory-v1",
+      "notes": "The first slice validates provenance structure and current path existence; 30-day and changed-since-source staleness remain mandatory use-time policy and may gain automated reporting in a later reviewed slice."
     }
   ]
 }

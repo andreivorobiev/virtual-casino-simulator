@@ -326,6 +326,12 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`web/AGENTS.md`](web/AGENTS.md) — AGENTS.md - web browser shell
 - [`web/assets/fonts/README.md`](web/assets/fonts/README.md) — Native-label font subsets
 
+### agents documentation
+
+- [`agents/memory/MEMORY_SPEC.md`](agents/memory/MEMORY_SPEC.md) — Persistent Agent Memory Specification
+- [`agents/memory/repository-facts.md`](agents/memory/repository-facts.md) — Repository Facts
+- [`agents/memory/task-log-template.md`](agents/memory/task-log-template.md) — Agent Task Summary
+
 ### site documentation
 
 - [`site/tiltseven/deployment.md`](site/tiltseven/deployment.md) — TiltSeven future publication checklist

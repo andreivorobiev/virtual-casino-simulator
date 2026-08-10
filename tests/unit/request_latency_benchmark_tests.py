@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates, settlement convergence, and account/Admin completion to total exactly 924 permanent rows.
-        self.assertEqual(len(requirements), 924)
+        # Require the accepted aggregates, account/Admin completion, and memory gate to total exactly 925 permanent rows.
+        self.assertEqual(len(requirements), 925)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1423,6 +1423,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "RESET-004": "Core",  # Bind public v2 recovery routes and browser flow.
             "CONVERT-003": "Application",  # Bind the guest conversion UI to existing authority.
             "TEST-158": "Tests",  # Bind account/Admin completion API and Browser evidence.
+            "TOOL-013": "Tooling",  # Bind persistent agent-memory provenance and validation ownership.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1534,16 +1535,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(core_module["version"], "9.38.0")
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
-        # Require the exact release-owned tests patch for v0.9.5.60 qualification.
-        self.assertEqual(tests_module["version"], "1.70.1")
-        # Require the exact release-owned docs patch for v0.9.5.60 provenance.
-        self.assertEqual(docs_module["version"], "1.68.1")
+        # Require the exact tests patch for the memory-governance fixture.
+        self.assertEqual(tests_module["version"], "1.70.2")
+        # Require the exact docs patch for the persistent memory specification and facts.
+        self.assertEqual(docs_module["version"], "1.68.2")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the exact release-owned contracts patch for the compatibility record.
         self.assertEqual(contracts_module["version"], "1.56.1")
-        # Require the exact tooling patch for the expanded anonymous-route contract gate.
-        self.assertEqual(tooling_module["version"], "1.25.3")
+        # Require the exact tooling patch for the agent-memory validation gate.
+        self.assertEqual(tooling_module["version"], "1.25.4")
         # Require the exact compatible Baccarat settlement-interface patch.
         self.assertEqual(baccarat_module["version"], "9.1.14")
         # Require the exact compatible Bingo settlement-interface patch.
