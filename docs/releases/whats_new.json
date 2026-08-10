@@ -4,10 +4,10 @@
   "max_merged_entries": 3,
   "entries": [
     {
-      "version": "0.9.5.62",
+      "version": "0.9.5.63",
       "show_in_whats_new": false,
-      "title_key": "whatsNew.entry.0_9_5_62.title",
-      "body_key": "whatsNew.entry.0_9_5_62.body"
+      "title_key": "whatsNew.entry.0_9_5_63.title",
+      "body_key": "whatsNew.entry.0_9_5_63.body"
     }
   ]
 }
