@@ -1,3 +1,16 @@
+# Virtual Casino Simulator v0.9.5.62 Release Notes
+
+## Row-scoped player persistence and bootstrap safety
+
+- Packages the accepted storage-integrity PR #646; the release-only application revision advances mechanically to `9.59.3`.
+- Resolves issue #431 by removing public whole-player-map rewrites from runtime persistence and replacing them with explicit insert-only player creation plus lock-correct, insert-missing-only bootstrap behavior.
+- Preserves byte-identical JSON no-ops, read-only MySQL loads, process-safe bootstrap, player isolation, frozen API envelopes, and all accepted game and settlement behavior.
+- Carries permanent requirements `STORAGE-012` and `TEST-162`; the governed total is exactly 930 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 742 regular files: the terminal v0.9.5.61 inventory plus this v0.9.5.62 compatibility record; repository documentation, tests, and engineering audit scripts remain intentionally outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; content-owned Core `9.38.1`, Players `9.1.1`, Tooling `1.26.0`, and every game module remain exactly as accepted on protected main.
+- Makes no migration, database-schema, game, settlement, paytable, wagering-economics, provider, public-policy, or frozen-v1-API change.
+- Retains exact immutable and terminal-green v0.9.5.61 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.61 Release Notes
 
 ## Durable agent context and source-bound engineering gates
