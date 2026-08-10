@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus the provider-signup slice to total exactly 940 permanent rows.
-        self.assertEqual(len(requirements), 940)
+        # Require the accepted aggregates plus the action-journal slice to total exactly 942 permanent rows.
+        self.assertEqual(len(requirements), 942)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1439,6 +1439,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "OAUTH-013": "Core",  # Bind explicit policy-gated social signup to OAuth.
             "AUTH-017": "Core",  # Bind recoverable provider-subject account provisioning.
             "TEST-168": "Tests",  # Bind social-signup API, concurrency, and Browser evidence.
+            "LEDGER-034": "Ledger",  # Bind append-only action-journal and compaction ownership.
+            "TEST-169": "Tests",  # Bind deterministic action-journal compatibility and scaling evidence.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1553,7 +1555,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the Deuces descriptor after removing its final game-owned history scan.
         deuces_module = json.loads((ROOT / "modules" / "deuces_wild_video_poker.json").read_text(encoding="utf-8"))
         # Require the compatible Core minor for policy-gated social enrollment.
-        self.assertEqual(core_module["version"], "9.40.0")
+        self.assertEqual(core_module["version"], "9.40.1")
         # Require the compatible Ledger patch for the public read-only point seam.
         self.assertEqual(ledger_module["version"], "9.1.2")
         # Require the exact compatible Players patch for explicit row insertion.
@@ -1561,9 +1563,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
         # Require the compatible tests minor for provider-signup qualification.
-        self.assertEqual(tests_module["version"], "1.74.1")
+        self.assertEqual(tests_module["version"], "1.74.2")
         # Require the docs minor for provider-signup governance and acceptance.
-        self.assertEqual(docs_module["version"], "1.72.1")
+        self.assertEqual(docs_module["version"], "1.72.2")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the compatible contracts minor for additive social-signup fields.

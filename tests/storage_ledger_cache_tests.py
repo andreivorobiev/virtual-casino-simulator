@@ -17,6 +17,8 @@ from pathlib import Path
 from casino.core import players
 # Import the storage module under test for provider construction and injection.
 from casino.core import storage
+# Import the standard fail-closed error used for corrupt money-action journals.
+from casino.errors import ConflictError
 
 
 # Build one realistic seeded ledger event for raw JSONL fixtures.
@@ -189,6 +191,133 @@ class LedgerCacheEquivalenceTests(unittest.TestCase):
         self.assertEqual(60, len(provider.read_ledger_recent("human", 1_000_000)))
         # Require at most one decode per appended row so at most one full-file parse could have happened.
         self.assertLessEqual(len(decoded_lines), 55)
+
+
+# Group append-only money-action journal compatibility and scaling proofs. (LEDGER-034, TEST-169)
+class LedgerActionJournalTests(unittest.TestCase):
+    # Create one isolated provider root and funded wallet per test.
+    def setUp(self):
+        # Build a disposable directory removed automatically after each test.
+        self._tmp = tempfile.TemporaryDirectory()
+        # Register directory cleanup even when a fail-closed assertion raises.
+        self.addCleanup(self._tmp.cleanup)
+        # Store the isolated provider data root.
+        self.data_root = Path(self._tmp.name) / "data"
+        # Build the provider under test.
+        self.provider = storage.JsonStorageProvider(self.data_root)
+        # Seed the standard fake-money wallets before journal actions execute.
+        self.provider.bootstrap_players(players.default_players())
+
+    # Prove new actions use two bounded appends and never rewrite action history.
+    def test_new_actions_never_rewrite_legacy_snapshot(self):
+        # Preserve the provider's ordinary JSON writer for unrelated player projections.
+        original_write = self.provider._write_json
+        # Count only attempted writes to the retired whole-history action snapshot.
+        snapshot_writes = []
+        # Define a transparent writer wrapper for this provider instance.
+        def counting_write(path, data):
+            # Record writes that would reserialize every historical action.
+            if path == self.provider.ledger_actions_path():
+                # Retain the attempted payload for a useful failure count.
+                snapshot_writes.append(data)
+            # Delegate player and other compatible document writes unchanged.
+            return original_write(path, data)
+        # Install the scoped counting wrapper.
+        self.provider._write_json = counting_write
+        # Commit fifty distinct exactly-once actions to exercise a nontrivial history.
+        for index in range(50):
+            # Execute one fresh debit under a unique canonical action key.
+            event, replayed = self.provider.transact_ledger_once("human", -1, "TEST_JOURNAL_DEBIT", f"journal-{index}", "storage", f"round-{index}", {"index": index})
+            # Require every unique identity to commit once.
+            self.assertFalse(replayed)
+            # Require the returned event to retain its canonical ledger identity.
+            self.assertTrue(event["ledger_id"])
+        # Require zero whole-history snapshot rewrites across all fifty actions.
+        self.assertEqual([], snapshot_writes)
+        # Read the durable append-only records without invoking provider parsing.
+        journal_lines = self.provider.ledger_action_journal_path().read_bytes().splitlines()
+        # Require exactly one commit and one projection marker per action.
+        self.assertEqual(100, len(journal_lines))
+        # Require a replay to append nothing and preserve the original event.
+        before_replay = self.provider.ledger_action_journal_path().stat().st_size
+        # Replay the first canonical identity with byte-identical semantics.
+        _, replayed = self.provider.transact_ledger_once("human", -1, "TEST_JOURNAL_DEBIT", "journal-0", "storage", "round-0", {"index": 0})
+        # Require the action to resolve as an existing commit.
+        self.assertTrue(replayed)
+        # Require replay to leave the append-only journal byte-identical.
+        self.assertEqual(before_replay, self.provider.ledger_action_journal_path().stat().st_size)
+        # Compact the settled journal through the production checkpoint seam.
+        self.provider._compact_action_journal(self.provider._read_actions_registry())
+        # Require retained checkpoint cost to stay within the issue's per-action ceiling.
+        self.assertLessEqual(self.provider.ledger_action_journal_path().stat().st_size / 50, 200)
+        # Reconstruct a fresh provider so compact references must resolve from ledger bytes.
+        restarted = storage.JsonStorageProvider(self.data_root)
+        # Replay one compacted action through the canonical exactly-once seam.
+        replay_event, replayed = restarted.transact_ledger_once("human", -1, "TEST_JOURNAL_DEBIT", "journal-49", "storage", "round-49", {"index": 49})
+        # Require compaction to preserve the original committed identity.
+        self.assertTrue(replayed)
+        # Require the replayed compact action to retain its ledger identity.
+        self.assertTrue(replay_event["ledger_id"])
+
+    # Prove the append-only format remains compatible with a pre-change snapshot.
+    def test_legacy_snapshot_replays_without_conversion_write(self):
+        # Commit one action so its production event and record fields are canonical.
+        event, replayed = self.provider.transact_ledger_once("human", -4, "TEST_LEGACY_DEBIT", "legacy-key", "storage", "legacy-round", {"family": "legacy"})
+        # Require the seed action to be a fresh commit.
+        self.assertFalse(replayed)
+        # Decode the first append-only commit record for fixture conversion.
+        commit = json.loads(self.provider.ledger_action_journal_path().read_text(encoding="utf-8").splitlines()[0])
+        # Build the exact legacy snapshot shape produced before LEDGER-034.
+        legacy = {"schema_version": 1, "next_sequence": 2, "actions": {commit["identity"]: {**commit["action"], "projected": True}}}
+        # Persist the compatibility snapshot through the normal atomic writer.
+        self.provider._write_json(self.provider.ledger_actions_path(), legacy)
+        # Remove the derived test journal so restart depends only on legacy bytes.
+        self.provider.ledger_action_journal_path().unlink()
+        # Reconstruct a fresh provider like an application restart after upgrade.
+        restarted = storage.JsonStorageProvider(self.data_root)
+        # Replay the exact old identity through the new combined index reader.
+        replay_event, replayed = restarted.transact_ledger_once("human", -4, "TEST_LEGACY_DEBIT", "legacy-key", "storage", "legacy-round", {"family": "legacy"})
+        # Require the old commit to remain exactly-once and retain its ledger identity.
+        self.assertTrue(replayed)
+        # Require the compatibility replay to return the original immutable event.
+        self.assertEqual(event["ledger_id"], replay_event["ledger_id"])
+        # Require a read-only replay not to create a new journal file.
+        self.assertFalse(restarted.ledger_action_journal_path().exists())
+
+    # Prove a warmed provider consumes only another process's appended journal tail.
+    def test_external_journal_append_is_visible(self):
+        # Warm the first provider's empty action index.
+        self.assertIsNone(self.provider.find_ledger_action("human", "storage", "external-key"))
+        # Build a second independent provider over the same durable files.
+        second = storage.JsonStorageProvider(self.data_root)
+        # Commit one action through the second provider while the first cache is warm.
+        event, replayed = second.transact_ledger_once("human", -2, "TEST_EXTERNAL_ONCE", "external-key", "storage", "external-round", {"writer": "second"})
+        # Require the external action to be a new commit.
+        self.assertFalse(replayed)
+        # Resolve the external commit through the first provider's incremental tail refresh.
+        observed = self.provider.find_ledger_action("human", "storage", "external-key")
+        # Require exact immutable event parity without rebuilding the journal format.
+        self.assertEqual(event, observed)
+
+    # Prove an interrupted journal append cannot silently rearm a money identity.
+    def test_partial_journal_record_fails_closed(self):
+        # Write one deliberately unterminated commit fragment under the isolated root.
+        self.provider.ledger_action_journal_path().write_bytes(b'{"identity":"partial","op":"commit"')
+        # Require any wallet-state read to stop at the operator-recovery boundary.
+        with self.assertRaises(ConflictError):
+            # Trigger the production recovery path that must validate the journal first.
+            self.provider.load_players(players.default_players)
+
+    # Prove interrupted compaction bytes cannot be ignored on restart.
+    def test_compaction_temporary_fails_closed(self):
+        # Build the exact private sibling pattern used by atomic checkpoint publication.
+        temporary = self.provider.ledger_action_journal_path().with_suffix(".jsonl.tmp-interrupted")
+        # Write a bounded unpublished record without replacing the durable journal.
+        temporary.write_text('{}\n', encoding="utf-8")
+        # Require ordinary wallet-state access to preserve both sources for operator recovery.
+        with self.assertRaises(ConflictError):
+            # Trigger the provider recovery boundary that scans compaction residue.
+            self.provider.load_players(players.default_players)
 
 
 # Group bootstrap provisioning race proofs for the seeded player path. (issue #431)

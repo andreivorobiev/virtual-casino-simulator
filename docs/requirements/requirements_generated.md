@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.61.1
-- core: 9.40.0
+- core: 9.40.1
 - ledger: 9.1.2
 - players: 9.1.1
 - bots: 1.1.1
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.74.1
-- docs: 1.72.1
+- tests: 1.74.2
+- docs: 1.72.2
 - contracts: 1.59.1
 - tooling: 1.28.0
 - commenting_policy: 1.0.0
@@ -628,6 +628,8 @@ Historical source baseline: 9.1.0
 - **OAUTH-013** (Core) - PASS: Google and Facebook expose an explicit provider-subject signup intent that is independent from sign-in and linking, requires current terms, privacy, and fake-money acknowledgements before navigation, binds terms version and locale into the one-time state/nonce/PKCE flow, rechecks the provider-specific self-signup policy immediately before account mutation, and remains disabled unless enrollment mode, method flag, operational switch, secret-safe readiness, and network-release latch all agree. Provider email is presentation metadata only and never selects, links, merges, or authenticates an account; disabling signup leaves existing linked sign-in unchanged.
 - **AUTH-017** (Core) - PASS: A first-use external provider subject receives one provider-backed pending enrollment that allocates stable server-owned user and player identifiers exactly once. Canonical user, wallet, current consent, and compound provider-subject link persist while the user remains inactive; only after all are durable does one canonical user-document transition publish the account active. Same-subject retries and simultaneous callbacks resume the same allocation, completed lost-response recovery returns the same account, an existing local-account link cannot become a new account, and a removed completed link cannot be silently resurrected through signup.
 - **TEST-168** (Tests) - PASS: Listener-free provider-signup qualification proves independent Google and Facebook policy, acknowledgement, readiness, start/callback recheck, state/nonce/PKCE, rate, cancellation, replay, same-email isolation, existing-link collision, deterministic retry, post-link failure recovery, same-subject concurrency, revocation non-resurrection, secret-safe logs and errors, bilingual accessible controls, and complete Auth visual-matrix containment without real credentials or provider network access.
+- **LEDGER-034** (Ledger) - PASS: The JSON provider commits new exactly-once money identities and projection acknowledgements through one fsynced append-only journal instead of rewriting all historical actions. Provider-local caches consume only monotonic external tails, crash recovery visits only pending identities, compatible ledger projection checks use an immutable identity index, and bounded compaction replaces settled event copies with verified ledger references while retaining at most 200 bytes per settled action in the checkpoint.
+- **TEST-169** (Tests) - PASS: Listener-free isolated JSON evidence proves new exactly-once actions perform zero whole-history action-snapshot rewrites, use one durable commit and one projection append, keep replay byte-identical, preserve pre-journal snapshots across restart, incrementally observe another provider's journal tail, fail closed on partial records, compact below 200 bytes per settled action, and preserve process-racing and lost-response recovery semantics.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
