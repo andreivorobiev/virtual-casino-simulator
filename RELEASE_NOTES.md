@@ -1,3 +1,16 @@
+# Virtual Casino Simulator v0.9.5.65 Release Notes
+
+## Descriptor-owned requirement shards
+
+- Packages accepted content PR #656; the release-only application revision advances mechanically to `9.59.6`.
+- Resolves issue #434 by making one non-game spine plus 46 descriptor-owned game shards the governed requirement source while retaining a generated compatibility aggregate for existing consumers.
+- Runs every browser-free Python game suite through one shared mapped API case and preserves dependency-complete generic CI discovery for Browser-owned modules.
+- Carries permanent requirement `TEST-165` and the expanded `TEST-161`; the governed total remains exactly 934 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 745 regular files: the terminal v0.9.5.64 inventory plus this v0.9.5.65 compatibility record; repository documentation, tests, requirement sources, and engineering audit scripts remain outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Tooling `1.27.1` and every runtime/game module remain exact protected-main values.
+- Preserves frozen API envelopes, accepted paytables, settlement timing, providers, restricted-preview policy, and the held MySQL migration policy.
+- Retains exact immutable and terminal-green v0.9.5.64 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.64 Release Notes
 
 ## Provider-indexed settlement recovery
