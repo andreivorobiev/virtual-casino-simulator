@@ -4485,7 +4485,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Wait for the asynchronous localized signup rerender.
                             page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"oauth-signup-disabled\"]')",arg=locale)
                             # Require all three acknowledgement controls and both provider controls to remain visible.
-                            assert all(page.get_by_test_id(testid).is_visible() for testid in ('signup-terms','signup-privacy','signup-fake-money','signup-oauth-google','signup-oauth-facebook'))
+                            assert all(page.get_by_test_id(testid).is_visible() for testid in ('signup-terms','signup-privacy','signup-play-token','signup-oauth-google','signup-oauth-facebook'))
                             # Require both provider signup controls to remain natively and accessibly disabled.
                             assert page.get_by_test_id('signup-oauth-google').is_disabled() and page.get_by_test_id('signup-oauth-facebook').is_disabled() and page.get_by_test_id('signup-oauth-google').get_attribute('aria-disabled')=='true' and page.get_by_test_id('signup-oauth-facebook').get_attribute('aria-disabled')=='true'
                             # Capture default-held signup at every governed viewport.
