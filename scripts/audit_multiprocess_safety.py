@@ -67,6 +67,12 @@ KNOWN_CORE_LOCKS = {
 # Classify exact core singleton/cache symbols whose per-process ownership is intentional.
 KNOWN_CORE_SINGLETONS = {
     ("casino/core/settlement.py", "_DEFAULT_ADAPTER"): ("stateless_settlement_adapter", "compatible"),  # Bind adapter.
+    ("casino/games/baccarat/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Baccarat adapter.
+    ("casino/games/bingo/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Bingo adapter.
+    ("casino/games/blackjack/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Blackjack adapter.
+    ("casino/games/keno/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Keno adapter.
+    ("casino/games/roulette/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Roulette adapter.
+    ("casino/games/slots/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Slots adapter.
     ("casino/core/storage.py", "_PROVIDER"): ("per_process_provider_cache", "compatible"),  # Bind runtime provider.
     ("casino/core/storage.py", "_TEST_PROVIDER"): ("test_provider_injection", "compatible"),  # Bind test provider.
 }
@@ -87,6 +93,7 @@ AUTH_SESSION_ROOTS = {
     "mark_guest_departed",  # Include guest departure state.
     "revoke_admin_session_for_user",  # Include one administrative revocation.
     "revoke_all_admin_sessions_for_user",  # Include bulk administrative revocation.
+    "revoke_session_by_id",  # Include the owner-confirmed single-session revocation path.
     "revoke_sessions_for_user",  # Include user session revocation.
     "revoke_sessions_for_user_method",  # Include method-scoped revocation.
     "save_sessions",  # Include direct compatibility snapshot writes.
@@ -99,6 +106,7 @@ AUTH_SESSION_READ_ONLY_ROOTS = {
     "export_auth_state",  # Include compatibility-state reads.
     "list_admin_sessions_for_user",  # Include strict administrative session reads.
     "load_sessions",  # Include direct compatibility snapshot reads.
+    "online_user_count",  # Include the bounded presence read over current sessions.
 }
 # Bound autoplay proof to every public lifecycle entrypoint.
 AUTOPLAY_ROOTS = {

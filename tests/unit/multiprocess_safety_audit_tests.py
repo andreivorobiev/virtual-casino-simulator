@@ -162,6 +162,25 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             rows[("casino/core/settlement.py", "_DEFAULT_ADAPTER")]["state_model"],  # Read adapter model.
             "stateless_settlement_adapter",  # Pin reviewed semantics.
         )
+        # Resolve the six explicit game adapter instances introduced by settlement convergence.
+        game_adapters = {
+            (row["path"], row["symbol"])  # Preserve adapter ownership.
+            for row in self.inventory["module_state"]  # Inspect complete module state.
+            if row["state_model"] == "stateless_settlement_adapter"  # Select reviewed adapters.
+            and row["path"].startswith("casino/games/")  # Exclude the shared default adapter.
+        }
+        # Pin every current explicit game adapter so additions require review.
+        self.assertEqual(
+            game_adapters,
+            {
+                ("casino/games/baccarat/api.py", "SETTLEMENT"),  # Pin Baccarat ownership.
+                ("casino/games/bingo/api.py", "SETTLEMENT"),  # Pin Bingo ownership.
+                ("casino/games/blackjack/api.py", "SETTLEMENT"),  # Pin Blackjack ownership.
+                ("casino/games/keno/api.py", "SETTLEMENT"),  # Pin Keno ownership.
+                ("casino/games/roulette/api.py", "SETTLEMENT"),  # Pin Roulette ownership.
+                ("casino/games/slots/api.py", "SETTLEMENT"),  # Pin Slots ownership.
+            },
+        )
         # Pin both lazy provider cache symbols.
         self.assertEqual(
             {

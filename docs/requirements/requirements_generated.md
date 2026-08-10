@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.70.2
-- docs: 1.68.2
+- tests: 1.71.0
+- docs: 1.69.0
 - contracts: 1.56.1
-- tooling: 1.25.4
+- tooling: 1.26.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
@@ -994,4 +994,7 @@ Historical source baseline: 9.1.0
 - **RESET-004** (Core) - PASS: Enumeration-safe password-recovery initiation, resend, and completion are exposed through explicit additive public v2 routes and a localized responsive browser flow. Requests use exact field allowlists, caller idempotency, the existing single-active-token service, generic public acknowledgements, and immediate bearer removal from browser history after completion; frozen v1 and provider release state are unchanged.
 - **CONVERT-003** (Application) - PASS: An active guest can reach a localized conversion form from My Settings, explicitly supply mailbox, display name, password, and terms acceptance, and submit through the existing idempotent conversion authority while preserving the guest wallet and history exactly once. The form never appears as public self-signup and conversion remains constrained by the current enrollment policy.
 - **TEST-158** (Tests) - PASS: Focused JSON/MySQL-capable API suites plus existing permanent Browser cases prove public recovery, owner-only administrator delegation and audit, lifecycle-only Users, enrollment readiness and fail-closed live enablement, read-only launch status, session enforcement/warning/provenance, personal settings with sound off by default, self-history, and the guest conversion offer across English, Russian, and all governed viewports.
+- **TEST-159** (Tests) - PASS: A listener-free exact-source payload and shipped-asset budget checkpoint accepts only bounded JSON and MySQL request-latency evidence, derives deterministic compression and asset composition facts, rejects hostile or mismatched inputs, and never starts a listener or contacts production.
+- **TEST-160** (Tests) - PASS: A fail-closed static multiprocess-safety audit inventories every registered game and reviewed session, autoplay, bot, limiter, operations, settlement-adapter, provider-cache, and MySQL-pool state owner before any worker-count change, and rejects unclassified entrypoints or mutable singleton state.
+- **TEST-161** (Tests) - PASS: Descriptor-owned game suite declarations are parsed through a strict dotted-module boundary, require unique permanent case and requirement mappings, reject empty, missing, duplicated, unstable, or failing suites, and preserve deterministic module execution order without a central game allowlist.
 - **TOOL-013** (Tooling) - PASS: A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.
