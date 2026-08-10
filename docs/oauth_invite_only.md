@@ -1,8 +1,8 @@
 # Invite-only OAuth operations boundary
 
-Requirements: OAUTH-007, OAUTH-008, OAUTH-009, OAUTH-010, AUTH-007, and TEST-093.
+Requirements: OAUTH-007, OAUTH-008, OAUTH-009, OAUTH-010, OAUTH-013, AUTH-007, AUTH-017, TEST-093, and TEST-168.
 
-This repository contains a disabled-by-default Google and Facebook OAuth implementation for existing active private-invite accounts. It does not provide public signup, create accounts, merge accounts, select accounts by provider email, or replace local-password recovery.
+This repository contains disabled-by-default Google and Facebook OAuth sign-in, linking, and explicit social-signup flows. Social signup can create a canonical account only after the separate enrollment policy, provider method flag, operational configuration, provider readiness, and network-release latch all permit that exact provider; restricted-preview defaults keep every social-signup route fail closed. The implementation never merges or selects accounts by provider email and does not replace local-password recovery.
 
 ## Repository defaults
 
@@ -18,6 +18,8 @@ Runtime availability requires both gates, complete credentials, a valid canonica
 The first link requires the exact authenticated active private-invite local-password user, the exact initiating session, browser binding, CSRF proof, and explicit confirmation. Later provider sign-in resolves only an existing unique `(provider, subject)` link. Provider email and display claims are never account selectors. Guests, disabled users, provider-only identities, and accounts without local-password recovery cannot link.
 
 Unlink removes only the current user's selected provider link and revokes sessions authenticated by that provider. Local-password sessions and recovery remain available.
+
+Social signup is a separate explicit action from sign-in and linking. The browser must acknowledge the current terms, privacy notice, and fake-money nature before navigation. The callback rechecks the provider-specific enrollment policy before it creates durable state. Identity is the compound `(provider, subject)` key; provider email is optional presentation metadata and can never select, link, or merge an account. A verified provider email already owned by a local account makes signup ineligible and returns a fixed instruction to authenticate and explicitly link, without disclosing or selecting that account. A pending record allocates one stable server-owned user and player identity, persists an inactive canonical user, wallet, consent, and identity link, then publishes the user active in one final document transition. Same-subject retries resume that allocation, while a removed completed link cannot be recreated by repeating signup.
 
 ## Flow persistence and recovery
 
@@ -46,12 +48,12 @@ Repository merge, deployment, configured credentials, or green checks do not aut
 5. provider-specific signature/app-binding, issuer, audience, nonce, expiry, and error behavior;
 6. rate-limit, transient ambiguity, rollback, unlink, and provider-session revocation evidence;
 7. monitoring and bounded smoke evidence without raw identity material;
-8. explicit owner authorization to set that provider's network-release latch true.
+8. explicit owner authorization to set that provider's network-release latch true and, for signup, to enable self-signup plus that provider method.
 
-No live release may authorize public signup, provider-created accounts, email linking, DNS or firewall changes, billing, deployment, or unrestricted launch #209 unless those actions receive their own explicit authority.
+No live release may authorize social signup, email linking, DNS or firewall changes, billing, deployment, or unrestricted launch #209 unless those actions receive their own explicit authority. Provider-console privacy, revocation, and deletion readiness remains held by #336.
 
 ## Rollback
 
-Set the affected provider-network release latch false first. This blocks new starts, callbacks, adapter construction, and continued authorization of provider-authenticated sessions while preserving local-password access. If required, also set the provider enable flag false, revoke provider-authenticated sessions, and unlink only reviewed affected bindings. Do not delete malformed or disputed persistence; preserve it for operator recovery and audit.
+Disable the provider's social-signup method in enrollment policy first when only new account creation must stop; existing linked sign-in remains available. Set the affected provider-network release latch false when all provider traffic must stop. This blocks new starts, callbacks, adapter construction, and continued authorization of provider-authenticated sessions while preserving local-password access. If required, also set the provider enable flag false, revoke provider-authenticated sessions, and unlink only reviewed affected bindings. Do not delete malformed or disputed persistence; preserve it for operator recovery and audit.
 
 Re-enablement requires a new exact readiness and security review. Never infer release authority from a prior repository merge or stale provider configuration.

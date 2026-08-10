@@ -759,8 +759,8 @@ def _audit(event, **fields) -> None:
 
 
 # Decide whether one governed enrollment route may proceed and record the exact decision first.
-def evaluate(route) -> dict:
-    """Return one bounded signup or invitation decision after its operational log succeeds."""
+def evaluate(route, method: str = "email") -> dict:
+    """Return one bounded method-specific signup or invitation decision after logging succeeds."""
     # Resolve one coherent policy snapshot for both enforcement and operational logging.
     resolved = capabilities()
     # Read the closed-vocabulary mode from the normalized policy.
@@ -789,19 +789,25 @@ def evaluate(route) -> dict:
         _audit(AUDIT_EVENT, route=route, mode=mode, decision="allowed", reason="allowed")
         # Allow the existing invitation service to retain its generic envelopes and lifecycle.
         return {"allowed": True, "reason": "allowed", "mode": mode}
-    # Deny public email signup outside the explicit self-signup mode.
+    # Reject unknown signup methods through one bounded operational decision.
+    if type(method) is not str or method not in METHODS:
+        # Record only the fixed unknown method label before returning.
+        _audit(AUDIT_EVENT, route=route, mode=mode, method="unknown", decision="denied", reason="method_disabled")
+        # Preserve only the reviewed reason and mode.
+        return {"allowed": False, "reason": "method_disabled", "mode": mode}
+    # Deny public signup outside the explicit self-signup mode.
     if mode != MODE_SELF_SIGNUP:
-        # Record the truthful invite-only refusal with only the reviewed email-method label.
-        _audit(AUDIT_EVENT, route=route, mode=mode, method="email", decision="denied", reason="self_signup_disabled")
+        # Record the truthful invite-only refusal with only the reviewed method label.
+        _audit(AUDIT_EVENT, route=route, mode=mode, method=method, decision="denied", reason="self_signup_disabled")
         # Preserve only the reviewed reason and mode.
         return {"allowed": False, "reason": "self_signup_disabled", "mode": mode}
-    # Deny public email signup unless its strict method flag is enabled.
-    if resolved["methods"]["email"] is not True:
+    # Deny public signup unless its strict method flag is enabled.
+    if resolved["methods"][method] is not True:
         # Record the fixed method refusal before account validation or creation.
-        _audit(AUDIT_EVENT, route=route, mode=mode, method="email", decision="denied", reason="method_disabled")
+        _audit(AUDIT_EVENT, route=route, mode=mode, method=method, decision="denied", reason="method_disabled")
         # Preserve only the reviewed reason and mode.
         return {"allowed": False, "reason": "method_disabled", "mode": mode}
     # Record the allowed signup before any identity or session mutation begins.
-    _audit(AUDIT_EVENT, route=route, mode=mode, method="email", decision="allowed", reason="allowed")
+    _audit(AUDIT_EVENT, route=route, mode=mode, method=method, decision="allowed", reason="allowed")
     # Allow the existing signup route to retain its request validation and response contract.
     return {"allowed": True, "reason": "allowed", "mode": mode}

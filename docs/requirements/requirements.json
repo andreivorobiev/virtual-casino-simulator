@@ -10491,6 +10491,83 @@
       "notes": "The test requirement is limited to repository-safe control and fail-closed evidence; no live provider traffic or external enablement is exercised."
     },
     {
+      "id": "OAUTH-013",
+      "module": "Core",
+      "description": "Google and Facebook expose an explicit provider-subject signup intent that is independent from sign-in and linking, requires current terms, privacy, and fake-money acknowledgements before navigation, binds terms version and locale into the one-time state/nonce/PKCE flow, rechecks the provider-specific self-signup policy immediately before account mutation, and remains disabled unless enrollment mode, method flag, operational switch, secret-safe readiness, and network-release latch all agree. Provider email is presentation metadata only and never selects, links, merges, or authenticates an account; disabling signup leaves existing linked sign-in unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OAUTH-002"
+      ],
+      "browser_tests": [
+        "BR-OAUTH-SIGNUP-001"
+      ],
+      "implementation_files": [
+        "casino/core/enrollment_policy.py",
+        "casino/core/oauth/service.py",
+        "casino/core/oauth/persistence.py",
+        "casino/core/oauth/enrollment.py",
+        "web/app.js",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "contracts/openapi/auth.v2.yaml",
+        "contracts/compatibility/oauth-invite-only-runtime.json",
+        "contracts/compatibility/restricted-preview-security.json",
+        "docs/oauth_invite_only.md",
+        "docs/restricted_preview_security.md"
+      ],
+      "introduced_in": "issue-335-social-signup",
+      "changed_in": "issue-335-social-signup",
+      "notes": "Repository behavior is disabled by default and uses only fake providers in tests. Provider-console configuration, credentials, live network release, deletion callbacks, DNS, and public launch remain separately held by #336 and #209."
+    },
+    {
+      "id": "AUTH-017",
+      "module": "Core",
+      "description": "A first-use external provider subject receives one provider-backed pending enrollment that allocates stable server-owned user and player identifiers exactly once. Canonical user, wallet, current consent, and compound provider-subject link persist while the user remains inactive; only after all are durable does one canonical user-document transition publish the account active. Same-subject retries and simultaneous callbacks resume the same allocation, completed lost-response recovery returns the same account, an existing local-account link cannot become a new account, and a removed completed link cannot be silently resurrected through signup.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OAUTH-002"
+      ],
+      "browser_tests": [
+        "BR-OAUTH-SIGNUP-001"
+      ],
+      "implementation_files": [
+        "casino/core/oauth/enrollment.py",
+        "casino/core/oauth/persistence.py",
+        "casino/core/oauth/identity_links.py",
+        "casino/core/auth.py",
+        "casino/core/players.py",
+        "tests/oauth/test_enrollment.py"
+      ],
+      "introduced_in": "issue-335-social-signup",
+      "changed_in": "issue-335-social-signup",
+      "notes": "Provider-created accounts have no local-password recovery and therefore cannot unlink their sole provider authority. Revoked or deleted completed links require a separately authenticated recovery path rather than signup resurrection."
+    },
+    {
+      "id": "TEST-168",
+      "module": "Tests",
+      "description": "Listener-free provider-signup qualification proves independent Google and Facebook policy, acknowledgement, readiness, start/callback recheck, state/nonce/PKCE, rate, cancellation, replay, same-email isolation, existing-link collision, deterministic retry, post-link failure recovery, same-subject concurrency, revocation non-resurrection, secret-safe logs and errors, bilingual accessible controls, and complete Auth visual-matrix containment without real credentials or provider network access.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OAUTH-002"
+      ],
+      "browser_tests": [
+        "BR-OAUTH-SIGNUP-001"
+      ],
+      "implementation_files": [
+        "tests/oauth/test_service.py",
+        "tests/oauth/test_persistence.py",
+        "tests/oauth/test_enrollment.py",
+        "tests/enrollment_policy_tests.py",
+        "tests/account_spine_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json",
+        "scripts/validate_contracts.py"
+      ],
+      "introduced_in": "issue-335-social-signup",
+      "changed_in": "issue-335-social-signup",
+      "notes": "All provider identities and credentials are synthetic; no live provider, browser callback, public enablement, or external account mutation is part of this requirement."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",

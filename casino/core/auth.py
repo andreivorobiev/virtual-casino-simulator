@@ -154,7 +154,7 @@ def verify_password(password: str, encoded: str) -> bool:
 
 def public_user(user: dict) -> dict:
     # Copy the durable identity without exposing its password verifier or internal analytics binding.
-    result = {key: value for key, value in user.items() if key not in ("password_hash", "guest_analytics_id")}
+    result = {key: value for key, value in user.items() if key not in ("password_hash", "guest_analytics_id", "oauth_enrollment_id")}
     # Publish the username alias required by the v2 contract while email remains compatible.
     result["username"] = user.get("username") or user.get("email") or ""
     # Publish the canonical role list while retaining the historical singular role field.
@@ -377,6 +377,104 @@ def provision_invited_user(email: str, password: str, display_name: str, locale:
     # Commit activation and reservation cleanup atomically.
     update_json(USERS_PATH, activate, default_users)
     # Return the durable active local account.
+    return result
+
+
+# Provision or resume one inactive provider-owned account before its identity link is committed. (OAUTH-013)
+def provision_social_user(provider: str, enrollment_id: str, user_id: str, player_id: str, display_name: str, provider_email: str | None, email_verified: bool, locale: str, terms_version: str) -> dict:
+    # Accept only the two reviewed external identity authorities.
+    if provider not in {"google", "facebook"}:
+        # Reject unknown providers before touching canonical identity state.
+        raise ValidationError("social identity provider is invalid")
+    # Require server-owned opaque identifiers for every recoverable saga resource.
+    if not str(enrollment_id or "").startswith("social_enrollment_") or not str(user_id or "").startswith("user_social_") or not str(player_id or "").startswith("player_social_"):
+        # Reject request-authored identity or wallet targets.
+        raise ValidationError("social enrollment identity is invalid")
+    # Normalize bounded presentation metadata without using it as an identity key.
+    label = str(display_name or "").strip()[:80] or f"{provider.title()} player"
+    # Retain a normalized provider email only as optional display metadata.
+    display_email = normalize_email(provider_email)[:254] if isinstance(provider_email, str) and provider_email.strip() else None
+    # Restrict the persisted locale to translated restricted-preview surfaces.
+    accepted_locale = locale if locale in ("en-US", "ru-RU") else "en-US"
+    # Require the current reviewed terms version before creating any canonical state.
+    if str(terms_version or "").strip() != GUEST_TERMS_VERSION:
+        # Reject stale or missing consent without creating an identity.
+        raise ValidationError("Current enrollment acknowledgement is required")
+    # Capture one provisioning instant used by the first successful attempt.
+    now = utc_now()
+    # Publish the durable identity selected by the user-document transaction.
+    result = {}
+
+    # Create or replay the inactive social identity atomically.
+    def provision(state: dict) -> dict:
+        # Reject malformed user state rather than replacing security-sensitive data.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Find an idempotent prior provisioning attempt by server-owned enrollment id.
+        existing = next((stored for stored in state["users"] if stored.get("oauth_enrollment_id") == enrollment_id), None)
+        # Validate and replay the exact prior identity when it exists.
+        if existing is not None:
+            # Reject changed canonical, provider, player, or terms bindings on recovery.
+            if existing.get("user_id") != user_id or existing.get("player_id") != player_id or existing.get("identity_provider") != provider or existing.get("terms_accepted_version") != terms_version:
+                # Keep the prior account unchanged and fail recovery closed.
+                raise ConflictError("social identity replay conflicts with existing state")
+            # Publish the compatible existing identity.
+            result.update(existing)
+            # Leave durable state unchanged until explicit activation below.
+            return state
+        # Reject any unrelated canonical account claiming the deterministic user or wallet id.
+        if any(stored.get("user_id") == user_id or stored.get("player_id") == player_id for stored in state["users"]):
+            # Preserve one owner for each canonical identity and wallet.
+            raise ConflictError("social identity conflicts with an existing account")
+        # Build a provider-owned username that cannot collide through provider email reuse.
+        username = f"{provider}-{user_id.removeprefix('user_social_')}"
+        # Build an inactive recoverable identity with no local password or email lookup key.
+        user = {"user_id": user_id, "email": None, "username": username, "display_name": label, "role": "player", "roles": ["player"], "status": "provisioning", "player_id": player_id, "password_hash": "", "terms_required": False, "terms_accepted_at": now, "terms_accepted_version": terms_version, "terms_acceptance_source": "oauth_signup", "privacy_accepted_at": now, "fake_money_acknowledged_at": now, "locale": accepted_locale, "language": accepted_locale, "created_at": now, "updated_at": now, "identity_provider": provider, "provider_email": display_email, "provider_email_verified": bool(email_verified), "oauth_enrollment_id": enrollment_id}
+        # Append the inactive canonical identity before its deterministic wallet and link.
+        state["users"].append(user)
+        # Publish the first provisioning result.
+        result.update(user)
+        # Return the complete identity document for one provider transaction.
+        return state
+
+    # Persist or replay the inactive canonical identity.
+    update_json(USERS_PATH, provision, default_users)
+    # Create or replay the deterministic wallet while the identity remains inactive.
+    players.ensure_social_player(player_id, label)
+    # Return only the still-inactive durable identity for link orchestration.
+    return result
+
+
+# Atomically activate one fully linked social account inside the canonical user document. (OAUTH-013)
+def activate_social_user(provider: str, enrollment_id: str, user_id: str, player_id: str) -> dict:
+    # Publish the exact active identity selected by the transaction.
+    result = {}
+
+    # Transition only the matching recoverable social identity to active.
+    def activate(state: dict) -> dict:
+        # Reject malformed user state before account activation.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Find the exact provisioning identity by both enrollment and canonical user id.
+        user = next((stored for stored in state["users"] if stored.get("oauth_enrollment_id") == enrollment_id and stored.get("user_id") == user_id), None)
+        # Refuse to activate absent or drifted provider/wallet bindings.
+        if user is None or user.get("identity_provider") != provider or user.get("player_id") != player_id or user.get("status") not in {"provisioning", "active"}:
+            # Preserve every existing account and wallet binding.
+            raise ConflictError("social identity activation is unavailable")
+        # Transition the recoverable identity to an active canonical account.
+        user["status"] = "active"
+        # Refresh the lifecycle timestamp on first activation or recovery replay.
+        user["updated_at"] = utc_now()
+        # Publish the complete active identity to the caller.
+        result.update(user)
+        # Return the complete canonical user document.
+        return state
+
+    # Commit activation as the single externally visible account-state transition.
+    update_json(USERS_PATH, activate, default_users)
+    # Return the active provider-owned account.
     return result
 
 # Report whether an identity record is a disposable guest-trial principal. (issue #317)

@@ -1,6 +1,6 @@
 {
   "artifact": "restricted-preview-security",
-  "version": 5,
+  "version": 6,
   "stage": "restricted-preview",
   "canonical_origin": "https://casino.tiltseven.com",
   "enrollment_policy": {
@@ -12,7 +12,7 @@
     "schema_v1_malformed_document": "fixed-operator-recovery-without-read-side-write",
     "schema_v1_unknown_mode": "fixed-operator-recovery-without-read-side-write",
     "public_methods_default_enabled": false,
-    "enforced_routes": ["/api/v2/auth/signup", "/api/v2/auth/redeem-invitation"],
+    "enforced_routes": ["/api/v2/auth/signup", "/api/v2/auth/redeem-invitation", "/api/v2/auth/oauth/{google|facebook}/start", "/api/v2/auth/oauth/{google|facebook}/callback"],
     "decision_logging": {
       "kind": "operational-jsonl",
       "event": "enrollment_decision",
@@ -104,6 +104,9 @@
     "oauth_provider_flags_default_false": true,
     "oauth_provider_network_release_flags_default_false": true,
     "oauth_existing_private_invite_accounts_only": true,
+    "oauth_social_signup_supported_but_default_false": true,
+    "oauth_social_signup_requires_terms_privacy_and_fake_money_acknowledgement": true,
+    "oauth_provider_email_auto_linking": false,
     "admin_requires_admin_session": true,
     "monitor_bearer_limited_to_operations": true,
     "guest_trials_restricted_preview_only": true,

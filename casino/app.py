@@ -335,7 +335,7 @@ def build_router() -> Router:
         # Resolve the read-only durable policy so the endpoint and future enforcement share one source. (AUTH-013)
         enrollment = enrollment_policy.capabilities()
         # Return feature gates only, never environment names, credentials, or operator settings.
-        return {"signup_enabled": enrollment["signup_enabled"], "guest_trials_enabled": guest_settings.trials_enabled(), "invitation_enrollment_enabled": enrollment["invitation_enrollment_enabled"], "enrollment_mode": enrollment["mode"], "guest_conversion_enabled": True, "passkeys_enabled": PASSKEYS_ENABLED, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"}
+        return {"signup_enabled": enrollment["signup_enabled"], "signup_methods": dict(enrollment["methods"]), "guest_trials_enabled": guest_settings.trials_enabled(), "invitation_enrollment_enabled": enrollment["invitation_enrollment_enabled"], "enrollment_mode": enrollment["mode"], "guest_conversion_enabled": True, "passkeys_enabled": PASSKEYS_ENABLED, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"}
 
     # Attach a public CSRF bootstrap so a cookie-less sign-in surface can recover without a shell reload. (issue #224)
     @router.get(r"/api/v2/auth/csrf")
