@@ -269,6 +269,8 @@
   "whatsNew.entry.0_9_5_66.body": "This release adds opt-in compact shell and Roulette responses while preserving complete legacy responses by default.",
   "whatsNew.entry.0_9_5_67.title": "Provider safety controls",
   "whatsNew.entry.0_9_5_67.body": "This release adds independent default-off Google and Facebook operational switches without enabling public signup.",
+  "whatsNew.entry.0_9_5_68.title": "Policy-gated social signup",
+  "whatsNew.entry.0_9_5_68.body": "This release adds disabled-by-default Google and Facebook signup into canonical Casino accounts without enabling provider traffic or public launch.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",

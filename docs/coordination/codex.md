@@ -1,28 +1,28 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-10T19:52:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-10T21:50:50Z.
 
 ## Current branch / active Codex work
 
-- Protected main is exact provider-safety merge `86258acbc7a8a6e8bb3511def7b4a5b93204923e`, following terminal-green v0.9.5.66 source `e8cd5e6f316d35028224c5946e90602f41cf984e`.
-- Isolated branch `codex/release-v0.9.5.67` prepares the repository-standard release packet from exact protected main.
-- Normal PR #663 closed repository-controlled issue #333; #336 and #209 remain open for external provider evidence and public-launch authority.
+- Protected main is exact social-signup merge `a670b5737146c628c137a117e08236dff3308f04`, following terminal-green v0.9.5.67 source `e40886626785e586b3013d3447cf242725b07c37`.
+- Isolated branch `codex/release-v0.9.5.68` prepares the repository-standard release packet from exact protected main.
+- Normal PR #666 closed repository-controlled issue #335; #336 and #209 remain open for external provider evidence and public-launch authority.
 
 ## Accepted scope and requirements
 
-- PR #663 adds durable owner-only Google/Facebook operational kill switches independent from enrollment signup flags, with optimistic revisions and privacy-safe hash-linked audit.
-- Provider start, callback, and availability read the switch before credential-bearing adapter construction; enablement requires existing runtime/network readiness while disablement is immediate.
-- Requirements total exactly 937 after permanent `OAUTH-012` and `TEST-167`; no release identifier is allocated.
+- PR #666 adds explicit Google/Facebook signup intents that create canonical Casino identity, player, wallet, consent, and provider-subject links exactly once.
+- Signup requires self-signup mode, a provider-specific enrollment flag, the independent operational switch, runtime readiness, and explicit terms/privacy/play-token acknowledgements; email never selects or merges an account.
+- Requirements total exactly 940 after permanent `OAUTH-013`, `AUTH-017`, and `TEST-168`; no release identifier is allocated.
 
 ## Version and contract allocation
 
-- Release versions advance only to package `0.9.5.67`, application `9.60.1`, contracts `1.58.1`, tests `1.73.1`, and docs `1.71.1`; tooling remains content-owned `1.27.1`.
-- Core remains content-owned `9.39.3` and Admin remains content-owned `1.18.0`; every game revision remains exact protected-main values.
-- The compatibility record retains exact terminal-green v0.9.5.66 source `e8cd5e6f316d35028224c5946e90602f41cf984e`, archive SHA-256 `204fc45b41d7fa4294228e643ea7a1ee4a4bc32407009ed152ecc3a2cf571d03`, and manifest SHA-256 `b2d2d8d5339436743a93ecb3c83cc00a3ef6e302e8bc82bef3d1a745574f1588`.
+- Release versions advance only to package `0.9.5.68`, application `9.61.1`, contracts `1.59.1`, tests `1.74.1`, and docs `1.72.1`; tooling remains content-owned `1.28.0`.
+- Core remains content-owned `9.40.0` and Admin remains content-owned `1.18.0`; every game revision remains exact protected-main values.
+- The compatibility record retains exact terminal-green v0.9.5.67 source `e40886626785e586b3013d3447cf242725b07c37`, archive SHA-256 `2455bb811622a393d782781959b4f156c8974a28d629629b49a3e3f1c4273b5b`, and manifest SHA-256 `b399e42a415b808c3c016ae089b5ac40d389d476e2cf70dc47a94a8c09e993ba`.
 
 ## Rollback, validation, and handback
 
 - Rollback remains application-only at exact schema 2; database rollback is prohibited outside `TOOL-003`. The migration catalog remains minimum 2 / expected 3 / apply held.
-- The canonical deployable inventory is exactly 748 regular files: terminal v0.9.5.66 inventory 746 plus one accepted runtime module and this compatibility record.
+- The canonical deployable inventory is exactly 750 regular files: terminal v0.9.5.67 inventory 748 plus one accepted runtime module and this compatibility record.
 - Local validation is browser-free; fresh hosted all-nine evidence remains mandatory before normal merge and immutable publication.
-- No provider traffic, public signup, public launch, database migration, game, settlement, paytable, or wagering-economics change is claimed.
+- No provider traffic, provider-console change, public-policy activation, public launch, database migration, game, settlement, paytable, or wagering-economics change is claimed.

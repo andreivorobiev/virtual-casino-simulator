@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.68 Release Notes
+
+## Policy-gated social signup
+
+- Packages accepted content PR #666 and closes repository-controlled issue #335; release-owned application advances to `9.61.1`.
+- Adds explicit Google and Facebook signup intents that create canonical Casino users, players, wallets, consent records, and provider-subject links exactly once.
+- Requires self-signup mode, the provider-specific enrollment flag, the independent operational switch, runtime readiness, and explicit terms, privacy, and play-token acknowledgements before provider navigation.
+- Preserves existing provider sign-in, refuses email-based account selection or merging, and directs verified-email collisions to authenticated account linking.
+- Keeps both social signup methods, provider traffic, and public launch disabled by default; external provider evidence remains #336 and the launch gate remains #209.
+- Carries permanent requirements `OAUTH-013`, `AUTH-017`, and `TEST-168`; the governed total is exactly 940 requirements.
+- Records the exact canonical package inventory as 750 regular files: v0.9.5.67 inventory 748 plus `casino/core/oauth/enrollment.py` and this v0.9.5.68 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; Core, tooling, and every game revision remain exact accepted protected-main values.
+- Retains exact immutable terminal-green v0.9.5.67 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.67 Release Notes
 
 ## Provider operational safety controls
