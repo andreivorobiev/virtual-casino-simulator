@@ -11,3 +11,6 @@ documentation generators, and release tooling. It is generated; do not edit it d
 
 Every new game receives its own shard. Existing requirement IDs remain permanent, and moving
 an entry between source files never changes its identifier or historical fields.
+
+Issue #434 established this source boundary; existing focused runner cases remain valid
+supplemental evidence, but a new game no longer needs a central Python-suite registration.
