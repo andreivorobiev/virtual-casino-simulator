@@ -14,6 +14,8 @@ import { applyTranslations, formatDate, formatMoney, formatNumber, getLocaleSett
 let current = 'dashboard';
 // Store lastUserPassword so Admin can see the latest one-time credential after rerender.
 let lastUserPassword = '';
+// Increment the Users-render revision so an older same-tab response cannot overwrite a newer account mutation.
+let usersRenderRevision = 0;
 // Preserve low-cardinality Guest Trials filters across locale rerenders and refreshes.
 let guestFilters = { locale: '', device: '', status: '', game: '', completed: '', error_category: '', range: '' };
 // Preserve governed problem-report filters across detail navigation and refreshes.
@@ -87,6 +89,12 @@ async function load(tab = 'dashboard') {
     if (tab === 'players') return playersBots();
     // Branch to the Admin beta-user renderer.
     if (tab === 'users') return users();
+    // Await the owner-only administrator delegation workspace.
+    if (tab === 'administrators') return await administrators();
+    // Await the owner-only enrollment policy and readiness workspace.
+    if (tab === 'enrollment') return await enrollment();
+    // Await the read-only launch readiness dashboard.
+    if (tab === 'launch') return await launchReadiness();
     // Await the owner-gated session policy so authorization errors stay inside the localized boundary. (SESSION-009)
     if (tab === 'sessions') return await sessions();
     // Await private invitation controls so rejected v2 requests stay inside the localized load-error boundary. (INVITE-005)
@@ -241,8 +249,8 @@ async function fundPracticeOpponents() {
 
 // Define userRows to render Admin user-management rows.
 function userRows(users) {
-  // Return one row per beta user with token, status, terms, and locale controls.
-  return users.map(user => `<tr data-testid="admin-user-row" data-user="${safe(user.user_id)}" data-email="${safe(user.email)}" data-status="${safe(user.status)}" data-terms="${safe(user.terms_status)}"><td>${safe(user.email)}</td><td>${safe(user.display_name)}</td><td class="admin-user-access-cell"><div class="admin-user-access-controls" data-testid="admin-user-access-controls"><select class="user-status" data-testid="admin-user-status">${['active', 'inactive', 'suspended', 'locked'].map(status => option(status, humanLabel(status), user.status)).join('')}</select><label class="check-row"><input class="user-admin-role" data-testid="admin-user-role-admin" type="checkbox" ${(user.roles || []).includes('admin') ? 'checked' : ''}> ${safe(t('users.roleAdmin', {}, 'admin'))}</label><button class="save-user-account" data-user="${safe(user.user_id)}" data-testid="admin-user-save-account">${safe(t('users.saveAccount', {}, 'admin'))}</button></div></td><td data-testid="admin-user-token-balance">${formatMoney(user.token_balance)}</td><td>${safe(user.token_state)}</td><td>${safe(user.terms_status)}</td><td><select class="user-language">${localeOptions(user.language || 'en-US')}</select></td><td><select class="user-format">${formatLocaleOptions(user.format_locale || 'browser')}</select></td><td><button class="save-user-locale" data-user="${safe(user.user_id)}" data-testid="admin-user-save-locale">Save locale</button><button class="toggle-user" data-user="${safe(user.user_id)}" data-action="${user.status === 'active' ? 'deactivate' : 'reactivate'}" data-testid="admin-user-toggle">${user.status === 'active' ? 'Deactivate' : 'Reactivate'}</button><button class="reset-user-password" data-user="${safe(user.user_id)}" data-testid="admin-user-reset">Reset password</button><button class="terms-user" data-user="${safe(user.user_id)}" data-accepted="${user.terms_status !== 'accepted'}" data-testid="admin-user-terms">${user.terms_status === 'accepted' ? 'Clear terms' : 'Accept terms'}</button></td></tr>`);
+  // Return one row per beta user with lifecycle, token, terms, and locale controls; roles live only in Administrators.
+  return users.map(user => `<tr data-testid="admin-user-row" data-user="${safe(user.user_id)}" data-email="${safe(user.email)}" data-status="${safe(user.status)}" data-terms="${safe(user.terms_status)}"><td>${safe(user.email)}</td><td>${safe(user.display_name)}</td><td class="admin-user-access-cell"><div class="admin-user-access-controls" data-testid="admin-user-access-controls"><select class="user-status" data-testid="admin-user-status">${['active', 'inactive', 'suspended', 'locked'].map(status => option(status, humanLabel(status), user.status)).join('')}</select><button class="save-user-account" data-user="${safe(user.user_id)}" data-testid="admin-user-save-account">${safe(t('users.saveAccount', {}, 'admin'))}</button></div></td><td data-testid="admin-user-token-balance">${formatMoney(user.token_balance)}</td><td>${safe(user.token_state)}</td><td>${safe(user.terms_status)}</td><td><select class="user-language">${localeOptions(user.language || 'en-US')}</select></td><td><select class="user-format">${formatLocaleOptions(user.format_locale || 'browser')}</select></td><td><button class="save-user-locale" data-user="${safe(user.user_id)}" data-testid="admin-user-save-locale">Save locale</button><button class="toggle-user" data-user="${safe(user.user_id)}" data-action="${user.status === 'active' ? 'deactivate' : 'reactivate'}" data-testid="admin-user-toggle">${user.status === 'active' ? 'Deactivate' : 'Reactivate'}</button><button class="reset-user-password" data-user="${safe(user.user_id)}" data-testid="admin-user-reset">Reset password</button><button class="terms-user" data-user="${safe(user.user_id)}" data-accepted="${user.terms_status !== 'accepted'}" data-testid="admin-user-terms">${user.terms_status === 'accepted' ? 'Clear terms' : 'Accept terms'}</button></td></tr>`);
 }
 
 // Define isManagedAccountUser so the Users tab stays account-only even if a legacy API payload includes guests.
@@ -258,12 +266,16 @@ function isManagedAccountUser(user) {
 
 // Define users to render the Admin beta-user management workspace.
 async function users() {
+  // Claim the latest Users-render revision before starting the asynchronous account read.
+  const renderRevision = ++usersRenderRevision;
+  // Remove the prior interactive account table immediately so a user cannot edit controls that an in-flight refresh will replace.
+  view.replaceChildren();
   // Set the localized users title and subtitle.
   setTitle(t('users.title', {}, 'admin'), t('users.subtitle', {}, 'admin'));
   // Load users through the Admin user-management endpoint.
   const data = await api('/api/v1/admin/users');
-  // Stop stale user-management responses from overwriting a newer active tab.
-  if (!isActiveTab('users')) return;
+  // Stop inactive-tab or superseded same-tab responses from overwriting the newest account state.
+  if (!isActiveTab('users') || renderRevision !== usersRenderRevision) return;
   // Keep the visible table account-only even if an older server returns temporary guest principals.
   const managedUsers = (data.users || []).filter(isManagedAccountUser);
   // Store password notice so rerenders can show the latest one-time credential.
@@ -273,7 +285,7 @@ async function users() {
   // Build the account-only table inside one named keyboard-scrollable region, or show the calm empty state.
   const managedUserTable = managedUsers.length ? `<div class="admin-users-table-scroll" data-testid="admin-users-managed-table" tabindex="0" role="region" aria-label="${safe(t('users.tableTitle', {}, 'admin'))}">${table(['Email', 'Name', t('users.accessControls', {}, 'admin'), 'Token balance', 'Token state', 'Terms', 'Language', 'Format', 'Actions'], userRows(managedUsers))}</div>` : emptyState(t('users.emptyTitle', {}, 'admin'), t('users.emptyDetail', {}, 'admin'), 'admin-users-empty');
   // Render creation controls and token-state inspection table.
-  view.innerHTML = `${guestSeparationCard}<section class="admin-card" data-testid="admin-user-create"><h3>${safe(t('users.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>Email<input id="admin_user_email" data-testid="admin-user-email" type="email" placeholder="beta@example.test"></label><label>Display name<input id="admin_user_name" data-testid="admin-user-name" placeholder="Beta Player"></label><label>Initial tokens<input id="admin_user_tokens" data-testid="admin-user-tokens" type="number" min="0" step="1" value="5000"></label></div><div class="grid3"><label>Temporary password<input id="admin_user_password" data-testid="admin-user-password" type="text" placeholder="Generate if blank"></label><label>${safe(t('users.initialRole', {}, 'admin'))}<select id="admin_user_role" data-testid="admin-user-role"><option value="player">${safe(t('users.rolePlayer', {}, 'admin'))}</option><option value="admin">${safe(t('users.roleAdmin', {}, 'admin'))}</option></select></label><label>Language<select id="admin_user_language" data-testid="admin-user-language">${localeOptions('en-US')}</select></label></div><div class="grid3"><label>Format locale<select id="admin_user_format" data-testid="admin-user-format">${formatLocaleOptions('browser')}</select></label></div><label><input id="admin_user_terms" data-testid="admin-user-terms-initial" type="checkbox"> Terms accepted</label><button id="admin_create_user" data-testid="admin-create-user" class="gold">${safe(t('users.createButton', {}, 'admin'))}</button>${passwordNotice}</section><section class="admin-card" data-testid="admin-users-managed-accounts"><h3>${safe(t('users.tableTitle', {}, 'admin'))}</h3>${managedUserTable}</section>`;
+  view.innerHTML = `${guestSeparationCard}<section class="admin-card" data-testid="admin-user-create"><h3>${safe(t('users.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>Email<input id="admin_user_email" data-testid="admin-user-email" type="email" placeholder="beta@example.test"></label><label>Display name<input id="admin_user_name" data-testid="admin-user-name" placeholder="Beta Player"></label><label>Initial tokens<input id="admin_user_tokens" data-testid="admin-user-tokens" type="number" min="0" step="1" value="5000"></label></div><div class="grid3"><label>Temporary password<input id="admin_user_password" data-testid="admin-user-password" type="text" placeholder="Generate if blank"></label><label>${safe(t('users.initialRole', {}, 'admin'))}<input id="admin_user_role" data-testid="admin-user-role" value="player" readonly></label><label>Language<select id="admin_user_language" data-testid="admin-user-language">${localeOptions('en-US')}</select></label></div><div class="grid3"><label>Format locale<select id="admin_user_format" data-testid="admin-user-format">${formatLocaleOptions('browser')}</select></label></div><label><input id="admin_user_terms" data-testid="admin-user-terms-initial" type="checkbox"> Terms accepted</label><button id="admin_create_user" data-testid="admin-create-user" class="gold">${safe(t('users.createButton', {}, 'admin'))}</button>${passwordNotice}</section><section class="admin-card" data-testid="admin-users-managed-accounts"><h3>${safe(t('users.tableTitle', {}, 'admin'))}</h3>${managedUserTable}</section>`;
   // Bind the Guest Trials shortcut after rendering the account-management handoff card.
   view.querySelector('#admin_open_guest_trials').onclick = () => activate('guests');
   // Bind the create-user button after rendering.
@@ -288,6 +300,69 @@ async function users() {
   view.querySelectorAll('.terms-user').forEach(button => button.onclick = () => updateUserTerms(button));
   // Bind locale save buttons after rendering the table.
   view.querySelectorAll('.save-user-locale').forEach(button => button.onclick = () => saveUserLocale(button));
+}
+
+// Render owner-only ordinary-Admin delegation separately from general account lifecycle. (ADMIN-033)
+async function administrators() {
+  // Set an explicit privilege-management boundary in the Admin shell.
+  setTitle(t('administrators.title', {}, 'admin'), t('administrators.subtitle', {}, 'admin'));
+  // Read the current role revision and immutable audit together.
+  const [data, historyData] = await Promise.all([api('/api/v2/admin/administrators'), api('/api/v2/admin/administrators/audit?limit=100')]);
+  // Stop a stale role response from replacing another selected tab.
+  if (!isActiveTab('administrators')) return;
+  // Render eligible grants, current ordinary Admins, protected owners, and bounded audit evidence.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-administrator-grant"><h3>${safe(t('administrators.grantTitle', {}, 'admin'))}</h3><label>${safe(t('administrators.account', {}, 'admin'))}<select id="administrator-target">${(data.eligible_accounts || []).map(account => option(account.user_id, `${account.display_name} (${account.email})`, '')).join('')}</select></label><label>${safe(t('administrators.password', {}, 'admin'))}<input id="administrator-password" type="password" autocomplete="current-password"></label><label>${safe(t('administrators.reason', {}, 'admin'))}<input id="administrator-reason" maxlength="256"></label><button id="administrator-grant" type="button" data-testid="administrator-grant" ${(data.eligible_accounts || []).length ? '' : 'disabled'}>${safe(t('administrators.grant', {}, 'admin'))}</button></section><section class="admin-card" data-testid="admin-administrator-list"><h3>${safe(t('administrators.currentTitle', {}, 'admin'))}</h3>${(data.administrators || []).length ? table([t('administrators.account', {}, 'admin'), t('administrators.role', {}, 'admin'), t('administrators.action', {}, 'admin')], data.administrators.map(account => `<tr><td>${safe(account.display_name)} (${safe(account.email)})</td><td>${safe((account.roles || []).join(', '))}</td><td>${account.protected_owner ? safe(t('administrators.protected', {}, 'admin')) : `<button type="button" class="administrator-revoke" data-user="${safe(account.user_id)}">${safe(t('administrators.revoke', {}, 'admin'))}</button>`}</td></tr>`)) : emptyState(t('administrators.empty', {}, 'admin'), t('administrators.emptyDetail', {}, 'admin'))}</section><section class="admin-card" data-testid="admin-administrator-audit"><h3>${safe(t('administrators.auditTitle', {}, 'admin'))}</h3>${(historyData.audit || []).length ? table([t('administrators.time', {}, 'admin'), t('administrators.action', {}, 'admin'), t('administrators.target', {}, 'admin'), t('administrators.reason', {}, 'admin')], historyData.audit.map(row => `<tr><td>${safe(row.at)}</td><td>${safe(humanLabel(row.action))}</td><td>${safe(row.target_user_id)}</td><td>${safe(row.reason)}</td></tr>`)) : emptyState(t('administrators.auditEmpty', {}, 'admin'), t('administrators.auditEmptyDetail', {}, 'admin'))}</section>`;
+  // Apply one reauthenticated role transition and scrub the password immediately afterward.
+  const changeRole = async (target, action) => {
+    // Read the transient owner step-up and reason at explicit action time only.
+    const password = view.querySelector('#administrator-password').value;
+    // Read and trim the bounded audit reason.
+    const reason = view.querySelector('#administrator-reason').value.trim();
+    // Clear the password before awaiting network work so rerenders or evidence cannot retain it.
+    view.querySelector('#administrator-password').value = '';
+    // Commit through the exact owner-only action endpoint with optimistic revision and replay key.
+    await post(`/api/v2/admin/administrators/${encodeURIComponent(target)}/${action}`, { password, reason, revision: data.revision, idempotency_key: crypto.randomUUID() });
+    // Confirm the committed transition without reflecting sensitive request content.
+    toast(t('administrators.saved', {}, 'admin'), true);
+    // Reload from durable identity and audit state.
+    await administrators();
+  };
+  // Bind the selected eligible account grant.
+  view.querySelector('#administrator-grant').onclick = () => changeRole(view.querySelector('#administrator-target').value, 'grant');
+  // Bind each non-owner revoke to the same reauthentication fields.
+  view.querySelectorAll('.administrator-revoke').forEach(button => { button.onclick = () => changeRole(button.dataset.user, 'revoke'); });
+}
+
+// Render owner policy, readiness, preview, rollback inputs, and immutable change evidence. (AUTH-015)
+async function enrollment() {
+  // Set the enrollment-governance heading and restricted-preview boundary.
+  setTitle(t('enrollment.title', {}, 'admin'), t('enrollment.subtitle', {}, 'admin'));
+  // Read one coherent durable policy and independent environment readiness snapshot.
+  const [data, readiness] = await Promise.all([api('/api/v2/admin/enrollment-policy'), api('/api/v2/admin/enrollment-readiness')]);
+  // Stop a stale enrollment request from replacing another selected tab.
+  if (!isActiveTab('enrollment')) return;
+  // Read the current durable policy once for controls and exact rollback input.
+  const policy = data.policy || { mode: 'closed', methods: { email: false, google: false, facebook: false }, invitations_enabled: false };
+  // Render policy controls, method-specific readiness, and verified audit without any launch action.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-enrollment-policy"><h3>${safe(t('enrollment.policyTitle', {}, 'admin'))}</h3><label>${safe(t('enrollment.mode', {}, 'admin'))}<select id="enrollment-mode">${(data.modes || []).map(mode => option(mode, humanLabel(mode), policy.mode)).join('')}</select></label><div class="grid3">${(data.methods || []).map(method => `<label class="check-row"><input id="enrollment-method-${safe(method)}" type="checkbox" ${policy.methods?.[method] ? 'checked' : ''}><span>${safe(humanLabel(method))}</span></label>`).join('')}</div><label class="check-row"><input id="enrollment-invitations" type="checkbox" ${policy.invitations_enabled ? 'checked' : ''}><span>${safe(t('enrollment.invitations', {}, 'admin'))}</span></label><label>${safe(t('enrollment.reason', {}, 'admin'))}<input id="enrollment-reason" maxlength="256"></label><div class="row"><button id="enrollment-preview" type="button">${safe(t('enrollment.preview', {}, 'admin'))}</button><button id="enrollment-apply" type="button" class="gold">${safe(t('enrollment.apply', {}, 'admin'))}</button></div><div id="enrollment-preview-result" class="result-box" hidden></div></section><section class="admin-card" data-testid="admin-enrollment-readiness"><h3>${safe(t('enrollment.readinessTitle', {}, 'admin'))}</h3><p>${safe(readiness.live_enablement_authorized ? t('enrollment.authorized', {}, 'admin') : t('enrollment.held', {}, 'admin'))}</p>${table([t('enrollment.method', {}, 'admin'), t('enrollment.enabled', {}, 'admin'), t('enrollment.ready', {}, 'admin'), t('enrollment.blockers', {}, 'admin')], Object.entries(readiness.methods || {}).map(([method, row]) => `<tr><td>${safe(humanLabel(method))}</td><td>${safe(String(row.enabled))}</td><td>${safe(String(row.ready))}</td><td>${safe((row.blockers || []).map(humanLabel).join(', ') || '—')}</td></tr>`))}</section><section class="admin-card" data-testid="admin-enrollment-audit"><h3>${safe(t('enrollment.auditTitle', {}, 'admin'))}</h3>${(data.audit || []).length ? table([t('enrollment.time', {}, 'admin'), t('enrollment.actor', {}, 'admin'), t('enrollment.reason', {}, 'admin')], data.audit.slice().reverse().map(row => `<tr><td>${safe(row.at)}</td><td>${safe(row.actor_id)}</td><td>${safe(row.reason)}</td></tr>`)) : emptyState(t('enrollment.auditEmpty', {}, 'admin'), t('enrollment.auditEmptyDetail', {}, 'admin'))}</section>`;
+  // Build the exact complete proposal from visible owner controls.
+  const changes = () => ({ mode: view.querySelector('#enrollment-mode').value, methods: Object.fromEntries((data.methods || []).map(method => [method, view.querySelector(`#enrollment-method-${method}`).checked])), invitations_enabled: view.querySelector('#enrollment-invitations').checked });
+  // Preview through the same pure policy computation used by apply.
+  view.querySelector('#enrollment-preview').onclick = async () => { const result = await post('/api/v2/admin/enrollment-policy/preview', { changes: changes() }); const outlet = view.querySelector('#enrollment-preview-result'); outlet.hidden = false; outlet.textContent = JSON.stringify(result.impact || {}, null, 2); };
+  // Apply only after explicit browser confirmation and a bounded owner reason.
+  view.querySelector('#enrollment-apply').onclick = async () => { if (!window.confirm(t('enrollment.confirm', {}, 'admin'))) return; await post('/api/v2/admin/enrollment-policy', { changes: changes(), confirm: true, reason: view.querySelector('#enrollment-reason').value.trim(), revision: data.revision }); toast(t('enrollment.saved', {}, 'admin'), true); await enrollment(); };
+}
+
+// Render a read-only release gate summary without exposing any activation control. (issue #209)
+async function launchReadiness() {
+  // Set the explicit held-launch heading and helper copy.
+  setTitle(t('launch.title', {}, 'admin'), t('launch.subtitle', {}, 'admin'));
+  // Read the owner-only aggregate from its additive v2 contract.
+  const data = await api('/api/v2/admin/launch-readiness');
+  // Stop a stale launch response from replacing another selected tab.
+  if (!isActiveTab('launch')) return;
+  // Render each gate and the non-negotiable separate-approval hold without buttons.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-launch-readiness" data-status="${safe(data.status)}"><h3>${safe(t('launch.status', {}, 'admin'))}: ${safe(humanLabel(data.status))}</h3><p>${safe(t('launch.held', {}, 'admin'))}</p>${table([t('launch.check', {}, 'admin'), t('launch.result', {}, 'admin')], (data.checks || []).map(row => `<tr><td>${safe(humanLabel(row.id))}</td><td>${safe(humanLabel(row.status))}</td></tr>`))}</section>`;
 }
 
 // Render the de-identified Guest Trials telemetry section for account-free visitors. (issue #317)
@@ -423,16 +498,12 @@ async function createUser() {
   await users();
 }
 
-// Define saveUserAccount to persist Admin role and lifecycle status controls.
+// Define saveUserAccount to persist lifecycle status while role changes remain owner-only in Administrators.
 async function saveUserAccount(button) {
   // Store the nearest rendered user row for control lookup.
   const row = button.closest('tr[data-user]');
-  // Build the role list from the explicit Admin checkbox while preserving player membership.
-  const roles = row.querySelector('.user-admin-role').checked ? ['admin'] : ['player'];
-  // Build the v2 account payload with the selected lifecycle status.
-  const payload = { status: row.querySelector('.user-status').value, roles };
-  // Ask for confirmation before changing Admin privileges.
-  if (!window.confirm(t('users.roleConfirm', {}, 'admin'))) return;
+  // Build the v2 account payload with only the selected lifecycle status.
+  const payload = { status: row.querySelector('.user-status').value };
   // Persist through the protected v2 Admin account contract.
   await api(`/api/v2/admin/users/${encodeURIComponent(button.dataset.user)}`, { method: 'PATCH', body: payload });
   // Show localized account update feedback.
@@ -725,7 +796,7 @@ async function sessions() {
   // Read the separately persisted live request policy under the same owner-facing security workspace.
   const r = rateData.settings || {};
   // Render the timeout and live request-rate controls as distinct bounded policy cards.
-  view.innerHTML = `<section class="admin-card" data-testid="admin-sessions-policy"><h3>${safe(t('sessions.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('sessions.idle', {}, 'admin'))}<input id="idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.idle_timeout_minutes)}" data-testid="admin-sessions-idle"></label><label>${safe(t('sessions.absolute', {}, 'admin'))}<input id="absolute_timeout_hours" type="number" min="1" max="24" value="${safe(s.absolute_timeout_hours)}" data-testid="admin-sessions-absolute"></label><label>${safe(t('sessions.adminIdle', {}, 'admin'))}<input id="admin_idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.admin_idle_timeout_minutes)}" data-testid="admin-sessions-admin-idle"></label></div><label><input id="admin_stricter" type="checkbox" ${s.admin_stricter ? 'checked' : ''} data-testid="admin-sessions-admin-stricter"> ${safe(t('sessions.adminStricter', {}, 'admin'))}</label><p class="muted">${safe(t('sessions.help', {}, 'admin'))}</p><div class="row"><button id="saveSessions" data-testid="admin-save-sessions" class="gold">${safe(t('sessions.save', {}, 'admin'))}</button></div></section><section class="admin-card" data-testid="admin-rate-limits"><h3>${safe(t('rateLimits.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('rateLimits.requests', {}, 'admin'))}<input id="requests_per_window" type="number" min="60" max="10000" value="${safe(r.requests_per_window)}" data-testid="admin-rate-limit-requests"></label><label>${safe(t('rateLimits.window', {}, 'admin'))}<input id="window_seconds" type="number" min="1" max="3600" value="${safe(r.window_seconds)}" data-testid="admin-rate-limit-window"></label></div><p class="muted">${safe(t('rateLimits.help', {}, 'admin'))}</p><div class="row"><button id="saveRateLimits" data-testid="admin-save-rate-limits" class="gold">${safe(t('rateLimits.save', {}, 'admin'))}</button></div></section>`;
+  view.innerHTML = `<section class="admin-card" data-testid="admin-sessions-policy"><h3>${safe(t('sessions.heading', {}, 'admin'))}</h3><label class="check-row"><input id="sessions_enabled" type="checkbox" ${s.enabled ? 'checked' : ''} data-testid="admin-sessions-enabled"><span>${safe(t('sessions.enabled', {}, 'admin'))}</span></label><div class="grid3"><label>${safe(t('sessions.idle', {}, 'admin'))}<input id="idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.idle_timeout_minutes)}" data-testid="admin-sessions-idle"></label><label>${safe(t('sessions.absolute', {}, 'admin'))}<input id="absolute_timeout_hours" type="number" min="1" max="24" value="${safe(s.absolute_timeout_hours)}" data-testid="admin-sessions-absolute"></label><label>${safe(t('sessions.warning', {}, 'admin'))}<input id="warning_minutes" type="number" min="0" max="10" value="${safe(s.warning_minutes)}" data-testid="admin-sessions-warning"></label><label>${safe(t('sessions.adminIdle', {}, 'admin'))}<input id="admin_idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.admin_idle_timeout_minutes)}" data-testid="admin-sessions-admin-idle"></label></div><label><input id="admin_stricter" type="checkbox" ${s.admin_stricter ? 'checked' : ''} data-testid="admin-sessions-admin-stricter"> ${safe(t('sessions.adminStricter', {}, 'admin'))}</label><p class="muted">${safe(t('sessions.help', {}, 'admin'))}</p><p class="muted" data-testid="admin-sessions-provenance">${safe(t('sessions.provenance', { time: s.updated_at || '—', actor: s.updated_by || '—' }, 'admin'))}</p><div class="row"><button id="saveSessions" data-testid="admin-save-sessions" class="gold">${safe(t('sessions.save', {}, 'admin'))}</button></div></section><section class="admin-card" data-testid="admin-rate-limits"><h3>${safe(t('rateLimits.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('rateLimits.requests', {}, 'admin'))}<input id="requests_per_window" type="number" min="60" max="10000" value="${safe(r.requests_per_window)}" data-testid="admin-rate-limit-requests"></label><label>${safe(t('rateLimits.window', {}, 'admin'))}<input id="window_seconds" type="number" min="1" max="3600" value="${safe(r.window_seconds)}" data-testid="admin-rate-limit-window"></label></div><p class="muted">${safe(t('rateLimits.help', {}, 'admin'))}</p><div class="row"><button id="saveRateLimits" data-testid="admin-save-rate-limits" class="gold">${safe(t('rateLimits.save', {}, 'admin'))}</button></div></section>`;
   // Bind the owner save action after rendering.
   view.querySelector('#saveSessions').onclick = saveSessions;
   // Bind the independent live rate-policy save action after rendering.
@@ -734,8 +805,8 @@ async function sessions() {
 
 // Persist the owner-authored session policy through the additive v2 contract.
 async function saveSessions() {
-  // Build the policy payload from the three numeric fields and the strict boolean toggle.
-  const payload = { idle_timeout_minutes: Number(view.querySelector('#idle_timeout_minutes').value), absolute_timeout_hours: Number(view.querySelector('#absolute_timeout_hours').value), admin_idle_timeout_minutes: Number(view.querySelector('#admin_idle_timeout_minutes').value), admin_stricter: view.querySelector('#admin_stricter').checked };
+  // Build the policy payload from enforcement, warning, bounded lifetime, and stricter-Admin controls.
+  const payload = { enabled: view.querySelector('#sessions_enabled').checked, idle_timeout_minutes: Number(view.querySelector('#idle_timeout_minutes').value), absolute_timeout_hours: Number(view.querySelector('#absolute_timeout_hours').value), warning_minutes: Number(view.querySelector('#warning_minutes').value), admin_idle_timeout_minutes: Number(view.querySelector('#admin_idle_timeout_minutes').value), admin_stricter: view.querySelector('#admin_stricter').checked };
   // Persist the bounded settings through the owner-only route.
   await api('/api/v2/admin/session-settings', { method: 'POST', body: payload });
   // Confirm the save without exposing policy internals.
@@ -913,13 +984,13 @@ const MENU = [
   // Overview owns the landing dashboard.
   { id: 'overview', label: 'nav.section.overview', items: [{ tab: 'dashboard', label: 'nav.dashboard', domain: 'admin' }] },
   // Identity groups accounts, session policy, invitations, and disposable guests.
-  { id: 'identity', label: 'nav.section.identity', items: [{ tab: 'users', label: 'nav.users', domain: 'admin' }, { tab: 'sessions', label: 'nav.sessions', domain: 'admin' }, { tab: 'invitations', label: 'nav.invitations', domain: 'admin' }, { tab: 'guests', label: 'nav.guests', domain: 'admin' }] },
+  { id: 'identity', label: 'nav.section.identity', items: [{ tab: 'users', label: 'nav.users', domain: 'admin' }, { tab: 'administrators', label: 'nav.administrators', domain: 'admin' }, { tab: 'enrollment', label: 'nav.enrollment', domain: 'admin' }, { tab: 'sessions', label: 'nav.sessions', domain: 'admin' }, { tab: 'invitations', label: 'nav.invitations', domain: 'admin' }, { tab: 'guests', label: 'nav.guests', domain: 'admin' }] },
   // Players and economy groups wallet activity, outcomes, rates, and autoplay.
   { id: 'players', label: 'nav.section.players', items: [{ tab: 'players', label: 'nav.players', domain: 'admin' }, { tab: 'ledger', label: 'nav.ledger', domain: 'admin' }, { tab: 'history', label: 'nav.history', domain: 'admin' }, { tab: 'economics', label: 'nav.economics', domain: 'admin' }, { tab: 'autoplay', label: 'nav.autoplay', domain: 'admin' }] },
   // Content and support groups game state, problem reports, audio, and locale.
   { id: 'content', label: 'nav.section.content', items: [{ tab: 'states', label: 'nav.states', domain: 'admin' }, { tab: 'feedback', label: 'feedback.admin.title', domain: 'feedback' }, { tab: 'audio', label: 'nav.audio', domain: 'admin' }, { tab: 'language', label: 'nav.language', domain: 'admin' }] },
   // System and operations groups health, telemetry, requirements, tests, and modules.
-  { id: 'system', label: 'nav.section.system', items: [{ tab: 'operations', label: 'nav.operations', domain: 'admin' }, { tab: 'telemetry', label: 'nav.telemetry', domain: 'admin' }, { tab: 'requirements', label: 'nav.requirements', domain: 'admin' }, { tab: 'tests', label: 'nav.tests', domain: 'admin' }, { tab: 'system', label: 'nav.system', domain: 'admin' }] },
+  { id: 'system', label: 'nav.section.system', items: [{ tab: 'launch', label: 'nav.launch', domain: 'admin' }, { tab: 'operations', label: 'nav.operations', domain: 'admin' }, { tab: 'telemetry', label: 'nav.telemetry', domain: 'admin' }, { tab: 'requirements', label: 'nav.requirements', domain: 'admin' }, { tab: 'tests', label: 'nav.tests', domain: 'admin' }, { tab: 'system', label: 'nav.system', domain: 'admin' }] },
 ];
 
 // Render the nested sidebar while preserving exact data-tab and test hooks.

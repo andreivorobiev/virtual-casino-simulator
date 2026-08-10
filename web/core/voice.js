@@ -5,6 +5,10 @@ import { api, post } from './api.js';
 let audioCtx=null;
 // Store AUDIO_SETTINGS so later code can read or update this value.
 let AUDIO_SETTINGS={master_enabled:false,master_volume:.8,sfx_enabled:false,sfx_volume:.7,voice_enabled:false,voice_volume:.85,voice_rate:.95,voice_pitch:1.08,preferred_voice_name:'',auto_nice_lady:true,announce_roulette_results:false,announce_blackjack_results:false,announce_baccarat_results:false,announce_bingo_calls:false,announce_keno_results:false};
+// Keep the authenticated user's personal sound choice separate from platform-wide Admin audio policy. (USER-008)
+let PERSONAL_SOUND_ENABLED=false;
+// Apply the current account's personal sound preference immediately without mutating Admin settings.
+export function setPersonalSoundEnabled(enabled){PERSONAL_SOUND_ENABLED=enabled===true; if(!PERSONAL_SOUND_ENABLED) try{speechSynthesis.cancel?.();}catch(_){} return PERSONAL_SOUND_ENABLED;}
 // Export this symbol so other modules can use it through the public module boundary.
 export function getVoiceSettings(){return {...AUDIO_SETTINGS};}
 // Export this symbol so other modules can use it through the public module boundary.
@@ -14,7 +18,7 @@ export async function saveVoiceSettings(s){AUDIO_SETTINGS={...AUDIO_SETTINGS,...
 // Export this symbol so other modules can use it through the public module boundary.
 export function availableVoices(){try{return speechSynthesis.getVoices().map((v,i)=>({index:i,name:v.name,lang:v.lang,default:v.default}));}catch{return [];}}
 // Define the canSfx function that implements this UI or API behavior.
-function canSfx(){return AUDIO_SETTINGS.master_enabled!==false && AUDIO_SETTINGS.sfx_enabled!==false && Number(AUDIO_SETTINGS.master_volume)>0 && Number(AUDIO_SETTINGS.sfx_volume)>0;}
+function canSfx(){return PERSONAL_SOUND_ENABLED && AUDIO_SETTINGS.master_enabled!==false && AUDIO_SETTINGS.sfx_enabled!==false && Number(AUDIO_SETTINGS.master_volume)>0 && Number(AUDIO_SETTINGS.sfx_volume)>0;}
 // Define the sfxVolume function that implements this UI or API behavior.
 function sfxVolume(v){return Number(v||.05)*Number(AUDIO_SETTINGS.master_volume||1)*Number(AUDIO_SETTINGS.sfx_volume||1);}
 // Define the audioProbe function so browser tests can observe sound behavior without real speakers.
@@ -24,7 +28,7 @@ export function speak(text, gameId='global'){
   // Start protected logic so failures can be handled safely.
   try{
     // Set if(AUDIO_SETTINGS.master_enabled to the value needed for the next operation.
-    if(AUDIO_SETTINGS.master_enabled===false || AUDIO_SETTINGS.voice_enabled===false) return;
+    if(!PERSONAL_SOUND_ENABLED || AUDIO_SETTINGS.master_enabled===false || AUDIO_SETTINGS.voice_enabled===false) return;
     // Store key so later code can read or update this value.
     const key = gameId==='bingo' ? 'announce_bingo_calls' : `announce_${gameId}_results`; if(gameId!=='global' && AUDIO_SETTINGS[key]===false) return;
     // Execute this statement as part of the module's documented control flow.

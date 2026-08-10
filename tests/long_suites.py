@@ -324,6 +324,9 @@ def run_browser_audio_verification(client, repeats, report):
             # Branch for current-user session lookup.
             if path == "/me" and request.method == "GET":  # Let the shell enter the casino immediately.
                 return route.fulfill(status=200, content_type="application/json", body=mocked_auth_response(True, auth_payload()))  # Return authenticated current user.
+            # Branch for durable personal settings so this audio-specific test explicitly opts into sound.
+            if path == "/me/settings" and request.method == "GET":  # Override the production-safe sound-off default only for audio verification.
+                return route.fulfill(status=200, content_type="application/json", body=mocked_auth_response(True, {"settings": {"locale": "en-US", "sound_enabled": True, "revision": 1, "updated_at": "2026-08-10T00:00:00Z"}}))  # Return one deterministic enabled preference.
             # Branch for token additions through the current-user wallet.
             if path == "/me/tokens/add" and request.method == "POST":  # Keep the wallet endpoint available if shell code calls it.
                 body = json.loads(request.post_data or "{}")  # Parse the requested token amount.

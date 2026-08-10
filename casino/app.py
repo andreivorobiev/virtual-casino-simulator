@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, guest_settings, invitations, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare, guest_conversion, enrollment_policy
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, guest_settings, invitations, password_reset, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare, guest_conversion, enrollment_policy
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -386,6 +386,35 @@ def build_router() -> Router:
         context.setdefault("response_headers", []).extend(auth.session_cookie_headers(result["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
         # Return the current-user payload rather than any raw password or signup internals.
         return result
+
+    # Register enumeration-safe password-recovery initiation on the additive public v2 boundary. (RESET-004)
+    @router.post(r"/api/v2/auth/password-reset/initiate")
+    # Accept one mailbox recovery request without revealing account existence or delivery state.
+    def auth_password_reset_initiate(body, query):
+        # Reject fields outside the exact locale and caller-idempotency contract.
+        if not isinstance(body, dict) or set(body) - {"email", "locale", "idempotency_key"}:
+            # Fail closed before passing any recipient value to the recovery service.
+            raise ValidationError("Password reset request contains unsupported fields")
+        # Delegate recipient normalization, release gating, delivery, and enumeration safety.
+        return password_reset.initiate(str(body.get("email") or ""), locale=str(body.get("locale") or "en-US"), idempotency_key=str(body.get("idempotency_key") or ""))
+
+    # Register an explicit resend alias that uses the same single-active-token state machine. (RESET-004)
+    @router.post(r"/api/v2/auth/password-reset/resend")
+    # Replace any prior active recovery bearer while returning the same generic acknowledgement.
+    def auth_password_reset_resend(body, query):
+        # Reuse the initiation validator and service so resend cannot become a separate account oracle.
+        return auth_password_reset_initiate(body, query)
+
+    # Register password-recovery completion on the additive public v2 boundary. (RESET-004)
+    @router.post(r"/api/v2/auth/password-reset/complete")
+    # Consume one purpose-bound bearer and revoke predecessor sessions after credential rotation.
+    def auth_password_reset_complete(body, query):
+        # Reject fields outside the exact bearer, mailbox, replacement, and idempotency contract.
+        if not isinstance(body, dict) or set(body) - {"token", "email", "new_password", "idempotency_key"}:
+            # Preserve one generic public request shape before service validation.
+            raise ValidationError("Password reset request contains unsupported fields")
+        # Delegate generic rejection, token consumption, password policy, and session revocation.
+        return password_reset.complete(str(body.get("token") or ""), str(body.get("email") or ""), str(body.get("new_password") or ""), idempotency_key=str(body.get("idempotency_key") or ""))
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v2/auth/guest/end")

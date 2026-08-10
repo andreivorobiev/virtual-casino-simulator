@@ -10,11 +10,13 @@ from datetime import datetime, timezone
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSION
+from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSION, PASSWORD_RESET_ENABLED
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, session_settings, rate_settings, guest_settings
+from casino.core import admin_roles, auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, session_settings, rate_settings, guest_settings, mail
+# Import secret-safe provider diagnostics without constructing a provider adapter or network transport.
+from casino.core.oauth.api import provider_diagnostic_payload
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import the invitation lifecycle for the Admin invitation-by-email section. (issue #332)
@@ -452,8 +454,14 @@ def create_admin_user(body):
     password = body.get("password") or _temporary_password()
     # Set player to a linked wallet created with zero direct balance.
     player = players.create_player(display_name, "human", 0)
-    # Normalize the requested role to the canonical player/Admin vocabulary.
-    role = _clean_roles(body.get("role") or "player")[0]
+    # Normalize the requested role before enforcing the dedicated post-creation delegation boundary. (ADMIN-033)
+    requested_roles = _clean_roles(body.get("role") or "player")
+    # Prevent legacy v1 account creation from bypassing owner reauthentication and role audit.
+    if requested_roles != ["player"]:
+        # Require every new identity to exist as an ordinary active player before delegation.
+        raise ValidationError("New accounts must be created as players before Admin delegation")
+    # Create every new account at the ordinary player privilege level.
+    role = "player"
     # Create the login identity through the same canonical auth service used by session login.
     user = auth.create_user(email, password, display_name, role, player["player_id"], not _as_bool(body.get("terms_accepted")), language)
     # Add Admin-facing locale and credential-rotation metadata to the canonical identity.
@@ -546,8 +554,12 @@ def update_admin_user_locale(user_id, body):
 def update_admin_user(user_id, body, actor=None):
     # Reject disposable guest-trial identities before any canonical account mutation can run.
     _account_user_by_id(_load_admin_users(), user_id)
-    # Resolve current owner authority only when the request changes role delegation.
-    owner = _current_platform_owner(actor) if "roles" in body else None
+    # Keep privilege mutation in the dedicated reauthenticated Administrators workflow. (ADMIN-033)
+    if "roles" in body:
+        # Reject the historical generic-user shortcut so it cannot bypass reason, replay, or audit controls.
+        raise ValidationError("Use the Administrators area to change account roles")
+    # Ordinary account lifecycle updates do not carry role-delegation authority.
+    owner = None
     # Capture the exact pre-mutation account inside the provider transaction for audit.
     before = {}
     # Define the canonical mutation applied to the requested identity.
@@ -914,10 +926,63 @@ def register(router):
             raise ValidationError("enrollment policy change requires explicit confirmation")
         # Extract the proposal only after current owner authority and confirmation succeed.
         changes = _enrollment_policy_changes(body, apply_request=True)
+        # Compute the exact resulting policy before any durable write or external enablement. (AUTH-015)
+        proposal = enrollment_policy.propose(changes)
+        # Read the current durable restricted-preview policy for capability-expansion comparison.
+        previous_policy = proposal["previous"]
+        # Read the fully normalized proposed policy rather than trusting sparse caller fields.
+        proposed_policy = proposal["policy"]
+        # Detect any newly enabled public identity method while external release approval remains held.
+        enables_method = any(bool(proposed_policy.get("methods", {}).get(method)) and not bool(previous_policy.get("methods", {}).get(method)) for method in ("email", "google", "facebook"))
+        # Detect a newly enabled invitation path under the same explicit release boundary.
+        enables_invitations = bool(proposed_policy.get("invitations_enabled")) and not bool(previous_policy.get("invitations_enabled"))
+        # Reject capability expansion until the separate Workroom/provider release decision exists.
+        if enables_method or enables_invitations:
+            # Preserve preview and disable/rollback controls without silently enabling public identity paths.
+            raise ForbiddenError("Live enrollment enablement requires separate owner release approval")
         # Atomically commit policy plus immutable actor/change evidence with the canonical owner id.
         result = enrollment_policy.update(changes, actor_id=owner.get("user_id"), reason=body.get("reason"), expected_revision=body.get("revision"))
         # Return the exact prior policy for direct application rollback plus the committed receipt.
         return {"policy": result["current"], "previous": result["previous"], "previous_revision": result["previous_revision"], "revision": result["revision"], "impact": result["impact"], "audit": result["audit"]}
+
+    # Publish one owner-only secret-safe enrollment readiness aggregate. (AUTH-015, OAUTH-011)
+    @router.get(r"/api/v2/admin/enrollment-readiness")
+    # Combine durable policy, mail, recovery, and provider diagnostics without enabling any method.
+    def admin_enrollment_readiness_v2(body, query, context):
+        # Require current durable owner authority before publishing configuration diagnostics.
+        _current_platform_owner(context.get("user"))
+        # Read the durable policy without writing or widening it.
+        policy = enrollment_policy.current()
+        # Read provider-neutral mail readiness without contacting a delivery provider.
+        mail_readiness = mail.configured_service().readiness()
+        # Read allowlisted OAuth diagnostics without constructing adapters or opening network traffic.
+        oauth = provider_diagnostic_payload()
+        # Index only the reviewed external providers by stable id.
+        providers = {row.get("provider"): row for row in oauth.get("providers", []) if row.get("provider") in {"google", "facebook"}}
+        # Compute email readiness from both recovery release and delivery readiness.
+        email_ready = bool(PASSWORD_RESET_ENABLED and mail_readiness.get("status") == "ready")
+        # Publish method-specific readiness separately from durable enable flags.
+        methods = {
+            # Bind email signup readiness to both reset release and delivery readiness.
+            "email": {"enabled": bool(policy.get("methods", {}).get("email")), "ready": email_ready, "blockers": [] if email_ready else ["password_recovery_or_mail_not_ready"]},
+            # Bind Google readiness to allowlisted diagnostics without contacting the provider.
+            "google": {"enabled": bool(policy.get("methods", {}).get("google")), "ready": bool(providers.get("google", {}).get("runtime_available")), "blockers": list(providers.get("google", {}).get("problems") or providers.get("google", {}).get("missing_variables") or (["provider_not_ready"] if not providers.get("google", {}).get("runtime_available") else []))},
+            # Bind Facebook readiness through the same secret-safe provider projection.
+            "facebook": {"enabled": bool(policy.get("methods", {}).get("facebook")), "ready": bool(providers.get("facebook", {}).get("runtime_available")), "blockers": list(providers.get("facebook", {}).get("problems") or providers.get("facebook", {}).get("missing_variables") or (["provider_not_ready"] if not providers.get("facebook", {}).get("runtime_available") else []))},
+        }
+        # Keep live enablement held even when repository configuration is structurally ready.
+        return {"policy": policy, "methods": methods, "mail": mail_readiness, "providers": oauth.get("providers", []), "live_enablement_authorized": False, "restricted_preview": True}
+
+    # Publish a read-only launch gate dashboard that cannot activate any release control. (issue #209)
+    @router.get(r"/api/v2/admin/launch-readiness")
+    # Aggregate current in-repository prerequisites while preserving the separate owner approval gate.
+    def admin_launch_readiness_v2(body, query, context):
+        # Reuse the owner-only readiness projection without creating a second source of truth.
+        enrollment = admin_enrollment_readiness_v2(body, query, context)
+        # Compute whether every signup method is disabled in the current restricted-preview policy.
+        methods_disabled = all(not bool(item.get("enabled")) for item in enrollment["methods"].values())
+        # Return fixed gate states and explicit external holds, never a mutation affordance.
+        return {"status": "held", "restricted_preview": True, "checks": [{"id": "enrollment_policy", "status": "pass" if methods_disabled else "review"}, {"id": "password_recovery", "status": "pass" if enrollment["methods"]["email"]["ready"] else "held"}, {"id": "google_provider", "status": "pass" if enrollment["methods"]["google"]["ready"] else "held"}, {"id": "facebook_provider", "status": "pass" if enrollment["methods"]["facebook"]["ready"] else "held"}, {"id": "owner_workroom_approval", "status": "held"}], "live_enablement_authorized": False}
 
     # Attach the v2 Admin summary route required for additive guest-trial reporting.
     @router.get(r"/api/v2/admin/guest-trials")
@@ -1177,6 +1242,42 @@ def register(router):
         # Return the updated canonical identity summary.
         return update_admin_user(user_id, body, actor=context.get("user"))
 
+    # Register the separate owner-only administrator-management inventory. (ADMIN-033)
+    @router.get(r"/api/v2/admin/administrators")
+    # Return current administrators, eligible active accounts, and the optimistic revision.
+    def admin_administrators_v2(body, query, context):
+        # Delegate durable owner revalidation and safe projection to the role service.
+        return admin_roles.listing(context.get("user") or {})
+
+    # Register bounded privacy-safe administrator-role audit history. (ADMIN-033)
+    @router.get(r"/api/v2/admin/administrators/audit")
+    # Return newest immutable grant/revoke rows only to the current platform owner.
+    def admin_administrator_audit_v2(body, query, context):
+        # Start protected parsing so arbitrary query text becomes a standard validation result.
+        try:
+            # Parse the optional history bound before applying the service clamp.
+            limit = int((query or {}).get("limit", 100))
+        # Convert non-numeric limits without echoing supplied text.
+        except (TypeError, ValueError) as exc:
+            # Raise one fixed validation diagnostic.
+            raise ValidationError("Administrator audit limit is invalid") from exc
+        # Delegate owner revalidation and safe projection to the role service.
+        return admin_roles.audit_history(context.get("user") or {}, limit=limit)
+
+    # Register one reauthenticated administrator grant for an existing active account. (ADMIN-033)
+    @router.post(r"/api/v2/admin/administrators/(?P<user_id>[^/]+)/grant")
+    # Apply an atomic, versioned, replay-safe grant and revoke predecessor sessions.
+    def admin_administrator_grant_v2(body, query, context, user_id):
+        # Bind actor authority from the authenticated context and target from the opaque path only.
+        return admin_roles.change(context.get("user") or {}, user_id, "grant", body or {})
+
+    # Register one reauthenticated administrator revocation for an existing account. (ADMIN-033)
+    @router.post(r"/api/v2/admin/administrators/(?P<user_id>[^/]+)/revoke")
+    # Apply an atomic, versioned, replay-safe revocation and invalidate predecessor sessions.
+    def admin_administrator_revoke_v2(body, query, context, user_id):
+        # Bind actor authority from the authenticated context and target from the opaque path only.
+        return admin_roles.change(context.get("user") or {}, user_id, "revoke", body or {})
+
     # Register the published v2 password reset route.
     @router.post(r"/api/v2/admin/users/(?P<user_id>[^/]+)/password")
     # Define admin_users_v2_password for login-ready password changes.
@@ -1289,14 +1390,14 @@ def register(router):
         # Return the validated settings document.
         return {"settings": session_settings.session_settings()}
 
-    # Persist an owner-authored timeout-policy update through the additive v2 contract. (SESSION-009, ADMIN-031)
+    # Persist an owner-authored timeout-policy update through the additive v2 contract. (SESSION-009, SESSION-010, ADMIN-031)
     @router.post(r"/api/v2/admin/session-settings")
     # Clamp and persist the supplied settings only after owner authorization.
     def save_session_settings_route(body, query, context=None):
-        # Reject ordinary Admins before validating or writing policy fields.
-        _current_platform_owner((context or {}).get("user"))
-        # Persist the validated partial update and echo the stored document.
-        return {"settings": session_settings.save_session_settings(body or {})}
+        # Reject ordinary Admins before validating or writing policy fields, capturing the owner for provenance.
+        owner = _current_platform_owner((context or {}).get("user"))
+        # Persist the validated partial update, stamping the durable last-updated actor without exposing any secret. (SESSION-010)
+        return {"settings": session_settings.save_session_settings(body or {}, actor_id=owner.get("user_id"))}
 
     # Expose the live application-request rate policy through an owner-only recovery-safe route. (SEC-015, ADMIN-032)
     @router.get(r"/api/v2/admin/rate-limits")

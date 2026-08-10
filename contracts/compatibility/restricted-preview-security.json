@@ -1,6 +1,6 @@
 {
   "artifact": "restricted-preview-security",
-  "version": 4,
+  "version": 5,
   "stage": "restricted-preview",
   "canonical_origin": "https://casino.tiltseven.com",
   "enrollment_policy": {
@@ -57,6 +57,9 @@
     "/api/v2/auth/redeem-invitation",
     "/api/v2/auth/enrollment-policy",
     "/api/v2/auth/signup",
+    "/api/v2/auth/password-reset/initiate",
+    "/api/v2/auth/password-reset/resend",
+    "/api/v2/auth/password-reset/complete",
     "/api/v2/auth/oauth/providers",
     "/api/v2/auth/csrf",
     "/api/v2/auth/oauth/{google|facebook}/start",

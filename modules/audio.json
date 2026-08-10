@@ -1,6 +1,6 @@
 {
   "module": "audio",
-  "version": "9.1.2",
+  "version": "9.1.3",
   "paths": [
     "casino/core/settings.py",
     "web/core/voice.js"

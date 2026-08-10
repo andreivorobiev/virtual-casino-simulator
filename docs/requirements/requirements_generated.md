@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.58.2
-- core: 9.37.1
+- application: 9.59.0
+- core: 9.38.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.6
-- audio: 9.1.2
-- admin: 1.16.0
+- audio: 9.1.3
+- admin: 1.17.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.6.2
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.69.4
-- docs: 1.67.4
-- contracts: 1.55.3
-- tooling: 1.25.2
+- tests: 1.70.0
+- docs: 1.68.0
+- contracts: 1.56.0
+- tooling: 1.25.3
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
@@ -981,3 +981,16 @@ Historical source baseline: 9.1.0
 - **LEDGER-032** (Ledger) - PASS: Every accepted game wager, ticket, card purchase, insurance action, split, double, refund, payout, and settlement for all registered games crosses casino.core.settlement.GameSettlementGateway and the storage-atomic SettlementAdapter exactly-once boundary; game modules cannot import or directly call ledger debit, credit, debit-once, or credit-once functions. Canonical game action, request fingerprint, and round evidence is written beside one-release legacy detail keys without rewriting historical rows or changing current API response semantics.
 - **GAMECORE-004** (Core) - PASS: The shared game-money compatibility gateway presents one canonical signed settlement contract to direct, shared-simple, staged-intent, and historically injected game service shapes, delegates production value movement only to SettlementAdapter, preserves deterministic replay and changed-meaning conflict behavior, and keeps transitional detail aliases read-compatible for one release.
 - **TEST-157** (Tests) - PASS: A catalog-derived source gate and focused settlement suite prove every registered game uses the shared settlement boundary, rejects direct game imports or calls to ledger money functions, preserves canonical and one-release compatibility evidence, and routes both direct actions and staged intents through storage-atomic debit-once or credit-once seams.
+- **ADMIN-033** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin access for an existing active non-guest account through a dedicated Administrators workspace that is separate from generic user lifecycle controls. Each transition requires current-password reauthentication, an explicit bounded reason, optimistic revision, an idempotency key, atomic identity persistence, target-session revocation, and an append-only hash-linked audit row; self-action and platform-owner mutation are forbidden.
+- **ADMIN-034** (Admin) - PASS: The owner-only Sessions workspace exposes localized controls for idle enforcement, idle and absolute limits, pre-expiration warning, stricter Admin behavior, and durable last-change provenance while preserving the independent rate-limit policy. Values are bounded by the provider contract, responsive in both installed locales, and ordinary Admin access remains forbidden.
+- **AUTH-015** (Core) - PASS: The platform owner can inspect secret-safe enrollment readiness beside the durable closed, invite-only, or self-signup policy, preview exact impact, and disable or roll back methods, while any newly enabled email, Google, Facebook, or invitation path fails closed until separate live-release authority exists. Readiness reports only bounded capability and blocker vocabulary and never exposes credentials or provider payloads.
+- **AUTH-016** (Core) - PASS: The owner-only launch-readiness endpoint and Admin dashboard aggregate enrollment, provider, and restricted-preview gates into a read-only held result. The surface contains no enable, launch, deploy, provider, DNS, secret, or billing action and cannot convert repository readiness into public-launch authority.
+- **OAUTH-011** (Core) - PASS: Enrollment readiness consumes the existing disabled-by-default OAuth diagnostics to report Google and Facebook runtime readiness, bounded missing-variable or provider blocker vocabulary, and current enabled state without contacting providers, exposing secrets, or enabling login or signup. Provider release latches remain false unless separately authorized.
+- **USER-008** (Application) - PASS: Personal sound is disabled by default for new, absent, malformed, and guest preference state and is enabled only by an explicit persisted true value. The authenticated shell applies the server-authored choice before route audio can play, and turning sound off immediately gates effects and voice and cancels pending speech without changing owner-wide audio policy.
+- **USER-009** (Application) - PASS: Every authenticated principal has a localized responsive My Settings route separate from Admin. Persistent accounts can optimistically save locale and sound and read only their privacy-safe paginated activity; guests receive non-durable preferences plus the explicit conversion offer and never receive another account's history.
+- **SESSION-010** (Core) - PASS: Every platform-owner session-policy write stamps a durable UTC change time and bounded opaque actor id in the same provider document as the policy; reads validate both fields, legacy documents remain compatible, and the Admin surface displays provenance without exposing session or credential material.
+- **SESSION-011** (Core) - PASS: The registered-account timeout policy can suspend idle enforcement without disabling the absolute session cap and can set a zero-through-ten-minute warning that is always shorter than the effective idle window. Provider reads and writes clamp malformed or out-of-range values, while guest-trial expiration remains independently governed.
+- **SESSION-012** (Application) - PASS: Current-user responses expose only safe session-expiration and warning timing derived from the active server session and current timeout policy. The shell schedules one localized warning, replaces stale timers on session refresh or logout, and never treats client timing as session authority.
+- **RESET-004** (Core) - PASS: Enumeration-safe password-recovery initiation, resend, and completion are exposed through explicit additive public v2 routes and a localized responsive browser flow. Requests use exact field allowlists, caller idempotency, the existing single-active-token service, generic public acknowledgements, and immediate bearer removal from browser history after completion; frozen v1 and provider release state are unchanged.
+- **CONVERT-003** (Application) - PASS: An active guest can reach a localized conversion form from My Settings, explicitly supply mailbox, display name, password, and terms acceptance, and submit through the existing idempotent conversion authority while preserving the guest wallet and history exactly once. The form never appears as public self-signup and conversion remains constrained by the current enrollment policy.
+- **TEST-158** (Tests) - PASS: Focused JSON/MySQL-capable API suites plus existing permanent Browser cases prove public recovery, owner-only administrator delegation and audit, lifecycle-only Users, enrollment readiness and fail-closed live enablement, read-only launch status, session enforcement/warning/provenance, personal settings with sound off by default, self-history, and the guest conversion offer across English, Russian, and all governed viewports.

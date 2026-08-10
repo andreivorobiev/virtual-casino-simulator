@@ -39,7 +39,7 @@ HISTORY_FIELDS = ("ts", "game", "reference", "transaction_type", "amount", "bala
 # Build the default personal preference record for a subject with nothing stored yet.
 def default_settings() -> dict:
     # Return the canonical defaults with the initial revision.
-    return {"locale": DEFAULT_LOCALE, "sound_enabled": True, "revision": 0, "updated_at": None}
+    return {"locale": DEFAULT_LOCALE, "sound_enabled": False, "revision": 0, "updated_at": None}
 
 
 # Build the empty persisted document shape.

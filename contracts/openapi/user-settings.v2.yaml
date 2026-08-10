@@ -267,6 +267,7 @@ components:
           enum: [en-US, ru-RU]
         sound_enabled:
           type: boolean
+          default: false
         revision:
           type: integer
           minimum: 0

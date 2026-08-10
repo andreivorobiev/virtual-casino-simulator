@@ -651,7 +651,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         # Fail the named central case when any focused assertion failed.
         if not result.wasSuccessful(): raise AssertionError("enrollment policy suite failed")
     # Map the permanent requirement to its existing focused central case without allocating a generic TEST ID.
-    run_case('API-ENROLLMENT-POLICY-001',['AUTH-013','AUTH-014'],run_enrollment_policy_tests)
+    run_case('API-ENROLLMENT-POLICY-001',['AUTH-013','AUTH-014','AUTH-015','OAUTH-011','TEST-158'],run_enrollment_policy_tests)
     # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
     run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','LEDGER-001','CORE-017'],storage_tests.run_player_creation_preserves_ledger)
     # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)
@@ -1207,7 +1207,7 @@ def validate_guest_contracts():
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
     # Preserve the exact anonymous allowlist including private redemption, disabled enrollment, and reviewed provider-latched OAuth routes. (OAUTH-007)
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/oauth/providers','/api/v2/auth/csrf','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/password-reset/initiate','/api/v2/auth/password-reset/resend','/api/v2/auth/password-reset/complete','/api/v2/auth/oauth/providers','/api/v2/auth/csrf','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
     # Prove launch stays held, the fixed grant and owner admission control are exact, and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['entry']['starting_play_tokens']==10000 and guest_contract['entry']['admission_change_requires_restart'] is False and guest_contract['entry']['admission_pause_ends_existing_trials'] is False and guest_contract['wallet']['starting_play_tokens_fixed']==10000 and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['admission_write_authority']=='current-active-platform-owner' and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -1413,7 +1413,7 @@ def run_api_tests():
     # Record bounded payout-rate arithmetic, exclusion, malformed-row, and detail evidence. (ADMIN-030, TEST-146)
     run_case('API-ADMIN-ECONOMICS-001',['ADMIN-030','TEST-146'],lambda: run_unit_module('tests.admin_economics_tests','Admin economics suite failed'))
     # Record owner-only clamped provider-backed session-policy routes and persistence. (SESSION-009, ADMIN-031, TEST-150)
-    run_case('API-ADMIN-SESSION-POLICY-001',['SESSION-009','ADMIN-031','TEST-150'],lambda: run_unit_module('tests.admin_game_states_tests.AdminSessionSettingsTests','Admin session policy suite failed'))
+    run_case('API-ADMIN-SESSION-POLICY-001',['SESSION-009','SESSION-010','SESSION-011','SESSION-012','ADMIN-031','ADMIN-034','TEST-150','TEST-158'],lambda: run_unit_module('tests.admin_game_states_tests.AdminSessionSettingsTests','Admin session policy suite failed'))
     # Run the owner-only live rate-policy provider and route contract. (SEC-015, ADMIN-032, TEST-156)
     run_case('API-ADMIN-RATE-LIMITS-001',['SEC-015','ADMIN-032','TEST-156'],lambda: run_unit_module('tests.admin_game_states_tests.AdminRateLimitSettingsTests','Admin rate-limit policy suite failed'))
     # Prove 10,000-token guest grants plus owner pause/resume enforcement without restart. (GUEST-001)
@@ -1545,7 +1545,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('personal settings and self-history suite failed')
     # Record the listener-free preference, pagination, contract, and self-only privacy proof.
-    run_case('API-SETTINGS-001',['USER-006','USER-007','TEST-103'],run_user_settings_tests)
+    run_case('API-SETTINGS-001',['USER-006','USER-007','USER-008','USER-009','TEST-103','TEST-158'],run_user_settings_tests)
     # Execute ledger-derived receipt classification, privacy, contract, and retry proof without a listener.
     def run_receipt_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -1689,7 +1689,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('guest conversion suite failed')
     # Record the listener-free explicit, idempotent, wallet-preserving conversion proof.
-    run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','TEST-111'],run_guest_conversion_tests)
+    run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','CONVERT-003','TEST-111','TEST-158'],run_guest_conversion_tests)
     # Execute the product account-spine proof without opening a listener.
     def run_account_spine_tests():
         # Load only the focused product account-spine class.
@@ -1703,7 +1703,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('product account-spine suite failed')
     # Record disabled signup/passkeys, owner-only Admin delegation, and reporter-status proof.
-    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','AUTH-012','ADMIN-028','FEEDBACK-005','I18N-009','TEST-112','TEST-138'],run_account_spine_tests)
+    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','AUTH-012','AUTH-015','AUTH-016','ADMIN-028','ADMIN-033','OAUTH-011','RESET-004','FEEDBACK-005','I18N-009','TEST-112','TEST-138','TEST-158'],run_account_spine_tests)
     # Execute the privacy-safe Admin session-control core without opening a listener.
     def run_admin_session_control_tests():
         # Load only the focused session inventory and revocation class.
@@ -2100,7 +2100,7 @@ def run_api_tests():
             # Raise one bounded failure naming no recipient, bearer, or credential material.
             raise AssertionError('password recovery infrastructure suite failed')
     # Record the listener-free password-recovery proof under its permanent requirements.
-    run_case('API-RESET-001',['RESET-001','RESET-002','RESET-003','TEST-097'],run_password_reset_tests)
+    run_case('API-RESET-001',['RESET-001','RESET-002','RESET-003','RESET-004','TEST-097','TEST-158'],run_password_reset_tests)
     # Run provider-neutral feedback lifecycle, concurrency, retention, and image-safety tests. (TEST-094, issue #349)
     def run_feedback_tests():
         # Import the focused suite lazily so unrelated runners do not require image tooling.
@@ -2368,7 +2368,7 @@ def run_api_tests():
             # Refresh the harness Admin session after the concurrent-session and logout proof (issue #226).
             login_default_user(base)
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-AUTH-001',['AUTH-001','SESSION-001','SESSION-007','USER-001','TERMS-001'],auth_backend)
+        run_case('API-AUTH-001',['AUTH-001','SESSION-001','SESSION-007','SESSION-012','USER-001','TERMS-001'],auth_backend)
         # Store wallet integrity evidence for the later server-restart persistence check.
         integrity_state={}
         # Define wallet_auth_integrity to exercise canonical users, authorization, and token movement through the live backend.
@@ -3885,6 +3885,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
                         # Read current-user state through the frontend helper that attaches the browser proof.
                         guest_current=guest_page.evaluate("async () => (await import('/core/api.js')).currentUser()")
+                        # Open personal settings to prove guest conversion is visible but separate from Admin enrollment policy. (CONVERT-003)
+                        guest_page.get_by_test_id('nav-settings').click(); guest_page.get_by_test_id('guest-conversion').wait_for(timeout=5000)
+                        # Require a complete conversion form and sound-off default without submitting identifying data.
+                        guest_conversion_visible=guest_page.get_by_test_id('guest-conversion-submit').is_visible() and not guest_page.get_by_test_id('personal-settings-sound').is_checked()
+                        # Require the personal/convert cards to remain inside the active responsive viewport.
+                        assert guest_conversion_visible and guest_page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
+                        # Capture the localized conversion offer without creating a durable account.
+                        guest_evidence(guest_page,f'after-pass-guest-conversion-{guest_locale}-{guest_viewport_id}.png','shell_lobby',['guest_conversion_form','personal_sound_default_off'],guest_locale,guest_viewport_id)
+                        # Return to the lobby before authorization and game-entry checks.
+                        guest_page.get_by_test_id('nav-lobby').click(); guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
                         # Prove the guest cannot access the centrally protected Admin API with its valid proof.
                         guest_admin_code=guest_page.evaluate("async () => { try { await (await import('/core/api.js')).api('/api/v2/admin/guest-trials'); return 'ALLOWED'; } catch (error) { return error.code; } }")
                         # Read the persistent guest marker and localized End control.
@@ -3930,7 +3940,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Capture the localized terminal redirect after the disposable session is irreversibly revoked.
                         guest_evidence(guest_page,f'after-pass-guest-auth-ended-{guest_locale}-{guest_viewport_id}.png','auth',['guest_trial_ended'],guest_locale,guest_viewport_id)
                         # Record the complete result without retaining any credential or raw browser proof.
-                        guest_results.append({'locale':guest_locale,'viewport':guest_viewport_id,'created':guest_payload['ok'] is True,'role':guest_payload['data']['user'].get('role'),'balance':guest_current['player']['token_balance'],'marker':guest_marker,'top_up_hidden':guest_wallet_top_up_hidden,'expiry_notice':guest_expiry_notice,'game_entered':guest_game_entered,'admin_code':guest_admin_code,'ended':guest_end_payload['ok'] is True,'contained':guest_page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")})
+                        guest_results.append({'locale':guest_locale,'viewport':guest_viewport_id,'created':guest_payload['ok'] is True,'role':guest_payload['data']['user'].get('role'),'balance':guest_current['player']['token_balance'],'conversion_visible':guest_conversion_visible,'marker':guest_marker,'top_up_hidden':guest_wallet_top_up_hidden,'expiry_notice':guest_expiry_notice,'game_entered':guest_game_entered,'admin_code':guest_admin_code,'ended':guest_end_payload['ok'] is True,'contained':guest_page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")})
                     # Close the entire isolated context even if one viewport fails.
                     finally:
                         # Destroy its cookies and sessionStorage without touching other browser work.
@@ -3960,7 +3970,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Destroy the replacement context and its now-revoked cookie.
                 replacement_context.close()
             # Record the full locale, viewport, consent, lifecycle, authorization, refresh, and browser-close matrix.
-            run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','GUEST-006','TEST-081'],lambda: guest_policy_disabled_result and len(guest_results)==8 and all(result['created'] and result['role']=='guest' and result['balance']==10000.0 and result['marker']=='true' and result['top_up_hidden'] and result['expiry_notice'] and result['game_entered'] and result['admin_code']=='FORBIDDEN' and result['ended'] and result['contained'] for result in guest_results) and all(guest_close_results))
+            run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','GUEST-006','USER-008','USER-009','CONVERT-003','TEST-081','TEST-158'],lambda: guest_policy_disabled_result and len(guest_results)==8 and all(result['created'] and result['role']=='guest' and result['balance']==10000.0 and result['conversion_visible'] and result['marker']=='true' and result['top_up_hidden'] and result['expiry_notice'] and result['game_entered'] and result['admin_code']=='FORBIDDEN' and result['ended'] and result['contained'] for result in guest_results) and all(guest_close_results))
             # Record the separately named same-context refresh and browser-context loss acceptance.
             run_case('BR-GUEST-REFRESH-001',['GUEST-002','TEST-081'],lambda: len(guest_results)==8 and all(result['ended'] for result in guest_results) and all(guest_close_results))
             # Refresh the direct API harness Admin session after the browser login added a concurrent session (issue #226).
@@ -4477,8 +4487,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         shot('after-pass-auth-signin-fit-1280x720.png')
                         # Restore the primary viewport for downstream auth coverage.
                         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
+                        # Open enumeration-safe public recovery through the visible sign-in affordance. (RESET-004)
+                        page.get_by_test_id('password-reset-entry').click(); page.get_by_test_id('password-reset-initiate').wait_for(timeout=5000)
+                        # Require recovery to stay outside authenticated casino chrome and retain bounded responsive geometry.
+                        assert not page.get_by_test_id('premium-topbar').is_visible() and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
+                        # Capture the public recovery initiation surface without submitting any mailbox value.
+                        shot('after-pass-password-reset-initiate.png')
+                        # Return to the login gate so the existing real-backend authentication flow remains unchanged.
+                        page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
                     # Execute this statement as part of the module's documented control flow.
-                    run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001','AUTH-UI-002','TEST-071'],auth_login_gate)
+                    run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001','AUTH-UI-002','RESET-004','TEST-071','TEST-158'],auth_login_gate)
                     # Reselect the Russian gate through the visible control when this shard skipped the producing cases.
                     if not browser_shard_owns('BR-TOUCH-TARGET-AUTH-001'): page.get_by_test_id('auth-locale-select').select_option('ru-RU')
                     # Keep the Russian locale selected by the OAuth acceptance loop for login persistence coverage.
@@ -4513,8 +4531,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.locator('#balance').inner_text()=='5,000.00' and '◈' not in page.get_by_test_id('premium-wallet').inner_text()
                         # Verify the chosen locale survived login and terms acceptance.
                         assert page.get_by_test_id('shell-locale-select').input_value()=='ru-RU'
+                        # Open the personal settings surface through the regular authenticated navigation. (USER-008, USER-009)
+                        page.get_by_test_id('nav-settings').click(); page.get_by_test_id('my-settings').wait_for(timeout=5000)
+                        # Require newly introduced accounts to keep personal sound off until explicit opt-in.
+                        assert not page.get_by_test_id('personal-settings-sound').is_checked() and page.get_by_test_id('my-history').is_visible()
+                        # Persist the explicit sound-off choice through the real optimistic settings route.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v2/me/settings') and response.request.method=='PATCH') as settings_response_info:
+                            # Submit only the visible personal locale and sound fields.
+                            page.get_by_test_id('personal-settings-save').click()
+                        # Require the standard settings envelope and a contained personal surface.
+                        assert settings_response_info.value.json()['ok'] is True and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
+                        # Capture personal settings/history evidence distinct from the Admin Console.
+                        shot('after-pass-my-settings-sound-off.png')
+                        # Return to the lobby so later account-provider acceptance starts from its existing route.
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                     # Execute this statement as part of the module's documented control flow.
-                    run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003'],auth_shell)
+                    run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003','USER-008','USER-009','TEST-158'],auth_shell)
                     # Define provider-free authenticated account-method and callback lifecycle visual acceptance. (OAUTH-010)
                     def oauth_runtime_browser():
                         # Read all four governed viewports from the authoritative matrix.
@@ -4749,6 +4781,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001','SESSION-006'],lambda: logout_me_status['status']==401 and logout_me_status['ok'] is False and page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
                     # Re-login after logout so the existing browser suite can continue authenticated.
                     page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Establish the English oracle explicitly because re-authentication correctly restores a previously saved locale preference.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait until the shared runtime and mounted shell both own the English locale before asserting English token copy.
+                    page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'en-US'")
                     # Clear expected unauthenticated /me failures produced by the login and logout gates.
                     console_errors.clear(); http_errors.clear()
                     # Navigate to Roulette to verify the same current-user wallet persists on a game surface.
@@ -8141,8 +8177,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     roulette_audio_settings={'master_enabled':True,'sfx_enabled':True,'voice_enabled':True,'announce_roulette_results':True}
                     # Fulfill only the helper's test-owned settings write without changing backend owner policy.
                     page.route('**/api/v1/admin/audio-settings',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'settings':roulette_audio_settings}})))
-                    # Apply the explicit opt-in through the same public voice helper used by Admin.
-                    page.evaluate("async settings => { const voice=await import('/core/voice.js'); await voice.saveVoiceSettings(settings); }",roulette_audio_settings)
+                    # Apply both the account-owned and Admin-owned explicit opt-ins through the public voice helper.
+                    page.evaluate("async settings => { const voice=await import('/core/voice.js'); voice.setPersonalSoundEnabled(true); await voice.saveVoiceSettings(settings); }",roulette_audio_settings)
                     # Remove the exact route seam before the real spin and all downstream network assertions.
                     page.unroute('**/api/v1/admin/audio-settings')
                     # Capture the authoritative backend spin response while using the visible Roulette action.
@@ -9962,7 +9998,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Store the exact governed Admin visual matrix.
                         viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                         # Hold the provider-shaped policy returned by the deterministic endpoint seam.
-                        policy={'schema_version':2,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15}
+                        policy={'schema_version':2,'enabled':True,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15,'warning_minutes':2,'updated_at':'2026-08-09T00:00:00Z','updated_by':'browser-owner'}
                         # Hold the provider-shaped live request policy returned beside session controls. (SEC-015, ADMIN-032)
                         rate_policy={'schema_version':2,'requests_per_window':1200,'window_seconds':60}
                         # Hold whether the next read should model ordinary-Admin denial.
@@ -9978,7 +10014,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Read the submitted JSON body.
                                 body=route.request.post_data_json
                                 # Clamp all numeric values and preserve a strict boolean.
-                                policy.update({'idle_timeout_minutes':max(1,min(int(body.get('idle_timeout_minutes',policy['idle_timeout_minutes'])),1440)),'absolute_timeout_hours':max(1,min(int(body.get('absolute_timeout_hours',policy['absolute_timeout_hours'])),24)),'admin_idle_timeout_minutes':max(1,min(int(body.get('admin_idle_timeout_minutes',policy['admin_idle_timeout_minutes'])),1440)),'admin_stricter':body.get('admin_stricter') is True})
+                                policy.update({'enabled':body.get('enabled') is True,'idle_timeout_minutes':max(1,min(int(body.get('idle_timeout_minutes',policy['idle_timeout_minutes'])),1440)),'absolute_timeout_hours':max(1,min(int(body.get('absolute_timeout_hours',policy['absolute_timeout_hours'])),24)),'admin_idle_timeout_minutes':max(1,min(int(body.get('admin_idle_timeout_minutes',policy['admin_idle_timeout_minutes'])),1440)),'admin_stricter':body.get('admin_stricter') is True,'warning_minutes':max(0,min(int(body.get('warning_minutes',policy['warning_minutes'])),10)),'updated_at':'2026-08-09T00:05:00Z','updated_by':'browser-owner'})
+                                # Keep the warning strictly below the clamped idle window, matching provider behavior.
+                                policy['warning_minutes']=min(policy['warning_minutes'],max(0,policy['idle_timeout_minutes']-1))
                             # Fulfill the owner success envelope.
                             route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'settings':policy}}))
                         # Serve owner reads and writes for the independently persisted live request policy.
@@ -10004,11 +10042,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Exercise every governed viewport.
                                 for viewport_id,viewport in viewports.items():
                                     # Reset the deterministic policy before this cell.
-                                    policy.update({'schema_version':2,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15}); denied['value']=False
+                                    policy.update({'schema_version':2,'enabled':True,'idle_timeout_minutes':30,'absolute_timeout_hours':12,'admin_stricter':True,'admin_idle_timeout_minutes':15,'warning_minutes':2,'updated_at':'2026-08-09T00:00:00Z','updated_by':'browser-owner'}); denied['value']=False
                                     # Reset the independent live request policy before this cell.
                                     rate_policy.update({'schema_version':2,'requests_per_window':1200,'window_seconds':60})
                                     # Apply exact visual geometry and render the owner view.
-                                    page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '30' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '12' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '15' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === true && document.querySelector('[data-testid=\"admin-rate-limit-requests\"]')?.value === '1200' && document.querySelector('[data-testid=\"admin-rate-limit-window\"]')?.value === '60'""",timeout=5000)
+                                    page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-enabled\"]')?.checked === true && document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '30' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '12' && document.querySelector('[data-testid=\"admin-sessions-warning\"]')?.value === '2' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '15' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === true && document.querySelector('[data-testid=\"admin-sessions-provenance\"]')?.textContent?.trim() && document.querySelector('[data-testid=\"admin-rate-limit-requests\"]')?.value === '1200' && document.querySelector('[data-testid=\"admin-rate-limit-window\"]')?.value === '60'""",timeout=5000)
                                     # Require the complete owner policy to remain contained.
                                     assert page.get_by_test_id('admin-sessions-idle').input_value()=='30' and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
                                     # Focus the real save action for keyboard evidence.
@@ -10016,7 +10054,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Capture the owner policy and keyboard state.
                                     game_evidence(f'after-pass-admin-session-policy-owner-{locale}-{viewport_id}.png','BR-ADMIN-SESSION-POLICY-001',['owner_policy','keyboard_focus'],locale,viewport_id)
                                     # Submit values outside reviewed bounds through the real UI control.
-                                    page.get_by_test_id('admin-sessions-idle').fill('0'); page.get_by_test_id('admin-sessions-absolute').fill('99'); page.get_by_test_id('admin-sessions-admin-idle').fill('5000'); page.get_by_test_id('admin-sessions-admin-stricter').uncheck()
+                                    page.get_by_test_id('admin-sessions-enabled').uncheck(); page.get_by_test_id('admin-sessions-idle').fill('0'); page.get_by_test_id('admin-sessions-absolute').fill('99'); page.get_by_test_id('admin-sessions-warning').fill('99'); page.get_by_test_id('admin-sessions-admin-idle').fill('5000'); page.get_by_test_id('admin-sessions-admin-stricter').uncheck()
                                     # Bind the real Save action to completion of its exact owner-policy POST.
                                     with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/session-settings') and response.request.method=='POST',timeout=5000):
                                         # Trigger the asynchronous save while its response observer is armed.
@@ -10024,9 +10062,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Rerender from the persisted deterministic response.
                                     page.get_by_test_id('admin-tab-sessions').click()
                                     # Wait for all exact clamped controls instead of the already-visible stale panel.
-                                    page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '1' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '24' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '1440' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === false""",timeout=5000)
+                                    page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-enabled\"]')?.checked === false && document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '1' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '24' && document.querySelector('[data-testid=\"admin-sessions-warning\"]')?.value === '0' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '1440' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === false && document.querySelector('[data-testid=\"admin-sessions-provenance\"]')?.textContent?.includes('browser-owner')""",timeout=5000)
                                     # Require exact clamped values and boolean persistence.
-                                    assert page.get_by_test_id('admin-sessions-idle').input_value()=='1' and page.get_by_test_id('admin-sessions-absolute').input_value()=='24' and page.get_by_test_id('admin-sessions-admin-idle').input_value()=='1440' and not page.get_by_test_id('admin-sessions-admin-stricter').is_checked()
+                                    assert not page.get_by_test_id('admin-sessions-enabled').is_checked() and page.get_by_test_id('admin-sessions-idle').input_value()=='1' and page.get_by_test_id('admin-sessions-absolute').input_value()=='24' and page.get_by_test_id('admin-sessions-warning').input_value()=='0' and page.get_by_test_id('admin-sessions-admin-idle').input_value()=='1440' and not page.get_by_test_id('admin-sessions-admin-stricter').is_checked()
                                     # Capture clamped and saved policy evidence.
                                     game_evidence(f'after-pass-admin-session-policy-saved-{locale}-{viewport_id}.png','BR-ADMIN-SESSION-POLICY-001',['clamped_values','saved'],locale,viewport_id)
                                     # Submit out-of-range live rate controls through the real owner UI.
@@ -10064,7 +10102,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Restore default Admin geometry, locale, and Dashboard.
                         page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }"); page.get_by_test_id('admin-tab-dashboard').click()
                     # Execute the governed owner-session policy Browser case.
-                    run_case('BR-ADMIN-SESSION-POLICY-001',['SESSION-009','ADMIN-031','SEC-015','ADMIN-032','TEST-150','TEST-156'],admin_session_policy_browser)
+                    run_case('BR-ADMIN-SESSION-POLICY-001',['SESSION-009','SESSION-010','SESSION-011','SESSION-012','ADMIN-031','ADMIN-034','SEC-015','ADMIN-032','TEST-150','TEST-156','TEST-158'],admin_session_policy_browser)
                     # Define the localized Admin ledger-label and responsive evidence regression. (issue #74)
                     def admin_ledger_labels_browser():
                         # Store the exact governed Admin viewports required by the visual matrix.
@@ -10534,31 +10572,29 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         user_row.wait_for(timeout=10000)
                         # Wait for the one-time temporary password notice.
                         page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
-                        # Promote and suspend the synthetic account through the new v2 role/lifecycle controls.
-                        user_row.get_by_test_id('admin-user-role-admin').check()
-                        # Select a non-active lifecycle state so the browser proof covers both new fields.
+                        # Select a non-active lifecycle state through the account-only Users surface.
                         user_row.get_by_test_id('admin-user-status').select_option('suspended')
-                        # Accept the explicit role/lifecycle confirmation for this controlled Admin mutation.
+                        # Accept the explicit lifecycle confirmation for this controlled Admin mutation.
                         page.once('dialog',lambda dialog: dialog.accept())
                         # Wait for both the protected v2 mutation and the account-table refresh it triggers.
                         with page.expect_response(lambda response: '/api/v2/admin/users/' in response.url and response.request.method == 'PATCH') as account_response_info:
                             # Wait for the mutation-triggered Users refresh before inspecting persisted controls.
                             with page.expect_response(lambda response: response.url.endswith('/api/v1/admin/users') and response.request.method == 'GET'):
-                                # Save the selected Admin role and suspended lifecycle state.
+                                # Save the suspended lifecycle state without any privilege field.
                                 user_row.get_by_test_id('admin-user-save-account').click()
                         # Store the v2 account mutation response for envelope verification.
                         account_response=account_response_info.value.json()
                         # Require the standard success envelope from the protected role/lifecycle route.
                         assert account_response['ok'] is True
-                        # Wait for persisted status and role controls to re-render from the refreshed account.
+                        # Wait for the persisted lifecycle control to re-render from the refreshed account.
                         user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="suspended"]')
-                        # Require both selected controls to reflect the canonical persisted account state.
-                        user_row.wait_for(timeout=10000); assert user_row.get_by_test_id('admin-user-role-admin').is_checked() and user_row.get_by_test_id('admin-user-status').input_value()=='suspended'
-                        # Enumerate every governed Admin viewport for the role/lifecycle evidence corpus.
+                        # Require the selected control to reflect the canonical persisted account state and no privilege editor to exist.
+                        user_row.wait_for(timeout=10000); assert user_row.get_by_test_id('admin-user-status').input_value()=='suspended' and user_row.get_by_test_id('admin-user-role-admin').count()==0
+                        # Enumerate every governed Admin viewport for the lifecycle evidence corpus.
                         account_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
-                        # Pin the new locale-owned Admin labels so Russian evidence cannot reuse English copy.
-                        account_labels={'en-US':{'role':'Admin','save':'Save account'},'ru-RU':{'role':'Администратор','save':'Сохранить аккаунт'}}
-                        # Capture the persisted role/lifecycle controls in both installed locales.
+                        # Pin the locale-owned lifecycle action so Russian evidence cannot reuse English copy.
+                        account_labels={'en-US':{'save':'Save account'},'ru-RU':{'save':'Сохранить аккаунт'}}
+                        # Capture the persisted lifecycle controls in both installed locales.
                         for locale in ('en-US','ru-RU'):
                             # Switch the Admin runtime before re-rendering the Users surface.
                             page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
@@ -10568,9 +10604,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="suspended"]')
                             # Wait for the persisted account row before localization and geometry assertions.
                             user_row.wait_for(timeout=5000)
-                            # Require the selected role and save action to use exact locale-owned labels.
-                            assert user_row.locator('label.check-row').inner_text().strip()==account_labels[locale]['role'] and user_row.get_by_test_id('admin-user-save-account').inner_text().strip()==account_labels[locale]['save']
-                            # Require the new role/lifecycle resource keys never to leak into visible Admin copy.
+                            # Require the lifecycle save action to use exact locale-owned copy.
+                            assert user_row.get_by_test_id('admin-user-save-account').inner_text().strip()==account_labels[locale]['save']
+                            # Require the lifecycle resource keys never to leak into visible Admin copy.
                             account_text=page.get_by_test_id('admin-users-managed-accounts').inner_text()
                             # Check complete governed keys rather than ordinary words that may appear legitimately.
                             assert all(key not in account_text for key in ('users.roleAdmin','users.saveAccount','users.roleConfirm','users.accountSaved'))
@@ -10583,29 +10619,83 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Wait one frame so the explicit scroll position is painted before containment and evidence capture.
                                 page.wait_for_timeout(50)
                                 # Measure document, section, scroll-owner, and changed-control containment independently.
-                                account_geometry=page.get_by_test_id('admin-users-managed-accounts').evaluate("""section => { const sectionRect=section.getBoundingClientRect(); const owner=section.querySelector('[data-testid="admin-users-managed-table"]'); const ownerRect=owner?.getBoundingClientRect(); const row=section.querySelector('tr[data-email="beta.browser@example.test"]'); const group=row?.querySelector('[data-testid="admin-user-access-controls"]'); const groupRect=group?.getBoundingClientRect(); const roleLabel=row?.querySelector('label.check-row'); const save=row?.querySelector('[data-testid="admin-user-save-account"]'); const roleStyle=roleLabel ? getComputedStyle(roleLabel) : null; const controls=[row?.querySelector('[data-testid="admin-user-status"]'),row?.querySelector('[data-testid="admin-user-role-admin"]'),save].filter(Boolean); return { documentContained: document.documentElement.scrollWidth <= window.innerWidth + 1, sectionContained: sectionRect.left >= -1 && sectionRect.right <= window.innerWidth + 1, ownerContained: Boolean(ownerRect && ownerRect.left >= sectionRect.left - 1 && ownerRect.right <= sectionRect.right + 1), controlsUsable: controls.length === 3 && controls.every(control => { const rect=control.getBoundingClientRect(); return rect.width > 0 && rect.height >= 18; }), controlsContained: controls.length === 3 && controls.every(control => { const rect=control.getBoundingClientRect(); return Boolean(ownerRect && rect.left >= ownerRect.left - 1 && rect.right <= ownerRect.right + 1); }), roleTextReadable: Boolean(roleLabel && roleStyle?.whiteSpace === 'nowrap' && roleLabel.scrollWidth <= roleLabel.clientWidth + 1), saveTextReadable: Boolean(save && save.scrollWidth <= save.clientWidth + 1), roleMetrics: roleLabel ? {clientWidth:roleLabel.clientWidth,scrollWidth:roleLabel.scrollWidth,clientHeight:roleLabel.clientHeight,scrollHeight:roleLabel.scrollHeight,whiteSpace:roleStyle?.whiteSpace} : null, saveMetrics: save ? {clientWidth:save.clientWidth,scrollWidth:save.scrollWidth,clientHeight:save.clientHeight,scrollHeight:save.scrollHeight} : null, ownerRect: ownerRect ? {left:ownerRect.left,right:ownerRect.right,width:ownerRect.width,scrollLeft:owner.scrollLeft,clientWidth:owner.clientWidth} : null, groupRect: groupRect ? {left:groupRect.left,right:groupRect.right,width:groupRect.width} : null, controlRects: controls.map(control => { const rect=control.getBoundingClientRect(); return {testid:control.getAttribute('data-testid'),left:rect.left,right:rect.right,width:rect.width}; }) }; }""")
+                                account_geometry=page.get_by_test_id('admin-users-managed-accounts').evaluate("""section => { const sectionRect=section.getBoundingClientRect(); const owner=section.querySelector('[data-testid="admin-users-managed-table"]'); const ownerRect=owner?.getBoundingClientRect(); const row=section.querySelector('tr[data-email="beta.browser@example.test"]'); const group=row?.querySelector('[data-testid="admin-user-access-controls"]'); const groupRect=group?.getBoundingClientRect(); const save=row?.querySelector('[data-testid="admin-user-save-account"]'); const controls=[row?.querySelector('[data-testid="admin-user-status"]'),save].filter(Boolean); return { documentContained: document.documentElement.scrollWidth <= window.innerWidth + 1, sectionContained: sectionRect.left >= -1 && sectionRect.right <= window.innerWidth + 1, ownerContained: Boolean(ownerRect && ownerRect.left >= sectionRect.left - 1 && ownerRect.right <= sectionRect.right + 1), controlsUsable: controls.length === 2 && controls.every(control => { const rect=control.getBoundingClientRect(); return rect.width > 0 && rect.height >= 18; }), controlsContained: controls.length === 2 && controls.every(control => { const rect=control.getBoundingClientRect(); return Boolean(ownerRect && rect.left >= ownerRect.left - 1 && rect.right <= ownerRect.right + 1); }), privilegeEditorAbsent: !row?.querySelector('[data-testid="admin-user-role-admin"]'), saveTextReadable: Boolean(save && save.scrollWidth <= save.clientWidth + 1), saveMetrics: save ? {clientWidth:save.clientWidth,scrollWidth:save.scrollWidth,clientHeight:save.clientHeight,scrollHeight:save.scrollHeight} : null, ownerRect: ownerRect ? {left:ownerRect.left,right:ownerRect.right,width:ownerRect.width,scrollLeft:owner.scrollLeft,clientWidth:owner.clientWidth} : null, groupRect: groupRect ? {left:groupRect.left,right:groupRect.right,width:groupRect.width} : null, controlRects: controls.map(control => { const rect=control.getBoundingClientRect(); return {testid:control.getAttribute('data-testid'),left:rect.left,right:rect.right,width:rect.width}; }) }; }""")
                                 # Fail closed on overflow, clipping, missing controls, or collapsed native inputs.
-                                assert all(account_geometry[key] for key in ('documentContained','sectionContained','ownerContained','controlsUsable','controlsContained','roleTextReadable','saveTextReadable')),{'locale':locale,'viewport':viewport_id,**account_geometry}
+                                assert all(account_geometry[key] for key in ('documentContained','sectionContained','ownerContained','controlsUsable','controlsContained','privilegeEditorAbsent','saveTextReadable')),{'locale':locale,'viewport':viewport_id,**account_geometry}
                                 # Write one exact-head Admin PNG and sidecar for independent EN/RU human review.
-                                region_evidence(f'after-pass-admin-account-spine-{locale}-{viewport_id}.png','[data-testid="admin-users-managed-accounts"]','admin',['users','users_account_role_status'],locale,viewport_id)
+                                region_evidence(f'after-pass-admin-account-spine-{locale}-{viewport_id}.png','[data-testid="admin-users-managed-accounts"]','admin',['users','users_account_lifecycle'],locale,viewport_id)
                         # Restore the suite-default locale and viewport before reverting the synthetic account.
                         page.set_viewport_size(account_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
                         # Reload Users and resolve the persisted synthetic account after locale evidence.
                         page.get_by_test_id('admin-tab-users').click(); user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="suspended"]')
-                        # Revert the synthetic account to a player in active state for the existing lifecycle proof.
-                        user_row.get_by_test_id('admin-user-role-admin').uncheck(); user_row.get_by_test_id('admin-user-status').select_option('active')
-                        # Accept the explicit confirmation for the controlled role/lifecycle restoration.
+                        # Restore the synthetic account to active state before the separate privilege workflow.
+                        user_row.get_by_test_id('admin-user-status').select_option('active')
+                        # Accept the explicit confirmation for the controlled lifecycle restoration.
                         page.once('dialog',lambda dialog: dialog.accept())
                         # Wait for both the v2 restoration mutation and its account-table refresh.
                         with page.expect_response(lambda response: '/api/v2/admin/users/' in response.url and response.request.method == 'PATCH'):
                             # Wait for the refresh before the original deactivate/reactivate sequence begins.
                             with page.expect_response(lambda response: response.url.endswith('/api/v1/admin/users') and response.request.method == 'GET'):
-                                # Persist the restored player role and active lifecycle status.
+                                # Persist the restored active lifecycle status.
                                 user_row.get_by_test_id('admin-user-save-account').click()
                         # Resolve the active player row after the protected restoration completes.
                         user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]')
-                        # Require the restored row before continuing with legacy account actions.
-                        user_row.wait_for(timeout=10000); assert not user_row.get_by_test_id('admin-user-role-admin').is_checked()
+                        # Require the restored row and continued absence of a privilege editor before delegation.
+                        user_row.wait_for(timeout=10000); assert user_row.get_by_test_id('admin-user-role-admin').count()==0
+                        # Capture the durable user id for the separate owner-only Administrators workflow.
+                        created_user_id=user_row.get_attribute('data-user')
+                        # Open the dedicated privilege-management surface instead of using generic account rows.
+                        page.get_by_test_id('admin-tab-administrators').click(); page.get_by_test_id('admin-administrator-grant').wait_for(timeout=5000)
+                        # Select the active synthetic account and supply transient step-up evidence.
+                        page.locator('#administrator-target').select_option(created_user_id); page.locator('#administrator-password').fill(DEFAULT_AUTH_PASSWORD); page.locator('#administrator-reason').fill('Browser delegation acceptance')
+                        # Commit one owner-reauthenticated Admin grant through the dedicated endpoint.
+                        with page.expect_response(lambda response: response.url.endswith(f'/api/v2/admin/administrators/{created_user_id}/grant') and response.request.method=='POST') as grant_response_info:
+                            # Activate the fixed grant control while its exact response observer is armed.
+                            page.get_by_test_id('administrator-grant').click()
+                        # Require the standard grant envelope and durable ordinary-Admin list row.
+                        assert grant_response_info.value.json()['ok'] is True; page.locator(f'.administrator-revoke[data-user="{created_user_id}"]').wait_for(timeout=10000)
+                        # Require one immutable audit row and scrubbed password field after the rerender.
+                        assert 'Browser delegation acceptance' in page.get_by_test_id('admin-administrator-audit').inner_text() and page.locator('#administrator-password').input_value()==''
+                        # Open the Administrators workspace in one locale without racing its asynchronous locale rerender.
+                        def open_administrators_locale(locale):
+                            # Read the current runtime locale before deciding whether locale notification or an explicit tab activation owns the load.
+                            current_locale=page.evaluate("() => window.CasinoI18n.getLocaleState().locale")
+                            # Observe the one canonical Administrators listing request that must complete the requested render.
+                            with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/administrators') and response.request.method=='GET') as administrators_response_info:
+                                # Let a genuine locale transition own the reload, otherwise activate the already-localized tab explicitly.
+                                if current_locale!=locale: page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                                # Trigger exactly one load when the locale is already current and no locale notification will fire.
+                                else: page.get_by_test_id('admin-tab-administrators').click()
+                            # Require a successful listing envelope before interacting with its replacement DOM.
+                            assert administrators_response_info.value.json()['ok'] is True
+                            # Wait until the asynchronously rendered heading uses the requested locale rather than the prior DOM.
+                            page.wait_for_function("async () => { const i18n=await import('/core/i18n.js'); return document.querySelector('#adminTitle')?.textContent===i18n.t('administrators.title',{},'admin'); }")
+                            # Require the replacement workspace and its scrubbed transient-password field.
+                            page.get_by_test_id('admin-administrator-list').wait_for(timeout=5000); assert page.locator('#administrator-password').input_value()==''
+                        # Capture the complete delegation workspace under every required locale and viewport.
+                        for locale in ('en-US','ru-RU'):
+                            # Render the exact locale through one non-racing Administrators load.
+                            open_administrators_locale(locale)
+                            # Exercise every governed responsive viewport without allowing horizontal page overflow.
+                            for viewport_id,viewport in account_viewports.items():
+                                # Apply the exact matrix viewport and wait for layout to settle.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(50)
+                                # Require all three privilege cards to remain contained and password values to remain absent.
+                                assert page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1") and page.locator('#administrator-password').input_value()==''
+                                # Capture exact-head after-pass privilege-management evidence.
+                                game_evidence(f'after-pass-admin-administrators-{locale}-{viewport_id}.png','BR-ADMIN-USERS-001',['administrator_list','owner_reauthentication','immutable_audit'],locale,viewport_id)
+                        # Restore English and desktop geometry through one completed render before revoking the temporary grant.
+                        page.set_viewport_size(account_viewports['desktop_primary']); open_administrators_locale('en-US')
+                        # Supply a fresh transient step-up and explicit revoke reason after the grant rerender.
+                        page.locator('#administrator-password').fill(DEFAULT_AUTH_PASSWORD); page.locator('#administrator-reason').fill('Browser delegation cleanup')
+                        # Revoke only the temporary ordinary-Admin grant through the dedicated route.
+                        with page.expect_response(lambda response: response.url.endswith(f'/api/v2/admin/administrators/{created_user_id}/revoke') and response.request.method=='POST') as revoke_response_info:
+                            # Activate the target-bound revoke control.
+                            page.locator(f'.administrator-revoke[data-user="{created_user_id}"]').click()
+                        # Require the standard revoke envelope and a durable audit row without the prior Admin listing.
+                        assert revoke_response_info.value.json()['ok'] is True; page.wait_for_function("""({ userId }) => document.querySelector('[data-testid="admin-administrator-audit"]')?.textContent.includes('Browser delegation cleanup') && !document.querySelector(`.administrator-revoke[data-user="${userId}"]`)""", arg={'userId':created_user_id}, timeout=5000)
+                        # Return to generic Users for lifecycle, password, terms, and locale actions.
+                        page.get_by_test_id('admin-tab-users').click(); user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]'); user_row.wait_for(timeout=5000)
                         # Deactivate the user through the first row action.
                         user_row.get_by_test_id('admin-user-toggle').click()
                         # Reacquire the row after its status-driven DOM replacement renders.
@@ -10682,10 +10772,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('admin-open-guest-trials').click(); page.get_by_test_id('admin-guest-filters').wait_for(timeout=5000)
                         # Restore the suite-default locale and viewport after governed evidence.
                         page.set_viewport_size(users_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
+                        # Open the owner enrollment workspace without changing any live capability.
+                        page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-policy').wait_for(timeout=5000); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=5000)
+                        # Preview the unchanged closed policy through the real pure-computation endpoint.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/enrollment-policy/preview') and response.request.method=='POST'):
+                            # Activate only the non-mutating preview control.
+                            page.locator('#enrollment-preview').click()
+                        # Require a visible bounded impact result and no launch authorization control.
+                        page.locator('#enrollment-preview-result:not([hidden])').wait_for(timeout=5000); assert page.get_by_test_id('admin-enrollment-policy').locator('button').count()==2
+                        # Capture enrollment policy/readiness and held launch status across the required matrix.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the Admin locale before rerendering governance workspaces.
+                            page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                            # Reload the enrollment workspace in the selected locale.
+                            page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=5000)
+                            # Exercise every governed responsive viewport for policy and readiness evidence.
+                            for viewport_id,viewport in users_viewports.items():
+                                # Apply exact visual-matrix dimensions and require document containment.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(50); assert page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
+                                # Capture the complete owner policy and secret-free readiness state.
+                                game_evidence(f'after-pass-admin-enrollment-{locale}-{viewport_id}.png','BR-ADMIN-USERS-001',['enrollment_policy','provider_readiness','live_enablement_held'],locale,viewport_id)
+                            # Open the read-only launch dashboard after enrollment evidence.
+                            page.get_by_test_id('admin-tab-launch').click(); page.get_by_test_id('admin-launch-readiness').wait_for(timeout=5000)
+                            # Require held status and the complete absence of any action control.
+                            assert page.get_by_test_id('admin-launch-readiness').get_attribute('data-status')=='held' and page.get_by_test_id('admin-launch-readiness').locator('button,input,select').count()==0
+                            # Capture the launch hold at each governed viewport without a mutation affordance.
+                            for viewport_id,viewport in users_viewports.items():
+                                # Apply exact dimensions and require a contained read-only card.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(50); assert page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
+                                # Capture exact-head read-only release-gate evidence.
+                                game_evidence(f'after-pass-admin-launch-readiness-{locale}-{viewport_id}.png','BR-ADMIN-USERS-001',['launch_readiness','launch_held','read_only'],locale,viewport_id)
                         # Verify the existing Language / Locale tab remains reachable.
+                        page.set_viewport_size(users_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
+                        # Navigate to the existing language surface after the new governance workspaces.
                         page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
                     # Execute this statement as part of the module's documented control flow.
-                    run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','ADMIN-026','I18N-009','TEST-081','TEST-112'],admin_users_browser)
+                    run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','ADMIN-026','ADMIN-033','AUTH-015','AUTH-016','OAUTH-011','I18N-009','TEST-081','TEST-112','TEST-158'],admin_users_browser)
                     # Prove the Admin Guest Trials section reports de-identified account-free telemetry. (issue #317)
                     def admin_guest_trials_browser():
                         # Define every governed Admin viewport, including the issue-required mobile state.
