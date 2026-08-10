@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.61 release line retains the exact 46-game catalog, runtime behavior, and accepted settlement interface byte-for-byte. Its agent-memory and engineering-gate additions change no descriptor, route, paytable, outcome, settlement, or economics behavior.
+
 The v0.9.5.60 release line retains the exact 46-game catalog and accepted settlement interface byte-for-byte. Its account and Admin completion adds no descriptor, route, paytable, outcome, settlement, or economics change.
 
 The v0.9.5.59 release line retains the exact 46-game catalog while converging every player-money path on the shared replay-safe settlement boundary. It adds no descriptor, route, paytable, outcome, or economics change.
@@ -48,6 +50,8 @@ The descriptor contains:
 - `default`: an exceptional documented fallback only when existing engine code already supplies that fallback outside its default-state object.
 
 The validator rejects unknown schema keys, unsafe semantic flags, inverted or non-finite bounds, invalid engine defaults, undeclared settings routes, descriptors without matching routes, and multiple settings routes owned by one descriptor. Internal callable references and rule schemas are stripped from the public game catalog.
+
+v0.9.5.61 also retains the existing behavior-neutral schema and coercion helpers byte-for-byte.
 
 v0.9.5.60 also retains the existing behavior-neutral schema and coercion helpers byte-for-byte.
 

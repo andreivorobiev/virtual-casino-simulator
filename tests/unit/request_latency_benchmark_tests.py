@@ -1538,14 +1538,14 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(core_module["version"], "9.38.0")
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
-        # Require the compatible tests minor for the three portfolio checkpoints.
-        self.assertEqual(tests_module["version"], "1.71.0")
-        # Require the compatible docs minor for the complete open-ticket review.
-        self.assertEqual(docs_module["version"], "1.69.0")
+        # Require the exact release-owned tests patch for v0.9.5.61 qualification.
+        self.assertEqual(tests_module["version"], "1.71.1")
+        # Require the exact release-owned docs patch for v0.9.5.61 provenance.
+        self.assertEqual(docs_module["version"], "1.69.1")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the exact release-owned contracts patch for the compatibility record.
-        self.assertEqual(contracts_module["version"], "1.56.1")
+        self.assertEqual(contracts_module["version"], "1.56.2")
         # Require the compatible tooling minor for the multiprocess safety audit.
         self.assertEqual(tooling_module["version"], "1.26.0")
         # Require the exact compatible Baccarat settlement-interface patch.
@@ -1558,8 +1558,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.6.2")
         # Require the exact compatible Slots settlement-interface patch.
         self.assertEqual(slots_module["version"], "9.4.4")
-        # Require the exact release-owned Application patch for the v0.9.5.60 package identity.
-        self.assertEqual(application_module["version"], "9.59.1")
+        # Require the exact release-owned Application patch for the v0.9.5.61 package identity.
+        self.assertEqual(application_module["version"], "9.59.2")
         # Require Blackjack to carry the compatible settlement-interface patch.
         self.assertEqual(blackjack_module["version"], "9.1.9")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
