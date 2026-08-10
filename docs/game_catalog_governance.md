@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.63 release line retains the exact 46-game catalog and accepted settlement interface. It packages the completed #433 descriptor boundary: settings coercion, persisted-state repair, generated request contracts, and authority evidence derive from the same catalog-owned schemas without changing paytables, outcomes, settlements, or economics.
+
 The v0.9.5.62 release line retains the exact 46-game catalog, runtime behavior, and accepted settlement interface byte-for-byte. Its row-scoped player persistence changes no descriptor, route, paytable, outcome, settlement, or economics behavior.
 
 The v0.9.5.60 release line retains the exact 46-game catalog and accepted settlement interface byte-for-byte. Its account and Admin completion adds no descriptor, route, paytable, outcome, settlement, or economics change.

@@ -1,3 +1,16 @@
+# Virtual Casino Simulator v0.9.5.63 Release Notes
+
+## Descriptor-driven game-rule enforcement
+
+- Packages accepted content PR #649; the release-only application revision advances mechanically to `9.59.4`.
+- Resolves issue #433 by enforcing descriptor-owned game settings centrally before handlers run, repairing poisoned persisted settings to engine defaults, and retiring duplicated Blackjack and Baccarat rule domains.
+- Generates governed OpenAPI request bodies and authority-matrix bounds from the same descriptors so contract evidence cannot drift from runtime enforcement.
+- Carries permanent requirement `TEST-163` and amendments to `SEC-002`, `SEC-004`, and `SEC-014`; the governed total remains exactly 931 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 743 regular files: the terminal v0.9.5.62 inventory plus this v0.9.5.63 compatibility record; repository documentation, tests, and engineering audit scripts remain outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.39.0`, Blackjack `9.1.10`, Baccarat `9.1.15`, Roulette `9.6.3`, Tooling `1.27.0`, and every other content module remain exact protected-main values.
+- Preserves frozen `/api/v1` response envelopes, accepted paytables, settlement semantics, providers, restricted-preview policy, and the held MySQL migration policy.
+- Retains exact immutable and terminal-green v0.9.5.62 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.62 Release Notes
 
 ## Row-scoped player persistence and bootstrap safety

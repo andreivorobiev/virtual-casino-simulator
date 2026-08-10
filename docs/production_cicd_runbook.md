@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.62`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.63`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -175,6 +175,8 @@ v0.9.5.60 packages the accepted account and Admin completion from sole normal co
 v0.9.5.61 packages the accepted persistent-agent-memory PR #640 and performance/governance PR #642. It closes bounded issues #641 and #643; adds source-bound durable agent context, payload/frontend budget evidence, a 46-game multiprocess safety inventory, and deterministic game-suite discovery while leaving broader portfolio and external-readiness tickets open. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.60 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.62 packages the accepted row-scoped player-persistence PR #646. It closes issue #431; removes runtime whole-player-map rewrites, makes MySQL player loads read-only, and uses lock-correct insert-missing-only bootstrap behavior without changing schemas, games, settlements, or API envelopes. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.61 as the application-only predecessor; database rollback remains prohibited.
+
+v0.9.5.63 packages accepted descriptor-driven game-rule enforcement PR #649. It closes issue #433; mounts descriptor-owned settings coercion centrally, repairs invalid persisted settings, retires duplicated game rule domains, and generates request contracts plus authority bounds from the same descriptors without changing paytables, settlements, providers, or frozen response envelopes. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.62 as the application-only predecessor; database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
