@@ -354,16 +354,34 @@ class PayloadFrontendBudgetHappyPathTests(unittest.TestCase):
         output.write_bytes(b"retained-before-fdopen")
         # Retain the real low-level close implementation.
         real_close = os.close
+        # Retain the real temporary allocation implementation.
+        real_mkstemp = budget.tempfile.mkstemp
+        # Capture only the descriptor owned by the atomic output helper.
+        owned_descriptors = []
+
+        # Record the helper-owned descriptor without affecting Git subprocess descriptors.
+        def capture_owned_descriptor(*args, **kwargs):
+            # Allocate the real same-directory temporary file.
+            descriptor, name = real_mkstemp(*args, **kwargs)
+            # Retain the exact descriptor whose cleanup this test governs.
+            owned_descriptors.append(descriptor)
+            # Return the unmodified allocation result.
+            return descriptor, name
+
         # Observe real descriptor cleanup while injecting stream-transfer failure.
-        with mock.patch.object(budget.os, "close", wraps=real_close) as close_call:
-            # Fail only the fdopen ownership transfer after real mkstemp allocation.
-            with mock.patch.object(budget.os, "fdopen", side_effect=OSError("SECRET_FDOPEN")):
-                # Require one fixed value-free programmatic failure.
-                with self.assertRaisesRegex(budget.PayloadFrontendBudgetError, "^output write failed$"):
-                    # Attempt the governed atomic write.
-                    budget.write_evidence_atomic(output, evidence, self.repo)
-        # Require one explicit raw descriptor close.
-        self.assertEqual(close_call.call_count, 1)
+        with mock.patch.object(budget.tempfile, "mkstemp", side_effect=capture_owned_descriptor):
+            # Observe every real close without changing unrelated subprocess behavior.
+            with mock.patch.object(budget.os, "close", wraps=real_close) as close_call:
+                # Fail only the fdopen ownership transfer after real mkstemp allocation.
+                with mock.patch.object(budget.os, "fdopen", side_effect=OSError("SECRET_FDOPEN")):
+                    # Require one fixed value-free programmatic failure.
+                    with self.assertRaisesRegex(budget.PayloadFrontendBudgetError, "^output write failed$"):
+                        # Attempt the governed atomic write.
+                        budget.write_evidence_atomic(output, evidence, self.repo)
+        # Require exactly one helper-owned descriptor allocation.
+        self.assertEqual(len(owned_descriptors), 1)
+        # Require exactly one explicit close of that helper-owned descriptor.
+        self.assertEqual(sum(call.args == (owned_descriptors[0],) for call in close_call.call_args_list), 1)
         # Require the original destination to remain byte-exact.
         self.assertEqual(output.read_bytes(), b"retained-before-fdopen")
         # Require every owned temporary file to be removed after handle release.
@@ -379,22 +397,45 @@ class PayloadFrontendBudgetHappyPathTests(unittest.TestCase):
         output.write_bytes(b"retained-before-close-error")
         # Retain the real low-level close implementation.
         real_close = os.close
+        # Retain the real temporary allocation implementation.
+        real_mkstemp = budget.tempfile.mkstemp
+        # Capture only the descriptor owned by the atomic output helper.
+        owned_descriptors = []
+
+        # Record the helper-owned descriptor without affecting Git subprocess descriptors.
+        def capture_owned_descriptor(*args, **kwargs):
+            # Allocate the real same-directory temporary file.
+            descriptor, name = real_mkstemp(*args, **kwargs)
+            # Retain the exact descriptor whose cleanup this test governs.
+            owned_descriptors.append(descriptor)
+            # Return the unmodified allocation result.
+            return descriptor, name
 
         # Release the descriptor but report one synthetic non-EBADF error.
         def close_then_report_error(descriptor: int) -> None:
+            # Preserve unrelated subprocess descriptor cleanup exactly.
+            if descriptor not in owned_descriptors:
+                # Close the unrelated descriptor without injecting the owned-file failure.
+                real_close(descriptor)
+                # End after preserving the unrelated close.
+                return
             # Close the real descriptor so Windows can remove the temp.
             real_close(descriptor)
             # Report a non-EBADF cleanup error with hostile detail.
             raise OSError(errno.EIO, "SECRET_CLOSE_DETAIL")
 
-        # Fail fdopen so raw descriptor cleanup owns the handle.
-        with mock.patch.object(budget.os, "fdopen", side_effect=OSError("SECRET_FDOPEN")):
-            # Inject the close error only after real handle release.
-            with mock.patch.object(budget.os, "close", side_effect=close_then_report_error):
-                # Require the final fixed cleanup failure.
-                with self.assertRaisesRegex(budget.PayloadFrontendBudgetError, "^output cleanup failed$") as caught:
-                    # Attempt the governed atomic write.
-                    budget.write_evidence_atomic(output, evidence, self.repo)
+        # Capture the exact helper-owned descriptor allocation.
+        with mock.patch.object(budget.tempfile, "mkstemp", side_effect=capture_owned_descriptor):
+            # Fail fdopen so raw descriptor cleanup owns the handle.
+            with mock.patch.object(budget.os, "fdopen", side_effect=OSError("SECRET_FDOPEN")):
+                # Inject the close error only after real handle release.
+                with mock.patch.object(budget.os, "close", side_effect=close_then_report_error):
+                    # Require the final fixed cleanup failure.
+                    with self.assertRaisesRegex(budget.PayloadFrontendBudgetError, "^output cleanup failed$") as caught:
+                        # Attempt the governed atomic write.
+                        budget.write_evidence_atomic(output, evidence, self.repo)
+        # Require exactly one helper-owned descriptor allocation.
+        self.assertEqual(len(owned_descriptors), 1)
         # Require no raw close detail in the surfaced failure.
         self.assertNotIn("SECRET_CLOSE_DETAIL", str(caught.exception))
         # Require the original destination to remain byte-exact.
