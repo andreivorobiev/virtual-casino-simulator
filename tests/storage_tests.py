@@ -1631,42 +1631,38 @@ def run_player_creation_preserves_ledger():
 
 # Prove client-supplied table rules cannot escape their declared domain into payout math. (issue #404)
 def run_table_rule_authority():
-    # Import the shared declarative validator under test.
-    from casino.core.validation import apply_rule_updates
-    # Import the per-game rule domains that the settings routes enforce.
-    from casino.games.baccarat.api import RULE_DOMAIN as BACCARAT_RULES
-    # Import the blackjack domain alongside it for the same coverage.
-    from casino.games.blackjack.api import RULE_DOMAIN as BLACKJACK_RULES
+    # Import the single descriptor-owned request boundary under test.
+    from casino.core.game_rules import coerce_request
     # Import the validation envelope every rejection must use.
     from casino.errors import ValidationError
 
     # Collect the hostile values that previously reached settlement math unchecked.
     hostile = [
         # Reject the unbounded natural payout that allowed a one-hand balance mint.
-        (BLACKJACK_RULES, "blackjack_payout", 1000000),
+        ("/api/v1/games/blackjack/settings", "blackjack_payout", 1000000),
         # Reject a negative payout that would invert the settlement direction.
-        (BLACKJACK_RULES, "blackjack_payout", -5),
+        ("/api/v1/games/blackjack/settings", "blackjack_payout", -5),
         # Reject the oversized shoe that allocated billions of card strings.
-        (BLACKJACK_RULES, "decks", 100000000),
+        ("/api/v1/games/blackjack/settings", "decks", 100000000),
         # Reject a non-numeric shoe size that previously raised an unhandled ValueError.
-        (BLACKJACK_RULES, "decks", "x"),
+        ("/api/v1/games/blackjack/settings", "decks", "x"),
         # Reject a truthy string standing in for a boolean switch.
-        (BLACKJACK_RULES, "dealer_hits_soft_17", "yes"),
+        ("/api/v1/games/blackjack/settings", "dealer_hits_soft_17", "yes"),
         # Reject the negative commission that inflated every banker win.
-        (BACCARAT_RULES, "banker_commission", -1000),
+        ("/api/v1/games/baccarat/settings", "banker_commission", -1000),
         # Reject the unbounded tie payout that minted balance on a tie.
-        (BACCARAT_RULES, "tie_payout", 1e9),
+        ("/api/v1/games/baccarat/settings", "tie_payout", 1e9),
         # Reject a tie behaviour the engine does not implement.
-        (BACCARAT_RULES, "tie_behavior", "lose"),
+        ("/api/v1/games/baccarat/settings", "tie_behavior", "lose"),
         # Reject non-finite input before it can reach money arithmetic.
-        (BACCARAT_RULES, "banker_commission", float("inf")),
+        ("/api/v1/games/baccarat/settings", "banker_commission", float("inf")),
     ]
     # Drive every hostile value through the shared validator.
-    for spec, key, value in hostile:
+    for route, key, value in hostile:
         # Start protected logic so a missing rejection is reported precisely.
         try:
             # Attempt the update against an empty rules mapping.
-            apply_rule_updates({key: value}, {}, spec)
+            coerce_request(route, {key: value})
             # Fail loudly when the hostile value was accepted.
             raise AssertionError(f"{key} accepted out-of-domain value {value!r}")
         # Accept only the published validation envelope.
@@ -1675,17 +1671,17 @@ def run_table_rule_authority():
             pass
 
     # Verify legitimate published table offers still apply unchanged.
-    accepted = apply_rule_updates({"blackjack_payout": 1.5, "decks": 6, "late_surrender": False}, {}, BLACKJACK_RULES)
+    accepted = coerce_request("/api/v1/games/blackjack/settings", {"blackjack_payout": 1.5, "decks": 6, "late_surrender": False})
     # Require each accepted rule to persist with its supplied value.
     assert accepted == {"blackjack_payout": 1.5, "decks": 6, "late_surrender": False}
     # Verify baccarat's published commission and tie payout still apply.
-    accepted_baccarat = apply_rule_updates({"banker_commission": 0.05, "tie_payout": 8}, {}, BACCARAT_RULES)
+    accepted_baccarat = coerce_request("/api/v1/games/baccarat/settings", {"banker_commission": 0.05, "tie_payout": 8})
     # Require both baccarat rules to persist with their supplied values.
     assert accepted_baccarat == {"banker_commission": 0.05, "tie_payout": 8}
     # Verify keys the game does not declare are ignored rather than persisted.
-    ignored = apply_rule_updates({"house_edge": 0, "blackjack_payout": 1.2}, {}, BLACKJACK_RULES)
-    # Require only the declared rule to be written through.
-    assert ignored == {"blackjack_payout": 1.2}
+    ignored = coerce_request("/api/v1/games/blackjack/settings", {"house_edge": 0, "blackjack_payout": 1.2})
+    # Preserve unknown compatibility keys for the handler allowlist to ignore.
+    assert ignored == {"house_edge": 0, "blackjack_payout": 1.2}
 
     # Verify each settings route actually routes through the validator rather than assigning raw body
     # values. Without this, reverting a route to `rules[key] = body[key]` would leave every assertion
@@ -1699,10 +1695,19 @@ def run_table_rule_authority():
         settings_body = register_source.split(f'"/api/v1/games/{marker}/settings"')[1].split("@router.")[0]
         # Strip comments so prose mentioning the old pattern cannot satisfy the check.
         settings_statements = "\n".join(line.split("#", 1)[0] for line in settings_body.splitlines())
-        # Require the shared declarative validator on the executable path.
-        assert "apply_rule_updates" in settings_statements, f"{marker} settings route must validate rules"
+        # Require only the descriptor-derived allowlist at the final persistence boundary.
+        assert "declared_fields" in settings_statements, f"{marker} settings route must use descriptor fields"
+        # Require the retired duplicated validator to stay absent.
+        assert "apply_rule_updates" not in settings_statements, f"{marker} settings route still uses retired validation"
         # Require the unvalidated direct assignment to be gone.
         assert "rules[key] = body[key]" not in settings_statements, f"{marker} settings route still assigns raw body values"
+
+    # Read the central dispatch source that must validate before every governed settings handler.
+    from casino.router import Router
+    # Require the descriptor boundary on the real executable dispatch path.
+    dispatch_source = inspect.getsource(Router.dispatch)
+    # Prove central request coercion cannot be removed while per-game tests remain green.
+    assert "game_rules.coerce_request" in dispatch_source
 
     # Verify the legacy v1 add-money route now carries the guest freeze and a bounded amount. (#410)
     from casino.app import build_router

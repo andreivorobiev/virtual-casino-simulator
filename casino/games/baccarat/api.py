@@ -2,7 +2,9 @@
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.validation import apply_rule_updates, require_amount, require_player_id
+from casino.core.validation import require_amount, require_player_id
+# Import the descriptor allowlist so the handler cannot drift from central router coercion.
+from casino.core.game_rules import declared_fields
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import players, logger
 # Import the one canonical game-money boundary.
@@ -18,21 +20,6 @@ from casino.errors import ConflictError
 GAME_ID = "baccarat"
 # Bind every Baccarat movement to the shared storage-atomic settlement adapter.
 SETTLEMENT = GameSettlementGateway(GAME_ID, "bet_id")
-
-# Declare the legal domain of every client-settable table rule so the settings route cannot persist a
-# value that settle_bet or make_shoe would then trust. (issue #404)
-RULE_DOMAIN = {
-    # Restrict the shoe to real table sizes; an unbounded count would allocate 52*decks card strings.
-    "decks": {"kind": "int", "min": 1, "max": 8},
-    # Bound the tie payout to the two published offers (8:1 and 9:1) rather than any caller number.
-    "tie_payout": {"kind": "enum", "values": [8, 9]},
-    # Keep the banker commission inside a real house range so a negative value cannot inflate wins.
-    "banker_commission": {"kind": "number", "min": 0, "max": 0.25},
-    # Accept only the tie behaviour the engine actually implements.
-    "tie_behavior": {"kind": "enum", "values": ["push"]},
-    # Bound the cut-card depth to a sane portion of the shoe.
-    "cut_cards_remaining": {"kind": "int", "min": 1, "max": 104},
-}
 
 # Define the request_player_id function used by this module.
 def request_player_id(body, query) -> str:
@@ -112,9 +99,12 @@ def register(router):
             raise ConflictError("Deal or clear open baccarat bets before changing settings")
         # Set rules to the value needed for the next operation.
         rules = state.setdefault("rules", engine.default_state()["rules"])
-        # Validate every caller-supplied rule against its declared domain before it can reach payout
-        # math, because these values are read directly by settle_bet and make_shoe (issue #404).
-        apply_rule_updates(body, rules, RULE_DOMAIN)
+        # Copy only centrally coerced descriptor fields so this handler owns no parallel rule schema. (SEC-014)
+        for field in declared_fields(GAME_ID):
+            # Preserve omitted rules while applying each validated caller update.
+            if field in body:
+                # Store the canonical router value for subsequent engine consumption.
+                rules[field] = body[field]
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return payload(player_id, state)
 

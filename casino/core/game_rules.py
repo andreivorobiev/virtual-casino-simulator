@@ -2,6 +2,10 @@
 
 # Import finite-number checks so descriptor bounds cannot contain NaN or infinity.
 import math
+# Import dynamic modules so engine-owned defaults remain referenced by descriptor instead of duplicated.
+import importlib
+# Cache default-factory resolution because immutable descriptors do not change within a process.
+from functools import lru_cache
 # Import the mapping protocol so malformed descriptor objects fail with focused diagnostics.
 from collections.abc import Mapping
 
@@ -206,6 +210,97 @@ def coerce_request(path: str, body, *, catalog=None):
         coerced[field] = coerce_rule_value(field, body[field], fields[field])
     # Return the validated request copy for a future central router hook.
     return coerced
+
+
+# Resolve one descriptor-owned default factory through a bounded immutable reference.
+@lru_cache(maxsize=32)
+def _default_factory(reference: str):
+    # Split the validated module-and-callable reference once.
+    module_name, callable_name = reference.split(":", 1)
+    # Import the owning game engine through the standard module loader.
+    module = importlib.import_module(module_name)
+    # Return the validated public factory without invoking it during import.
+    return getattr(module, callable_name)
+
+
+# Return the engine-owned default rule mapping for one validated schema.
+def _default_rules(schema: Mapping) -> Mapping:
+    # Resolve and invoke the immutable descriptor reference for a fresh state object.
+    defaults_state = _default_factory(schema["defaults"])()
+    # Fail closed if runtime metadata bypassed catalog validation.
+    if not isinstance(defaults_state, Mapping):
+        # Use the same fixed public diagnostic as malformed field metadata.
+        raise ValidationError("Game rule configuration is unavailable")
+    # Read nested rules when named, or the complete state for top-level Roulette settings.
+    defaults = defaults_state.get(schema["defaults_key"]) if schema["defaults_key"] else defaults_state
+    # Reject a scalar projection rather than inventing defaults.
+    if not isinstance(defaults, Mapping):
+        # Keep descriptor internals out of the public diagnostic.
+        raise ValidationError("Game rule configuration is unavailable")
+    # Return the engine-owned mapping for canonical repair values.
+    return defaults
+
+
+# Clamp persisted descriptor-owned rules to canonical values without rewriting unrelated state. (SEC-014)
+def clamp_state_rules(game_id: str, state, *, catalog=None):
+    # Keep undeclared games and malformed outer state inert at this shared read boundary.
+    if not isinstance(state, dict):
+        # Return the original object and no repair evidence.
+        return state, ()
+    # Resolve the same internal descriptor used by request coercion and catalog validation.
+    schema = schema_for(game_id, catalog=catalog)
+    # Leave games without a governed settings route byte-for-byte untouched.
+    if not isinstance(schema, Mapping):
+        # Report no repaired fields for the inert path.
+        return state, ()
+    # Read the validated field map and engine-owned defaults once.
+    fields = schema.get("fields")
+    # Fail closed when runtime code somehow bypasses the catalog structure gate.
+    if not isinstance(fields, Mapping):
+        # Use the fixed configuration diagnostic rather than guessing a permissive domain.
+        raise ValidationError("Game rule configuration is unavailable")
+    # Resolve canonical defaults from the owning engine.
+    defaults = _default_rules(schema)
+    # Read the descriptor projection key once for nested or top-level state.
+    defaults_key = schema.get("defaults_key")
+    # Select the target mapping when the persisted shape remains usable.
+    target = state.get(defaults_key) if defaults_key else state
+    # Replace a poisoned nested rules scalar with a fresh mapping while preserving outer state.
+    if defaults_key and not isinstance(target, dict):
+        # Install an empty mapping that the field loop will populate from safe defaults.
+        target = {}
+        # Attach the repaired mapping to the exact descriptor-owned state key.
+        state[defaults_key] = target
+    # Fail closed if a top-level governed state somehow is not mutable after the outer dict check.
+    if not isinstance(target, dict):
+        # Keep the runtime error stable and value-free.
+        raise ValidationError("Game rule configuration is unavailable")
+    # Collect only descriptor field names so logs never contain persisted values.
+    repaired = []
+    # Visit declared fields deterministically for stable tests and notices.
+    for field in sorted(fields):
+        # Read the canonical fallback from engine state or the documented legacy default.
+        default_value = defaults[field] if field in defaults else fields[field].get("default")
+        # Start with the safe default for missing or rejected persisted values.
+        canonical = default_value
+        # Attempt to canonicalize a present persisted value through the same request domain.
+        if field in target:
+            # Isolate validation so one poisoned field does not block repair of the complete state.
+            try:
+                # Convert finite strings/numbers and strict enums to descriptor-owned representations.
+                canonical = coerce_rule_value(field, target[field], fields[field])
+            # Repair any stable validation rejection to the engine-owned default.
+            except ValidationError:
+                # Keep the default selected above without logging the rejected value.
+                canonical = default_value
+        # Compare both type and value so numeric canonicalization is persisted on the next normal save.
+        if field not in target or type(target[field]) is not type(canonical) or target[field] != canonical:
+            # Replace only this descriptor-owned field with its canonical safe value.
+            target[field] = canonical
+            # Record the field name for value-free repair evidence.
+            repaired.append(field)
+    # Return the repaired state and immutable deterministic field evidence.
+    return state, tuple(repaired)
 
 
 # Validate one field specification independently from any engine default.

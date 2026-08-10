@@ -19,6 +19,34 @@ paths:
     post:
       summary: POST /api/v1/games/baccarat/settings
       operationId: baccarat_POST_api_v1_games_baccarat_settings
+      # BEGIN GENERATED GAME RULE REQUEST BODY
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                banker_commission:
+                  type: number
+                  minimum: 0
+                  maximum: 0.05
+                cut_cards_remaining:
+                  type: integer
+                  minimum: 1
+                  maximum: 104
+                decks:
+                  type: integer
+                  minimum: 1
+                  maximum: 8
+                tie_behavior:
+                  type: string
+                  enum: ["push"]
+                tie_payout:
+                  type: number
+                  enum: [8,9]
+      # END GENERATED GAME RULE REQUEST BODY
       responses:
         '200':
           description: Standard API envelope response

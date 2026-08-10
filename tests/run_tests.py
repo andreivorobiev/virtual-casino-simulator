@@ -40,6 +40,8 @@ from casino.core.state_store import save_player_game_state, write_json
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
+# Import descriptor-governed request and persisted-state rule evidence for SEC-014.
+from tests.games import test_game_rule_schema
 # Import the durable enrollment-policy suite so the central runner owns its evidence. (AUTH-013)
 from tests import enrollment_policy_tests
 # Import the listener-free player-state atomicity suite for central storage validation.
@@ -654,6 +656,16 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     run_case('API-ENROLLMENT-POLICY-001',['AUTH-013','AUTH-014','AUTH-015','OAUTH-011','TEST-158'],run_enrollment_policy_tests)
     # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
     run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','STORAGE-012','LEDGER-001','CORE-017','TEST-162'],storage_tests.run_player_creation_preserves_ledger)
+    # Run the descriptor, router, state-repair, and catalog suite through the permanent API gate. (#433)
+    def run_game_rule_schema_tests():
+        # Load only the listener-free descriptor-governance test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(test_game_rule_schema.GameRuleSchemaTests)
+        # Execute the focused suite with concise central-runner output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any descriptor or runtime-boundary assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('game rule schema suite failed')
+    # Bind central request coercion, read repair, generated contracts, and catalog governance permanently.
+    run_case('API-GAME-RULES-001',['SEC-002','SEC-004','SEC-014','TEST-163'],run_game_rule_schema_tests)
     # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)
     run_case('STORAGE-TABLE-RULES-001',['LEDGER-029','TOKEN-006'],storage_tests.run_table_rule_authority)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
@@ -2051,7 +2063,7 @@ def run_api_tests():
     # Record focused deployment-default coverage before starting the normal loopback API server.
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
-    run_case('API-SEC-001',[f'SEC-{index:03d}' for index in range(1,10)],run_server_authority_tests)
+    run_case('API-SEC-001',[*([f'SEC-{index:03d}' for index in range(1,10)]), 'SEC-014', 'TEST-163'],run_server_authority_tests)
     # Certify deterministic lifecycle, generic errors, strict bindings, concurrency, and data minimization without a listener. (issue #331)
     def run_one_time_token_tests():
         # Import the focused infrastructure suite only when the mapped API case runs.

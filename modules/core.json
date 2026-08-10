@@ -1,6 +1,6 @@
 {
   "module": "core",
-  "version": "9.38.1",
+  "version": "9.39.0",
   "paths": [
     "casino/core/",
     "casino/app.py",

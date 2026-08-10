@@ -19,6 +19,22 @@ paths:
     post:
       summary: POST /api/v1/games/roulette/settings
       operationId: roulette_POST_api_v1_games_roulette_settings
+      # BEGIN GENERATED GAME RULE REQUEST BODY
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                mode:
+                  type: string
+                  enum: ["single","double"]
+                zero_rule:
+                  type: string
+                  enum: ["normal","la_partage","en_prison"]
+      # END GENERATED GAME RULE REQUEST BODY
       responses:
         '200':
           description: Standard API envelope response

@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus the storage-integrity completion to total exactly 930 permanent rows.
-        self.assertEqual(len(requirements), 930)
+        # Require the accepted aggregates plus descriptor-runtime completion to total exactly 931 permanent rows.
+        self.assertEqual(len(requirements), 931)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1428,6 +1428,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-161": "Tests",  # Bind descriptor-owned game-suite discovery.
             "STORAGE-012": "Storage",  # Bind row-scoped insertion and provider-owned bootstrap.
             "TEST-162": "Tests",  # Bind race, replay, rollback, and read-only storage evidence.
+            "TEST-163": "Tests",  # Bind central descriptor runtime and generated-contract evidence.
             "TOOL-013": "Tooling",  # Bind persistent agent-memory provenance and validation ownership.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
@@ -1538,35 +1539,35 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         blackjack_module = json.loads((ROOT / "modules" / "blackjack.json").read_text(encoding="utf-8"))
         # Parse the Autoplay descriptor for the compatible lifecycle reconciliation repair.
         autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
-        # Require the exact compatible Core patch for storage-integrity completion.
-        self.assertEqual(core_module["version"], "9.38.1")
+        # Require the compatible Core minor for central descriptor runtime enforcement.
+        self.assertEqual(core_module["version"], "9.39.0")
         # Require the exact compatible Players patch for explicit row insertion.
         self.assertEqual(players_module["version"], "9.1.1")
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
-        # Require the exact release-owned tests patch for v0.9.5.62 qualification.
-        self.assertEqual(tests_module["version"], "1.71.3")
-        # Require the exact release-owned docs patch for v0.9.5.62 provenance.
-        self.assertEqual(docs_module["version"], "1.69.3")
+        # Require the compatible tests minor for permanent descriptor-runtime evidence.
+        self.assertEqual(tests_module["version"], "1.72.0")
+        # Require the compatible docs minor for completed #433 governance.
+        self.assertEqual(docs_module["version"], "1.70.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
-        # Require the exact release-owned contracts patch for the compatibility record.
-        self.assertEqual(contracts_module["version"], "1.56.3")
-        # Require the compatible tooling minor for the multiprocess safety audit.
-        self.assertEqual(tooling_module["version"], "1.26.0")
-        # Require the exact compatible Baccarat settlement-interface patch.
-        self.assertEqual(baccarat_module["version"], "9.1.14")
+        # Require the compatible contracts minor for descriptor-generated request bodies.
+        self.assertEqual(contracts_module["version"], "1.57.0")
+        # Require the compatible tooling minor for deterministic rule-contract generation.
+        self.assertEqual(tooling_module["version"], "1.27.0")
+        # Require the compatible Baccarat patch for central settings enforcement.
+        self.assertEqual(baccarat_module["version"], "9.1.15")
         # Require the exact compatible Bingo settlement-interface patch.
         self.assertEqual(bingo_module["version"], "9.3.6")
         # Require the exact compatible Keno settlement-interface patch.
         self.assertEqual(keno_module["version"], "9.3.6")
-        # Require the exact compatible Roulette settlement-interface patch.
-        self.assertEqual(roulette_module["version"], "9.6.2")
+        # Require the compatible Roulette patch for descriptor-owned settings persistence.
+        self.assertEqual(roulette_module["version"], "9.6.3")
         # Require the exact compatible Slots settlement-interface patch.
         self.assertEqual(slots_module["version"], "9.4.4")
         # Require the exact release-owned Application patch for the v0.9.5.62 package identity.
         self.assertEqual(application_module["version"], "9.59.3")
-        # Require Blackjack to carry the compatible settlement-interface patch.
-        self.assertEqual(blackjack_module["version"], "9.1.9")
+        # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
+        self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
         self.assertEqual(autoplay_module["version"], "1.1.6")

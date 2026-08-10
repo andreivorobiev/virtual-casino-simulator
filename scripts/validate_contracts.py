@@ -14,6 +14,8 @@ sys.path.insert(0, str(ROOT))
 from casino.config import GAMES
 # Import the deterministic security inventory builder and checked artifact path.
 from scripts.generate_server_authority_matrix import MATRIX_PATH, build_matrix
+# Import descriptor-derived rule-contract checks so settings schemas cannot drift from runtime domains.
+from scripts.generate_game_rule_contracts import synchronize as synchronize_game_rule_contracts
 # Set CONTRACT_DIR to the value needed for the next operation.
 CONTRACT_DIR = ROOT / "contracts" / "openapi"
 # Set REQUIRED to the value needed for the next operation.
@@ -164,6 +166,8 @@ def check_compatibility_artifacts(errors, write=False):
 def main():
     # Set errors to the value needed for the next operation.
     errors = []
+    # Require every governed settings request body to match the exact descriptor-generated block.
+    errors.extend(synchronize_game_rule_contracts(write=False))
     # Load and compare the hostile-client inventory before validating individual contracts.
     try:
         # Parse the checked artifact so malformed JSON is reported through the normal validator.

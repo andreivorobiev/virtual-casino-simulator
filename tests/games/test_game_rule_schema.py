@@ -2,19 +2,23 @@
 
 # Import standard unit-test support for focused descriptor fixtures.
 import unittest
+# Import source inspection so retired per-game rule schemas stay absent.
+import inspect
 
 # Import the canonical runtime catalog used by startup and validation.
 from casino.config import GAMES
 # Import pure schema and coercion checks so fixtures need no server or persisted data.
-from casino.core.game_rules import coerce_request, declared_fields, schema_for, validate_rule_schema
+from casino.core.game_rules import clamp_state_rules, coerce_request, declared_fields, schema_for, validate_rule_schema
 # Import the public validation envelope so rejection messages can be checked directly.
 from casino.errors import ValidationError
 # Import the public registry projection to prove internal schemas never reach browser clients.
 from casino.games.registry import list_games
-# Import the two merged #404 domains so this inert bridge cannot drift before runtime migration.
-from casino.games.baccarat.api import RULE_DOMAIN as BACCARAT_RULE_DOMAIN
-# Import the blackjack domain separately so each descriptor remains owned by its game.
-from casino.games.blackjack.api import RULE_DOMAIN as BLACKJACK_RULE_DOMAIN
+# Import settings handlers only for static proof that per-game rule domains are retired.
+from casino.games.baccarat import api as baccarat_api
+# Import Blackjack independently so both former duplicated domains stay absent.
+from casino.games.blackjack import api as blackjack_api
+# Import the central router for listener-free runtime coercion and error-precedence checks.
+from casino.router import Router
 # Import catalog helpers that discover real route registration without binding a listener.
 from scripts.validate_game_catalog import resolve_callable, validate_settings_schema
 
@@ -138,23 +142,60 @@ class GameRuleSchemaTests(unittest.TestCase):
         # Require the full catalog to satisfy the rule-domain gate.
         self.assertEqual(errors, [])
 
-    # Prove the new descriptors exactly mirror the already-merged #404 runtime domains.
-    def test_descriptors_match_current_runtime_domains(self):
-        # Index current catalog entries by stable game id for focused comparisons.
-        games = {game["id"]: game for game in GAMES}
-        # Compare the two routes already using the shared apply_rule_updates boundary.
-        for game_id, runtime_domain in (("blackjack", BLACKJACK_RULE_DOMAIN), ("baccarat", BACCARAT_RULE_DOMAIN)):
-            # Read only the core domain keys shared with the current runtime validator.
-            descriptor_domain = {
-                # Strip semantic governance flags and documented fallbacks before equality.
-                field: {key: value for key, value in spec.items() if key in {"kind", "min", "max", "values"}}
-                # Visit every field declared by this game's descriptor.
-                for field, spec in games[game_id]["rules"]["fields"].items()
-            }
-            # Require the inert descriptor to describe exactly what the merged route enforces today.
-            self.assertEqual(descriptor_domain, runtime_domain)
-        # Require roulette's existing hand-written settings fields to be completely represented.
-        self.assertEqual(set(games["roulette"]["rules"]["fields"]), {"mode", "zero_rule"})
+    # Prove every former per-game rule-domain implementation is retired after central mounting.
+    def test_handlers_have_no_parallel_rule_schema(self):
+        # Inspect both handlers that formerly duplicated descriptor fields and bounds.
+        for module in (blackjack_api, baccarat_api):
+            # Read source without executing a listener or touching persisted state.
+            source = inspect.getsource(module)
+            # Reject the retired module-owned schema constant.
+            self.assertNotIn("RULE_DOMAIN", source)
+            # Reject the retired generic update helper from settings handlers.
+            self.assertNotIn("apply_rule_updates", source)
+            # Require the descriptor allowlist at the final persistence boundary.
+            self.assertIn("declared_fields", source)
+
+    # Prove the real router mounts coercion and rejects invalid settings before a handler runs.
+    def test_router_enforces_descriptor_before_handler(self):
+        # Create one isolated router without binding a network listener.
+        router = Router()
+        # Track whether the handler observed a request after central coercion.
+        observed = []
+        # Register only the exact descriptor-owned settings path under test.
+        router.post(r"/api/v1/games/blackjack/settings")(lambda body, query: observed.append(body) or {"body": body})
+        # Reject an allocation attack before the handler can inspect or persist it.
+        with self.assertRaisesRegex(ValidationError, "^decks must be at most 8$"):
+            # Dispatch with an explicit compatibility player identity through the real central boundary.
+            router.dispatch("POST", "/api/v1/games/blackjack/settings", {"player_id": "human", "decks": 100000000}, {})
+        # Prove the rejected request never reached the handler.
+        self.assertEqual(observed, [])
+        # Accept and canonicalize a numeric string through the same route.
+        result = router.dispatch("POST", "/api/v1/games/blackjack/settings", {"player_id": "human", "decks": "2"}, {})
+        # Require the handler to receive the canonical integer plus resolved identity.
+        self.assertEqual(result["body"]["decks"], 2)
+
+    # Prove poisoned persisted settings repair to engine defaults without reflecting supplied values.
+    def test_persisted_rule_repair_uses_descriptor_defaults(self):
+        # Build a Blackjack state with unsafe allocation, payout, and boolean values plus one unrelated key.
+        state = {"rules": {"decks": 0, "blackjack_payout": 999, "dealer_hits_soft_17": "yes", "legacy_note": "keep"}}
+        # Clamp through the same descriptor used by request coercion.
+        repaired, fields = clamp_state_rules("blackjack", state)
+        # Restore each poisoned field to its engine-owned default.
+        self.assertEqual(repaired["rules"]["decks"], 6)
+        # Restore the closed payout vocabulary default.
+        self.assertEqual(repaired["rules"]["blackjack_payout"], 1.5)
+        # Restore the strict boolean default.
+        self.assertIs(repaired["rules"]["dealer_hits_soft_17"], False)
+        # Preserve unrelated legacy metadata outside the descriptor field set.
+        self.assertEqual(repaired["rules"]["legacy_note"], "keep")
+        # Publish only field names as repair evidence.
+        self.assertIn("decks", fields)
+        # Prove Baccarat's documented cut-card fallback is now an engine-owned default.
+        baccarat, baccarat_fields = clamp_state_rules("baccarat", {"rules": {"cut_cards_remaining": 999}})
+        # Repair the unsafe count to the canonical fourteen-card threshold.
+        self.assertEqual(baccarat["rules"]["cut_cards_remaining"], 14)
+        # Record the exact repaired field without exposing its old value.
+        self.assertIn("cut_cards_remaining", baccarat_fields)
 
     # Prove a future game cannot register settings without declaring its legal rule domain.
     def test_settings_route_without_descriptor_fails(self):

@@ -29,6 +29,8 @@ from unittest.mock import patch
 
 # Import core services after the environment override so every directory constant is disposable.
 from casino.core import history, ledger, players, state_store, storage
+# Import the single descriptor-owned read repair used by production state loading.
+from casino.core.game_rules import clamp_state_rules
 # Import the conflict type expected when a changed action identity is reused.
 from casino.errors import ConflictError
 # Import the baccarat modules under repair.
@@ -274,14 +276,18 @@ class LegacySettlementTests(unittest.TestCase):
         saved = state_store.load_player_game_state("blackjack", "human", blackjack_engine.default_state)
         # Require the rebuilt shoe to fit the clamped six-deck default rather than one hundred million decks.
         self.assertTrue(0 < len(saved["shoe"]) <= 6 * 52)
+        # Repair the bool payout poison through the production read boundary before settlement math.
+        repaired_payout, _ = clamp_state_rules("blackjack", {"rules": {"blackjack_payout": True}})
         # Require the bool payout poison to fail closed because True must never count as even money.
-        self.assertEqual(25.0, blackjack_engine.natural_payout_due({"rules": {"blackjack_payout": True}}, 10))
+        self.assertEqual(25.0, blackjack_engine.natural_payout_due(repaired_payout, 10))
         # Require the supported even-money integer rate to stay honored.
         self.assertEqual(20.0, blackjack_engine.natural_payout_due({"rules": {"blackjack_payout": 1}}, 10))
         # Require the supported six-to-five rate to stay honored.
         self.assertEqual(22.0, blackjack_engine.natural_payout_due({"rules": {"blackjack_payout": 1.2}}, 10))
-        # Clamp one poisoned switch-and-ceiling pair directly for strict-type evidence.
-        clamped = blackjack_engine._sanitized_rules({"rules": {"dealer_hits_soft_17": "yes", "max_split_hands": 99}})
+        # Clamp one poisoned switch-and-ceiling pair through the production read repair for strict-type evidence.
+        clamped_state, _ = clamp_state_rules("blackjack", {"rules": {"dealer_hits_soft_17": "yes", "max_split_hands": 99}})
+        # Read the repaired rules after the central descriptor boundary completes.
+        clamped = clamped_state["rules"]
         # Require the truthy string switch to fail closed to the boolean house default.
         self.assertFalse(clamped["dealer_hits_soft_17"])
         # Require the oversized split ceiling to fail closed to the four-hand house default.
@@ -291,28 +297,40 @@ class LegacySettlementTests(unittest.TestCase):
     def test_baccarat_poisoned_rules_settle_at_house_defaults(self):
         # Build one banker bet fixture for commission evidence.
         banker_bet = {"bet_id": "bacbet_fixed_b", "player_id": "human", "type": "banker", "label": "Banker", "amount": 10}
+        # Repair one tiny commission through the central descriptor boundary.
+        tiny_state, _ = clamp_state_rules("baccarat", {"rules": {"banker_commission": 0.0000001}})
         # Require the tiny in-range commission to stay honored rather than snapping to the default.
-        self.assertEqual(20.0, baccarat_engine.settle_bet(banker_bet, {"winner": "banker"}, {"banker_commission": 0.0000001})["credit"])
+        self.assertEqual(20.0, baccarat_engine.settle_bet(banker_bet, {"winner": "banker"}, tiny_state["rules"])["credit"])
+        # Repair one hostile commission through the production read boundary.
+        hostile_state, _ = clamp_state_rules("baccarat", {"rules": {"banker_commission": 5.0}})
         # Require the hostile commission to fail closed to the five-percent house default.
-        self.assertEqual(19.5, baccarat_engine.settle_bet(banker_bet, {"winner": "banker"}, {"banker_commission": 5.0})["credit"])
+        self.assertEqual(19.5, baccarat_engine.settle_bet(banker_bet, {"winner": "banker"}, hostile_state["rules"])["credit"])
         # Build one tie bet fixture for tie-rate evidence.
         tie_bet = {"bet_id": "bacbet_fixed_t", "player_id": "human", "type": "tie", "label": "Tie", "amount": 10}
+        # Repair one hostile tie payout through the production read boundary.
+        tie_state, _ = clamp_state_rules("baccarat", {"rules": {"tie_payout": 1000}})
         # Require the hostile tie rate to fail closed to the eight-to-one house default.
-        self.assertEqual(90.0, baccarat_engine.settle_bet(tie_bet, {"winner": "tie"}, {"tie_payout": 1000})["credit"])
+        self.assertEqual(90.0, baccarat_engine.settle_bet(tie_bet, {"winner": "tie"}, tie_state["rules"])["credit"])
         # Require the supported nine-to-one tie rate to stay honored.
         self.assertEqual(100.0, baccarat_engine.settle_bet(tie_bet, {"winner": "tie"}, {"tie_payout": 9})["credit"])
         # Build one state whose deck count is poisoned for shoe-size evidence.
         state = baccarat_engine.default_state()
         # Poison the persisted deck count far beyond the supported table range.
         state["rules"]["decks"] = 100000000
-        # Rebuild the shoe through the clamped consumption path.
+        # Repair the simulated persisted state through the production read boundary before allocation.
+        state, _ = clamp_state_rules("baccarat", state)
+        # Rebuild the shoe only after the descriptor-owned repair has bounded allocation.
         baccarat_engine.ensure_shoe(state)
         # Require the rebuilt shoe to fit the clamped eight-deck default after its burn ritual.
         self.assertTrue(0 < len(state["shoe"]) <= 8 * 52)
-        # Require the route-accepted upper cut-card bound to survive read-side sanitation.
-        self.assertEqual(104, baccarat_engine._sanitized_rules({"rules": {"cut_cards_remaining": 104}})["cut_cards_remaining"])
-        # Require a cut threshold above the route domain to fail closed to the engine fallback.
-        self.assertNotIn("cut_cards_remaining", baccarat_engine._sanitized_rules({"rules": {"cut_cards_remaining": 105}}))
+        # Repair the route-accepted upper cut-card bound through the production read boundary.
+        upper_state, _ = clamp_state_rules("baccarat", {"rules": {"cut_cards_remaining": 104}})
+        # Require the accepted upper cut-card bound to survive canonical repair.
+        self.assertEqual(104, upper_state["rules"]["cut_cards_remaining"])
+        # Repair a cut threshold above the route domain to the engine-owned fallback.
+        fallback_state, _ = clamp_state_rules("baccarat", {"rules": {"cut_cards_remaining": 105}})
+        # Require the unsafe threshold to resolve to the fourteen-card house default.
+        self.assertEqual(14, fallback_state["rules"]["cut_cards_remaining"])
 
     # Test 5: shuffles must accept an injected generator while production defaults to a CSPRNG. (issue #420)
     def test_shuffles_accept_injected_generator_and_default_to_csprng(self):
