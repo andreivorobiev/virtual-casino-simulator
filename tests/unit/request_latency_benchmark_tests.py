@@ -1555,13 +1555,13 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
         # Require the compatible tests patch for shared discovery and requirement-source evidence.
-        self.assertEqual(tests_module["version"], "1.72.4")
+        self.assertEqual(tests_module["version"], "1.72.5")
         # Require the docs patch for independently owned requirement sources.
-        self.assertEqual(docs_module["version"], "1.70.4")
+        self.assertEqual(docs_module["version"], "1.70.5")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the compatible contracts minor for descriptor-generated request bodies.
-        self.assertEqual(contracts_module["version"], "1.57.2")
+        self.assertEqual(contracts_module["version"], "1.57.3")
         # Require the compatible tooling patch for deterministic requirement assembly.
         self.assertEqual(tooling_module["version"], "1.27.1")
         # Require the compatible Baccarat patch for central settings enforcement.
@@ -1574,8 +1574,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.6.3")
         # Require the exact compatible Slots settlement-interface patch.
         self.assertEqual(slots_module["version"], "9.4.4")
-        # Require the exact release-owned Application patch for the v0.9.5.64 package identity.
-        self.assertEqual(application_module["version"], "9.59.5")
+        # Require the exact release-owned Application patch for the v0.9.5.65 package identity.
+        self.assertEqual(application_module["version"], "9.59.6")
         # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
         self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
