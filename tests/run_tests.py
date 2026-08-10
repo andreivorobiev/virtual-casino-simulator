@@ -10693,7 +10693,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Activate the target-bound revoke control.
                             page.locator(f'.administrator-revoke[data-user="{created_user_id}"]').click()
                         # Require the standard revoke envelope and a durable audit row without the prior Admin listing.
-                        assert revoke_response_info.value.json()['ok'] is True; page.get_by_test_id('admin-administrator-audit').wait_for(timeout=5000); assert 'Browser delegation cleanup' in page.get_by_test_id('admin-administrator-audit').inner_text() and page.locator(f'.administrator-revoke[data-user="{created_user_id}"]').count()==0
+                        assert revoke_response_info.value.json()['ok'] is True; page.wait_for_function("""({ userId }) => document.querySelector('[data-testid="admin-administrator-audit"]')?.textContent.includes('Browser delegation cleanup') && !document.querySelector(`.administrator-revoke[data-user="${userId}"]`)""", arg={'userId':created_user_id}, timeout=5000)
                         # Return to generic Users for lifecycle, password, terms, and locale actions.
                         page.get_by_test_id('admin-tab-users').click(); user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]'); user_row.wait_for(timeout=5000)
                         # Deactivate the user through the first row action.
