@@ -1,11 +1,12 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-10T19:21:35Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-10T19:37:45Z.
 
 ## Current branch / active Codex work
 
 - Protected main, tag, release, and terminal-green production are exact v0.9.5.66 source `e8cd5e6f316d35028224c5946e90602f41cf984e`.
 - Isolated branch `codex/enrollment-auth-queue-v67` owns only issue #333's remaining repository-controlled provider operational switches from exact v0.9.5.66 main.
+- Draft PR #663 carries the accepted content and uses the governed `## Issues resolved` closure section for #333; its initial CI event predated that metadata correction and is superseded.
 - Google and Facebook remain default-off; external provider configuration, public signup, and public launch stay separately held by #336 and #209.
 
 ## Accepted scope and requirements
