@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.66 Release Notes
+
+## Compact state projections
+
+- Packages accepted content PR #659; the release-only application revision advances mechanically to `9.59.8`.
+- Resolves bounded issue #660 with opt-in compact frozen-v1 projections for the casino shell and Roulette play responses while parent performance issue #323 remains open for production latency acceptance.
+- Preserves complete legacy responses by default and for malformed or duplicate projection values; no existing client is required to adopt the projection.
+- Loads the immutable Roulette catalog once per wheel mode and reuses it across actions and remounts without changing wagers, outcomes, settlements, state persistence, or response envelopes.
+- Carries permanent requirement `TEST-166`; the governed total is exactly 935 requirements and this release allocates no additional identifier.
+- Records the exact canonical package inventory as 746 regular files: the terminal v0.9.5.65 inventory plus this v0.9.5.66 compatibility record; repository documentation, tests, requirement sources, and engineering audit scripts remain outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Tooling `1.27.1` and every content-owned runtime/game revision remain exact protected-main values.
+- Preserves the deployed one-worker/two-thread topology until `TEST-160`'s independently recorded multiprocess blocker is resolved.
+- Retains exact immutable and terminal-green v0.9.5.65 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.65 Release Notes
 
 ## Descriptor-owned requirement shards
