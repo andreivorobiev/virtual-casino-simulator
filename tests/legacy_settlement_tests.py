@@ -85,7 +85,7 @@ class LegacySettlementTests(unittest.TestCase):
             # Start one scoped directory override.
             directory_patch.start()
         # Seed the default players so the human wallet exists with its 5000 starting balance.
-        players.save_players(players.default_players())
+        storage.get_storage_provider().bootstrap_players(players.default_players())
         # Register the real blackjack routes on an isolated router.
         self.blackjack_router = FakeRouter()
         # Capture the blackjack handlers for direct invocation.

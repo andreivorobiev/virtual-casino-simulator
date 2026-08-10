@@ -138,8 +138,8 @@ def build_router() -> Router:
         with provider.reset_transaction():
             # Recreate shared runtime folders while the reset boundary remains held.
             ensure_dirs()
-            # Bootstrap default players reentrantly under the same provider boundary.
-            players.save_players(players.default_players())
+            # Bootstrap only missing default rows under the same provider-owned reset boundary.
+            provider.bootstrap_players(players.default_players())
             # Bootstrap the default administrator before releasing reset visibility.
             auth.bootstrap_admin_from_env()
             # Build the unchanged success payload while reset visibility remains private.

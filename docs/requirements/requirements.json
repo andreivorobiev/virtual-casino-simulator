@@ -13522,6 +13522,30 @@
       "notes": "This advances issue #434 with the executable discovery boundary; per-game descriptor migration and removal of the legacy central registrations remain separately visible until completed."
     },
     {
+      "id": "STORAGE-012",
+      "module": "Storage",
+      "description": "Player persistence exposes only explicit row-scoped insertion and provider-owned idempotent bootstrap boundaries: JSON holds one cross-process wallet gate across the complete missing-row batch, MySQL inserts missing primary-key rows inside one rollback-safe transaction, existing wallet and lifecycle fields are never overwritten, player reads perform no seed or commit work, and the retired whole-document save and empty-check seams cannot reintroduce a read-before-write race.",
+      "status": "PASS",
+      "api_tests": ["STORAGE-LEDGER-GUARD-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/storage.py", "casino/core/players.py", "casino/app.py", "tests/storage_tests.py", "tests/run_tests.py"],
+      "introduced_in": "issue-431-storage-integrity",
+      "changed_in": "issue-431-storage-integrity",
+      "notes": "Administrative reset remains the sole explicit destructive lifecycle boundary. Ordinary bootstrap, signup, invitation, guest creation, and read paths cannot replace a full player snapshot or mutate ledger history."
+    },
+    {
+      "id": "TEST-162",
+      "module": "Tests",
+      "description": "Browser-free JSON and fake-MySQL evidence proves thread- and process-racing player creation and bootstrap insert each missing identifier once, preserve committed balances and ledger rows, perform byte-identical no-op replay, roll back partial MySQL batches, leave MySQL reads write-free, and statically reject the retired public full-document save and empty-check interfaces.",
+      "status": "PASS",
+      "api_tests": ["STORAGE-LEDGER-GUARD-001"],
+      "browser_tests": [],
+      "implementation_files": ["tests/storage_tests.py", "tests/unit/request_latency_benchmark_tests.py", "tests/run_tests.py"],
+      "introduced_in": "issue-431-storage-integrity",
+      "changed_in": "issue-431-storage-integrity",
+      "notes": "The focused case reuses the existing storage-and-ledger guard so historical issue #402 coverage and the completed #431 interface retirement remain one durable acceptance boundary."
+    },
+    {
       "id": "TOOL-013",
       "module": "Tooling",
       "description": "A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.",

@@ -162,7 +162,7 @@ def _seed_provider(provider: JsonStorageProvider) -> None:
     # Create the complete provider directory tree under the stable gate.
     provider.ensure_ready()
     # Persist one deterministic player wallet.
-    provider.save_players(_players())
+    provider.bootstrap_players(_players())
     # Persist one ordinary named document.
     provider.write_document("settings/example", {"enabled": True})
     # Persist one history row through the affected public path.
@@ -290,7 +290,7 @@ def _process_hold_reset(root: str, ready, release) -> None:
     # Hold both stable and legacy gates across the full reset body.
     with provider.reset_transaction():
         # Persist one complete post-reset wallet.
-        provider.save_players(_players(20))
+        provider.bootstrap_players(_players(20))
         # Persist one complete post-reset history row.
         provider.append_history(_history_event("round-after"))
         # Recreate one complete post-reset game state.
@@ -436,7 +436,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
     # Prove paid settlement, immutable replay, conflict-before-planner, and zero-cost receipt.
     def test_paid_zero_cost_replay_and_conflict_semantics(self):
         # Seed the exact wallet required by the paid plan.
-        self.provider.save_players(_players())
+        self.provider.bootstrap_players(_players())
         # Build the paid action resources and identity.
         resources = _resources()
         # Bind one durable key to its canonical request.
@@ -495,7 +495,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
                     # Construct the one-shot failure provider.
                     provider = _ActionFailureProvider(Path(directory) / "data", boundary)
                     # Seed its exact paid-action wallet.
-                    provider.save_players(_players())
+                    provider.bootstrap_players(_players())
                     # Build one unique identity for this boundary.
                     resources = _resources()
                     # Bind the boundary into the durable key only.
@@ -528,7 +528,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
             # Construct the prepared-stage failure provider.
             provider = _ActionFailureProvider(Path(directory) / "data", "prepared")
             # Seed the exact paid wallet.
-            provider.save_players(_players())
+            provider.bootstrap_players(_players())
             # Build one durable action request.
             resources = _resources()
             # Bind one unique prepared-stage key.
@@ -564,7 +564,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
                     # Construct the one-shot pending-stage provider.
                     provider = _ActionFailureProvider(Path(directory) / "data", boundary)
                     # Seed the exact wallet.
-                    provider.save_players(_players())
+                    provider.bootstrap_players(_players())
                     # Build the ordinary resources.
                     resources = _resources()
                     # Bind the original durable semantics.
@@ -599,7 +599,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
     # Prove corrupt journals remain byte-exact and stale private temps are boundedly cleaned.
     def test_corrupt_journal_preservation_stale_temp_cleanup_and_fsync_recovery(self):
         # Seed one compatible wallet.
-        self.provider.save_players(_players())
+        self.provider.bootstrap_players(_players())
         # Create the private action directory.
         self.provider.game_action_journal_path().parent.mkdir(parents=True, exist_ok=True)
         # Persist one truncated journal.
@@ -640,7 +640,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
             # Fail the second journal directory fsync, which publishes the complete plan.
             failing = _FsyncFailureProvider(Path(directory) / "data", 2)
             # Seed the exact wallet.
-            failing.save_players(_players())
+            failing.bootstrap_players(_players())
             # Build one durable request.
             resources = _resources()
             # Bind one unique action key.
@@ -667,7 +667,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
     # Prove planner failure and direct planner side effects leave all state retryable.
     def test_planner_failure_and_public_mutations_are_fail_closed(self):
         # Seed the exact paid wallet and one ordinary document.
-        self.provider.save_players(_players())
+        self.provider.bootstrap_players(_players())
         # Persist one ordinary document before planner execution.
         self.provider.write_document("settings/example", {"value": 1})
         # Capture exact pre-planner provider bytes.
@@ -679,7 +679,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
         # Define one planner that attempts each affected mutation.
         mutations = (
             # Attempt direct wallet replacement.
-            lambda: self.provider.save_players(_players(99)),
+            lambda: self.provider.bootstrap_players(_players(99)),
             # Attempt row-scoped wallet update.
             lambda: self.provider.update_player("human", lambda row: row.update({"balance": 99})),
             # Attempt ordinary ledger mutation.
@@ -729,7 +729,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
     # Prove cross-process identical duplicates converge and conflicting duplicates do not both plan.
     def test_cross_process_duplicate_and_conflict_convergence(self):
         # Seed the shared paid-action wallet.
-        self.provider.save_players(_players())
+        self.provider.bootstrap_players(_players())
         # Use spawn so no thread-local or file-handle state is inherited.
         context = multiprocessing.get_context("spawn")
         # Create one process-safe result queue.
@@ -770,7 +770,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
         # Reset to a clean shared root for conflicting concurrency.
         self.provider.reset()
         # Restore the original wallet.
-        self.provider.save_players(_players())
+        self.provider.bootstrap_players(_players())
         # Create one process per conflicting request under the same key.
         conflicts = [
             # Use distinct request semantics for durable conflict.
@@ -822,7 +822,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
                     # Replace divergent fixture state through one rollback-safe transaction.
                     with self.provider.reset_transaction():
                         # Restore deterministic player state.
-                        self.provider.save_players(_players())
+                        self.provider.bootstrap_players(_players())
                         # Restore deterministic document state.
                         self.provider.write_document("settings/example", {"enabled": True})
                         # Restore deterministic history state.
@@ -832,7 +832,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
                 # Build default no-op route dependencies.
                 ensure = mock.Mock()
                 # Build deterministic player bootstrap.
-                save_players = mock.Mock(side_effect=lambda state: self.provider.save_players(state))
+                bootstrap_players = mock.Mock(side_effect=lambda state: self.provider.bootstrap_players(state))
                 # Build deterministic Admin bootstrap.
                 bootstrap = mock.Mock()
                 # Build deterministic catalog projection.
@@ -840,11 +840,11 @@ class JsonGameActionProviderTests(unittest.TestCase):
                 # Build deterministic final player projection.
                 visible = mock.Mock(return_value=_players()["players"])
                 # Attach the selected injected failure.
-                selected = {"ensure": ensure, "players": save_players, "admin": bootstrap, "games": games, "visibility": visible}[boundary]
+                selected = {"ensure": ensure, "players": bootstrap_players, "admin": bootstrap, "games": games, "visibility": visible}[boundary]
                 # Fail at the exact selected route-body boundary.
                 selected.side_effect = RuntimeError("injected reset boundary")
                 # Patch only route collaborators while preserving route auth invocation.
-                with mock.patch.object(app.auth, "require_admin"), mock.patch.object(app, "ensure_dirs", ensure), mock.patch.object(app.players, "save_players", save_players), mock.patch.object(app.auth, "bootstrap_admin_from_env", bootstrap), mock.patch.object(app, "list_games", games), mock.patch.object(app.players, "list_players", visible):
+                with mock.patch.object(app.auth, "require_admin"), mock.patch.object(app, "ensure_dirs", ensure), mock.patch.object(self.provider, "bootstrap_players", bootstrap_players), mock.patch.object(app.auth, "bootstrap_admin_from_env", bootstrap), mock.patch.object(app, "list_games", games), mock.patch.object(app.players, "list_players", visible):
                     # Require the injected route failure.
                     with self.assertRaises(RuntimeError):
                         # Invoke the listener-free existing route handler.
@@ -881,7 +881,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
                 # Attempt a complete post-reset bootstrap body.
                 with self.provider.reset_transaction():
                     # Persist a distinguishable post-reset wallet.
-                    self.provider.save_players(_players(20))
+                    self.provider.bootstrap_players(_players(20))
         # Require exact pre-reset state rather than committed reset state.
         self.assertEqual(before, _data_snapshot(self.provider))
         # Require all recovery material removed after verified rollback.
@@ -983,7 +983,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
     # Prove same-thread nested aliases and mixed-version legacy locking cannot deadlock or race.
     def test_reentrant_alias_and_legacy_lock_bridge(self):
         # Seed the ordinary player wallet.
-        self.provider.save_players(_players())
+        self.provider.bootstrap_players(_players())
         # Construct one equivalent relative-spelling provider instance.
         alias = JsonStorageProvider(self.root.parent / "." / self.root.name)
         # Require one canonical process-gate identity.
@@ -1184,7 +1184,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
         # Mutate only the second canonical provider root.
         def write_second():
             # Persist one wallet through the second independent gate.
-            second.save_players(_players())
+            second.bootstrap_players(_players())
             # Signal completion without releasing the first holder.
             second_finished.set()
         # Start the first independent gate holder.
@@ -1216,7 +1216,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
             # Attempt first-provider visibility.
             first.load_players(_players)
         # Require the second provider to remain independently usable.
-        second.save_players(_players())
+        second.bootstrap_players(_players())
         # Require the second provider persisted its independent wallet.
         self.assertEqual(10, second.load_players(_players)["players"][0]["balance"])
 
@@ -1370,7 +1370,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
         # Perform one successful complete reset under both locks.
         with self.provider.reset_transaction():
             # Publish one post-reset wallet while both lock files remain open.
-            self.provider.save_players(_players())
+            self.provider.bootstrap_players(_players())
         # Require the stable lock object was never replaced.
         stable_after = self.provider.json_gate_path().stat()
         # Require exact platform file identity across reset.
@@ -1429,7 +1429,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
                         # Refuse wallet visibility.
                         lambda: provider.load_players(_players),
                         # Refuse wallet mutation.
-                        lambda: provider.save_players(_players()),
+                        lambda: provider.bootstrap_players(_players()),
                         # Refuse ordinary ledger mutation.
                         lambda: provider.transact_ledger("human", -1, "TEST"),
                         # Refuse named-document visibility.
@@ -1534,7 +1534,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
         # Recreate the local root exactly where the old route called ensure_dirs.
         recreate = mock.Mock(side_effect=lambda: local_data.mkdir(parents=True, exist_ok=True))
         # Track default-player bootstrap without requiring fake provider player methods.
-        save_players = mock.Mock()
+        bootstrap_players = mock.Mock()
         # Track Admin bootstrap.
         bootstrap_admin = mock.Mock()
         # Build the unchanged response projections.
@@ -1542,7 +1542,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
         # Build the unchanged player response.
         visible_players = _players()["players"]
         # Patch only the generic local cleanup root and route collaborators.
-        with mock.patch.object(storage_module, "DATA_DIR", local_data), mock.patch.object(app.auth, "require_admin", require_admin), mock.patch.object(app, "ensure_dirs", recreate), mock.patch.object(app.players, "save_players", save_players), mock.patch.object(app.auth, "bootstrap_admin_from_env", bootstrap_admin), mock.patch.object(app, "list_games", return_value=games), mock.patch.object(app.players, "list_players", return_value=visible_players):
+        with mock.patch.object(storage_module, "DATA_DIR", local_data), mock.patch.object(app.auth, "require_admin", require_admin), mock.patch.object(app, "ensure_dirs", recreate), mock.patch.object(provider, "bootstrap_players", bootstrap_players), mock.patch.object(app.auth, "bootstrap_admin_from_env", bootstrap_admin), mock.patch.object(app, "list_games", return_value=games), mock.patch.object(app.players, "list_players", return_value=visible_players):
             # Invoke the existing listener-free route.
             result = reset_route.handler({}, {}, context={"user": {"roles": ["admin"]}})
         # Require exact unchanged response fields.
@@ -1556,7 +1556,7 @@ class JsonGameActionProviderTests(unittest.TestCase):
         # Require caller recreation still executes exactly once.
         recreate.assert_called_once_with()
         # Require both bootstrap operations remain present.
-        save_players.assert_called_once()
+        bootstrap_players.assert_called_once()
         # Require Admin bootstrap remains present.
         bootstrap_admin.assert_called_once_with()
 

@@ -7,9 +7,9 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.59.2
-- core: 9.38.0
+- core: 9.38.1
 - ledger: 9.1.1
-- players: 9.1.0
+- players: 9.1.1
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.71.1
-- docs: 1.69.1
+- tests: 1.71.2
+- docs: 1.69.2
 - contracts: 1.56.2
 - tooling: 1.26.0
 - commenting_policy: 1.0.0
@@ -997,4 +997,6 @@ Historical source baseline: 9.1.0
 - **TEST-159** (Tests) - PASS: A listener-free exact-source payload and shipped-asset budget checkpoint accepts only bounded JSON and MySQL request-latency evidence, derives deterministic compression and asset composition facts, rejects hostile or mismatched inputs, and never starts a listener or contacts production.
 - **TEST-160** (Tests) - PASS: A fail-closed static multiprocess-safety audit inventories every registered game and reviewed session, autoplay, bot, limiter, operations, settlement-adapter, provider-cache, and MySQL-pool state owner before any worker-count change, and rejects unclassified entrypoints or mutable singleton state.
 - **TEST-161** (Tests) - PASS: Descriptor-owned game suite declarations are parsed through a strict dotted-module boundary, require unique permanent case and requirement mappings, reject empty, missing, duplicated, unstable, or failing suites, and preserve deterministic module execution order without a central game allowlist.
+- **STORAGE-012** (Storage) - PASS: Player persistence exposes only explicit row-scoped insertion and provider-owned idempotent bootstrap boundaries: JSON holds one cross-process wallet gate across the complete missing-row batch, MySQL inserts missing primary-key rows inside one rollback-safe transaction, existing wallet and lifecycle fields are never overwritten, player reads perform no seed or commit work, and the retired whole-document save and empty-check seams cannot reintroduce a read-before-write race.
+- **TEST-162** (Tests) - PASS: Browser-free JSON and fake-MySQL evidence proves thread- and process-racing player creation and bootstrap insert each missing identifier once, preserve committed balances and ledger rows, perform byte-identical no-op replay, roll back partial MySQL batches, leave MySQL reads write-free, and statically reject the retired public full-document save and empty-check interfaces.
 - **TOOL-013** (Tooling) - PASS: A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.

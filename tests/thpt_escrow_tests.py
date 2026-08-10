@@ -41,7 +41,7 @@ class TexasHoldemEscrowExhaustionTests(unittest.TestCase):
         # Always clear provider injection after the isolated test run.
         self.addCleanup(storage.set_provider_for_tests, None)
         # Persist default players through the provider-backed players service.
-        players.save_players(players.default_players())
+        self.provider.bootstrap_players(players.default_players())
         # Reset the disposable-root state document so every test starts from an empty table.
         api.StateRepository().save("human", engine.default_state())
         # Fund the three fixed practice seats through the production one-time funding seam.

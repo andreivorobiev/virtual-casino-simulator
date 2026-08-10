@@ -653,7 +653,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     # Map the permanent requirement to its existing focused central case without allocating a generic TEST ID.
     run_case('API-ENROLLMENT-POLICY-001',['AUTH-013','AUTH-014','AUTH-015','OAUTH-011','TEST-158'],run_enrollment_policy_tests)
     # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
-    run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','LEDGER-001','CORE-017'],storage_tests.run_player_creation_preserves_ledger)
+    run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','STORAGE-012','LEDGER-001','CORE-017','TEST-162'],storage_tests.run_player_creation_preserves_ledger)
     # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)
     run_case('STORAGE-TABLE-RULES-001',['LEDGER-029','TOKEN-006'],storage_tests.run_table_rule_authority)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
