@@ -1553,13 +1553,13 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
         # Require the compatible tests patch for permanent indexed-provider evidence.
-        self.assertEqual(tests_module["version"], "1.72.2")
+        self.assertEqual(tests_module["version"], "1.72.3")
         # Require the docs patch for LEDGER-033 and TEST-164 governance.
-        self.assertEqual(docs_module["version"], "1.70.2")
+        self.assertEqual(docs_module["version"], "1.70.3")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the compatible contracts minor for descriptor-generated request bodies.
-        self.assertEqual(contracts_module["version"], "1.57.1")
+        self.assertEqual(contracts_module["version"], "1.57.2")
         # Require the compatible tooling minor for deterministic rule-contract generation.
         self.assertEqual(tooling_module["version"], "1.27.0")
         # Require the compatible Baccarat patch for central settings enforcement.
@@ -1572,8 +1572,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.6.3")
         # Require the exact compatible Slots settlement-interface patch.
         self.assertEqual(slots_module["version"], "9.4.4")
-        # Require the exact release-owned Application patch for the v0.9.5.63 package identity.
-        self.assertEqual(application_module["version"], "9.59.4")
+        # Require the exact release-owned Application patch for the v0.9.5.64 package identity.
+        self.assertEqual(application_module["version"], "9.59.5")
         # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
         self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

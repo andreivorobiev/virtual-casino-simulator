@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.64 Release Notes
+
+## Provider-indexed settlement recovery
+
+- Packages accepted content PR #652; the release-only application revision advances mechanically to `9.59.5`.
+- Resolves bounded issue #653 and advances umbrella #432 by exposing one provider-owned action lookup through the existing JSON action registry and MySQL unique action index.
+- Removes million-row recovery scans from the shared settlement boundary and Deuces Wild while preserving exact replay, conflict, lost-response, amount, transaction-type, round, and fingerprint validation.
+- Carries permanent requirements `LEDGER-033` and `TEST-164`; the governed total remains exactly 933 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 744 regular files: the terminal v0.9.5.63 inventory plus this v0.9.5.64 compatibility record; repository documentation, tests, and engineering audit scripts remain outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.39.1`, Ledger `9.1.2`, Deuces Wild `1.1.3`, Tooling `1.27.0`, and every other content module remain exact protected-main values.
+- Preserves frozen API envelopes, accepted paytables, settlement timing, providers, restricted-preview policy, and the held MySQL migration policy.
+- Keeps the legacy JSON action-journal format readable by the predecessor; umbrella #432 remains open for a later append-only write transition.
+- Retains exact immutable and terminal-green v0.9.5.63 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.63 Release Notes
 
 ## Descriptor-driven game-rule enforcement
