@@ -124,6 +124,21 @@ class SessionTimeoutTests(unittest.TestCase):
             # Confirm the player identity resolves.
             self.assertEqual(user["user_id"], self.player["user_id"])
 
+    # A guest descriptor must use the durable user trial deadline rather than the unrelated session token lifetime. (SESSION-012)
+    def test_guest_descriptor_uses_user_trial_expiry(self) -> None:
+        # Give the guest a ten-minute trial deadline that is deliberately earlier than the token lifetime.
+        guest_expiry = _stamp(-600)
+        # Build the disposable principal with its canonical durable trial deadline.
+        guest = {"user_id": "guest_descriptor", "identity_provider": "guest", "roles": ["guest"], "role": "guest", "guest_expires_at": guest_expiry}
+        # Build a current session whose hard expiry is one day away so it cannot mask a wrong guest source.
+        session = {"created_at": _stamp(60), "updated_at": _stamp(0), "expires_at": _stamp(-86_400)}
+        # Resolve the read-only client scheduling contract.
+        descriptor = auth.session_status_descriptor(session, guest)
+        # Require the absolute bound to match the user-owned guest deadline exactly.
+        self.assertEqual(descriptor["absolute_expires_at"], guest_expiry)
+        # Require the effective expiry not to extend past the trial deadline.
+        self.assertLessEqual(descriptor["expires_at"], guest_expiry)
+
 
 # Run focused evidence directly when invoked by a developer or release validator.
 if __name__ == "__main__":

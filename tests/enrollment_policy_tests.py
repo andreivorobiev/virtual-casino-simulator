@@ -219,7 +219,7 @@ class EnrollmentPolicyTests(unittest.TestCase):
         # Parse the explicit restricted-preview compatibility decision.
         compatibility = json.loads((ROOT / "contracts" / "compatibility" / "restricted-preview-security.json").read_text(encoding="utf-8"))
         # Require artifact v4 for the owner Admin transaction revision.
-        self.assertEqual(compatibility["version"], 4)
+        self.assertEqual(compatibility["version"], 5)
         # Read the complete policy decision without accepting implicit defaults.
         policy = compatibility["enrollment_policy"]
         # Require the retained fallback plus separate schema-owned recovery boundaries.
@@ -883,18 +883,18 @@ class EnrollmentAdminTransactionTests(unittest.TestCase):
                 router.dispatch("POST", "/api/v2/admin/enrollment-policy", {"changes": self._opening_changes(), "confirm": "true", "reason": "Must not apply"}, context={"user": {"user_id": self.owner["user_id"]}})
             # Require confirmation refusal to remain write-free.
             self.assertFalse(self._policy_path().exists())
-            # Prove Admin mutation does not depend on the operational decision logger.
-            with mock.patch.object(enrollment_policy.logger, "info", side_effect=OSError("operational-log-unavailable")):
-                # Apply the exact previewed proposal with fixed confirmation and reason.
-                applied = router.dispatch("POST", "/api/v2/admin/enrollment-policy", {"changes": self._opening_changes(), "revision": preview["revision"], "confirm": True, "reason": "Owner-approved private enrollment"}, context={"user": {"user_id": self.owner["user_id"]}})
-            # Require route projection to equal the preview's policy and impact.
-            self.assertEqual((applied["policy"], applied["previous"], applied["impact"]), (preview["policy"], preview["previous"], preview["impact"]))
-            # Require apply to report both the consumed preview revision and new rollback revision.
-            self.assertEqual((applied["previous_revision"], len(applied["revision"])), (preview["revision"], 64))
-            # Read the coherent owner view after apply.
+            # Reject live capability expansion while separate provider and owner release approval is held.
+            with self.assertRaises(ForbiddenError):
+                # Attempt the exact previewed opening proposal through the production Admin route.
+                router.dispatch("POST", "/api/v2/admin/enrollment-policy", {"changes": self._opening_changes(), "revision": preview["revision"], "confirm": True, "reason": "Owner-approved private enrollment"}, context={"user": {"user_id": self.owner["user_id"]}})
+            # Require the held route to remain write-free.
+            self.assertFalse(self._policy_path().exists())
+            # Seed a previously approved open policy directly through the service to exercise route rollback.
+            applied = enrollment_policy.update(self._opening_changes(), actor_id=self.owner["user_id"], reason="Synthetic prior external approval", expected_revision=preview["revision"])
+            # Read the coherent owner view after the synthetic prior approval.
             view = router.dispatch("GET", "/api/v2/admin/enrollment-policy", {}, context={"user": {"user_id": self.owner["user_id"]}})
             # Require policy, capabilities, and immutable receipt to come from one committed document.
-            self.assertEqual((view["policy"], view["capabilities"], view["audit"]), (applied["policy"], preview["impact"]["after"], [applied["audit"]]))
+            self.assertEqual((view["policy"], view["capabilities"], view["audit"]), (applied["current"], preview["impact"]["after"], [applied["audit"]]))
             # Require owner visibility to expose the same current revision as the apply receipt.
             self.assertEqual(view["revision"], applied["revision"])
             # Apply the exact returned prior policy as one rollback request.

@@ -36,7 +36,7 @@ PASSWORD_ITERATIONS = 120_000
 # The complete anonymous-route allowlist. Three layers must agree byte-for-byte: this set,
 # casino/wsgi.py _validate_restricted_preview_routes (checked at worker boot), and
 # contracts/compatibility/restricted-preview-security.json (checked by validate_contracts and run_tests).
-PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}
+PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/password-reset/initiate", "/api/v2/auth/password-reset/resend", "/api/v2/auth/password-reset/complete", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}
 # Bound the accepted session lifetime to the restricted-preview review interval.
 MAX_SESSION_TTL_SECONDS = 86_400
 # Retain at most one thousand active session records across the single-node preview.
@@ -1434,7 +1434,7 @@ def session_status_descriptor(session: dict, user: dict) -> dict:
         # Import the guest inactivity window lazily to avoid widening the module import graph.
         idle_seconds = GUEST_INACTIVITY_SECONDS
         # Compute the guest absolute expiry from the durable trial deadline when present.
-        absolute_expiry = parse_time(session.get("guest_expires_at")) if session.get("guest_expires_at") else hard_expiry
+        absolute_expiry = parse_time(user.get("guest_expires_at")) if user.get("guest_expires_at") else hard_expiry
         # Reuse the owner-configured warning window purely as a presentation nicety for guests.
         warn_seconds = _session_warning_seconds(False)
         # Record that the disposable trial governs this session for the client copy.

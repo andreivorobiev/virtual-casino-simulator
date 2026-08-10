@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregate plus catalog-wide settlement allocations to total exactly 911 permanent rows.
-        self.assertEqual(len(requirements), 911)
+        # Require the accepted aggregates, settlement convergence, and account/Admin completion to total exactly 924 permanent rows.
+        self.assertEqual(len(requirements), 924)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1410,6 +1410,19 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "GAMECORE-004": "Core",  # Bind legacy game call shapes to the shared settlement adapter.
             "TEST-157": "Tests",  # Bind the catalog-derived direct-ledger prevention gate.
             "AUDIO-010": "Audio",  # Bind silent defaults and explicit owner overrides to Audio.
+            "ADMIN-033": "Admin",  # Bind ordinary-Admin delegation to the dedicated owner workspace.
+            "ADMIN-034": "Admin",  # Bind session policy completion to the responsive Admin surface.
+            "AUTH-015": "Core",  # Bind enrollment readiness and fail-closed live enablement.
+            "AUTH-016": "Core",  # Bind the read-only launch readiness aggregate.
+            "OAUTH-011": "Core",  # Bind provider readiness to secret-safe diagnostics.
+            "USER-008": "Application",  # Bind personal sound to explicit opt-in behavior.
+            "USER-009": "Application",  # Bind My Settings and self-history to the shell.
+            "SESSION-010": "Core",  # Bind durable session-policy provenance.
+            "SESSION-011": "Core",  # Bind idle enforcement and warning controls.
+            "SESSION-012": "Application",  # Bind the safe browser session-warning descriptor.
+            "RESET-004": "Core",  # Bind public v2 recovery routes and browser flow.
+            "CONVERT-003": "Application",  # Bind the guest conversion UI to existing authority.
+            "TEST-158": "Tests",  # Bind account/Admin completion API and Browser evidence.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1517,20 +1530,20 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         blackjack_module = json.loads((ROOT / "modules" / "blackjack.json").read_text(encoding="utf-8"))
         # Parse the Autoplay descriptor for the compatible lifecycle reconciliation repair.
         autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
-        # Require the exact compatible core patch for catalog-wide settlement convergence.
-        self.assertEqual(core_module["version"], "9.37.1")
-        # Require the exact compatible Admin minor allocation for the new policy controls.
-        self.assertEqual(admin_module["version"], "1.16.0")
-        # Require the exact release-owned tests patch for v0.9.5.59 qualification.
-        self.assertEqual(tests_module["version"], "1.69.4")
-        # Require the exact release-owned docs patch for v0.9.5.59 provenance.
-        self.assertEqual(docs_module["version"], "1.67.4")
-        # Require the exact compatible Audio patch for silent fresh and fallback state.
-        self.assertEqual(audio_module["version"], "9.1.2")
-        # Require the exact release-owned contracts patch for the compatibility record.
-        self.assertEqual(contracts_module["version"], "1.55.3")
-        # Require the exact tooling patch for catalog-derived boundary validation.
-        self.assertEqual(tooling_module["version"], "1.25.2")
+        # Require the exact compatible Core minor for account/Admin completion.
+        self.assertEqual(core_module["version"], "9.38.0")
+        # Require the exact compatible Admin minor for delegation and readiness controls.
+        self.assertEqual(admin_module["version"], "1.17.0")
+        # Require the exact tests minor for the completed account/Admin acceptance matrix.
+        self.assertEqual(tests_module["version"], "1.70.0")
+        # Require the exact docs minor for thirteen new permanent governance rows.
+        self.assertEqual(docs_module["version"], "1.68.0")
+        # Require the exact compatible Audio patch for explicit personal sound opt-in.
+        self.assertEqual(audio_module["version"], "9.1.3")
+        # Require the exact contracts minor for additive recovery, roles, and readiness APIs.
+        self.assertEqual(contracts_module["version"], "1.56.0")
+        # Require the exact tooling patch for the expanded anonymous-route contract gate.
+        self.assertEqual(tooling_module["version"], "1.25.3")
         # Require the exact compatible Baccarat settlement-interface patch.
         self.assertEqual(baccarat_module["version"], "9.1.14")
         # Require the exact compatible Bingo settlement-interface patch.
@@ -1541,8 +1554,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.6.2")
         # Require the exact compatible Slots settlement-interface patch.
         self.assertEqual(slots_module["version"], "9.4.4")
-        # Require the exact release-owned Application patch for the v0.9.5.59 package identity.
-        self.assertEqual(application_module["version"], "9.58.2")
+        # Require the exact compatible Application minor for recovery, settings, and conversion UI.
+        self.assertEqual(application_module["version"], "9.59.0")
         # Require Blackjack to carry the compatible settlement-interface patch.
         self.assertEqual(blackjack_module["version"], "9.1.9")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

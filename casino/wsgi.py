@@ -163,7 +163,7 @@ def _json_response(start_response, status: int, payload: dict, extra_headers=Non
 # Initialize provider-neutral state once during production worker boot.
 def _validate_restricted_preview_routes() -> None:
     # Require exactly the reviewed anonymous fixed routes plus separately matched OAuth paths. (issues #317, #326, #332, #378, #224)
-    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}:
+    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/password-reset/initiate", "/api/v2/auth/password-reset/resend", "/api/v2/auth/password-reset/complete", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}:
         # Fail startup rather than allowing compatibility metadata to broaden public access.
         raise RuntimeError("Restricted preview public routes do not match the accepted allowlist")
     # Inspect registered method and pattern pairs without invoking any route.

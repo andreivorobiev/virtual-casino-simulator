@@ -59,20 +59,20 @@ class UserSettingsTests(unittest.TestCase):
         # Read the untouched subject's preferences.
         settings = user_settings.read_settings(self.owner)
         # Require the canonical default locale, sound, and starting revision.
-        self.assertEqual((settings["locale"], settings["sound_enabled"], settings["revision"]), ("en-US", True, 0))
+        self.assertEqual((settings["locale"], settings["sound_enabled"], settings["revision"]), ("en-US", False, 0))
         # Require the record to be marked durable for a persistent account.
         self.assertTrue(settings["persisted"])
 
     # Require a saved preference to survive a fresh read from storage.
     def test_saved_preferences_persist_and_advance_the_revision(self) -> None:
         # Apply a supported locale and a sound change.
-        updated = user_settings.update_settings(self.owner, {"locale": "ru-RU", "sound_enabled": False})
+        updated = user_settings.update_settings(self.owner, {"locale": "ru-RU", "sound_enabled": True})
         # Require the stored values and an advanced revision.
-        self.assertEqual((updated["locale"], updated["sound_enabled"], updated["revision"]), ("ru-RU", False, 1))
+        self.assertEqual((updated["locale"], updated["sound_enabled"], updated["revision"]), ("ru-RU", True, 1))
         # Re-read through storage to prove durability rather than trusting the write's return value.
         reread = user_settings.read_settings(self.owner)
         # Require the re-read record to match exactly.
-        self.assertEqual((reread["locale"], reread["sound_enabled"], reread["revision"]), ("ru-RU", False, 1))
+        self.assertEqual((reread["locale"], reread["sound_enabled"], reread["revision"]), ("ru-RU", True, 1))
 
     # Require one subject's preferences to stay invisible to another account.
     def test_preferences_are_scoped_to_the_session_subject(self) -> None:
@@ -138,7 +138,7 @@ class UserSettingsTests(unittest.TestCase):
         # Read through the production normalizer.
         settings = user_settings.read_settings(self.owner)
         # Require every invalid field to use the canonical safe default.
-        self.assertEqual((settings["locale"], settings["sound_enabled"], settings["revision"], settings["updated_at"]), ("en-US", True, 0, None))
+        self.assertEqual((settings["locale"], settings["sound_enabled"], settings["revision"], settings["updated_at"]), ("en-US", False, 0, None))
 
     # Require guest trials to change settings in session without creating a durable record.
     def test_guest_settings_stay_session_local(self) -> None:

@@ -3,10 +3,10 @@
   "contracts/compatibility/andar-bahar-side-pricing.json": "a5479da440aa841d4080660c77ee03816b9131396a108ba440f4f1f09cae155b",
   "contracts/compatibility/hi-lo-rank-pricing.json": "2e2650c7d245c66fe4cb7d93913499874ffc15a8b111d9417af3da97ab83c97a",
   "contracts/openapi/acey_deucey.v1.yaml": "203217f8bb86f07bb102af57f0e93021dfaf77a9107efd17f31eed263b42352a",
-  "contracts/openapi/admin-users.v2.yaml": "6d39af997fe7779302c84136f77dae6e5e848d74ca2af459cdd4d6950af94ed7",
+  "contracts/openapi/admin-users.v2.yaml": "797bd232239c2fdc05804a492da70d501132a48a936493c734532661d9227b29",
   "contracts/openapi/admin.v1.yaml": "65aabdf392c067a18bd84b106b63f7a223072a958fc21d3837045215d21209c5",
   "contracts/openapi/andar_bahar.v1.yaml": "7d25913c80730f28a66516f75b42739cce01e7d33cd741ca970bf4a92d2fcd25",
-  "contracts/openapi/auth.v2.yaml": "e80f907cab21aaaee82a69707358cf2837ce88fec8237e3b97a72e3cf2e7f214",
+  "contracts/openapi/auth.v2.yaml": "771a472d0e9d5714b08857dfcac58906009717fe12d5e132dc321e1c4f17f46a",
   "contracts/openapi/autoplay.v1.yaml": "435d7bf8d4a278e6b56634695f8fcfcb9648f1d8b7297c942ebc6c5c97c0d552",
   "contracts/openapi/baccarat.v1.yaml": "738da72771628936fb2305331a01b810befbd26413f38d8901036cac4f372b48",
   "contracts/openapi/big_six_wheel.v1.yaml": "ec31240b41fa5e6d18708a9b5cdeeeab59a123e594cb15e595cc2612d7e906db",
@@ -63,5 +63,5 @@
   "contracts/openapi/three_card_poker.v1.yaml": "3ce7261f139361fbedd226f0527e31d9dfff03cbb6e028d75081a6b6ee400ec2",
   "contracts/openapi/transactional-mail.v2.yaml": "d721dbf64cf4bb88ceba41247d7f091152435ec18f3417d90bca7be29540c0ad",
   "contracts/openapi/trente_et_quarante.v1.yaml": "d9be8846b82bbfcb12c33cd5b100015acfd8a979f368e657641ae25a7f197b28",
-  "contracts/openapi/user-settings.v2.yaml": "24f95c2906ad3b6f96df8cdaf6df273ac32d0eca2f8006fcd9a856665eec09be"
+  "contracts/openapi/user-settings.v2.yaml": "a3e3cef8bbd51217ee4d10f46ddffd1d1264508eb073e636aed819448b503681"
 }

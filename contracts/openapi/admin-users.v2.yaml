@@ -53,7 +53,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserDetailEnvelope'
     patch:
-      summary: Update user active status, role assignments, display name, or locale; role assignment requires the platform owner and cannot mutate platform-owner authority.
+      summary: Update user lifecycle status, display name, or locale; role changes use the separate reauthenticated Administrators routes.
       operationId: admin_users_v2_update_user
       security:
         - cookieSession: []
@@ -129,6 +129,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserStateEnvelope'
+  /admin/administrators:
+    get:
+      summary: List current ordinary administrators, protected owners, eligible active accounts, and the optimistic role revision.
+      operationId: admin_administrators_v2_list
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Owner-only administrator management inventory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministratorListEnvelope'
+        '403':
+          description: Current active platform-owner authority is required.
+  /admin/administrators/audit:
+    get:
+      summary: Read bounded newest-first immutable administrator grant and revoke evidence.
+      operationId: admin_administrators_v2_audit
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Owner-only role audit history with no credentials or replay keys.
+  /admin/administrators/{user_id}/{action}:
+    post:
+      summary: Grant or revoke ordinary Admin access after owner password reauthentication.
+      operationId: admin_administrators_v2_change
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - name: action
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [grant, revoke]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdministratorRoleChangeRequest'
+      responses:
+        '200':
+          description: Committed or exactly replayed transition receipt; predecessor target sessions are revoked after first commit.
+        '403':
+          description: Owner authority, step-up password, self-action, or protected-owner validation failed.
+        '409':
+          description: The role revision is stale or the caller replay key changed meaning.
   /admin/session-settings:
     get:
       # Read the provider-backed registered-session timeout policy as the platform owner. (SESSION-009, ADMIN-031)
@@ -323,6 +374,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /admin/enrollment-readiness:
+    get:
+      summary: Read secret-safe email, Google, and Facebook readiness while live enablement remains separately held.
+      operationId: admin_enrollment_readiness_v2
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Current policy, method readiness, blockers, and fixed restricted-preview release hold.
+        '403':
+          description: Current active platform-owner authority is required.
+  /admin/launch-readiness:
+    get:
+      summary: Read launch prerequisite status without exposing any activation action.
+      operationId: admin_launch_readiness_v2
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Read-only held launch gate summary.
+        '403':
+          description: Current active platform-owner authority is required.
 components:
   securitySchemes:
     cookieSession:
@@ -599,6 +672,7 @@ components:
           type: string
     UpdateUserRequest:
       type: object
+      additionalProperties: false
       properties:
         active:
           type: boolean
@@ -607,13 +681,74 @@ components:
           enum: [active, inactive, suspended, locked]
         display_name:
           type: string
+        locale:
+          type: string
+    AdministratorRoleChangeRequest:
+      type: object
+      required: [password, reason, idempotency_key, revision]
+      additionalProperties: false
+      properties:
+        password:
+          type: string
+          format: password
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 256
+        idempotency_key:
+          type: string
+          minLength: 16
+          maxLength: 200
+        revision:
+          type: integer
+          minimum: 0
+    AdministratorAccount:
+      type: object
+      required: [user_id, display_name, email, status, roles, role_version, protected_owner]
+      additionalProperties: false
+      properties:
+        user_id:
+          type: string
+        display_name:
+          type: string
+        email:
+          type: string
+          format: email
+        status:
+          type: string
         roles:
           type: array
           items:
             type: string
-            enum: [player, admin]
-        locale:
-          type: string
+            enum: [player, admin, platform_owner]
+        role_version:
+          type: integer
+          minimum: 0
+        protected_owner:
+          type: boolean
+    AdministratorListEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [revision, administrators, eligible_accounts]
+          additionalProperties: false
+          properties:
+            revision:
+              type: integer
+              minimum: 0
+            administrators:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdministratorAccount'
+            eligible_accounts:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdministratorAccount'
     ResetPasswordRequest:
       type: object
       required: [password]
@@ -705,11 +840,13 @@ components:
     SessionSettings:
       # Validated provider-backed policy applied to every registered account. (SESSION-009)
       type: object
-      required: [schema_version, idle_timeout_minutes, absolute_timeout_hours, admin_stricter, admin_idle_timeout_minutes]
+      required: [schema_version, enabled, idle_timeout_minutes, absolute_timeout_hours, admin_stricter, admin_idle_timeout_minutes, warning_minutes, updated_at, updated_by]
       properties:
         schema_version:
           type: integer
           minimum: 2
+        enabled:
+          type: boolean
         idle_timeout_minutes:
           type: integer
           minimum: 1
@@ -724,11 +861,24 @@ components:
           type: integer
           minimum: 1
           maximum: 1440
+        warning_minutes:
+          type: integer
+          minimum: 0
+          maximum: 10
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_by:
+          type: string
+          nullable: true
     SessionSettingsUpdateRequest:
       # Sparse updates preserve omitted settings and clamp supplied numeric values. (ADMIN-031)
       type: object
       additionalProperties: false
       properties:
+        enabled:
+          type: boolean
         idle_timeout_minutes:
           type: integer
         absolute_timeout_hours:
@@ -736,6 +886,8 @@ components:
         admin_stricter:
           type: boolean
         admin_idle_timeout_minutes:
+          type: integer
+        warning_minutes:
           type: integer
     SessionSettingsEnvelope:
       type: object

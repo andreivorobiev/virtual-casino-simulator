@@ -193,7 +193,7 @@
     {
       "id": "auth",
       "route": "/",
-      "selector": "[data-testid='login-gate'], [data-testid='terms-gate']",
+      "selector": "[data-testid='login-gate'], [data-testid='terms-gate'], [data-testid='password-reset-initiate'], [data-testid='password-reset-complete']",
       "states": [
         "login",
         "guest",
@@ -207,6 +207,8 @@
         "oauth_provider_status_error",
         "oauth_callback_success",
         "oauth_callback_error",
+        "password_reset_initiate",
+        "password_reset_complete",
         "terms_required",
         "invalid_credentials"
       ],
@@ -333,6 +335,10 @@
         "owner_policy",
         "clamped_values",
         "saved",
+        "enforcement_enabled",
+        "enforcement_disabled",
+        "warning_window",
+        "change_provenance",
         "ordinary_admin_denied",
         "keyboard_focus"
       ],
@@ -388,7 +394,7 @@
     {
       "id": "shell_lobby",
       "route": "/",
-      "selector": "[data-testid='premium-topbar'], [data-testid='lobby']",
+      "selector": "[data-testid='premium-topbar'], [data-testid='lobby'], [data-testid='my-settings'], [data-testid='guest-conversion']",
       "states": [
         "authenticated",
         "tiltseven_neon_pit",
@@ -411,7 +417,11 @@
         "guest_trial_top_up_unavailable",
         "guest_trial_same_context_refresh",
         "guest_trial_reduced_motion",
-        "guest_trial_zoom_200"
+        "guest_trial_zoom_200",
+        "personal_settings",
+        "personal_history",
+        "personal_sound_default_off",
+        "guest_conversion_form"
       ],
       "locales": [
         "en-US",
@@ -818,7 +828,14 @@
         "ledger",
         "players_and_bots",
         "users",
-        "users_account_role_status",
+        "users_account_lifecycle",
+        "administrators_owner_reauthentication",
+        "administrators_immutable_audit",
+        "enrollment_policy",
+        "provider_readiness",
+        "live_enablement_held",
+        "launch_readiness",
+        "launch_held_read_only",
         "invitations_disabled",
         "invitations_release_held",
         "invitations_empty",

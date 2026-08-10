@@ -31,6 +31,8 @@ class GuestConversionTests(unittest.TestCase):
         from casino.core.state_store import write_json
         # Restore the canonical empty identity store before seeding this test's guest.
         write_json(auth.USERS_PATH, auth.default_users())
+        # Reset the independent source-rate document so prior API cases cannot exhaust this focused fixture.
+        write_json(auth.GUEST_CREATION_LOG_PATH, auth.default_guest_creation_log())
         # Create a real guest trial through the identity boundary.
         self.guest = auth.create_guest(accepted=True, terms_version=auth.GUEST_TERMS_VERSION, locale="en-US")["user"]
 

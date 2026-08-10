@@ -12,7 +12,7 @@ import { activeBrand, applyBrand } from './core/brand.js';
 // Import the session-owned wallet celebration controller without adding game or API authority. (UX-023)
 import { createWalletCelebration, createWalletCelebrationLifecycle } from './core/celebrate.js';
 // Import required dependency so this module can preload global voice settings before games mount.
-import { loadVoiceSettings } from './core/voice.js';
+import { loadVoiceSettings, setPersonalSoundEnabled } from './core/voice.js';
 // Import the registered-user problem-report dialog without adding feedback code to the shared shell.
 import { bindFeedbackDialog, localizeFeedback, syncFeedbackReporter } from './core/feedback.js';
 
@@ -28,6 +28,8 @@ let latestState = null;
 let shellConnected = false;
 // Cache the authenticated current-user payload so wallet and profile UI stay consistent.
 let currentSession = null;
+// Hold the current pre-expiration warning timer so session replacement cannot leave a stale alert. (SESSION-012)
+let sessionWarningTimer = null;
 // Own BFCache-safe wallet controller replacement for the complete application module lifetime.
 const walletCelebrationLifecycle = createWalletCelebrationLifecycle({
   // Bind pagehide and pageshow to the current browser document.
@@ -137,6 +139,8 @@ function routeFallbackLabel(route) {
 
 // Resolve the route represented by the current browser location for reload and history restoration.
 function routeFromLocation() {
+  // Restore the distinct authenticated My Settings destination independently from games and Admin.
+  if (location.pathname.replace(/\/$/, '') === '/settings') return 'settings';
   // Match canonical reloadable game paths without accepting nested or ambiguous segments.
   const match = location.pathname.match(/^\/games\/([^/]+)\/?$/);
   // Decode the matched id so route comparison uses catalog identifiers.
@@ -211,8 +215,8 @@ function oauthCompletionCopy() {
 
 // Synchronize browser history with one resolved catalog route.
 function updateRouteHistory(route, mode = 'push') {
-  // Resolve the canonical path from catalog metadata or the lobby root.
-  const path = route === 'lobby' ? '/' : gameDescriptors.find(game => game.id === route)?.route || '/';
+  // Resolve the canonical path from the dedicated settings route, catalog metadata, or lobby root.
+  const path = route === 'settings' ? '/settings' : route === 'lobby' ? '/' : gameDescriptors.find(game => game.id === route)?.route || '/';
   // Preserve locale and test query parameters while removing legacy route hashes.
   const url = new URL(location.href);
   // Apply the canonical route path to the current URL.
@@ -280,6 +284,10 @@ function isGuestSession() {
 
 // Clear every shell-owned authenticated cache before showing any logged-out gate.
 function clearAuthenticatedShellState() {
+  // Cancel any warning owned by the session being discarded.
+  clearTimeout(sessionWarningTimer);
+  // Clear the handle so a later session can schedule independently.
+  sessionWarningTimer = null;
   // Dispose the session-owned celebration before a game or logged-out surface can remount.
   walletCelebrationLifecycle.unmount('session-cleared');
   // Stop observing game-only rails before the authenticated route outlet is replaced.
@@ -298,6 +306,20 @@ function clearAuthenticatedShellState() {
   gameDescriptors = [];
   // Hide registered-user reporting whenever authenticated identity has been discarded.
   syncFeedbackReporter(null);
+}
+
+// Schedule one localized pre-expiration warning from the server-authored session descriptor. (SESSION-012)
+function scheduleSessionWarning() {
+  // Cancel the prior session's or prior refresh's timer before deriving a new deadline.
+  clearTimeout(sessionWarningTimer);
+  // Read only the safe descriptor returned by the current-user API.
+  const descriptor = currentSession?.session_status || {};
+  // Stop when warning is disabled, absent, or already terminal.
+  if (!descriptor.warn_at || Number(descriptor.warning_seconds || 0) <= 0 || Number(descriptor.expires_in_seconds || 0) <= 0) { sessionWarningTimer = null; return; }
+  // Compute a bounded client delay from the server-owned UTC instant.
+  const delay = Math.max(0, Math.min(Date.parse(descriptor.warn_at) - Date.now(), 2147483647));
+  // Schedule informational copy only; the next API remains the authoritative expiry decision.
+  sessionWarningTimer = setTimeout(() => toast(t('session.expiryWarning', { minutes: Math.max(1, Math.ceil(Number(descriptor.warning_seconds) / 60)) }, 'shell')), delay);
 }
 
 // Clear every shell-owned authenticated cache before showing the logged-out session-expired gate.
@@ -400,7 +422,7 @@ function renderLoginGate(message = '') {
   // Resolve explicit caller feedback before a fixed provider completion acknowledgement.
   const authMessage = message || oauthCompletionCopy();
   // Render the browser login gate with private-beta toy-simulator acknowledgement.
-  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-signup" data-testid="signup-entry"><a class="secondary" href="/enroll/signup" data-testid="signup-entry-link">${safe(t('signup.cta', {}, 'shell'))}</a><p class="auth-guest-copy">${safe(t('signup.entryCopy', {}, 'shell'))}</p></div><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button" disabled aria-disabled="true">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
+  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><a href="/account/reset" data-testid="password-reset-entry">${safe(t('recovery.forgot', {}, 'shell'))}</a><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-signup" data-testid="signup-entry"><a class="secondary" href="/enroll/signup" data-testid="signup-entry-link">${safe(t('signup.cta', {}, 'shell'))}</a><p class="auth-guest-copy">${safe(t('signup.entryCopy', {}, 'shell'))}</p></div><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button" disabled aria-disabled="true">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
   // Wire the auth-screen locale selector and rerender the gate after switching.
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
@@ -522,7 +544,9 @@ async function renderOAuthAccountControls() {
     // Render one fixed provider row with the appropriate link or unlink action.
     const rows = (result.providers || []).filter(item => ['google', 'facebook'].includes(item.provider)).map(item => `<div class="oauth-account-row" data-testid="oauth-link-${safe(item.provider)}"><span>${safe(item.provider === 'google' ? t('auth.oauthGoogleName', {}, 'shell') : t('auth.oauthFacebookName', {}, 'shell'))}</span><button type="button" data-oauth-account-provider="${safe(item.provider)}" data-oauth-account-action="${item.linked ? 'unlink' : 'link'}" ${!item.linked && !item.available ? 'disabled aria-disabled="true"' : ''}>${safe(item.linked ? t('auth.oauthUnlink', {}, 'shell') : t('auth.oauthLink', {}, 'shell'))}</button></div>`).join('');
     // Require explicit consent adjacent to the provider actions.
-    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('auth.oauthAccountCopy', {}, 'shell'))}</p>${oauthCompletion ? `<p class="auth-message" data-testid="oauth-callback-message" role="status">${safe(oauthCompletionCopy())}</p>` : ''}<label class="check-row oauth-link-confirm"><input id="oauth-link-confirm" type="checkbox" data-testid="oauth-link-confirm"><span>${safe(t('auth.oauthLinkConfirm', {}, 'shell'))}</span></label>${rows}<p id="oauth-account-message" class="auth-message" role="status"></p>`;
+    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><button type="button" class="secondary" data-testid="my-settings-entry">${safe(t('settings.title', {}, 'shell'))}</button><p class="oauth-provider-copy">${safe(t('auth.oauthAccountCopy', {}, 'shell'))}</p>${oauthCompletion ? `<p class="auth-message" data-testid="oauth-callback-message" role="status">${safe(oauthCompletionCopy())}</p>` : ''}<label class="check-row oauth-link-confirm"><input id="oauth-link-confirm" type="checkbox" data-testid="oauth-link-confirm"><span>${safe(t('auth.oauthLinkConfirm', {}, 'shell'))}</span></label>${rows}<p id="oauth-account-message" class="auth-message" role="status"></p>`;
+    // Keep personal settings routing separate from provider-link actions and Admin Console.
+    popover.querySelector('[data-testid="my-settings-entry"]').onclick = () => { document.getElementById('account-menu')?.removeAttribute('open'); void navigate('settings'); };
     // Wire each rendered provider action through its explicit operation.
     popover.querySelectorAll('[data-oauth-account-provider]').forEach(button => {
       // Handle link navigation or a separately confirmed unlink transaction.
@@ -567,6 +591,61 @@ function isInvitationRoute() {
 function isSignupRoute() {
   // Match only the canonical signup path; all other anonymous paths retain the normal login gate.
   return location.pathname.replace(/\/$/, '') === '/enroll/signup';
+}
+
+// Report whether the current URL names the public password-recovery destination. (RESET-004)
+function isPasswordResetRoute() {
+  // Match only the canonical path so arbitrary anonymous URLs remain at the login gate.
+  return location.pathname.replace(/\/$/, '') === '/account/reset';
+}
+
+// Render enumeration-safe recovery initiation or bearer completion without mounting casino routes. (RESET-004)
+function renderPasswordResetGate(message = '', success = false) {
+  // Clear any stale authenticated shell state before exposing the public recovery form.
+  currentSession = null; window.CasinoCurrentUser = null; syncFeedbackReporter(null);
+  // Keep protected chrome hidden throughout recovery.
+  document.body.classList.remove('lobby-active'); document.body.classList.add('auth-locked');
+  // Read the route outlet reserved by the public shell.
+  const view = document.getElementById('view');
+  // Apply the shared auth layout and remove protected-region semantics.
+  view.className = 'screen auth-screen'; view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
+  // Read the transient bearer only to choose and submit the completion form.
+  const token = new URL(location.href).searchParams.get('token') || '';
+  // Render initiation when no bearer is present and completion when the mail link supplied one.
+  view.innerHTML = token ? `<section class="auth-panel" data-testid="password-reset-complete"><p class="eyebrow">${safe(t('recovery.eyebrow', {}, 'shell'))}</p><h1>${safe(t('recovery.completeTitle', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('recovery.completeCopy', {}, 'shell'))}</p><form id="password-reset-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="reset-email" type="email" autocomplete="email" required></label><label>${safe(t('recovery.newPassword', {}, 'shell'))}<input id="reset-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><button class="primary" type="submit">${safe(t('recovery.complete', {}, 'shell'))}</button><p id="reset-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/">${safe(t('recovery.back', {}, 'shell'))}</a></section>` : `<section class="auth-panel" data-testid="password-reset-initiate"><p class="eyebrow">${safe(t('recovery.eyebrow', {}, 'shell'))}</p><h1>${safe(t('recovery.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('recovery.copy', {}, 'shell'))}</p><form id="password-reset-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="reset-email" type="email" autocomplete="email" required></label><button class="primary" type="submit">${safe(t('recovery.send', {}, 'shell'))}</button><p id="reset-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/">${safe(t('recovery.back', {}, 'shell'))}</a></section>`;
+  // Submit the currently rendered initiation or completion form through one bounded handler.
+  document.getElementById('password-reset-form').onsubmit = async event => {
+    // Prevent navigation while the enumeration-safe request is active.
+    event.preventDefault();
+    // Read the status outlet and submit control for deterministic in-flight behavior.
+    const status = document.getElementById('reset-message'); const submit = event.currentTarget.querySelector('button[type="submit"]'); submit.disabled = true;
+    // Start protected recovery so public error details never replace generic copy.
+    try {
+      // Complete the bearer flow when a token is present.
+      if (token) {
+        // Submit the exact transient bearer, mailbox, replacement, and caller key.
+        await api('/api/v2/auth/password-reset/complete', { method: 'POST', body: { token, email: document.getElementById('reset-email').value.trim(), new_password: document.getElementById('reset-password').value, idempotency_key: crypto.randomUUID() } });
+        // Remove the bearer from browser history immediately after terminal success.
+        history.replaceState({}, '', '/');
+        // Return to sign-in with a privacy-safe completion acknowledgement.
+        renderLoginGate(t('recovery.completed', {}, 'shell'));
+        // Stop this handler after route replacement.
+        return;
+      }
+      // Initiate or reissue recovery with one identical public acknowledgement.
+      await api('/api/v2/auth/password-reset/initiate', { method: 'POST', body: { email: document.getElementById('reset-email').value.trim(), locale: getLocaleState().locale, idempotency_key: crypto.randomUUID() } });
+      // Publish the identical success copy regardless of account existence or delivery state.
+      if (status) { status.textContent = t('recovery.accepted', {}, 'shell'); status.dataset.success = 'true'; }
+    // Collapse disabled, malformed, expired, and provider failures into one retry-safe message.
+    } catch (_) {
+      // Publish one generic recovery failure without reflecting server internals.
+      if (status) status.textContent = t('recovery.unavailable', {}, 'shell');
+    // Re-enable the still-mounted form after a recoverable request.
+    } finally {
+      // Avoid touching a control removed by successful completion navigation.
+      if (submit.isConnected) submit.disabled = false;
+    }
+  };
 }
 
 // Derive a token-free session key and stable caller idempotency value for reload-safe redemption. (INVITE-003)
@@ -729,12 +808,28 @@ async function enterAuthenticated(session) {
   currentSession = normalizeCurrentUser(session);
   // Branch to terms acceptance before showing the casino shell.
   if (currentSession.terms?.required) { renderTermsGate(currentSession); return; }
+  // Read durable personal preferences before any route can emit sound or render a stale locale. (USER-009)
+  try {
+    // Load only the authenticated caller's additive v2 settings envelope.
+    const preferenceData = await api('/api/v2/me/settings');
+    // Read the server-owned settings under a safe default for older compatible deployments.
+    const preferences = preferenceData.settings || {};
+    // Apply the caller's durable sound preference before games can mount.
+    setPersonalSoundEnabled(preferences.sound_enabled === true);
+    // Apply a supported durable locale without creating another server mutation.
+    if (preferences.locale && preferences.locale !== getLocaleState().locale) await setLocale(preferences.locale, { persistLocal: false });
+  // Preserve login availability if a compatible older server has no settings surface.
+  } catch (_) {
+    // Keep the default local sound and locale behavior for a missing optional preference read.
+  }
   // Load Admin-owned persisted voice settings only when this authenticated identity may read them.
   if (currentSession.user?.role === 'admin') await loadVoiceSettings();
   // Reveal the casino chrome now that the browser session is authenticated.
   document.body.classList.remove('auth-locked');
   // Update the persistent wallet, logout, and locale controls without celebrating initial load.
   const initialBalance = updateCurrentUserShell();
+  // Schedule the server-authored warning only after the complete authenticated shell is visible.
+  scheduleSessionWarning();
   // Bind one controller to the persistent wallet nodes and this exact authenticated session.
   walletCelebrationLifecycle.mount(initialBalance);
   // Load casino state for status rail and initial lobby counts.
@@ -827,7 +922,7 @@ async function refreshCurrentSession() {
     // Clear the current session so no stale wallet can render.
     currentSession = null;
     // Render the exact account-free enrollment path, signup path, or the normal private-beta login gate.
-    if (isInvitationRoute()) renderInvitationGate(); else if (isSignupRoute()) void renderSignupGate(); else renderLoginGate();
+    if (isInvitationRoute()) renderInvitationGate(); else if (isSignupRoute()) void renderSignupGate(); else if (isPasswordResetRoute()) renderPasswordResetGate(); else renderLoginGate();
     // Report the expired or absent session without exposing backend diagnostics.
     return false;
   }
@@ -869,11 +964,67 @@ function revealActiveNav() {
 }
 
 // Render the premium top navigation from the route registry.
+async function renderMySettings(view) {
+  // Load the caller's durable preferences and account-owned history in parallel when applicable. (USER-009)
+  const preferenceData = await api('/api/v2/me/settings');
+  // Read the settings under the documented defaults for a newly created account.
+  const settings = preferenceData.settings || { locale: 'en-US', sound_enabled: false, revision: 0 };
+  // Keep disposable guests out of durable history while still exposing session-local preferences and conversion.
+  const historyData = isGuestSession() ? { events: [] } : await api('/api/v2/me/history?page=1&page_size=25');
+  // Stop a stale request from replacing a newer route.
+  if (active !== 'settings') return;
+  // Render one personal surface distinct from owner-only Admin controls.
+  view.innerHTML = `<section class="panel settings-panel" data-testid="my-settings"><p class="eyebrow">${safe(t('settings.eyebrow', {}, 'shell'))}</p><h1>${safe(t('settings.title', {}, 'shell'))}</h1><p>${safe(t('settings.copy', {}, 'shell'))}</p><form id="personal-settings-form" class="auth-form"><label>${safe(t('settings.language', {}, 'shell'))}<select id="personal-settings-locale" data-testid="personal-settings-locale"></select></label><label class="check-row"><input id="personal-settings-sound" data-testid="personal-settings-sound" type="checkbox" ${settings.sound_enabled === true ? 'checked' : ''}><span>${safe(t('settings.sound', {}, 'shell'))}</span></label><button class="primary" data-testid="personal-settings-save" type="submit">${safe(t('settings.save', {}, 'shell'))}</button><p id="personal-settings-message" class="auth-message" role="status"></p></form></section>${isGuestSession() ? `<section class="panel settings-panel" data-testid="guest-conversion"><h2>${safe(t('conversion.title', {}, 'shell'))}</h2><p>${safe(t('conversion.copy', {}, 'shell'))}</p><form id="guest-conversion-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="conversion-email" type="email" maxlength="254" required></label><label>${safe(t('conversion.displayName', {}, 'shell'))}<input id="conversion-display-name" maxlength="80" required></label><label>${safe(t('conversion.password', {}, 'shell'))}<input id="conversion-password" type="password" minlength="12" maxlength="128" required></label><label class="check-row"><input id="conversion-terms" type="checkbox" required><span>${safe(t('conversion.terms', {}, 'shell'))}</span></label><button class="primary" data-testid="guest-conversion-submit" type="submit">${safe(t('conversion.submit', {}, 'shell'))}</button><p id="guest-conversion-message" class="auth-message" role="status"></p></form></section>` : `<section class="panel settings-panel" data-testid="my-history"><h2>${safe(t('settings.history', {}, 'shell'))}</h2>${(historyData.events || []).length ? `<div class="table-scroll" tabindex="0" role="region" aria-label="${safe(t('settings.history', {}, 'shell'))}"><table class="mini-table"><thead><tr><th>${safe(t('settings.time', {}, 'shell'))}</th><th>${safe(t('settings.game', {}, 'shell'))}</th><th>${safe(t('settings.event', {}, 'shell'))}</th><th>${safe(t('settings.amount', {}, 'shell'))}</th><th>${safe(t('settings.balance', {}, 'shell'))}</th><th>${safe(t('settings.reference', {}, 'shell'))}</th></tr></thead><tbody>${historyData.events.map(event => `<tr><td>${safe(event.ts || '')}</td><td>${safe(event.game || '')}</td><td>${safe(event.transaction_type || '')}</td><td>${safe(event.amount)}</td><td>${safe(event.balance_after)}</td><td>${safe(event.reference || '')}</td></tr>`).join('')}</tbody></table></div>` : `<p class="status">${safe(t('settings.historyEmpty', {}, 'shell'))}</p>`}</section>`}`;
+  // Fill the locale select from the governed locale manifest.
+  const localeSelect = view.querySelector('#personal-settings-locale');
+  // Reuse the shared option renderer before selecting the server-authored value.
+  localeSelect.innerHTML = localeOptionsHtml();
+  // Select only a supported value and otherwise retain the active locale.
+  localeSelect.value = settings.locale || getLocaleState().locale;
+  // Save one optimistic personal preference revision without touching Admin policy.
+  view.querySelector('#personal-settings-form').onsubmit = async event => {
+    // Keep the browser on the personal settings route.
+    event.preventDefault();
+    // Persist only the published locale, sound flag, and current optimistic revision.
+    const result = await api('/api/v2/me/settings', { method: 'PATCH', body: { locale: localeSelect.value, sound_enabled: view.querySelector('#personal-settings-sound').checked, revision: settings.revision } });
+    // Advance the in-memory optimistic revision so repeated saves cannot reuse a stale token.
+    settings.revision = result.settings?.revision ?? settings.revision;
+    // Apply the accepted sound preference to the current browser immediately.
+    setPersonalSoundEnabled(result.settings?.sound_enabled === true);
+    // Apply the accepted locale after the server confirms persistence.
+    if (result.settings?.locale) await setLocale(result.settings.locale, { persistLocal: false });
+    // Confirm the authoritative save in the still-mounted surface.
+    const message = document.getElementById('personal-settings-message');
+    // Publish localized success copy when the locale rerender did not replace the node.
+    if (message) message.textContent = t('settings.saved', {}, 'shell');
+  };
+  // Bind explicit guest conversion only for a live disposable guest surface.
+  const conversionForm = view.querySelector('#guest-conversion-form');
+  // Submit the conversion through its recovery-safe additive v2 route.
+  if (conversionForm) conversionForm.onsubmit = async event => {
+    // Keep the guest on this surface until the server commits conversion.
+    event.preventDefault();
+    // Read the stable live result outlet before starting the request.
+    const message = view.querySelector('#guest-conversion-message');
+    // Submit canonical account identity while preserving the existing guest player and wallet.
+    await api('/api/v2/me/convert-guest', { method: 'POST', body: { email: view.querySelector('#conversion-email').value.trim(), display_name: view.querySelector('#conversion-display-name').value.trim(), password: view.querySelector('#conversion-password').value, terms_version: 'private-beta-1', accepted: view.querySelector('#conversion-terms').checked, locale: localeSelect.value, idempotency_key: crypto.randomUUID() } });
+    // Report terminal completion before clearing the now-revoked guest shell.
+    message.textContent = t('conversion.completed', {}, 'shell');
+    // Clear the disposable session and return to login for the durable account.
+    clearAuthenticatedShellState();
+    // Render an explicit sign-in handoff without retaining form secrets.
+    renderLoginGate(t('conversion.completed', {}, 'shell'));
+  };
+}
+
+// Render the premium top navigation from the route registry.
 function renderNav() {
   // Read the navigation outlet that index.html reserves for route buttons.
   const nav = document.getElementById('main-nav');
   // Build the lobby button with the active shell class when selected.
   const items = [`<button data-route="lobby" class="nav-item ${active === 'lobby' ? 'active' : ''}" data-testid="nav-lobby"><span class="nav-icon" aria-hidden="true">&#8962;</span>${safe(t('nav.lobby', {}, 'shell'))}</button>`];
+  // Keep personal preferences separate from privileged Admin policy for every authenticated principal.
+  items.push(`<button data-route="settings" class="nav-item ${active === 'settings' ? 'active' : ''}" data-testid="nav-settings">${safe(t('settings.title', {}, 'shell'))}</button>`);
   // Add one button per game so every game remains equally reachable.
   gameDescriptors.forEach(game => items.push(`<button data-route="${game.id}" class="nav-item ${active === game.id ? 'active' : ''}" data-testid="nav-${game.id}">${safe(game.label)}</button>`));
   // Expose the Admin affordance only when the authenticated current-user contract carries the Admin role. (AUTH-008)
@@ -1079,10 +1230,12 @@ export async function navigate(route, options = {}) {
     const previous = active;
     // Check whether the requested route is one of the registered games.
     const knownGame = gameDescriptors.some(game => game.id === route);
+    // Recognize the separate authenticated personal-settings destination.
+    const knownSettings = route === 'settings';
     // Fall back to lobby for unknown routes.
-    targetRoute = route === 'lobby' || knownGame ? route : 'lobby';
+    targetRoute = route === 'lobby' || knownSettings || knownGame ? route : 'lobby';
     // Synchronize normal navigation, initial restoration, or invalid-route replacement with browser history.
-    if (options.history !== 'none') updateRouteHistory(targetRoute, options.history || (knownGame || route === 'lobby' ? 'push' : 'replace'));
+    if (options.history !== 'none') updateRouteHistory(targetRoute, options.history || (knownGame || knownSettings || route === 'lobby' ? 'push' : 'replace'));
     // Unmount the previously active game when that game supplied cleanup.
     if (previous && loadedGames.has(previous)) loadedGames.get(previous).unmount?.();
     // Store the active route for nav rendering.
@@ -1110,6 +1263,25 @@ export async function navigate(route, options = {}) {
       // Render lobby markup and catalog controls from the cached API state.
       renderLobby(view);
       // Stop after lobby render because no game module is mounted.
+      return;
+    }
+    // Render personal settings without importing or mounting a game module.
+    if (targetRoute === 'settings') {
+      // Stop observing game-owned scroll rails before the personal surface replaces them.
+      gameRailObserver?.disconnect();
+      // Keep settings out of the lobby-only containment contract.
+      document.body.classList.remove('lobby-active');
+      // Apply a bounded normal screen class for responsive personal cards.
+      view.className = 'screen settings-screen';
+      // Identify the settings surface for browser acceptance without presentation coupling.
+      view.setAttribute('data-testid', 'settings-screen');
+      // Keep the personal surface in the keyboard flow.
+      view.tabIndex = 0;
+      // Publish a localized accessible region name.
+      view.setAttribute('role', 'region'); view.setAttribute('aria-label', safe(t('settings.title', {}, 'shell')));
+      // Render caller-owned preferences, history, or guest conversion.
+      await renderMySettings(view);
+      // Stop before the game-loader branch.
       return;
     }
     // Restore the regular game shell flow before mounting any non-lobby route.
