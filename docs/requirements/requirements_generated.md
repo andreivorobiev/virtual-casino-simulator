@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.59.6
-- core: 9.39.1
+- application: 9.59.7
+- core: 9.39.2
 - ledger: 9.1.2
 - players: 9.1.1
 - bots: 1.1.1
@@ -16,7 +16,7 @@ Historical source baseline: 9.1.0
 - admin: 1.17.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.6.3
+- roulette: 9.6.4
 - slots: 9.4.4
 - blackjack: 9.1.10
 - baccarat: 9.1.15
@@ -50,9 +50,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.72.5
-- docs: 1.70.5
-- contracts: 1.57.3
+- tests: 1.72.6
+- docs: 1.70.6
+- contracts: 1.57.4
 - tooling: 1.27.1
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.4
@@ -621,6 +621,7 @@ Historical source baseline: 9.1.0
 - **LEDGER-033** (Ledger) - PASS: Committed money actions are resolved by the canonical player, game-or-core scope, and action key through one provider-owned point-lookup seam: JSON uses its stat-guarded durable action registry and MySQL uses the existing unique action index. Settlement recovery never scans a million-row ledger window, preserves exact replay-conflict validation, and adds no connection to a write path.
 - **TEST-164** (Tests) - PASS: Listener-free JSON, fake-MySQL, and settlement-adapter evidence proves indexed action hit and miss behavior, provider/public event-shape parity, restart and lost-response recovery, exact player/game/key SQL binding, connection cleanup, fail-closed immutable-dimension conflicts, and a bounded fallback only for explicitly injected legacy test seams.
 - **TEST-165** (Tests) - PASS: A fail-closed requirement-source assembler derives the compatibility registry from one non-game spine and one descriptor-owned shard per catalog game, rejects missing, duplicate, malformed, or misowned permanent IDs, and makes direct aggregate edits fail CI.
+- **TEST-166** (Tests) - PASS: The current shell and Roulette client may explicitly request compact frozen-v1 compatibility projections that preserve every consumed player, navigation, presence, state, statistics, and settlement field while skipping unrelated shell history, ledger, player-list, duplicate catalog work, and repeated Roulette bet-catalog bytes. Default and ambiguous requests retain the complete legacy response, Roulette loads one immutable catalog per wheel mode, and listener-free tests prove material deterministic byte reduction without changing money or game state.
 - **TOOL-013** (Tooling) - PASS: A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.

@@ -10394,6 +10394,32 @@
       "notes": "Existing consumers retain requirements.json as a generated compatibility aggregate; authors edit only the owning spine or game shard and regenerate deterministically."
     },
     {
+      "id": "TEST-166",
+      "module": "Tests",
+      "description": "The current shell and Roulette client may explicitly request compact frozen-v1 compatibility projections that preserve every consumed player, navigation, presence, state, statistics, and settlement field while skipping unrelated shell history, ledger, player-list, duplicate catalog work, and repeated Roulette bet-catalog bytes. Default and ambiguous requests retain the complete legacy response, Roulette loads one immutable catalog per wheel mode, and listener-free tests prove material deterministic byte reduction without changing money or game state.",
+      "status": "PASS",
+      "api_tests": [
+        "PERF-PAYLOAD-PROJECTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/app.py",
+        "casino/games/roulette/api.py",
+        "web/app.js",
+        "web/games/roulette.js",
+        "contracts/openapi/casino.v1.yaml",
+        "contracts/openapi/roulette.v1.yaml",
+        "tests/unit/performance_projection_tests.py",
+        "tests/games/roulette/test_frontend.mjs",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-323-payload-projections",
+      "changed_in": "issue-323-payload-projections",
+      "notes": "The optional projection values are new-client compatibility shims only: callers that omit them, repeat them, or supply another value keep the complete frozen response. Hosted Browser qualification remains required because the Roulette module now loads its static catalog independently before rendering controls."
+    },
+    {
       "id": "TOOL-013",
       "module": "Tooling",
       "description": "A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.",

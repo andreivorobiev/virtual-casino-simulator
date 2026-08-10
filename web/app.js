@@ -1179,8 +1179,8 @@ function updateShellStatus(state, connected) {
 async function refreshShellState(options = {}) {
   // Start protected API polling so the shell can mark itself disconnected on failure.
   try {
-    // Read the frozen v1 casino state envelope.
-    const state = await api('/api/v1/casino/state');
+    // Request the additive compact shell projection while legacy callers retain the frozen complete response. (TEST-166)
+    const state = await api('/api/v1/casino/state?projection=shell');
     // Cache the state for lobby rendering and later refreshes.
     latestState = state;
     // Rebuild frontend registration from the same public catalog used by backend registration.

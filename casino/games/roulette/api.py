@@ -37,11 +37,17 @@ def scoreboards(player_id: str):
 
 
 # Define the state_payload function used by this module.
-def state_payload(player_id: str, state=None):
+def state_payload(player_id: str, state=None, query=None):
     # Set state to the value needed for the next operation.
     state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
-    # Return the computed value to the caller.
-    return {"game": GAME_ID, "state": state, "player": players.get_player(player_id), "players": scoreboards(player_id), "catalog": rules.catalog(state.get("mode", "double")), "stats": engine.stats(state)}
+    # Build the player-specific response shared by legacy and compact callers. (TEST-166)
+    payload = {"game": GAME_ID, "state": state, "player": players.get_player(player_id), "players": scoreboards(player_id), "stats": engine.stats(state)}
+    # Preserve the frozen complete response unless the current client explicitly requests the play projection.
+    if not isinstance(query, dict) or query.get("projection") != "play":
+        # Retain the complete mode-specific bet catalog for every legacy caller.
+        payload["catalog"] = rules.catalog(state.get("mode", "double"))
+    # Return the compact or complete response without changing state, money, or settlement semantics.
+    return payload
 
 
 # Define the register function used by this module.
@@ -53,7 +59,7 @@ def register(router):
         # Set player_id to the value needed for the next operation.
         player_id = request_player_id(body, query)
         # Return the computed value to the caller.
-        return state_payload(player_id)
+        return state_payload(player_id, query=query)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/settings")
@@ -76,7 +82,7 @@ def register(router):
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return state_payload(player_id, state)
+        return state_payload(player_id, state, query=query)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/games/roulette/bet-catalog")
@@ -106,7 +112,7 @@ def register(router):
         # Set logger.info("roulette_bet_placed", player_id to the value needed for the next operation.
         logger.info("roulette_bet_placed", player_id=player_id, bet_id=item["bet_id"], amount=amount, bet_type=item["type"])
         # Return the computed value to the caller.
-        return {"bet": item, "ledger": led, **state_payload(player_id, state)}
+        return {"bet": item, "ledger": led, **state_payload(player_id, state, query=query)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/call-bet")
@@ -143,7 +149,7 @@ def register(router):
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"placed": placed, "ledger": ledgers, **state_payload(player_id, state)}
+        return {"placed": placed, "ledger": ledgers, **state_payload(player_id, state, query=query)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/rebet")
@@ -174,7 +180,7 @@ def register(router):
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"placed": placed, "ledger": ledgers, **state_payload(player_id, state)}
+        return {"placed": placed, "ledger": ledgers, **state_payload(player_id, state, query=query)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.delete(r"/api/v1/games/roulette/bets/(?P<bet_id>[^/]+)")
@@ -191,7 +197,7 @@ def register(router):
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"cleared": bet, "ledger": cred, **state_payload(player_id, state)}
+        return {"cleared": bet, "ledger": cred, **state_payload(player_id, state, query=query)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/clear")
@@ -214,7 +220,7 @@ def register(router):
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"cleared": bets, **state_payload(player_id, state)}
+        return {"cleared": bets, **state_payload(player_id, state, query=query)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/spin")
@@ -263,7 +269,7 @@ def register(router):
         # Set logger.info("roulette_spin_result", round_id to the value needed for the next operation.
         logger.info("roulette_spin_result", round_id=settled["round_id"], result=settled["result"], color=settled["result_color"], bet_count=len(settled.get("bets",[])))
         # Return the computed value to the caller.
-        return {"round": settled, "settlements": settlements, "bot_bets": [], **state_payload(player_id, state)}
+        return {"round": settled, "settlements": settlements, "bot_bets": [], **state_payload(player_id, state, query=query)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/games/roulette/stats")

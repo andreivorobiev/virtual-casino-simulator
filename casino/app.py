@@ -97,6 +97,14 @@ def build_router() -> Router:
     @router.get(r"/api/v1/casino/state")
     # Define the casino_state function used by this module.
     def casino_state(body, query, context):
+        # Recognize only the exact new shell projection so malformed or duplicate query values retain legacy behavior. (TEST-166)
+        shell_projection = query.get("projection") == "shell"
+        # Count unique recently active sessions for both the compact shell and full compatibility response. (issue #570)
+        online_player_count = auth.online_user_count()
+        # Return only fields consumed by the shell when the caller explicitly opts into the compact projection. (TEST-166)
+        if shell_projection:
+            # Preserve descriptor-driven navigation while avoiding unrelated player, history, ledger, and catalog work.
+            return {"version": APP_VERSION, "games": list_games(), "online_player_count": online_player_count}
         # Read the bound player so non-Admin state never exposes another wallet.
         player_id = context.get("bound_player_id")
         # Publish all players only to Admins and the authenticated player otherwise.
@@ -107,8 +115,6 @@ def build_router() -> Router:
         visible_history = recent_history if auth.is_admin(context["user"]) else [row for row in recent_history if row.get("player_id") == player_id]
         # Read only the bound player's ledger for normal authenticated users.
         recent_ledger = ledger.read_recent(None if auth.is_admin(context["user"]) else player_id, 25)
-        # Count unique recently active sessions independently from durable player records. (issue #570)
-        online_player_count = auth.online_user_count()
         # Return the session-scoped casino summary with privacy-safe aggregate presence.
         return {"version": APP_VERSION, "games": list_games(), "catalog": catalog_summary(), "players": visible_players, "online_player_count": online_player_count, "recent_history": visible_history, "recent_ledger": recent_ledger}
 
