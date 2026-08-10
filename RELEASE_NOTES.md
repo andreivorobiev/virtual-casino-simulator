@@ -1,3 +1,16 @@
+# Virtual Casino Simulator v0.9.5.67 Release Notes
+
+## Provider operational safety controls
+
+- Packages accepted content PR #663 and closes repository-controlled issue #333; release-owned application advances to `9.60.1`.
+- Adds durable owner-only Google and Facebook operational kill switches independent from enrollment-method policy, with optimistic revisions and hash-linked privacy-safe audit.
+- Enforces each switch before provider-adapter construction and OAuth availability; enablement requires existing secret-safe runtime and network-release readiness while disablement is immediate.
+- Keeps both providers, public signup, and public launch disabled by default; external provider evidence remains governed by #336 and the launch gate remains #209.
+- Carries permanent requirements `OAUTH-012` and `TEST-167`; the governed total is exactly 937 requirements.
+- Records the exact canonical package inventory as 748 regular files: v0.9.5.66 inventory 746 plus `casino/core/oauth_controls.py` and this v0.9.5.67 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; every content-owned runtime/game revision remains exact accepted protected-main values.
+- Retains exact immutable terminal-green v0.9.5.66 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.66 Release Notes
 
 ## Compact state projections

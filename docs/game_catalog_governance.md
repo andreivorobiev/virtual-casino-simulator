@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.67 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages owner-only default-off provider operational controls without changing any game descriptor, route, outcome, wallet action, or economics.
+
 The v0.9.5.66 release line retains the exact 46-game catalog and accepted settlement behavior. It packages bounded compact shell and Roulette response projections from #659 without changing descriptors, routes, paytables, outcomes, settlement timing, or economics.
 
 The v0.9.5.65 release line retains the exact 46-game catalog and accepted runtime behavior. It packages completed #434 governance: descriptor-owned requirement shards and shared suite discovery fail closed without changing routes, paytables, outcomes, settlement timing, or economics.

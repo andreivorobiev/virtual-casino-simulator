@@ -1558,13 +1558,13 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
         # Require the compatible tests minor for provider-control qualification.
-        self.assertEqual(tests_module["version"], "1.73.0")
+        self.assertEqual(tests_module["version"], "1.73.1")
         # Require the docs minor for provider-control governance and acceptance.
-        self.assertEqual(docs_module["version"], "1.71.0")
+        self.assertEqual(docs_module["version"], "1.71.1")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the compatible contracts minor for additive Admin control routes.
-        self.assertEqual(contracts_module["version"], "1.58.0")
+        self.assertEqual(contracts_module["version"], "1.58.1")
         # Require the compatible tooling patch for deterministic requirement assembly.
         self.assertEqual(tooling_module["version"], "1.27.1")
         # Require the compatible Baccarat patch for central settings enforcement.
@@ -1578,7 +1578,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Slots settlement-interface patch.
         self.assertEqual(slots_module["version"], "9.4.4")
         # Require the compatible Application minor for the visible Admin control surface.
-        self.assertEqual(application_module["version"], "9.60.0")
+        self.assertEqual(application_module["version"], "9.60.1")
         # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
         self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
