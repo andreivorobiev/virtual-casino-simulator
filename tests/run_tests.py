@@ -1741,7 +1741,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('product account-spine suite failed')
     # Record disabled signup/passkeys, owner-only Admin delegation, and reporter-status proof.
-    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','AUTH-012','AUTH-015','AUTH-016','ADMIN-028','ADMIN-033','OAUTH-011','RESET-004','FEEDBACK-005','I18N-009','TEST-112','TEST-138','TEST-158'],run_account_spine_tests)
+    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','AUTH-012','AUTH-015','AUTH-016','ADMIN-028','ADMIN-033','OAUTH-011','OAUTH-012','RESET-004','FEEDBACK-005','I18N-009','TEST-112','TEST-138','TEST-158','TEST-167'],run_account_spine_tests)
     # Execute the privacy-safe Admin session-control core without opening a listener.
     def run_admin_session_control_tests():
         # Load only the focused session inventory and revocation class.
@@ -2079,7 +2079,7 @@ def run_api_tests():
     # Record all forty-three localized one-click repeat foundations under permanent ownership.
     run_case('UI-REPEAT-BET-001',['UX-022','TEST-137'],run_repeat_bet_tests)
     # Centrally discover all mocked and disabled OAuth tests before any listener starts.
-    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','TEST-045','TEST-093'],run_oauth_mock_tests)
+    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-012','TEST-045','TEST-093','TEST-167'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
@@ -2318,7 +2318,7 @@ def run_api_tests():
             # Preserve the frozen v1 surface without any OAuth path.
             assert api(base,'/api/v1/auth/oauth/providers',ok=False)['error']['code']=='NOT_FOUND'
         # Record additive v2, boolean privacy, current-user ownership, disabled gate, and frozen-v1 proof.
-        run_case('API-OAUTH-002',['OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','AUTH-007','TEST-093'],oauth_runtime_api)
+        run_case('API-OAUTH-002',['OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','OAUTH-012','AUTH-007','TEST-093','TEST-167'],oauth_runtime_api)
         # Define the disabled transactional-mail Admin diagnostic contract against the real loopback backend.
         def mail_api():
             # Require unauthenticated callers to fail before mail diagnostics disclose configuration state.
@@ -10813,7 +10813,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Restore the suite-default locale and viewport after governed evidence.
                         page.set_viewport_size(users_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
                         # Open the owner enrollment workspace without changing any live capability.
-                        page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-policy').wait_for(timeout=5000); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=5000)
+                        page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-policy').wait_for(timeout=5000); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=5000); page.get_by_test_id('admin-oauth-operational-controls').wait_for(timeout=5000)
+                        # Require both independent provider operations to remain disabled under repository defaults.
+                        assert page.locator('#oauth-operational-google').is_checked() is False and page.locator('#oauth-operational-facebook').is_checked() is False
                         # Preview the unchanged closed policy through the real pure-computation endpoint.
                         with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/enrollment-policy/preview') and response.request.method=='POST'):
                             # Activate only the non-mutating preview control.
@@ -10825,13 +10827,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Switch the Admin locale before rerendering governance workspaces.
                             page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
                             # Reload the enrollment workspace in the selected locale.
-                            page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=5000)
+                            page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=5000); page.get_by_test_id('admin-oauth-operational-controls').wait_for(timeout=5000)
                             # Exercise every governed responsive viewport for policy and readiness evidence.
                             for viewport_id,viewport in users_viewports.items():
                                 # Apply exact visual-matrix dimensions and require document containment.
                                 page.set_viewport_size(viewport); page.wait_for_timeout(50); assert page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
                                 # Capture the complete owner policy and secret-free readiness state.
-                                game_evidence(f'after-pass-admin-enrollment-{locale}-{viewport_id}.png','BR-ADMIN-USERS-001',['enrollment_policy','provider_readiness','live_enablement_held'],locale,viewport_id)
+                                game_evidence(f'after-pass-admin-enrollment-{locale}-{viewport_id}.png','BR-ADMIN-USERS-001',['enrollment_policy','provider_readiness','provider_operational_controls','live_enablement_held'],locale,viewport_id)
                             # Open the read-only launch dashboard after enrollment evidence.
                             page.get_by_test_id('admin-tab-launch').click(); page.get_by_test_id('admin-launch-readiness').wait_for(timeout=5000)
                             # Require held status and the complete absence of any action control.
@@ -10847,7 +10849,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Navigate to the existing language surface after the new governance workspaces.
                         page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
                     # Execute this statement as part of the module's documented control flow.
-                    run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','ADMIN-026','ADMIN-033','AUTH-015','AUTH-016','OAUTH-011','I18N-009','TEST-081','TEST-112','TEST-158'],admin_users_browser)
+                    run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','ADMIN-026','ADMIN-033','AUTH-015','AUTH-016','OAUTH-011','OAUTH-012','I18N-009','TEST-081','TEST-112','TEST-158','TEST-167'],admin_users_browser)
                     # Prove the Admin Guest Trials section reports de-identified account-free telemetry. (issue #317)
                     def admin_guest_trials_browser():
                         # Define every governed Admin viewport, including the issue-required mobile state.

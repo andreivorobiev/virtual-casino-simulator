@@ -14,7 +14,7 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import admin_roles, auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, session_settings, rate_settings, guest_settings, mail
+from casino.core import admin_roles, auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, oauth_controls, session_settings, rate_settings, guest_settings, mail
 # Import secret-safe provider diagnostics without constructing a provider adapter or network transport.
 from casino.core.oauth.api import provider_diagnostic_payload
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
@@ -945,6 +945,55 @@ def register(router):
         # Return the exact prior policy for direct application rollback plus the committed receipt.
         return {"policy": result["current"], "previous": result["previous"], "previous_revision": result["previous_revision"], "revision": result["revision"], "impact": result["impact"], "audit": result["audit"]}
 
+    # Publish the owner-only provider operational switches separately from signup-method policy. (OAUTH-012)
+    @router.get(r"/api/v2/admin/oauth/operational-controls")
+    # Return current kill switches and secret-safe runtime readiness without provider contact.
+    def admin_oauth_operational_controls_read_v2(body, query, context):
+        # Require current durable owner authority before exposing security-control history.
+        _current_platform_owner(context.get("user"))
+        # Read one verified default-off control document.
+        controls = oauth_controls.current()
+        # Read only allowlisted provider diagnostics from the existing no-network projection.
+        diagnostics = provider_diagnostic_payload().get("providers", [])
+        # Return detached switches, revision, audit, and bounded readiness metadata.
+        return {"revision": controls["revision"], "providers": controls["providers"], "audit": controls["audit"], "readiness": diagnostics}
+
+    # Preview a provider kill-switch change without mutating durable state. (OAUTH-012)
+    @router.post(r"/api/v2/admin/oauth/operational-controls/preview")
+    # Validate one sparse provider-control proposal and return its lockout impact.
+    def admin_oauth_operational_controls_preview_v2(body, query, context):
+        # Require current durable owner authority before request-shape validation.
+        _current_platform_owner(context.get("user"))
+        # Require the exact one-field preview contract.
+        if not isinstance(body, dict) or set(body) != {"changes"}:
+            # Reject arbitrary release, credential, readiness, or provider fields.
+            raise ValidationError("OAuth operational preview request is invalid")
+        # Delegate strict provider and boolean validation to the shared pure preview.
+        return oauth_controls.propose(body["changes"])
+
+    # Commit one confirmed owner kill-switch change under optimistic concurrency. (OAUTH-012)
+    @router.post(r"/api/v2/admin/oauth/operational-controls")
+    # Apply only a readiness-gated provider transition with immutable evidence.
+    def admin_oauth_operational_controls_apply_v2(body, query, context):
+        # Resolve the current durable owner for authorization and audit attribution.
+        owner = _current_platform_owner(context.get("user"))
+        # Require the exact confirmed mutation contract and no smuggled provider configuration.
+        if not isinstance(body, dict) or set(body) != {"changes", "confirm", "reason", "revision"} or body.get("confirm") is not True:
+            # Fail closed before provider diagnostics or durable state access.
+            raise ValidationError("OAuth operational change requires explicit confirmation")
+        # Compute the exact revision-bound effect before the provider transaction.
+        proposal = oauth_controls.propose(body["changes"])
+        # Index only secret-safe reviewed provider diagnostics.
+        diagnostics = {row.get("provider"): row for row in provider_diagnostic_payload().get("providers", []) if row.get("provider") in oauth_controls.PROVIDERS}
+        # Identify switches changing from disabled to operational.
+        enabling = [provider for provider in oauth_controls.PROVIDERS if proposal["providers"][provider] is True and proposal["previous"][provider] is False]
+        # Require complete credentials, callback, independent network release, and integrated runtime before enabling.
+        if any(not bool(diagnostics.get(provider, {}).get("runtime_available")) or not bool(diagnostics.get(provider, {}).get("network_released")) for provider in enabling):
+            # Preserve disable and rollback while refusing readiness-by-assertion.
+            raise ForbiddenError("Provider operational enablement requires complete external release readiness")
+        # Commit the exact sparse transition with immutable owner evidence.
+        return oauth_controls.update(body["changes"], actor_id=owner.get("user_id"), reason=body.get("reason"), expected_revision=body.get("revision"))
+
     # Publish one owner-only secret-safe enrollment readiness aggregate. (AUTH-015, OAUTH-011)
     @router.get(r"/api/v2/admin/enrollment-readiness")
     # Combine durable policy, mail, recovery, and provider diagnostics without enabling any method.
@@ -959,6 +1008,8 @@ def register(router):
         oauth = provider_diagnostic_payload()
         # Index only the reviewed external providers by stable id.
         providers = {row.get("provider"): row for row in oauth.get("providers", []) if row.get("provider") in {"google", "facebook"}}
+        # Read durable provider login switches independently from signup method flags.
+        operational = oauth_controls.current()["providers"]
         # Compute email readiness from both recovery release and delivery readiness.
         email_ready = bool(PASSWORD_RESET_ENABLED and mail_readiness.get("status") == "ready")
         # Publish method-specific readiness separately from durable enable flags.
@@ -966,12 +1017,12 @@ def register(router):
             # Bind email signup readiness to both reset release and delivery readiness.
             "email": {"enabled": bool(policy.get("methods", {}).get("email")), "ready": email_ready, "blockers": [] if email_ready else ["password_recovery_or_mail_not_ready"]},
             # Bind Google readiness to allowlisted diagnostics without contacting the provider.
-            "google": {"enabled": bool(policy.get("methods", {}).get("google")), "ready": bool(providers.get("google", {}).get("runtime_available")), "blockers": list(providers.get("google", {}).get("problems") or providers.get("google", {}).get("missing_variables") or (["provider_not_ready"] if not providers.get("google", {}).get("runtime_available") else []))},
+            "google": {"enabled": bool(policy.get("methods", {}).get("google")), "operational": bool(operational.get("google")), "ready": bool(providers.get("google", {}).get("runtime_available")), "blockers": list(providers.get("google", {}).get("problems") or providers.get("google", {}).get("missing_variables") or (["provider_not_ready"] if not providers.get("google", {}).get("runtime_available") else []))},
             # Bind Facebook readiness through the same secret-safe provider projection.
-            "facebook": {"enabled": bool(policy.get("methods", {}).get("facebook")), "ready": bool(providers.get("facebook", {}).get("runtime_available")), "blockers": list(providers.get("facebook", {}).get("problems") or providers.get("facebook", {}).get("missing_variables") or (["provider_not_ready"] if not providers.get("facebook", {}).get("runtime_available") else []))},
+            "facebook": {"enabled": bool(policy.get("methods", {}).get("facebook")), "operational": bool(operational.get("facebook")), "ready": bool(providers.get("facebook", {}).get("runtime_available")), "blockers": list(providers.get("facebook", {}).get("problems") or providers.get("facebook", {}).get("missing_variables") or (["provider_not_ready"] if not providers.get("facebook", {}).get("runtime_available") else []))},
         }
         # Keep live enablement held even when repository configuration is structurally ready.
-        return {"policy": policy, "methods": methods, "mail": mail_readiness, "providers": oauth.get("providers", []), "live_enablement_authorized": False, "restricted_preview": True}
+        return {"policy": policy, "methods": methods, "provider_operations": operational, "mail": mail_readiness, "providers": oauth.get("providers", []), "live_enablement_authorized": False, "restricted_preview": True}
 
     # Publish a read-only launch gate dashboard that cannot activate any release control. (issue #209)
     @router.get(r"/api/v2/admin/launch-readiness")

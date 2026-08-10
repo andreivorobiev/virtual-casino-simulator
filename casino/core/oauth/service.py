@@ -18,7 +18,7 @@ from typing import Mapping
 from urllib.parse import urlencode
 
 # Import canonical authentication without creating or mutating users.
-from casino.core import auth, logger
+from casino.core import auth, logger, oauth_controls
 # Import random prefixed identifiers for flow persistence.
 from casino.core.ids import new_id
 # Import strict callback, URL, state, nonce, and PKCE helpers.
@@ -123,7 +123,7 @@ def _ready_provider(configuration: OAuthConfiguration, provider: str):
 # Coordinate provider adapters, one-time flows, canonical users, links, and sessions.
 class OAuthService:
     # Initialize production dependencies while retaining complete test injection.
-    def __init__(self, *, environ: Mapping[str, object] | None = None, storage: StorageProvider | None = None, adapter_factory=None, limiter: OAuthRateLimiter | None = None):
+    def __init__(self, *, environ: Mapping[str, object] | None = None, storage: StorageProvider | None = None, adapter_factory=None, limiter: OAuthRateLimiter | None = None, operational_gate=None):
         # Retain an injected environment snapshot or defer live reads until each request.
         self.environ = environ
         # Select the shared configured storage provider once for transactional repositories.
@@ -134,6 +134,8 @@ class OAuthService:
         self.adapter_factory = build_provider_adapter if adapter_factory is None else adapter_factory
         # Retain an optional injected limiter while production constructs a key-bound durable limiter lazily.
         self.limiter = limiter
+        # Resolve the durable owner kill switch on every production request while permitting isolated tests to inject a fixed decision.
+        self.operational_gate = oauth_controls.enabled if operational_gate is None else operational_gate
 
     # Load the current flag and credential snapshot so rollback takes effect without restart.
     def _configuration(self) -> OAuthConfiguration:
@@ -152,6 +154,10 @@ class OAuthService:
 
     # Build one request-local provider adapter without storing it in service representations.
     def _adapter(self, configuration: OAuthConfiguration, provider: str):
+        # Require the independently governed operational switch before credentials or network adapters are available.
+        if self.operational_gate(provider) is not True:
+            # Collapse disabled operational state into the same unavailable response as incomplete configuration.
+            raise NotFoundError("Identity provider is unavailable")
         # Require a currently ready provider before credential access.
         selected = _ready_provider(configuration, provider)
         # Construct the adapter with the exact public id and confidential secret.
@@ -162,7 +168,7 @@ class OAuthService:
         # Build secret-safe diagnostics from the current configuration.
         diagnostics = oauth_diagnostics(self._configuration())
         # Return only external provider ids and whether their complete runtime is ready.
-        return {"providers": [{"provider": item.provider, "available": item.status == "ready" and item.runtime_available} for item in diagnostics if item.provider in {"google", "facebook"}]}
+        return {"providers": [{"provider": item.provider, "available": self.operational_gate(item.provider) is True and item.status == "ready" and item.runtime_available} for item in diagnostics if item.provider in {"google", "facebook"}]}
 
     # Start one sign-in or explicit authenticated link operation.
     def start(self, provider: str, body: Mapping[str, object], context: dict) -> dict:
