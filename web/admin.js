@@ -268,6 +268,8 @@ function isManagedAccountUser(user) {
 async function users() {
   // Claim the latest Users-render revision before starting the asynchronous account read.
   const renderRevision = ++usersRenderRevision;
+  // Remove the prior interactive account table immediately so a user cannot edit controls that an in-flight refresh will replace.
+  view.replaceChildren();
   // Set the localized users title and subtitle.
   setTitle(t('users.title', {}, 'admin'), t('users.subtitle', {}, 'admin'));
   // Load users through the Admin user-management endpoint.
