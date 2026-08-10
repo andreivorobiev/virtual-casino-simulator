@@ -833,6 +833,7 @@
         "administrators_immutable_audit",
         "enrollment_policy",
         "provider_readiness",
+        "provider_operational_controls",
         "live_enablement_held",
         "launch_readiness",
         "launch_held_read_only",

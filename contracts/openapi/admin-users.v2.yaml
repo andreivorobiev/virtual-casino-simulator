@@ -374,6 +374,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /admin/oauth/operational-controls:
+    get:
+      summary: Read owner-only Google and Facebook login kill switches separately from enrollment-method flags.
+      operationId: admin_oauth_operational_controls_v2_read
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Verified default-off operational switches, immutable audit, and secret-safe readiness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthOperationalControlsEnvelope'
+        '403':
+          description: Current active platform-owner authority is required.
+    post:
+      summary: Apply one confirmed readiness-gated provider login switch change with immutable audit.
+      operationId: admin_oauth_operational_controls_v2_apply
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthOperationalApplyRequest'
+      responses:
+        '200':
+          description: The exact committed operational transition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthOperationalApplyEnvelope'
+        '400':
+          description: Confirmation, reason, revision, or provider values are invalid.
+        '403':
+          description: Owner authority or complete external provider release readiness is absent.
+        '409':
+          description: The supplied operational-control revision is stale or the transition is unchanged.
+  /admin/oauth/operational-controls/preview:
+    post:
+      summary: Preview provider login and lockout impact without changing durable controls.
+      operationId: admin_oauth_operational_controls_v2_preview
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthOperationalPreviewRequest'
+      responses:
+        '200':
+          description: Revision-bound exact switch and lockout impact.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthOperationalPreviewEnvelope'
+        '400':
+          description: Provider changes are malformed or outside the reviewed provider set.
+        '403':
+          description: Current active platform-owner authority is required.
   /admin/enrollment-readiness:
     get:
       summary: Read secret-safe email, Google, and Facebook readiness while live enablement remains separately held.
@@ -446,6 +508,158 @@ components:
           $ref: '#/components/schemas/EnrollmentMethods'
         invitations_enabled:
           type: boolean
+    OAuthOperationalProviders:
+      type: object
+      required: [google, facebook]
+      additionalProperties: false
+      properties:
+        google:
+          type: boolean
+        facebook:
+          type: boolean
+    OAuthOperationalChanges:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        google:
+          type: boolean
+        facebook:
+          type: boolean
+    OAuthOperationalAudit:
+      type: object
+      required: [audit_id, actor_id, reason, at, previous, current, revision, previous_digest, digest]
+      additionalProperties: false
+      properties:
+        audit_id:
+          type: string
+        actor_id:
+          type: string
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 256
+        at:
+          type: string
+          format: date-time
+        previous:
+          $ref: '#/components/schemas/OAuthOperationalProviders'
+        current:
+          $ref: '#/components/schemas/OAuthOperationalProviders'
+        revision:
+          type: integer
+          minimum: 1
+        previous_digest:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        digest:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+    OAuthOperationalControlsEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [revision, providers, audit, readiness]
+          additionalProperties: false
+          properties:
+            revision:
+              type: integer
+              minimum: 0
+            providers:
+              $ref: '#/components/schemas/OAuthOperationalProviders'
+            audit:
+              type: array
+              maxItems: 4096
+              items:
+                $ref: '#/components/schemas/OAuthOperationalAudit'
+            readiness:
+              type: array
+              items:
+                type: object
+    OAuthOperationalPreviewRequest:
+      type: object
+      required: [changes]
+      additionalProperties: false
+      properties:
+        changes:
+          $ref: '#/components/schemas/OAuthOperationalChanges'
+    OAuthOperationalPreviewEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [revision, previous, providers, impact]
+          additionalProperties: false
+          properties:
+            revision:
+              type: integer
+              minimum: 0
+            previous:
+              $ref: '#/components/schemas/OAuthOperationalProviders'
+            providers:
+              $ref: '#/components/schemas/OAuthOperationalProviders'
+            impact:
+              type: object
+              required: [providers_changed, existing_login_disabled]
+              additionalProperties: false
+              properties:
+                providers_changed:
+                  type: array
+                  items:
+                    type: string
+                    enum: [google, facebook]
+                existing_login_disabled:
+                  type: array
+                  items:
+                    type: string
+                    enum: [google, facebook]
+    OAuthOperationalApplyRequest:
+      type: object
+      required: [changes, confirm, reason, revision]
+      additionalProperties: false
+      properties:
+        changes:
+          $ref: '#/components/schemas/OAuthOperationalChanges'
+        confirm:
+          type: boolean
+          enum: [true]
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 256
+        revision:
+          type: integer
+          minimum: 0
+    OAuthOperationalApplyEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [revision, previous, providers, audit]
+          additionalProperties: false
+          properties:
+            revision:
+              type: integer
+              minimum: 1
+            previous:
+              $ref: '#/components/schemas/OAuthOperationalProviders'
+            providers:
+              $ref: '#/components/schemas/OAuthOperationalProviders'
+            audit:
+              $ref: '#/components/schemas/OAuthOperationalAudit'
     EnrollmentPolicyChanges:
       type: object
       additionalProperties: false

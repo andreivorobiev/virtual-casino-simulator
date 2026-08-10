@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.59.8
-- core: 9.39.2
+- application: 9.60.0
+- core: 9.39.3
 - ledger: 9.1.2
 - players: 9.1.1
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.17.0
+- admin: 1.18.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.6.4
@@ -50,9 +50,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.72.7
-- docs: 1.70.7
-- contracts: 1.57.5
+- tests: 1.73.0
+- docs: 1.71.0
+- contracts: 1.58.0
 - tooling: 1.27.1
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.4
@@ -623,6 +623,8 @@ Historical source baseline: 9.1.0
 - **TEST-165** (Tests) - PASS: A fail-closed requirement-source assembler derives the compatibility registry from one non-game spine and one descriptor-owned shard per catalog game, rejects missing, duplicate, malformed, or misowned permanent IDs, and makes direct aggregate edits fail CI.
 - **TEST-166** (Tests) - PASS: The current shell and Roulette client may explicitly request compact frozen-v1 compatibility projections that preserve every consumed player, navigation, presence, state, statistics, and settlement field while skipping unrelated shell history, ledger, player-list, duplicate catalog work, and repeated Roulette bet-catalog bytes. Default and ambiguous requests retain the complete legacy response, Roulette loads one immutable catalog per wheel mode, and listener-free tests prove material deterministic byte reduction without changing money or game state.
 - **TOOL-013** (Tooling) - PASS: A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.
+- **OAUTH-012** (Core) - PASS: Google and Facebook existing-account login is governed by durable provider-specific operational switches that are independent from public signup-method flags. Both switches default off, are read on every OAuth start, callback, and availability projection, and prevent credential-bearing adapter construction while disabled. Only the current platform owner may preview or confirm a transition; enablement additionally requires complete secret-safe configuration and the independent network-release latch, while disable and rollback remain immediately available. Every committed transition uses optimistic concurrency and a bounded hash-linked privacy-safe audit.
+- **TEST-167** (Tests) - PASS: Provider operational-control qualification proves default-off behavior, strict provider and boolean allowlists, owner-only API access, secret-safe readiness-gated enablement, always-available disablement, optimistic stale-write rejection, immutable audit continuity, and OAuth adapter non-construction while a provider switch is off across isolated storage and registered API routes.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

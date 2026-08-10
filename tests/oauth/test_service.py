@@ -103,7 +103,7 @@ class OAuthServiceTests(unittest.TestCase):
             # Return the isolated request-local adapter.
             return adapter
         # Return a test service whose adapters never use credentials or provider network access.
-        return OAuthService(environ={} if environment is None else environment, storage=self.storage, adapter_factory=adapter_factory)
+        return OAuthService(environ={} if environment is None else environment, storage=self.storage, adapter_factory=adapter_factory, operational_gate=lambda _provider: True)
 
     # Build a minimal browser context with the stable owner cookie.
     def context(self, cookie=BROWSER_COOKIE):
@@ -256,13 +256,42 @@ class OAuthServiceTests(unittest.TestCase):
             # Return an inert fake if the policy incorrectly reaches this boundary.
             return FakeAdapter(provider)
         # Construct the service with complete configuration but no release authority.
-        service = OAuthService(environ=environment, storage=self.storage, adapter_factory=factory)
+        service = OAuthService(environ=environment, storage=self.storage, adapter_factory=factory, operational_gate=lambda _provider: True)
         # Reject provider start as unavailable under the independent gate.
         with self.assertRaises(NotFoundError):
             # Attempt no provider network or flow persistence.
             service.start("google", {"action": "signin", "return_to": "/"}, self.context())
         # Require adapter construction to remain completely inaccessible.
         self.assertEqual(constructions, [])
+
+    # Prove the owner kill switch is independent from complete provider configuration. (OAUTH-012)
+    def test_operational_kill_switch_prevents_adapter_construction(self):
+        # Count every adapter construction attempt without retaining credentials.
+        constructions = []
+        # Record only bounded provider ids when each request reads the independent switch.
+        decisions = []
+        # Build one factory that must remain unreachable while the durable switch is off.
+        def factory(provider, _client_id, _client_secret):
+            # Record only the bounded provider identifier if isolation fails.
+            constructions.append(provider)
+            # Return an inert fake without provider traffic.
+            return FakeAdapter(provider)
+        # Construct complete provider configuration behind one fixed disabled operational seam.
+        service = OAuthService(environ=GOOGLE_ENV, storage=self.storage, adapter_factory=factory, operational_gate=lambda provider: decisions.append(provider) or False)
+        # Publish the provider as unavailable even though its environment is otherwise ready.
+        self.assertEqual(service.public_provider_status(), {"providers": [{"provider": "google", "available": False}, {"provider": "facebook", "available": False}]})
+        # Require the availability projection to read both reviewed switches even when configuration is incomplete.
+        self.assertEqual(decisions, ["google", "facebook"])
+        # Isolate the next request's switch-read proof.
+        decisions.clear()
+        # Reject provider start before credential-bearing adapter construction.
+        with self.assertRaises(NotFoundError):
+            # Attempt no flow or network operation.
+            service.start("google", {"action": "signin", "return_to": "/"}, self.context())
+        # Require adapter construction to remain completely inaccessible.
+        self.assertEqual(constructions, [])
+        # Require the rejected start to read the exact requested provider switch once.
+        self.assertEqual(decisions, ["google"])
 
     # Prove a transient exchange releases the exact flow for one bounded same-state retry.
     def test_transient_exchange_failure_preserves_recoverable_flow(self):
@@ -279,7 +308,7 @@ class OAuthServiceTests(unittest.TestCase):
             # Return the bounded fake adapter.
             return adapter
         # Construct the service under complete synthetic dual-gate configuration.
-        service = OAuthService(environ=GOOGLE_ENV, storage=self.storage, adapter_factory=factory)
+        service = OAuthService(environ=GOOGLE_ENV, storage=self.storage, adapter_factory=factory, operational_gate=lambda _provider: True)
         # Prelink one provider subject so a recovered sign-in can complete without email matching.
         service.links.save(ExternalIdentityLink(provider="google", subject="google-subject", user_id=self.user["user_id"], created_at="2026-07-19T00:00:00.000Z", updated_at="2026-07-19T00:00:00.000Z"))
         # Suppress test audit writes and inject only canonical session dependencies.

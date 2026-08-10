@@ -10440,6 +10440,55 @@
       "introduced_in": "agent-memory-v1",
       "changed_in": "agent-memory-v1",
       "notes": "The first slice validates provenance structure and current path existence; 30-day and changed-since-source staleness remain mandatory use-time policy and may gain automated reporting in a later reviewed slice."
+    },
+    {
+      "id": "OAUTH-012",
+      "module": "Core",
+      "description": "Google and Facebook existing-account login is governed by durable provider-specific operational switches that are independent from public signup-method flags. Both switches default off, are read on every OAuth start, callback, and availability projection, and prevent credential-bearing adapter construction while disabled. Only the current platform owner may preview or confirm a transition; enablement additionally requires complete secret-safe configuration and the independent network-release latch, while disable and rollback remain immediately available. Every committed transition uses optimistic concurrency and a bounded hash-linked privacy-safe audit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OAUTH-002",
+        "API-ACCOUNT-SPINE-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-USERS-001"
+      ],
+      "implementation_files": [
+        "casino/core/oauth_controls.py",
+        "casino/core/oauth/service.py",
+        "casino/admin.py",
+        "web/admin.js",
+        "contracts/openapi/admin-users.v2.yaml",
+        "tests/oauth/test_operational_controls.py",
+        "tests/oauth/test_service.py",
+        "tests/account_spine_tests.py"
+      ],
+      "introduced_in": "issue-333-provider-operational-controls",
+      "changed_in": "issue-333-provider-operational-controls",
+      "notes": "Completes the repository-controlled provider kill-switch remainder of #333. Live provider configuration, provider-console mutation, credentials, DNS, public signup, and unrestricted launch remain external gates under #336 and #209."
+    },
+    {
+      "id": "TEST-167",
+      "module": "Tests",
+      "description": "Provider operational-control qualification proves default-off behavior, strict provider and boolean allowlists, owner-only API access, secret-safe readiness-gated enablement, always-available disablement, optimistic stale-write rejection, immutable audit continuity, and OAuth adapter non-construction while a provider switch is off across isolated storage and registered API routes.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OAUTH-002",
+        "API-ACCOUNT-SPINE-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-USERS-001"
+      ],
+      "implementation_files": [
+        "tests/oauth/test_operational_controls.py",
+        "tests/oauth/test_service.py",
+        "tests/account_spine_tests.py",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-333-provider-operational-controls",
+      "changed_in": "issue-333-provider-operational-controls",
+      "notes": "The test requirement is limited to repository-safe control and fail-closed evidence; no live provider traffic or external enablement is exercised."
     }
   ]
 }

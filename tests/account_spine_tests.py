@@ -18,7 +18,7 @@ from casino import config
 # Import Admin account management helpers under test.
 from casino import admin
 # Import the canonical auth identity/session store.
-from casino.core import admin_roles, auth, enrollment_policy, password_reset
+from casino.core import admin_roles, auth, enrollment_policy, oauth_controls, password_reset
 # Import reporter-status service behavior.
 from casino.core import feedback
 # Import wallet storage reset helpers.
@@ -83,6 +83,33 @@ class ProductAccountSpineTests(unittest.TestCase):
                 ROUTER.dispatch("POST", "/api/v2/auth/signup", {"email": "signup-held@example.test", "password": "SignupHeldPassw0rd!23", "display_name": "Signup Held", "terms_version": "private-beta-1", "accepted": True}, context={"client": "unit", "response_headers": []})
         # Require the failed signup attempt to create no account.
         self.assertIsNone(auth.find_user_by_email("signup-held@example.test"))
+
+    # Prove provider login kill switches stay separate, readiness-gated, and reversible. (OAUTH-012, TEST-167)
+    def test_provider_operational_controls_are_owner_gated(self) -> None:
+        # Seed the active platform owner required by every operational-control route.
+        owner = self._owner_admin()
+        # Read the default-off controls through the registered Admin API.
+        initial = ROUTER.dispatch("GET", "/api/v2/admin/oauth/operational-controls", context={"user": owner})
+        # Require independent Google/Facebook switches and no prior audit.
+        self.assertEqual((initial["revision"], initial["providers"], initial["audit"]), (0, {"google": False, "facebook": False}, []))
+        # Reject enablement while external runtime readiness is absent.
+        with patch("casino.admin.provider_diagnostic_payload", return_value={"providers": [{"provider": "google", "runtime_available": False, "network_released": False}]}):
+            # Fail before durable mutation even with explicit owner confirmation.
+            with self.assertRaises(ForbiddenError):
+                # Attempt no external provider activation.
+                ROUTER.dispatch("POST", "/api/v2/admin/oauth/operational-controls", {"changes": {"google": True}, "confirm": True, "reason": "Synthetic incomplete readiness", "revision": 0}, context={"user": owner})
+        # Require the rejected enablement to leave the switch document untouched.
+        self.assertEqual(oauth_controls.current()["revision"], 0)
+        # Supply complete secret-safe readiness without constructing an adapter or contacting a provider.
+        with patch("casino.admin.provider_diagnostic_payload", return_value={"providers": [{"provider": "google", "runtime_available": True, "network_released": True}]}):
+            # Commit one synthetic owner enablement through the exact guarded route.
+            enabled = ROUTER.dispatch("POST", "/api/v2/admin/oauth/operational-controls", {"changes": {"google": True}, "confirm": True, "reason": "Synthetic complete readiness", "revision": 0}, context={"user": owner})
+        # Require the provider switch and immutable transition to commit together.
+        self.assertEqual((enabled["revision"], enabled["providers"]), (1, {"google": True, "facebook": False}))
+        # Disable the provider without requiring external readiness so rollback always remains available.
+        disabled = ROUTER.dispatch("POST", "/api/v2/admin/oauth/operational-controls", {"changes": {"google": False}, "confirm": True, "reason": "Synthetic emergency rollback", "revision": 1}, context={"user": owner})
+        # Require immediate default-off recovery and two retained audit rows.
+        self.assertEqual((disabled["revision"], disabled["providers"], len(oauth_controls.current()["audit"])), (2, {"google": False, "facebook": False}, 2))
 
     # Prove all three password-recovery handlers are explicit public v2 routes with bounded delegation. (RESET-004)
     def test_password_recovery_routes_are_public_and_enumeration_safe(self) -> None:
