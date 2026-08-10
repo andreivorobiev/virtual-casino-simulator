@@ -8173,8 +8173,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     roulette_audio_settings={'master_enabled':True,'sfx_enabled':True,'voice_enabled':True,'announce_roulette_results':True}
                     # Fulfill only the helper's test-owned settings write without changing backend owner policy.
                     page.route('**/api/v1/admin/audio-settings',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'settings':roulette_audio_settings}})))
-                    # Apply the explicit opt-in through the same public voice helper used by Admin.
-                    page.evaluate("async settings => { const voice=await import('/core/voice.js'); await voice.saveVoiceSettings(settings); }",roulette_audio_settings)
+                    # Apply both the account-owned and Admin-owned explicit opt-ins through the public voice helper.
+                    page.evaluate("async settings => { const voice=await import('/core/voice.js'); voice.setPersonalSoundEnabled(true); await voice.saveVoiceSettings(settings); }",roulette_audio_settings)
                     # Remove the exact route seam before the real spin and all downstream network assertions.
                     page.unroute('**/api/v1/admin/audio-settings')
                     # Capture the authoritative backend spin response while using the visible Roulette action.
@@ -10652,12 +10652,26 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert grant_response_info.value.json()['ok'] is True; page.locator(f'.administrator-revoke[data-user="{created_user_id}"]').wait_for(timeout=10000)
                         # Require one immutable audit row and scrubbed password field after the rerender.
                         assert 'Browser delegation acceptance' in page.get_by_test_id('admin-administrator-audit').inner_text() and page.locator('#administrator-password').input_value()==''
+                        # Open the Administrators workspace in one locale without racing its asynchronous locale rerender.
+                        def open_administrators_locale(locale):
+                            # Read the current runtime locale before deciding whether locale notification or an explicit tab activation owns the load.
+                            current_locale=page.evaluate("() => window.CasinoI18n.getLocaleState().locale")
+                            # Observe the one canonical Administrators listing request that must complete the requested render.
+                            with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/administrators') and response.request.method=='GET') as administrators_response_info:
+                                # Let a genuine locale transition own the reload, otherwise activate the already-localized tab explicitly.
+                                if current_locale!=locale: page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                                # Trigger exactly one load when the locale is already current and no locale notification will fire.
+                                else: page.get_by_test_id('admin-tab-administrators').click()
+                            # Require a successful listing envelope before interacting with its replacement DOM.
+                            assert administrators_response_info.value.json()['ok'] is True
+                            # Wait until the asynchronously rendered heading uses the requested locale rather than the prior DOM.
+                            page.wait_for_function("async () => { const i18n=await import('/core/i18n.js'); return document.querySelector('#adminTitle')?.textContent===i18n.t('administrators.title',{},'admin'); }")
+                            # Require the replacement workspace and its scrubbed transient-password field.
+                            page.get_by_test_id('admin-administrator-list').wait_for(timeout=5000); assert page.locator('#administrator-password').input_value()==''
                         # Capture the complete delegation workspace under every required locale and viewport.
                         for locale in ('en-US','ru-RU'):
-                            # Switch through the shared Admin locale runtime.
-                            page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
-                            # Reload Administrators so every visible string comes from the selected locale.
-                            page.get_by_test_id('admin-tab-administrators').click(); page.get_by_test_id('admin-administrator-list').wait_for(timeout=5000)
+                            # Render the exact locale through one non-racing Administrators load.
+                            open_administrators_locale(locale)
                             # Exercise every governed responsive viewport without allowing horizontal page overflow.
                             for viewport_id,viewport in account_viewports.items():
                                 # Apply the exact matrix viewport and wait for layout to settle.
@@ -10666,8 +10680,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 assert page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1") and page.locator('#administrator-password').input_value()==''
                                 # Capture exact-head after-pass privilege-management evidence.
                                 game_evidence(f'after-pass-admin-administrators-{locale}-{viewport_id}.png','BR-ADMIN-USERS-001',['administrator_list','owner_reauthentication','immutable_audit'],locale,viewport_id)
-                        # Restore English and desktop geometry before revoking the temporary grant.
-                        page.set_viewport_size(account_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }"); page.get_by_test_id('admin-tab-administrators').click()
+                        # Restore English and desktop geometry through one completed render before revoking the temporary grant.
+                        page.set_viewport_size(account_viewports['desktop_primary']); open_administrators_locale('en-US')
                         # Supply a fresh transient step-up and explicit revoke reason after the grant rerender.
                         page.locator('#administrator-password').fill(DEFAULT_AUTH_PASSWORD); page.locator('#administrator-reason').fill('Browser delegation cleanup')
                         # Revoke only the temporary ordinary-Admin grant through the dedicated route.

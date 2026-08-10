@@ -816,8 +816,8 @@ async function enterAuthenticated(session) {
     const preferences = preferenceData.settings || {};
     // Apply the caller's durable sound preference before games can mount.
     setPersonalSoundEnabled(preferences.sound_enabled === true);
-    // Apply a supported durable locale without creating another server mutation.
-    if (preferences.locale && preferences.locale !== getLocaleState().locale) await setLocale(preferences.locale, { persistLocal: false });
+    // Override the active login/browser locale only after the caller explicitly saved a durable preference.
+    if (preferences.updated_at && preferences.locale && preferences.locale !== getLocaleState().locale) await setLocale(preferences.locale, { persistLocal: false });
   // Preserve login availability if a compatible older server has no settings surface.
   } catch (_) {
     // Keep the default local sound and locale behavior for a missing optional preference read.
@@ -979,8 +979,8 @@ async function renderMySettings(view) {
   const localeSelect = view.querySelector('#personal-settings-locale');
   // Reuse the shared option renderer before selecting the server-authored value.
   localeSelect.innerHTML = localeOptionsHtml();
-  // Select only a supported value and otherwise retain the active locale.
-  localeSelect.value = settings.locale || getLocaleState().locale;
+  // Preserve the active login/browser locale until a real durable settings write establishes a preference.
+  localeSelect.value = settings.updated_at ? settings.locale : getLocaleState().locale;
   // Save one optimistic personal preference revision without touching Admin policy.
   view.querySelector('#personal-settings-form').onsubmit = async event => {
     // Keep the browser on the personal settings route.
