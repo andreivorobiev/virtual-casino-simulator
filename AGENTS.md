@@ -26,6 +26,15 @@ GitHub is the source of truth after this payload is pushed. Work must happen thr
 - Codex is the coordinator, shared-integration owner, independent reviewer, and sole executor for every repository merge.
 - Codex merge ownership does not replace required owner approval, protected-branch rules, exact-head validation, independent acceptance, release gates, deployment authority, or any other safety boundary.
 
+## Persistent agent memory
+
+- All repository agent roles may read `agents/memory/`.
+- Only the `engineering-manager` role may propose memory writes, and only after the associated task is complete.
+- Memory writes use a normal branch and pull request, pass repository gates, and receive independent review; no agent self-approves a memory edit.
+- Memory must never contain secrets, tokens, credentials, personal data, provider payloads, or values from `.env`.
+- A memory fact older than 30 days or citing a path changed after its source commit is stale and must be revalidated before use.
+- Memory summarizes repository source but never overrides requirements, contracts, protected-branch rules, or release and deployment authority.
+
 ## Required workflow
 
 1. Read the relevant requirement IDs before editing.
