@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.69 Release Notes
+
+## Append-only JSON ledger action journal
+
+- Packages accepted content PR #669 and closes repository-controlled issue #432; release-owned application advances to `9.61.2`.
+- Replaces per-action whole-history JSON action snapshot rewrites with one fsynced append-only commit record and one projection marker.
+- Preserves legacy `ledger_actions.json` snapshot readability, exact replay, conflict detection, lost-response recovery, and all game-visible settlement behavior.
+- Incrementally observes cross-process journal tails, visits only pending identities during crash recovery, and uses an immutable ledger-identity index for projection lookup.
+- Fails closed on partial, corrupt, conflicting, or interrupted-compaction records and periodically compacts settled references below 200 bytes per action.
+- Carries permanent requirements `LEDGER-034` and `TEST-169`; the governed total is exactly 942 requirements.
+- Records the exact canonical package inventory as 751 regular files: v0.9.5.68 inventory 750 plus this v0.9.5.69 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.40.1`, Ledger `9.1.2`, tooling `1.28.0`, and every game revision remain exact protected-main values.
+- Retains exact immutable terminal-green v0.9.5.68 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.68 Release Notes
 
 ## Policy-gated social signup
