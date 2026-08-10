@@ -1400,6 +1400,12 @@ def run_api_tests():
         result=subprocess.run([sys.executable,'-m','unittest',module_name,'-v'],cwd=str(ROOT),capture_output=True,text=True,timeout=600)
         # Fail the named central case when any focused assertion fails, preserving the child's diagnostic tail.
         if result.returncode!=0: raise AssertionError(f'{failure_message}: {result.stderr[-1500:]}')
+    # Record the exact-source payload and shipped-asset budget checkpoint. (issue #323, TEST-159)
+    run_case('PERF-PAYLOAD-BUDGET-001',['TEST-159'],lambda: run_unit_module('tests.unit.payload_frontend_budget_tests','payload and frontend budget suite failed'))
+    # Record the fail-closed process-safety inventory used before any worker-count increase. (issue #323, TEST-160)
+    run_case('PERF-MULTIPROCESS-SAFETY-001',['TEST-160'],lambda: run_unit_module('tests.unit.multiprocess_safety_audit_tests','multiprocess safety audit suite failed'))
+    # Record the descriptor-owned game-suite discovery boundary without migrating game descriptors yet. (issue #434, TEST-161)
+    run_case('GOV-GAME-SUITE-DISCOVERY-001',['TEST-161'],lambda: run_unit_module('tests.game_suite_discovery_tests','game suite discovery suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['STORAGE-009','TEST-135'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)

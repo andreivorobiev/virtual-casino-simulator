@@ -13486,6 +13486,42 @@
       "notes": "No old Browser artifact is reused; hosted exact-head qualification produces fresh evidence after this source lands."
     },
     {
+      "id": "TEST-159",
+      "module": "Tests",
+      "description": "A listener-free exact-source payload and shipped-asset budget checkpoint accepts only bounded JSON and MySQL request-latency evidence, derives deterministic compression and asset composition facts, rejects hostile or mismatched inputs, and never starts a listener or contacts production.",
+      "status": "PASS",
+      "api_tests": ["PERF-PAYLOAD-BUDGET-001"],
+      "browser_tests": [],
+      "implementation_files": ["tests/payload_frontend_budget.py", "tests/unit/payload_frontend_budget_tests.py", "tests/run_tests.py"],
+      "introduced_in": "top-half-portfolio-v61",
+      "changed_in": "top-half-portfolio-v61",
+      "notes": "This advances issue #323 Package D with source-bound measurement policy; it does not claim production performance acceptance."
+    },
+    {
+      "id": "TEST-160",
+      "module": "Tests",
+      "description": "A fail-closed static multiprocess-safety audit inventories every registered game and reviewed session, autoplay, bot, limiter, operations, settlement-adapter, provider-cache, and MySQL-pool state owner before any worker-count change, and rejects unclassified entrypoints or mutable singleton state.",
+      "status": "PASS",
+      "api_tests": ["PERF-MULTIPROCESS-SAFETY-001"],
+      "browser_tests": [],
+      "implementation_files": ["scripts/audit_multiprocess_safety.py", "tests/unit/multiprocess_safety_audit_tests.py", "tests/run_tests.py"],
+      "introduced_in": "top-half-portfolio-v61",
+      "changed_in": "top-half-portfolio-v61",
+      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production."
+    },
+    {
+      "id": "TEST-161",
+      "module": "Tests",
+      "description": "Descriptor-owned game suite declarations are parsed through a strict dotted-module boundary, require unique permanent case and requirement mappings, reject empty, missing, duplicated, unstable, or failing suites, and preserve deterministic module execution order without a central game allowlist.",
+      "status": "PASS",
+      "api_tests": ["GOV-GAME-SUITE-DISCOVERY-001"],
+      "browser_tests": [],
+      "implementation_files": ["tests/game_suite_discovery.py", "tests/game_suite_discovery_tests.py", "tests/run_tests.py"],
+      "introduced_in": "top-half-portfolio-v61",
+      "changed_in": "top-half-portfolio-v61",
+      "notes": "This advances issue #434 with the executable discovery boundary; per-game descriptor migration and removal of the legacy central registrations remain separately visible until completed."
+    },
+    {
       "id": "TOOL-013",
       "module": "Tooling",
       "description": "A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.",
