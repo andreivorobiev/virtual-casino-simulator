@@ -13571,8 +13571,8 @@
       "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-001", "API-GAMECORE-002"],
       "browser_tests": [],
       "implementation_files": ["casino/core/storage.py", "casino/core/ledger.py", "casino/core/settlement.py", "casino/games/deuces_wild_video_poker/api.py"],
-      "introduced_in": "issue-432-ledger-action-index",
-      "changed_in": "issue-432-ledger-action-index",
+      "introduced_in": "issue-653-provider-action-index-bridge",
+      "changed_in": "issue-653-provider-action-index-bridge",
       "notes": "This compatibility bridge exposes the index already written by both providers and keeps the legacy JSON action journal byte-compatible for application-only rollback. A later release may change the journal format only after its immediate predecessor can read both formats."
     },
     {
@@ -13583,8 +13583,8 @@
       "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-001", "API-GAMECORE-002"],
       "browser_tests": [],
       "implementation_files": ["tests/storage_tests.py", "tests/settlement_core_tests.py", "tests/run_tests.py"],
-      "introduced_in": "issue-432-ledger-action-index",
-      "changed_in": "issue-432-ledger-action-index",
+      "introduced_in": "issue-653-provider-action-index-bridge",
+      "changed_in": "issue-653-provider-action-index-bridge",
       "notes": "The permanent tests use only isolated temporary JSON storage and fake MySQL connections; no listener, public browser, production service, or provider credential is touched."
     },
     {
