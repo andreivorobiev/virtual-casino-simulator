@@ -4781,6 +4781,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001','SESSION-006'],lambda: logout_me_status['status']==401 and logout_me_status['ok'] is False and page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
                     # Re-login after logout so the existing browser suite can continue authenticated.
                     page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Establish the English oracle explicitly because re-authentication correctly restores a previously saved locale preference.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait until the shared runtime and mounted shell both own the English locale before asserting English token copy.
+                    page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'en-US'")
                     # Clear expected unauthenticated /me failures produced by the login and logout gates.
                     console_errors.clear(); http_errors.clear()
                     # Navigate to Roulette to verify the same current-user wallet persists on a game surface.

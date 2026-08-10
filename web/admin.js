@@ -14,6 +14,8 @@ import { applyTranslations, formatDate, formatMoney, formatNumber, getLocaleSett
 let current = 'dashboard';
 // Store lastUserPassword so Admin can see the latest one-time credential after rerender.
 let lastUserPassword = '';
+// Increment the Users-render revision so an older same-tab response cannot overwrite a newer account mutation.
+let usersRenderRevision = 0;
 // Preserve low-cardinality Guest Trials filters across locale rerenders and refreshes.
 let guestFilters = { locale: '', device: '', status: '', game: '', completed: '', error_category: '', range: '' };
 // Preserve governed problem-report filters across detail navigation and refreshes.
@@ -264,12 +266,14 @@ function isManagedAccountUser(user) {
 
 // Define users to render the Admin beta-user management workspace.
 async function users() {
+  // Claim the latest Users-render revision before starting the asynchronous account read.
+  const renderRevision = ++usersRenderRevision;
   // Set the localized users title and subtitle.
   setTitle(t('users.title', {}, 'admin'), t('users.subtitle', {}, 'admin'));
   // Load users through the Admin user-management endpoint.
   const data = await api('/api/v1/admin/users');
-  // Stop stale user-management responses from overwriting a newer active tab.
-  if (!isActiveTab('users')) return;
+  // Stop inactive-tab or superseded same-tab responses from overwriting the newest account state.
+  if (!isActiveTab('users') || renderRevision !== usersRenderRevision) return;
   // Keep the visible table account-only even if an older server returns temporary guest principals.
   const managedUsers = (data.users || []).filter(isManagedAccountUser);
   // Store password notice so rerenders can show the latest one-time credential.
