@@ -271,6 +271,8 @@
   "whatsNew.entry.0_9_5_67.body": "This release adds independent default-off Google and Facebook operational switches without enabling public signup.",
   "whatsNew.entry.0_9_5_68.title": "Policy-gated social signup",
   "whatsNew.entry.0_9_5_68.body": "This release adds disabled-by-default Google and Facebook signup into canonical Casino accounts without enabling provider traffic or public launch.",
+  "whatsNew.entry.0_9_5_69.title": "Append-only ledger action journal",
+  "whatsNew.entry.0_9_5_69.body": "This release makes JSON exactly-once action writes append-only, cross-process visible, crash-recoverable, and periodically compacted without changing game or wallet behavior.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
