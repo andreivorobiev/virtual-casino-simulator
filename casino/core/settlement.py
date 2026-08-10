@@ -19,8 +19,8 @@ from casino.core.validation import require_finite_number
 from casino.errors import ConflictError, ValidationError
 
 
-# Bound proof reconstruction to the existing generous player-local history window.
-LEDGER_PROOF_SCAN_LIMIT = 1_000_000
+# Bound only injected legacy test-seam proof reconstruction to a small local window.
+LEGACY_PROOF_FALLBACK_LIMIT = 1_000
 # Reserve canonical detail keys that callers may repeat only with identical values.
 CANONICAL_DETAIL_KEYS = ("game_action_key", "request_fingerprint", "round_id")
 
@@ -89,11 +89,13 @@ def _canonical_details(details, *, action_key: str, request_fingerprint: str, ro
 # Provide injectable public-ledger seams for focused listener-free proof.
 class SettlementAdapter:
     # Bind the adapter to public ledger functions unless focused tests inject substitutes.
-    def __init__(self, *, debit_once=None, credit_once=None, read_recent=None) -> None:
+    def __init__(self, *, debit_once=None, credit_once=None, find_action=None, read_recent=None) -> None:
         # Retain the storage-atomic debit entry point.
         self._debit_once = debit_once or ledger.debit_once
         # Retain the storage-atomic credit entry point.
         self._credit_once = credit_once or ledger.credit_once
+        # Use the provider action index in production while preserving explicitly injected legacy seams.
+        self._find_action = find_action or (None if read_recent is not None else ledger.find_action)
         # Retain the player-scoped proof reader used only after commit or conflict.
         self._read_recent = read_recent or ledger.read_recent
 
@@ -123,8 +125,10 @@ class SettlementAdapter:
         action_key = _require_identity(action_key, field="action_key")
         # Validate the upstream semantic fingerprint used for compatible recovery.
         request_fingerprint = _require_identity(request_fingerprint, field="request_fingerprint")
-        # Read only this player's bounded recent history for response or recovery proof.
-        rows = self._read_recent(player_id, LEDGER_PROOF_SCAN_LIMIT)
+        # Resolve the canonical storage identity directly when the provider seam is available.
+        indexed_event = self._find_action(player_id, game_id, action_key) if self._find_action is not None else None
+        # Use the indexed singleton in production or the bounded injected history in legacy focused tests.
+        rows = ([indexed_event] if indexed_event is not None else []) if self._find_action is not None else self._read_recent(player_id, LEGACY_PROOF_FALLBACK_LIMIT)
         # Inspect newest rows first so a corrupt duplicate cannot hide a later conflict.
         for event in reversed(rows):
             # Ignore malformed non-object rows rather than trusting their shape.
@@ -264,6 +268,7 @@ class GameSettlementGateway:
         *,
         debit_once=None,  # Allow focused tests to inject a storage-atomic debit seam.
         credit_once=None,  # Allow focused tests to inject a storage-atomic credit seam.
+        find_action=None,  # Allow focused tests to inject the provider point-lookup seam.
         read_recent=None,  # Allow focused tests to inject player-scoped proof rows.
         debit=None,  # Accept the old raw test seam without using it in production.
         credit=None,  # Accept the old raw test seam without using it in production.
@@ -297,7 +302,7 @@ class GameSettlementGateway:
             # Use the wrapped test seam instead of the production credit-once function.
             credit_once = compatibility_credit_once
         # Build the one canonical adapter that owns every production money movement.
-        self._adapter = SettlementAdapter(debit_once=debit_once, credit_once=credit_once, read_recent=read_recent)
+        self._adapter = SettlementAdapter(debit_once=debit_once, credit_once=credit_once, find_action=find_action, read_recent=read_recent)
 
     # Read one committed action by canonical or transitional action-detail identity.
     def find(self, player_id, action_key=None, **dimensions):
@@ -307,8 +312,10 @@ class GameSettlementGateway:
         player_id = _require_identity(player_id, field="player_id")
         # Validate the stable game action identity before scanning proof.
         action_key = _require_identity(action_key, field="action_key")
-        # Read player-local proof only through the shared adapter-owned ledger seam.
-        rows = self._adapter._read_recent(player_id, LEDGER_PROOF_SCAN_LIMIT)
+        # Resolve the storage identity directly when production or a focused indexed seam provides it.
+        indexed_event = self._adapter._find_action(player_id, self.game_id, action_key) if self._adapter._find_action is not None else None
+        # Use the indexed singleton or a bounded injected legacy-history fallback.
+        rows = ([indexed_event] if indexed_event is not None else []) if self._adapter._find_action is not None else self._adapter._read_recent(player_id, LEGACY_PROOF_FALLBACK_LIMIT)
         # Inspect newest rows first so recovery sees the latest compatible event.
         for event in reversed(rows):
             # Ignore malformed rows and every other game namespace.

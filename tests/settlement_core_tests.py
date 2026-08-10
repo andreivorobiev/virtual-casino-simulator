@@ -6,7 +6,7 @@ import math
 import unittest
 
 # Import the new route-free adapter under direct test.
-from casino.core.settlement import GameSettlementGateway, LEDGER_PROOF_SCAN_LIMIT, SettlementAdapter
+from casino.core.settlement import GameSettlementGateway, LEGACY_PROOF_FALLBACK_LIMIT, SettlementAdapter
 # Import public errors used by the adapter's stable failure contract.
 from casino.errors import ConflictError, ValidationError
 # Import the repository validator so the permanent test exercises its actual catalog-derived gate.
@@ -62,6 +62,8 @@ class _LedgerSeam:
         self.credit_calls = []
         # Record every recent-ledger lookup for bounded proof assertions.
         self.read_calls = []
+        # Record every provider-indexed lookup for exact identity assertions.
+        self.find_calls = []
         # Return this exact debit result unless a test configures an exception.
         self.debit_result = (_event(), False)
         # Return this exact credit result unless a test configures an exception.
@@ -72,6 +74,8 @@ class _LedgerSeam:
         self.credit_error = None
         # Return these exact rows from the bounded proof reader.
         self.rows = []
+        # Return this exact event from the provider point lookup.
+        self.indexed_event = None
 
     # Capture a storage-atomic debit proposal.
     def debit_once(self, **kwargs):
@@ -102,10 +106,17 @@ class _LedgerSeam:
         # Return a fresh list so the adapter cannot mutate the seam's fixture.
         return list(self.rows)
 
+    # Return one provider-indexed action without scanning history.
+    def find_action(self, player_id, game, action_key):
+        # Record the canonical identity dimensions selected by the adapter.
+        self.find_calls.append((player_id, game, action_key))
+        # Return the configured exact event or miss.
+        return self.indexed_event
+
     # Build an adapter bound only to these listener-free seams.
     def adapter(self) -> SettlementAdapter:
-        # Inject all three public-ledger boundaries under test.
-        return SettlementAdapter(debit_once=self.debit_once, credit_once=self.credit_once, read_recent=self.read_recent)
+        # Inject every public-ledger boundary under test.
+        return SettlementAdapter(debit_once=self.debit_once, credit_once=self.credit_once, find_action=self.find_action, read_recent=self.read_recent)
 
 
 # Prove the settlement checkpoint is additive, atomic, and fail closed.
@@ -241,23 +252,16 @@ class SettlementAdapterTests(unittest.TestCase):
         seam = _LedgerSeam()
         # Build the exact event that alone may satisfy the lookup.
         expected = _event()
-        # Mix unrelated identities around the valid row.
-        seam.rows = [
-            # Keep a same-named action under another player isolated.
-            _event(player_id="player-b"),
-            # Keep a same-named action under another game isolated.
-            _event(game="other-game"),
-            # Keep another action key in the same game isolated.
-            _event(action_key="action-2"),
-            # Provide the exact compatible proof.
-            expected,
-        ]
+        # Return the exact identity selected by the provider index.
+        seam.indexed_event = expected
         # Locate the committed action through every immutable dimension.
         result = seam.adapter().find_action(**self._arguments())
         # Return the exact stored object without reconstructing audit data.
         self.assertIs(result, expected)
-        # Read only the authenticated player's bounded proof window.
-        self.assertEqual(seam.read_calls, [("player-a", LEDGER_PROOF_SCAN_LIMIT)])
+        # Query only the canonical player, game, and action identity.
+        self.assertEqual(seam.find_calls, [("player-a", "example-game", "action-1")])
+        # Never scan recent history when the indexed seam is present.
+        self.assertEqual(seam.read_calls, [])
 
     # Prove reused scoped identities fail closed across round/type/amount/fingerprint.
     def test_find_action_rejects_changed_scoped_identity_dimensions(self):
@@ -276,8 +280,8 @@ class SettlementAdapterTests(unittest.TestCase):
         for event in conflicts:
             # Keep one fresh seam and one candidate row.
             seam = _LedgerSeam()
-            # Return the conflicting row from the defensive reader.
-            seam.rows = [event]
+            # Return the conflicting row from the indexed provider seam.
+            seam.indexed_event = event
             # Identify the ledger fixture without weakening the public error contract.
             with self.subTest(event=event):
                 # Require fail-closed conflict for the reused scoped identity.
@@ -293,8 +297,8 @@ class SettlementAdapterTests(unittest.TestCase):
         seam.debit_error = ConflictError("Ledger action key was reused with different transaction semantics")
         # Publish the winner with the same logical request fingerprint but different tentative entropy.
         winner = _event(extra_details={"entropy": 7})
-        # Return the winner during post-conflict reconstruction.
-        seam.rows = [winner]
+        # Return the winner during post-conflict indexed reconstruction.
+        seam.indexed_event = winner
         # Attempt the same logical action with a different tentative entropy value.
         event, replayed = seam.adapter().apply_action_once(**self._arguments(), details={"entropy": 9})
         # Return the exact committed winner rather than the losing proposal.
@@ -303,8 +307,10 @@ class SettlementAdapterTests(unittest.TestCase):
         self.assertIs(replayed, True)
         # Attempt the storage-atomic movement only once.
         self.assertEqual(len(seam.debit_calls), 1)
-        # Perform exactly one post-conflict proof lookup.
-        self.assertEqual(seam.read_calls, [("player-a", LEDGER_PROOF_SCAN_LIMIT)])
+        # Perform exactly one post-conflict indexed proof lookup.
+        self.assertEqual(seam.find_calls, [("player-a", "example-game", "action-1")])
+        # Never scan history during indexed recovery.
+        self.assertEqual(seam.read_calls, [])
 
     # Prove a provider conflict with no compatible winner preserves the original error.
     def test_provider_conflict_without_proof_reraises_original_error(self):
@@ -314,16 +320,31 @@ class SettlementAdapterTests(unittest.TestCase):
         original = ConflictError("Provider rejected conflicting action")
         # Raise the configured provider error on the money attempt.
         seam.debit_error = original
-        # Return only unrelated proof that must not satisfy this request.
-        seam.rows = [_event(player_id="player-b"), _event(game="other-game")]
+        # Return an index miss so no unrelated row can satisfy this request.
+        seam.indexed_event = None
         # Capture the adapter's final conflict.
         with self.assertRaises(ConflictError) as captured:
             # Attempt the action through the storage-atomic seam.
             seam.adapter().apply_action_once(**self._arguments())
         # Preserve the exact provider exception when recovery finds nothing compatible.
         self.assertIs(captured.exception, original)
-        # Perform one bounded recovery lookup after the provider conflict.
-        self.assertEqual(seam.read_calls, [("player-a", LEDGER_PROOF_SCAN_LIMIT)])
+        # Perform one exact indexed recovery lookup after the provider conflict.
+        self.assertEqual(seam.find_calls, [("player-a", "example-game", "action-1")])
+        # Never scan history during indexed miss handling.
+        self.assertEqual(seam.read_calls, [])
+
+    # Prove an explicit legacy focused seam stays bounded without affecting production.
+    def test_explicit_legacy_reader_uses_small_bounded_fallback(self):
+        # Build one seam but intentionally omit its indexed callback.
+        seam = _LedgerSeam()
+        # Return the exact compatible event from the legacy injected reader.
+        seam.rows = [_event()]
+        # Construct the adapter with only the historical read seam.
+        adapter = SettlementAdapter(debit_once=seam.debit_once, credit_once=seam.credit_once, read_recent=seam.read_recent)
+        # Resolve the compatible proof through the fallback path.
+        self.assertIs(adapter.find_action(**self._arguments()), seam.rows[0])
+        # Keep the listener-free compatibility read small and deterministic.
+        self.assertEqual(seam.read_calls, [("player-a", LEGACY_PROOF_FALLBACK_LIMIT)])
 
 
 # Prove the transitional game-call shapes all resolve through the one canonical adapter. (LEDGER-032)
@@ -333,7 +354,7 @@ class GameSettlementGatewayTests(unittest.TestCase):
         # Retain the seam separately for exact provider-call assertions.
         seam = _LedgerSeam()
         # Bind one historical detail key beside canonical evidence.
-        gateway = GameSettlementGateway("example-game", "legacy_action_id", debit_once=seam.debit_once, credit_once=seam.credit_once, read_recent=seam.read_recent)
+        gateway = GameSettlementGateway("example-game", "legacy_action_id", debit_once=seam.debit_once, credit_once=seam.credit_once, find_action=seam.find_action, read_recent=seam.read_recent)
         # Return both objects so tests can inspect calls without private adapter access.
         return gateway, seam
 

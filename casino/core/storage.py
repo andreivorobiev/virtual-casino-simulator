@@ -3,6 +3,8 @@
 from __future__ import annotations
 # Import process-exit hooks so cached MySQL pools release idle connections on shutdown.
 import atexit
+# Import deep-copy support so indexed reads cannot mutate cached durable events.
+import copy
 # Import required dependency so action fingerprints are derived from canonical transaction semantics.
 import hashlib
 # Import required dependency so process-lock helpers can be expressed as context managers.
@@ -194,6 +196,11 @@ class StorageProvider:
     # Execute or replay one storage-enforced ledger action identity.
     def transact_ledger_once(self, player_id: str, amount: float, transaction_type: str, action_key: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> tuple[dict, bool]:
         # Raise because concrete providers must enforce action uniqueness with wallet persistence.
+        raise NotImplementedError
+
+    # Find one committed storage action through the provider's canonical identity index. (LEDGER-033)
+    def find_ledger_action(self, player_id: str, game: str | None, action_key: str) -> dict | None:
+        # Raise because concrete providers must implement their own indexed identity lookup.
         raise NotImplementedError
 
     # Read recent ledger events with optional player filtering.
@@ -2464,6 +2471,37 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 # Return the newly committed event with a non-replay marker.
                 return event, False
 
+    # Find one committed JSON ledger action without scanning ledger history. (LEDGER-033)
+    def find_ledger_action(self, player_id: str, game: str | None, action_key: str) -> dict | None:
+        # Normalize the indexed caller-owned key before durable lookup.
+        action_key = _normalize_action_key(action_key)
+        # Normalize the game-or-core namespace exactly as the write path does.
+        scope = _action_scope(game)
+        # Build the identical unambiguous key used by transact_ledger_once.
+        identity = self._action_identity(player_id, scope, action_key)
+        # Serialize recovery and lookup with local provider operations.
+        with self.lock:
+            # Serialize recovery and lookup with independent JSON provider processes.
+            with self._ledger_process_lock():
+                # Complete every durable logical commit before exposing its event.
+                self._recover_all_json_actions_locked()
+                # Read the stat-guarded action index once after recovery settles it.
+                registry = self._read_actions_registry()
+                # Read the indexed record without traversing unrelated actions.
+                record = registry.get("actions", {}).get(identity) if isinstance(registry, dict) else None
+                # Report a miss without falling back to unbounded ledger history.
+                if not isinstance(record, dict):
+                    # Preserve the public optional-result contract.
+                    return None
+                # Read the immutable committed event stored by the logical action journal.
+                event = record.get("event")
+                # Fail closed when an indexed record lacks a structured event.
+                if not isinstance(event, dict):
+                    # Reject corrupt action-index state instead of authorizing a fresh write.
+                    raise ConflictError("Ledger action index is inconsistent", {"action_key": action_key})
+                # Return a detached event so readers cannot mutate the provider cache.
+                return copy.deepcopy(event)
+
     # Read recent ledger events from the local JSONL file.
     def read_ledger_recent(self, player_id: str | None = None, limit: int = 100) -> list[dict]:
         # Guard recovery and the ledger read from concurrent local threads.
@@ -3102,6 +3140,38 @@ class MySQLStorageProvider(StorageProvider):
         # Always close the connection after the action attempt.
         finally:
             # Close this operation's MySQL connection.
+            connection.close()
+
+    # Find one committed MySQL ledger action through its unique identity index. (LEDGER-033)
+    def find_ledger_action(self, player_id: str, game: str | None, action_key: str) -> dict | None:
+        # Normalize the indexed caller-owned key before opening a connection.
+        action_key = _normalize_action_key(action_key)
+        # Normalize the game-or-core scope exactly as the write path does.
+        scope = _action_scope(game)
+        # Ensure the migrated unique action index exists before querying it.
+        self.ensure_ready()
+        # Open one read-only provider connection for the point lookup.
+        connection = self.connect()
+        # Protect cleanup so every result and failure closes the provider connection.
+        try:
+            # Open a dictionary cursor for public ledger-event mapping.
+            cursor = connection.cursor(dictionary=True)
+            # Query the existing unique identity index without locking the player row.
+            cursor.execute(
+                "SELECT ledger_id, ts, player_id, game, round_id, transaction_type, amount, balance_before, balance_after, details_json FROM casino_ledger WHERE player_id = %s AND action_scope = %s AND action_key = %s",  # Use the same indexed predicate as transact_ledger_once.
+                (player_id, scope, action_key),  # Bind the canonical wallet, scope, and action key.
+            )
+            # Read at most the one row guaranteed by the unique index.
+            row = cursor.fetchone()
+            # Return no event for an unused action identity.
+            if row is None:
+                # Preserve the optional-result provider contract.
+                return None
+            # Convert the indexed row into the established public ledger shape.
+            return _ledger_from_row(row)
+        # Always close the point-lookup connection.
+        finally:
+            # Release the provider connection without adding a write-path connection.
             connection.close()
 
     # Read recent ledger events from MySQL.

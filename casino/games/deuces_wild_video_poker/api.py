@@ -32,8 +32,6 @@ GAME_ID = engine.GAME_ID
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 # Serialize state preparation, ledger recovery, and marker persistence in this local process.
 _ACTION_LOCK = threading.RLock()
-# Scan the complete practical local ledger window for delayed retry recovery.
-LEDGER_SCAN_LIMIT = 1_000_000
 # Name the game-owned ledger detail carrying stable internal idempotency keys.
 IDEMPOTENCY_DETAIL = "idempotency_key"
 
@@ -70,8 +68,8 @@ class DeucesWildVideoPokerService:
         self._debit = settlement.debit
         # Preserve the historical credit shape while routing through the shared adapter.
         self._credit = settlement.credit
-        # Preserve bounded proof reads through the adapter-owned ledger seam.
-        self._read_ledger = settlement.read_recent
+        # Preserve indexed proof lookup through the adapter-owned ledger seam.
+        self._find_action = settlement.find
         # Store read-only player lookup for response payloads.
         self._get_player = get_player
         # Store the clock seam for deterministic focused tests.
@@ -114,10 +112,8 @@ class DeucesWildVideoPokerService:
 
     # Find a previously committed ledger movement by its stable internal action key.
     def _find_ledger_action(self, player_id: str, action_key: str):
-        # Read only this player's append-only history so another session cannot satisfy recovery.
-        events = self._read_ledger(player_id, LEDGER_SCAN_LIMIT)
-        # Scan newest-first because a valid key should resolve to its only committed row.
-        return next((event for event in reversed(events) if (event.get("details") or {}).get(IDEMPOTENCY_DETAIL) == action_key), None)
+        # Resolve the exact game-scoped storage identity without scanning ledger history.
+        return self._find_action(player_id, action_key)
 
     # Verify that recovered ledger proof matches the complete expected movement.
     def _validate_ledger_event(self, event: dict, *, round_state: dict, transaction_type: str, signed_amount: float, action_key: str, fingerprint) -> None:

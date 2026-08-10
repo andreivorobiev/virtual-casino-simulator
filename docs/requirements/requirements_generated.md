@@ -7,8 +7,8 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.59.4
-- core: 9.39.0
-- ledger: 9.1.1
+- core: 9.39.1
+- ledger: 9.1.2
 - players: 9.1.1
 - bots: 1.1.1
 - autoplay: 1.1.6
@@ -30,7 +30,7 @@ Historical source baseline: 9.1.0
 - hi_lo: 1.1.2
 - three_card_poker: 1.1.2
 - jacks_or_better_video_poker: 1.1.2
-- deuces_wild_video_poker: 1.1.2
+- deuces_wild_video_poker: 1.1.3
 - scratch_cards: 1.1.1
 - sic_bo: 1.1.3
 - chuck_a_luck: 1.1.2
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.72.1
-- docs: 1.70.1
+- tests: 1.72.2
+- docs: 1.70.2
 - contracts: 1.57.1
 - tooling: 1.27.0
 - commenting_policy: 1.0.0
@@ -1000,4 +1000,6 @@ Historical source baseline: 9.1.0
 - **STORAGE-012** (Storage) - PASS: Player persistence exposes only explicit row-scoped insertion and provider-owned idempotent bootstrap boundaries: JSON holds one cross-process wallet gate across the complete missing-row batch, MySQL inserts missing primary-key rows inside one rollback-safe transaction, existing wallet and lifecycle fields are never overwritten, player reads perform no seed or commit work, and the retired whole-document save and empty-check seams cannot reintroduce a read-before-write race.
 - **TEST-162** (Tests) - PASS: Browser-free JSON and fake-MySQL evidence proves thread- and process-racing player creation and bootstrap insert each missing identifier once, preserve committed balances and ledger rows, perform byte-identical no-op replay, roll back partial MySQL batches, leave MySQL reads write-free, and statically reject the retired public full-document save and empty-check interfaces.
 - **TEST-163** (Tests) - PASS: Listener-free and integrated API evidence proves descriptor-governed settings reject hostile allocation and settlement values before handlers run, canonicalize accepted values, repair poisoned persisted state to engine-owned defaults, publish exact generated request schemas and bounded-field authority evidence, and reject any return of duplicated per-game rule domains.
+- **LEDGER-033** (Ledger) - PASS: Committed money actions are resolved by the canonical player, game-or-core scope, and action key through one provider-owned point-lookup seam: JSON uses its stat-guarded durable action registry and MySQL uses the existing unique action index. Settlement recovery never scans a million-row ledger window, preserves exact replay-conflict validation, and adds no connection to a write path.
+- **TEST-164** (Tests) - PASS: Listener-free JSON, fake-MySQL, and settlement-adapter evidence proves indexed action hit and miss behavior, provider/public event-shape parity, restart and lost-response recovery, exact player/game/key SQL binding, connection cleanup, fail-closed immutable-dimension conflicts, and a bounded fallback only for explicitly injected legacy test seams.
 - **TOOL-013** (Tooling) - PASS: A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.
