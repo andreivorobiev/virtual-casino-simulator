@@ -19,6 +19,14 @@ paths:
     get:
       summary: GET /api/v1/casino/state
       operationId: casino_GET_api_v1_casino_state
+      parameters:
+        - in: query
+          name: projection
+          required: false
+          schema:
+            type: string
+            enum: [shell]
+          description: Optional current-shell projection that preserves version, descriptor-driven games, and online presence while omitting unrelated full-state fields; the default response remains unchanged.
       responses:
         '200':
           description: Standard API envelope with a privacy-safe unique recent-session online count

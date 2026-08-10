@@ -178,6 +178,8 @@ let root = null;
 let state = null;
 // Store the active bet catalog so click handlers can place documented bet types.
 let catalog = [];
+// Remember which wheel mode owns the cached static catalog so route remounts avoid repeat payloads. (TEST-166)
+let catalogMode = null;
 // Store the selected chip amount independently of locale and route rerenders.
 let chip = 5;
 // Store the mounted autoplay element so unmount can stop any local loop.
@@ -433,14 +435,40 @@ function applyPayload(payload) {
   }
 }
 
+// Add the opt-in play projection without changing any default frozen-v1 response.
+function compactPath(path) {
+  // Preserve existing query parameters when a caller already selected a resource.
+  const separator = path.includes('?') ? '&' : '?';
+  // Return one explicit projection value that malformed duplicate values cannot activate server-side.
+  return `${path}${separator}projection=play`;
+}
+
+// Load the large mode-owned bet catalog at most once per active wheel mode.
+async function ensureCatalog(mode) {
+  // Normalize absent or hostile state to the existing double-zero default.
+  const requestedMode = mode === 'single' ? 'single' : 'double';
+  // Reuse the current mode's immutable rules catalog across actions and route remounts.
+  if (catalog.length && catalogMode === requestedMode) return catalog;
+  // Fetch the unchanged frozen catalog endpoint independently from player state.
+  const payload = await api(`/api/v1/games/roulette/bet-catalog?mode=${encodeURIComponent(requestedMode)}`);
+  // Replace the cached catalog only after one complete successful response.
+  catalog = payload.catalog || [];
+  // Bind the cache to the exact mode that produced it.
+  catalogMode = requestedMode;
+  // Return the loaded catalog for focused tests and callers that await readiness.
+  return catalog;
+}
+
 // Fetch state, catalog, stats, players, and bot presentation for the initial mount.
 async function load() {
   // Initialize the localized bot placeholder before the first visible render.
   botPanelCache = loadingBotPanelHtml();
-  // Load the current Roulette state through the frozen v1 endpoint.
-  const payload = await api(currentPlayerPath('/api/v1/games/roulette/state'));
+  // Load player-specific state without retransmitting the static bet catalog. (TEST-166)
+  const payload = await api(currentPlayerPath(compactPath('/api/v1/games/roulette/state')));
   // Apply the response to local render caches.
   applyPayload(payload);
+  // Load the current mode's immutable catalog once before rendering any wager controls.
+  await ensureCatalog(payload?.state?.mode);
   // Render the game before slower bot markup resolves.
   render();
   // Refresh bot panel markup through the shared bot controller helper.
@@ -606,7 +634,7 @@ async function placeBet(bet, expected = null, source = null, amount = chip) {
     }
   }
   // Post the bet through the frozen v1 endpoint.
-  const payload = await post('/api/v1/games/roulette/bets', withCurrentPlayer({ amount, bet_type: bet.type, covered_numbers: bet.covered_numbers, label: bet.label }));
+  const payload = await post(compactPath('/api/v1/games/roulette/bets'), withCurrentPlayer({ amount, bet_type: bet.type, covered_numbers: bet.covered_numbers, label: bet.label }));
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -626,7 +654,7 @@ async function placeCall(type) {
   // Read the optional call/final number from the current control rail.
   const number = root.querySelector('#callNumber')?.value || undefined;
   // Post the call bet using the existing v1 payload shape.
-  const payload = await post('/api/v1/games/roulette/call-bet', withCurrentPlayer({ amount: chip, call_type: type, number }));
+  const payload = await post(compactPath('/api/v1/games/roulette/call-bet'), withCurrentPlayer({ amount: chip, call_type: type, number }));
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -644,7 +672,7 @@ async function placeCall(type) {
 // Clear one human bet by id through the documented refund endpoint.
 async function clearBet(id) {
   // Delete the bet through the frozen v1 endpoint.
-  const payload = await del(`/api/v1/games/roulette/bets/${id}`, withCurrentPlayer());
+  const payload = await del(compactPath(`/api/v1/games/roulette/bets/${id}`), withCurrentPlayer());
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -660,7 +688,7 @@ async function clearBet(id) {
 // Clear all human bets through the documented refund endpoint.
 async function clearAll() {
   // Post the clear request through the frozen v1 endpoint.
-  const payload = await post('/api/v1/games/roulette/clear', withCurrentPlayer());
+  const payload = await post(compactPath('/api/v1/games/roulette/clear'), withCurrentPlayer());
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -676,7 +704,7 @@ async function clearAll() {
 // Rebuild the previous human bet template through the documented endpoint.
 async function rebet() {
   // Post the rebet request through the frozen v1 endpoint.
-  const payload = await post('/api/v1/games/roulette/rebet', withCurrentPlayer());
+  const payload = await post(compactPath('/api/v1/games/roulette/rebet'), withCurrentPlayer());
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -698,9 +726,11 @@ async function settings() {
   // Read the selected zero rule from the control rail.
   const zeroRule = root.querySelector('#zero')?.value;
   // Post settings without adding or changing any payload fields.
-  const payload = await post('/api/v1/games/roulette/settings', withCurrentPlayer({ mode, zero_rule: zeroRule }));
+  const payload = await post(compactPath('/api/v1/games/roulette/settings'), withCurrentPlayer({ mode, zero_rule: zeroRule }));
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
+  // Replace the immutable catalog only when the accepted setting changed wheel mode.
+  await ensureCatalog(payload?.state?.mode);
   // Mark the route as actively accepting bets.
   markBettingPhase();
   // Rerender settings, table geometry, and bet targets.
@@ -860,7 +890,7 @@ async function spin(show = true) {
     // Play the existing wheel rolling sound trimmed to the reveal time this spin still has left.
     rouletteRollSound(Math.max(400, revealMs - (performance.now() - revealStartedAt)));
     // Post the spin request through the frozen v1 endpoint without changing payloads.
-    const payload = await post('/api/v1/games/roulette/spin', withCurrentPlayer());
+    const payload = await post(compactPath('/api/v1/games/roulette/spin'), withCurrentPlayer());
     // Reject a late backend response after route disposal without replaying, refunding, or touching a remount.
     if (!completion.isCurrent()) return;
     // Steer the live wrappers toward the authoritative pocket for full-motion human spins.

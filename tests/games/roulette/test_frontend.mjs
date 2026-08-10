@@ -108,6 +108,8 @@ function installFakeBrowser() {
   let logRequests = 0;
   // Count unmount clear requests so a stale committed spin cannot create a duplicate refund.
   let clearRequests = 0;
+  // Count immutable catalog reads so compact state can prove one fetch per wheel mode. (TEST-166)
+  let catalogRequests = 0;
   // Build a storage shim for current-player and locale helpers.
   const storage = new Map();
   // Install browser storage without writing to disk.
@@ -133,7 +135,7 @@ function installFakeBrowser() {
   // Build one standard successful JSON response.
   const response = data => ({ ok: true, status: 200, async json() { return { ok: true, data }; } });
   // Build the state envelope consumed by each actual Roulette mount.
-  const rouletteState = roundId => ({ state: { mode: 'single', zero_rule: 'normal', open_round: { bets: [] }, last_bet_template: [], last_results: [] }, catalog: [], players: [], stats: { roll_count: 0, colors: {}, frequency: {}, hot: [], cold: [], latest: [] }, round: { round_id: roundId, result: '17', result_color: 'black' }, settlements: [] });
+  const rouletteState = roundId => ({ state: { mode: 'single', zero_rule: 'normal', open_round: { bets: [] }, last_bet_template: [], last_results: [] }, players: [], stats: { roll_count: 0, colors: {}, frequency: {}, hot: [], cold: [], latest: [] }, round: { round_id: roundId, result: '17', result_color: 'black' }, settlements: [] });
   // Route every fetch through exact public paths used by the game and shared modules.
   globalThis.fetch = async input => {
     // Normalize the requested URL without retaining options or credentials.
@@ -142,14 +144,16 @@ function installFakeBrowser() {
     if (url.startsWith('/i18n/')) return response(url.endsWith('manifest.json') ? { schemaVersion: 1, defaultLocale: 'en-US', fallbackLocale: 'en-US', aliases: {}, locales: [], domains: ['common'] } : {});
     // Return the actual mounted Roulette state.
     if (url.startsWith('/api/v1/games/roulette/state')) return response(rouletteState('state-round'));
+    // Return one immutable mode-specific bet catalog and count its cacheable retrieval.
+    if (url.startsWith('/api/v1/games/roulette/bet-catalog')) { catalogRequests += 1; return response({ catalog: [{ id: 'outside:red', type: 'outside', layout_kind: 'outside', covered_numbers: ['1'], label: 'Red', net_payout: 1 }] }); }
     // Control bot-panel capability reads independently from bot action execution.
     if (url.includes('/eligible-bots')) { botRequests += 1; const gate = delayedBot; delayedBot = null; return response(gate ? await gate.promise : { bots: [], capabilities: { supports_bots: false, strategies: [] } }); }
     // Keep the bot action on the same immediate public seam.
     if (url.includes('/bots/play-round')) return response({ actions: [] });
     // Control the exact Roulette action response for API-pending teardown proof.
-    if (url === '/api/v1/games/roulette/spin') { spinRequests += 1; const gate = delayedSpin; delayedSpin = null; return response(gate ? await gate.promise : rouletteState(`spin-${spinRequests}`)); }
+    if (url.startsWith('/api/v1/games/roulette/spin')) { spinRequests += 1; const gate = delayedSpin; delayedSpin = null; return response(gate ? await gate.promise : rouletteState(`spin-${spinRequests}`)); }
     // Return a harmless clear acknowledgement if a regression attempts an unmount refund.
-    if (url === '/api/v1/games/roulette/clear') { clearRequests += 1; return response({}); }
+    if (url.startsWith('/api/v1/games/roulette/clear')) { clearRequests += 1; return response({}); }
     // Control the shared wallet's second await independently from the game response.
     if (url === '/api/v2/me') { walletRequests += 1; const gate = delayedWallet; delayedWallet = null; return response(gate ? await gate.promise : { user: { user_id: 'user-1' }, player: { player_id: 'human', token_balance: 1000 + walletRequests } }); }
     // Return a legacy wallet shape for completeness when current-user state is deliberately absent.
@@ -160,7 +164,7 @@ function installFakeBrowser() {
     throw new Error(`unexpected Roulette test request: ${url}`);
   };
   // Return controller hooks without exposing mutable internals to the game.
-  return { clock, dispatched, documentNodes, delaySpin() { delayedSpin = deferred(); return delayedSpin; }, delayWallet() { delayedWallet = deferred(); return delayedWallet; }, delayBot() { delayedBot = deferred(); return delayedBot; }, get spinRequests() { return spinRequests; }, get walletRequests() { return walletRequests; }, get botRequests() { return botRequests; }, get logRequests() { return logRequests; }, get clearRequests() { return clearRequests; } };
+  return { clock, dispatched, documentNodes, delaySpin() { delayedSpin = deferred(); return delayedSpin; }, delayWallet() { delayedWallet = deferred(); return delayedWallet; }, delayBot() { delayedBot = deferred(); return delayedBot; }, get spinRequests() { return spinRequests; }, get walletRequests() { return walletRequests; }, get botRequests() { return botRequests; }, get logRequests() { return logRequests; }, get clearRequests() { return clearRequests; }, get catalogRequests() { return catalogRequests; } };
 }
 
 // Install the browser seam before shared frontend modules read global state.
@@ -302,8 +306,12 @@ test('ROU-072 actual game API-pending unmount and remount prevent stale continua
   window.__casinoPresentationProbe = event => completions.push(event);
   // Create the first actual route root.
   const firstRoot = createFakeElement('roulette-root-one');
+  // Record catalog traffic before the first compact state mount.
+  const catalogCount = browser.catalogRequests;
   // Mount the exported game object through its production lifecycle.
   await RouletteGame.mount(firstRoot);
+  // Require exactly one immutable catalog read for the first single-zero mount.
+  assert.equal(browser.catalogRequests, catalogCount + 1);
   // Delay only the authoritative spin response.
   const spinGate = browser.delaySpin();
   // Record the request count before the controlled action starts.
@@ -320,6 +328,8 @@ test('ROU-072 actual game API-pending unmount and remount prevent stale continua
   const secondRoot = createFakeElement('roulette-root-two');
   // Re-enter the production mount lifecycle on the new root.
   await RouletteGame.mount(secondRoot);
+  // Reuse the same mode's catalog rather than retransmitting it on remount.
+  assert.equal(browser.catalogRequests, catalogCount + 1);
   // Snapshot the remounted DOM before releasing the stale response.
   const remountedMarkup = secondRoot.innerHTML;
   // Release the old backend response after a new route owns the game.

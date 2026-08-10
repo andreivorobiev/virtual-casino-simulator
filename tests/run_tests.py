@@ -1414,6 +1414,8 @@ def run_api_tests():
         if result.returncode!=0: raise AssertionError(f'{failure_message}: {result.stderr[-1500:]}')
     # Record the exact-source payload and shipped-asset budget checkpoint. (issue #323, TEST-159)
     run_case('PERF-PAYLOAD-BUDGET-001',['TEST-159'],lambda: run_unit_module('tests.unit.payload_frontend_budget_tests','payload and frontend budget suite failed'))
+    # Record compact shell/Roulette projections and frozen-response compatibility. (issue #323, TEST-166)
+    run_case('PERF-PAYLOAD-PROJECTION-001',['TEST-166'],lambda: run_unit_module('tests.unit.performance_projection_tests','payload projection suite failed'))
     # Record the fail-closed process-safety inventory used before any worker-count increase. (issue #323, TEST-160)
     run_case('PERF-MULTIPROCESS-SAFETY-001',['TEST-160'],lambda: run_unit_module('tests.unit.multiprocess_safety_audit_tests','multiprocess safety audit suite failed'))
     # Record the descriptor-owned game-suite discovery boundary without migrating game descriptors yet. (issue #434, TEST-161)
@@ -7792,7 +7794,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)
                         def clear_roulette_audit_bets():
                             # Capture the documented clear response before activating the real rendered control.
-                            with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/clear') and response.request.method=='POST', timeout=5000) as clear_info:
+                            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/clear') and response.request.method=='POST', timeout=5000) as clear_info:
                                 # Activate the same clear-all path a player uses rather than mutating test state directly.
                                 page.locator('#clear').click()
                             # Require the refund request to succeed before attempting a wheel-mode transition.
@@ -7848,7 +7850,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Build the stable selector for this hit target.
                             selector=f'[data-cell-key="{key}"]'
                             # Capture the exact wager POST triggered by activating this cell.
-                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
+                            with page.expect_request(lambda request: request.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
                                 # Activate the cell through Playwright's real actionability-checked pointer path. (issue #348)
                                 page.get_by_test_id('roulette-table').locator(selector).click()
                             # Read the posted bet body for identity verification.
@@ -7860,7 +7862,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Settle the board rerender before activating the next hit target.
                             page.wait_for_timeout(25)
                         # Capture the exact "2nd 12" wager the issue reported as mismatched.
-                        with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as second_dozen_info:
+                        with page.expect_request(lambda request: request.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as second_dozen_info:
                             # Activate the reported second-dozen hit target through the real pointer path.
                             page.locator('[data-cell-key="dozen:2"]').click()
                         # Read the second-dozen wager body.
@@ -7882,11 +7884,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Change modes only when needed so every expected response corresponds to a real state transition.
                             if current_mode!=wheel_mode:
                                 # Capture the documented settings response that owns the catalog rerender.
-                                with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/settings') and response.request.method=='POST', timeout=5000) as settings_info:
+                                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/settings') and response.request.method=='POST', timeout=5000) as settings_info:
                                     # Select the requested wheel mode through the rendered control.
                                     page.get_by_test_id('roulette-mode').select_option(wheel_mode)
                                 # Require the mode transition to succeed before reading its zero-zone catalog.
                                 assert settings_info.value.ok, f'Roulette {wheel_mode} mode settings request failed'
+                            # Wait for the independently loaded mode catalog to replace the previous mode's rendered targets. (TEST-166)
+                            page.wait_for_function("(expected) => document.querySelectorAll('[data-betid][data-bet-type=zero_split],[data-betid][data-bet-type=trio],[data-betid][data-bet-type=first_four],[data-betid][data-bet-type=top_line]').length === expected", arg=expected_count, timeout=5000)
                             # Require the semantic visibility state to survive the mode-owned rerender.
                             assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', f'Roulette {wheel_mode} mode hid inside spots after rerender'
                             # Read only the mode-specific zero-zone targets and their real pointer rectangles.
@@ -7912,7 +7916,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Build the stable selector that survives each wager-owned rerender.
                                 selector=f'[data-cell-key="{key}"]'
                                 # Capture the exact wager request emitted by the real pointer activation.
-                                with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as zero_request:
+                                with page.expect_request(lambda request: request.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as zero_request:
                                     # Exercise Playwright visibility, stability, hit testing, and pointer dispatch together.
                                     page.locator(selector).click()
                                 # Read the mode-specific wager body without relying on localized labels.
@@ -8036,7 +8040,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Exercise every visible racetrack, neighbor, final, and complete-number control. (issue #250)
                         for call_type in ('snake','voisins','tiers','orphelins','jeu_zero','neighbors','final','complete'):
                             # Capture the authoritative component list returned for this exact visible activation.
-                            with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/call-bet') and response.request.method=='POST') as call_response_info:
+                            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/call-bet') and response.request.method=='POST') as call_response_info:
                                 # Activate the visible call-bet button instead of bypassing the player interaction path.
                                 page.locator(f'[data-call="{call_type}"]').click()
                             # Read the standard response envelope after the route has accepted the activation.
@@ -8218,7 +8222,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Remove the exact route seam before the real spin and all downstream network assertions.
                     page.unroute('**/api/v1/admin/audio-settings')
                     # Capture the authoritative backend spin response while using the visible Roulette action.
-                    with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/spin') and response.request.method == 'POST') as roulette_spin_response_info:
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/spin') and response.request.method == 'POST') as roulette_spin_response_info:
                         # Spin the wheel through the dominant Roulette UI action.
                         page.get_by_test_id('roulette-spin').click()
                     # Read the standard API envelope returned for this exact visible spin.
@@ -8418,7 +8422,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Place the smallest visible straight bet so each evidence row drives the real public action.
                                     page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
                                     # Capture the authoritative response while starting the actual spin.
-                                    with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/spin') and response.request.method=='POST') as presentation_spin_response:
+                                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/spin') and response.request.method=='POST') as presentation_spin_response:
                                         # Use the dominant game action rather than a synthetic CSS toggle.
                                         page.get_by_test_id('roulette-spin').click()
                                     # Wait for the actual mounted spinning presentation.
