@@ -637,7 +637,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','AUDIO-010','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
-    run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
+    run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','LEDGER-033','STORAGE-005','STORAGE-006','TEST-043','TEST-164'],storage_tests.run_json_action_idempotency)
     # Execute provider-owned journal recovery, contention, reset, and fail-closed proof. (#430)
     run_case('STORAGE-GAME-ACTION-ONCE-001',['STORAGE-011'],run_json_game_action_provider_tests)
     # Prove player-scoped JSON concurrency, rollback, fallback, isolation, and MySQL delegation.
@@ -669,7 +669,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)
     run_case('STORAGE-TABLE-RULES-001',['LEDGER-029','TOKEN-006'],storage_tests.run_table_rule_authority)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
-    run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
+    run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009','LEDGER-033','TEST-164'],storage_tests.run_mysql_schema_provider_path)
     # Execute bounded capacity, cleanup, fork, observability, and 1/2/4/8 pool evidence without a service.
     run_case('MYSQL-POOL-001',['STORAGE-010','TEST-141'],run_mysql_pool_tests)
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
@@ -1779,7 +1779,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('settlement adapter suite failed')
     # Record the additive audit, sign routing, replay, conflict, and bounded recovery proof.
-    run_case('API-GAMECORE-002',['GAMECORE-003'],run_settlement_adapter_tests)
+    run_case('API-GAMECORE-002',['GAMECORE-003','LEDGER-033','TEST-164'],run_settlement_adapter_tests)
 
     # Prove every registered game remains behind the one shared settlement boundary. (LEDGER-032, GAMECORE-004, TEST-157)
     def run_catalog_settlement_boundary_tests():

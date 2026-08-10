@@ -32,6 +32,11 @@ def transact_once(player_id: str, amount: float, transaction_type: str, action_k
     # Return the provider-owned event and replay marker from one atomic action transaction.
     return get_storage_provider().transact_ledger_once(player_id, amount, transaction_type, action_key, game, round_id, details)
 
+# Find one committed storage action through the active provider's identity index. (LEDGER-033)
+def find_action(player_id: str, game: str | None, action_key: str) -> dict | None:
+    # Delegate the read-only point lookup without opening a second write-path connection.
+    return get_storage_provider().find_ledger_action(player_id, game, action_key)
+
 # Define the debit function used by this module.
 def debit(player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
     # Normalize the finite magnitude before applying the debit sign. (LEDGER-027)

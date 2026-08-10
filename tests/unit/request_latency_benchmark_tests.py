@@ -1374,7 +1374,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
         # Require the accepted aggregates plus descriptor-runtime completion to total exactly 931 permanent rows.
-        self.assertEqual(len(requirements), 931)
+        # Count the two permanent issue-432 index and evidence requirements added after v63.
+        self.assertEqual(len(requirements), 933)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1509,6 +1510,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(test_149[0]["module"], "Tests")
         # Parse the core descriptor for the enrollment-policy compatible addition.
         core_module = json.loads((ROOT / "modules" / "core.json").read_text(encoding="utf-8"))
+        # Parse the Ledger descriptor for the indexed lookup addition.
+        ledger_module = json.loads((ROOT / "modules" / "ledger.json").read_text(encoding="utf-8"))
         # Parse the players descriptor for the row-scoped creation boundary.
         players_module = json.loads((ROOT / "modules" / "players.json").read_text(encoding="utf-8"))
         # Parse the Admin descriptor for the additive owner-only routes.
@@ -1539,16 +1542,20 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         blackjack_module = json.loads((ROOT / "modules" / "blackjack.json").read_text(encoding="utf-8"))
         # Parse the Autoplay descriptor for the compatible lifecycle reconciliation repair.
         autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
-        # Require the compatible Core minor for central descriptor runtime enforcement.
-        self.assertEqual(core_module["version"], "9.39.0")
+        # Parse the Deuces descriptor after removing its final game-owned history scan.
+        deuces_module = json.loads((ROOT / "modules" / "deuces_wild_video_poker.json").read_text(encoding="utf-8"))
+        # Require the compatible Core patch for provider-indexed action lookup.
+        self.assertEqual(core_module["version"], "9.39.1")
+        # Require the compatible Ledger patch for the public read-only point seam.
+        self.assertEqual(ledger_module["version"], "9.1.2")
         # Require the exact compatible Players patch for explicit row insertion.
         self.assertEqual(players_module["version"], "9.1.1")
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
-        # Require the compatible tests minor for permanent descriptor-runtime evidence.
-        self.assertEqual(tests_module["version"], "1.72.1")
-        # Require the release-owned docs patch for v0.9.5.63 provenance.
-        self.assertEqual(docs_module["version"], "1.70.1")
+        # Require the compatible tests patch for permanent indexed-provider evidence.
+        self.assertEqual(tests_module["version"], "1.72.2")
+        # Require the docs patch for LEDGER-033 and TEST-164 governance.
+        self.assertEqual(docs_module["version"], "1.70.2")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the compatible contracts minor for descriptor-generated request bodies.
@@ -1571,3 +1578,5 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
         self.assertEqual(autoplay_module["version"], "1.1.6")
+        # Require the Deuces patch that removes its final million-row proof scan.
+        self.assertEqual(deuces_module["version"], "1.1.3")

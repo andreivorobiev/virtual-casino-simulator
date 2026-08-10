@@ -13564,6 +13564,30 @@
       "notes": "The permanent cases exercise the real Router dispatch and production state-load repair rather than a parallel test-only validator; contract and matrix drift fail existing repository validators."
     },
     {
+      "id": "LEDGER-033",
+      "module": "Ledger",
+      "description": "Committed money actions are resolved by the canonical player, game-or-core scope, and action key through one provider-owned point-lookup seam: JSON uses its stat-guarded durable action registry and MySQL uses the existing unique action index. Settlement recovery never scans a million-row ledger window, preserves exact replay-conflict validation, and adds no connection to a write path.",
+      "status": "PASS",
+      "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-001", "API-GAMECORE-002"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/storage.py", "casino/core/ledger.py", "casino/core/settlement.py", "casino/games/deuces_wild_video_poker/api.py"],
+      "introduced_in": "issue-432-ledger-action-index",
+      "changed_in": "issue-432-ledger-action-index",
+      "notes": "This compatibility bridge exposes the index already written by both providers and keeps the legacy JSON action journal byte-compatible for application-only rollback. A later release may change the journal format only after its immediate predecessor can read both formats."
+    },
+    {
+      "id": "TEST-164",
+      "module": "Tests",
+      "description": "Listener-free JSON, fake-MySQL, and settlement-adapter evidence proves indexed action hit and miss behavior, provider/public event-shape parity, restart and lost-response recovery, exact player/game/key SQL binding, connection cleanup, fail-closed immutable-dimension conflicts, and a bounded fallback only for explicitly injected legacy test seams.",
+      "status": "PASS",
+      "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-001", "API-GAMECORE-002"],
+      "browser_tests": [],
+      "implementation_files": ["tests/storage_tests.py", "tests/settlement_core_tests.py", "tests/run_tests.py"],
+      "introduced_in": "issue-432-ledger-action-index",
+      "changed_in": "issue-432-ledger-action-index",
+      "notes": "The permanent tests use only isolated temporary JSON storage and fake MySQL connections; no listener, public browser, production service, or provider credential is touched."
+    },
+    {
       "id": "TOOL-013",
       "module": "Tooling",
       "description": "A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.",

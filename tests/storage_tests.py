@@ -666,6 +666,12 @@ def run_json_action_idempotency():
         replay_event, replayed = restarted.transact_ledger_once("human", -5, "TEST_DEBIT", "action-debit", "storage", "round_debit", {"family": "debit"})
         # Verify restart replay returns the original debit event.
         assert replayed is True and replay_event["ledger_id"] == results[0][0]
+        # Resolve the same action through the provider's canonical point-lookup seam. (LEDGER-033)
+        indexed_event = restarted.find_ledger_action("human", "storage", "action-debit")
+        # Require the indexed read to return the exact immutable event shape and identity.
+        assert indexed_event == replay_event and indexed_event is not replay_event
+        # Require an unused key to return a clean miss without scanning ledger history.
+        assert restarted.find_ledger_action("human", "storage", "action-missing") is None
         # Reject the same identity when the signed amount changes.
         try:
             # Attempt changed semantic reuse without allowing a second wallet mutation.
@@ -966,6 +972,64 @@ def run_mysql_schema_provider_path():
     assert "FOR UPDATE" in action_source and "action_scope" in action_source and "action_key" in action_source
     # Verify identity, wallet balance, and ledger event commit in the same provider method.
     assert "UPDATE casino_players" in action_source and "INSERT INTO casino_ledger" in action_source and "connection.commit()" in action_source
+    # Read the indexed point-lookup implementation under the same permanent provider gate. (LEDGER-033)
+    lookup_source = inspect.getsource(storage.MySQLStorageProvider.find_ledger_action)
+    # Require the unique player/scope/key predicate without a player lock or write statement.
+    assert "action_scope = %s AND action_key = %s" in lookup_source and "FOR UPDATE" not in lookup_source and "INSERT " not in lookup_source and "UPDATE " not in lookup_source
+    # Define one point-lookup cursor that returns an exact driver-style row once.
+    class IndexedMySQLCursor:
+        # Initialize the configured row and empty SQL evidence.
+        def __init__(self, row):
+            # Retain the optional exact row returned by fetchone.
+            self.row = row
+            # Record the query and bound identity for index-shape assertions.
+            self.calls = []
+        # Record one point lookup without executing an external query.
+        def execute(self, statement, parameters):
+            # Preserve the exact SQL and canonical identity dimensions.
+            self.calls.append((statement, parameters))
+        # Return the configured row or miss.
+        def fetchone(self):
+            # Preserve the driver-style optional row contract.
+            return self.row
+    # Define one connection that proves read-only cleanup.
+    class IndexedMySQLConnection:
+        # Initialize one cursor and close marker.
+        def __init__(self, row):
+            # Own one configured fake cursor.
+            self.cursor_instance = IndexedMySQLCursor(row)
+            # Start without connection cleanup evidence.
+            self.closed = False
+        # Return the dictionary cursor expected by the provider.
+        def cursor(self, dictionary=False):
+            # Require the public-event mapping path.
+            assert dictionary is True
+            # Return the sole fake cursor.
+            return self.cursor_instance
+        # Record deterministic connection cleanup.
+        def close(self):
+            # Mark the read-only connection released.
+            self.closed = True
+    # Build one exact indexed row with driver-compatible money and details values.
+    indexed_row = {"ledger_id": "led_indexed", "ts": "2026-08-10T00:00:00.000Z", "player_id": "human", "game": "storage", "round_id": "round-indexed", "transaction_type": "TEST_INDEXED", "amount": -5, "balance_before": 100, "balance_after": 95, "details_json": '{"ledger_action_key":"action-indexed"}'}
+    # Construct a provider without opening a real pool or database.
+    indexed_provider = object.__new__(storage.MySQLStorageProvider)
+    # Bypass schema readiness after the migration source assertions above.
+    indexed_provider.ensure_ready = lambda: None
+    # Return one hit connection for the first exact lookup.
+    hit_connection = IndexedMySQLConnection(indexed_row)
+    # Bind the hit connection to the real provider method.
+    indexed_provider.connect = lambda: hit_connection
+    # Resolve the exact hit through the production point-lookup implementation.
+    indexed_event = indexed_provider.find_ledger_action("human", "storage", "action-indexed")
+    # Require public shape, canonical SQL bindings, and deterministic connection cleanup.
+    assert indexed_event["ledger_id"] == "led_indexed" and hit_connection.cursor_instance.calls[0][1] == ("human", "storage", "action-indexed") and hit_connection.closed
+    # Return one miss connection for the absent identity case.
+    miss_connection = IndexedMySQLConnection(None)
+    # Rebind the provider to the miss connection.
+    indexed_provider.connect = lambda: miss_connection
+    # Require a clean optional miss and connection cleanup.
+    assert indexed_provider.find_ledger_action("human", "storage", "action-missing") is None and miss_connection.closed
     # Read runtime readiness source after migration ownership moved out of the provider.
     runtime_source = inspect.getsource(storage.MySQLStorageProvider.ensure_ready)
     # Require only the read-only compatibility verifier at runtime.
