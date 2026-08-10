@@ -1534,14 +1534,14 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(core_module["version"], "9.38.0")
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
-        # Require the exact tests minor for the completed account/Admin acceptance matrix.
-        self.assertEqual(tests_module["version"], "1.70.0")
-        # Require the exact docs minor for thirteen new permanent governance rows.
-        self.assertEqual(docs_module["version"], "1.68.0")
+        # Require the exact release-owned tests patch for v0.9.5.60 qualification.
+        self.assertEqual(tests_module["version"], "1.70.1")
+        # Require the exact release-owned docs patch for v0.9.5.60 provenance.
+        self.assertEqual(docs_module["version"], "1.68.1")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
-        # Require the exact contracts minor for additive recovery, roles, and readiness APIs.
-        self.assertEqual(contracts_module["version"], "1.56.0")
+        # Require the exact release-owned contracts patch for the compatibility record.
+        self.assertEqual(contracts_module["version"], "1.56.1")
         # Require the exact tooling patch for the expanded anonymous-route contract gate.
         self.assertEqual(tooling_module["version"], "1.25.3")
         # Require the exact compatible Baccarat settlement-interface patch.
@@ -1554,8 +1554,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.6.2")
         # Require the exact compatible Slots settlement-interface patch.
         self.assertEqual(slots_module["version"], "9.4.4")
-        # Require the exact compatible Application minor for recovery, settings, and conversion UI.
-        self.assertEqual(application_module["version"], "9.59.0")
+        # Require the exact release-owned Application patch for the v0.9.5.60 package identity.
+        self.assertEqual(application_module["version"], "9.59.1")
         # Require Blackjack to carry the compatible settlement-interface patch.
         self.assertEqual(blackjack_module["version"], "9.1.9")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.60 Release Notes
+
+## Account recovery and owner-governed administration
+
+- Packages the accepted account and Admin completion from sole normal content PR #638; the release-only application revision advances mechanically to `9.59.1`.
+- Resolves issues #334, #351, #352, #378, and #388 with durable recovery challenges, owner-role delegation safeguards, personal settings, guest conversion readiness, and owner-controlled session policy.
+- Preserves restricted-preview policy: public signup, live OAuth providers, and provider network activity remain disabled; no credential, DNS, billing, mail-provider, or public-launch action is introduced.
+- Keeps fresh and fallback sound disabled by default while allowing an authenticated user to opt in through personal settings.
+- Carries thirteen accepted permanent requirements from the content merge; the governed total remains exactly 924 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 740 regular files: the terminal v0.9.5.59 inventory, the accepted Admin-role module, and this v0.9.5.60 compatibility record; repository documentation and tests remain intentionally outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; content-owned Admin, Audio, Core, and Tooling revisions remain exactly as accepted on protected main.
+- Makes no migration, database-schema, game, settlement, paytable, wagering-economics, or frozen-v1-API change.
+- Retains exact immutable and terminal-green v0.9.5.59 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.59 Release Notes
 
 ## One replay-safe settlement interface for all games

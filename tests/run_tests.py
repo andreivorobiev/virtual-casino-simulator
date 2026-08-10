@@ -5383,8 +5383,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 page.get_by_test_id('catalog-search').fill('__no_catalog_match__')
                                 # Require the localized empty state and zero stale game cards.
                                 assert page.get_by_test_id('catalog-empty').is_visible() and page.locator('[data-testid^="card-"]').count()==0
-                                # Clear the query before the representative category evidence state.
-                                page.get_by_test_id('catalog-search').fill('')
+                                # Clear and dispatch the search input in one browser task so its synchronous rerender cannot detach Playwright's fill target mid-action. (issue #637)
+                                page.get_by_test_id('catalog-search').evaluate("(input) => { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }")
                                 # Wait for the cleared query to own a non-empty catalog before changing its category. (issue #637)
                                 page.wait_for_function("""() => document.querySelector('[data-testid="catalog-search"]')?.value === '' && document.querySelectorAll('[data-testid^="card-"]').length > 0""",timeout=5000)
                                 # Select the table category as a visible representative after every category passed behavior checks.
