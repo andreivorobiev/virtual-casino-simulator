@@ -29,17 +29,19 @@ def parsed_module(path: str, source: str) -> dict:
 
 # Prove exhaustive structural inventory and fail-closed semantic classification.
 class MultiprocessSafetyInventoryTests(unittest.TestCase):
-    # Build one exact-current inventory while the replacement source is intentionally uncommitted.
+    # Build one exact-current inventory from tracked source without requiring archive Git metadata.
     @classmethod
     def setUpClass(cls) -> None:  # Build shared exact-current structural evidence.
-        # Bind the isolated Package C checkout without changing process working directory.
+        # Bind the isolated Package C source tree without changing process working directory.
         cls.repo_root = Path(__file__).resolve().parents[2]
-        # Resolve the exact rejected checkpoint identity currently checked out.
-        cls.commit = audit.source_commit(cls.repo_root)
-        # Permit the focused suite to inspect the intentionally dirty replacement source.
-        with mock.patch.object(audit, "require_clean_tree"):
-            # Build one immutable structural packet for current-source assertions.
-            cls.inventory = audit.build_inventory(cls.repo_root, cls.commit)
+        # Supply one valid synthetic commit because release validation uses a Git-free exact-HEAD archive.
+        cls.commit = "0" * 40
+        # Bind provenance to the synthetic identity while retaining all source-byte analysis.
+        with mock.patch.object(audit, "source_commit", return_value=cls.commit):
+            # Permit both a normal checkout and the exact tracked release archive fixture.
+            with mock.patch.object(audit, "require_clean_tree"):
+                # Build one immutable structural packet for current-source assertions.
+                cls.inventory = audit.build_inventory(cls.repo_root, cls.commit)
 
     # Prove all 46 registered games receive one conservative reachable persistence disposition.
     def test_all_registered_games_are_reachably_classified_and_blocked(self) -> None:
