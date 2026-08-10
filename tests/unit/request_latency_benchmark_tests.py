@@ -1373,8 +1373,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates, account/Admin completion, memory gate, and portfolio checkpoints to total exactly 928 permanent rows.
-        self.assertEqual(len(requirements), 928)
+        # Require the accepted aggregates plus the storage-integrity completion to total exactly 930 permanent rows.
+        self.assertEqual(len(requirements), 930)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1426,6 +1426,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-159": "Tests",  # Bind the exact-source payload and frontend budget checkpoint.
             "TEST-160": "Tests",  # Bind the fail-closed multiprocess safety inventory.
             "TEST-161": "Tests",  # Bind descriptor-owned game-suite discovery.
+            "STORAGE-012": "Storage",  # Bind row-scoped insertion and provider-owned bootstrap.
+            "TEST-162": "Tests",  # Bind race, replay, rollback, and read-only storage evidence.
             "TOOL-013": "Tooling",  # Bind persistent agent-memory provenance and validation ownership.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
@@ -1506,6 +1508,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(test_149[0]["module"], "Tests")
         # Parse the core descriptor for the enrollment-policy compatible addition.
         core_module = json.loads((ROOT / "modules" / "core.json").read_text(encoding="utf-8"))
+        # Parse the players descriptor for the row-scoped creation boundary.
+        players_module = json.loads((ROOT / "modules" / "players.json").read_text(encoding="utf-8"))
         # Parse the Admin descriptor for the additive owner-only routes.
         admin_module = json.loads((ROOT / "modules" / "admin.json").read_text(encoding="utf-8"))
         # Parse the tests descriptor.
@@ -1534,14 +1538,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         blackjack_module = json.loads((ROOT / "modules" / "blackjack.json").read_text(encoding="utf-8"))
         # Parse the Autoplay descriptor for the compatible lifecycle reconciliation repair.
         autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
-        # Require the exact compatible Core minor for account/Admin completion.
-        self.assertEqual(core_module["version"], "9.38.0")
+        # Require the exact compatible Core patch for storage-integrity completion.
+        self.assertEqual(core_module["version"], "9.38.1")
+        # Require the exact compatible Players patch for explicit row insertion.
+        self.assertEqual(players_module["version"], "9.1.1")
         # Require the exact compatible Admin minor for delegation and readiness controls.
         self.assertEqual(admin_module["version"], "1.17.0")
-        # Require the exact release-owned tests patch for v0.9.5.61 qualification.
-        self.assertEqual(tests_module["version"], "1.71.1")
-        # Require the exact release-owned docs patch for v0.9.5.61 provenance.
-        self.assertEqual(docs_module["version"], "1.69.1")
+        # Require the exact tests patch for storage-integrity evidence.
+        self.assertEqual(tests_module["version"], "1.71.2")
+        # Require the exact docs patch for the new durable requirements.
+        self.assertEqual(docs_module["version"], "1.69.2")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the exact release-owned contracts patch for the compatibility record.

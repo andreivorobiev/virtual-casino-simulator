@@ -37,13 +37,6 @@ def load_players() -> dict:
     # Return the computed value to the caller.
     return state
 
-# Define the save_players function used by this module.
-def save_players(state: dict) -> None:
-    # Set state["schema_version"] to the value needed for the next operation.
-    state["schema_version"] = SCHEMA_VERSION
-    # Persist the player document through the active storage provider.
-    get_storage_provider().save_players(state)
-
 # Define the list_players function used by this module.
 def list_players() -> list[dict]:
     # Return the computed value to the caller.
@@ -76,12 +69,12 @@ def create_player(display_name: str, kind: str = "human", balance: float = 5000.
     # Set player to the value needed for the next operation.
     player = {"player_id": new_id("player"), "display_name": display_name.strip(), "type": kind, "balance": round(float(balance),2), "created_at": now, "updated_at": now, "status": "active"}
     # Append this one player through the provider's row-scoped path instead of rewriting the whole
-    # player document. A load/append/save_players cycle here would drop out of the cross-process wallet
+    # player document. A load/append/full-rewrite cycle here would drop out of the cross-process wallet
     # lock between the read and the write, so a bet settling concurrently could be silently reverted,
     # and on MySQL it would replace every player row from a stale snapshot (issue #402).
-    # ensure_player holds the wallet lock across the JSON read-modify-write and uses a row-scoped
+    # insert_player holds the wallet lock across the JSON read-modify-write and uses a row-scoped
     # INSERT IGNORE plus SELECT ... FOR UPDATE on MySQL, so it is safe on both providers.
-    return get_storage_provider().ensure_player(player)
+    return get_storage_provider().insert_player(player)
 
 # Define the ensure_player_for_user function used by this module.
 def ensure_player_for_user(user_id: str, display_name: str, player_id: str | None = None) -> dict:

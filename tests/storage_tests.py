@@ -48,6 +48,42 @@ def _json_action_worker(args):
     return event["ledger_id"], replayed
 
 
+# Insert one player from an independent process through the public creation service.
+def _json_player_create_worker(args):
+    # Import player and storage services inside the spawned process.
+    from casino.core import players, storage
+
+    # Unpack the isolated data root and deterministic display suffix.
+    data_root, suffix = args
+    # Route every public player call into the shared isolated JSON store.
+    storage.set_provider_for_tests(storage.JsonStorageProvider(Path(data_root)))
+    # Start protected work so process-local injection is always released.
+    try:
+        # Create one independently identified player through the production row-scoped seam.
+        created = players.create_player(f"Process Player {suffix}", "guest", 200.0)
+        # Return only the durable identifier needed by the parent assertion.
+        return created["player_id"]
+    # Always clear the process-local provider before the worker exits.
+    finally:
+        # Restore ordinary provider selection for process teardown.
+        storage.set_provider_for_tests(None)
+
+
+# Bootstrap overlapping player rows from an independent process.
+def _json_player_bootstrap_worker(args):
+    # Import storage inside the spawned process so no provider state is inherited.
+    from casino.core import storage
+
+    # Unpack the shared root and unique row suffix.
+    data_root, suffix = args
+    # Build one independent provider instance against the shared store.
+    provider = storage.JsonStorageProvider(Path(data_root))
+    # Submit one shared row and one process-owned row through one batch boundary.
+    provider.bootstrap_players({"players": [{"player_id": "bootstrap_process_shared", "display_name": "Shared Process", "type": "guest", "balance": 110.0}, {"player_id": f"bootstrap_process_{suffix}", "display_name": f"Process {suffix}", "type": "guest", "balance": 111.0}]})
+    # Return the unique identifier so completion is explicit and serializable.
+    return f"bootstrap_process_{suffix}"
+
+
 # Execute one managed practice-opponent action in a separately spawned process.
 def _practice_opponent_worker(args):
     # Import services inside the child process so Windows spawn uses clean module state.
@@ -426,8 +462,8 @@ def run_json_provider_parity():
         try:
             # Ensure the isolated storage directories exist.
             provider.ensure_ready()
-            # Persist default players through the provider-backed players service.
-            players.save_players(players.default_players())
+            # Bootstrap default players through the provider-owned idempotent boundary.
+            provider.bootstrap_players(players.default_players())
             # Read the default players back through the public players service.
             loaded = players.list_players()
             # Verify the human default player remains available.
@@ -605,7 +641,7 @@ def run_json_action_idempotency():
         # Seed the isolated wallet through the production provider shape.
         provider = storage.JsonStorageProvider(data_root)
         # Persist default players before concurrent child processes begin.
-        provider.save_players(players.default_players())
+        provider.bootstrap_players(players.default_players())
         # Capture the initial fake-money balance for exact-once settlement proof.
         starting_balance = next(row["balance"] for row in provider.load_players(players.default_players)["players"] if row["player_id"] == "human")
         # Define debit, payout, refund, and settlement families with distinct signed amounts.
@@ -653,7 +689,7 @@ def run_json_action_idempotency():
         # Start a separate isolated store for lost-response recovery proof.
         recovery_root = Path(tmp) / "recovery-data"
         # Seed the recovery wallet through a normal provider.
-        storage.JsonStorageProvider(recovery_root).save_players(players.default_players())
+        storage.JsonStorageProvider(recovery_root).bootstrap_players(players.default_players())
         # Build the failure-injecting provider that stops after durable action commit.
         failing = _LostResponseJsonProvider.build(recovery_root)
         # Execute the action and expect the injected post-commit failure.
@@ -704,7 +740,7 @@ def run_practice_opponent_accounting():
         # Seed canonical human and bot player accounts in the isolated store.
         provider = storage.JsonStorageProvider(data_root)
         # Persist defaults before controller reads or ledger actions begin.
-        provider.save_players(players.default_players())
+        provider.bootstrap_players(players.default_players())
         # Inject the isolated provider into public services in this process.
         storage.set_provider_for_tests(provider)
         # Start protected logic so provider injection is always cleared.
@@ -1101,7 +1137,7 @@ def run_mysql_live_provider_path():
         # Measure the bounded pool on the disposable MySQL service before domain-state concurrency.
         _run_mysql_pool_live_measurements(provider)
         # Seed fresh private-beta player rows through the provider abstraction.
-        players.save_players(players.default_players())
+        provider.bootstrap_players(players.default_players())
         # Create a real auth user so users and terms acceptance enter the provider document table.
         user = auth.create_user("mysql.integration@example.test", "mysql-integration-password", "MySQL Integration", terms_required=False)
         # Login so a live session document is persisted alongside the user record.
@@ -1340,13 +1376,13 @@ def run_mysql_live_provider_path():
         assert guard_action_replayed is False
         # Capture the balance after every pre-existing durable mutation.
         guard_action_balance = players.get_player("human")["balance"]
-        # Persist one stale existing row plus one missing row through the compatibility document seam.
-        provider.save_players({"players": [{"player_id": "human", "display_name": "Stale Snapshot", "type": "human", "balance": 999999.0, "created_at": guard_player["created_at"], "updated_at": guard_player["updated_at"], "status": "suspended"}, {"player_id": "mysql_save_players_guard", "display_name": "MySQL Save Players Guard", "type": "guest", "balance": 125.0, "created_at": guard_player["created_at"], "updated_at": guard_player["updated_at"], "status": "active"}]})
+        # Submit one stale existing row plus one missing row through the explicit bootstrap seam.
+        provider.bootstrap_players({"players": [{"player_id": "human", "display_name": "Stale Snapshot", "type": "human", "balance": 999999.0, "created_at": guard_player["created_at"], "updated_at": guard_player["updated_at"], "status": "suspended"}, {"player_id": "mysql_save_players_guard", "display_name": "MySQL Save Players Guard", "type": "guest", "balance": 125.0, "created_at": guard_player["created_at"], "updated_at": guard_player["updated_at"], "status": "active"}]})
         # Require the stale supplied row to leave the committed wallet and lifecycle state unchanged.
         assert players.get_player("human")["balance"] == guard_action_balance and players.get_player("human")["status"] == "active"
         # Require the missing supplied row to be inserted alongside every existing player.
         assert players.get_player("mysql_save_players_guard")["balance"] == 125.0
-        # Require the ledger event committed before save_players to remain readable.
+        # Require the ledger event committed before bootstrap to remain readable.
         assert any(row["ledger_id"] == guard_debit["ledger_id"] for row in ledger.read_recent("human", 100))
         # Replay the pre-existing action identity after the compatibility write.
         replayed_action, replayed = ledger.debit_once("human", 3, "MYSQL_SAVE_PLAYERS_GUARD", "mysql-save-players-guard", "storage", "round_mysql_save_players", {"issue": 431})
@@ -1377,8 +1413,8 @@ def run_player_creation_preserves_ledger():
         try:
             # Ensure the isolated storage directories exist.
             provider.ensure_ready()
-            # Seed the default player document so a known wallet exists.
-            players.save_players(players.default_players())
+            # Seed the default player document through the provider-owned bootstrap boundary.
+            provider.bootstrap_players(players.default_players())
             # Move money BEFORE the next player is created. The original defect survived CI precisely
             # because every existing fixture seeded players before writing any ledger rows.
             debit = ledger.debit("human", 40, "TEST_CREATE_PLAYER_DEBIT", "storage", "round_create", {})
@@ -1386,6 +1422,47 @@ def run_player_creation_preserves_ledger():
             balance_after_debit = players.get_player("human")["balance"]
             # Verify the debit actually committed before the player write under test.
             assert debit["balance_after"] == balance_after_debit
+            # Build two independent provider instances so bootstrap contenders use separate thread locks.
+            contenders = (storage.JsonStorageProvider(data_root), storage.JsonStorageProvider(data_root))
+            # Define one stale existing row plus overlapping and distinct missing bootstrap rows.
+            batches = (
+                # Preserve the durable human row while adding the first two identifiers.
+                {"players": [{"player_id": "human", "display_name": "Stale Human", "type": "human", "balance": 999999.0, "status": "suspended"}, {"player_id": "bootstrap_shared", "display_name": "Shared", "type": "guest", "balance": 100.0}, {"player_id": "bootstrap_first", "display_name": "First", "type": "guest", "balance": 101.0}]},
+                # Race the shared identifier while adding one independent identifier.
+                {"players": [{"player_id": "bootstrap_shared", "display_name": "Changed Shared", "type": "guest", "balance": 999.0}, {"player_id": "bootstrap_second", "display_name": "Second", "type": "guest", "balance": 102.0}]},
+            )
+            # Run both bootstrap batches concurrently through the production cross-process boundary.
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                # Wait for both bounded contenders and surface any failure immediately.
+                list(executor.map(lambda pair: pair[0].bootstrap_players(pair[1]), zip(contenders, batches)))
+            # Require stale bootstrap input never to overwrite the already debited wallet or status.
+            assert players.get_player("human")["balance"] == balance_after_debit and players.get_player("human")["status"] == "active"
+            # Require each overlapping or distinct identifier to exist exactly once after the race.
+            bootstrapped = [row["player_id"] for row in players.list_players() if row["player_id"].startswith("bootstrap_")]
+            # Reject duplicate shared rows and lost independent rows.
+            assert sorted(bootstrapped) == ["bootstrap_first", "bootstrap_second", "bootstrap_shared"]
+            # Capture exact durable bytes before repeating an already satisfied bootstrap batch.
+            bootstrap_bytes = provider.players_path().read_bytes()
+            # Repeat the first batch to prove idempotent bootstrap performs no replacement write.
+            provider.bootstrap_players(batches[0])
+            # Require a byte-identical no-op when every supplied identifier already exists.
+            assert provider.players_path().read_bytes() == bootstrap_bytes
+            # Start two operating-system processes against the same isolated player document.
+            with ProcessPoolExecutor(max_workers=2) as executor:
+                # Require both overlapping bootstrap batches to complete without a lost update.
+                process_bootstraps = list(executor.map(_json_player_bootstrap_worker, [(str(data_root), "first"), (str(data_root), "second")]))
+            # Require both process-owned identifiers to report completion.
+            assert sorted(process_bootstraps) == ["bootstrap_process_first", "bootstrap_process_second"]
+            # Read every process bootstrap identifier after both independent providers exit.
+            process_rows = [row["player_id"] for row in players.list_players() if row["player_id"].startswith("bootstrap_process_")]
+            # Require the shared row once and both distinct rows once.
+            assert sorted(process_rows) == ["bootstrap_process_first", "bootstrap_process_second", "bootstrap_process_shared"]
+            # Start two independent public player creations against the same durable wallet.
+            with ProcessPoolExecutor(max_workers=2) as executor:
+                # Materialize both identifiers so worker errors cannot be hidden.
+                process_created = list(executor.map(_json_player_create_worker, [(str(data_root), "A"), (str(data_root), "B")]))
+            # Require both created identifiers to be distinct and durably visible.
+            assert len(set(process_created)) == 2 and set(process_created) <= {row["player_id"] for row in players.list_players()}
             # Create a second player through the public service that guest trials and signup both use.
             created = players.create_player("Ledger Guard", "guest", 250.0)
             # Verify creation still returns a usable player row.
@@ -1409,14 +1486,18 @@ def run_player_creation_preserves_ledger():
             # Restore normal provider selection for subsequent tests.
             storage.set_provider_for_tests(None)
 
-    # Verify the MySQL compatibility path now inserts missing rows without destructive replacement.
-    replace_source = inspect.getsource(storage.MySQLStorageProvider.save_players)
+    # Verify the explicit MySQL bootstrap path inserts missing rows without destructive replacement.
+    replace_source = inspect.getsource(storage.MySQLStorageProvider.bootstrap_players)
     # Require the destructive unconditional ledger truncation to be gone from the player write path.
     assert "DELETE FROM casino_ledger" not in replace_source, "player document replacement must not truncate the ledger"
     # Require insert-only compatibility semantics for every supplied player row.
     assert "INSERT IGNORE INTO casino_players" in replace_source
     # Require one explicit transaction with rollback protection around the bounded inserts.
     assert "start_transaction" in replace_source and "connection.commit()" in replace_source and "connection.rollback()" in replace_source
+    # Read the MySQL load path to prove reads no longer seed or commit player rows.
+    load_source = inspect.getsource(storage.MySQLStorageProvider.load_players)
+    # Require the public read path to contain no write, seed, or commit statement.
+    assert "INSERT" not in load_source and "_seed_players" not in load_source and "connection.commit()" not in load_source
 
     # Model the narrow MySQL cursor behavior without opening a network connection. (STORAGE-008, issue #431)
     class PlayerInsertCursor:
@@ -1425,7 +1506,7 @@ def run_player_creation_preserves_ledger():
             # Store the connection that owns statements, rows, and the failure seam.
             self.connection = connection
 
-        # Execute only the bounded insert statement accepted by save_players.
+        # Execute only the bounded insert statement accepted by bootstrap_players.
         def execute(self, statement, parameters):
             # Record every statement so the test can reject hidden table-wide mutations.
             self.connection.statements.append(statement)
@@ -1501,7 +1582,7 @@ def run_player_creation_preserves_ledger():
     # Return the successful fake connection for this one provider call.
     success_provider.connect = lambda: success_connection
     # Submit one stale existing player and one genuinely missing player.
-    success_provider.save_players({"players": [{"player_id": "human", "display_name": "Stale Human", "type": "human", "balance": 999999.0, "created_at": "stale", "updated_at": "stale", "status": "suspended"}, {"player_id": "new_player", "display_name": "New Player", "type": "guest", "balance": 250.0, "created_at": "created", "updated_at": "updated", "status": "active"}]})
+    success_provider.bootstrap_players({"players": [{"player_id": "human", "display_name": "Stale Human", "type": "human", "balance": 999999.0, "created_at": "stale", "updated_at": "stale", "status": "suspended"}, {"player_id": "new_player", "display_name": "New Player", "type": "guest", "balance": 250.0, "created_at": "created", "updated_at": "updated", "status": "active"}]})
     # Require transaction, commit, cleanup, and no rollback on the successful batch.
     assert success_connection.started and success_connection.committed and success_connection.closed and not success_connection.rolled_back
     # Require the stale existing wallet row to remain byte-for-byte unchanged.
@@ -1522,9 +1603,9 @@ def run_player_creation_preserves_ledger():
     # Start protected failure evidence so the expected connector error is observed.
     try:
         # Submit two missing rows so the first insert must be undone when the second fails.
-        failure_provider.save_players({"players": [{"player_id": "first_new", "display_name": "First New", "type": "guest", "balance": 10.0}, {"player_id": "second_new", "display_name": "Second New", "type": "guest", "balance": 20.0}]})
+        failure_provider.bootstrap_players({"players": [{"player_id": "first_new", "display_name": "First New", "type": "guest", "balance": 10.0}, {"player_id": "second_new", "display_name": "Second New", "type": "guest", "balance": 20.0}]})
         # Fail explicitly if the provider swallowed the simulated connector error.
-        raise AssertionError("save_players must preserve the original insert failure")
+        raise AssertionError("bootstrap_players must preserve the original insert failure")
     # Accept only the deterministic connector failure from the fake cursor.
     except RuntimeError as error:
         # Require the original error rather than an unrelated cleanup failure.
@@ -1538,10 +1619,14 @@ def run_player_creation_preserves_ledger():
     create_source = inspect.getsource(players.create_player)
     # Strip comment text so the check inspects executable statements rather than prose about them.
     create_statements = "\n".join(line.split("#", 1)[0] for line in create_source.splitlines())
-    # Require the row-scoped provider call that holds the wallet lock on both providers.
-    assert "ensure_player" in create_statements
+    # Require the explicit row-scoped provider call that holds the wallet lock on both providers.
+    assert "insert_player" in create_statements
     # Require the destructive whole-document rewrite to be gone from the executable path.
     assert "save_players" not in create_statements
+    # Require the retired ambiguous method to be absent from the provider contract and implementations.
+    assert not hasattr(storage.StorageProvider, "save_players") and not hasattr(storage.JsonStorageProvider, "save_players") and not hasattr(storage.MySQLStorageProvider, "save_players")
+    # Require the retired empty-check seam to be absent so bootstrap cannot reintroduce a read-before-write race.
+    assert not hasattr(storage.StorageProvider, "has_players") and not hasattr(storage.JsonStorageProvider, "has_players") and not hasattr(storage.MySQLStorageProvider, "has_players")
 
 
 # Prove client-supplied table rules cannot escape their declared domain into payout math. (issue #404)

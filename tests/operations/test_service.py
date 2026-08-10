@@ -196,8 +196,8 @@ class OperationsProbeServiceTests(unittest.TestCase):
             provider = JsonStorageProvider(Path(temporary_directory) / "data")
             # Bootstrap provider directories without touching repository data.
             provider.ensure_ready()
-            # Persist a minimal valid primary player document through the real provider.
-            provider.save_players({"players": []})
+            # Persist a minimal valid primary player document through the isolated JSON writer.
+            provider._save_players_document({"players": []})
             # Run the Operations readiness probe against the concrete provider.
             result = probes.probe_storage(lambda: provider)
         # Verify the real local provider reports healthy outside the temporary context.

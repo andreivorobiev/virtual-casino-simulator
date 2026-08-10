@@ -39,8 +39,8 @@ class ProductAccountSpineTests(unittest.TestCase):
         write_json(auth.USERS_PATH, auth.default_users())
         # Reset auth sessions so role-revocation assertions start empty.
         write_json(auth.SESSIONS_PATH, auth.default_sessions())
-        # Reset wallet records so Admin-created users receive predictable linked players.
-        players.save_players(players.default_players())
+        # Reset the JSON wallet document through the test-only internal writer so public code exposes no full-rewrite seam.
+        storage.get_storage_provider()._save_players_document(players.default_players())
         # Allocate an isolated feedback provider for reporter-status tests.
         self.temporary = tempfile.TemporaryDirectory(prefix="casino-account-spine-")
         # Point feedback at the isolated provider.

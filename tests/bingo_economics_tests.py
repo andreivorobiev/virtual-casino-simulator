@@ -113,7 +113,7 @@ class BingoEconomicsTests(unittest.TestCase):
         # Ensure the isolated storage directories exist.
         self.provider.ensure_ready()
         # Seed the default human and bot wallets at 5000 each.
-        players.save_players(players.default_players())
+        self.provider.bootstrap_players(players.default_players())
         # Build a fresh router and register only the bingo routes.
         self.router = Router()
         # Register the production bingo handlers on the shared router.

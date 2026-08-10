@@ -102,8 +102,8 @@ class NonfiniteMoneyTests(unittest.TestCase):
             provider = storage.JsonStorageProvider(Path(temporary) / "data")
             # Construct one finite wallet fixture without using shared runtime accounts.
             valid_state = {"schema_version": 8, "players": [{"player_id": "human", "display_name": "Test", "type": "human", "balance": 5000.0, "status": "active"}]}
-            # Persist the accepted baseline through the production JSON writer.
-            provider.save_players(valid_state)
+            # Persist the accepted baseline through the isolated JSON writer under direct test control.
+            provider._save_players_document(valid_state)
             # Capture the exact valid bytes before the corrupt candidate.
             original_bytes = provider.players_path().read_bytes()
             # Copy the fixture so only the candidate contains NaN.
@@ -112,8 +112,8 @@ class NonfiniteMoneyTests(unittest.TestCase):
             corrupt_state["players"][0]["balance"] = float("nan")
             # Require strict serialization to reject before atomic replacement.
             with self.assertRaises(ValueError):
-                # Attempt the lower-level provider write as a final defense layer.
-                provider.save_players(corrupt_state)
+                # Attempt the lower-level JSON writer as a final defense layer.
+                provider._save_players_document(corrupt_state)
             # Require the original finite document to remain byte-for-byte unchanged.
             self.assertEqual(original_bytes, provider.players_path().read_bytes())
             # Parse the retained document with a strict non-standard-constant hook.

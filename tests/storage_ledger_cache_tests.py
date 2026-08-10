@@ -128,7 +128,7 @@ class LedgerCacheEquivalenceTests(unittest.TestCase):
         # Build the first provider whose cache will be warmed.
         first = storage.JsonStorageProvider(self.data_root)
         # Seed the default player document so ledger transactions can settle.
-        first.save_players(players.default_players())
+        first.bootstrap_players(players.default_players())
         # Warm the first instance's cache over the empty ledger.
         self.assertEqual([], first.read_ledger_recent("human", 100))
         # Build a second independent provider instance over the same directory.
@@ -160,7 +160,7 @@ class LedgerCacheEquivalenceTests(unittest.TestCase):
         # Build the provider that executes the sequential actions.
         provider = storage.JsonStorageProvider(self.data_root)
         # Seed the default player document so debits can settle.
-        provider.save_players(players.default_players())
+        provider.bootstrap_players(players.default_players())
         # Append ten ordinary rows so a full re-parse would be clearly visible in the counter.
         for index in range(10):
             # Append one production debit row.

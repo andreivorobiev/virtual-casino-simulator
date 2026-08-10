@@ -136,7 +136,7 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         # Ensure provider directories exist before seeding players.
         self._provider.ensure_ready()
         # Seed the default player document so the human wallet starts at 5000.
-        players.save_players(players.default_players())
+        self._provider.bootstrap_players(players.default_players())
         # Remove per-player game state files left inside the shared isolated root by earlier tests.
         shutil.rmtree(GAME_DATA_DIR, ignore_errors=True)
 

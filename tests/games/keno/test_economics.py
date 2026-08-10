@@ -202,7 +202,7 @@ class KenoEconomicsTests(TestCase):
         # Fund only the human player enough for exact maximum-stake jackpot tests.
         next(player for player in player_document["players"] if player["player_id"] == "human")["balance"] = balance
         # Persist the funded players through the production provider boundary.
-        players.save_players(player_document)
+        storage.get_storage_provider().bootstrap_players(player_document)
         # Reset current game state to the compatible empty shape.
         self.state = engine.default_state()
         # Reset save-call accounting for the next route scenario.

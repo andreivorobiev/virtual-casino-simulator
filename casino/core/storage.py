@@ -161,19 +161,19 @@ class StorageProvider:
         # Preserve non-JSON behavior because its state is not reset through JSON directories.
         yield self
 
-    # Return true when at least one player has already been bootstrapped.
-    def has_players(self) -> bool:
-        # Raise because concrete providers must inspect their own player store.
-        raise NotImplementedError
-
     # Load the player document shape used by the existing players API.
     def load_players(self, default_factory: Callable[[], dict]) -> dict:
         # Raise because concrete providers must map their own storage rows.
         raise NotImplementedError
 
-    # Save a full player document for bootstrap and reset compatibility.
-    def save_players(self, state: dict) -> None:
-        # Raise because concrete providers must map their own storage rows.
+    # Insert one new player through a row-scoped, lock-correct provider boundary.
+    def insert_player(self, player: dict) -> dict:
+        # Raise because concrete providers must serialize player creation.
+        raise NotImplementedError
+
+    # Insert only missing bootstrap rows without replacing existing player state.
+    def bootstrap_players(self, state: dict) -> None:
+        # Raise because concrete providers must make bootstrap idempotent.
         raise NotImplementedError
 
     # Update one player using the existing updater callback contract.
@@ -772,17 +772,6 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 self._recover_all_json_actions_locked()
                 # Transfer control while the complete JSON tree remains stable.
                 yield self
-
-    # Return true when the local players document exists.
-    def has_players(self) -> bool:
-        # Guard recovery and the existence read from concurrent local threads.
-        with self.lock:
-            # Serialize with action-owned wallet recovery across processes.
-            with self._json_global_gate():
-                # Complete every recoverable wallet action before exposing existence.
-                self._recover_all_json_actions_locked()
-                # Return whether players have already been bootstrapped.
-                return self.players_path().exists()
 
     # Read JSON from a local path with corruption fallback.
     def _read_json(self, path: Path, default: Any) -> Any:
@@ -2066,18 +2055,43 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 # Return the compatible player document after recovery.
                 return self._load_players_document(default_factory)
 
-    # Save players to the existing JSON document shape.
-    def save_players(self, state: dict) -> None:
-        # Reject wallet mutation attempted from inside a planner.
+    # Insert one player through the deterministic provider-owned identity boundary.
+    def insert_player(self, player: dict) -> dict:
+        # Reuse the exactly-once insert-or-read semantics already required by invitations.
+        return self.ensure_player(player)
+
+    # Insert only missing bootstrap players under one JSON wallet boundary. (STORAGE-012, issue #431)
+    def bootstrap_players(self, state: dict) -> None:
+        # Reject bootstrap mutation attempted from inside a planner.
         self._reject_planner_mutation()
-        # Guard recovery and the wallet write from concurrent local threads.
+        # Guard the complete bootstrap batch from concurrent local threads.
         with self.lock:
-            # Serialize with every action-owned projection across processes.
+            # Serialize bootstrap with every wallet action across processes.
             with self._json_global_gate():
-                # Complete every recoverable action before a later wallet overwrite.
+                # Complete every recoverable action before adding missing wallets.
                 self._recover_all_json_actions_locked()
-                # Persist the compatible player document inside the held gate.
-                self._save_players_document(state)
+                # Load the current document without inventing unrelated defaults.
+                current = self._load_players_document(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
+                # Index durable identifiers so repeated or racing bootstrap calls are harmless.
+                identifiers = {row.get("player_id") for row in current.get("players", []) if isinstance(row, dict)}
+                # Track whether this call contributed any previously missing row.
+                changed = False
+                # Visit each bounded bootstrap row exactly once.
+                for player in state.get("players", []):
+                    # Ignore an already durable identifier without overwriting wallet or lifecycle fields.
+                    if player.get("player_id") in identifiers:
+                        # Continue to the remaining default rows.
+                        continue
+                    # Append a detached row while the cross-process wallet gate remains held.
+                    current["players"].append(dict(player))
+                    # Reserve the identifier against duplicates inside the same supplied batch.
+                    identifiers.add(player.get("player_id"))
+                    # Record that the normalized document must be published once.
+                    changed = True
+                # Persist only when at least one missing row was appended.
+                if changed:
+                    # Publish the complete JSON document atomically under the held wallet boundary.
+                    self._save_players_document(current)
 
     # Update one player with the existing callback semantics.
     def update_player(self, player_id: str, updater: Callable[[dict], None]) -> dict:
@@ -2782,51 +2796,12 @@ class MySQLStorageProvider(StorageProvider):
             # Close the MySQL connection for this operation.
             connection.close()
 
-    # Return true when the MySQL players table has at least one row.
-    def has_players(self) -> bool:
-        # Ensure schema exists before checking player rows.
-        self.ensure_ready()
-        # Open a connection for the count query.
-        connection = self.connect()
-        # Start protected query logic so the connection is always closed.
-        try:
-            # Open a cursor that returns tuple rows.
-            cursor = connection.cursor()
-            # Count players to detect bootstrap state.
-            cursor.execute("SELECT COUNT(*) FROM casino_players")
-            # Return whether at least one player exists.
-            return int(cursor.fetchone()[0]) > 0
-        # Always close the connection after the count query.
-        finally:
-            # Close the MySQL connection for this operation.
-            connection.close()
-
-    # Insert default players when the MySQL table is empty.
-    def _seed_players_if_empty(self, cursor, default_factory: Callable[[], dict]) -> None:
-        # Count rows so seed data is only inserted into a fresh database.
-        cursor.execute("SELECT COUNT(*) FROM casino_players")
-        # Fetch the count row from tuple or dictionary cursors used by different callers.
-        count_row = cursor.fetchone()
-        # Normalize the aggregate value without depending on the cursor row representation.
-        player_count = next(iter(count_row.values())) if isinstance(count_row, dict) else count_row[0]
-        # Branch when no players exist yet.
-        if int(player_count) == 0:
-            # Build the default player document from the caller's factory.
-            state = default_factory()
-            # Insert each default player row.
-            for player in state.get("players", []):
-                # Use INSERT IGNORE so two processes racing this count-then-seed on a fresh database lose harmlessly instead of raising an unmapped IntegrityError out of the read path. (issue #431)
-                cursor.execute(
-                    "INSERT IGNORE INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Insert one seeded player row while keeping any concurrently seeded row.
-                    (player["player_id"], player["display_name"], player.get("type", "human"), round(float(player.get("balance", 0)), 2), player.get("created_at", utc_now()), player.get("updated_at", utc_now()), player.get("status", "active")),  # Bind seeded player fields.
-                )
-
     # Convert a MySQL player row into the existing API shape.
     def _player_from_row(self, row: dict) -> dict:
         # Return a dict with the current public player field names.
         return {"player_id": row["player_id"], "display_name": row["display_name"], "type": row["player_type"], "balance": _money(row["balance"]), "created_at": row["created_at"], "updated_at": row["updated_at"], "status": row["status"]}
 
-    # Load players from MySQL and seed defaults when starting fresh.
+    # Load players from MySQL without mutating storage from a read path.
     def load_players(self, default_factory: Callable[[], dict]) -> dict:
         # Ensure schema exists before reading players.
         self.ensure_ready()
@@ -2836,10 +2811,6 @@ class MySQLStorageProvider(StorageProvider):
         try:
             # Open a dictionary cursor so row mapping is explicit.
             cursor = connection.cursor(dictionary=True)
-            # Seed default players if this is a fresh MySQL database.
-            self._seed_players_if_empty(cursor, default_factory)
-            # Commit seed rows before reading the ordered player list.
-            connection.commit()
             # Read players in stable order for deterministic API responses.
             cursor.execute("SELECT player_id, display_name, player_type, balance, created_at, updated_at, status FROM casino_players ORDER BY player_id")
             # Convert database rows into the JSON-compatible state document.
@@ -2851,8 +2822,13 @@ class MySQLStorageProvider(StorageProvider):
             # Close the MySQL connection for this operation.
             connection.close()
 
-    # Insert every missing player from one compatible document without replacing durable rows. (STORAGE-008, issue #431)
-    def save_players(self, state: dict) -> None:
+    # Insert one player through the deterministic provider-owned identity boundary.
+    def insert_player(self, player: dict) -> dict:
+        # Reuse the primary-key transaction shared with invited-account provisioning.
+        return self.ensure_player(player)
+
+    # Insert every missing bootstrap row without replacing durable rows. (STORAGE-012, issue #431)
+    def bootstrap_players(self, state: dict) -> None:
         # Ensure schema exists before inserting player rows.
         self.ensure_ready()
         # Open a connection for the bounded append operation.
@@ -3588,15 +3564,11 @@ def _close_cached_provider_pools() -> None:
 atexit.register(_close_cached_provider_pools)
 
 
-# Seed players when the configured provider is fresh.
+# Seed players idempotently through the configured provider.
 def bootstrap_players(default_factory: Callable[[], dict]) -> None:
     # Get the active storage provider.
     provider = get_storage_provider()
     # Ensure backing storage exists before checking player bootstrap state.
     provider.ensure_ready()
-    # Keep the empty check as a fast path that skips provisioning on already-seeded storage. (issue #431)
-    if not provider.has_players():
-        # Route each seeded row through idempotent provisioning so the check-then-write race cannot clobber a concurrent bootstrap or wallet write. (issue #431)
-        for player in default_factory().get("players", []):
-            # Create or keep one default player exactly once under the provider's own locks.
-            provider.ensure_player(player)
+    # Delegate the complete row set so each provider owns one race-free bootstrap boundary. (issue #431)
+    provider.bootstrap_players(default_factory())
