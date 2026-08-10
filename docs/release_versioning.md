@@ -9,7 +9,7 @@ Casino packaged releases use four numbers:
 The current release is:
 
 ```text
-0.9.5.65
+0.9.5.66
 ```
 
 ## What each number means
@@ -34,7 +34,7 @@ That adds the private-beta `0` epoch in front while preserving the existing plat
 Historical `v9.x.y` tags stay immutable. New packaged release tags use the four-number form, for example:
 
 ```text
-v0.9.5.65
+v0.9.5.66
 ```
 
 ## Next planned release

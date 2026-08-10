@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.65`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.66`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -181,6 +181,8 @@ v0.9.5.63 packages accepted descriptor-driven game-rule enforcement PR #649. It 
 v0.9.5.64 packages the accepted provider action-index bridge from normal PR #652. It closes bounded issue #653 and advances umbrella #432; settlement recovery and Deuces Wild now resolve exact action identities through the JSON registry or MySQL unique index instead of million-row ledger scans, while the legacy JSON journal format remains rollback-compatible and #432 stays open for the later append-only write transition. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.63 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.65 packages accepted governance PR #656. It closes issue #434; game requirements now have descriptor-owned shards, the legacy aggregate is generated and fail-closed, and shared Python game-suite execution is descriptor-discovered without changing any runtime, API, settlement, paytable, or provider behavior. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.64 as the application-only predecessor; database rollback remains prohibited.
+
+v0.9.5.66 packages accepted performance PR #659. It closes bounded issue #660 while parent issue #323 remains open for production latency evidence; the frozen v1 API gains opt-in compact shell and Roulette play projections, complete legacy responses remain the default, and the Roulette client reuses one immutable catalog per wheel mode without changing money, state, settlement, paytable, or provider behavior. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.65 as the application-only predecessor; database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
