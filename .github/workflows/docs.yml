@@ -20,4 +20,5 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Run checks
         run: |
+          python scripts/assemble_requirements.py --check
           python scripts/generate_docs.py --check

@@ -1,0 +1,113 @@
+{
+  "game": "three_card_poker",
+  "requirements_prefixes": [
+    "TCP"
+  ],
+  "requirements": [
+    {
+      "id": "TCP-001",
+      "module": "Three Card Poker",
+      "description": "Three Card Poker applies the documented three-card ranking, queen-high dealer qualification, Ante Bonus A, Pair Plus C, and Play or Fold settlement rules.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TCP-001"
+      ],
+      "browser_tests": [
+        "BR-TCP-001"
+      ],
+      "implementation_files": [
+        "casino/games/three_card_poker/engine.py",
+        "web/games/three_card_poker.js"
+      ],
+      "introduced_in": "game-expansion-three-card-poker",
+      "changed_in": "game-expansion-three-card-poker",
+      "notes": "Allocated by GitHub issue #77 for issue #93; focused and real-backend tests cover ranking, qualification, bonuses, Play, Fold, wins, losses, and ties."
+    },
+    {
+      "id": "TCP-002",
+      "module": "Three Card Poker",
+      "description": "Authenticated sessions own isolated reload-safe Three Card Poker decisions, recent rounds, hidden dealer cards, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TCP-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-TCP-001"
+      ],
+      "implementation_files": [
+        "casino/games/three_card_poker/api.py",
+        "casino/core/request_player.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-three-card-poker",
+      "changed_in": "game-expansion-three-card-poker",
+      "notes": "Session context overrides caller player ids, dealer cards stay hidden before settlement, and terminal history survives restart."
+    },
+    {
+      "id": "TCP-003",
+      "module": "Three Card Poker",
+      "description": "Ante, Pair Plus, Play, refund, and payout movements use the shared ledger exactly once under stable identifiers and immutable fingerprints.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TCP-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/three_card_poker/service.py",
+        "casino/core/ledger.py",
+        "tests/games/three_card_poker/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-three-card-poker",
+      "changed_in": "game-expansion-three-card-poker",
+      "notes": "Game code never mutates balances directly; opening and decision retries preserve exact ledger proof while changed payloads fail closed."
+    },
+    {
+      "id": "TCP-004",
+      "module": "Application",
+      "description": "The Three Card Poker surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and outcomes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-TCP-001"
+      ],
+      "implementation_files": [
+        "web/games/three_card_poker.js",
+        "web/i18n/en-US/games/three_card_poker.json",
+        "web/i18n/ru-RU/games/three_card_poker.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-three-card-poker",
+      "changed_in": "game-expansion-three-card-poker",
+      "notes": "Acceptance evidence covers both locales, all four named viewports, ready, decision, terminal, Fold, reduced-motion, and route-restored states."
+    },
+    {
+      "id": "TCP-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery include Three Card Poker with requirement, module, version, and visual evidence traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-TCP-001"
+      ],
+      "implementation_files": [
+        "modules/three_card_poker.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "tests/game_drivers/three_card_poker.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-three-card-poker",
+      "changed_in": "game-expansion-three-card-poker",
+      "notes": "The descriptor uses sort order 190 and the normalized tests.game_drivers.three_card_poker:play driver reference released by issue #77."
+    }
+  ]
+}

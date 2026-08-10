@@ -5,9 +5,15 @@ import json
 import pathlib
 # Import required dependency so this module can use its public functions or constants.
 import re
+# Import sys so direct script execution resolves the current checkout before helper imports.
+import sys
 
 # Set ROOT to the value needed for the next operation.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+# Prefer the current checkout over unrelated installed packages during direct execution.
+sys.path.insert(0, str(ROOT))
+# Import the checked-source assembler so every ordinary requirement validation rejects aggregate drift.
+from scripts.assemble_requirements import synchronize as synchronize_requirement_sources
 # Set REQ to the value needed for the next operation.
 REQ = ROOT / "docs" / "requirements" / "requirements.json"
 # Set ID_RE to the value needed for the next operation.
@@ -23,6 +29,16 @@ def main():
     seen = set()
     # Set errors to the value needed for the next operation.
     errors = []
+    # Require byte-exact agreement between independently owned sources and the compatibility aggregate.
+    try:
+        # Check without writing so ordinary validation remains side-effect free.
+        if not synchronize_requirement_sources(ROOT, write=False):
+            # Provide the exact repair command for a stale generated aggregate.
+            errors.append("requirements.json is stale; run python scripts/assemble_requirements.py --write")
+    # Convert absent, malformed, or misowned source shards into one fail-closed diagnostic.
+    except Exception as exc:
+        # Preserve the exception class and bounded message for a focused source repair.
+        errors.append(f"requirement source assembly failed: {type(exc).__name__}: {exc}")
     # Iterate through the collection to process each item.
     for req in requirements:
         # Set rid to the value needed for the next operation.

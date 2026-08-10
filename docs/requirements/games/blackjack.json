@@ -1,0 +1,496 @@
+{
+  "game": "blackjack",
+  "requirements_prefixes": [
+    "BJ"
+  ],
+  "requirements": [
+    {
+      "id": "BJ-001",
+      "module": "Blackjack",
+      "description": "Blackjack deals two player cards and two dealer cards.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-002",
+      "module": "Blackjack",
+      "description": "Dealer hole card is hidden in public state.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-003",
+      "module": "Blackjack",
+      "description": "Aces can count as 1 or 11.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-004",
+      "module": "Blackjack",
+      "description": "Soft totals are computed correctly for multi-ace hands.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-005",
+      "module": "Blackjack",
+      "description": "Natural blackjack pays the configured blackjack payout whether it settles immediately or after the player declines even money.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-002"
+      ],
+      "browser_tests": [
+        "BR-BJ-NATURAL-PAYOUT-001"
+      ],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "changed_in": "issue-243-blackjack-natural-payout",
+      "notes": "Deferred naturals are settled through the same configured payout calculation after the dealer completes play."
+    },
+    {
+      "id": "BJ-006",
+      "module": "Blackjack",
+      "description": "Push returns the stake.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-007",
+      "module": "Blackjack",
+      "description": "Dealer stands or hits soft 17 according to setting.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-008",
+      "module": "Blackjack",
+      "description": "Player can hit during active hand.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-009",
+      "module": "Blackjack",
+      "description": "Player can stand during active hand.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-010",
+      "module": "Blackjack",
+      "description": "Double down is available when legal.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-011",
+      "module": "Blackjack",
+      "description": "Double down debits an additional wager.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-012",
+      "module": "Blackjack",
+      "description": "Double down deals exactly one card and stands.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-013",
+      "module": "Blackjack",
+      "description": "Split is available for equal blackjack values.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-014",
+      "module": "Blackjack",
+      "description": "Split debits an additional wager.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-015",
+      "module": "Blackjack",
+      "description": "Resplit is limited by max_split_hands.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-016",
+      "module": "Blackjack",
+      "description": "Double-after-split setting is enforced.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-017",
+      "module": "Blackjack",
+      "description": "Split aces one-card rule is enforced.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-018",
+      "module": "Blackjack",
+      "description": "Late surrender setting is enforced.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-019",
+      "module": "Blackjack",
+      "description": "Surrender credits half the wager.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-020",
+      "module": "Blackjack",
+      "description": "Insurance is available only during player turn against a visible dealer Ace while the dealer hole card remains hidden.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001",
+        "API-BJ-003"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js",
+        "tests/run_tests.py"
+      ],
+      "changed_in": "issue-244-blackjack-insurance-phase",
+      "notes": "Issue #244 adds a pre-debit phase guard and real-HTTP regression for revealed and settled rounds."
+    },
+    {
+      "id": "BJ-021",
+      "module": "Blackjack",
+      "description": "Insurance cannot be bought more than once.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-022",
+      "module": "Blackjack",
+      "description": "Insurance maximum is half original wager.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-023",
+      "module": "Blackjack",
+      "description": "Even money is available with player blackjack against dealer Ace.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-024",
+      "module": "Blackjack",
+      "description": "Blackjack table rules cannot change during active rounds.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-025",
+      "module": "Blackjack",
+      "description": "A player cannot start multiple active blackjack rounds.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-026",
+      "module": "Blackjack",
+      "description": "Blackjack uses a persistent shoe.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-027",
+      "module": "Blackjack",
+      "description": "Blackjack state endpoint exposes shoe count.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-028",
+      "module": "Blackjack",
+      "description": "Blackjack UI renders dealer and player hands.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BJ-001"
+      ],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-029",
+      "module": "Blackjack",
+      "description": "Blackjack UI exposes action buttons.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BJ-001"
+      ],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-030",
+      "module": "Blackjack",
+      "description": "Blackjack writes history rows on settlement.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "casino/games/blackjack/api.py",
+        "web/games/blackjack.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BJ-031",
+      "module": "Blackjack",
+      "description": "A two-card natural that declines even money pays the configured blackjack rate and beats every dealer non-natural total, including multi-card 21.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-002"
+      ],
+      "browser_tests": [
+        "BR-BJ-NATURAL-PAYOUT-001"
+      ],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-243-blackjack-natural-payout",
+      "changed_in": "issue-243-blackjack-natural-payout",
+      "notes": "Dealer naturals still push; ordinary non-natural 21 versus 21 remains a push."
+    },
+    {
+      "id": "BJ-032",
+      "module": "Blackjack",
+      "description": "Blackjack settlement Net display includes insurance side-bet stake and payout movement.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BJ-INSURANCE-NET-001"
+      ],
+      "implementation_files": [
+        "web/games/blackjack.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-260-blackjack-insurance-net",
+      "changed_in": "issue-260-blackjack-insurance-net",
+      "notes": "Synthetic browser evidence renders a settled dealer-blackjack insurance round whose Net row would be wrong if insurance stake and payout were excluded."
+    }
+  ]
+}

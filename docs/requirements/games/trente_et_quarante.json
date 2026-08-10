@@ -1,0 +1,51 @@
+{
+  "game": "trente_et_quarante",
+  "requirements_prefixes": [
+    "TEQ"
+  ],
+  "requirements": [
+    {
+      "id": "TEQ-001",
+      "module": "Trente et Quarante",
+      "description": "Trente et Quarante deals two rows of cards on the shared exactly-once settlement core, Noir first then Rouge, each until its running pip total passes thirty so every row lands between thirty-one and forty. The row closer to thirty-one wins. A coup debits one bounded play-token stake and settles four even-money bets: Rouge and Noir on which row wins, and Couleur and Inverse on whether the first card's colour matches the winning row's colour. Any tie returns the whole stake as a push, except the refait at thirty-one where the bank bars half the stake; because the row and colour bets are otherwise symmetric, this refait is the entire house edge. Unknown bets and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TRENTE-ET-QUARANTE-001"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
+      "implementation_files": [
+        "casino/games/trente_et_quarante/rules.py",
+        "casino/games/trente_et_quarante/engine.py",
+        "casino/games/trente_et_quarante/api.py",
+        "web/games/trente_et_quarante.js",
+        "contracts/openapi/trente_et_quarante.v1.yaml"
+      ],
+      "introduced_in": "issue-147-trente-et-quarante",
+      "changed_in": "issue-147-trente-et-quarante",
+      "notes": "Allocated for GitHub issue #147, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "TEQ-002",
+      "module": "Trente et Quarante",
+      "description": "Trente et Quarante inherits the shared core's exactly-once settlement: one caller-stable request id maps to one coup, a retry replays the identical committed rows and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and coups routes and never alters the frozen shared API. Both dealt rows always total between thirty-one and forty, and the published bet catalog reports honest bets and win, push, and refait multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TRENTE-ET-QUARANTE-001"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
+      "implementation_files": [
+        "casino/games/trente_et_quarante/api.py",
+        "casino/core/simple_game.py",
+        "tests/trente_et_quarante_tests.py",
+        "tests/game_drivers/trente_et_quarante.py"
+      ],
+      "introduced_in": "issue-147-trente-et-quarante",
+      "changed_in": "issue-147-trente-et-quarante",
+      "notes": "Allocated for GitHub issue #147."
+    }
+  ]
+}

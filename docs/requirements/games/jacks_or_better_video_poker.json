@@ -1,0 +1,113 @@
+{
+  "game": "jacks_or_better_video_poker",
+  "requirements_prefixes": [
+    "JOBVP"
+  ],
+  "requirements": [
+    {
+      "id": "JOBVP-001",
+      "module": "Jacks or Better Video Poker",
+      "description": "Single-hand 9/6 Jacks or Better supports one through five coins and the five-coin royal-flush bonus.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JOBVP-001"
+      ],
+      "browser_tests": [
+        "BR-JOBVP-001"
+      ],
+      "implementation_files": [
+        "casino/games/jacks_or_better_video_poker/engine.py",
+        "web/games/jacks_or_better_video_poker.js"
+      ],
+      "introduced_in": "game-expansion-jacks-or-better",
+      "changed_in": "game-expansion-jacks-or-better",
+      "notes": "Issue #77 allocation for issue #91 covers the canonical 9/6 paytable, holds, and one draw."
+    },
+    {
+      "id": "JOBVP-002",
+      "module": "Jacks or Better Video Poker",
+      "description": "Authenticated sessions own isolated reload-safe active hands, holds, completed history, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JOBVP-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-JOBVP-001"
+      ],
+      "implementation_files": [
+        "casino/games/jacks_or_better_video_poker/api.py",
+        "casino/core/request_player.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-jacks-or-better",
+      "changed_in": "game-expansion-jacks-or-better",
+      "notes": "Session identity overrides caller player ids and settled history survives restart."
+    },
+    {
+      "id": "JOBVP-003",
+      "module": "Jacks or Better Video Poker",
+      "description": "Wagers and returned credits use the shared ledger exactly once under stable deal and draw action identities.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JOBVP-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/jacks_or_better_video_poker/api.py",
+        "casino/core/ledger.py",
+        "tests/games/jacks_or_better_video_poker/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-jacks-or-better",
+      "changed_in": "game-expansion-jacks-or-better",
+      "notes": "The game never mutates balances directly and altered retries fail closed."
+    },
+    {
+      "id": "JOBVP-004",
+      "module": "Application",
+      "description": "Jacks or Better supplies complete English and Russian copy with responsive, accessible, reduced-motion-safe play across required viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-JOBVP-001"
+      ],
+      "implementation_files": [
+        "web/games/jacks_or_better_video_poker.js",
+        "web/i18n/en-US/games/jacks_or_better_video_poker.json",
+        "web/i18n/ru-RU/games/jacks_or_better_video_poker.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-jacks-or-better",
+      "changed_in": "game-expansion-jacks-or-better",
+      "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "JOBVP-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery include Jacks or Better with requirement, module, version, and visual traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-JOBVP-001"
+      ],
+      "implementation_files": [
+        "modules/jacks_or_better_video_poker.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "tests/game_drivers/jacks_or_better_video_poker.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-jacks-or-better",
+      "changed_in": "game-expansion-jacks-or-better",
+      "notes": "Descriptor sort order 170 and catalog long driver are canonical."
+    }
+  ]
+}

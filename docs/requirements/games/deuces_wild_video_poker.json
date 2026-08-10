@@ -1,0 +1,115 @@
+{
+  "game": "deuces_wild_video_poker",
+  "requirements_prefixes": [
+    "DWVP"
+  ],
+  "requirements": [
+    {
+      "id": "DWVP-001",
+      "module": "Deuces Wild Video Poker",
+      "description": "Single-hand house-edged Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable, with the four-of-a-kind return reduced so optimal play is no longer player-positive.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DWVP-001"
+      ],
+      "browser_tests": [
+        "BR-DWVP-001"
+      ],
+      "implementation_files": [
+        "casino/games/deuces_wild_video_poker/engine.py",
+        "web/games/deuces_wild_video_poker.js",
+        "contracts/openapi/deuces_wild_video_poker.v1.yaml",
+        "tests/games/deuces_wild_video_poker/test_economics.py"
+      ],
+      "introduced_in": "game-expansion-deuces-wild",
+      "changed_in": "issue-456-deuces-house-edge",
+      "notes": "Issue #77 allocation covers the canonical wild-deuce precedence and payout profile. The full-pay schedule was player-positive under optimal hold (~100.42%); reducing four_of_a_kind from 5 to 4 (the canonical deuces house-edge lever) lands optimal-play RTP at ~94.05% with the hand-ranking order intact (issue #456)."
+    },
+    {
+      "id": "DWVP-002",
+      "module": "Deuces Wild Video Poker",
+      "description": "Authenticated sessions own isolated reload-safe active hands, holds, history, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DWVP-001",
+        "API-WALLET-RESTART-001"
+      ],
+      "browser_tests": [
+        "BR-DWVP-001"
+      ],
+      "implementation_files": [
+        "casino/games/deuces_wild_video_poker/api.py",
+        "casino/core/request_player.py",
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-deuces-wild",
+      "changed_in": "game-expansion-deuces-wild",
+      "notes": "Bound session identity overrides caller player ids."
+    },
+    {
+      "id": "DWVP-003",
+      "module": "Deuces Wild Video Poker",
+      "description": "Wagers and returned credits use the shared ledger exactly once under stable deal and draw identities.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DWVP-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/deuces_wild_video_poker/api.py",
+        "casino/core/ledger.py",
+        "tests/games/deuces_wild_video_poker/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-deuces-wild",
+      "changed_in": "game-expansion-deuces-wild",
+      "notes": "No balance mutation occurs outside the ledger."
+    },
+    {
+      "id": "DWVP-004",
+      "module": "Application",
+      "description": "Deuces Wild supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-DWVP-001"
+      ],
+      "implementation_files": [
+        "web/games/deuces_wild_video_poker.js",
+        "web/i18n/en-US/games/deuces_wild_video_poker.json",
+        "web/i18n/ru-RU/games/deuces_wild_video_poker.json",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-deuces-wild",
+      "changed_in": "game-expansion-deuces-wild",
+      "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "DWVP-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery include Deuces Wild with requirement, module, version, and visual traceability.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CATALOG-001",
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001",
+        "BR-DWVP-001"
+      ],
+      "implementation_files": [
+        "modules/deuces_wild_video_poker.json",
+        "modules/module-manifest.json",
+        "contracts/compatibility/module-api-matrix.json",
+        "tests/game_drivers/deuces_wild_video_poker.py",
+        "tests/visual/visual_matrix.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "game-expansion-deuces-wild",
+      "changed_in": "game-expansion-deuces-wild",
+      "notes": "Descriptor sort order 180 and catalog long driver are canonical."
+    }
+  ]
+}

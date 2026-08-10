@@ -1,0 +1,1229 @@
+{
+  "game": "roulette",
+  "requirements_prefixes": [
+    "ROU",
+    "ROU-WHEEL"
+  ],
+  "requirements": [
+    {
+      "id": "ROU-001",
+      "module": "Roulette",
+      "description": "Single-zero roulette mode supports 0 and 1-36.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-002",
+      "module": "Roulette",
+      "description": "Double-zero roulette mode supports 0, 00, and 1-36.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-003",
+      "module": "Roulette",
+      "description": "Wheel mode cannot change while open bets exist.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-004",
+      "module": "Roulette",
+      "description": "Zero rule selector supports normal, la partage, and en prison.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-005",
+      "module": "Roulette",
+      "description": "Straight-up bets are legal for all wheel numbers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-006",
+      "module": "Roulette",
+      "description": "Split bets are legal for adjacent table numbers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-007",
+      "module": "Roulette",
+      "description": "Zero split 0/00 is legal in double-zero mode.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-008",
+      "module": "Roulette",
+      "description": "Street bets are legal for each table row.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-009",
+      "module": "Roulette",
+      "description": "Corner bets are legal for all four-number intersections.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-010",
+      "module": "Roulette",
+      "description": "Six-line bets are legal for adjacent row pairs.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-011",
+      "module": "Roulette",
+      "description": "Zero trios are exposed where layout-appropriate.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-012",
+      "module": "Roulette",
+      "description": "First-four/top-line bets are exposed by mode.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-013",
+      "module": "Roulette",
+      "description": "Dozen bets are exposed and pay 2:1 net.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-014",
+      "module": "Roulette",
+      "description": "Column bets are exposed and pay 2:1 net.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-015",
+      "module": "Roulette",
+      "description": "Red and black outside bets are exposed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-016",
+      "module": "Roulette",
+      "description": "Odd and even outside bets are exposed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-017",
+      "module": "Roulette",
+      "description": "Low and high outside bets are exposed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-018",
+      "module": "Roulette",
+      "description": "Snake bet is exposed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-019",
+      "module": "Roulette",
+      "description": "Racetrack call bets include Snake.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-020",
+      "module": "Roulette",
+      "description": "Racetrack call bets include Voisins.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-021",
+      "module": "Roulette",
+      "description": "Racetrack call bets include Tiers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-022",
+      "module": "Roulette",
+      "description": "Racetrack call bets include Orphelins.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-023",
+      "module": "Roulette",
+      "description": "Racetrack call bets include Jeu Zero.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-024",
+      "module": "Roulette",
+      "description": "Racetrack call bets include number and neighbors.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-025",
+      "module": "Roulette",
+      "description": "Racetrack call bets include final digit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-026",
+      "module": "Roulette",
+      "description": "Racetrack call bets include complete number.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-027",
+      "module": "Roulette",
+      "description": "Straight-up winning bets credit stake plus 35:1 profit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-028",
+      "module": "Roulette",
+      "description": "Split winning bets credit stake plus 17:1 profit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-029",
+      "module": "Roulette",
+      "description": "Street winning bets credit stake plus 11:1 profit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-030",
+      "module": "Roulette",
+      "description": "Corner winning bets credit stake plus 8:1 profit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-031",
+      "module": "Roulette",
+      "description": "Line winning bets credit stake plus 5:1 profit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-032",
+      "module": "Roulette",
+      "description": "La partage returns half of even-money outside bets on zero.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-033",
+      "module": "Roulette",
+      "description": "En prison carries eligible even-money outside bets into the next round.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-034",
+      "module": "Roulette",
+      "description": "Roulette spin writes history rows.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-035",
+      "module": "Roulette",
+      "description": "Roulette stores last 1000 roll results.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-036",
+      "module": "Roulette",
+      "description": "Roulette stats include frequency by number.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-037",
+      "module": "Roulette",
+      "description": "Roulette stats include red/black/green counts.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-038",
+      "module": "Roulette",
+      "description": "Roulette stats include odd/even counts.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-039",
+      "module": "Roulette",
+      "description": "Roulette stats include low/high counts.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-040",
+      "module": "Roulette",
+      "description": "Roulette stats include dozen and column counts.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-041",
+      "module": "Roulette",
+      "description": "Roulette UI renders a vector wheel.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-042",
+      "module": "Roulette",
+      "description": "Roulette UI animates wheel and ball while spinning.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-043",
+      "module": "Roulette",
+      "description": "Roulette UI renders a real table-style layout whose complete fixed betting board remains contained across governed and scaled mid-desktop viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001",
+        "BR-ROU-PREMIUM-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "changed_in": "issue-570-production-polish",
+      "notes": "The compact desktop breakpoint applies before a 760-pixel table can be clipped by the center stage; hosted evidence includes the reported 1706 by 900 CSS viewport."
+    },
+    {
+      "id": "ROU-044",
+      "module": "Roulette",
+      "description": "Roulette UI allows clicking number cells for straight bets.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-045",
+      "module": "Roulette",
+      "description": "Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001",
+        "BR-ROU-HITMAP-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "9.1.0",
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #348 requires the visible layer state to use real pointer hit testing in both single- and double-zero modes; invisible overlay controls cannot satisfy this requirement."
+    },
+    {
+      "id": "ROU-046",
+      "module": "Roulette",
+      "description": "Roulette UI draws chips on table spots with amounts.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-047",
+      "module": "Roulette",
+      "description": "Roulette auto play repeats saved bet templates.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-048",
+      "module": "Roulette",
+      "description": "Roulette bots can be enabled with strategy and stake settings.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-049",
+      "module": "Roulette",
+      "description": "Roulette scoreboard shows human and bot balances.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-050",
+      "module": "Roulette",
+      "description": "Roulette voice announces the rolled number.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "casino/games/roulette/rules.py",
+        "casino/games/roulette/engine.py",
+        "casino/games/roulette/api.py",
+        "web/games/roulette.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "ROU-051",
+      "module": "Roulette",
+      "description": "Roulette wheel must not default to a fake zero result when no spin has occurred.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "web/core/voice.js"
+      ],
+      "introduced_in": "9.1.0",
+      "changed_in": "9.1.0",
+      "notes": "Introduced in v9.1.0."
+    },
+    {
+      "id": "ROU-052",
+      "module": "Roulette",
+      "description": "Roulette wheel shows the latest actual spin result after settlement.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "web/core/voice.js"
+      ],
+      "introduced_in": "9.1.0",
+      "changed_in": "9.1.0",
+      "notes": "Introduced in v9.1.0."
+    },
+    {
+      "id": "ROU-053",
+      "module": "Roulette",
+      "description": "Roulette wheel selected pocket and backend spin result must match.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "web/core/voice.js"
+      ],
+      "introduced_in": "9.1.0",
+      "changed_in": "9.1.0",
+      "notes": "Introduced in v9.1.0."
+    },
+    {
+      "id": "ROU-054",
+      "module": "Roulette",
+      "description": "Roulette spin animation starts before settlement display and ends on the result state.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "web/core/voice.js"
+      ],
+      "introduced_in": "9.1.0",
+      "changed_in": "9.1.0",
+      "notes": "Introduced in v9.1.0."
+    },
+    {
+      "id": "ROU-055",
+      "module": "Roulette",
+      "description": "Roulette ball indicator uses the selected pocket when a result exists.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "web/core/voice.js"
+      ],
+      "introduced_in": "9.1.0",
+      "changed_in": "9.1.0",
+      "notes": "Introduced in v9.1.0."
+    },
+    {
+      "id": "ROU-056",
+      "module": "Roulette",
+      "description": "Roulette sound settings are not rendered on the Roulette page.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "web/core/voice.js"
+      ],
+      "introduced_in": "9.1.0",
+      "changed_in": "9.1.0",
+      "notes": "Introduced in v9.1.0."
+    },
+    {
+      "id": "ROU-057",
+      "module": "Roulette",
+      "description": "Every Roulette bet cell carries a stable hit-target identity across re-renders; activating a cell posts the exact bet_type and covered numbers it represents (for example 2nd 12 covers 13-24), verified on the client before the wager posts so a re-render can never map a click to a different betting region.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-HITMAP-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-222-roulette-hit-target",
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #222 established stable identities; issue #348 additionally requires real pointer actionability and distinct zero-zone geometry instead of programmatic event dispatch."
+    },
+    {
+      "id": "ROU-058",
+      "module": "Roulette",
+      "description": "Roulette's spinning settlement card shows player-facing spin progress copy instead of an internal layout/debug note.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SPINNING-COPY-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-234-roulette-debug-text",
+      "changed_in": "issue-234-roulette-debug-text",
+      "notes": "The browser harness checks the real spinning-state settlement card before settlement to reject the old layout-reservation copy."
+    },
+    {
+      "id": "ROU-059",
+      "module": "Roulette",
+      "description": "Roulette disables bet-slip Remove controls whenever a spin has locked the current wager set.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-LOCKED-REMOVE-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-240-roulette-remove-lock",
+      "changed_in": "issue-240-roulette-remove-lock",
+      "notes": "The browser harness places a real wager, starts a real spin, and asserts the still-rendered slip Remove action is disabled while the round is locked."
+    },
+    {
+      "id": "ROU-060",
+      "module": "Roulette",
+      "description": "Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-REFUND-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-246-roulette-refund-on-leave",
+      "changed_in": "issue-246-roulette-refund-on-leave",
+      "notes": "Issue #246: unmount() now fires a best-effort refund for open-round human bets and refreshes the shared wallet."
+    },
+    {
+      "id": "ROU-061",
+      "module": "Roulette",
+      "description": "Every visible Roulette wagering surface registers correctly labeled bets with no silent no-ops: all 38 straight pockets show their pocket number, every FAST BETS shortcut and grid outside cell shows its canonical outside label even on repeat clicks, all dozen and column cells plus every inside/special marker type show their exact catalog labels, and each racetrack/call control renders every authoritative component label returned for that activation.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "casino/games/roulette/rules.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250: the audited behavior is served by the shared resolveCellBet identity plumbing; this requirement pins it with an exhaustive per-type regression."
+    },
+    {
+      "id": "ROU-062",
+      "module": "Roulette",
+      "description": "Roulette uses one consistent escrow model for unspun wagers: placing an open bet debits the authoritative wallet immediately, and activating the visible Clear bets control refunds the exact pending stake before any spin or table-leave cleanup.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-REFUND-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-229-232-roulette-clear-refund-closeout",
+      "changed_in": "issue-229-232-roulette-clear-refund-closeout",
+      "notes": "This regression extends the existing leave-table refund proof to the visible Clear bets control and covers issue #229 and issue #232 without changing Roulette game rules."
+    },
+    {
+      "id": "ROU-063",
+      "module": "Roulette",
+      "description": "One session-bound Roulette spin commits one authoritative pocket and settlement, and wheel, ball, table, result, history, voice, wallet, ledger, and Admin telemetry agree on that pocket and round without overlapping input.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Permanent allocation for issue #169; no Roulette source or frozen v1 contract changes are included in the foundation."
+    },
+    {
+      "id": "ROU-064",
+      "module": "Roulette",
+      "description": "Roulette uses the complete named physical sequence with default Authentic reveal in 15 to 18 seconds, optional Quick reveal in 8 to 10 seconds, autoplay reveal in 6 to 8 seconds, and a non-spinning reduced-motion reveal in 400 to 800 ms without changing the committed result.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "The owner timing correction supersedes the earlier 7.5 to 9.5 second recommendation."
+    },
+    {
+      "id": "ROU-065",
+      "module": "Roulette",
+      "description": "The rotor and ball counter-rotate with separate continuous velocity profiles; Authentic mode shows at least 16 ball circuits, progressive deceleration, bounded rim departure and contacts, pocket-relative capture, and at least one second of ball-and-pocket co-rotation without teleport or transform reset.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Final ball alignment must be within half a pocket arc and two CSS pixels on the controlled viewport."
+    },
+    {
+      "id": "ROU-066",
+      "module": "Roulette",
+      "description": "Roulette locks wagering and mode controls during the atomic spin, conceals the result until visible pocket capture, and then reveals highlight, history, voice, and wallet celebration exactly once with player-facing phase copy.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "This strengthens existence-only ROU-042 and ROU-054 without changing Roulette mathematics."
+    },
+    {
+      "id": "ROU-067",
+      "module": "Roulette",
+      "description": "Roulette navigation, refresh, autoplay stop, locale change, mute, and API failure recover the authoritative committed round once or a safe pre-commit betting state and leave no duplicate ledger/history event, orbit, glow, timer, sound, or disabled-control residue.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Acceptance includes route-away/return and refresh at both pre-commit and post-commit boundaries."
+    },
+    {
+      "id": "ROU-068",
+      "module": "Tests",
+      "description": "Roulette motion acceptance maps at least 100 committed spins and supplies exact-head frame, transform, capture, alignment, geometry, cleanup, wallet/history/ledger, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/visual/visual_matrix.json",
+        "docs/motion_acceptance_contract.md"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Static screenshots alone cannot satisfy issue #169."
+    },
+    {
+      "id": "ROU-069",
+      "module": "Roulette",
+      "description": "The legacy Roulette rotor presentation avoids the reported strobing regression by using a finely sampled monotonic coast-down under linear timing whose modeled 60 Hz rotor step remains below one European-wheel pocket; the browser runtime exposes that same named linear 3.6-second animation while a spin is resolving.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion-compatibility",
+      "changed_in": "issue-169-wheel-motion-compatibility",
+      "notes": "This bounded compatibility fix does not satisfy or supersede planned ROU-063 through ROU-068, whose complete physical sequence, timing profiles, recovery matrix, 100-spin proof, video evidence, and independent acceptance remain outstanding."
+    },
+    {
+      "id": "ROU-070",
+      "module": "Roulette",
+      "description": "The legacy Roulette rotor and ball counter-rotate through whole-turn animation endpoints so releasing their animation cannot introduce an end-of-spin angular pop, and the browser runtime suppresses rotor, ball, settle, and orbit decoration when reduced motion is requested without changing the authoritative result.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion-compatibility",
+      "changed_in": "issue-169-wheel-motion-compatibility",
+      "notes": "This requirement covers only the existing 3.6-second presentation. The planned 400-to-800 ms reduced-motion lifecycle and full authoritative motion adoption remain governed by ROU-064 and the other planned issue #169 requirements."
+    },
+    {
+      "id": "ROU-071",
+      "module": "Roulette",
+      "description": "Persisted open bets carry the catalog layout kind so outside-bet chips render on their outside cells, with a type-based client fallback for bets persisted before the field existed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-LEGACY-SETTLE-002"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/engine.py",
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-222-roulette-outside-chips",
+      "changed_in": "issue-222-roulette-outside-chips",
+      "notes": "Bet identity resolution was fixed earlier under issue #222; this closes the remaining chip-position half. Browser geometry regression for outside chips is recommended follow-up evidence in the premium browser lane."
+    },
+    {
+      "id": "ROU-072",
+      "module": "Roulette",
+      "description": "Roulette preserves the frozen linear 3.6-second, twenty-one-stop rotor and ball compatibility curves while bounded honest-landing wrappers carry the authoritative result into a physically coherent pocket presentation, true reduced motion suppresses both curves and every wrapper transition, and route-owned action identity makes API, landing, wallet, sound, bot, refund, teardown, and remount continuation exactly once and stale-safe.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-PRESENTATION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/games/roulette/test_frontend.mjs",
+        "tests/run_tests.py",
+        "docs/evidence/roulette/README.md"
+      ],
+      "introduced_in": "issue-527-roulette-slots-presentation",
+      "changed_in": "issue-527-roulette-slots-presentation",
+      "notes": "Listener-free tests dispose the real route-owned timer scope through actual Roulette mount, unmount, and remount cycles at API, landing, and delayed-wallet boundaries. Hosted exact-head Browser evidence executes normal and reduced public spins in English and Russian at all four governed viewports. This bounded presentation slice does not claim the planned ROU-063 through ROU-068 Authentic/Quick pacing or video-adoption gates, and issues #168, #169, and #74 remain open."
+    }
+  ]
+}

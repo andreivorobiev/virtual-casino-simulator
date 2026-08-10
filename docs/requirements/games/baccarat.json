@@ -1,0 +1,428 @@
+{
+  "game": "baccarat",
+  "requirements_prefixes": [
+    "BAC"
+  ],
+  "requirements": [
+    {
+      "id": "BAC-001",
+      "module": "Baccarat",
+      "description": "Baccarat implements Punto Banco Player/Banker/Tie betting.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-002",
+      "module": "Baccarat",
+      "description": "Baccarat uses configurable 6 or 8 deck shoe.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-003",
+      "module": "Baccarat",
+      "description": "Baccarat uses persistent shoe state.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-004",
+      "module": "Baccarat",
+      "description": "Baccarat burn-card procedure runs when shoe is created.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-005",
+      "module": "Baccarat",
+      "description": "Baccarat cut-card reshuffle threshold is supported.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-006",
+      "module": "Baccarat",
+      "description": "Baccarat deals in Player, Banker, Player, Banker order.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-007",
+      "module": "Baccarat",
+      "description": "Aces count as one.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-008",
+      "module": "Baccarat",
+      "description": "Tens and face cards count as zero.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-009",
+      "module": "Baccarat",
+      "description": "Hand totals are modulo 10.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-010",
+      "module": "Baccarat",
+      "description": "Natural 8 or 9 stops drawing.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-011",
+      "module": "Baccarat",
+      "description": "Player draws on 0-5 and stands on 6-7.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-012",
+      "module": "Baccarat",
+      "description": "Banker draw tableau is implemented.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-013",
+      "module": "Baccarat",
+      "description": "Player bet pays 1:1.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-014",
+      "module": "Baccarat",
+      "description": "Banker bet pays with 5 percent commission by default.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-015",
+      "module": "Baccarat",
+      "description": "Tie bet pays configurable 8:1 default.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-016",
+      "module": "Baccarat",
+      "description": "Player/Banker bets push on tie.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-017",
+      "module": "Baccarat",
+      "description": "Baccarat bets debit immediately.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-018",
+      "module": "Baccarat",
+      "description": "Baccarat bet cancellation refunds before deal.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-019",
+      "module": "Baccarat",
+      "description": "Baccarat bots can place strategy bets.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-020",
+      "module": "Baccarat",
+      "description": "Baccarat UI shows cards, totals, and winner.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-001"
+      ],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-021",
+      "module": "Baccarat",
+      "description": "Baccarat UI shows road history.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-001"
+      ],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-022",
+      "module": "Baccarat",
+      "description": "Baccarat UI shows shoe and burn info.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-001"
+      ],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-023",
+      "module": "Baccarat",
+      "description": "Baccarat auto play repeats selected bet.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-001"
+      ],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-024",
+      "module": "Baccarat",
+      "description": "Baccarat writes history rows.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/engine.py",
+        "casino/games/baccarat/api.py",
+        "web/games/baccarat.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BAC-025",
+      "module": "Baccarat",
+      "description": "Baccarat's fresh shoe panel shows the configured full shoe capacity before the lazily built shoe receives its first deal.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-FRESH-SHOE-001"
+      ],
+      "implementation_files": [
+        "web/games/baccarat.js"
+      ],
+      "introduced_in": "issue-249-baccarat-shoe-count",
+      "changed_in": "issue-249-baccarat-shoe-count",
+      "notes": "The browser assertion reads the first mounted wager-setup drawer before any wager or deal can create the backend shoe."
+    },
+    {
+      "id": "BAC-026",
+      "module": "Baccarat",
+      "description": "Baccarat preserves one stable visible Deal action and deterministically returns to wager-ready state through 2,000 consecutive settled browser UI coups without a replaced target, timeout, retry, duplicate action, or stranded round.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-SUSTAINED-001"
+      ],
+      "implementation_files": [
+        "tests/baccarat_sustained.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        ".github/workflows/browser-tests.yml",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "issue-265-baccarat-sustained-qualification",
+      "changed_in": "issue-265-baccarat-sustained-qualification",
+      "notes": "The exact-source profile uses one disposable loopback runtime, one synthetic account, one browser context, exactly 2,000 rounds, and one attempt per round; any control disappearance, wager-ready timeout, browser diagnostic, isolation failure, or cleanup failure keeps the result red."
+    }
+  ]
+}

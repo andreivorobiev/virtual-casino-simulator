@@ -1,0 +1,462 @@
+{
+  "game": "bingo",
+  "requirements_prefixes": [
+    "BINGO"
+  ],
+  "requirements": [
+    {
+      "id": "BINGO-001",
+      "module": "Bingo",
+      "description": "Bingo uses 75-ball American rules.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-002",
+      "module": "Bingo",
+      "description": "Bingo card has B column 1-15.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-003",
+      "module": "Bingo",
+      "description": "Bingo card has I column 16-30.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-004",
+      "module": "Bingo",
+      "description": "Bingo card has N column 31-45.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-005",
+      "module": "Bingo",
+      "description": "Bingo card has G column 46-60.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-006",
+      "module": "Bingo",
+      "description": "Bingo card has O column 61-75.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-007",
+      "module": "Bingo",
+      "description": "Bingo card has free center space.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-008",
+      "module": "Bingo",
+      "description": "Bingo supports any-line pattern.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-009",
+      "module": "Bingo",
+      "description": "Bingo supports four-corners pattern.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-010",
+      "module": "Bingo",
+      "description": "Bingo supports postage-stamp pattern.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-011",
+      "module": "Bingo",
+      "description": "Bingo supports blackout pattern.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-012",
+      "module": "Bingo",
+      "description": "Each accepted visible Bingo card purchase debits immediately and exactly once; a pending purchase cannot schedule a duplicate.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [
+        "BR-BINGO-PURCHASE-001"
+      ],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-013",
+      "module": "Bingo",
+      "description": "Bingo reset before called balls refunds cards.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-014",
+      "module": "Bingo",
+      "description": "Bingo reset after called balls logs abandoned session.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-015",
+      "module": "Bingo",
+      "description": "Bingo calls unique balls.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-016",
+      "module": "Bingo",
+      "description": "Bingo called balls use B/I/N/G/O labels.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-017",
+      "module": "Bingo",
+      "description": "Bingo marks called cells.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BINGO-001"
+      ],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-018",
+      "module": "Bingo",
+      "description": "Bingo highlights winning pattern.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BINGO-001"
+      ],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-019",
+      "module": "Bingo",
+      "description": "Bingo supports bot cards.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-020",
+      "module": "Bingo",
+      "description": "Bingo awards payout to the winning card.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-021",
+      "module": "Bingo",
+      "description": "Bingo auto play calls until a winner or the bounded per-pattern call cap ends the session as no_win without a payout.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [
+        "BR-BINGO-001"
+      ],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-022",
+      "module": "Bingo",
+      "description": "Bingo UI shows the authoritative cards in play and a truthful disabled busy boundary while a purchase resolves.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [
+        "BR-BINGO-001",
+        "BR-BINGO-PURCHASE-001"
+      ],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-023",
+      "module": "Bingo",
+      "description": "Bingo writes history rows.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "BINGO-024",
+      "module": "Bingo",
+      "description": "Bingo remains fake-money only.",
+      "status": "SUPERSEDED",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "web/games/bingo.js"
+      ],
+      "notes": "Superseded wording keeps no-real-money gameplay while using play-token terminology.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "LIC-002",
+        "LIC-003",
+        "TOKEN-001"
+      ]
+    },
+    {
+      "id": "BINGO-025",
+      "module": "Bingo",
+      "description": "Bingo sessions seat ledger-funded bot competitor cards and bound calls per pattern, ending as no_win with no payout at the cap, so a session has a real losing outcome, calls are never unbounded, and bot wins pay bot wallets.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-ECONOMICS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/api.py",
+        "casino/games/bingo/engine.py"
+      ],
+      "introduced_in": "issue-405-bingo-economics",
+      "changed_in": "issue-452-bingo-paytable",
+      "notes": "Unfilled competitor seats are now filled with synthetic house spoiler cards so the field is always full; persisted pre-cap sessions migrate to the default cap on load. The formerly player-positive paytable was rebalanced house-side under issue #452 (see BINGO-026)."
+    },
+    {
+      "id": "BINGO-026",
+      "module": "Bingo",
+      "description": "Every Bingo pattern pays roughly 0.9 divided by its measured win probability at the guaranteed four-card field, giving each pattern a modest single-digit-to-low-double-digit house edge instead of the prior player-positive returns, and the competitor field is always seated at full strength with synthetic house spoiler cards that end sessions but are never credited.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-ECONOMICS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/engine.py",
+        "casino/games/bingo/api.py",
+        "tests/bingo_economics_tests.py"
+      ],
+      "introduced_in": "issue-452-bingo-paytable",
+      "changed_in": "issue-452-bingo-paytable",
+      "notes": "Multipliers line 3.4, four_corners 6.3, postage_stamp 3.5, and blackout 650 were derived from seeded simulation evidence over the production pattern evaluator. House spoiler cards carry no wallet and are skipped by settlement, so an uncharged card can never collect and the guaranteed field remains house-sided when no configured bot can fund a seat."
+    },
+    {
+      "id": "BINGO-027",
+      "module": "Bingo",
+      "description": "Bingo autoplay defaults to one complete bounded 75-call plan, including for disposable guests, and resetting a called session requires explicit non-refund confirmation followed by truthful refunded, abandoned, or cleared feedback.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001"
+      ],
+      "browser_tests": [
+        "BR-BINGO-001"
+      ],
+      "implementation_files": [
+        "casino/app.py",
+        "casino/config.py",
+        "web/games/bingo.js",
+        "web/i18n/en-US/games/bingo.json",
+        "web/i18n/ru-RU/games/bingo.json"
+      ],
+      "introduced_in": "issues-576-577-bingo-lifecycle",
+      "changed_in": "issues-576-577-bingo-lifecycle",
+      "notes": "The existing server refund-before-first-call and abandon-after-call economics remain authoritative."
+    }
+  ]
+}

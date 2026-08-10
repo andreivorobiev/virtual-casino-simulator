@@ -1418,6 +1418,24 @@ def run_api_tests():
     run_case('PERF-MULTIPROCESS-SAFETY-001',['TEST-160'],lambda: run_unit_module('tests.unit.multiprocess_safety_audit_tests','multiprocess safety audit suite failed'))
     # Record the descriptor-owned game-suite discovery boundary without migrating game descriptors yet. (issue #434, TEST-161)
     run_case('GOV-GAME-SUITE-DISCOVERY-001',['TEST-161'],lambda: run_unit_module('tests.game_suite_discovery_tests','game suite discovery suite failed'))
+    # Execute every browser-free Python game suite through one shared mapped case so future games never add central runner blocks. (issue #434, TEST-161)
+    def run_complete_game_suite_discovery():
+        # Define both governed discovery roots used by complete CI discovery.
+        discovery_roots=('tests/games','casino/games')
+        # Execute each root in a fresh process so test-owned imports and storage settings remain isolated.
+        for discovery_root in discovery_roots:
+            # Discover every Python suite path while leaving Playwright-owned modules to the Browser-capable CI step.
+            suite_files=sorted(path for path in (ROOT/discovery_root).rglob('test_*.py') if path.name!='test_browser.py')
+            # Convert tracked paths to dotted unittest module names without a per-game allowlist.
+            suite_modules=['.'.join(path.relative_to(ROOT).with_suffix('').parts) for path in suite_files]
+            # Run the complete browser-free module list through unittest's normal loader.
+            result=subprocess.run([sys.executable,'-m','unittest',*suite_modules],cwd=str(ROOT),capture_output=True,text=True,timeout=600)
+            # Fail the mapped case with the child's bounded diagnostic tail when any discovered suite fails.
+            if result.returncode!=0: raise AssertionError(f'{discovery_root} discovery failed: {(result.stderr or result.stdout)[-1500:]}')
+    # Map current-and-future browser-free suite execution without one registration per game.
+    run_case('GOV-GAME-SUITES-001',['TEST-161'],run_complete_game_suite_discovery)
+    # Record deterministic requirement-source partitioning and aggregate drift rejection. (issue #434, TEST-165)
+    run_case('GOV-REQUIREMENT-SHARDS-001',['TEST-165'],lambda: run_unit_module('tests.requirements_sharding_tests','requirement sharding suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['STORAGE-009','TEST-135'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
