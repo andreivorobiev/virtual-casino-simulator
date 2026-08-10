@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.61 Release Notes
+
+## Durable agent context and source-bound engineering gates
+
+- Packages the accepted persistent-agent-memory PR #640 and performance/governance PR #642; the release-only application revision advances mechanically to `9.59.2`.
+- Resolves bounded issues #641 and #643 while keeping the broader selected portfolio open wherever its full acceptance or external evidence remains incomplete.
+- Adds a governance-first durable memory specification, 21 source-bound repository facts, a fail-closed memory validator, and role-scoped write rules without storing secrets, credentials, personal data, or `.env` content.
+- Adds source-bound payload/frontend budget evidence, a fail-closed 46-game multiprocess safety inventory, and deterministic descriptor-owned game-suite discovery under permanent gates `TEST-159`, `TEST-160`, and `TEST-161`.
+- Carries four accepted permanent requirements across the two content merges; the governed total is exactly 928 requirements and this release allocates no identifier.
+- Records the exact canonical package inventory as 741 regular files: the terminal v0.9.5.60 inventory plus this v0.9.5.61 compatibility record; repository agent memory, documentation, tests, and engineering audit scripts remain intentionally outside the deployable archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; content-owned Tooling `1.26.0` and every runtime/game module remain exactly as accepted on protected main.
+- Makes no migration, database-schema, game, settlement, paytable, wagering-economics, provider, public-policy, or frozen-v1-API change.
+- Retains exact immutable and terminal-green v0.9.5.60 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.60 Release Notes
 
 ## Account recovery and owner-governed administration
