@@ -89,7 +89,7 @@ BROWSER_CASE_AFFINITY_GROUPS={
     # Keep the disposable guest lifecycle and closed-session refresh proof together.
     'guest_lifecycle':('BR-GUEST-TRIAL-001','BR-GUEST-REFRESH-001'),
     # Keep login, terms, wallet, shell, catalog, and responsive lobby state on shard zero.
-    'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
+    'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-OAUTH-SIGNUP-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
     # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
     'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
     # Keep Bingo, Blackjack, Baccarat, feedback, Admin, audio, and i18n state on shard three.
@@ -2079,7 +2079,7 @@ def run_api_tests():
     # Record all forty-three localized one-click repeat foundations under permanent ownership.
     run_case('UI-REPEAT-BET-001',['UX-022','TEST-137'],run_repeat_bet_tests)
     # Centrally discover all mocked and disabled OAuth tests before any listener starts.
-    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-012','TEST-045','TEST-093','TEST-167'],run_oauth_mock_tests)
+    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-012','OAUTH-013','AUTH-017','TEST-045','TEST-093','TEST-167','TEST-168'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
@@ -2282,7 +2282,7 @@ def run_api_tests():
             # Read the boolean-only public provider catalog without authenticated configuration detail.
             public=api(base,'/api/v2/auth/oauth/providers',auth_token=None)
             # Require exactly two disabled external providers under repository-default flags.
-            assert public=={'providers':[{'provider':'google','available':False},{'provider':'facebook','available':False}]}
+            assert public=={'providers':[{'provider':'google','available':False,'signup_available':False},{'provider':'facebook','available':False,'signup_available':False}]}
             # Require reviewed provider start routes to exist but remain inaccessible under both default gates.
             for held_provider in ('google','facebook'):
                 # Send one exact start request and require provider-unavailable without allocating a flow.
@@ -2306,7 +2306,7 @@ def run_api_tests():
             # Read the public boolean catalog without an authenticated session.
             public=api(base,'/api/v2/auth/oauth/providers',auth_token=None)
             # Require fixed provider order and no configuration, callback, client, or release detail.
-            assert public=={'providers':[{'provider':'google','available':False},{'provider':'facebook','available':False}]}
+            assert public=={'providers':[{'provider':'google','available':False,'signup_available':False},{'provider':'facebook','available':False,'signup_available':False}]}
             # Read current-user link status through the authenticated Admin's ordinary account identity.
             links=api(base,'/api/v2/me/oauth/providers')
             # Require boolean-only current-user state and held availability for both providers.
@@ -2318,7 +2318,7 @@ def run_api_tests():
             # Preserve the frozen v1 surface without any OAuth path.
             assert api(base,'/api/v1/auth/oauth/providers',ok=False)['error']['code']=='NOT_FOUND'
         # Record additive v2, boolean privacy, current-user ownership, disabled gate, and frozen-v1 proof.
-        run_case('API-OAUTH-002',['OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','OAUTH-012','AUTH-007','TEST-093','TEST-167'],oauth_runtime_api)
+        run_case('API-OAUTH-002',['OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','OAUTH-012','OAUTH-013','AUTH-007','AUTH-017','TEST-093','TEST-167','TEST-168'],oauth_runtime_api)
         # Define the disabled transactional-mail Admin diagnostic contract against the real loopback backend.
         def mail_api():
             # Require unauthenticated callers to fail before mail diagnostics disclose configuration state.
@@ -3872,7 +3872,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Open one page for the disabled-capability render.
                 guest_policy_page=guest_policy_context.new_page()
                 # Return a complete standard public policy envelope with only guest admission paused.
-                guest_policy_page.route('**/api/v2/auth/enrollment-policy',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'enrollment_mode':'closed','signup_enabled':False,'guest_trials_enabled':False,'invitation_enrollment_enabled':False,'guest_conversion_enabled':True,'passkeys_enabled':False,'canonical_identity':'casino_user_id','shared_auth_origin':'tiltseven_first_party'}})))
+                guest_policy_page.route('**/api/v2/auth/enrollment-policy',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'enrollment_mode':'closed','signup_enabled':False,'signup_methods':{'email':False,'google':False,'facebook':False},'guest_trials_enabled':False,'invitation_enrollment_enabled':False,'guest_conversion_enabled':True,'passkeys_enabled':False,'canonical_identity':'casino_user_id','shared_auth_origin':'tiltseven_first_party'}})))
                 # Start protected inspection so the isolated browser context always closes.
                 try:
                     # Navigate to the real login shell and wait for the mocked policy to settle.
@@ -4421,7 +4421,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Write the PNG and metadata sidecar through the shared exact-head evidence helper.
                                 game_evidence(f'after-pass-auth-oauth-providers-disabled-{locale}-{viewport_id}.png','auth',['oauth_providers_disabled'],locale,viewport_id)
                         # Override only the boolean public status endpoint without contacting any provider.
-                        page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","available":true},{"provider":"facebook","available":false}]}}'))
+                        page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","available":true,"signup_available":false},{"provider":"facebook","available":false,"signup_available":false}]}}'))
                         # Exercise available-provider copy and native states in both locales.
                         for locale in ('en-US','ru-RU'):
                             # Trigger a fresh status request through the visible locale rerender.
@@ -4470,6 +4470,58 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                     # Record provider-disabled EN/RU controls, no-request behavior, and visual evidence.
                     run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','OAUTH-007','OAUTH-010','TEST-045','TEST-093'],oauth_disabled_browser)
+                    # Define social-signup policy, consent, localization, and containment acceptance. (OAUTH-013)
+                    def oauth_signup_browser():
+                        # Read all governed Auth viewports from the authoritative visual matrix.
+                        viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                        # Require the complete visual acceptance matrix.
+                        assert set(viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                        # Navigate to the real default-held provider signup surface.
+                        page.goto(base+'/enroll/signup',wait_until='networkidle'); page.get_by_test_id('signup-enrollment').wait_for(timeout=5000); page.get_by_test_id('oauth-signup-disabled').wait_for(timeout=5000)
+                        # Exercise default-off provider signup in both installed locales.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch through the visible enrollment locale selector.
+                            page.get_by_test_id('signup-locale').select_option(locale)
+                            # Wait for the asynchronous localized signup rerender.
+                            page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"oauth-signup-disabled\"]')",arg=locale)
+                            # Require all three acknowledgement controls and both provider controls to remain visible.
+                            assert all(page.get_by_test_id(testid).is_visible() for testid in ('signup-terms','signup-privacy','signup-fake-money','signup-oauth-google','signup-oauth-facebook'))
+                            # Require both provider signup controls to remain natively and accessibly disabled.
+                            assert page.get_by_test_id('signup-oauth-google').is_disabled() and page.get_by_test_id('signup-oauth-facebook').is_disabled() and page.get_by_test_id('signup-oauth-google').get_attribute('aria-disabled')=='true' and page.get_by_test_id('signup-oauth-facebook').get_attribute('aria-disabled')=='true'
+                            # Capture default-held signup at every governed viewport.
+                            for viewport_id,viewport in viewports.items():
+                                # Resize to the exact named viewport before containment checks.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                                # Require no document or enrollment-panel horizontal overflow.
+                                assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"signup-enrollment\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
+                                # Record localized after-pass evidence for policy-held provider signup.
+                                game_evidence(f'after-pass-auth-oauth-signup-disabled-{locale}-{viewport_id}.png','auth',['oauth_signup_disabled'],locale,viewport_id)
+                        # Override only public policy and boolean provider status with synthetic no-network readiness.
+                        page.route('**/api/v2/auth/enrollment-policy',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"enrollment_mode":"self-signup","signup_enabled":false,"signup_methods":{"email":false,"google":true,"facebook":false},"guest_trials_enabled":false,"invitation_enrollment_enabled":false,"guest_conversion_enabled":true,"passkeys_enabled":false,"canonical_identity":"casino_user_id","shared_auth_origin":"tiltseven_first_party"}}'))
+                        # Publish one signup-ready provider independently from ordinary sign-in state.
+                        page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","available":true,"signup_available":true},{"provider":"facebook","available":false,"signup_available":false}]}}'))
+                        # Reload the same-origin signup route through only synthetic responses.
+                        page.goto(base+'/enroll/signup',wait_until='networkidle'); page.get_by_test_id('oauth-signup-available').wait_for(timeout=5000)
+                        # Require only the independently enabled provider signup control.
+                        assert not page.get_by_test_id('signup-oauth-google').is_disabled() and page.get_by_test_id('signup-oauth-facebook').is_disabled()
+                        # Click before acknowledgement to prove provider navigation cannot start.
+                        page.get_by_test_id('signup-oauth-google').click()
+                        # Require localized consent feedback and no provider-start request.
+                        assert page.get_by_test_id('signup-message').inner_text() and not any('/api/v2/auth/oauth/google/start' in request for request in provider_requests)
+                        # Capture the exact consent-required state at the primary viewport.
+                        page.set_viewport_size(viewports['desktop_primary']); game_evidence('after-pass-auth-oauth-signup-consent-required.png','auth',['oauth_signup_available','oauth_signup_consent_required'],'ru-RU','desktop_primary')
+                        # Load one fixed server-owned successful completion marker without a provider callback.
+                        page.goto(base+'/enroll/signup?oauth_provider=google&oauth_status=signed_up',wait_until='networkidle'); page.get_by_test_id('oauth-signup-available').wait_for(timeout=5000)
+                        # Require a localized non-sensitive success acknowledgement and scrubbed query.
+                        assert page.get_by_test_id('signup-message').inner_text() and 'oauth_provider' not in page.url and 'oauth_status' not in page.url
+                        # Capture the governed successful completion state.
+                        game_evidence('after-pass-auth-oauth-signup-success.png','auth',['oauth_signup_success'],'ru-RU','desktop_primary')
+                        # Restore real public endpoints before downstream authentication cases.
+                        page.unroute('**/api/v2/auth/enrollment-policy'); page.unroute('**/api/v2/auth/oauth/providers')
+                        # Return to the real default-held login surface and primary viewport.
+                        page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000); page.set_viewport_size({'width':1920,'height':1080})
+                    # Record provider-specific signup policy, consent, EN/RU, and visual-matrix evidence.
+                    run_case('BR-OAUTH-SIGNUP-001',['OAUTH-013','AUTH-017','TEST-168'],oauth_signup_browser)
                     # Define exact geometry acceptance for every primary Auth hit target. (issue #283)
                     def auth_touch_target_floor():
                         # Read every governed viewport from the authoritative visual matrix.

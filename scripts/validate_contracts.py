@@ -411,10 +411,12 @@ def main():
             errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve disabled OAuth compatibility")
         # Read the additive route declarations once for exact boundary checks.
         oauth_routes = oauth_policy.get("v2_endpoints", [])
-        # Require the six exact routes and continued denial of signup, user creation, merge, and email linking.
-        if oauth_routes != ["GET /api/v2/auth/oauth/providers", "POST /api/v2/auth/oauth/{google|facebook}/start", "GET /api/v2/auth/oauth/{google|facebook}/callback", "GET /api/v2/me/oauth/providers", "POST /api/v2/me/oauth/{google|facebook}/unlink", "GET /api/v2/admin/oauth/providers"] or oauth_policy.get("account_boundary", {}).get("public_signup") is not False or oauth_policy.get("account_boundary", {}).get("provider_user_creation") is not False or oauth_policy.get("account_boundary", {}).get("email_matching_or_linking") is not False:
-            # Reject route expansion or any provider-selected account behavior.
-            errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve the invite-only account boundary")
+        # Read the additive account policy so signup support cannot weaken provider-subject identity.
+        account_boundary = oauth_policy.get("account_boundary", {})
+        # Require the six exact routes, explicit gated signup, and continued denial of email-selected linking.
+        if oauth_routes != ["GET /api/v2/auth/oauth/providers", "POST /api/v2/auth/oauth/{google|facebook}/start", "GET /api/v2/auth/oauth/{google|facebook}/callback", "GET /api/v2/me/oauth/providers", "POST /api/v2/me/oauth/{google|facebook}/unlink", "GET /api/v2/admin/oauth/providers"] or "defaults false" not in str(account_boundary.get("public_signup", "")) or "inactive canonical user/wallet/link" not in str(account_boundary.get("provider_user_creation", "")) or account_boundary.get("email_matching_or_linking") is not False or account_boundary.get("social_signup_identity_key") != "provider plus provider subject; provider email is presentation metadata only":
+            # Reject route expansion, implicit enablement, or any provider-email-selected account behavior.
+            errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve the gated social account boundary")
         # Read both provider-specific false-default gate declarations.
         provider_flags = oauth_policy.get("provider_flags", {})
         # Require exact provider enable/release names and their conjunctive runtime policy.
@@ -427,9 +429,9 @@ def main():
         if flow_security.get("recoverable_atomic_one_time_flow") is not True or flow_security.get("replay_rejected") is not True or not flow_security.get("durable_separation", {}).get("metadata") or not flow_security.get("durable_separation", {}).get("exchange_proofs"):
             # Reject weakened replay, ambiguity, or proof-separation policy.
             errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve OAuth flow safety")
-        # Require exact Workroom approval traceability and continued denial of live release authority.
-        if "Workroom #25 owner comment 5027642551" not in oauth_policy.get("repository_merge_approval", "") or "do not authorize live provider" not in oauth_policy.get("gate_policy", ""):
-            # Reject missing repository authority or accidental live authority.
+        # Require exact Workroom approval traceability and continued denial of live provider or signup release authority.
+        if "Workroom #25 owner comment 5027642551" not in oauth_policy.get("repository_merge_approval", "") or "separate future owner release" not in oauth_policy.get("live_enablement_gate", "") or "#336 and #209" not in oauth_policy.get("gate_policy", ""):
+            # Reject missing repository authority, external readiness holds, or accidental live authority.
             errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve the Workroom #25 authority boundary")
     # Convert absent or malformed policy into one stable contract diagnostic.
     except (OSError, json.JSONDecodeError) as exc:

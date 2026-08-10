@@ -171,11 +171,11 @@ class EnrollmentPolicyTests(unittest.TestCase):
         # Decode the owner Admin contract for exact route and transaction anchors.
         admin_contract = admin_contract_path.read_text(encoding="utf-8")
         # Require the strict response object to declare the new mode before all retained fields.
-        self.assertIn("required: [enrollment_mode, signup_enabled, guest_trials_enabled, invitation_enrollment_enabled, guest_conversion_enabled, passkeys_enabled, canonical_identity, shared_auth_origin]", contract)
+        self.assertIn("required: [enrollment_mode, signup_enabled, signup_methods, guest_trials_enabled, invitation_enrollment_enabled, guest_conversion_enabled, passkeys_enabled, canonical_identity, shared_auth_origin]", contract)
         # Require the new property to use the complete closed vocabulary.
         self.assertIn("enrollment_mode:\n          type: string\n          enum: [closed, invite-only, self-signup]", contract)
         # Require both enforced public routes and fixed operational logging.
-        self.assertIn("enforced_routes: [/api/v2/auth/signup, /api/v2/auth/redeem-invitation]", contract)
+        self.assertIn("enforced_routes: [/api/v2/auth/signup, /api/v2/auth/redeem-invitation, /api/v2/auth/oauth/{provider}/start, /api/v2/auth/oauth/{provider}/callback]", contract)
         # Require only missing, non-mapping, or unowned-schema documents to preserve the seed.
         self.assertIn("absent-nonmapping-or-unowned-document: deployed-environment-baseline", contract)
         # Require malformed and unknown-mode schema-owned state to preserve bytes for recovery.
@@ -218,14 +218,14 @@ class EnrollmentPolicyTests(unittest.TestCase):
         self.assertIn("required: [audit_version, audit_id, actor_id, reason, at, previous, current, impact, previous_digest, digest]", admin_contract)
         # Parse the explicit restricted-preview compatibility decision.
         compatibility = json.loads((ROOT / "contracts" / "compatibility" / "restricted-preview-security.json").read_text(encoding="utf-8"))
-        # Require artifact v4 for the owner Admin transaction revision.
-        self.assertEqual(compatibility["version"], 5)
+        # Require artifact v6 for the provider-specific signup policy extension.
+        self.assertEqual(compatibility["version"], 6)
         # Read the complete policy decision without accepting implicit defaults.
         policy = compatibility["enrollment_policy"]
         # Require the retained fallback plus separate schema-owned recovery boundaries.
         self.assertEqual({key: policy[key] for key in ("route", "modes", "environment_seed", "environment_fallback", "absent_nonmapping_or_unowned_document", "schema_v1_malformed_document", "schema_v1_unknown_mode", "public_methods_default_enabled", "admin_write_available", "live_enablement_authorized", "api_v1_unchanged")}, {"route": "/api/v2/auth/enrollment-policy", "modes": ["closed", "invite-only", "self-signup"], "environment_seed": True, "environment_fallback": True, "absent_nonmapping_or_unowned_document": "deployed-environment-baseline", "schema_v1_malformed_document": "fixed-operator-recovery-without-read-side-write", "schema_v1_unknown_mode": "fixed-operator-recovery-without-read-side-write", "public_methods_default_enabled": False, "admin_write_available": True, "live_enablement_authorized": False, "api_v1_unchanged": True})
-        # Require enforcement to stop at the two approved public mutations.
-        self.assertEqual(policy["enforced_routes"], ["/api/v2/auth/signup", "/api/v2/auth/redeem-invitation"])
+        # Require the policy to guard email, invitation, and both social-signup flow boundaries.
+        self.assertEqual(policy["enforced_routes"], ["/api/v2/auth/signup", "/api/v2/auth/redeem-invitation", "/api/v2/auth/oauth/{google|facebook}/start", "/api/v2/auth/oauth/{google|facebook}/callback"])
         # Require the exact bounded operational logger contract and separate immutable owner audit.
         self.assertEqual(policy["decision_logging"], {"kind": "operational-jsonl", "event": "enrollment_decision", "routes": ["signup", "invitation", "unknown"], "modes": ["closed", "invite-only", "self-signup"], "methods": ["email", "google", "facebook", "unknown"], "decisions": ["allowed", "denied"], "reasons": ["allowed", "mode_closed", "self_signup_disabled", "method_disabled", "invitations_disabled", "unknown_route"], "fail_closed_before_mutation": True, "immutable_actor_change_audit": False, "separate_owner_change_audit": "provider-backed-hash-linked-policy-transaction"})
         # Require the complete least-privilege owner transaction compatibility decision.

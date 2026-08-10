@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.60.1
-- core: 9.39.3
+- application: 9.61.0
+- core: 9.40.0
 - ledger: 9.1.2
 - players: 9.1.1
 - bots: 1.1.1
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.73.1
-- docs: 1.71.1
-- contracts: 1.58.1
-- tooling: 1.27.1
+- tests: 1.74.0
+- docs: 1.72.0
+- contracts: 1.59.0
+- tooling: 1.28.0
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
@@ -625,6 +625,9 @@ Historical source baseline: 9.1.0
 - **TOOL-013** (Tooling) - PASS: A governance-first persistent agent memory store records source-bound stable repository facts and bounded completed-task summaries, prohibits secret or personal material, restricts writes to engineering-manager pull requests with independent review, and fails CI when any fact omits an existing repository source path or full source-commit SHA.
 - **OAUTH-012** (Core) - PASS: Google and Facebook existing-account login is governed by durable provider-specific operational switches that are independent from public signup-method flags. Both switches default off, are read on every OAuth start, callback, and availability projection, and prevent credential-bearing adapter construction while disabled. Only the current platform owner may preview or confirm a transition; enablement additionally requires complete secret-safe configuration and the independent network-release latch, while disable and rollback remain immediately available. Every committed transition uses optimistic concurrency and a bounded hash-linked privacy-safe audit.
 - **TEST-167** (Tests) - PASS: Provider operational-control qualification proves default-off behavior, strict provider and boolean allowlists, owner-only API access, secret-safe readiness-gated enablement, always-available disablement, optimistic stale-write rejection, immutable audit continuity, and OAuth adapter non-construction while a provider switch is off across isolated storage and registered API routes.
+- **OAUTH-013** (Core) - PASS: Google and Facebook expose an explicit provider-subject signup intent that is independent from sign-in and linking, requires current terms, privacy, and fake-money acknowledgements before navigation, binds terms version and locale into the one-time state/nonce/PKCE flow, rechecks the provider-specific self-signup policy immediately before account mutation, and remains disabled unless enrollment mode, method flag, operational switch, secret-safe readiness, and network-release latch all agree. Provider email is presentation metadata only and never selects, links, merges, or authenticates an account; disabling signup leaves existing linked sign-in unchanged.
+- **AUTH-017** (Core) - PASS: A first-use external provider subject receives one provider-backed pending enrollment that allocates stable server-owned user and player identifiers exactly once. Canonical user, wallet, current consent, and compound provider-subject link persist while the user remains inactive; only after all are durable does one canonical user-document transition publish the account active. Same-subject retries and simultaneous callbacks resume the same allocation, completed lost-response recovery returns the same account, an existing local-account link cannot become a new account, and a removed completed link cannot be silently resurrected through signup.
+- **TEST-168** (Tests) - PASS: Listener-free provider-signup qualification proves independent Google and Facebook policy, acknowledgement, readiness, start/callback recheck, state/nonce/PKCE, rate, cancellation, replay, same-email isolation, existing-link collision, deterministic retry, post-link failure recovery, same-subject concurrency, revocation non-resurrection, secret-safe logs and errors, bilingual accessible controls, and complete Auth visual-matrix containment without real credentials or provider network access.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

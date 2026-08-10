@@ -76,7 +76,7 @@ class ProductAccountSpineTests(unittest.TestCase):
             # Read the public policy route without a session.
             policy = ROUTER.dispatch("GET", "/api/v2/auth/enrollment-policy")
             # Require the exact additive v2 response while every public enrollment control stays disabled.
-            self.assertEqual(policy, {"enrollment_mode": "closed", "signup_enabled": False, "guest_trials_enabled": True, "invitation_enrollment_enabled": False, "guest_conversion_enabled": True, "passkeys_enabled": False, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"})
+            self.assertEqual(policy, {"enrollment_mode": "closed", "signup_enabled": False, "signup_methods": {"email": False, "google": False, "facebook": False}, "guest_trials_enabled": True, "invitation_enrollment_enabled": False, "guest_conversion_enabled": True, "passkeys_enabled": False, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"})
             # Attempt the public signup mutation with a complete payload.
             with self.assertRaises(ForbiddenError):
                 # Dispatch directly with response headers to match the adapter contract.

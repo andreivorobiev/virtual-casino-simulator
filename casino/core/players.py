@@ -111,3 +111,23 @@ def ensure_invited_player(player_id: str, display_name: str) -> dict:
     player = {"player_id": player_id, "display_name": label, "type": "human", "balance": 5000.0, "created_at": now, "updated_at": now, "status": "active"}
     # Delegate insert-or-read semantics to the configured JSON or MySQL provider.
     return get_storage_provider().ensure_player(player)
+
+
+# Provision one deterministic social-enrollment player idempotently across JSON and MySQL. (OAUTH-013)
+def ensure_social_player(player_id: str, display_name: str) -> dict:
+    # Require only the server-owned social-enrollment identifier namespace.
+    if not str(player_id or "").startswith("player_social_"):
+        # Reject caller-selected or malformed wallet identifiers.
+        raise ValidationError("social player identifier is invalid")
+    # Normalize the provider display label without accepting an empty wallet label.
+    label = str(display_name or "").strip()[:80]
+    # Reject unusable provider display metadata before storage access.
+    if not label:
+        # Keep all provisioning state unchanged.
+        raise ValidationError("display_name is required")
+    # Capture one creation timestamp used only by the first successful provision.
+    now = utc_now()
+    # Build the deterministic full-account wallet row with the established starting balance.
+    player = {"player_id": player_id, "display_name": label, "type": "human", "balance": 5000.0, "created_at": now, "updated_at": now, "status": "active"}
+    # Delegate insert-or-read semantics to the configured JSON or MySQL provider.
+    return get_storage_provider().ensure_player(player)

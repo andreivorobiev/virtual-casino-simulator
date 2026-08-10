@@ -1,5 +1,5 @@
 {
-  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/326",
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/335",
   "status": "implemented_disabled_by_default",
   "v1_compatibility": {
     "policy": "unchanged",
@@ -14,11 +14,14 @@
     "GET /api/v2/admin/oauth/providers"
   ],
   "account_boundary": {
-    "public_signup": false,
-    "provider_user_creation": false,
+    "public_signup": "supported only for explicit signup intent when self-signup mode, provider method, operational switch, configuration readiness, and network-release latch are all true; defaults false",
+    "provider_user_creation": "recoverable provider-subject pending allocation followed by inactive canonical user/wallet/link persistence and one active-user publication transition",
     "email_matching_or_linking": false,
     "first_link": "active authenticated local-password user plus explicit confirmation, exact session, and browser owner",
-    "subsequent_signin": "previous provider-subject link plus currently active canonical private-invite user"
+    "subsequent_signin": "previous provider-subject link plus currently active canonical local or social user",
+    "social_signup_identity_key": "provider plus provider subject; provider email is presentation metadata only",
+    "social_signup_consent": ["current terms", "privacy notice", "fake-money acknowledgement"],
+    "social_signup_recovery": "same provider subject resumes one deterministic pending allocation; active link recovery may sign in after a lost response; revoked links are never resurrected by signup"
   },
   "provider_flags": {
     "google": ["CASINO_OAUTH_ENABLED_GOOGLE defaults false", "CASINO_OAUTH_NETWORK_RELEASED_GOOGLE defaults false"],
@@ -39,7 +42,7 @@
       "exchange_proofs": "internal flow id, nonce, PKCE verifier, and expiry only",
       "forbidden_co_storage": ["raw state", "raw callback URI", "raw browser binding", "raw user id", "raw session id", "nonce", "PKCE verifier"]
     },
-    "bindings": ["provider", "callback_uri", "browser_owner", "session_owner_for_link", "action"],
+    "bindings": ["provider", "callback_uri", "browser_owner", "session_owner_for_link", "action", "signup_terms_version", "signup_locale"],
     "safe_relative_redirect_allowlist": true
   },
   "identity_security": {
@@ -52,9 +55,11 @@
   "rollback": {
     "disable_provider_or_network_release": "either false latch prevents new flows, callbacks, adapter construction, and continued provider-session authorization",
     "unlink": "removes one provider-user binding and revokes matching provider-authenticated sessions",
-    "local_password": "remains available and is required for safe linking and unlinking"
+    "local_password": "remains available and is required for safe linking and unlinking; provider-created accounts cannot unlink their sole authority without a separately authenticated recovery path",
+    "social_signup_disable": "prevents new signup starts and callbacks without disabling existing linked sign-in",
+    "social_identity_revocation": "a missing link on a completed social enrollment requires account recovery and cannot be recreated through signup"
   },
   "repository_merge_approval": "Workroom #25 owner comment 5027642551 authorizes only fully repaired disabled-by-default repository code for existing private-invite accounts.",
   "live_enablement_gate": "A separate future owner release must approve each provider console, credentials, exact callback, security/privacy/data-deletion checks, rollback, and deployment before either network-release latch becomes true.",
-  "gate_policy": "Repository merge, configured credentials, green checks, or deployment do not authorize live provider network access, public signup, account creation, account merging, email linking, DNS, or unrestricted launch #209."
+  "gate_policy": "Repository merge, configured credentials, green checks, or deployment do not enable any provider or signup method. Live provider network access, public signup, DNS, and unrestricted launch remain separately controlled by #336 and #209."
 }

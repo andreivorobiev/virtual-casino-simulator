@@ -45,8 +45,8 @@ MAX_LINK_RECORDS = 10_000
 MAX_RATE_BUCKETS = 2_000
 # Keep an in-flight exchange claim bounded so a crashed worker can recover.
 EXCHANGE_CLAIM_SECONDS = 60
-# Accept only the two reviewed OAuth actions.
-FLOW_ACTIONS = frozenset({"signin", "link"})
+# Accept only the three reviewed OAuth actions.
+FLOW_ACTIONS = frozenset({"signin", "link", "signup"})
 # Accept only reviewed flow lifecycle states.
 FLOW_STATUSES = frozenset({"pending", "exchanging", "consumed"})
 
@@ -100,6 +100,10 @@ class OAuthFlowRecord:
     action: str
     # Store one prevalidated same-origin completion path.
     return_to: str
+    # Retain the exact reviewed terms version only for an explicit signup intent.
+    terms_version: str | None = None
+    # Retain the translated enrollment locale only for an explicit signup intent.
+    locale: str | None = None
     # Carry only a durable HMAC verifier for a linking user after claim.
     user_id: str | None = field(default=None, repr=False)
     # Carry only a durable HMAC verifier for a linking session after claim.
@@ -176,10 +180,18 @@ def _validate_flow(record: OAuthFlowRecord) -> None:
     if record.action == "link" and (not isinstance(record.user_id, str) or not record.user_id or not isinstance(record.session_id, str) or not record.session_id):
         # Prevent a provider callback from selecting a linking target.
         raise ValidationError("OAuth linking flow owner is invalid")
-    # Require sign-in flows to carry no canonical target.
-    if record.action == "signin" and (record.user_id is not None or record.session_id is not None):
-        # Reject preselected sign-in users so email cannot become a target.
-        raise ValidationError("OAuth sign-in flow owner is invalid")
+    # Require sign-in and signup flows to carry no canonical target.
+    if record.action in {"signin", "signup"} and (record.user_id is not None or record.session_id is not None):
+        # Reject preselected users so email or a caller id cannot become a target.
+        raise ValidationError("OAuth provider flow owner is invalid")
+    # Require signup-only consent metadata to be complete and bounded.
+    if record.action == "signup" and (not isinstance(record.terms_version, str) or not record.terms_version or len(record.terms_version) > 64 or record.locale not in {"en-US", "ru-RU"}):
+        # Reject missing or stale signup acknowledgement metadata.
+        raise ValidationError("OAuth signup acknowledgement is invalid")
+    # Require sign-in and link flows to carry no signup acknowledgement metadata.
+    if record.action != "signup" and (record.terms_version is not None or record.locale is not None):
+        # Prevent one flow intent from smuggling enrollment meaning.
+        raise ValidationError("OAuth flow acknowledgement is invalid")
 
 
 # Persist and recoverably claim OAuth flows across JSON and MySQL processes.
@@ -250,7 +262,7 @@ class OAuthFlowRepository:
                 # Fail closed until bounded expiry makes room.
                 raise ConflictError("OAuth flow capacity is reached")
             # Persist only digests for state, callback, browser, user, and session bindings.
-            retained.append({"flow_id": record.flow_id, "provider": record.provider, "state_digest": state_digest, "callback_digest": self._digest("callback", record.callback_uri), "owner_digest": self._digest("owner", record.owner_binding), "action": record.action, "return_to": record.return_to, "user_digest": self._digest("user", record.user_id) if record.user_id else None, "session_digest": self._digest("session", record.session_id) if record.session_id else None, "status": "pending", "created_at": record.created_at, "expires_at": record.expires_at, "attempts": 0, "exchange_digest": None, "claim_until": None, "consumed_at": None})
+            retained.append({"flow_id": record.flow_id, "provider": record.provider, "state_digest": state_digest, "callback_digest": self._digest("callback", record.callback_uri), "owner_digest": self._digest("owner", record.owner_binding), "action": record.action, "return_to": record.return_to, "terms_version": record.terms_version, "locale": record.locale, "user_digest": self._digest("user", record.user_id) if record.user_id else None, "session_digest": self._digest("session", record.session_id) if record.session_id else None, "status": "pending", "created_at": record.created_at, "expires_at": record.expires_at, "attempts": 0, "exchange_digest": None, "claim_until": None, "consumed_at": None})
             # Return the complete metadata document for atomic commit.
             return {"schema_version": SCHEMA_VERSION, "flows": retained}
 
@@ -334,7 +346,7 @@ class OAuthFlowRepository:
             # Fail closed without consuming the state.
             raise UnauthorizedError("OAuth flow proof is unavailable")
         # Return a request-local record combining callback inputs with the separate proofs.
-        return OAuthFlowRecord(flow_id=str(selected["row"]["flow_id"]), provider=provider, state=state_value, nonce=str(proof.get("nonce", "")), pkce_verifier=str(proof.get("pkce_verifier", "")), callback_uri=callback_uri, owner_binding=owner_binding, action=str(selected["row"]["action"]), return_to=str(selected["row"]["return_to"]), user_id=selected["row"].get("user_digest"), session_id=selected["row"].get("session_digest"), status="exchanging", created_at=str(selected["row"]["created_at"]), expires_at=str(selected["row"]["expires_at"]), exchange_token=exchange_token)
+        return OAuthFlowRecord(flow_id=str(selected["row"]["flow_id"]), provider=provider, state=state_value, nonce=str(proof.get("nonce", "")), pkce_verifier=str(proof.get("pkce_verifier", "")), callback_uri=callback_uri, owner_binding=owner_binding, action=str(selected["row"]["action"]), return_to=str(selected["row"]["return_to"]), terms_version=selected["row"].get("terms_version"), locale=selected["row"].get("locale"), user_id=selected["row"].get("user_digest"), session_id=selected["row"].get("session_digest"), status="exchanging", created_at=str(selected["row"]["created_at"]), expires_at=str(selected["row"]["expires_at"]), exchange_token=exchange_token)
 
     # Transition an exact claimed metadata row to pending or consumed.
     def _transition(self, record_or_row: object, exchange_token: str, target: str) -> None:

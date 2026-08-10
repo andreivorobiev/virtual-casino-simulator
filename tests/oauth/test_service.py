@@ -17,6 +17,8 @@ from unittest.mock import patch
 from casino.core.oauth.models import VerifiedIdentity
 # Import strict identity-link records for provider-session rollback tests.
 from casino.core.oauth.identity_links import ExternalIdentityLink
+# Import the non-sensitive social-enrollment result for an isolated callback seam.
+from casino.core.oauth.enrollment import SocialEnrollmentResult
 # Import the stable flow document key for test-only state retrieval.
 from casino.core.oauth.persistence import FLOW_DOCUMENT_KEY
 # Import the invite-only service under test.
@@ -120,7 +122,7 @@ class OAuthServiceTests(unittest.TestCase):
         # Construct an empty-environment service.
         service = self.service()
         # Require both public provider booleans to remain false.
-        self.assertEqual(service.public_provider_status(), {"providers": [{"provider": "google", "available": False}, {"provider": "facebook", "available": False}]})
+        self.assertEqual(service.public_provider_status(), {"providers": [{"provider": "google", "available": False, "signup_available": False}, {"provider": "facebook", "available": False, "signup_available": False}]})
         # Reject a start without the explicit complete Google flag contract.
         with self.assertRaises(NotFoundError):
             # Attempt no provider navigation under default settings.
@@ -150,6 +152,74 @@ class OAuthServiceTests(unittest.TestCase):
                     with self.assertRaises(UnauthorizedError):
                         # Attempt the same state a second time.
                         service.callback(provider, {"state": state, "code": "another-code"}, self.context())
+
+    # Prove each provider requires explicit policy and acknowledgements before canonical signup. (OAUTH-013)
+    def test_explicit_social_signup_is_independent_and_email_never_selects_target(self):
+        # Exercise both providers through independent complete synthetic environments.
+        for provider, environment in (("google", GOOGLE_ENV), ("facebook", FACEBOOK_ENV)):
+            # Label only the reviewed provider identifier.
+            with self.subTest(provider=provider):
+                # Retain the verified identity passed to the isolated canonical provisioning seam.
+                captured = {}
+
+                # Build one recovery service without user, wallet, or provider side effects.
+                class FakeEnrollment:
+                    # Return one active canonical provider-owned user without consulting email.
+                    def provision(self, identity, terms_version, locale):
+                        # Capture only test-local claim fields for exact assertions.
+                        captured.update({"provider": identity.provider, "subject": identity.subject, "email": identity.email, "terms_version": terms_version, "locale": locale})
+                        # Return one synthetic canonical account result.
+                        return SocialEnrollmentResult(user={"user_id": "user-social", "player_id": "player-social", "status": "active", "identity_provider": provider}, created=True, recovered=False)
+
+                # Construct a service whose signup boundary is the local fake above.
+                service = OAuthService(environ=environment, storage=self.storage, adapter_factory=lambda selected, _client, _secret: self.adapters.append(FakeAdapter(selected)) or self.adapters[-1], operational_gate=lambda _provider: True, enrollment_factory=lambda _storage, _digest, _links: FakeEnrollment())
+                # Define the complete explicit signup intent with no email or canonical target.
+                body = {"action": "signup", "return_to": "/", "terms_version": "private-beta-1", "accepted_terms": True, "accepted_privacy": True, "accepted_fake_money": True, "locale": "ru-RU"}
+                # Suppress bounded audit output and authorize the exact provider method for both start and callback.
+                with patch("casino.core.oauth.service.logger.info"), patch("casino.core.oauth.service.enrollment_policy.evaluate", return_value={"allowed": True, "reason": "allowed", "mode": "self-signup"}) as policy, patch("casino.core.oauth.service.auth.create_session", return_value={**self.session, "auth_method": provider}) as create_session, patch("casino.core.oauth.service.auth.session_cookie_headers", return_value=[("Set-Cookie", "synthetic")]):
+                    # Start the provider-bound flow after all acknowledgements.
+                    started = service.start(provider, body, self.context())
+                    # Require the public result to preserve only provider, action, URL, and expiry.
+                    self.assertEqual((started["provider"], started["action"]), (provider, "signup"))
+                    # Complete the exact one-time callback through the fake canonical boundary.
+                    callback_context = self.context()
+                    # Invoke one successful provider response.
+                    result = service.callback(provider, {"state": self.newest_state(), "code": "synthetic-code"}, callback_context)
+                    # Require one canonical session and safe same-origin signup completion marker.
+                    self.assertEqual((result["status"], result["created"], result["recovered"], callback_context["redirect"]), ("signed_up", True, False, f"/?oauth_provider={provider}&oauth_status=signed_up"))
+                    # Require method policy to be checked both before navigation and before mutation.
+                    self.assertEqual(policy.call_count, 2)
+                    # Require the provider method to label the canonical session.
+                    create_session.assert_called_once()
+                # Require provider email to reach only presentation metadata and never a user target argument.
+                self.assertEqual(captured, {"provider": provider, "subject": f"{provider}-subject", "email": "invite@example.invalid", "terms_version": "private-beta-1", "locale": "ru-RU"})
+
+    # Prove missing consent or disabled method creates no provider flow or adapter. (OAUTH-013)
+    def test_social_signup_denials_create_no_flow(self):
+        # Count every adapter construction to prove early failure ordering.
+        constructions = []
+        # Construct a ready synthetic configuration behind the explicit test operational gate.
+        service = OAuthService(environ=GOOGLE_ENV, storage=self.storage, adapter_factory=lambda provider, _client, _secret: constructions.append(provider) or FakeAdapter(provider), operational_gate=lambda _provider: True)
+        # Define the complete valid shape before creating negative variants.
+        valid = {"action": "signup", "return_to": "/", "terms_version": "private-beta-1", "accepted_terms": True, "accepted_privacy": True, "accepted_fake_money": True, "locale": "en-US"}
+        # Reject each missing acknowledgement before policy or adapter access.
+        for field in ("accepted_terms", "accepted_privacy", "accepted_fake_money"):
+            # Label only the bounded contract field.
+            with self.subTest(field=field):
+                # Build one exact false acknowledgement variant.
+                body = {**valid, field: False}
+                # Require the stable request-validation class.
+                with self.assertRaises(ValidationError):
+                    # Attempt no provider flow.
+                    service.start("google", body, self.context())
+        # Deny a complete intent when the provider-specific enrollment method is off.
+        with patch("casino.core.oauth.service.enrollment_policy.evaluate", return_value={"allowed": False, "reason": "method_disabled", "mode": "self-signup"}):
+            # Require the policy failure before adapter construction.
+            with self.assertRaises(ForbiddenError):
+                # Attempt no provider flow under the disabled method.
+                service.start("google", valid, self.context())
+        # Require no credential-bearing adapter or durable flow from any denial.
+        self.assertEqual((constructions, self.storage.read_document(FLOW_DOCUMENT_KEY, lambda: {"flows": []})["flows"]), ([], []))
 
     # Prove linking requires current canonical authentication and explicit confirmation.
     def test_explicit_link_then_prelinked_signin_succeeds(self):
@@ -279,7 +349,7 @@ class OAuthServiceTests(unittest.TestCase):
         # Construct complete provider configuration behind one fixed disabled operational seam.
         service = OAuthService(environ=GOOGLE_ENV, storage=self.storage, adapter_factory=factory, operational_gate=lambda provider: decisions.append(provider) or False)
         # Publish the provider as unavailable even though its environment is otherwise ready.
-        self.assertEqual(service.public_provider_status(), {"providers": [{"provider": "google", "available": False}, {"provider": "facebook", "available": False}]})
+        self.assertEqual(service.public_provider_status(), {"providers": [{"provider": "google", "available": False, "signup_available": False}, {"provider": "facebook", "available": False, "signup_available": False}]})
         # Require the availability projection to read both reviewed switches even when configuration is incomplete.
         self.assertEqual(decisions, ["google", "facebook"])
         # Isolate the next request's switch-read proof.

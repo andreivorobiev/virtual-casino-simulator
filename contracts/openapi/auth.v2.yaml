@@ -7,7 +7,7 @@ servers:
   - url: /api/v2
 x-casino-enrollment-policy:
   revision: 5
-  enforced_routes: [/api/v2/auth/signup, /api/v2/auth/redeem-invitation]
+  enforced_routes: [/api/v2/auth/signup, /api/v2/auth/redeem-invitation, /api/v2/auth/oauth/{provider}/start, /api/v2/auth/oauth/{provider}/callback]
   absent-nonmapping-or-unowned-document: deployed-environment-baseline
   schema-v1-malformed-document: fixed-operator-recovery-without-read-side-write
   schema-v1-unknown-mode: fixed-operator-recovery-without-read-side-write
@@ -244,7 +244,7 @@ paths:
   # Public provider status contains booleans only and never configuration or credential fields.
   /auth/oauth/providers:
     get:
-      summary: List boolean-only Google and Facebook runtime availability.
+      summary: List boolean-only Google and Facebook sign-in and signup availability.
       operationId: auth_v2_oauth_public_providers
       responses:
         '200':
@@ -256,7 +256,7 @@ paths:
   # Start is inert unless provider configuration and its independent network-release latch are both ready.
   /auth/oauth/{provider}/start:
     post:
-      summary: Start invite-only provider sign-in or explicitly confirmed authenticated linking.
+      summary: Start provider sign-in, explicit linking, or separately gated acknowledged signup.
       operationId: auth_v2_oauth_start
       parameters:
         - $ref: '#/components/parameters/OAuthProvider'
@@ -274,7 +274,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OAuthStartEnvelope'
         '400':
-          description: Standard envelope for invalid action, confirmation, or return path.
+          description: Standard envelope for invalid action, confirmation, acknowledgement, locale, or return path.
           content:
             application/json:
               schema:
@@ -286,7 +286,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '403':
-          description: Browser/session CSRF binding or private-invite local-password authority is unavailable.
+          description: Browser/session CSRF binding, local-password linking authority, or provider-specific signup policy is unavailable.
           content:
             application/json:
               schema:
@@ -306,7 +306,7 @@ paths:
   # Callback consumes one recoverably claimed browser-bound flow and returns no provider response body.
   /auth/oauth/{provider}/callback:
     get:
-      summary: Complete or recover one prior browser-bound provider sign-in or link action.
+      summary: Complete or recover one prior browser-bound provider sign-in, link, or signup action.
       operationId: auth_v2_oauth_callback
       parameters:
         - $ref: '#/components/parameters/OAuthProvider'
@@ -701,7 +701,7 @@ components:
               enum: [reset]
     OAuthProviderAvailability:
       type: object
-      required: [provider, available]
+      required: [provider, available, signup_available]
       additionalProperties: false
       properties:
         provider:
@@ -709,6 +709,9 @@ components:
           enum: [google, facebook]
         available:
           type: boolean
+        signup_available:
+          type: boolean
+          description: True only when sign-in runtime, self-signup mode, and this provider method are all enabled.
     OAuthProviderLinkStatus:
       type: object
       required: [provider, available, linked]
@@ -728,7 +731,7 @@ components:
       properties:
         action:
           type: string
-          enum: [signin, link]
+          enum: [signin, link, signup]
         return_to:
           type: string
           pattern: '^/(?:$|games/[a-z0-9][a-z0-9_-]{0,63})$'
@@ -736,6 +739,26 @@ components:
         confirm_link:
           type: boolean
           description: Must be exactly true for link and never selects a user.
+        terms_version:
+          type: string
+          enum: [private-beta-1]
+          description: Required only for signup and bound to the one-time flow.
+        accepted_terms:
+          type: boolean
+          enum: [true]
+          description: Required only for signup.
+        accepted_privacy:
+          type: boolean
+          enum: [true]
+          description: Required only for signup.
+        accepted_fake_money:
+          type: boolean
+          enum: [true]
+          description: Required only for signup and confirms balances have no cash value.
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+          description: Required only for signup.
     OAuthStartResult:
       type: object
       required: [provider, action, authorization_url, expires_in]
@@ -746,7 +769,7 @@ components:
           enum: [google, facebook]
         action:
           type: string
-          enum: [signin, link]
+          enum: [signin, link, signup]
         authorization_url:
           type: string
           format: uri
@@ -795,7 +818,7 @@ components:
           enum: [desktop, tablet, mobile, unknown]
     EnrollmentPolicy:
       type: object
-      required: [enrollment_mode, signup_enabled, guest_trials_enabled, invitation_enrollment_enabled, guest_conversion_enabled, passkeys_enabled, canonical_identity, shared_auth_origin]
+      required: [enrollment_mode, signup_enabled, signup_methods, guest_trials_enabled, invitation_enrollment_enabled, guest_conversion_enabled, passkeys_enabled, canonical_identity, shared_auth_origin]
       additionalProperties: false
       properties:
         enrollment_mode:
@@ -803,6 +826,17 @@ components:
           enum: [closed, invite-only, self-signup]
         signup_enabled:
           type: boolean
+        signup_methods:
+          type: object
+          required: [email, google, facebook]
+          additionalProperties: false
+          properties:
+            email:
+              type: boolean
+            google:
+              type: boolean
+            facebook:
+              type: boolean
         guest_trials_enabled:
           type: boolean
         invitation_enrollment_enabled:
