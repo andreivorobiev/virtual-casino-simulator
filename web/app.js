@@ -820,7 +820,7 @@ function renderEmailVerificationGate(message = '', success = false) {
     }
   };
   // Bind enumeration-safe replacement delivery.
-  document.getElementById('email-verification-resend').onclick = async () => {
+  view.querySelector('[data-testid="email-verification-resend"]').onclick = async () => {
     // Resolve the generic status outlet.
     const status = document.getElementById('email-verification-message');
     // Start protected resend without exposing recipient existence or delivery state.
@@ -838,7 +838,7 @@ function renderEmailVerificationGate(message = '', success = false) {
     }
   };
   // Bind terminal cancellation without exposing pending-recipient existence.
-  document.getElementById('email-verification-cancel').onclick = async () => {
+  view.querySelector('[data-testid="email-verification-cancel"]').onclick = async () => {
     // Resolve the generic status outlet.
     const status = document.getElementById('email-verification-message');
     // Start protected cancellation under one caller-owned action key.
