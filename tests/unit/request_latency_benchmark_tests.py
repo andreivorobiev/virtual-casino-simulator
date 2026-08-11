@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus five issue #183 mobile-core requirements to total exactly 952 permanent rows.
-        self.assertEqual(len(requirements), 952)
+        # Require the accepted aggregates plus three issue #683 lifecycle requirements to total exactly 955 permanent rows.
+        self.assertEqual(len(requirements), 955)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1398,6 +1398,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "SEC-016": "Core",  # Preserve native origin and link ownership.
             "SESSION-013": "Core",  # Preserve native lifecycle ownership.
             "TEST-172": "Tests",  # Preserve mobile-core evidence ownership.
+            "STORAGE-013": "Storage",  # Bind immutable action lifecycle claims to storage.
+            "MYSQL-009": "MySQL",  # Bind schema-four claim and receipt ownership.
+            "TEST-174": "Tests",  # Bind provider parity and migration evidence without reusing TEST-173.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
             "AUTO-015": "Autoplay",  # Bind lifecycle reconciliation to the control plane.
@@ -1567,24 +1570,24 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
         # Parse the Deuces descriptor after removing its final game-owned history scan.
         deuces_module = json.loads((ROOT / "modules" / "deuces_wild_video_poker.json").read_text(encoding="utf-8"))
-        # Require the compatible Core minor for native session and origin security.
-        self.assertEqual(core_module["version"], "9.42.0")
+        # Require the compatible Core minor for the provider-neutral lifecycle bridge.
+        self.assertEqual(core_module["version"], "9.43.0")
         # Require the compatible Ledger patch for the public read-only point seam.
         self.assertEqual(ledger_module["version"], "9.1.2")
         # Require the exact compatible Players patch for explicit row insertion.
         self.assertEqual(players_module["version"], "9.1.2")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the tests patch for v0.9.5.74 release qualification.
-        self.assertEqual(tests_module["version"], "1.79.1")
-        # Require the docs patch for v0.9.5.74 release governance.
-        self.assertEqual(docs_module["version"], "1.76.1")
+        # Require the tests minor for lifecycle and schema-four qualification.
+        self.assertEqual(tests_module["version"], "1.80.0")
+        # Require the docs minor for lifecycle and schema-four governance.
+        self.assertEqual(docs_module["version"], "1.77.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the contracts patch for the immutable v0.9.5.74 rollback record.
         self.assertEqual(contracts_module["version"], "1.61.1")
-        # Require the tooling minor for deterministic native build and sync qualification.
-        self.assertEqual(tooling_module["version"], "1.30.0")
+        # Require the tooling minor for the new immutable migration descriptor.
+        self.assertEqual(tooling_module["version"], "1.31.0")
         # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
         self.assertEqual((mobile_module["version"], mobile_module["package_version"]), ("1.0.0", "0.2.0"))
         # Require the compatible Baccarat patch for central settings enforcement.

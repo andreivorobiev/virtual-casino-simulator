@@ -1,0 +1,19 @@
+{
+  "version": 4,
+  "name": "game-action-claims",
+  "description": "Add reset-epoch ownership, immutable execute-or-uncommitted claims, and receipt-to-claim binding.",
+  "statements": [
+    "CREATE TABLE casino_game_action_epoch_state (state_id TINYINT UNSIGNED NOT NULL, current_epoch BIGINT UNSIGNED NOT NULL, phase VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, PRIMARY KEY (state_id), CONSTRAINT chk_game_action_epoch_singleton CHECK (state_id = 1), CONSTRAINT chk_game_action_epoch_range CHECK (current_epoch BETWEEN 1 AND 9223372036854775807), CONSTRAINT chk_game_action_epoch_phase CHECK (phase IN ('ready', 'resetting'))) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "INSERT INTO casino_game_action_epoch_state (state_id, current_epoch, phase) VALUES (1, 1, 'ready')",
+    "ALTER TABLE casino_game_action_receipts ADD COLUMN reset_epoch BIGINT UNSIGNED NOT NULL DEFAULT 1 FIRST",
+    "ALTER TABLE casino_game_action_receipts ALTER COLUMN reset_epoch DROP DEFAULT",
+    "ALTER TABLE casino_game_action_receipts DROP PRIMARY KEY, ADD PRIMARY KEY (reset_epoch, game_id, player_id, action_key)",
+    "CREATE TABLE casino_game_action_claims (reset_epoch BIGINT UNSIGNED NOT NULL, game_id VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, player_id VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, action_key VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, request_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, resources_json TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, disposition VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, PRIMARY KEY (reset_epoch, game_id, player_id, action_key), UNIQUE KEY uq_game_action_claim_semantics (reset_epoch, game_id, player_id, action_key, disposition, request_fingerprint), CONSTRAINT chk_game_action_claim_epoch CHECK (reset_epoch BETWEEN 1 AND 9223372036854775807), CONSTRAINT chk_game_action_claim_fingerprint CHECK (request_fingerprint REGEXP '^[0-9a-f]{64}$'), CONSTRAINT chk_game_action_claim_resources CHECK (JSON_VALID(resources_json) AND JSON_TYPE(resources_json) = 'OBJECT' AND OCTET_LENGTH(resources_json) BETWEEN 2 AND 16384), CONSTRAINT chk_game_action_claim_disposition CHECK (disposition IN ('execute', 'uncommitted'))) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "INSERT INTO casino_game_action_claims (reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, disposition) SELECT reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, 'execute' FROM casino_game_action_receipts",
+    "ALTER TABLE casino_game_action_receipts ADD COLUMN claim_disposition VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'execute' AFTER request_fingerprint",
+    "ALTER TABLE casino_game_action_receipts ALTER COLUMN claim_disposition DROP DEFAULT",
+    "ALTER TABLE casino_game_action_receipts ADD CONSTRAINT chk_game_action_receipt_disposition CHECK (claim_disposition = 'execute')",
+    "ALTER TABLE casino_game_action_receipts ADD UNIQUE INDEX uq_game_action_receipt_claim (reset_epoch, game_id, player_id, action_key, claim_disposition, request_fingerprint)",
+    "ALTER TABLE casino_game_action_receipts ADD CONSTRAINT fk_game_action_receipt_claim FOREIGN KEY (reset_epoch, game_id, player_id, action_key, claim_disposition, request_fingerprint) REFERENCES casino_game_action_claims (reset_epoch, game_id, player_id, action_key, disposition, request_fingerprint) ON UPDATE RESTRICT ON DELETE RESTRICT"
+  ]
+}

@@ -8853,7 +8853,7 @@
     {
       "id": "CORE-031",
       "module": "Core",
-      "description": "The core defines one provider-neutral game-action contract with bounded immutable identity, declared resources, snapshots, signed integer-cent movements, plans, and receipts; canonical request fingerprints bind exact semantic input and resources, conflicting durable-key reuse is rejected before planner or RNG work, and the abstract execute_game_action_once boundary applies the same receipt model to paid and zero-cost actions.",
+      "description": "The core defines one provider-neutral game-action contract with bounded immutable identity, declared resources, snapshots, signed integer-cent movements, plans, receipts, and lifecycle resolution; canonical request fingerprints bind exact semantic input and resources, conflicting durable-key reuse is rejected before planner or RNG work, execute_game_action_once applies the same receipt model to paid and zero-cost actions, and resolve_game_action reports only pending, committed with the exact receipt, or durably uncommitted without invoking a planner.",
       "status": "PASS",
       "api_tests": [
         "API-GAMECORE-003"
@@ -8865,8 +8865,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-430-game-action-contract",
-      "changed_in": "issue-430-game-action-contract",
-      "notes": "Introduced as the independently revertible Phase 0c core-contract prerequisite for issue #430. The conformance fake proves the abstract semantics only; no JSON or MySQL provider implementation, route or game adoption, current-production atomicity claim, or multi-process scaling claim is included."
+      "changed_in": "issue-683-game-action-lifecycle-bridge",
+      "notes": "Introduced as the Phase 0c contract prerequisite for issue #430 and compatibly extended by issue #683 with a provider-neutral resolver result. Phase A adds no route, game, public API, migration activation, production schema change, or issue #430 closure claim."
     },
     {
       "id": "TEST-140",
@@ -9155,7 +9155,7 @@
     {
       "id": "MYSQL-007",
       "module": "MySQL",
-      "description": "The checksum-bound contiguous schema-three catalog provisions exact binary action-scope identity, lowercase request fingerprint, bounded declared-resource and complete paid-or-zero-cost receipt documents, receipt SHA-256, duplicate-scope rejection, and persisted receipt capacity.",
+      "description": "The checksum-bound contiguous schema-three catalog provisions exact binary action-scope identity, lowercase request fingerprint, bounded declared-resource and complete paid-or-zero-cost receipt documents, receipt SHA-256, duplicate-scope rejection, and persisted receipt capacity; schema four preserves every schema-three receipt byte and hash while binding it to one immutable execute claim.",
       "status": "PASS",
       "api_tests": [
         "MYSQL-MIGRATION-001",
@@ -9165,6 +9165,7 @@
       "implementation_files": [
         "migrations/mysql/catalog.json",
         "migrations/mysql/0003_game_action_receipts.json",
+        "migrations/mysql/0004_game_action_claims.json",
         "scripts/package_app.py",
         "tests/mysql_migration_tests.py",
         "tests/mysql_migration_live.py",
@@ -9173,13 +9174,13 @@
         "tests/storage_tests.py"
       ],
       "introduced_in": "issue-430-mysql-schema3-receipts",
-      "changed_in": "issue-430-mysql-schema3-receipts",
-      "notes": "This capacity-only checkpoint proves checksum-bound initial DDL application, paid and zero-cost receipt insertion, exact-scope duplicate rejection, and exact persisted rows. Current database-wide runtime DML grants do not prevent receipt UPDATE or DELETE, so this slice does not claim database-enforced immutability. Before any MySQL provider composite or runtime atomicity acceptance, a separately governed migration-readiness slice must restrict the receipt table to runtime SELECT and INSERT only, fail startup closed on exact SHOW GRANTS, bind CHECK and grant drift, and prove disposable upgrade, restart, and rollback behavior. It adds no privilege or server-global change, runtime provider implementation, route, game, Slots, ledger, saga, journal, production atomicity, or issue-closure claim."
+      "changed_in": "issue-683-game-action-lifecycle-bridge",
+      "notes": "Schema-three receipt fields and JSON/hash bytes remain unchanged. Schema four adds an execute-only claim binding, a no-default receipt disposition, RESTRICT foreign-key ownership, and disposable runtime SELECT/INSERT-only evidence for claims and receipts. Migration application remains held and no production schema or grant is changed by the application."
     },
     {
       "id": "MYSQL-008",
       "module": "MySQL",
-      "description": "The schema-three rollback-compatibility bridge accepts runtime startup only for an initialized clean checksum-valid schema-two migration prefix or the complete checksum-valid schema-three chain, binds recovery evidence to the actual schema version and exact applied prefix, and holds migration application before configuration, connection, lock, DDL, or state mutation.",
+      "description": "The schema-four rollback-compatibility bridge accepts runtime startup only for an initialized clean checksum-valid schema-two, schema-three, or schema-four migration prefix, binds recovery evidence to the actual schema version and exact applied prefix, and holds migration application before configuration, connection, lock, DDL, or state mutation.",
       "status": "PASS",
       "api_tests": [
         "MYSQL-MIGRATION-001",
@@ -9198,8 +9199,8 @@
         "tests/storage_tests.py"
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
-      "changed_in": "issue-430-mysql-schema-rollback-bridge",
-      "notes": "This bridge is runtime capacity only: it permits clean schema-two and schema-three restart compatibility while the catalog apply policy remains held. The separately governed v0.9.5.39 bridge and v0.9.5.40-v0.9.5.74 policy releases deploy this capacity while proving production remains at schema two; the bridge itself performs no live database migration and makes no MySQL provider, composite transaction, receipt immutability, current production atomicity, grant, account, secret, server-global, database-rollback, schema-three-live, future migration, route, game, Slots, ledger, or issue-closure claim."
+      "changed_in": "issue-683-game-action-lifecycle-bridge",
+      "notes": "This bridge is runtime capacity only: clean schemas two and three retain current behavior, while lifecycle executor/resolver methods are usable only on exact clean schema four. The catalog remains apply-held; the application performs no migration, production grant, provider, route, game, public API, or deployment mutation."
     },
     {
       "id": "TOOL-011",
@@ -10826,6 +10827,83 @@
       "introduced_in": "issue-183-mobile-core-security",
       "changed_in": "issue-183-mobile-core-security",
       "notes": "All credentials, origins, users, sessions, and lifecycle events in host-runnable tests are synthetic. Device and distribution evidence remains separately governed by issues #184, #185, and #195."
+    },
+    {
+      "id": "STORAGE-013",
+      "module": "Storage",
+      "description": "JSON and clean-schema-four MySQL storage expose one provider-neutral game-action lifecycle resolver. The first exact semantic claimant wins an immutable execute or uncommitted disposition within the current reset epoch; resolver lock contention or reset unavailability returns pending without a claim, committed resolution returns the original complete receipt, resolver-first prevents every late planner and mutation, conflicts are detected before resource reads, and no claim or receipt is updated or deleted. A successful governed reset advances one durable unavailable namespace through resetting to ready, preserves prior immutable history while making it unreachable to current action lookups, and permits the same external key to execute freshly only after bootstrap completes.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-GAME-ACTION-LIFECYCLE-001",
+        "MYSQL-GAME-ACTION-LIFECYCLE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/game_action.py",
+        "casino/core/storage.py",
+        "tests/game_action_contract_tests.py",
+        "tests/json_game_action_provider_tests.py",
+        "tests/mysql_game_action_provider_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-683-game-action-lifecycle-bridge",
+      "changed_in": "issue-683-game-action-lifecycle-bridge",
+      "notes": "The bridge is inert: no route, game, public API, contract, migration application, or production activation uses it. JSON holds its existing global provider gate across reset and caller bootstrap, retains epoch-scoped immutable history, and restores exact prior bytes on body or finalization failure. MySQL lifecycle DML requires exact clean schema four and a ready singleton epoch."
+    },
+    {
+      "id": "MYSQL-009",
+      "module": "MySQL",
+      "description": "Schema four adds a singleton positive reset epoch with exact ready-or-resetting phase plus immutable binary-collated, epoch-prefixed game-action claims and receipts. Existing schema-three receipts are backfilled into epoch one execute claims without changing receipt JSON or hashes; new receipts require an explicit execute disposition and matching composite claim through RESTRICT ownership. Runtime claims and receipts are SELECT-and-INSERT only, the epoch singleton is SELECT-and-UPDATE only, execution commits claim, wallets, ledger rows, game state, and receipt in one transaction, and reset holds one target-scoped nonblocking named lock across epoch advance, mutable clear, same-session bootstrap, and exact ready finalization.",
+      "status": "PASS",
+      "api_tests": [
+        "MYSQL-GAME-ACTION-LIFECYCLE-001",
+        "MYSQL-MIGRATION-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/storage.py",
+        "migrations/mysql/0004_game_action_claims.json",
+        "migrations/mysql/catalog.json",
+        "scripts/package_app.py",
+        "tests/mysql_game_action_provider_tests.py",
+        "tests/mysql_migration_tests.py",
+        "tests/mysql_migration_live.py"
+      ],
+      "introduced_in": "issue-683-game-action-lifecycle-bridge",
+      "changed_in": "issue-683-game-action-lifecycle-bridge",
+      "notes": "Catalog policy remains held with minimum runtime schema two and expected schema four. Application runtime accepts clean schemas two, three, and four, but lifecycle executor/resolver methods reject schemas two and three before DML. A failed schema-four reset remains durably resetting until a later explicitly authorized reset acquires the same named lock, advances again, and completes bootstrap; action planning never runs in that gap. No production migration or grant mutation is included."
+    },
+    {
+      "id": "TEST-174",
+      "module": "Tests",
+      "description": "Provider-neutral, JSON, transactional MySQL-model, migration, disposable-MySQL, storage, recovery, release, and CI evidence proves resolver-first and executor-first convergence, finite pending lock waits, exact replay and changed-input conflict, planner at most once, no late execution after uncommitted, crash recovery at every JSON projection boundary, exact wallet/state/ledger/receipt convergence, schema-three receipt byte preservation during schema-four epoch-one backfill, runtime append-only grants, clean schema-two/three compatibility, exact clean-schema-four lifecycle eligibility, and held application. Reset evidence proves action-versus-reset orderings, claim-zero/planner-zero resetting gaps, same-session capacity-one bootstrap, fresh same-key execution in a new epoch, old immutable history retention without cross-epoch replay, exact JSON rollback, durable MySQL reset failure and later recovery, nonblocking concurrent reset refusal, and no route, game, API, log, or deployment activation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAME-ACTION-LIFECYCLE-001",
+        "STORAGE-GAME-ACTION-LIFECYCLE-001",
+        "MYSQL-GAME-ACTION-LIFECYCLE-001",
+        "MYSQL-MIGRATION-001",
+        "MYSQL-MIGRATION-LIVE-001",
+        "RECOVERY-POLICY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/game_action_contract_tests.py",
+        "tests/json_game_action_provider_tests.py",
+        "tests/mysql_game_action_provider_tests.py",
+        "tests/mysql_migration_tests.py",
+        "tests/mysql_migration_live.py",
+        "tests/storage_tests.py",
+        "tests/recovery_tests.py",
+        "tests/release_artifact_tests.py",
+        "tests/release_predecessor_tests.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-683-game-action-lifecycle-bridge",
+      "changed_in": "issue-683-game-action-lifecycle-bridge",
+      "notes": "TEST-173 remains reserved by the separate parked issue #168 worktree and is not reused. All database identities and money are disposable synthetic fixtures; no production database, deployment, route, game, or public API is touched."
     },
     {
       "id": "ROU-001",

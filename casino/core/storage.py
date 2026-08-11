@@ -6,6 +6,8 @@ from __future__ import annotations
 import atexit
 # Import deep-copy support so indexed reads cannot mutate cached durable events.
 import copy
+# Import portable operating-system error numbers for exact lock-contention classification.
+import errno
 # Import required dependency so action fingerprints are derived from canonical transaction semantics.
 import hashlib
 # Import required dependency so process-lock helpers can be expressed as context managers.
@@ -35,8 +37,8 @@ from typing import Any, Callable
 from casino.config import DATA_DIR, DEFAULT_MYSQL_DATABASE, DEFAULT_MYSQL_HOST, DEFAULT_MYSQL_PORT, DEFAULT_MYSQL_USER, DEFAULT_STORAGE_PROVIDER, GAME_DATA_DIR, LOG_DIR, SCHEMA_VERSION
 # Import required dependency so provider-created rows use the app timestamp format.
 from casino.core.clock import utc_now
-# Import the immutable route-free game-action contract implemented only by the JSON provider.
-from casino.core.game_action import GameActionExecutor, GameActionIdentity, GameActionMovement, GameActionPlan, GameActionReceipt, GameActionResources, GameActionSnapshot, apply_plan_to_snapshot, canonical_json_bytes, validate_execution_request
+# Import the immutable route-free game-action execution and resolution contract.
+from casino.core.game_action import GameActionExecutor, GameActionIdentity, GameActionMovement, GameActionPlan, GameActionReceipt, GameActionResolution, GameActionResources, GameActionSnapshot, apply_plan_to_snapshot, canonical_json_bytes, validate_execution_request, validate_resolution_request
 # Import required dependency so provider-created ledger rows use stable IDs.
 from casino.core.ids import new_id
 # Import read-only MySQL migration compatibility without exposing deployment credentials.
@@ -58,10 +60,20 @@ _JSON_GATE_REGISTRY_LOCK = threading.RLock()
 _JSON_GATE_LOCKS: dict[str, threading.RLock] = {}
 # Track nested gate and planner state without leaking it across threads.
 _JSON_GATE_LOCAL = threading.local()
+# Track active MySQL planners separately from filesystem-root gate ownership.
+_MYSQL_PLANNER_LOCAL = threading.local()
+# Serialize process-local reset target registration across equivalent provider instances.
+_MYSQL_RESET_REGISTRY_LOCK = threading.RLock()
+# Track targets whose retained session currently owns the reset lifecycle.
+_MYSQL_RESET_TARGETS: set[tuple[str, int, str]] = set()
 # Version the provider-private durable action files independently from public storage.
 _GAME_ACTION_STORAGE_VERSION = 1
+# Version epoch-scoped lifecycle registries without rewriting legacy epoch-one bytes.
+_GAME_ACTION_EPOCH_STORAGE_VERSION = 2
+# Bound reset epochs to the signed BIGINT range shared by JSON and MySQL providers.
+_GAME_ACTION_MAX_EPOCH = (1 << 63) - 1
 # Enumerate the only durable recovery stages accepted from the private journal.
-_GAME_ACTION_STAGES = {"prepared", "planned", "wallet_applied", "state_applied", "receipt_committed"}
+_GAME_ACTION_STAGES = {"prepared", "planned", "wallet_applied", "ledger_applied", "state_applied", "receipt_committed"}
 # Compact the append-only ledger-action journal only after a bounded growth interval. (LEDGER-034)
 _LEDGER_ACTION_COMPACT_BYTES = 512 * 1024
 
@@ -325,6 +337,16 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
     def game_action_receipts_path(self) -> Path:
         # Persist committed identities independently from append-only ledger compatibility.
         return self.data_dir / ".game_actions" / "receipts.json"
+
+    # Return the provider-private immutable execution/cancellation claim registry path.
+    def game_action_claims_path(self) -> Path:
+        # Keep lifecycle claims beside receipts under the same reset-safe global gate.
+        return self.data_dir / ".game_actions" / "claims.json"
+
+    # Return the provider-private reset epoch and readiness state path.
+    def game_action_epoch_path(self) -> Path:
+        # Keep the durable epoch inside the reset backup root for exact rollback.
+        return self.data_dir / ".game_actions" / "epoch.json"
 
     # Return the provider-private action-managed game-state registry path.
     def game_action_states_path(self) -> Path:
@@ -742,6 +764,30 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         with self.lock:
             # Hold stable then legacy cross-process locks until final visibility.
             with self._json_global_gate():
+                # Converge every recoverable action before retiring its mutable epoch.
+                self._recover_all_json_actions_locked()
+                # Read the exact ready epoch before creating rollback material.
+                epoch_state = self._read_game_action_epoch()
+                # Refuse nested or stale reset ownership.
+                if epoch_state["phase"] != "ready" or epoch_state["current_epoch"] >= _GAME_ACTION_MAX_EPOCH:
+                    # Keep every provider byte unchanged at the fixed recovery boundary.
+                    raise ConflictError("Game action reset requires operator recovery")
+                # Capture the epoch that remains immutable history after this reset.
+                current_epoch = epoch_state["current_epoch"]
+                # Validate and retain every committed receipt across the reset.
+                receipt_registry, _receipts = self._read_game_action_receipts(current_epoch)
+                # Validate and retain every execute or uncommitted claim across the reset.
+                claim_registry, _claims = self._read_game_action_claims(current_epoch)
+                # Convert legacy epoch-one receipts only inside the reset transaction.
+                if receipt_registry["schema_version"] == _GAME_ACTION_STORAGE_VERSION:
+                    # Preserve each serialized legacy receipt unchanged under epoch one.
+                    receipt_registry = {"schema_version": _GAME_ACTION_EPOCH_STORAGE_VERSION, "receipts_by_epoch": {"1": copy.deepcopy(receipt_registry["receipts"])}}
+                # Convert legacy epoch-one claims only inside the reset transaction.
+                if claim_registry["schema_version"] == _GAME_ACTION_STORAGE_VERSION:
+                    # Preserve each serialized legacy claim unchanged under epoch one.
+                    claim_registry = {"schema_version": _GAME_ACTION_EPOCH_STORAGE_VERSION, "claims_by_epoch": {"1": copy.deepcopy(claim_registry["claims"])}}
+                # Derive the next namespace without permitting wraparound.
+                next_epoch = current_epoch + 1
                 # Snapshot complete pre-reset bytes before destructive mutation.
                 backup = self._create_reset_backup_locked()
                 # Capture any reset or caller-body failure without releasing either gate.
@@ -749,8 +795,16 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 try:
                     # Clear provider state without replacing either lock identity.
                     self._reset_locked()
+                    # Restore immutable receipt history after mutable state is cleared.
+                    self._write_game_action_json(self.game_action_receipts_path(), receipt_registry)
+                    # Restore immutable claim and tombstone history beside receipts.
+                    self._write_game_action_json(self.game_action_claims_path(), claim_registry)
+                    # Publish the new namespace as unavailable throughout caller bootstrap.
+                    self._write_game_action_epoch(current_epoch=next_epoch, phase="resetting")
                     # Yield so app bootstrap writes remain inside the same reentrant boundary.
                     yield self
+                    # Release the exact bootstrapped namespace only after the caller body succeeds.
+                    self._write_game_action_epoch(current_epoch=next_epoch, phase="ready")
                 # Capture clear or bootstrap failure for rollback under the held gate.
                 except BaseException as error:
                     # Retain the original failure until restoration and cleanup succeed.
@@ -970,6 +1024,77 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                     # Release the file lock for the next process.
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
+    # Attempt one exact operating-system file lock without waiting behind active work.
+    @contextmanager
+    def _try_exclusive_process_file_lock(self, path: Path):
+        # Create the lock parent before opening the persistent lock target.
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Open the same persistent one-byte target used by the blocking gate.
+        with path.open("a+b") as handle:
+            # Track whether this process acquired the lock and therefore must release it.
+            acquired = False
+            # Branch to the Windows byte-range locking implementation.
+            if os.name == "nt":
+                # Import the Windows runtime lock API only on Windows.
+                import msvcrt
+                # Ensure the file contains one byte that can be locked.
+                if handle.seek(0, os.SEEK_END) == 0:
+                    # Write and flush the shared lock byte once for a fresh root.
+                    handle.write(b"0")
+                    handle.flush()
+                # Seek to the shared one-byte range before the nonblocking attempt.
+                handle.seek(0)
+                try:
+                    # Fail immediately when another process owns the byte range.
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                # Classify only an exact Windows lock contender as unavailable.
+                except OSError as exc:
+                    # Re-raise descriptor, filesystem, and unexpected lock failures.
+                    if exc.errno not in {errno.EACCES, errno.EAGAIN} and getattr(exc, "winerror", None) not in {33, 36}:
+                        # Preserve the original fail-closed operating-system error.
+                        raise
+                    # Yield false without reading or mutating provider state.
+                    yield False
+                    # Stop after the caller observes lock ownership elsewhere.
+                    return
+            # Use nonblocking advisory flock on POSIX development and CI hosts.
+            else:
+                # Import POSIX locking only where the module is available.
+                import fcntl
+                try:
+                    # Fail immediately when another process owns the file lock.
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                # Classify only documented advisory-lock contention as unavailable.
+                except OSError as exc:
+                    # Re-raise descriptor, I/O, and other filesystem failures.
+                    if exc.errno not in {errno.EACCES, errno.EAGAIN}:
+                        # Preserve the original fail-closed operating-system error.
+                        raise
+                    # Yield false without reading or mutating provider state.
+                    yield False
+                    # Stop after the caller observes lock ownership elsewhere.
+                    return
+            # Remember that the finally block owns an exact release obligation.
+            acquired = True
+            try:
+                # Transfer control while the exact nonblocking lock is held.
+                yield True
+            finally:
+                # Skip release only when acquisition never succeeded.
+                if acquired and os.name == "nt":
+                    # Import the Windows runtime lock API only on Windows.
+                    import msvcrt
+                    # Return to the locked byte before releasing it.
+                    handle.seek(0)
+                    # Release the exact byte range for the active executor.
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                # Release the POSIX advisory lock when this process owns it.
+                elif acquired:
+                    # Import POSIX locking only where the module is available.
+                    import fcntl
+                    # Release the exact file lock.
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
     # Hold the one reentrant operating-system gate across action-affected JSON access.
     @contextmanager
     def _json_global_gate(self):
@@ -1019,6 +1144,80 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                     finally:
                         # Remove the outermost marker before releasing legacy then stable locks.
                         depths.pop(depth_key, None)
+
+    # Attempt the global JSON gate once so resolution can report active ownership.
+    @contextmanager
+    def _try_json_global_gate(self):
+        # Canonicalize this provider root for shared thread and process identity.
+        root_key = self._json_root_key()
+        # Include the process ID so forked children never inherit nesting state.
+        depth_key = (os.getpid(), root_key)
+        # Resolve the process-shared reentrant thread lock.
+        thread_gate = _json_gate_lock(root_key)
+        # Attempt thread ownership without waiting behind an active executor.
+        acquired_thread = thread_gate.acquire(blocking=False)
+        # Report pending immediately when another thread owns the provider lifecycle.
+        if not acquired_thread:
+            # Transfer only the finite unavailable result.
+            yield False
+            # Stop without touching durable provider state.
+            return
+        try:
+            # Read the call-thread's current nesting map or initialize one.
+            depths = getattr(_JSON_GATE_LOCAL, "depths", {})
+            # Reuse an already-held operating-system gate on a nested same-thread call.
+            if depths.get(depth_key, 0):
+                # Increment the exact root nesting depth before yielding.
+                depths[depth_key] += 1
+                # Retain the updated nesting map for public provider calls.
+                _JSON_GATE_LOCAL.depths = depths
+                try:
+                    # Report immediate ownership while the outer call retains both locks.
+                    yield True
+                finally:
+                    # Restore the previous nesting depth.
+                    depths[depth_key] -= 1
+                # Stop after the nested critical section.
+                return
+            # Attempt the stable reset-safe process lock first.
+            with self._try_exclusive_process_file_lock(self.json_gate_path()) as stable_acquired:
+                # Report active work elsewhere without touching reset-owned directories.
+                if not stable_acquired:
+                    # Return one pending ownership result.
+                    yield False
+                    # Stop before attempting the legacy wallet lock.
+                    return
+                # Refuse visibility while failed reset recovery still owns state.
+                self._require_no_reset_recovery_locked()
+                # Create only the data root needed for the legacy lock path.
+                self.data_dir.mkdir(parents=True, exist_ok=True)
+                # Attempt the shipped wallet lock second in the fixed lock order.
+                with self._try_exclusive_process_file_lock(self.ledger_lock_path()) as legacy_acquired:
+                    # Report active legacy work without reading action state.
+                    if not legacy_acquired:
+                        # Return one pending ownership result.
+                        yield False
+                        # Stop before provider readiness work.
+                        return
+                    # Recheck reset recovery after both exact locks are held.
+                    self._require_no_reset_recovery_locked()
+                    # Create remaining provider directories only under complete ownership.
+                    self._ensure_ready_direct()
+                    # Remove only stale provider-owned temporary files.
+                    self._cleanup_game_action_temps_locked()
+                    # Mark the two operating-system locks held for nested public calls.
+                    depths[depth_key] = 1
+                    # Publish nesting state to this thread.
+                    _JSON_GATE_LOCAL.depths = depths
+                    try:
+                        # Transfer complete nonblocking ownership to the resolver.
+                        yield True
+                    finally:
+                        # Remove the outermost marker before releasing process locks.
+                        depths.pop(depth_key, None)
+        finally:
+            # Release the process-shared thread gate after every outcome.
+            thread_gate.release()
 
     # Hold the global JSON gate across a legacy wallet transaction.
     @contextmanager
@@ -1158,7 +1357,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             # Preserve a no-residue fresh read.
             return
         # Enumerate only the exact three owned temp-name prefixes.
-        prefixes = ("journal.json.tmp-", "receipts.json.tmp-", "states.json.tmp-")
+        prefixes = ("journal.json.tmp-", "receipts.json.tmp-", "states.json.tmp-", "claims.json.tmp-")
         try:
             # Inspect every current private-directory entry once.
             for candidate in parent.iterdir():
@@ -1508,45 +1707,231 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             # Preserve the original durable bytes for operator repair.
             raise ConflictError("Game action storage requires operator recovery") from None
 
-    # Return the empty private receipt registry shape.
-    def _empty_game_action_receipts(self) -> dict:
-        # Version the registry and retain immutable receipts by durable scope.
-        return {"schema_version": _GAME_ACTION_STORAGE_VERSION, "receipts": {}}
+    # Return the implicit legacy epoch state used before the first successful reset.
+    def _empty_game_action_epoch(self) -> dict:
+        # Preserve existing epoch-one lifecycle files without an eager rewrite.
+        return {"schema_version": _GAME_ACTION_STORAGE_VERSION, "current_epoch": 1, "phase": "ready"}
+
+    # Read and validate the provider-private reset epoch state.
+    def _read_game_action_epoch(self) -> dict:
+        # Decode the epoch control file or project the compatible legacy epoch-one default.
+        state = self._read_game_action_json(self.game_action_epoch_path(), self._empty_game_action_epoch)
+        # Require the exact finite singleton state shape.
+        if type(state) is not dict or set(state) != {"current_epoch", "phase", "schema_version"}:
+            # Preserve malformed control bytes for operator recovery.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Require the exact private epoch-state schema version.
+        if type(state["schema_version"]) is not int or state["schema_version"] != _GAME_ACTION_STORAGE_VERSION:
+            # Reject unknown durable epoch semantics.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Require one bounded non-coercible current epoch.
+        if type(state["current_epoch"]) is not int or not 1 <= state["current_epoch"] <= _GAME_ACTION_MAX_EPOCH:
+            # Refuse missing, boolean, zero, negative, or overflowing epochs.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Require one finite reset readiness phase.
+        if type(state["phase"]) is not str or state["phase"] not in {"ready", "resetting"}:
+            # Reject unknown lifecycle visibility states.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Return a detached plain state for caller-owned phase transitions.
+        return dict(state)
+
+    # Publish one exact provider-private reset epoch state atomically.
+    def _write_game_action_epoch(self, *, current_epoch: int, phase: str) -> None:
+        # Validate the epoch before writing any control bytes.
+        if type(current_epoch) is not int or not 1 <= current_epoch <= _GAME_ACTION_MAX_EPOCH:
+            # Fail closed rather than wrapping a durable namespace.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Accept only the two reviewed visibility phases.
+        if phase not in {"ready", "resetting"}:
+            # Reject internal phase drift before publication.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Atomically persist the complete bounded control document.
+        self._write_game_action_json(
+            self.game_action_epoch_path(),
+            {"schema_version": _GAME_ACTION_STORAGE_VERSION, "current_epoch": current_epoch, "phase": phase},
+        )
+
+    # Require the current JSON lifecycle namespace to be available for actions.
+    def _ready_game_action_epoch(self) -> int:
+        # Read the exact durable singleton state under the caller's global gate.
+        state = self._read_game_action_epoch()
+        # Refuse action visibility during an incomplete reset.
+        if state["phase"] != "ready":
+            # Preserve reset-owned state without creating a claim.
+            raise ConflictError("Game action reset is in progress")
+        # Return the bounded current namespace.
+        return state["current_epoch"]
+
+    # Return the empty private receipt registry shape for one current epoch.
+    def _empty_game_action_receipts(self, reset_epoch: int = 1) -> dict:
+        # Preserve the exact legacy container only for the implicit first epoch.
+        if reset_epoch == 1:
+            # Retain backwards-compatible receipt bytes before any reset.
+            return {"schema_version": _GAME_ACTION_STORAGE_VERSION, "receipts": {}}
+        # Use the epoch-scoped registry after the first successful reset.
+        return {"schema_version": _GAME_ACTION_EPOCH_STORAGE_VERSION, "receipts_by_epoch": {str(reset_epoch): {}}}
 
     # Read and fully validate the immutable receipt registry.
-    def _read_game_action_receipts(self) -> tuple[dict, dict[str, GameActionReceipt]]:
+    def _read_game_action_receipts(self, reset_epoch: int = 1) -> tuple[dict, dict[str, GameActionReceipt]]:
         # Strictly decode the registry without repairing corrupt bytes.
-        registry = self._read_game_action_json(self.game_action_receipts_path(), self._empty_game_action_receipts)
-        # Require the exact versioned registry shape.
-        if type(registry) is not dict or set(registry) != {"receipts", "schema_version"}:
-            # Reject unknown durable fields or container types.
-            raise ConflictError("Game action storage requires operator recovery")
-        # Require the exact non-coercible storage version.
-        if type(registry["schema_version"]) is not int or registry["schema_version"] != _GAME_ACTION_STORAGE_VERSION:
-            # Reject unknown durable schema behavior.
-            raise ConflictError("Game action storage requires operator recovery")
-        # Require one ordinary mapping of durable receipt records.
-        if type(registry["receipts"]) is not dict:
-            # Reject arrays, scalars, or custom durable receipt shapes.
+        registry = self._read_game_action_json(self.game_action_receipts_path(), lambda: self._empty_game_action_receipts(reset_epoch))
+        # Recognize the exact legacy epoch-one registry without rewriting it.
+        if type(registry) is dict and set(registry) == {"receipts", "schema_version"} and registry.get("schema_version") == _GAME_ACTION_STORAGE_VERSION:
+            # Reject legacy bytes after the durable namespace has advanced.
+            if reset_epoch != 1 or type(registry["receipts"]) is not dict:
+                # Preserve incompatible durable rows for operator recovery.
+                raise ConflictError("Game action storage requires operator recovery")
+            # Read the sole legacy epoch-one receipt mapping.
+            receipt_records = registry["receipts"]
+            # Validate the complete one-epoch retained registry below.
+            retained_receipt_records = ((1, receipt_records),)
+        # Recognize only the reviewed epoch-scoped registry shape.
+        elif type(registry) is dict and set(registry) == {"receipts_by_epoch", "schema_version"} and registry.get("schema_version") == _GAME_ACTION_EPOCH_STORAGE_VERSION:
+            # Require an ordinary epoch mapping.
+            if type(registry["receipts_by_epoch"]) is not dict:
+                # Reject arrays, scalars, or unknown containers.
+                raise ConflictError("Game action storage requires operator recovery")
+            # Validate every retained epoch key and nested mapping before current lookup.
+            for epoch_key, records in registry["receipts_by_epoch"].items():
+                # Accept only canonical positive decimal epochs no newer than current state.
+                if type(epoch_key) is not str or not epoch_key.isdigit() or str(int(epoch_key)) != epoch_key or not 1 <= int(epoch_key) <= reset_epoch or type(records) is not dict:
+                    # Preserve malformed or future lifecycle history unchanged.
+                    raise ConflictError("Game action storage requires operator recovery")
+            # Read only the current epoch while retaining older immutable rows.
+            receipt_records = registry["receipts_by_epoch"].get(str(reset_epoch), {})
+            # Validate every retained epoch so corruption cannot hide outside current lookup.
+            retained_receipt_records = tuple((int(epoch_key), records) for epoch_key, records in registry["receipts_by_epoch"].items())
+        # Reject every unknown durable registry version or field set.
+        else:
+            # Preserve malformed bytes for operator recovery.
             raise ConflictError("Game action storage requires operator recovery")
         # Reconstruct every receipt so unrelated corrupt entries cannot remain hidden.
         receipts = {}
-        # Inspect each durable scope and receipt pair.
-        for scope_key, record in registry["receipts"].items():
-            # Require an exact string registry key.
-            if type(scope_key) is not str:
-                # Reject coercible or ambiguous scope identities.
-                raise ConflictError("Game action storage requires operator recovery")
-            # Reconstruct and self-validate the complete immutable receipt.
-            receipt = self._deserialize_game_action_receipt(record)
-            # Require the registry key to match the receipt identity exactly.
-            if scope_key != self._game_action_scope_key(receipt.identity):
-                # Reject misplaced or shadowed committed identities.
-                raise ConflictError("Game action storage requires operator recovery")
-            # Retain the validated receipt for caller lookup.
-            receipts[scope_key] = receipt
+        # Inspect every retained epoch and its durable receipt pairs.
+        for retained_epoch, records in retained_receipt_records:
+            # Validate each complete immutable row in this epoch.
+            for scope_key, record in records.items():
+                # Require an exact string registry key.
+                if type(scope_key) is not str:
+                    # Reject coercible or ambiguous scope identities.
+                    raise ConflictError("Game action storage requires operator recovery")
+                # Reconstruct and self-validate the complete immutable receipt.
+                receipt = self._deserialize_game_action_receipt(record)
+                # Require the registry key to match the receipt identity exactly.
+                if scope_key != self._game_action_scope_key(receipt.identity):
+                    # Reject misplaced or shadowed committed identities.
+                    raise ConflictError("Game action storage requires operator recovery")
+                # Retain only the caller's current namespace for public lookup.
+                if retained_epoch == reset_epoch:
+                    # Expose this validated current-epoch receipt.
+                    receipts[scope_key] = receipt
         # Return both the writable plain registry and immutable validated view.
         return registry, receipts
+
+    # Return the empty append-only lifecycle claim registry shape for one epoch.
+    def _empty_game_action_claims(self, reset_epoch: int = 1) -> dict:
+        # Preserve the exact legacy container only in epoch one.
+        if reset_epoch == 1:
+            # Retain backwards-compatible claim bytes before any reset.
+            return {"schema_version": _GAME_ACTION_STORAGE_VERSION, "claims": {}}
+        # Use the epoch-scoped container after reset advances the namespace.
+        return {"schema_version": _GAME_ACTION_EPOCH_STORAGE_VERSION, "claims_by_epoch": {str(reset_epoch): {}}}
+
+    # Read and fully validate immutable execution and cancellation claims.
+    def _read_game_action_claims(self, reset_epoch: int = 1) -> tuple[dict, dict[str, dict]]:
+        # Strictly decode the registry so malformed bytes remain available for operator recovery.
+        registry = self._read_game_action_json(self.game_action_claims_path(), lambda: self._empty_game_action_claims(reset_epoch))
+        # Recognize the exact legacy epoch-one registry without rewriting it.
+        if type(registry) is dict and set(registry) == {"claims", "schema_version"} and registry.get("schema_version") == _GAME_ACTION_STORAGE_VERSION:
+            # Reject legacy claims outside their only valid epoch.
+            if reset_epoch != 1 or type(registry["claims"]) is not dict:
+                # Preserve incompatible durable rows for operator recovery.
+                raise ConflictError("Game action storage requires operator recovery")
+            # Read the sole legacy epoch-one claim mapping.
+            claim_records = registry["claims"]
+            # Validate the complete one-epoch retained registry below.
+            retained_claim_records = ((1, claim_records),)
+        # Recognize only the reviewed epoch-scoped registry shape.
+        elif type(registry) is dict and set(registry) == {"claims_by_epoch", "schema_version"} and registry.get("schema_version") == _GAME_ACTION_EPOCH_STORAGE_VERSION:
+            # Require one ordinary retained-epoch mapping.
+            if type(registry["claims_by_epoch"]) is not dict:
+                # Reject arrays, scalars, or unknown containers.
+                raise ConflictError("Game action storage requires operator recovery")
+            # Validate every retained epoch before current lookup.
+            for epoch_key, records in registry["claims_by_epoch"].items():
+                # Accept only canonical positive decimal epochs no newer than current state.
+                if type(epoch_key) is not str or not epoch_key.isdigit() or str(int(epoch_key)) != epoch_key or not 1 <= int(epoch_key) <= reset_epoch or type(records) is not dict:
+                    # Preserve malformed or future lifecycle history unchanged.
+                    raise ConflictError("Game action storage requires operator recovery")
+            # Read only the current epoch while retaining earlier immutable tombstones.
+            claim_records = registry["claims_by_epoch"].get(str(reset_epoch), {})
+            # Validate every retained epoch so hidden corruption remains fail closed.
+            retained_claim_records = tuple((int(epoch_key), records) for epoch_key, records in registry["claims_by_epoch"].items())
+        # Reject unknown registry versions and shapes.
+        else:
+            # Preserve malformed bytes for operator recovery.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Reconstruct every row before allowing any claim lookup.
+        claims = {}
+        # Validate every retained epoch and its opaque immutable claim rows.
+        for retained_epoch, records in retained_claim_records:
+            # Inspect every exact scope and record in this epoch.
+            for scope_key, record in records.items():
+                # Require exact claim fields with a finite disposition.
+                if type(scope_key) is not str or type(record) is not dict or set(record) != {"disposition", "identity", "resources"} or record.get("disposition") not in {"execute", "uncommitted"}:
+                    # Preserve malformed claim bytes unchanged.
+                    raise ConflictError("Game action storage requires operator recovery")
+                # Reconstruct identity and resources through the provider-neutral contract.
+                identity = self._deserialize_game_action_identity(record["identity"])
+                # Reconstruct the canonical declared resource set.
+                resources = self._deserialize_game_action_resources(record["resources"])
+                # Require the registry key to match its exact three-part identity.
+                if scope_key != self._game_action_scope_key(identity):
+                    # Reject misplaced or shadowed lifecycle claims.
+                    raise ConflictError("Game action storage requires operator recovery")
+                # Retain only the caller's current namespace for lifecycle lookup.
+                if retained_epoch == reset_epoch:
+                    # Expose validated contract objects and the finite disposition.
+                    claims[scope_key] = {"identity": identity, "resources": resources, "disposition": record["disposition"]}
+        # Return the writable plain registry and validated immutable-semantics view.
+        return registry, claims
+
+    # Insert one immutable JSON lifecycle claim or verify exact compatible replay.
+    def _commit_game_action_claim(self, identity: GameActionIdentity, resources: GameActionResources, disposition: str, reset_epoch: int = 1) -> str:
+        # Require provider-owned finite disposition selection.
+        if disposition not in {"execute", "uncommitted"}:
+            # Treat internal misuse as fixed storage corruption risk.
+            raise ConflictError("Game action storage is invalid")
+        # Read and validate all existing claims before appending a new row.
+        registry, claims = self._read_game_action_claims(reset_epoch)
+        # Derive the unambiguous durable scope key.
+        scope_key = self._game_action_scope_key(identity)
+        # Inspect prior immutable ownership when another executor or resolver won.
+        existing = claims.get(scope_key)
+        # Reject changed fingerprint, resources, or disposition without rewriting the winner.
+        if existing is not None:
+            # Preserve exact semantic conflicts before planner or resource access.
+            if existing["identity"] != identity or existing["resources"] != resources:
+                # Keep the immutable winning row unchanged.
+                raise ConflictError("Game action key conflicts with durable semantics")
+            # Report the immutable winning disposition without changing it.
+            return existing["disposition"]
+        # Append the exact immutable row under its canonical scope.
+        # Select the exact current-epoch mutable mapping without exposing older rows.
+        claim_records = registry["claims"] if registry["schema_version"] == _GAME_ACTION_STORAGE_VERSION else registry["claims_by_epoch"].setdefault(str(reset_epoch), {})
+        # Append only inside the captured reset epoch.
+        claim_records[scope_key] = {
+            # Preserve the finite lifecycle winner.
+            "disposition": disposition,
+            # Preserve canonical identity and fingerprint fields.
+            "identity": self._serialize_game_action_identity(identity),
+            # Preserve canonical declared resources.
+            "resources": self._serialize_game_action_resources(resources),
+        }
+        # Atomically publish the complete append-only registry under the global gate.
+        self._write_game_action_json(self.game_action_claims_path(), registry)
+        # Report that this caller inserted the selected winning disposition.
+        return disposition
 
     # Return the empty provider-private action state registry shape.
     def _empty_game_action_states(self) -> dict:
@@ -1677,6 +2062,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         resources: GameActionResources,
         snapshot_before: GameActionSnapshot,
         receipt: GameActionReceipt | None,
+        reset_epoch: int,
     ) -> dict:
         # Return the exact versioned durable recovery fields.
         return {
@@ -1686,8 +2072,10 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             "receipt": None if receipt is None else self._serialize_game_action_receipt(receipt),
             # Preserve the complete declared resources.
             "resources": self._serialize_game_action_resources(resources),
-            # Version the private journal format.
-            "schema_version": _GAME_ACTION_STORAGE_VERSION,
+            # Bind recovery to the exact reset namespace that created the action.
+            "reset_epoch": reset_epoch,
+            # Version the epoch-bound private journal format.
+            "schema_version": _GAME_ACTION_EPOCH_STORAGE_VERSION,
             # Preserve the planner input even before an outcome exists.
             "snapshot_before": self._serialize_game_action_snapshot(snapshot_before),
             # Record the exact recoverable stage.
@@ -1702,13 +2090,27 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             return None
         # Strictly decode the existing journal.
         record = self._read_game_action_json(self.game_action_journal_path(), dict)
-        # Require the exact fixed journal field set.
-        if type(record) is not dict or set(record) != {"identity", "receipt", "resources", "schema_version", "snapshot_before", "stage"}:
-            # Reject truncated or unknown durable journal state.
-            raise ConflictError("Game action storage requires operator recovery")
-        # Require the exact non-coercible storage version.
-        if type(record["schema_version"]) is not int or record["schema_version"] != _GAME_ACTION_STORAGE_VERSION:
-            # Reject unknown durable schema behavior.
+        # Resolve the exact current reset namespace before accepting recovery bytes.
+        current_epoch = self._read_game_action_epoch()["current_epoch"]
+        # Accept only the shipped legacy journal shape in epoch one.
+        if type(record) is dict and set(record) == {"identity", "receipt", "resources", "schema_version", "snapshot_before", "stage"} and record.get("schema_version") == _GAME_ACTION_STORAGE_VERSION:
+            # Reject a legacy journal after reset has advanced the namespace.
+            if current_epoch != 1:
+                # Preserve stale recovery bytes for operator inspection.
+                raise ConflictError("Game action storage requires operator recovery")
+            # Project the compatible implicit legacy epoch.
+            reset_epoch = 1
+        # Accept the exact epoch-bound journal format only for the current namespace.
+        elif type(record) is dict and set(record) == {"identity", "receipt", "reset_epoch", "resources", "schema_version", "snapshot_before", "stage"} and record.get("schema_version") == _GAME_ACTION_EPOCH_STORAGE_VERSION:
+            # Require one exact current bounded epoch.
+            if type(record["reset_epoch"]) is not int or record["reset_epoch"] != current_epoch:
+                # Refuse cross-reset recovery into current mutable state.
+                raise ConflictError("Game action storage requires operator recovery")
+            # Retain the validated epoch for reconstructed state.
+            reset_epoch = record["reset_epoch"]
+        # Reject every truncated, future, or unknown journal shape.
+        else:
+            # Preserve unknown durable journal bytes.
             raise ConflictError("Game action storage requires operator recovery")
         # Require one exact known stage string.
         if type(record["stage"]) is not str or record["stage"] not in _GAME_ACTION_STAGES:
@@ -1727,7 +2129,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 # Preserve the ambiguous journal for operator recovery.
                 raise ConflictError("Game action storage requires operator recovery")
             # Return the validated reconstructed prepared record.
-            return {"identity": identity, "receipt": None, "resources": resources, "snapshot_before": snapshot_before, "stage": record["stage"]}
+            return {"identity": identity, "receipt": None, "reset_epoch": reset_epoch, "resources": resources, "snapshot_before": snapshot_before, "stage": record["stage"]}
         # Require every post-planner stage to contain one exact receipt.
         if record["receipt"] is None:
             # Reject a recovery stage without its immutable outcome.
@@ -1739,7 +2141,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             # Reject internally divergent durable recovery state.
             raise ConflictError("Game action storage requires operator recovery")
         # Return the validated reconstructed journal record.
-        return {"identity": identity, "receipt": receipt, "resources": resources, "snapshot_before": snapshot_before, "stage": record["stage"]}
+        return {"identity": identity, "receipt": receipt, "reset_epoch": reset_epoch, "resources": resources, "snapshot_before": snapshot_before, "stage": record["stage"]}
 
     # Persist one reconstructed journal at a new recovery stage.
     def _write_game_action_journal_stage(self, record: dict, stage: str) -> None:
@@ -1755,6 +2157,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 identity=record["identity"],
                 # Preserve the immutable planned receipt when present.
                 receipt=record["receipt"],
+                # Preserve the exact reset namespace across every checkpoint.
+                reset_epoch=record["reset_epoch"],
                 # Preserve the complete bounded resource set.
                 resources=record["resources"],
                 # Preserve the exact planner input snapshot.
@@ -1858,9 +2262,9 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         self._write_game_action_json(self.game_action_states_path(), registry)
 
     # Commit one immutable receipt or verify an already committed identical receipt.
-    def _commit_game_action_receipt(self, receipt: GameActionReceipt) -> None:
+    def _commit_game_action_receipt(self, receipt: GameActionReceipt, reset_epoch: int = 1) -> None:
         # Read and validate every durable receipt before adding a new one.
-        registry, receipts = self._read_game_action_receipts()
+        registry, receipts = self._read_game_action_receipts(reset_epoch)
         # Derive the unambiguous durable identity key.
         scope_key = self._game_action_scope_key(receipt.identity)
         # Inspect an existing receipt when a failure occurred after its publication.
@@ -1873,10 +2277,88 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         if existing is not None:
             # Preserve idempotent recovery without rewriting registry bytes.
             return
-        # Add the complete serialized receipt under its exact scope.
-        registry["receipts"][scope_key] = self._serialize_game_action_receipt(receipt)
+        # Select the exact current-epoch mapping without altering older rows.
+        receipt_records = registry["receipts"] if registry["schema_version"] == _GAME_ACTION_STORAGE_VERSION else registry["receipts_by_epoch"].setdefault(str(reset_epoch), {})
+        # Add the complete serialized receipt under its epoch-scoped identity.
+        receipt_records[scope_key] = self._serialize_game_action_receipt(receipt)
         # Atomically publish the updated immutable receipt registry.
         self._write_game_action_json(self.game_action_receipts_path(), registry)
+
+    # Build deterministic append-only ledger rows for one immutable planned receipt.
+    def _game_action_ledger_events(self, receipt: GameActionReceipt) -> tuple[dict, ...]:
+        # Track the exact running balance for each declared wallet in planner order.
+        balances = dict(receipt.snapshot_before.wallet_balances)
+        # Collect one immutable ledger row per nonzero movement.
+        events = []
+        # Serialize the exact action scope once for deterministic movement identities.
+        scope_key = self._game_action_scope_key(receipt.identity)
+        # Visit movements in the immutable planner order.
+        for index, movement in enumerate(receipt.plan.movements):
+            # Read the exact integer-cent balance before this movement.
+            before_cents = balances[movement.wallet_id]
+            # Compute the exact integer-cent balance after this movement.
+            after_cents = before_cents + movement.amount_cents
+            # Bind the ledger identity to the complete action scope and movement index.
+            ledger_digest = hashlib.sha256(f"{scope_key}:{index}".encode("utf-8")).hexdigest()
+            # Construct a compatible ledger event with provider-owned recovery metadata.
+            event = {
+                # Use one deterministic bounded identifier so crash recovery can detect a prior append.
+                "ledger_id": f"gac_{ledger_digest[:60]}",
+                # Timestamp the first durable append; replay validates every other immutable field.
+                "ts": utc_now(),
+                # Preserve the exact affected wallet identity.
+                "player_id": movement.wallet_id,
+                # Preserve the exact game namespace.
+                "game": receipt.identity.game_id,
+                # Bind traceability to the caller action key within the legacy field bound.
+                "round_id": receipt.identity.action_key[:128],
+                # Preserve the provider-neutral movement reason under a distinct namespace.
+                "transaction_type": f"game_action_{movement.reason}"[:128],
+                # Convert exact cents to the established JSON ledger number shape.
+                "amount": self._json_wallet_value(movement.amount_cents),
+                # Preserve the exact balance before this movement.
+                "balance_before": self._json_wallet_value(before_cents),
+                # Preserve the exact balance after this movement.
+                "balance_after": self._json_wallet_value(after_cents),
+                # Retain immutable action identity evidence without game-specific payloads.
+                "details": {
+                    # Store the caller-stable action key.
+                    "game_action_key": receipt.identity.action_key,
+                    # Store the semantic request and resource digest.
+                    "game_action_request_fingerprint": receipt.identity.request_fingerprint,
+                    # Store the exact movement position for ordered replay proof.
+                    "game_action_movement_index": index,
+                },
+            }
+            # Append the exact planned ledger row.
+            events.append(event)
+            # Advance the wallet-local running balance for later movements.
+            balances[movement.wallet_id] = after_cents
+        # Return an immutable event sequence for recovery.
+        return tuple(events)
+
+    # Append or verify every deterministic ledger row for one planned receipt.
+    def _apply_game_action_ledger(self, receipt: GameActionReceipt) -> None:
+        # Read all valid append-only rows once under the global action gate.
+        existing_rows = {row["ledger_id"]: row for row in self._ledger_rows()}
+        # Visit the exact deterministic rows in planner movement order.
+        for event in self._game_action_ledger_events(receipt):
+            # Resolve an earlier append from a stopped process by deterministic identity.
+            existing = existing_rows.get(event["ledger_id"])
+            # Verify every immutable field while permitting the original append timestamp.
+            if existing is not None:
+                # Compare the complete semantic row after substituting the preserved timestamp.
+                expected = {**event, "ts": existing.get("ts")}
+                # Reject a duplicate identifier whose action semantics diverge.
+                if existing != expected:
+                    # Preserve the append-only ledger and journal for operator recovery.
+                    raise ConflictError("Game action ledger requires operator recovery")
+                # Continue without appending a duplicate movement.
+                continue
+            # Append the new deterministic movement while the global gate remains held.
+            self._append_jsonl(self.ledger_path(), event)
+            # Retain it for duplicate detection within this receipt.
+            existing_rows[event["ledger_id"]] = event
 
     # Recover one prepared or planned journal before affected state is exposed.
     def _recover_game_action_journal_locked(self, *, inject_failures: bool = False) -> GameActionReceipt | None:
@@ -1894,6 +2376,12 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             return None
         # Read the already validated immutable planned receipt.
         receipt = record["receipt"]
+        # Publish or validate the immutable execute winner before any projection.
+        winning_disposition = self._commit_game_action_claim(receipt.identity, receipt.resources, "execute", record["reset_epoch"])
+        # Refuse an impossible planned outcome behind a resolver-owned tombstone.
+        if winning_disposition != "execute":
+            # Preserve journal and claim bytes for explicit operator recovery.
+            raise ConflictError("Game action storage requires operator recovery")
         # Project every declared wallet exactly once.
         self._apply_game_action_wallets(receipt)
         # Inject a process-stop boundary after wallet publication and before stage advance.
@@ -1902,6 +2390,14 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             self._game_action_checkpoint("wallet_applied")
         # Checkpoint the wallet projection for restart diagnostics.
         self._write_game_action_journal_stage(record, "wallet_applied")
+        # Append or verify every movement ledger row before publishing game state.
+        self._apply_game_action_ledger(receipt)
+        # Inject a process-stop boundary after ledger publication and before stage advance.
+        if inject_failures:
+            # Invoke only the test-overridable no-op checkpoint.
+            self._game_action_checkpoint("ledger_applied")
+        # Checkpoint the append-only ledger projection for restart diagnostics.
+        self._write_game_action_journal_stage(record, "ledger_applied")
         # Project every declared state resource exactly once.
         self._apply_game_action_states(receipt)
         # Inject a process-stop boundary after state publication and before stage advance.
@@ -1911,7 +2407,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         # Checkpoint the state projection for restart diagnostics.
         self._write_game_action_journal_stage(record, "state_applied")
         # Commit or verify the immutable receipt registry.
-        self._commit_game_action_receipt(receipt)
+        self._commit_game_action_receipt(receipt, record["reset_epoch"])
         # Inject a process-stop boundary after receipt publication and before stage advance.
         if inject_failures:
             # Invoke only the test-overridable no-op checkpoint.
@@ -1950,6 +2446,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         with self.lock:
             # Serialize every affected JSON projection across instances and processes.
             with self._json_global_gate():
+                # Require one ready durable namespace before any journal or resource access.
+                reset_epoch = self._ready_game_action_epoch()
                 # Complete any shipped logical ledger commit before reading wallets.
                 self._recover_committed_actions()
                 # Inspect an existing private journal before action-key lookup.
@@ -1963,7 +2461,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 # Recover or clear every valid pending stage before receipt lookup.
                 self._recover_game_action_journal_locked()
                 # Load and validate the complete immutable receipt registry.
-                _registry, receipts = self._read_game_action_receipts()
+                _registry, receipts = self._read_game_action_receipts(reset_epoch)
                 # Derive the caller's unambiguous durable scope key.
                 scope_key = self._game_action_scope_key(identity)
                 # Inspect an earlier committed receipt before any resource snapshot.
@@ -1976,6 +2474,22 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                         raise ConflictError("Game action key conflicts with committed semantics")
                     # Return the original immutable receipt as a replay.
                     return existing, True
+                # Read immutable lifecycle claims only after legacy receipt compatibility.
+                _claim_registry, claims = self._read_game_action_claims(reset_epoch)
+                # Inspect a resolver or stopped executor winner for this exact scope.
+                claim = claims.get(scope_key)
+                # Resolve a durable claim before any resource snapshot or planner call.
+                if claim is not None:
+                    # Reject changed identity or resources against the immutable row.
+                    if claim["identity"] != identity or claim["resources"] != resources:
+                        # Preserve mismatch-before-planner semantics.
+                        raise ConflictError("Game action key conflicts with durable semantics")
+                    # Refuse late execution after a resolver-owned uncommitted claim.
+                    if claim["disposition"] == "uncommitted":
+                        # Keep the tombstone immutable and prevent any resource mutation.
+                        raise ConflictError("Game action was durably resolved as uncommitted")
+                    # An execute claim without its receipt or journal cannot be repaired safely.
+                    raise ConflictError("Game action storage requires operator recovery")
                 # Capture exact declared wallet and game state only after durable lookup.
                 snapshot_before = self._capture_game_action_snapshot(resources)
                 # Build the pre-planner durable reservation.
@@ -1988,6 +2502,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                     "resources": resources,
                     # Preserve the exact planner input.
                     "snapshot_before": snapshot_before,
+                    # Bind every recovery stage to the captured reset namespace.
+                    "reset_epoch": reset_epoch,
                     # Mark the pre-planner recovery stage.
                     "stage": "prepared",
                 }
@@ -2031,6 +2547,12 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 self._write_game_action_journal_stage(prepared, "planned")
                 # Inject a process-stop boundary after outcome durability.
                 self._game_action_checkpoint("planned")
+                # Publish the immutable execute winner after the receipt is recoverable.
+                winning_disposition = self._commit_game_action_claim(identity, resources, "execute", reset_epoch)
+                # Refuse any impossible resolver win without projecting the plan.
+                if winning_disposition != "execute":
+                    # Preserve the planned journal and tombstone for operator recovery.
+                    raise ConflictError("Game action storage requires operator recovery")
                 # Apply and checkpoint every projection through restart-safe recovery.
                 committed = self._recover_game_action_journal_locked(inject_failures=True)
                 # Require the recovery path to return the just-planned immutable receipt.
@@ -2039,6 +2561,108 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                     raise ConflictError("Game action storage requires operator recovery")
                 # Return the newly committed receipt with replay false.
                 return receipt, False
+
+    # Resolve one JSON action through the same process-wide ownership boundary.
+    def resolve_game_action(
+        self,
+        *,
+        identity: GameActionIdentity,
+        resources: GameActionResources,
+    ) -> GameActionResolution:
+        # Validate exact contract types before attempting any provider lock.
+        validate_resolution_request(identity=identity, resources=resources)
+        # Reject recursive lifecycle resolution from inside a planner.
+        self._reject_planner_mutation()
+        # Attempt the provider-instance lock without waiting behind active execution.
+        lock_acquired = self.lock.acquire(blocking=False)
+        # Report active ownership without reading partially projected state.
+        if not lock_acquired:
+            # Return the provider-neutral finite pending result.
+            return GameActionResolution(status="pending")
+        try:
+            # Attempt both process locks once so resolution never stalls an HTTP worker.
+            with self._try_json_global_gate() as gate_acquired:
+                # Report active ownership when another process retains either gate.
+                if not gate_acquired:
+                    # Return no receipt or partial state while execution is in flight.
+                    return GameActionResolution(status="pending")
+                # Treat reset-owned visibility as finite pending without a claim.
+                epoch_state = self._read_game_action_epoch()
+                # Keep reset isolation provider-neutral for nonblocking resolution.
+                if epoch_state["phase"] != "ready":
+                    # Return without journal recovery or immutable lifecycle mutation.
+                    return GameActionResolution(status="pending")
+                # Capture the exact ready namespace for every later lookup.
+                reset_epoch = epoch_state["current_epoch"]
+                # Complete any legacy logical money action before inspecting wallets.
+                self._recover_committed_actions()
+                # Derive the unambiguous durable action scope.
+                scope_key = self._game_action_scope_key(identity)
+                # Inspect a provider-private journal before committing a resolver claim.
+                pending = self._read_game_action_journal()
+                # Resolve the same scope through exact fingerprint and resource semantics.
+                if pending is not None and pending["identity"].scope_key == identity.scope_key:
+                    # Reject changed semantic reuse before any journal recovery mutation.
+                    if pending["identity"] != identity or pending["resources"] != resources:
+                        # Preserve the active or recoverable journal unchanged.
+                        raise ConflictError("Game action key conflicts with durable semantics")
+                    # Let the resolver win only while no planner outcome exists.
+                    if pending["stage"] == "prepared":
+                        # Remove the no-mutation reservation under exclusive ownership.
+                        self._remove_game_action_journal()
+                        # Append the immutable uncommitted tombstone.
+                        winner = self._commit_game_action_claim(identity, resources, "uncommitted", reset_epoch)
+                        # Require the resolver to retain its exact winning disposition.
+                        if winner != "uncommitted":
+                            # Refuse inconsistent lifecycle history.
+                            raise ConflictError("Game action storage requires operator recovery")
+                        # Return the terminal no-result state.
+                        return GameActionResolution(status="uncommitted")
+                    # Recover every planned or later stage to its immutable receipt.
+                    self._recover_game_action_journal_locked()
+                # Recover or clear an unrelated journal before reading shared registries.
+                elif pending is not None:
+                    # Complete its valid lifecycle under the same global gate.
+                    self._recover_game_action_journal_locked()
+                # Read committed receipts first for schema-3 JSON compatibility.
+                _receipt_registry, receipts = self._read_game_action_receipts(reset_epoch)
+                # Inspect the exact caller scope after all recoverable projection work.
+                receipt = receipts.get(scope_key)
+                # Return a compatible legacy or schema-4 committed result.
+                if receipt is not None:
+                    # Reject changed identity or resources before returning prior outcome data.
+                    if receipt.identity != identity or receipt.resources != resources:
+                        # Preserve the immutable committed receipt.
+                        raise ConflictError("Game action key conflicts with committed semantics")
+                    # Return the complete provider-neutral committed resolution.
+                    return GameActionResolution(status="committed", receipt=receipt)
+                # Read immutable lifecycle claims after legacy receipt lookup.
+                _claim_registry, claims = self._read_game_action_claims(reset_epoch)
+                # Inspect an earlier resolver or executor winner.
+                claim = claims.get(scope_key)
+                # Validate exact compatible claim reuse before returning its state.
+                if claim is not None:
+                    # Reject changed semantic reuse without rewriting the winner.
+                    if claim["identity"] != identity or claim["resources"] != resources:
+                        # Preserve mismatch-before-mutation semantics.
+                        raise ConflictError("Game action key conflicts with durable semantics")
+                    # Return a resolver-owned tombstone as the terminal no-result state.
+                    if claim["disposition"] == "uncommitted":
+                        # Return no receipt for an action that never committed.
+                        return GameActionResolution(status="uncommitted")
+                    # An execute claim without a receipt or journal needs operator repair.
+                    raise ConflictError("Game action storage requires operator recovery")
+                # Atomically append the resolver-owned tombstone as the first claim.
+                winner = self._commit_game_action_claim(identity, resources, "uncommitted", reset_epoch)
+                # Require this exact resolver to retain the immutable winning state.
+                if winner != "uncommitted":
+                    # Reject an impossible disposition transition.
+                    raise ConflictError("Game action storage requires operator recovery")
+                # Return the durable terminal no-result state.
+                return GameActionResolution(status="uncommitted")
+        finally:
+            # Release the provider-instance lock after every finite or exceptional outcome.
+            self.lock.release()
 
     # Append a JSONL ledger event to the local ledger file.
     def _append_jsonl(self, path: Path, event: dict) -> None:
@@ -3020,7 +3644,33 @@ HISTORY_FIELDS = [
 
 
 # Define the MySQLStorageProvider for configured multi-user persistence.
-class MySQLStorageProvider(StorageProvider):
+# Define a no-close facade that lets reset bootstrap reuse its one owned pool lease.
+class _BorrowedMySQLConnection:
+    # Retain the reset-owned lease without transferring close authority.
+    def __init__(self, connection: Any) -> None:
+        # Store only the caller-owned lease for transparent DB-API delegation.
+        self._connection = connection
+        # Track operation-boundary cleanup without transferring outer close authority.
+        self._closed = False
+
+    # Delegate every DB-API attribute except the explicit no-close boundary below.
+    def __getattr__(self, name: str) -> Any:
+        # Preserve cursor and transaction behavior on the exact reset session.
+        return getattr(self._connection, name)
+
+    # Keep nested provider operations from returning the reset lease to the pool.
+    def close(self) -> None:
+        # Preserve idempotent DB-API close behavior for nested finally blocks.
+        if self._closed:
+            # Avoid repeated session cleanup after the operation already ended.
+            return
+        # End every implicit read or failed-write transaction before the next bootstrap helper.
+        self._connection.rollback()
+        # Mark cleanup complete only after the retained session is transaction-clean.
+        self._closed = True
+
+
+class MySQLStorageProvider(StorageProvider, GameActionExecutor):
     # Store the provider name used by diagnostics and tests.
     name = "mysql"
 
@@ -3034,6 +3684,8 @@ class MySQLStorageProvider(StorageProvider):
         self._ready = False
         # Serialize first-use compatibility verification across concurrent request threads.
         self._ready_lock = threading.RLock()
+        # Track same-thread reset lease borrowing without sharing authority across requests.
+        self._reset_local = threading.local()
 
     # Import mysql.connector only when the MySQL provider is selected.
     def _connector(self):
@@ -3057,10 +3709,18 @@ class MySQLStorageProvider(StorageProvider):
 
     # Lease a request-scoped MySQL connection from the bounded process-local pool.
     def connect(self, **overrides):
+        # Reject raw connection access from inside a planner on this database target.
+        self._reject_planner_mutation()
         # Reject connector overrides that could cross credential, database, or session boundaries.
         if set(overrides) - {"connection_timeout"}:
             # Raise a fixed validation error without echoing option names or values.
             raise ValueError("Unsupported MySQL connection override.")
+        # Reuse the reset-owned lease for synchronous bootstrap calls at pool capacity one.
+        borrowed = getattr(self._reset_local, "connection", None)
+        # Return a no-close facade only while this thread owns an active reset session.
+        if borrowed is not None:
+            # Prevent nested bootstrap helpers from returning the sole lease early.
+            return _BorrowedMySQLConnection(borrowed)
         # Preserve the established readiness-probe timeout seam while pooling ordinary operations.
         connection_timeout = overrides.get("connection_timeout")
         # Return a lease whose close sanitizes and returns the physical connection.
@@ -3073,11 +3733,65 @@ class MySQLStorageProvider(StorageProvider):
 
     # Close idle physical sessions and make this provider reject future checkout.
     def close_pool(self) -> None:
+        # Refuse provider lifecycle mutation from inside a supposedly pure planner.
+        self._reject_planner_mutation()
         # Delegate fail-safe connection shutdown to the pool.
         self._pool.close_all()
 
+    # Return the configured relational target key shared by equivalent provider instances.
+    def _planner_key(self) -> tuple[str, int, str]:
+        # Normalize host case while preserving exact port and database ownership.
+        return (self.config.host.lower(), self.config.port, self.config.database)
+
+    # Return whether this thread is planning through this configured database boundary.
+    def _planner_is_active(self) -> bool:
+        # Read the thread-local target set without sharing a mutable default.
+        providers = getattr(_MYSQL_PLANNER_LOCAL, "providers", set())
+        # Bind purity across equivalent provider instances for the same relational target.
+        return self._planner_key() in providers
+
+    # Return whether this process already owns an active reset for the same target.
+    def _reset_is_active(self) -> bool:
+        # Serialize registry observation with reset acquisition and release.
+        with _MYSQL_RESET_REGISTRY_LOCK:
+            # Match equivalent provider instances through the secret-free target key.
+            return self._planner_key() in _MYSQL_RESET_TARGETS
+
+    # Reject MySQL provider mutation attempted from inside an action planner.
+    def _reject_planner_mutation(self) -> None:
+        # Fail before opening a connection or changing provider lifecycle state.
+        if self._planner_is_active():
+            # Reuse the provider-neutral fixed purity error.
+            raise ValidationError("Game action planner must be side-effect free")
+
+    # Mark one synchronous planner call as unable to re-enter this provider mutably.
+    @contextmanager
+    def _planner_boundary(self):
+        # Copy the active target set so nesting remains thread-local and explicit.
+        providers = set(getattr(_MYSQL_PLANNER_LOCAL, "providers", set()))
+        # Resolve this provider's secret-free relational target identity.
+        planner_key = self._planner_key()
+        # Reject recursive planning through the same target before another connection.
+        if planner_key in providers:
+            # Preserve the fixed provider-neutral validation boundary.
+            raise ValidationError("Game action planner must be side-effect free")
+        # Add this exact configured target for the synchronous callback lifetime.
+        providers.add(planner_key)
+        # Publish the active set only to this thread.
+        _MYSQL_PLANNER_LOCAL.providers = providers
+        try:
+            # Transfer control to the caller-owned planner.
+            yield
+        finally:
+            # Remove this target even when the planner raises.
+            providers.discard(planner_key)
+            # Retain any independently active outer database boundaries.
+            _MYSQL_PLANNER_LOCAL.providers = providers
+
     # Verify the exact MySQL migration state before reads and writes.
     def ensure_ready(self) -> None:
+        # Refuse hidden provider access through a planner closure before cached readiness.
+        self._reject_planner_mutation()
         # Return immediately after this provider instance has completed a read-only compatibility check.
         if self._ready:
             # Avoid repeating metadata reads on every document or game-state operation.
@@ -3101,30 +3815,639 @@ class MySQLStorageProvider(StorageProvider):
                 # Close the runtime connection without issuing DDL or migration-state DML.
                 connection.close()
 
-    # Reset MySQL storage tables while preserving the schema.
-    def reset(self) -> None:
-        # Ensure tables exist before clearing them.
-        self.ensure_ready()
-        # Open a connection for reset statements.
-        connection = self.connect()
-        # Start protected reset logic so the connection is always closed.
+    # Require exact clean schema four before exposing the inert lifecycle write bridge.
+    def _runtime_schema_state(self, connection):
+        # Delegate read-only catalog verification through one overridable test seam.
+        return verify_runtime_compatibility(connection)
+
+    # Require exact clean schema four before exposing the inert lifecycle write bridge.
+    def _require_game_action_schema(self, connection) -> None:
+        # Re-read control metadata on this transaction connection rather than trusting readiness cache.
+        state = self._runtime_schema_state(connection)
+        # Accept no older compatible schema because claims do not exist before migration four.
+        if not state.initialized or state.status != "clean" or state.current_version != 4:
+            # Keep ordinary schema-two/three runtime reads available while lifecycle writes fail closed.
+            raise ConflictError("MySQL game action lifecycle requires clean schema 4")
+
+    # Lock and validate the singleton MySQL reset epoch inside an active transaction.
+    def _mysql_game_action_epoch(self, cursor, *, exclusive: bool = False) -> dict:
+        # Select shared lifecycle visibility for actions or exclusive ownership for reset.
+        lock_clause = "FOR UPDATE" if exclusive else "FOR SHARE"
+        # Read the exact singleton row with the requested transaction lock.
+        cursor.execute(f"SELECT state_id, current_epoch, phase FROM casino_game_action_epoch_state WHERE state_id = 1 {lock_clause}")
+        # Fetch the sole expected control row.
+        row = cursor.fetchone()
+        # Require one exact dictionary row from the schema-four singleton.
+        if type(row) is not dict or set(row) != {"current_epoch", "phase", "state_id"}:
+            # Refuse absent, duplicate-projected, or malformed control state.
+            raise ConflictError("MySQL game action lifecycle requires operator recovery")
+        # Require the fixed singleton identity without coercion.
+        if type(row["state_id"]) is not int or row["state_id"] != 1:
+            # Preserve the relational row for operator repair.
+            raise ConflictError("MySQL game action lifecycle requires operator recovery")
+        # Require one bounded signed-range epoch shared with JSON.
+        if type(row["current_epoch"]) is not int or not 1 <= row["current_epoch"] <= _GAME_ACTION_MAX_EPOCH:
+            # Refuse overflow or connector coercion.
+            raise ConflictError("MySQL game action lifecycle requires operator recovery")
+        # Require one finite reset phase.
+        if type(row["phase"]) is not str or row["phase"] not in {"ready", "resetting"}:
+            # Reject unknown visibility semantics.
+            raise ConflictError("MySQL game action lifecycle requires operator recovery")
+        # Return the validated row for same-transaction use.
+        return row
+
+    # Convert one exact MySQL decimal balance into provider-neutral integer cents.
+    def _mysql_game_action_cents(self, value: Any) -> int:
+        # Convert through decimal string form to avoid binary floating-point normalization.
+        scaled = Decimal(str(value)) * Decimal(100)
+        # Require an exact finite integral-cent value.
+        if not scaled.is_finite() or scaled != scaled.to_integral_value():
+            # Preserve malformed wallet rows for operator recovery.
+            raise ConflictError("Game action wallet state requires operator recovery")
         try:
-            # Open a cursor for DML reset statements.
-            cursor = connection.cursor()
-            # Delete ledger rows before players to satisfy foreign keys.
-            cursor.execute("DELETE FROM casino_ledger")
-            # Delete history rows because MySQL starts fresh after reset.
-            cursor.execute("DELETE FROM casino_history")
-            # Delete JSON document rows because settings bootstrap from defaults.
-            cursor.execute("DELETE FROM casino_documents")
-            # Delete player rows after dependent ledger rows.
-            cursor.execute("DELETE FROM casino_players")
-            # Commit the reset as one unit.
+            # Validate exact range and nonnegative semantics through a one-wallet snapshot.
+            snapshot = GameActionSnapshot.create(resources=GameActionResources(wallet_ids=("wallet",)), wallet_balances={"wallet": int(scaled)}, state_values={})
+        # Normalize contract validation into the provider recovery boundary.
+        except (ValueError, OverflowError, ValidationError):
+            # Preserve the original relational row unchanged.
+            raise ConflictError("Game action wallet state requires operator recovery") from None
+        # Return the exact validated integer-cent balance.
+        return snapshot.wallet_balance("wallet")
+
+    # Decode one canonical text JSON field from the immutable lifecycle tables.
+    def _decode_mysql_game_action_json(self, value: Any) -> Any:
+        # Accept only bytes or text from the binary-collated TEXT columns.
+        if isinstance(value, bytes):
+            # Decode exact UTF-8 without replacement.
+            raw = value.decode("utf-8")
+        # Preserve driver-returned text exactly.
+        elif type(value) is str:
+            # Retain the raw text for canonical byte comparison.
+            raw = value
+        # Reject driver coercion or unexpected JSON-native shapes.
+        else:
+            # Preserve the row for operator recovery.
+            raise ConflictError("Game action storage requires operator recovery")
+        try:
+            # Reject duplicate object keys while decoding immutable receipt material.
+            decoded = json.loads(raw, object_pairs_hook=self._unique_json_object)
+        # Normalize malformed UTF-8 or JSON without exposing stored bytes.
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            # Preserve the row for explicit operator repair.
+            raise ConflictError("Game action storage requires operator recovery") from None
+        # Require the stored text to equal the unique canonical representation byte-for-byte.
+        if canonical_json_bytes(decoded).decode("utf-8") != raw:
+            # Refuse ambiguous whitespace, ordering, or numeric encodings.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Return the strictly decoded canonical object.
+        return decoded
+
+    # Decode and validate one immutable MySQL receipt row.
+    def _mysql_game_action_receipt(self, row: dict) -> GameActionReceipt:
+        # Decode the complete canonical resource declaration.
+        resources_value = self._decode_mysql_game_action_json(row["resources_json"])
+        # Reconstruct exact resources through the provider-neutral validator.
+        resources = self._deserialize_game_action_resources(resources_value)
+        # Decode the complete canonical receipt graph.
+        receipt_value = self._decode_mysql_game_action_json(row["receipt_json"])
+        # Hash the exact stored bytes before accepting their semantic content.
+        receipt_bytes = row["receipt_json"] if isinstance(row["receipt_json"], bytes) else str(row["receipt_json"]).encode("utf-8")
+        # Hash the exact binary-collated text returned by the provider.
+        receipt_digest = hashlib.sha256(receipt_bytes).hexdigest()
+        # Require the immutable row checksum to match exactly.
+        if receipt_digest != row["receipt_sha256"]:
+            # Refuse a corrupted or normalized receipt row.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Reconstruct and self-validate the complete immutable receipt.
+        receipt = self._deserialize_game_action_receipt(receipt_value)
+        # Require duplicated row identity and resource fields to agree exactly.
+        if receipt.identity.scope_key != (row["game_id"], row["player_id"], row["action_key"]) or receipt.identity.request_fingerprint != row["request_fingerprint"] or receipt.resources != resources:
+            # Preserve inconsistent immutable lifecycle rows.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Require every receipt child row to name only the execute disposition.
+        if row.get("claim_disposition") != "execute":
+            # Refuse a receipt detached from executable ownership.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Return the exact provider-neutral committed receipt.
+        return receipt
+
+    # Read one immutable receipt under the caller's active transaction.
+    def _select_mysql_game_action_receipt(self, cursor, identity: GameActionIdentity, reset_epoch: int) -> GameActionReceipt | None:
+        # Query the exact primary-key scope and all immutable receipt bytes.
+        cursor.execute(
+            "SELECT reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256, claim_disposition FROM casino_game_action_receipts WHERE reset_epoch = %s AND game_id = %s AND player_id = %s AND action_key = %s FOR SHARE",
+            (reset_epoch, *identity.scope_key),
+        )
+        # Read the optional committed row.
+        row = cursor.fetchone()
+        # Preserve the unused-key result without inventing a receipt.
+        if row is None:
+            # Return no committed outcome.
+            return None
+        # Require the selected immutable row to remain in the captured namespace.
+        if type(row.get("reset_epoch")) is not int or row["reset_epoch"] != reset_epoch:
+            # Refuse connector coercion or cross-epoch row drift.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Decode and validate the complete immutable row.
+        return self._mysql_game_action_receipt(row)
+
+    # Insert or inspect one immutable lifecycle claim under transaction ownership.
+    def _claim_mysql_game_action(self, cursor, identity: GameActionIdentity, resources: GameActionResources, disposition: str, reset_epoch: int) -> tuple[str, bool]:
+        # Serialize exact resources once for unique and compatibility checks.
+        resources_json = canonical_json_bytes(self._serialize_game_action_resources(resources)).decode("utf-8")
+        # Attempt one append-only insert without updating an existing winner.
+        cursor.execute(
+            "INSERT IGNORE INTO casino_game_action_claims (reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, disposition) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (reset_epoch, *identity.scope_key, identity.request_fingerprint, resources_json, disposition),
+        )
+        # Remember whether this transaction inserted the immutable winning row.
+        inserted = cursor.rowcount == 1
+        # Lock and read the winning primary-key row after duplicate contenders serialize.
+        cursor.execute(
+            "SELECT reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, disposition FROM casino_game_action_claims WHERE reset_epoch = %s AND game_id = %s AND player_id = %s AND action_key = %s FOR SHARE",
+            (reset_epoch, *identity.scope_key),
+        )
+        # Require the just-inserted or prior winning claim to exist.
+        row = cursor.fetchone()
+        # Reject impossible disappearance under the same transaction.
+        if row is None:
+            # Preserve transactional state for rollback.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Require the winning claim to belong to the captured epoch exactly.
+        if type(row.get("reset_epoch")) is not int or row["reset_epoch"] != reset_epoch:
+            # Refuse connector coercion or namespace drift.
+            raise ConflictError("Game action storage requires operator recovery")
+        # Decode exact resources before comparing semantic reuse.
+        stored_resources = self._deserialize_game_action_resources(self._decode_mysql_game_action_json(row["resources_json"]))
+        # Reject changed identity fingerprint or resources without invoking a planner.
+        if row["request_fingerprint"] != identity.request_fingerprint or stored_resources != resources:
+            # Keep the original immutable claim unchanged.
+            raise ConflictError("Game action key conflicts with durable semantics")
+        # Return the finite winning disposition and whether this transaction inserted it.
+        return row["disposition"], inserted
+
+    # Capture exact locked MySQL wallet and state resources for one planner.
+    def _capture_mysql_game_action_snapshot(self, cursor, resources: GameActionResources) -> GameActionSnapshot:
+        # Collect exact integer-cent wallet balances by declared identity.
+        wallet_balances = {}
+        # Lock wallets in canonical resource order to prevent cross-action deadlocks.
+        for wallet_id in resources.wallet_ids:
+            # Lock one exact wallet row for the complete lifecycle transaction.
+            cursor.execute("SELECT player_id, balance FROM casino_players WHERE player_id = %s FOR UPDATE", (wallet_id,))
+            # Read the required wallet row.
+            row = cursor.fetchone()
+            # Reject missing wallets through the established provider boundary.
+            if row is None:
+                # Preserve the transaction for rollback by the caller.
+                raise NotFoundError(f"Player {wallet_id} was not found")
+            # Convert the decimal balance to exact integer cents.
+            wallet_balances[wallet_id] = self._mysql_game_action_cents(row["balance"])
+        # Collect exact route-free game-state documents.
+        state_values = {}
+        # Lock states in canonical resource order alongside wallet rows.
+        for state_key in resources.state_keys:
+            # Create the exact lockable empty document without overwriting prior state.
+            cursor.execute(
+                "INSERT INTO casino_documents (document_key, payload_json, updated_at) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE document_key = VALUES(document_key)",
+                (state_key, "{}", utc_now()),
+            )
+            # Lock the exact state row for snapshot and later replacement.
+            cursor.execute("SELECT payload_json FROM casino_documents WHERE document_key = %s FOR UPDATE", (state_key,))
+            # Read the state row established by the insert-or-lock operation.
+            row = cursor.fetchone()
+            # Reject impossible row disappearance.
+            if row is None:
+                # Fail closed within the transaction.
+                raise ConflictError("Game action state requires operator recovery")
+            # Decode the existing provider JSON shape.
+            state_values[state_key] = _decode_json(row["payload_json"])
+        # Freeze and validate the complete bounded provider snapshot.
+        return GameActionSnapshot.create(resources=resources, wallet_balances=wallet_balances, state_values=state_values)
+
+    # Insert exact ledger movements inside the active game-action transaction.
+    def _insert_mysql_game_action_ledger(self, cursor, receipt: GameActionReceipt) -> None:
+        # Build deterministic movement rows from immutable before/after snapshots.
+        for event in self._game_action_ledger_events(receipt):
+            # Insert each append-only ledger row with a dedicated compatible action namespace.
+            cursor.execute(
+                "INSERT INTO casino_ledger (ledger_id, ts, player_id, game, round_id, transaction_type, amount, balance_before, balance_after, action_scope, action_key, action_fingerprint, details_json) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (event["ledger_id"], event["ts"], event["player_id"], event["game"], event["round_id"], event["transaction_type"], event["amount"], event["balance_before"], event["balance_after"], "game_action", event["ledger_id"], receipt.identity.request_fingerprint, json.dumps(event["details"], sort_keys=True, separators=(",", ":"))),
+            )
+
+    # Execute or replay one schema-four MySQL game action in one transaction.
+    def execute_game_action_once(
+        self,
+        *,
+        identity: GameActionIdentity,
+        resources: GameActionResources,
+        planner: Callable[[GameActionSnapshot], GameActionPlan],
+    ) -> tuple[GameActionReceipt, bool]:
+        # Validate exact provider-neutral types before any connection or row lock.
+        validate_execution_request(identity=identity, resources=resources, planner=planner)
+        # Reject recursive execution from inside another planner on this provider.
+        self._reject_planner_mutation()
+        # Fail before pool checkout when this process owns reset bootstrap at capacity one.
+        if self._reset_is_active():
+            # Preserve claim-zero and planner-zero reset exclusion.
+            raise ConflictError("Game action reset is in progress")
+        # Ensure ordinary runtime compatibility before opening the action transaction.
+        self.ensure_ready()
+        # Open one connection for claim, resources, ledger, state, and receipt.
+        connection = self.connect()
+        try:
+            # Start one row-locking lifecycle transaction.
+            connection.start_transaction()
+            # Require exact clean schema four inside the same lifecycle transaction.
+            self._require_game_action_schema(connection)
+            # Open a dictionary cursor for immutable row reconstruction.
+            cursor = connection.cursor(dictionary=True)
+            # Hold shared ownership of one ready reset epoch through the full action transaction.
+            epoch_state = self._mysql_game_action_epoch(cursor)
+            # Refuse every action while reset bootstrap remains incomplete.
+            if epoch_state["phase"] != "ready":
+                # Fail before claim insertion, resource access, or planner invocation.
+                raise ConflictError("Game action reset is in progress")
+            # Capture the exact immutable namespace for every lifecycle row.
+            reset_epoch = epoch_state["current_epoch"]
+            # Insert or serialize behind the exact lifecycle claim.
+            disposition, inserted = self._claim_mysql_game_action(cursor, identity, resources, "execute", reset_epoch)
+            # Reject a resolver-owned tombstone before snapshots or planner/RNG.
+            if disposition == "uncommitted":
+                # Preserve the winning claim and roll back only this caller's no-op work.
+                raise ConflictError("Game action was durably resolved as uncommitted")
+            # Read a compatible committed receipt after the execute claim lock is held.
+            existing = self._select_mysql_game_action_receipt(cursor, identity, reset_epoch)
+            # Resolve committed replay without another planner invocation.
+            if existing is not None:
+                # Reject changed resource or fingerprint reuse before returning the result.
+                if existing.identity != identity or existing.resources != resources:
+                    # Preserve immutable claim and receipt rows.
+                    raise ConflictError("Game action key conflicts with committed semantics")
+                # Commit the read-only transaction and release row ownership.
+                connection.commit()
+                # Return the original immutable committed receipt.
+                return existing, True
+            # Refuse a prior execute claim whose receipt is absent after lock acquisition.
+            if not inserted:
+                # Preserve the orphaned claim for operator recovery.
+                raise ConflictError("Game action storage requires operator recovery")
+            # Lock and snapshot every declared wallet and state resource.
+            snapshot_before = self._capture_mysql_game_action_snapshot(cursor, resources)
+            # Prevent the synchronous planner from mutating this provider through a closure.
+            with self._planner_boundary():
+                # Invoke the caller planner once while the complete transaction owns resources.
+                plan = planner(snapshot_before)
+            # Require the exact immutable plan result type.
+            if type(plan) is not GameActionPlan:
+                # Reject plan-like objects before any committed projection.
+                raise ValidationError("Game action planner returned an invalid plan")
+            # Compute and validate the exact deterministic committed snapshot.
+            snapshot_after = apply_plan_to_snapshot(snapshot_before, plan)
+            # Construct the complete immutable receipt before any DML projection.
+            receipt = GameActionReceipt(identity=identity, resources=resources, snapshot_before=snapshot_before, plan=plan, snapshot_after=snapshot_after)
+            # Publish exact final wallet balances under the retained row locks.
+            for wallet_id, balance_cents in receipt.snapshot_after.wallet_balances:
+                # Update only the declared wallet row with exact decimal cents.
+                cursor.execute("UPDATE casino_players SET balance = %s, updated_at = %s WHERE player_id = %s", (Decimal(balance_cents) / Decimal(100), utc_now(), wallet_id))
+                # Require the locked wallet row to remain uniquely present.
+                if cursor.rowcount != 1:
+                    # Fail the complete transaction closed.
+                    raise ConflictError("Game action wallet state requires operator recovery")
+            # Append every movement ledger row inside the same transaction.
+            self._insert_mysql_game_action_ledger(cursor, receipt)
+            # Publish exact final state documents under their retained row locks.
+            for state_key, state_value in receipt.snapshot_after.state_values:
+                # Replace only one declared state row with canonical JSON.
+                cursor.execute("UPDATE casino_documents SET payload_json = %s, updated_at = %s WHERE document_key = %s", (canonical_json_bytes(self._plain_canonical(state_value)).decode("utf-8"), utc_now(), state_key))
+                # Require the locked state row to remain uniquely present.
+                if cursor.rowcount != 1:
+                    # Fail the complete transaction closed.
+                    raise ConflictError("Game action state requires operator recovery")
+            # Serialize exact receipt and resource bytes for immutable storage.
+            resources_json = canonical_json_bytes(self._serialize_game_action_resources(resources)).decode("utf-8")
+            # Serialize the complete receipt through the same legacy-compatible codec.
+            receipt_json = canonical_json_bytes(self._serialize_game_action_receipt(receipt)).decode("utf-8")
+            # Hash the exact receipt bytes stored in the binary-collated column.
+            receipt_sha256 = hashlib.sha256(receipt_json.encode("utf-8")).hexdigest()
+            # Insert the immutable receipt as the final transaction row.
+            cursor.execute(
+                "INSERT INTO casino_game_action_receipts (reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256, claim_disposition) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'execute')",
+                (reset_epoch, *identity.scope_key, identity.request_fingerprint, resources_json, receipt_json, receipt_sha256),
+            )
+            # Commit claim, wallets, ledger, state, and receipt atomically.
             connection.commit()
-        # Always close the connection after reset.
+            # Return the newly committed immutable receipt.
+            return receipt, False
+        # Roll back every provider, planner, validation, or database failure.
+        except Exception:
+            # Discard all uncommitted lifecycle and resource changes.
+            connection.rollback()
+            # Preserve the original bounded error for callers and tests.
+            raise
         finally:
-            # Close the MySQL connection for this operation.
+            # Release the transaction connection after commit or rollback.
             connection.close()
+
+    # Resolve one schema-four MySQL action without invoking its planner.
+    def resolve_game_action(
+        self,
+        *,
+        identity: GameActionIdentity,
+        resources: GameActionResources,
+    ) -> GameActionResolution:
+        # Validate exact provider-neutral types before any connection or lock attempt.
+        validate_resolution_request(identity=identity, resources=resources)
+        # Reject lifecycle mutation from inside an active planner on this provider.
+        self._reject_planner_mutation()
+        # Return finite pending before pool checkout during same-process reset bootstrap.
+        if self._reset_is_active():
+            # Preserve claim-zero and bounded capacity-one behavior.
+            return GameActionResolution(status="pending")
+        # Preserve ordinary compatible runtime readiness behavior.
+        self.ensure_ready()
+        # Open one connection for the finite resolver transaction.
+        connection = self.connect()
+        # Retain the original session lock-wait policy for pooled-connection restoration.
+        original_lock_wait = None
+        # Retain the cursor so finally can restore session state after commit or rollback.
+        cursor = None
+        try:
+            # Open a dictionary cursor before the transaction to inspect session policy.
+            cursor = connection.cursor(dictionary=True)
+            # Read the current pooled-session lock-wait value without exposing it publicly.
+            cursor.execute("SELECT @@SESSION.innodb_lock_wait_timeout AS lock_wait")
+            # Retain the exact bounded integer for later restoration.
+            original_lock_wait = int(cursor.fetchone()["lock_wait"])
+            # Bound only this leased session before beginning the resolver transaction.
+            cursor.execute("SET SESSION innodb_lock_wait_timeout = 1")
+            # End any implicit connector transaction opened by session preflight reads.
+            connection.rollback()
+            # Start one transaction whose insert races the execute claim.
+            connection.start_transaction()
+            # Require exact clean schema four inside the bounded resolver transaction.
+            self._require_game_action_schema(connection)
+            # Hold shared epoch ownership before any immutable lifecycle lookup or insert.
+            epoch_state = self._mysql_game_action_epoch(cursor)
+            # Treat reset bootstrap as finite pending without a claim.
+            if epoch_state["phase"] != "ready":
+                # End the read-only transaction before returning no outcome.
+                connection.commit()
+                # Preserve claim-zero and planner-zero reset behavior.
+                return GameActionResolution(status="pending")
+            # Capture the exact ready namespace for resolver competition.
+            reset_epoch = epoch_state["current_epoch"]
+            # Insert or serialize behind the exact lifecycle claim.
+            disposition, _inserted = self._claim_mysql_game_action(cursor, identity, resources, "uncommitted", reset_epoch)
+            # Return the durable resolver-owned tombstone when it won first.
+            if disposition == "uncommitted":
+                # Commit the immutable no-result claim.
+                connection.commit()
+                # Return the terminal provider-neutral state.
+                return GameActionResolution(status="uncommitted")
+            # Read the execute owner's immutable receipt after its claim lock releases.
+            receipt = self._select_mysql_game_action_receipt(cursor, identity, reset_epoch)
+            # Refuse an execute claim that became visible without its atomic receipt.
+            if receipt is None:
+                # Preserve the orphaned claim for operator recovery.
+                raise ConflictError("Game action storage requires operator recovery")
+            # Reject changed compatible fields before returning outcome data.
+            if receipt.identity != identity or receipt.resources != resources:
+                # Preserve immutable execute history.
+                raise ConflictError("Game action key conflicts with committed semantics")
+            # Commit the read-only resolution transaction.
+            connection.commit()
+            # Return the complete immutable committed result.
+            return GameActionResolution(status="committed", receipt=receipt)
+        # Convert only MySQL lock wait/deadlock errors into a finite pending state.
+        except Exception as exc:
+            # Read the connector's numeric server error without importing provider classes.
+            error_number = getattr(exc, "errno", None)
+            # Release all statement and row locks from the timed-out resolver.
+            connection.rollback()
+            # Report active ownership for bounded lock wait or deadlock selection.
+            if error_number in {1205, 1213}:
+                # Return no partial receipt while execution remains uncertain.
+                return GameActionResolution(status="pending")
+            # Preserve every other provider or semantic failure.
+            raise
+        finally:
+            try:
+                # Restore the pooled session policy after the transaction has ended.
+                if cursor is not None and original_lock_wait is not None:
+                    # Reapply only the trusted integer read from this same session.
+                    cursor.execute("SET SESSION innodb_lock_wait_timeout = %s", (original_lock_wait,))
+            finally:
+                # Always return or discard the lease even when session restoration fails.
+                connection.close()
+
+    # Reuse the canonical Phase0c codecs without creating a second receipt format.
+    _plain_canonical = JsonStorageProvider._plain_canonical
+    # Reuse duplicate-key rejection for immutable MySQL text fields.
+    _unique_json_object = JsonStorageProvider._unique_json_object
+    # Reuse exact resource serialization for schema-three compatibility.
+    _serialize_game_action_resources = JsonStorageProvider._serialize_game_action_resources
+    # Reuse delimiter-safe durable scope encoding for movement identities.
+    _game_action_scope_key = JsonStorageProvider._game_action_scope_key
+    # Reuse exact resource reconstruction for conflict checks.
+    _deserialize_game_action_resources = JsonStorageProvider._deserialize_game_action_resources
+    # Reuse exact identity reconstruction embedded in legacy receipts.
+    _deserialize_game_action_identity = JsonStorageProvider._deserialize_game_action_identity
+    # Reuse exact identity serialization embedded in legacy receipts.
+    _serialize_game_action_identity = JsonStorageProvider._serialize_game_action_identity
+    # Reuse immutable snapshot serialization.
+    _serialize_game_action_snapshot = JsonStorageProvider._serialize_game_action_snapshot
+    # Reuse immutable snapshot reconstruction.
+    _deserialize_game_action_snapshot = JsonStorageProvider._deserialize_game_action_snapshot
+    # Reuse immutable plan serialization.
+    _serialize_game_action_plan = JsonStorageProvider._serialize_game_action_plan
+    # Reuse immutable plan reconstruction.
+    _deserialize_game_action_plan = JsonStorageProvider._deserialize_game_action_plan
+    # Reuse the complete legacy-compatible receipt serialization.
+    _serialize_game_action_receipt = JsonStorageProvider._serialize_game_action_receipt
+    # Reuse the complete legacy-compatible receipt reconstruction.
+    _deserialize_game_action_receipt = JsonStorageProvider._deserialize_game_action_receipt
+    # Reuse exact JSON cent conversion for deterministic ledger event fields.
+    _json_wallet_cents = JsonStorageProvider._json_wallet_cents
+    # Reuse compatible JSON numeric projection for ledger events.
+    _json_wallet_value = JsonStorageProvider._json_wallet_value
+    # Reuse deterministic movement ledger construction across providers.
+    _game_action_ledger_events = JsonStorageProvider._game_action_ledger_events
+
+    # Derive one bounded non-secret named lock for this exact relational reset target.
+    def _mysql_reset_lock_name(self) -> str:
+        # Serialize only the normalized host, port, and database identity.
+        target = f"{self.config.host.lower()}:{self.config.port}/{self.config.database}"
+        # Keep the lock name below MySQL's 64-character boundary.
+        return f"casino-reset-{hashlib.sha256(target.encode('utf-8')).hexdigest()[:48]}"
+
+    # Delete only reset-owned mutable projections inside an active transaction.
+    def _clear_mysql_mutable_state(self, cursor) -> None:
+        # Delete ledger rows before players to satisfy foreign keys.
+        cursor.execute("DELETE FROM casino_ledger")
+        # Delete history rows because reset starts a fresh visible outcome set.
+        cursor.execute("DELETE FROM casino_history")
+        # Delete JSON document rows because caller bootstrap restores reviewed defaults.
+        cursor.execute("DELETE FROM casino_documents")
+        # Delete player rows after dependent ledger rows.
+        cursor.execute("DELETE FROM casino_players")
+
+    # Hold a target-scoped reset lock through clear, caller bootstrap, and phase release.
+    @contextmanager
+    def reset_transaction(self):
+        # Reject destructive provider mutation from inside a planner.
+        self._reject_planner_mutation()
+        # Reject same-thread nested resets before borrowing can hide ownership.
+        if getattr(self._reset_local, "connection", None) is not None:
+            # Preserve the outer reset as the sole owner.
+            raise ConflictError("MySQL reset is already in progress")
+        # Verify the compatible schema before opening the owned reset lease.
+        self.ensure_ready()
+        # Resolve the process-wide target identity before pool checkout.
+        reset_target = self._planner_key()
+        # Claim local reset ownership nonblockingly for capacity-one pools.
+        with _MYSQL_RESET_REGISTRY_LOCK:
+            # Reject another provider instance already resetting this target.
+            if reset_target in _MYSQL_RESET_TARGETS:
+                # Avoid waiting for its retained sole pool lease.
+                raise ConflictError("MySQL reset is already in progress")
+            # Reserve this target until named-lock acquisition succeeds or cleanup runs.
+            _MYSQL_RESET_TARGETS.add(reset_target)
+        try:
+            # Acquire the one pool lease retained across synchronous caller bootstrap.
+            connection = self.connect()
+        # Release local ownership if pool checkout itself fails.
+        except BaseException:
+            # Serialize exact registry cleanup across equivalent provider instances.
+            with _MYSQL_RESET_REGISTRY_LOCK:
+                # Remove only this target's provisional ownership.
+                _MYSQL_RESET_TARGETS.discard(reset_target)
+            # Preserve the original checkout failure.
+            raise
+        # Derive the fixed target-scoped named lock without credentials.
+        lock_name = self._mysql_reset_lock_name()
+        # Track whether this session owns the server lock for exact release.
+        named_lock_acquired = False
+        # Track whether schema four requires durable phase finalization.
+        reset_epoch = None
+        try:
+            # Use dictionary rows for strict named-lock and epoch validation.
+            cursor = connection.cursor(dictionary=True)
+            # Attempt the target-scoped session lock without waiting behind another reset.
+            cursor.execute("SELECT GET_LOCK(%s, 0) AS acquired", (lock_name,))
+            # Read the exact finite acquisition result.
+            lock_row = cursor.fetchone()
+            # Reject contention, connector coercion, or server lock failure uniformly.
+            if type(lock_row) is not dict or lock_row.get("acquired") != 1:
+                # Avoid any reset phase or mutable-state change.
+                raise ConflictError("MySQL reset is already in progress")
+            # Record sole session ownership before any transaction begins.
+            named_lock_acquired = True
+            # End the implicit transaction opened by the named-lock preflight query.
+            connection.rollback()
+            # Start phase one across epoch ownership and mutable deletion.
+            connection.start_transaction()
+            # Re-read exact migration state inside the reset transaction.
+            schema_state = self._runtime_schema_state(connection)
+            # Activate durable epoch semantics only on exact clean schema four.
+            if schema_state.initialized and schema_state.status == "clean" and schema_state.current_version == 4:
+                # Lock the singleton exclusively before any mutable table deletion.
+                epoch_state = self._mysql_game_action_epoch(cursor, exclusive=True)
+                # Refuse namespace overflow without changing the existing phase.
+                if epoch_state["current_epoch"] >= _GAME_ACTION_MAX_EPOCH:
+                    # Preserve all relational state for operator recovery.
+                    raise ConflictError("MySQL game action lifecycle requires operator recovery")
+                # Advance again even when recovering a prior failed resetting phase.
+                reset_epoch = epoch_state["current_epoch"] + 1
+                # Bind the new namespace and unavailable phase to the exact prior row.
+                cursor.execute(
+                    "UPDATE casino_game_action_epoch_state SET current_epoch = %s, phase = 'resetting' WHERE state_id = 1 AND current_epoch = %s AND phase = %s",
+                    (reset_epoch, epoch_state["current_epoch"], epoch_state["phase"]),
+                )
+                # Require the singleton compare-and-set to update exactly once.
+                if cursor.rowcount != 1:
+                    # Refuse ambiguous reset ownership.
+                    raise ConflictError("MySQL game action lifecycle requires operator recovery")
+            # Preserve compatible schema-two/three reset behavior without lifecycle access.
+            elif not schema_state.initialized or schema_state.status != "clean" or schema_state.current_version not in {2, 3}:
+                # Refuse dirty, partial, future, or unsupported schemas before deletion.
+                raise ConflictError("MySQL storage schema requires operator recovery")
+            # Delete only mutable projections; lifecycle claims and receipts remain append-only.
+            self._clear_mysql_mutable_state(cursor)
+            # Commit phase one so bootstrap can use the same session without holding row deletes.
+            connection.commit()
+            # Expose only a no-close facade to nested same-thread provider calls.
+            self._reset_local.connection = connection
+            try:
+                # Yield while the named lock and resetting phase exclude every lifecycle action.
+                yield self
+            finally:
+                # End lease borrowing before finalization or failure cleanup.
+                self._reset_local.connection = None
+            # Release schema-four lifecycle visibility only after caller bootstrap succeeds.
+            if reset_epoch is not None:
+                # Clear any connector transaction residue left by caller-owned reads.
+                connection.rollback()
+                # Start one exact phase-two transaction.
+                connection.start_transaction()
+                # Require schema four again before changing durable readiness.
+                self._require_game_action_schema(connection)
+                # Lock the exact singleton for compare-and-set finalization.
+                finalized_state = self._mysql_game_action_epoch(cursor, exclusive=True)
+                # Require the bound epoch to remain unavailable and unchanged.
+                if finalized_state != {"state_id": 1, "current_epoch": reset_epoch, "phase": "resetting"}:
+                    # Leave the durable phase unavailable for operator recovery.
+                    raise ConflictError("MySQL game action lifecycle requires operator recovery")
+                # Publish ready only for this exact reset attempt's namespace.
+                cursor.execute(
+                    "UPDATE casino_game_action_epoch_state SET phase = 'ready' WHERE state_id = 1 AND current_epoch = %s AND phase = 'resetting'",
+                    (reset_epoch,),
+                )
+                # Require one exact singleton transition.
+                if cursor.rowcount != 1:
+                    # Preserve resetting on ambiguous finalization.
+                    raise ConflictError("MySQL game action lifecycle requires operator recovery")
+                # Commit the final ready phase after all bootstrap writes are durable.
+                connection.commit()
+        # Roll back only the current session transaction while retaining durable resetting phase.
+        except BaseException:
+            # Discard partial phase-one, bootstrap-call, or phase-two work on this lease.
+            connection.rollback()
+            # Preserve the original bounded failure.
+            raise
+        finally:
+            # Clear borrowing even when yield or finalization exits exceptionally.
+            self._reset_local.connection = None
+            try:
+                # Release only a named lock this session proved it acquired.
+                if named_lock_acquired:
+                    # End any implicit or failed transaction before the release query.
+                    connection.rollback()
+                    # Open one final dictionary cursor on the retained session.
+                    release_cursor = connection.cursor(dictionary=True)
+                    # Release the exact target-scoped user lock.
+                    release_cursor.execute("SELECT RELEASE_LOCK(%s) AS released", (lock_name,))
+                    # Require this session to report successful release.
+                    release_row = release_cursor.fetchone()
+                    # Treat missing ownership or connector coercion as a reset failure.
+                    if type(release_row) is not dict or release_row.get("released") != 1:
+                        # Prevent a pooled session with uncertain user-lock state from being trusted.
+                        raise ConflictError("MySQL reset lock release failed")
+            finally:
+                try:
+                    # Return or discard the sole outer lease after every outcome.
+                    connection.close()
+                finally:
+                    # Release process-local target ownership even if pool cleanup fails.
+                    with _MYSQL_RESET_REGISTRY_LOCK:
+                        # Let later explicit reset attempts recover a durable resetting phase.
+                        _MYSQL_RESET_TARGETS.discard(reset_target)
+
+    # Reset MySQL mutable state through the complete phase-owned boundary.
+    def reset(self) -> None:
+        # Reuse the same reset transaction with an intentionally empty caller body.
+        with self.reset_transaction():
+            # Preserve direct reset behavior without additional bootstrap writes.
+            pass
 
     # Convert a MySQL player row into the existing API shape.
     def _player_from_row(self, row: dict) -> dict:
@@ -3154,11 +4477,15 @@ class MySQLStorageProvider(StorageProvider):
 
     # Insert one player through the deterministic provider-owned identity boundary.
     def insert_player(self, player: dict) -> dict:
+        # Reject player insertion attempted from inside a planner.
+        self._reject_planner_mutation()
         # Reuse the primary-key transaction shared with invited-account provisioning.
         return self.ensure_player(player)
 
     # Insert every missing bootstrap row without replacing durable rows. (STORAGE-012, issue #431)
     def bootstrap_players(self, state: dict) -> None:
+        # Reject bootstrap mutation attempted from inside a planner.
+        self._reject_planner_mutation()
         # Ensure schema exists before inserting player rows.
         self.ensure_ready()
         # Open a connection for the bounded append operation.
@@ -3191,6 +4518,8 @@ class MySQLStorageProvider(StorageProvider):
 
     # Update one player in a MySQL transaction.
     def update_player(self, player_id: str, updater: Callable[[dict], None]) -> dict:
+        # Reject wallet mutation attempted from inside a planner.
+        self._reject_planner_mutation()
         # Ensure schema exists before updating players.
         self.ensure_ready()
         # Open a connection for the row-locking transaction.
@@ -3241,6 +4570,8 @@ class MySQLStorageProvider(StorageProvider):
 
     # Create one deterministic player under a MySQL primary-key transaction.
     def ensure_player(self, player: dict) -> dict:
+        # Reject deterministic player creation attempted from inside a planner.
+        self._reject_planner_mutation()
         # Ensure the relational schema exists before provisioning.
         self.ensure_ready()
         # Open one connection for the insert-or-read transaction.
@@ -3287,6 +4618,8 @@ class MySQLStorageProvider(StorageProvider):
 
     # Execute a ledger transaction and player balance update atomically in MySQL.
     def transact_ledger(self, player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
+        # Reject wallet and ledger mutation attempted from inside a planner.
+        self._reject_planner_mutation()
         # Normalize the transaction amount to the app's fake-money precision.
         amount = round(float(amount), 2)
         # Reject zero-value ledger rows before touching player state.
@@ -3349,6 +4682,8 @@ class MySQLStorageProvider(StorageProvider):
 
     # Execute or replay one storage-enforced MySQL ledger action identity.
     def transact_ledger_once(self, player_id: str, amount: float, transaction_type: str, action_key: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> tuple[dict, bool]:
+        # Reject exactly-once ledger mutation attempted from inside a planner.
+        self._reject_planner_mutation()
         # Normalize the transaction amount to the app's fake-money precision.
         amount = round(float(amount), 2)
         # Reject zero-value ledger rows before opening a database transaction.
@@ -3495,6 +4830,8 @@ class MySQLStorageProvider(StorageProvider):
 
     # Append one history event to MySQL.
     def append_history(self, event: dict) -> None:
+        # Reject history mutation attempted from inside a planner.
+        self._reject_planner_mutation()
         # Ensure schema exists before writing history.
         self.ensure_ready()
         # Open a connection for the insert.
@@ -3582,6 +4919,8 @@ class MySQLStorageProvider(StorageProvider):
 
     # Write a named JSON document to MySQL.
     def write_document(self, key: str, data: Any) -> None:
+        # Reject document mutation attempted from inside a planner.
+        self._reject_planner_mutation()
         # Ensure schema exists before writing the document.
         self.ensure_ready()
         # Open a connection for the upsert.
@@ -3604,6 +4943,8 @@ class MySQLStorageProvider(StorageProvider):
 
     # Mutate one document in a single row-locking MySQL transaction. (OTT-001)
     def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
+        # Reject document read-modify-write attempted from inside a planner.
+        self._reject_planner_mutation()
         # Verify the exact schema before opening a mutation transaction.
         self.ensure_ready()
         # Evaluate the default once so retries and the persisted seed share one canonical value.

@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Disposable MySQL 8.4 migration, runtime-grant, restart, and lock evidence for TEST-048."""
+"""Disposable MySQL 8.4 migration, lifecycle, grants, restart, and lock evidence."""
 
 # Import UTC timing for short-lived synthetic recovery proofs.
 from datetime import datetime, timedelta, timezone
@@ -18,9 +18,17 @@ import re
 import tempfile
 # Import portable temporary proof paths.
 from pathlib import Path
+# Import bounded in-process concurrency for real MVCC claim/receipt races.
+import threading
+# Import a short deterministic assertion window for the blocked resolver.
+import time
 
-# Import the migration policy and runtime storage provider under test.
-from casino.core import mysql_migrations, storage
+# Import the actual Admin bootstrap, player projection, migration policy, and storage provider.
+from casino.core import auth, mysql_migrations, players, storage
+# Import immutable game-action values for real disposable-provider lifecycle proof.
+from casino.core.game_action import GameActionIdentity, GameActionMovement, GameActionPlan, GameActionResolution, GameActionResources
+# Import the stable conflict boundary for resolver-first refusal.
+from casino.errors import ConflictError
 # Import the established live provider restart and two-process DML matrix.
 from tests import storage_tests
 
@@ -231,7 +239,7 @@ def _cleanup(admin, databases, migrator_user, runtime_user):
     admin.commit()
 
 
-# Exercise exact-scope uniqueness, canonical receipt capacity, and durable persistence.
+# Exercise immutable lifecycle claims, receipt binding, and durable persistence.
 def _exercise_game_action_receipts(connection):
     # Open one runtime-identity cursor against the fully migrated disposable target.
     cursor = connection.cursor()
@@ -239,16 +247,18 @@ def _exercise_game_action_receipts(connection):
     cursor.execute("SELECT ENGINE FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts'")
     # Require the exact transactional storage engine after live application.
     assert str(cursor.fetchone()[0]).lower() == "innodb"
-    # Read exact schema-three column types and capacities without application values.
+    # Read exact schema-four receipt column types and capacities without application values.
     cursor.execute("SELECT COLUMN_NAME, COLUMN_TYPE, COLLATION_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts' ORDER BY ORDINAL_POSITION")
     # Normalize the fixed structural rows for exact assertions.
     columns = {str(row[0]): (str(row[1]).lower(), None if row[2] is None else str(row[2]).lower()) for row in cursor.fetchall()}
     # Require the complete bounded storage shape.
     assert columns == {
+        "reset_epoch": ("bigint unsigned", None),
         "game_id": ("varchar(191)", "utf8mb4_bin"),
         "player_id": ("varchar(191)", "utf8mb4_bin"),
         "action_key": ("varchar(191)", "utf8mb4_bin"),
         "request_fingerprint": ("char(64)", "ascii_bin"),
+        "claim_disposition": ("varchar(16)", "ascii_bin"),
         "resources_json": ("text", "utf8mb4_bin"),
         "receipt_json": ("mediumtext", "utf8mb4_bin"),
         "receipt_sha256": ("char(64)", "ascii_bin"),
@@ -256,7 +266,35 @@ def _exercise_game_action_receipts(connection):
     # Read exact primary-key ordering for one action-scope identity.
     cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_receipts' AND INDEX_NAME = 'PRIMARY' ORDER BY SEQ_IN_INDEX")
     # Require the exact game/player/action scope boundary.
-    assert [str(row[0]) for row in cursor.fetchall()] == ["game_id", "player_id", "action_key"]
+    assert [str(row[0]) for row in cursor.fetchall()] == ["reset_epoch", "game_id", "player_id", "action_key"]
+    # Read exact schema-four claim columns and collations.
+    cursor.execute("SELECT COLUMN_NAME, COLUMN_TYPE, COLLATION_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_claims' ORDER BY ORDINAL_POSITION")
+    # Normalize claim structural rows for exact assertions.
+    claim_columns = {str(row[0]): (str(row[1]).lower(), None if row[2] is None else str(row[2]).lower()) for row in cursor.fetchall()}
+    # Require the complete immutable claim shape.
+    assert claim_columns == {
+        "reset_epoch": ("bigint unsigned", None),
+        "game_id": ("varchar(191)", "utf8mb4_bin"),
+        "player_id": ("varchar(191)", "utf8mb4_bin"),
+        "action_key": ("varchar(191)", "utf8mb4_bin"),
+        "request_fingerprint": ("char(64)", "ascii_bin"),
+        "resources_json": ("text", "utf8mb4_bin"),
+        "disposition": ("varchar(16)", "ascii_bin"),
+    }
+    # Read the reset namespace singleton through its exact durable schema.
+    cursor.execute("SELECT COLUMN_NAME, COLUMN_TYPE, COLLATION_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'casino_game_action_epoch_state' ORDER BY ORDINAL_POSITION")
+    # Normalize the epoch control schema without exposing runtime values.
+    epoch_columns = {str(row[0]): (str(row[1]).lower(), None if row[2] is None else str(row[2]).lower()) for row in cursor.fetchall()}
+    # Require the bounded singleton, positive epoch, and binary phase representation.
+    assert epoch_columns == {
+        "state_id": ("tinyint unsigned", None),
+        "current_epoch": ("bigint unsigned", None),
+        "phase": ("varchar(16)", "ascii_bin"),
+    }
+    # Read the only seeded namespace control row.
+    cursor.execute("SELECT state_id, current_epoch, phase FROM casino_game_action_epoch_state")
+    # Require the initial namespace to be available at epoch one.
+    assert tuple(cursor.fetchone()) == (1, 1, "ready")
     # Build one canonical bounded resource representation shared by paid and zero-cost receipts.
     resources = {"state_keys": ["roulette.round"], "wallet_ids": ["player_204"]}
     # Encode resource bytes in deterministic compact canonical form.
@@ -286,21 +324,26 @@ def _exercise_game_action_receipts(connection):
         receipt_json = json.dumps(receipt, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         # Hash the exact stored receipt representation independently of request semantics.
         receipt_sha256 = hashlib.sha256(receipt_json.encode("utf-8")).hexdigest()
-        # Insert one exact-scope receipt-capacity row.
+        # Insert the immutable execute claim before its child receipt.
         cursor.execute(
-            "INSERT INTO casino_game_action_receipts (game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            ("roulette", "player_204", action_key, fingerprint, resources_json, receipt_json, receipt_sha256),
+            "INSERT INTO casino_game_action_claims (reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, disposition) VALUES (%s, %s, %s, %s, %s, %s, 'execute')",
+            (1, "roulette", "player_204", action_key, fingerprint, resources_json),
+        )
+        # Insert one exact-scope receipt bound to the execute claim.
+        cursor.execute(
+            "INSERT INTO casino_game_action_receipts (reset_epoch, game_id, player_id, action_key, request_fingerprint, claim_disposition, resources_json, receipt_json, receipt_sha256) VALUES (%s, %s, %s, %s, %s, 'execute', %s, %s, %s)",
+            (1, "roulette", "player_204", action_key, fingerprint, resources_json, receipt_json, receipt_sha256),
         )
         # Retain the exact row expected after the duplicate attempt.
-        inserted.append(("roulette", "player_204", action_key, fingerprint, resources_json, receipt_json, receipt_sha256))
+        inserted.append(("1", "roulette", "player_204", action_key, fingerprint, "execute", resources_json, receipt_json, receipt_sha256))
     # Durably commit both representative receipts before the duplicate attempt.
     connection.commit()
     # Require same-scope reuse with another fingerprint to fail on the unique boundary.
     try:
         # Attempt to reuse the paid action scope with different request semantics.
         cursor.execute(
-            "INSERT INTO casino_game_action_receipts (game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            ("roulette", "player_204", "paid_204", "c" * 64, resources_json, inserted[0][5], inserted[0][6]),
+            "INSERT INTO casino_game_action_claims (reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, disposition) VALUES (%s, %s, %s, %s, %s, %s, 'uncommitted')",
+            (1, "roulette", "player_204", "paid_204", "c" * 64, resources_json),
         )
     # Accept only one duplicate-key server refusal.
     except _connector().Error as exc:
@@ -313,11 +356,417 @@ def _exercise_game_action_receipts(connection):
         # Surface one fixed category without receipt content.
         raise AssertionError("game-action receipt scope reuse was accepted")
     # Read exact durable rows after the duplicate-key refusal.
-    cursor.execute("SELECT game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256 FROM casino_game_action_receipts ORDER BY action_key")
+    cursor.execute("SELECT reset_epoch, game_id, player_id, action_key, request_fingerprint, claim_disposition, resources_json, receipt_json, receipt_sha256 FROM casino_game_action_receipts ORDER BY action_key")
     # Normalize driver-returned text without parsing away exact bytes.
     persisted = [tuple(str(value) for value in row) for row in cursor.fetchall()]
     # Require both exact inserted rows and canonical receipt bytes/hash to persist.
-    assert persisted == sorted(inserted, key=lambda row: row[2])
+    assert persisted == sorted(inserted, key=lambda row: row[3])
+    # Insert one terminal resolver-first tombstone with no receipt.
+    cursor.execute(
+        "INSERT INTO casino_game_action_claims (reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, disposition) VALUES (%s, %s, %s, %s, %s, %s, 'uncommitted')",
+        (1, "roulette", "player_204", "uncommitted_204", "d" * 64, resources_json),
+    )
+    # Commit the immutable tombstone.
+    connection.commit()
+    # Refuse a receipt behind a non-execute claim through exact child constraints.
+    try:
+        # Attempt to attach execute-only receipt material to the tombstone scope.
+        cursor.execute(
+            "INSERT INTO casino_game_action_receipts (reset_epoch, game_id, player_id, action_key, request_fingerprint, claim_disposition, resources_json, receipt_json, receipt_sha256) VALUES (%s, %s, %s, %s, %s, 'execute', %s, %s, %s)",
+            (1, "roulette", "player_204", "uncommitted_204", "d" * 64, resources_json, inserted[0][7], inserted[0][8]),
+        )
+    # Accept only check or foreign-key constraint refusal.
+    except _connector().Error as exc:
+        # Require server-enforced lifecycle binding rather than an unrelated syntax failure.
+        assert int(getattr(exc, "errno", 0) or 0) in {3819, 1452}
+        # Clear only the rejected child insertion.
+        connection.rollback()
+    # Fail if an uncommitted claim accepted a receipt.
+    else:
+        # Surface one fixed category.
+        raise AssertionError("uncommitted game-action claim accepted a receipt")
+
+
+# Exercise the production MySQL lifecycle provider against the disposable schema-four service.
+def _exercise_game_action_provider() -> None:
+    # Bind a new provider only to the already guarded disposable runtime identity.
+    provider = storage.MySQLStorageProvider(
+        storage.MySQLConfig(
+            # Reuse the exact loopback host approved by the outer guard.
+            host=os.environ["CASINO_MYSQL_HOST"],
+            # Reuse the exact matched disposable service port.
+            port=int(os.environ["CASINO_MYSQL_PORT"]),
+            # Use only the least-privilege runtime identity.
+            user=os.environ["CASINO_MYSQL_USER"],
+            # Pass the synthetic runtime password without formatting or logging it.
+            password=os.environ["CASINO_MYSQL_PASSWORD"],
+            # Bind the provider to the disposable base database.
+            database=os.environ["CASINO_MYSQL_DATABASE"],
+        ),
+        # Guarantee two simultaneous leases for the executor-versus-resolver race.
+        pool_config=storage.MySQLPoolConfig(capacity=2, checkout_wait_ms=1000, connect_timeout_seconds=3),
+    )
+    try:
+        # Create one deterministic synthetic wallet through the public provider seam.
+        player = provider.ensure_player(
+            {
+                # Use a bounded test-only wallet identity.
+                "player_id": "lifecycle_204",
+                # Keep the display label non-secret and synthetic.
+                "display_name": "Lifecycle 204",
+                # Preserve the ordinary human wallet type.
+                "type": "human",
+                # Seed exact fake-money balance for debit and payout proof.
+                "balance": 10.0,
+                # Use one fixed compatible timestamp for deterministic fixture semantics.
+                "created_at": "2026-01-01T00:00:00+00:00",
+                # Keep the initial update timestamp identical.
+                "updated_at": "2026-01-01T00:00:00+00:00",
+                # Provision the disposable wallet as active.
+                "status": "active",
+            }
+        )
+        # Require the exact inserted wallet identity and balance.
+        assert player["player_id"] == "lifecycle_204" and player["balance"] == 10.0
+        # Declare one wallet and one route-free state resource.
+        resources = GameActionResources(wallet_ids=("lifecycle_204",), state_keys=("game_action:lifecycle_204",))
+        # Bind canonical action semantics to the declared resources.
+        identity = GameActionIdentity.create(game_id="slots", player_id="lifecycle_204", action_key="execute_204", resources=resources, request={"stake_cents": 100})
+        # Count the exact live planner invocation.
+        planner_calls = []
+
+        # Return one deterministic debit, payout, and state plan.
+        def planner(snapshot):
+            # Retain only the immutable planner input for at-most-once proof.
+            planner_calls.append(snapshot)
+            # Build the complete paid action plan.
+            return GameActionPlan.create(
+                # Return one bounded synthetic result object.
+                outcome={"round_id": "round_204"},
+                # Preserve exact movement order in integer cents.
+                movements=(GameActionMovement(wallet_id="lifecycle_204", amount_cents=-100, reason="stake"), GameActionMovement(wallet_id="lifecycle_204", amount_cents=250, reason="payout")),
+                # Publish one exact route-free state document.
+                state_updates={"game_action:lifecycle_204": {"round_id": "round_204", "status": "settled"}},
+            )
+
+        # Execute the real schema-four relational transaction once.
+        receipt, replayed = provider.execute_game_action_once(identity=identity, resources=resources, planner=planner)
+        # Require one original action and one planner call.
+        assert replayed is False and len(planner_calls) == 1
+        # Replay without invoking replacement planner or RNG work.
+        replay_receipt, replayed = provider.execute_game_action_once(identity=identity, resources=resources, planner=lambda _snapshot: (_ for _ in ()).throw(AssertionError("replay invoked planner")))
+        # Require exact immutable receipt replay.
+        assert replayed is True and replay_receipt == receipt
+        # Resolve the execute winner to the same complete receipt.
+        assert provider.resolve_game_action(identity=identity, resources=resources) == GameActionResolution(status="committed", receipt=receipt)
+        # Read the exact committed wallet through the ordinary provider surface.
+        wallets = {row["player_id"]: row for row in provider.load_players(lambda: {"players": []})["players"]}
+        # Require debit and payout to converge on the expected balance.
+        assert wallets["lifecycle_204"]["balance"] == 11.5
+        # Read the route-free state document committed with the receipt.
+        assert provider.read_document("game_action:lifecycle_204", {}) == {"round_id": "round_204", "status": "settled"}
+        # Read exact append-only movement rows for the synthetic wallet.
+        ledger_rows = provider.read_ledger_recent(player_id="lifecycle_204", limit=10)
+        # Require one row per movement and no duplicate replay projection.
+        assert len(ledger_rows) == 2 and [row["amount"] for row in ledger_rows] == [-1.0, 2.5]
+        # Bind a separate action for a real REPEATABLE READ claim/receipt race.
+        race_identity = GameActionIdentity.create(game_id="slots", player_id="lifecycle_204", action_key="race_204", resources=resources, request={"stake_cents": 0})
+        # Signal when the executor owns its uncommitted execute claim inside the planner.
+        planner_entered = threading.Event()
+        # Hold planner completion until the resolver is blocked on the same claim.
+        release_planner = threading.Event()
+        # Retain thread results without exposing connector details.
+        race_results = {}
+        # Retain unexpected thread failures for parent-thread assertion.
+        race_errors = []
+
+        # Execute one state-only action while retaining the claim row lock.
+        def execute_race():
+            try:
+                # Define the held state-only planner.
+                def held_planner(_snapshot):
+                    # Signal only after the executor has inserted its claim and captured resources.
+                    planner_entered.set()
+                    # Wait a bounded interval for the resolver contender to begin.
+                    if not release_planner.wait(5):
+                        # Surface a deterministic local coordination failure.
+                        raise AssertionError("resolver race did not release planner")
+                    # Return one zero-cost state result.
+                    return GameActionPlan.create(outcome={"round_id": "race_204"}, state_updates={"game_action:lifecycle_204": {"round_id": "race_204", "status": "settled"}})
+                # Commit through the production transaction boundary.
+                race_results["execute"] = provider.execute_game_action_once(identity=race_identity, resources=resources, planner=held_planner)
+            # Retain any failure for a secret-free assertion in the parent thread.
+            except BaseException as exc:
+                # Store only the exception object in test memory.
+                race_errors.append(exc)
+
+        # Resolve the exact action while the execute claim is still uncommitted.
+        def resolve_race():
+            try:
+                # Wait through the bounded claim lock and recover the committed receipt.
+                race_results["resolve"] = provider.resolve_game_action(identity=race_identity, resources=resources)
+            # Retain any failure for a secret-free assertion in the parent thread.
+            except BaseException as exc:
+                # Store only the exception object in test memory.
+                race_errors.append(exc)
+
+        # Launch the executor on the first pooled connection.
+        executor_thread = threading.Thread(target=execute_race)
+        # Start the exact action transaction.
+        executor_thread.start()
+        # Require the executor to reach its held planner under claim ownership.
+        assert planner_entered.wait(5)
+        # Launch the resolver on the second pooled connection.
+        resolver_thread = threading.Thread(target=resolve_race)
+        # Start the competing resolution transaction.
+        resolver_thread.start()
+        # Allow the resolver to establish its pre-commit snapshot and block on the claim.
+        time.sleep(0.2)
+        # Require the resolver to remain in flight before executor commit.
+        assert resolver_thread.is_alive()
+        # Allow the executor to commit claim, state, and receipt atomically.
+        release_planner.set()
+        # Join both bounded lifecycle calls.
+        executor_thread.join(5)
+        # Join the resolver after the claim lock releases.
+        resolver_thread.join(5)
+        # Require both lifecycle calls to terminate without hidden failure.
+        assert not executor_thread.is_alive() and not resolver_thread.is_alive() and race_errors == []
+        # Read the executor's exact newly committed receipt.
+        race_receipt, race_replayed = race_results["execute"]
+        # Require original execution rather than replay.
+        assert race_replayed is False
+        # Require the resolver's locking receipt read to observe the just-committed row.
+        assert race_results["resolve"] == GameActionResolution(status="committed", receipt=race_receipt)
+        # Bind a separate resolver-first action to the same declared resources.
+        uncommitted_identity = GameActionIdentity.create(game_id="slots", player_id="lifecycle_204", action_key="uncommitted_204", resources=resources, request={"stake_cents": 200})
+        # Commit the immutable no-result claim before execution.
+        assert provider.resolve_game_action(identity=uncommitted_identity, resources=resources) == GameActionResolution(status="uncommitted")
+        try:
+            # Attempt late execution through the production schema-four provider.
+            provider.execute_game_action_once(identity=uncommitted_identity, resources=resources, planner=lambda _snapshot: (_ for _ in ()).throw(AssertionError("late executor invoked planner")))
+        # Accept only the fixed resolver-first conflict boundary.
+        except ConflictError as exc:
+            # Require the exact value-free application error.
+            assert str(exc) == "Game action was durably resolved as uncommitted"
+        # Fail if the immutable uncommitted winner permitted late execution.
+        else:
+            # Surface one fixed proof failure.
+            raise AssertionError("resolver-first lifecycle claim allowed late execution")
+        # Retain a planner counter for the reset-unavailable executor proof.
+        resetting_planner_calls = []
+        # Hold the target-scoped reset through mutable deletion and same-session bootstrap.
+        with provider.reset_transaction() as reset_provider:
+            # Prove lifecycle execution cannot plan while the durable namespace is resetting.
+            try:
+                # Attempt the prior exact action key while reset owns the target.
+                reset_provider.execute_game_action_once(identity=identity, resources=resources, planner=lambda snapshot: resetting_planner_calls.append(snapshot))
+            # Accept only the fixed unavailable lifecycle boundary.
+            except ConflictError as exc:
+                # Require value-free fail-closed semantics and zero planner calls.
+                assert str(exc) == "Game action reset is in progress" and resetting_planner_calls == []
+            # Fail if a resetting namespace admitted an action.
+            else:
+                # Surface one fixed availability failure.
+                raise AssertionError("game action executed while reset was in progress")
+            # Resolve the same action without allocating a claim or invoking a planner.
+            assert reset_provider.resolve_game_action(identity=identity, resources=resources) == GameActionResolution(status="pending")
+            # Bootstrap one fresh wallet through the retained capacity-one-compatible session.
+            reset_player = reset_provider.ensure_player(
+                {
+                    # Reuse the same synthetic wallet identity in the new mutable namespace.
+                    "player_id": "lifecycle_204",
+                    # Preserve the non-secret fixture label.
+                    "display_name": "Lifecycle 204",
+                    # Preserve ordinary human wallet semantics.
+                    "type": "human",
+                    # Seed the same fake-money balance for fresh-action proof.
+                    "balance": 10.0,
+                    # Retain deterministic compatible timestamps.
+                    "created_at": "2026-01-01T00:00:00+00:00",
+                    # Keep the update timestamp identical.
+                    "updated_at": "2026-01-01T00:00:00+00:00",
+                    # Restore an active wallet exactly as Admin reset bootstrap does.
+                    "status": "active",
+                }
+            )
+            # Require same-session bootstrap to publish the fresh wallet.
+            assert reset_player["player_id"] == "lifecycle_204" and reset_player["balance"] == 10.0
+        # Count one planner invocation under the now-ready fresh epoch.
+        fresh_planner_calls = []
+
+        # Return a compatible fresh result under the reused external action key.
+        def fresh_planner(snapshot):
+            # Retain the exact fresh-epoch snapshot for one-call proof.
+            fresh_planner_calls.append(snapshot)
+            # Create a zero-cost result so only namespace isolation is under test.
+            return GameActionPlan.create(outcome={"round_id": "fresh_204"}, state_updates={"game_action:lifecycle_204": {"round_id": "fresh_204", "status": "settled"}})
+
+        # Reuse the exact action key and semantics after reset without replaying epoch one.
+        fresh_receipt, fresh_replayed = provider.execute_game_action_once(identity=identity, resources=resources, planner=fresh_planner)
+        # Require one genuinely new action and one exact planner call.
+        assert fresh_replayed is False and len(fresh_planner_calls) == 1 and fresh_receipt.plan.outcome == (("round_id", "fresh_204"),)
+        # Open one ordinary runtime lease for retained-history and namespace assertions.
+        evidence_connection = provider.connect()
+        # Always return the evidence lease to the bounded pool.
+        try:
+            # Read only aggregate immutable history and the public singleton control.
+            evidence_cursor = evidence_connection.cursor(dictionary=True)
+            # Count matching exact action keys across both retained epochs.
+            evidence_cursor.execute("SELECT reset_epoch, COUNT(*) AS claim_count FROM casino_game_action_claims WHERE game_id = %s AND player_id = %s AND action_key = %s GROUP BY reset_epoch ORDER BY reset_epoch", ("slots", "lifecycle_204", "execute_204"))
+            # Require the old claim to remain and the same key to exist independently in epoch two.
+            assert evidence_cursor.fetchall() == [{"reset_epoch": 1, "claim_count": 1}, {"reset_epoch": 2, "claim_count": 1}]
+            # Read the exact ready namespace after successful reset finalization.
+            evidence_cursor.execute("SELECT state_id, current_epoch, phase FROM casino_game_action_epoch_state")
+            # Require one monotonic transition and no public receipt mutation.
+            assert evidence_cursor.fetchone() == {"state_id": 1, "current_epoch": 2, "phase": "ready"}
+            # End the connector-owned read transaction before returning the lease.
+            evidence_connection.rollback()
+        # Return the evidence lease on every assertion outcome.
+        finally:
+            # Preserve the pool's ordinary connection lifecycle.
+            evidence_connection.close()
+        # Bind one distinct epoch-two action for action-versus-reset row-lock ordering.
+        ordering_identity = GameActionIdentity.create(game_id="slots", player_id="lifecycle_204", action_key="reset-ordering_204", resources=resources, request={"stake_cents": 0})
+        # Signal after the action owns a shared epoch lock inside its planner.
+        ordering_planner_entered = threading.Event()
+        # Hold the action transaction until the reset contender is demonstrably waiting.
+        release_ordering_planner = threading.Event()
+        # Signal only when reset phase one finishes and its caller body begins.
+        reset_body_entered = threading.Event()
+        # Retain thread-safe bounded outcomes for parent-thread assertions.
+        ordering_results = {}
+        # Retain unexpected thread failures without printing connector details.
+        ordering_errors = []
+
+        # Execute one action while retaining shared ownership of epoch two.
+        def execute_before_reset():
+            try:
+                # Define the held zero-cost action planner.
+                def ordering_planner(_snapshot):
+                    # Prove the action has passed claim and resource locking.
+                    ordering_planner_entered.set()
+                    # Wait only for the bounded reset-ordering assertion.
+                    if not release_ordering_planner.wait(5):
+                        # Surface deterministic local coordination failure.
+                        raise AssertionError("reset ordering did not release planner")
+                    # Return one exact state-only result.
+                    return GameActionPlan.create(outcome={"round_id": "reset-ordering_204"}, state_updates={"game_action:lifecycle_204": {"round_id": "reset-ordering_204", "status": "settled"}})
+                # Commit the action under the production schema-four transaction.
+                ordering_results["execute"] = provider.execute_game_action_once(identity=ordering_identity, resources=resources, planner=ordering_planner)
+            # Retain any failure for exact parent-thread handling.
+            except BaseException as exc:
+                # Store only the in-memory exception object.
+                ordering_errors.append(exc)
+
+        # Advance reset only after the prior action releases its shared epoch lock.
+        def reset_after_action():
+            try:
+                # Hold named-lock and resetting phase through same-session bootstrap.
+                with provider.reset_transaction() as reset_provider:
+                    # Signal that phase one acquired exclusive epoch ownership and committed.
+                    reset_body_entered.set()
+                    # Recreate the sole wallet in the new mutable namespace.
+                    reset_provider.ensure_player({"player_id": "lifecycle_204", "display_name": "Lifecycle 204", "type": "human", "balance": 10.0, "created_at": "2026-01-01T00:00:00+00:00", "updated_at": "2026-01-01T00:00:00+00:00", "status": "active"})
+            # Retain any reset failure for one secret-free assertion.
+            except BaseException as exc:
+                # Store only the in-memory exception object.
+                ordering_errors.append(exc)
+
+        # Start the action on one pool lease.
+        ordering_action_thread = threading.Thread(target=execute_before_reset)
+        # Launch the exact executor transaction.
+        ordering_action_thread.start()
+        # Require the action to retain shared epoch ownership in its planner.
+        assert ordering_planner_entered.wait(5)
+        # Start reset on the other pool lease.
+        ordering_reset_thread = threading.Thread(target=reset_after_action)
+        # Launch the exclusive reset contender.
+        ordering_reset_thread.start()
+        # Allow the reset to reach its exclusive singleton lock wait.
+        time.sleep(0.2)
+        # Require caller bootstrap not to begin before the action commits.
+        assert not reset_body_entered.is_set()
+        # Let the prior action commit claim, state, and receipt atomically.
+        release_ordering_planner.set()
+        # Join both bounded operations after lock ownership transfers.
+        ordering_action_thread.join(5)
+        # Join reset after phase two publishes ready.
+        ordering_reset_thread.join(5)
+        # Require exact action-before-reset order without hidden failure.
+        assert not ordering_action_thread.is_alive() and not ordering_reset_thread.is_alive() and ordering_errors == [] and reset_body_entered.is_set()
+        # Require the pre-reset action to have committed originally.
+        assert ordering_results["execute"][1] is False
+        # Resolve the retired exact key only in epoch three, never through its epoch-two receipt.
+        assert provider.resolve_game_action(identity=ordering_identity, resources=resources) == GameActionResolution(status="uncommitted")
+        # Build a capacity-one provider for the complete shipped Admin reset bootstrap chain.
+        bootstrap_provider = storage.MySQLStorageProvider(provider.config, pool_config=storage.MySQLPoolConfig(capacity=1, checkout_wait_ms=1000, connect_timeout_seconds=3))
+        # Route provider-aware auth and player helpers through only this disposable target.
+        storage.set_provider_for_tests(bootstrap_provider)
+        try:
+            # Require the live harness to exercise provider-aware JSON documents rather than local files.
+            assert storage.storage_provider_name() == "mysql"
+            # Hold one physical session across clear, actual bootstrap helpers, and ready finalization.
+            with bootstrap_provider.reset_transaction() as reset_provider:
+                # Recreate the exact default player set through the shipped provider-neutral wrapper.
+                storage.bootstrap_players(players.default_players)
+                # Run the real read-create-promote Admin bootstrap chain under the retained session.
+                bootstrapped_admin = auth.bootstrap_admin_from_env()
+                # Require the configured bootstrap identity to end with exact owner authority.
+                assert auth.PLATFORM_OWNER_ROLE in auth.roles_for_user(bootstrapped_admin)
+                # Read users again so a trailing implicit document transaction is sanitized too.
+                visible_users = auth.load_users().get("users", [])
+                # Require the created Admin identity to be durably visible inside reset bootstrap.
+                assert any(row.get("user_id") == bootstrapped_admin.get("user_id") for row in visible_users)
+                # Materialize the unchanged reset response player projection before ready release.
+                visible_players = players.list_players()
+                # Require all defaults plus the Admin-bound wallet without exposing identities.
+                assert len(visible_players) >= len(players.default_players()["players"])
+                # Borrow the retained session only to prove GET_LOCK survives nested close cleanup.
+                lock_evidence = reset_provider.connect()
+                # Always sanitize this final borrowed read without returning the sole lease.
+                try:
+                    # Open a dictionary cursor for secret-free lock ownership evidence.
+                    lock_cursor = lock_evidence.cursor(dictionary=True)
+                    # Read only the session owner identifier for the already-derived lock name.
+                    lock_cursor.execute("SELECT IS_USED_LOCK(%s) AS owner_id", (reset_provider._mysql_reset_lock_name(),))
+                    # Require one current session owner while bootstrap remains unavailable.
+                    assert lock_cursor.fetchone()["owner_id"] is not None
+                # End the implicit evidence transaction while preserving the named lock.
+                finally:
+                    # Exercise the borrowed rollback-without-close boundary under a real connector.
+                    lock_evidence.close()
+            # Open the only capacity-one lease again after reset returned it to the pool.
+            final_connection = bootstrap_provider.connect()
+            # Always return the final read-only evidence lease.
+            try:
+                # Read exact final epoch and released named-lock state.
+                final_cursor = final_connection.cursor(dictionary=True)
+                # Require a fourth ready namespace after the complete reset bootstrap.
+                final_cursor.execute("SELECT state_id, current_epoch, phase FROM casino_game_action_epoch_state")
+                # Bind exact successful phase completion.
+                assert final_cursor.fetchone() == {"state_id": 1, "current_epoch": 4, "phase": "ready"}
+                # Prove the reset session released its target-scoped lock before pool reuse.
+                final_cursor.execute("SELECT IS_FREE_LOCK(%s) AS is_free", (bootstrap_provider._mysql_reset_lock_name(),))
+                # Require exact server confirmation rather than process-local inference.
+                assert final_cursor.fetchone() == {"is_free": 1}
+                # End the final connector-owned read transaction explicitly.
+                final_connection.rollback()
+            # Return the sole physical session to its pool.
+            finally:
+                # Exercise ordinary pooled lease cleanup after reset finalization.
+                final_connection.close()
+            # Require capacity one, no checked-out lease, and exactly one reusable physical session.
+            pool_evidence = bootstrap_provider.pool_snapshot()
+            # Prove no reset/bootstrap connection leak or hidden capacity expansion.
+            assert (pool_evidence["capacity"], pool_evidence["in_use"], pool_evidence["idle"], pool_evidence["physical_created"]) == (1, 0, 1, 1)
+        # Restore the process-wide test provider on every assertion or connector failure.
+        finally:
+            # Clearing injection also closes the capacity-one provider's idle pool safely.
+            storage.set_provider_for_tests(None)
+    finally:
+        # Close every idle pooled disposable connection on success or failure.
+        provider.close_pool()
 
 
 # Run the complete MySQL 8.4 migration and DDL-free runtime matrix.
@@ -405,24 +854,24 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 # Seed the checksum-verified full chain solely for runtime compatibility proof.
                 migrations, _, _, _ = mysql_migrations.load_catalog()
                 # Apply the complete fixture prefix through existing private test seams.
-                _seed_catalog_prefix(base_connection, migrations, 3)
+                _seed_catalog_prefix(base_connection, migrations, 4)
                 # Inspect exact runtime state after fixture seeding.
                 final_state = mysql_migrations.verify_runtime_compatibility(base_connection)
-                # Require exact schema version three.
-                assert final_state.current_version == 3 and final_state.status == "clean"
+                # Require exact schema version four.
+                assert final_state.current_version == 4 and final_state.status == "clean"
                 # Require exact applied migration sequence.
-                assert [item[0] for item in final_state.applied] == [1, 2, 3]
-                # Open a fresh process-independent connector to model schema-three restart readiness.
-                restarted_three = _connector().connect(**base_config.kwargs())
-                # Always close the restarted schema-three connection.
+                assert [item[0] for item in final_state.applied] == [1, 2, 3, 4]
+                # Open a fresh process-independent connector to model schema-four restart readiness.
+                restarted_four = _connector().connect(**base_config.kwargs())
+                # Always close the restarted schema-four connection.
                 try:
                     # Require the complete chain to remain runtime compatible after reconnection.
-                    assert mysql_migrations.verify_runtime_compatibility(restarted_three).current_version == 3
+                    assert mysql_migrations.verify_runtime_compatibility(restarted_four).current_version == 4
                 # Release the restarted connection.
                 finally:
                     # Close all connector-owned state.
-                    restarted_three.close()
-                # Prove held apply remains closed even at the complete schema-three tail.
+                    restarted_four.close()
+                # Prove held apply remains closed even at the complete schema-four tail.
                 try:
                     # Attempt a no-proof application call at the full chain.
                     mysql_migrations.apply_migrations(base_connection, base_config, None)
@@ -444,7 +893,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
             upgrade_connection = _connector().connect(**upgrade_config.kwargs())
             # Start protected exact schema-two seeding and runner upgrade.
             try:
-                # Load the immutable three-step catalog.
+                # Load the immutable four-step catalog.
                 migrations, expected, _, _ = mysql_migrations.load_catalog()
                 # Create and validate proof before metadata DDL in test setup.
                 initial_proof = _proof(upgrade_connection, upgrade_config, proof_root, "upgrade-initial")
@@ -474,7 +923,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                     mysql_migrations._mark_complete(upgrade_connection, migration, migrations)
                 # Require the exact supported clean schema-two state.
                 version_two = mysql_migrations.inspect_schema(upgrade_connection, migrations)
-                # Prove only migration three remains pending.
+                # Prove migrations three and four remain pending.
                 assert version_two.current_version == 2 and version_two.status == "clean"
                 # Prove bridge runtime readiness accepts the exact immutable schema-two prefix.
                 assert mysql_migrations.verify_runtime_compatibility(upgrade_connection).current_version == 2
@@ -542,8 +991,34 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                     cursor.execute(statement)
                 # Complete the exact full-chain fixture state.
                 mysql_migrations._mark_complete(upgrade_connection, migrations[2], migrations)
-                # Require runtime readiness to accept the complete schema-three chain.
+                # Require runtime readiness to accept the clean schema-three prefix.
                 assert mysql_migrations.verify_runtime_compatibility(upgrade_connection).current_version == 3
+                # Build one exact legacy schema-three receipt before claim backfill.
+                legacy_resources = json.dumps({"state_keys": [], "wallet_ids": []}, sort_keys=True, separators=(",", ":"))
+                # Build one canonical self-consistent zero-cost legacy receipt.
+                legacy_receipt = json.dumps({"identity": {"action_key": "legacy_204", "game_id": "roulette", "player_id": "player_204", "request_fingerprint": "e" * 64}, "plan": {"movements": [], "outcome": {"legacy": True}, "state_updates": []}, "resources": {"state_keys": [], "wallet_ids": []}, "snapshot_after": {"state_values": [], "wallet_balances": []}, "snapshot_before": {"state_values": [], "wallet_balances": []}}, sort_keys=True, separators=(",", ":"))
+                # Hash the exact receipt bytes independently.
+                legacy_sha = hashlib.sha256(legacy_receipt.encode("utf-8")).hexdigest()
+                # Insert the representative legacy schema-three row.
+                cursor.execute("INSERT INTO casino_game_action_receipts (game_id, player_id, action_key, request_fingerprint, resources_json, receipt_json, receipt_sha256) VALUES (%s, %s, %s, %s, %s, %s, %s)", ("roulette", "player_204", "legacy_204", "e" * 64, legacy_resources, legacy_receipt, legacy_sha))
+                # Commit the legacy row before schema-four DDL backfill.
+                upgrade_connection.commit()
+                # Apply only migration four through the disposable fixture seam.
+                source_state = mysql_migrations.inspect_schema(upgrade_connection, migrations)
+                # Mark exact schema four applying for fixture setup.
+                mysql_migrations._mark_applying(upgrade_connection, source_state, migrations[3])
+                # Execute every checksum-verified schema-four statement.
+                for statement in migrations[3].statements:
+                    # Apply one exact driver statement in the disposable target.
+                    cursor.execute(statement)
+                # Complete the full schema-four fixture state.
+                mysql_migrations._mark_complete(upgrade_connection, migrations[3], migrations)
+                # Require runtime readiness to accept exact clean schema four.
+                assert mysql_migrations.verify_runtime_compatibility(upgrade_connection).current_version == 4
+                # Read the backfilled claim and unchanged receipt bytes.
+                cursor.execute("SELECT c.reset_epoch, r.reset_epoch, c.disposition, c.request_fingerprint, c.resources_json, r.claim_disposition, r.receipt_json, r.receipt_sha256 FROM casino_game_action_claims c JOIN casino_game_action_receipts r ON r.reset_epoch=c.reset_epoch AND r.game_id=c.game_id AND r.player_id=c.player_id AND r.action_key=c.action_key WHERE c.reset_epoch=1 AND c.game_id=%s AND c.player_id=%s AND c.action_key=%s", ("roulette", "player_204", "legacy_204"))
+                # Require exact execute backfill and byte-for-byte legacy receipt preservation.
+                assert tuple(str(value) for value in cursor.fetchone()) == ("1", "1", "execute", "e" * 64, legacy_resources, "execute", legacy_receipt, legacy_sha)
                 # Capture exact immutable rows for corruption/refusal cases.
                 applied_rows = [(item.version, item.name, item.checksum) for item in migrations]
                 # Corrupt one checksum in the disposable metadata.
@@ -583,7 +1058,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 # Restore exact version-one row.
                 cursor.execute("INSERT INTO casino_schema_migrations (version, name, checksum, applied_at) VALUES (1, %s, %s, %s)", (applied_rows[0][1], applied_rows[0][2], datetime.now(timezone.utc).isoformat()))
                 # Set an impossible future current version.
-                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 4 WHERE state_id = 1")
+                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 5 WHERE state_id = 1")
                 # Commit the future fixture.
                 upgrade_connection.commit()
                 # Require future refusal.
@@ -599,7 +1074,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                     # Surface the missing refusal.
                     raise AssertionError("future migration state was accepted")
                 # Restore current version and mark the next transition dirty.
-                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 3, status = 'dirty', applying_version = 4 WHERE state_id = 1")
+                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 4, status = 'dirty', applying_version = 5 WHERE state_id = 1")
                 # Commit the dirty fixture.
                 upgrade_connection.commit()
                 # Require runtime refusal of dirty state.
@@ -668,8 +1143,18 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 tamper_connection.close()
             # Grant runtime DML only after the base schema is fully migrated.
             admin_cursor = admin.cursor()
-            # Grant database-scoped runtime SELECT and DML without schema privileges.
-            admin_cursor.execute(f"GRANT SELECT, INSERT, UPDATE, DELETE ON `{base_database}`.* TO '{runtime_user}'@'%'")
+            # Grant database-scoped read rights needed by runtime compatibility and current locking reads.
+            admin_cursor.execute(f"GRANT SELECT ON `{base_database}`.* TO '{runtime_user}'@'%'")
+            # Grant compatible insertion, update, and delete only to established mutable runtime tables.
+            for table in ("casino_players", "casino_ledger", "casino_history", "casino_documents"):
+                # Preserve ordinary runtime DML while excluding lifecycle history and control rows.
+                admin_cursor.execute(f"GRANT INSERT, UPDATE, DELETE ON `{base_database}`.`{table}` TO '{runtime_user}'@'%'")
+            # Permit append-only lifecycle ownership without update or delete authority.
+            for table in ("casino_game_action_claims", "casino_game_action_receipts"):
+                # Grant only the insert operation required for immutable action history.
+                admin_cursor.execute(f"GRANT INSERT ON `{base_database}`.`{table}` TO '{runtime_user}'@'%'")
+            # Permit exact compare-and-set reset phase transitions on the singleton only.
+            admin_cursor.execute(f"GRANT UPDATE ON `{base_database}`.`casino_game_action_epoch_state` TO '{runtime_user}'@'%'")
             # Commit the least-privilege grant.
             admin.commit()
             # Open a runtime-identity connection for compatibility and denial evidence.
@@ -677,19 +1162,52 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
             # Start protected runtime grant tests.
             try:
                 # Prove runtime startup compatibility with SELECT only.
-                assert mysql_migrations.verify_runtime_compatibility(runtime_connection).current_version == 3
+                assert mysql_migrations.verify_runtime_compatibility(runtime_connection).current_version == 4
                 # Read actual grants through the runtime identity.
                 runtime_cursor = runtime_connection.cursor()
                 # Query current-user grants without administrator credentials.
                 runtime_cursor.execute("SHOW GRANTS FOR CURRENT_USER()")
                 # Normalize grant text only in memory.
                 grants = "\n".join(str(row[0]).upper() for row in runtime_cursor.fetchall())
-                # Require the four approved DML privileges.
+                # Require the four approved DML privilege words across scoped grants.
                 assert all(privilege in grants for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE"))
                 # Require no schema or grant-management privilege.
                 assert all(privilege not in grants for privilege in ("CREATE", "ALTER", "DROP", "INDEX", "TRIGGER", "GRANT OPTION"))
                 # Prove paid/zero-cost insertion, duplicate refusal, and exact persistence.
                 _exercise_game_action_receipts(runtime_connection)
+                # Prove the production lifecycle provider converges all relational projections.
+                _exercise_game_action_provider()
+                # Enumerate forbidden mutation against the two immutable lifecycle tables.
+                immutable_denials = (
+                    # Refuse claim disposition mutation.
+                    "UPDATE casino_game_action_claims SET disposition='execute' WHERE action_key='uncommitted_204'",
+                    # Refuse claim deletion.
+                    "DELETE FROM casino_game_action_claims WHERE action_key='uncommitted_204'",
+                    # Refuse receipt mutation.
+                    "UPDATE casino_game_action_receipts SET receipt_sha256=receipt_sha256 WHERE action_key='paid_204'",
+                    # Refuse receipt deletion.
+                    "DELETE FROM casino_game_action_receipts WHERE action_key='paid_204'",
+                    # Refuse creation of another reset namespace row.
+                    "INSERT INTO casino_game_action_epoch_state (state_id, current_epoch, phase) VALUES (2, 1, 'ready')",
+                    # Refuse deletion of the singleton reset namespace.
+                    "DELETE FROM casino_game_action_epoch_state WHERE state_id=1",
+                )
+                # Require runtime grants to enforce append-only lifecycle rows.
+                for statement in immutable_denials:
+                    # Execute one expected table-level privilege denial.
+                    try:
+                        # Attempt mutation as the runtime identity.
+                        runtime_cursor.execute(statement)
+                    # Accept only connector database errors.
+                    except _connector().Error as exc:
+                        # Require a table-level command denial.
+                        assert int(getattr(exc, "errno", 0) or 0) == 1142
+                        # Clear statement transaction state.
+                        runtime_connection.rollback()
+                    # Fail if immutable lifecycle history was mutable.
+                    else:
+                        # Surface one fixed privilege category.
+                        raise AssertionError("runtime lifecycle-row mutation was permitted")
                 # Enumerate actual forbidden schema and grant-management attempts.
                 generic_denials = frozenset({1044, 1045, 1142, 1227})
                 denied_statements = (
