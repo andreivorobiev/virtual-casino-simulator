@@ -10,6 +10,8 @@ import json
 import os
 # Import portable paths for exact checkout and external logs.
 import pathlib
+# Import regular expressions for recursive credential-name rejection in native read envelopes.
+import re
 # Import interpreter path control for exact checkout module resolution.
 import sys
 # Import immutable-record replacement for one focused application-limiter policy.
@@ -29,6 +31,8 @@ from casino.core import rate_settings
 
 # Preserve the synthetic exact origin supplied by the parent test.
 ORIGIN = os.environ["CASINO_CANONICAL_ORIGIN"]
+# Preserve the exact Android Capacitor origin enabled by the parent test. (SEC-016)
+MOBILE_ORIGIN = "https://localhost"
 # Preserve only its public authority for the required Host header.
 AUTHORITY = ORIGIN.removeprefix("https://")
 # Define one synthetic marker that must never enter application logs.
@@ -110,6 +114,26 @@ def decoded(response):
 def header_values(response, name):
     # Filter case-insensitively while preserving header order.
     return [value for header, value in response["headers"] if header.lower() == name.lower()]
+
+
+# Build exact OS-owned native headers without cookies or browser bootstrap state. (AUTH-019, SEC-016)
+def native_headers(token=None, csrf=None, origin=MOBILE_ORIGIN, guest_nonce=None):
+    # Start with the exact native marker and configured Capacitor origin.
+    headers = {"Origin": origin, "X-Casino-Mobile-Client": "1"}
+    # Add one OS-vault bearer only when the caller supplies it.
+    if token:
+        # Keep the disposable bearer inside this request mapping.
+        headers["Authorization"] = f"Bearer {token}"
+    # Add the matching OS-vault CSRF proof only when supplied.
+    if csrf:
+        # Keep the distinct session proof inside this request mapping.
+        headers["X-CSRF-Token"] = csrf
+    # Add the matching guest-browser proof only for a guest-owned lifecycle request.
+    if guest_nonce:
+        # Keep the disposable nonce inside this request mapping.
+        headers["X-Guest-Browser-Nonce"] = guest_nonce
+    # Return the complete credential-free-or-vault-owned header set.
+    return headers
 
 
 # Extract one named cookie value from ordered Set-Cookie response headers.
@@ -224,6 +248,92 @@ assert old_session["status"] == "200 OK"
 current = request("GET", "/api/v2/me", headers={"Authorization": f"Bearer {admin_token}"})
 # Require the expected synthetic identity without client metadata.
 assert current["status"] == "200 OK" and "client" not in decoded(current)["data"]["session"] and "token" not in decoded(current)["data"]["session"] and decoded(current)["data"]["session"]["csrf_token"] == admin_csrf
+
+# Reject even an exact-marker WebView preflight because native OS networking requires no CORS. (SEC-016)
+native_preflight = request("OPTIONS", "/api/v2/auth/mobile/session/rotate", headers={"Origin": MOBILE_ORIGIN, "X-Casino-Mobile-Client": "1", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization, content-type, x-csrf-token, x-casino-mobile-client"})
+# Require a fixed denial with no browser-readable origin or credential authority.
+assert native_preflight["status"] == "403 Forbidden" and not header_values(native_preflight, "Access-Control-Allow-Origin") and not header_values(native_preflight, "Access-Control-Allow-Credentials")
+# Reject a missing marker, foreign origin, wildcard header, and unknown header through the same no-CORS boundary.
+for hostile_headers in ({"Origin": MOBILE_ORIGIN, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"}, {"Origin": "https://foreign.example.invalid", "X-Casino-Mobile-Client": "1", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"}, {"Origin": MOBILE_ORIGIN, "X-Casino-Mobile-Client": "1", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "*"}, {"Origin": MOBILE_ORIGIN, "X-Casino-Mobile-Client": "1", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "x-unreviewed"}):
+    # Send the hostile preflight without any application mutation.
+    rejected_preflight = request("OPTIONS", "/api/v2/auth/mobile/session/rotate", headers=hostile_headers)
+    # Require no successful CORS authority or credential header.
+    assert rejected_preflight["status"] == "403 Forbidden" and not header_values(rejected_preflight, "Access-Control-Allow-Origin") and not header_values(rejected_preflight, "Access-Control-Allow-Credentials")
+
+# Create a dedicated session through the primary native login path without cookie/bootstrap-CSRF authority.
+native_seed_login = request("POST", "/api/v2/auth/login", {"email": "preview-admin@example.invalid", "password": "synthetic-preview-password"}, native_headers())
+# Require no browser-readable CORS, no browser cookie, and the complete native credential pair.
+assert native_seed_login["status"] == "200 OK" and not header_values(native_seed_login, "Access-Control-Allow-Origin") and not header_values(native_seed_login, "Set-Cookie")
+# Retain the disposable predecessor only inside the child process.
+native_seed = decoded(native_seed_login)["data"]["session"]
+# Require the OS bridge's documented issuance wire contract before it strips secrets from JavaScript.
+assert native_seed["token"] and native_seed["csrf_token"] and native_seed["generation"] >= 1 and native_seed["token"] != native_seed["csrf_token"]
+# Reject a native protected read without an OS-vault bearer.
+native_without_bearer = request("GET", "/api/v2/auth/mobile/session", headers=native_headers())
+# Require the generic unauthorized boundary with no CORS or cookies.
+assert native_without_bearer["status"] == "401 Unauthorized" and not header_values(native_without_bearer, "Access-Control-Allow-Origin") and not header_values(native_without_bearer, "Set-Cookie")
+# Read both current-user compatibility routes through exact native bearer authority before rotation.
+for native_current_path in ("/api/v2/me", "/api/v2/auth/session"):
+    # Request the ordinary secret-free payload through direct OS-network classification.
+    native_current = request("GET", native_current_path, headers=native_headers(native_seed["token"]))
+    # Parse the response only after exact transport success.
+    native_current_data = decoded(native_current)["data"] if native_current["status"] == "200 OK" else {}
+    # Require no issuance or guest credential field in either ordinary read envelope.
+    assert native_current["status"] == "200 OK" and native_current_data.get("session") and not re.search(rb'"(?:token|csrf_token|guest_browser_nonce)"', native_current["body"])
+# Reject cookie authority even when a valid bearer and CSRF proof are also present.
+native_with_cookie = request("GET", "/api/v2/auth/mobile/session", headers={**native_headers(native_seed["token"]), "Cookie": f"casino_session={native_seed['token']}"})
+# Require cookie/native authority confusion to fail before route dispatch.
+assert native_with_cookie["status"] == "403 Forbidden"
+# Reject rotation without the matching session CSRF.
+native_missing_csrf = request("POST", "/api/v2/auth/mobile/session/rotate", {"expected_generation": native_seed["generation"]}, native_headers(native_seed["token"]))
+# Require the fixed integrity rejection without rotating the predecessor.
+assert native_missing_csrf["status"] == "403 Forbidden"
+# Rotate through the exact native bearer, CSRF, marker, and Origin boundary.
+native_rotated = request("POST", "/api/v2/auth/mobile/session/rotate", {"expected_generation": native_seed["generation"]}, native_headers(native_seed["token"], native_seed["csrf_token"]))
+# Require native issuance wire fields with no CORS, cookies, or credentials wildcard.
+assert native_rotated["status"] == "200 OK" and not header_values(native_rotated, "Access-Control-Allow-Origin") and not header_values(native_rotated, "Access-Control-Allow-Credentials") and not header_values(native_rotated, "Set-Cookie")
+# Retain only the disposable successor for stale/lost-response/revoke evidence.
+native_successor = decoded(native_rotated)["data"]["session"]
+# Require one atomic server generation and distinct bearer/CSRF pair.
+assert native_successor["generation"] == native_seed["generation"] + 1 and native_successor["token"] != native_seed["token"] and native_successor["csrf_token"] != native_seed["csrf_token"]
+# Model a lost rotation response by retrying the predecessor, which must never leave two reusable credentials.
+native_lost_response_retry = request("POST", "/api/v2/auth/mobile/session/rotate", {"expected_generation": native_seed["generation"]}, native_headers(native_seed["token"], native_seed["csrf_token"]))
+# Require forced reauthentication rather than duplicate issuance or replay.
+assert native_lost_response_retry["status"] == "401 Unauthorized"
+# Revoke the successor through the matching bearer/CSRF boundary.
+native_revoked = request("POST", "/api/v2/auth/mobile/session/revoke", {}, native_headers(native_successor["token"], native_successor["csrf_token"]))
+# Require one cookie-free terminal revocation.
+assert native_revoked["status"] == "200 OK" and decoded(native_revoked)["data"] == {"revoked": True} and not header_values(native_revoked, "Set-Cookie")
+# Prove the revoked successor cannot probe or replay.
+native_after_revoke = request("GET", "/api/v2/auth/mobile/session", headers=native_headers(native_successor["token"]))
+# Require the same generic unauthorized boundary.
+assert native_after_revoke["status"] == "401 Unauthorized"
+
+# Reject browser-CSRF bootstrap when requested through the native no-cookie authority.
+native_csrf_bootstrap = request("GET", "/api/v2/auth/csrf", headers=native_headers())
+# Require a fixed forbidden result with no CORS or Set-Cookie emission.
+assert native_csrf_bootstrap["status"] == "403 Forbidden" and not header_values(native_csrf_bootstrap, "Access-Control-Allow-Origin") and not header_values(native_csrf_bootstrap, "Set-Cookie")
+
+# Create one native guest session without browser cookies or bootstrap CSRF authority.
+native_guest_started = request("POST", "/api/v2/auth/guest", {"accepted": True, "terms_version": "private-beta-1", "locale": "en-US", "device": "mobile"}, native_headers())
+# Require the issuance-only guest credential pair and nonce with no Set-Cookie authority.
+assert native_guest_started["status"] == "200 OK" and not header_values(native_guest_started, "Set-Cookie") and not header_values(native_guest_started, "Access-Control-Allow-Origin")
+# Retain the disposable guest wire material only inside this isolated child process.
+native_guest = decoded(native_guest_started)["data"]
+# Require the native guest issuance envelope to carry all OS-vault and guest-integrity inputs.
+assert native_guest["session"]["token"] and native_guest["session"]["csrf_token"] and native_guest["guest_browser_nonce"]
+# End the guest with exact bearer, CSRF, nonce, native marker, and configured Origin.
+native_guest_end = request("POST", "/api/v2/auth/guest/end", {}, native_headers(native_guest["session"]["token"], native_guest["session"]["csrf_token"], guest_nonce=native_guest["guest_browser_nonce"]))
+# Require cookie-free terminal success so the native bridge can atomically clear its vault.
+assert native_guest_end["status"] == "200 OK" and decoded(native_guest_end)["data"] == {"ended": True} and not header_values(native_guest_end, "Set-Cookie")
+# Prove the ended bearer cannot revalidate after terminal OS-vault clear semantics.
+native_guest_after_end = request("GET", "/api/v2/auth/mobile/session", headers=native_headers(native_guest["session"]["token"]))
+# Require the fixed unauthorized result with no cookie residue.
+assert native_guest_after_end["status"] == "401 Unauthorized" and not header_values(native_guest_after_end, "Set-Cookie")
+# Preserve browser cookie authentication and omit native CORS from ordinary same-origin current-user reads.
+browser_cookie_regression = request("GET", "/api/v2/me", headers={"Cookie": f"casino_session={admin_token}", "Origin": ORIGIN})
+# Require unchanged browser authority and no reflected Capacitor CORS metadata.
+assert browser_cookie_regression["status"] == "200 OK" and not header_values(browser_cookie_regression, "Access-Control-Allow-Origin")
 
 # Reject a protected mutation when Origin is absent.
 no_origin = request("POST", "/api/v2/me/tokens/add", {"amount": 1}, {"Authorization": f"Bearer {admin_token}", "X-CSRF-Token": admin_csrf})
@@ -369,7 +479,7 @@ log_root = pathlib.Path(os.environ["CASINO_LOG_DIR"])
 # Join all log text for one fail-closed sentinel scan.
 log_text = "\n".join(path.read_text(encoding="utf-8", errors="replace") for path in log_root.rglob("*") if path.is_file())
 # Require no supplied path, query, header, cookie, Origin, body, bearer, or CSRF value in logs.
-assert SENTINEL not in log_text and admin_token not in log_text and admin_csrf not in log_text and bootstrap_csrf not in log_text
+assert SENTINEL not in log_text and admin_token not in log_text and admin_csrf not in log_text and bootstrap_csrf not in log_text and native_seed["token"] not in log_text and native_successor["token"] not in log_text and native_successor["csrf_token"] not in log_text
 
 # Logout through exact Origin and session CSRF proof.
 logout = request("POST", "/api/v2/auth/logout", {}, mutation_headers(admin_csrf, admin_token))

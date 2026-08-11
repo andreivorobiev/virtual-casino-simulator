@@ -34,8 +34,10 @@ await rm(outputRoot, { recursive: true, force: true });
 await mkdir(outputRoot, { recursive: true });
 // Copy the unchanged shared browser product into the native-only staging directory.
 await cp(path.join(repositoryRoot, "web"), outputRoot, { recursive: true });
-// Bundle native-only plugin imports from a scoped working directory for portable Windows resolution.
-await build({ absWorkingDir: mobileRoot, entryPoints: ["./runtime/mobile-runtime.js"], outfile: "dist/mobile-runtime.js", bundle: true, format: "esm", platform: "browser", target: ["safari17", "chrome120"], sourcemap: false, logLevel: "warning" });
+// Read the owned entry point explicitly so Windows worktree paths never enter package-style resolution.
+const mobileRuntimeSource = await readFile(path.join(mobileRoot, "runtime", "mobile-runtime.js"), "utf8");
+// Bundle native-only plugin imports from the exact runtime resolve directory for portable host behavior.
+await build({ stdin: { contents: mobileRuntimeSource, resolveDir: path.join(mobileRoot, "runtime"), sourcefile: "mobile-runtime.js" }, outfile: path.join(outputRoot, "mobile-runtime.js"), bundle: true, format: "esm", platform: "browser", target: ["safari17", "chrome120"], sourcemap: false, logLevel: "warning" });
 // Copy native-only safe-area, keyboard, and status styling beside the bundled runtime.
 await cp(path.join(mobileRoot, "runtime", "mobile-runtime.css"), path.join(outputRoot, "mobile-runtime.css"));
 // Write only normalized public values into the generated environment configuration.

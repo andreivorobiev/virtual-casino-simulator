@@ -132,6 +132,10 @@
   "mississippi_stud": [
     "contracts/openapi/mississippi_stud.v1.yaml"
   ],
+  "mobile": [
+    "contracts/compatibility/mobile-client-security.json",
+    "contracts/openapi/auth.v2.yaml"
+  ],
   "multi_hand_video_poker": [
     "contracts/openapi/multi_hand_video_poker.v1.yaml"
   ],

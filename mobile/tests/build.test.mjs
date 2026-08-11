@@ -8,6 +8,8 @@ import path from "node:path";
 import test from "node:test";
 // Import URL conversion for stable test paths on Windows and Unix hosts.
 import { fileURLToPath } from "node:url";
+// Import the pure generated-path normalizer so Windows and Linux fixtures exercise identical bytes.
+import { normalizeCapacitorPackageText } from "../scripts/normalize-capacitor-sync.mjs";
 
 // Resolve the mobile workspace independently of the caller's current directory.
 const mobileRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -51,13 +53,13 @@ test("native project metadata matches the mobile foundation", async () => {
   // Read Android application metadata from the committed generated project.
   const androidBuild = await readFile(path.join(mobileRoot, "android", "app", "build.gradle"), "utf8");
   // Confirm Android carries the same semantic version as the mobile package.
-  assert.match(androidBuild, /versionName "0\.1\.0"/);
+  assert.match(androidBuild, /versionName "0\.2\.0"/);
   // Confirm Android carries the stable application identifier from Capacitor configuration.
   assert.match(androidBuild, /applicationId "io\.github\.andreivorobiev\.virtualcasino"/);
   // Read iOS project metadata from the committed generated Xcode project.
   const iosProject = await readFile(path.join(mobileRoot, "ios", "App", "App.xcodeproj", "project.pbxproj"), "utf8");
   // Confirm iOS carries the same semantic version as the mobile package.
-  assert.match(iosProject, /MARKETING_VERSION = 0\.1\.0;/);
+  assert.match(iosProject, /MARKETING_VERSION = 0\.2\.0;/);
   // Confirm iOS carries the stable application identifier from Capacitor configuration.
   assert.match(iosProject, /PRODUCT_BUNDLE_IDENTIFIER = io\.github\.andreivorobiev\.virtualcasino;/);
 });
@@ -74,4 +76,41 @@ test("Android cleartext and backup settings are build scoped", async () => {
   const debugManifest = await readFile(path.join(mobileRoot, "android", "app", "src", "debug", "AndroidManifest.xml"), "utf8");
   // Confirm cleartext transport is enabled only in the debug source set.
   assert.match(debugManifest, /android:usesCleartextTraffic="true"/);
+  // Require debug cleartext to pass through one explicit loopback-only policy.
+  assert.match(debugManifest, /android:networkSecurityConfig="@xml\/network_security_config"/);
+  // Read the exact debug-only network security source.
+  const debugNetworkPolicy = await readFile(path.join(mobileRoot, "android", "app", "src", "debug", "res", "xml", "network_security_config.xml"), "utf8");
+  // Reject a permissive base policy and require only emulator/loopback domains.
+  assert.match(debugNetworkPolicy, /base-config cleartextTrafficPermitted="false"/);
+  // Require all and only the three reviewed local authorities.
+  assert.deepEqual([...debugNetworkPolicy.matchAll(/<domain includeSubdomains="false">([^<]+)<\/domain>/g)].map(match => match[1]), ["localhost", "127.0.0.1", "10.0.2.2"]);
+});
+
+// Verify Capacitor's Windows and Unix Swift package output converges to one governed representation. (TEST-172)
+test("Capacitor Swift package paths normalize across hosts", () => {
+  // Build all exact declarations once with portable separators for the canonical oracle.
+  const portableEntries = [
+    // Model the App plugin's PNPM virtual-store path.
+    '.package(name: "CapacitorApp", path: "../../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.4.2/node_modules/@capacitor/app"),',
+    // Model the Browser plugin's PNPM virtual-store path.
+    '.package(name: "CapacitorBrowser", path: "../../../node_modules/.pnpm/@capacitor+browser@8.0.3_@capacitor+core@8.4.2/node_modules/@capacitor/browser"),',
+    // Model the Keyboard plugin's PNPM virtual-store path.
+    '.package(name: "CapacitorKeyboard", path: "../../../node_modules/.pnpm/@capacitor+keyboard@8.0.5_@capacitor+core@8.4.2/node_modules/@capacitor/keyboard"),',
+    // Model the Network plugin's PNPM virtual-store path.
+    '.package(name: "CapacitorNetwork", path: "../../../node_modules/.pnpm/@capacitor+network@8.0.1_@capacitor+core@8.4.2/node_modules/@capacitor/network")',
+  ].join("\n");
+  // Convert only the local path values to the exact form emitted by Capacitor on Windows.
+  const windowsEntries = portableEntries.replaceAll("../../../node_modules/", "..\\..\\..\\node_modules\\").replaceAll("/.pnpm/", "\\.pnpm\\").replaceAll("/node_modules/@capacitor/", "\\node_modules\\@capacitor\\");
+  // Require Windows generation to converge byte-for-byte with the portable committed form.
+  assert.equal(normalizeCapacitorPackageText(windowsEntries), portableEntries);
+  // Require Linux generation to remain unchanged rather than accumulating formatter drift.
+  assert.equal(normalizeCapacitorPackageText(portableEntries), portableEntries);
+  // Reject a generated entry that escapes the exact mobile node_modules virtual store.
+  assert.throws(() => normalizeCapacitorPackageText(portableEntries.replace("../../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.4.2/", "../../../node_modules/.pnpm/./")), /exact governed virtual-store entry/);
+  // Reject a parent-directory virtual-store segment that could escape the PNPM package root.
+  assert.throws(() => normalizeCapacitorPackageText(portableEntries.replace("../../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.4.2/", "../../../node_modules/.pnpm/../")), /exact governed virtual-store entry/);
+  // Reject a syntactically bounded but foreign virtual-store package directory.
+  assert.throws(() => normalizeCapacitorPackageText(portableEntries.replace("@capacitor+app@8.1.0_@capacitor+core@8.4.2", "foreign@0.0.0")), /exact governed virtual-store entry/);
+  // Reject a partial generated inventory instead of silently committing an incomplete sync.
+  assert.throws(() => normalizeCapacitorPackageText(portableEntries.split("\n").slice(0, 3).join("\n")), /missing governed Capacitor package entries/);
 });

@@ -2,5 +2,5 @@
 <!-- Debug-only cleartext support is limited to explicitly validated local-development builds. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Release builds inherit the secure platform default because this override exists only in src/debug. -->
-    <application android:usesCleartextTraffic="true" />
+    <application android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml/network_security_config" />
 </manifest>

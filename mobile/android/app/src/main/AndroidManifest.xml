@@ -22,6 +22,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Accept only OS-verified HTTPS account links for the restricted-preview origin. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="casino.tiltseven.com" android:pathPrefix="/enroll/" />
+                <data android:scheme="https" android:host="casino.tiltseven.com" android:pathPrefix="/account/reset" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -35,7 +44,6 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
-
+    <!-- Permit only ordinary HTTPS networking; release cleartext remains disabled. -->
     <uses-permission android:name="android.permission.INTERNET" />
 </manifest>

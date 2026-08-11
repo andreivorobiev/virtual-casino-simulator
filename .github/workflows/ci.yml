@@ -99,3 +99,16 @@ jobs:
       - name: Frontend module suites
         run: |
           node --test "tests/games/**/test_frontend.mjs" "tests/unit/*.test.mjs" "tests/security/test_browser_api.mjs" "casino/games/**/tests/*.mjs"
+          # Exercise the pure injectable native transport, lifecycle, config, and deep-link suites without platform SDKs. (TEST-172)
+          node --test "mobile/tests/*.test.mjs"
+      # Pin the declared package manager independently from the runner's changing Corepack bundle. (issue #183, TEST-172)
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+      # Prove the checked native projects remain reproducibly synchronized. (issue #183, TEST-172)
+      - name: Mobile deterministic build and sync
+        run: |
+          pnpm --dir mobile install --frozen-lockfile
+          pnpm --dir mobile run check
+          git diff --exit-code -- mobile/android mobile/ios

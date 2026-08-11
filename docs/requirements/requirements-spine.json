@@ -10715,6 +10715,116 @@
       "introduced_in": "issue-69-verified-email-enrollment",
       "changed_in": "issue-69-verified-email-enrollment",
       "notes": "All mailbox, password, token, provider, and digest values are synthetic and isolated; no live mail, provider, DNS, public enablement, or production mutation is performed."
+    },
+    {
+      "id": "CORE-032",
+      "module": "Application",
+      "description": "The shared browser and PWA keep their existing cookie-bound API transport unchanged, while the signed mobile runtime injects one Request-correct scoped API transport instead of replacing global fetch. Native requests preserve methods, public allowlisted headers, bodies, paths, query strings, response envelopes, and caller consumption semantics; reject foreign authorities, cookies, JavaScript bearer or CSRF fields, redirects, malformed responses, and cached transport; and never automatically retry money or other mutations.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MOBILE-CORE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/core/api.js",
+        "mobile/runtime/transport.js",
+        "mobile/runtime/mobile-runtime.js",
+        "mobile/android/app/src/main/java/io/github/andreivorobiev/virtualcasino/CasinoSecureTransportPlugin.java",
+        "mobile/ios/App/App/CasinoSecureTransportPlugin.swift"
+      ],
+      "introduced_in": "issue-183-mobile-core-security",
+      "changed_in": "issue-183-mobile-core-security",
+      "notes": "The mobile package version is 0.2.0 while its first independently governed repository module descriptor is 1.0.0. Signed-device evidence remains in issues #184, #185, and #195."
+    },
+    {
+      "id": "AUTH-019",
+      "module": "Core",
+      "description": "Enabled native clients authenticate only with an opaque OS-vault bearer and matching per-session CSRF proof; native requests reject Cookie authority, and JavaScript never receives bearer, CSRF, or guest-browser proof fields. The additive v2 native session probe returns only bounded status, generation, issue, and expiry metadata. Account switching revokes and verifies the predecessor before vault clear and new login, while login, current-user, probe, rotate, and guest envelopes are recursively checked for secret residue before shared JavaScript receives them.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MOBILE-CORE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/app.py",
+        "casino/wsgi.py",
+        "mobile/runtime/transport.js",
+        "mobile/android/app/src/main/java/io/github/andreivorobiev/virtualcasino/CasinoSecureTransportPlugin.java",
+        "mobile/ios/App/App/CasinoSecureTransportPlugin.swift",
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "issue-183-mobile-core-security",
+      "changed_in": "issue-183-mobile-core-security",
+      "notes": "Android uses a Keystore-encrypted record and iOS uses a this-device-only non-synchronizing Keychain record; no web bundle, log, URL, or persistent JavaScript store owns session credentials."
+    },
+    {
+      "id": "SEC-016",
+      "module": "Core",
+      "description": "Native API access is disabled unless production explicitly configures the exact generated Capacitor origins as direct OS-network request classifiers and pins the exact canonical backend authority. Browser CORS remains disabled: every API preflight is rejected and native responses emit no Access-Control-Allow-Origin or credential permission. Production also rejects cleartext, unknown origins, unknown configuration fields, redirect-following, and arbitrary request headers. Verified app links accept only the owned HTTPS host and exact enrollment or recovery routes, strip password-reset and enrollment bearers from WebView history immediately into module-only memory across rerenders, and reject relative, malformed, duplicate, unknown-field, fragment, route, authority, and bounded replay violations through digest-only native claims.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MOBILE-CORE-001"
+      ],
+      "browser_tests": [
+        "BR-AUTH-LOGIN-001"
+      ],
+      "implementation_files": [
+        "casino/core/security.py",
+        "casino/wsgi.py",
+        "mobile/runtime/config.js",
+        "mobile/runtime/deep-links.js",
+        "web/app.js",
+        "mobile/android/app/src/main/AndroidManifest.xml",
+        "mobile/ios/App/App/App.entitlements"
+      ],
+      "introduced_in": "issue-183-mobile-core-security",
+      "changed_in": "issue-183-mobile-core-security",
+      "notes": "The checked Android debug network policy permits only localhost, 127.0.0.1, and 10.0.2.2; every committed runtime configuration still requires an HTTPS backend."
+    },
+    {
+      "id": "SESSION-013",
+      "module": "Core",
+      "description": "Native session rotation replaces the server bearer and CSRF pair atomically under one session generation so a lost response cannot leave two reusable credentials. A separate monotonically increasing local vault generation advances on every credential issue, replacement, clear, and 401 invalidation and never takes a server-authored value, preventing account-switch ABA. Background, reconnect, foreground, clock rollback, process restore, account switch, and connectivity changes block new mutations until native session probe and authoritative PWA refresh succeed; in-flight work is account, session, and vault-generation bound and stale completions cannot repaint or retry.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MOBILE-CORE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/auth.py",
+        "casino/app.py",
+        "mobile/runtime/transport.js",
+        "mobile/runtime/mobile-runtime.js",
+        "mobile/android/app/src/main/java/io/github/andreivorobiev/virtualcasino/CasinoSecureTransportPlugin.java",
+        "mobile/ios/App/App/CasinoSecureTransportPlugin.swift"
+      ],
+      "introduced_in": "issue-183-mobile-core-security",
+      "changed_in": "issue-183-mobile-core-security",
+      "notes": "No mutation is queued or automatically retried; foreground and reconnect reopen controls only after both OS-vault probe and current authoritative application refresh."
+    },
+    {
+      "id": "TEST-172",
+      "module": "Tests",
+      "description": "Provider-free Node, Python, API, contract, and source-conformance evidence proves Request semantics, native/public header separation, secret-free recursive envelopes, strict origin and configuration rejection, verified-link parsing and replay, password-reset bearer survival across browser and native rerenders, atomic one-winner rotation, monotonically advancing vault generations without account-switch ABA, stale completion rejection, foreground and reconnect refresh, Android Keystore and iOS Keychain source policy, exact native module ownership, and unchanged browser/PWA fallback. Native SDK, signed-device, store, and live-link evidence are explicitly not claimed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MOBILE-CORE-001"
+      ],
+      "browser_tests": [
+        "BR-AUTH-LOGIN-001"
+      ],
+      "implementation_files": [
+        "tests/mobile_core_security_tests.py",
+        "tests/unit/mobile_transient_bearer.test.mjs",
+        "mobile/tests/transport.test.mjs",
+        "mobile/tests/deep-links.test.mjs",
+        "tests/run_tests.py",
+        ".github/workflows/ci.yml",
+        "contracts/compatibility/mobile-client-security.json"
+      ],
+      "introduced_in": "issue-183-mobile-core-security",
+      "changed_in": "issue-183-mobile-core-security",
+      "notes": "All credentials, origins, users, sessions, and lifecycle events in host-runnable tests are synthetic. Device and distribution evidence remains separately governed by issues #184, #185, and #195."
     }
   ]
 }

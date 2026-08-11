@@ -1,0 +1,19 @@
+{
+  "module": "mobile",
+  "version": "1.0.0",
+  "paths": [
+    "mobile/"
+  ],
+  "requirements_prefixes": [],
+  "contracts": [
+    "contracts/compatibility/mobile-client-security.json",
+    "contracts/openapi/auth.v2.yaml"
+  ],
+  "depends_on": [
+    "application",
+    "core",
+    "contracts"
+  ],
+  "package_version": "0.2.0",
+  "evidence_status": "core-transport-session-source-complete-oauth-and-signed-device-pending"
+}

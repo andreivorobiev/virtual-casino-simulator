@@ -6,8 +6,9 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.63.1
-- core: 9.41.0
+- application: 9.64.0
+- core: 9.42.0
+- mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.2
 - bots: 1.1.1
@@ -50,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.78.1
-- docs: 1.75.1
-- contracts: 1.60.1
-- tooling: 1.29.2
+- tests: 1.79.0
+- docs: 1.76.0
+- contracts: 1.61.0
+- tooling: 1.30.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
@@ -635,6 +636,11 @@ Historical source baseline: 9.1.0
 - **AUTH-018** (Core) - PASS: Policy-enabled first-party email signup persists only recoverable pending credentials and a purpose-bound verification delivery before confirmation: no canonical user, player, balance, or session exists. Verification consumes the current bearer under caller idempotency, reserves mailbox uniqueness, provisions an inactive local identity, creates a zero-balance inactive wallet, credits the configured starting balance through one deterministic ledger.credit_once action, then activates wallet and user without creating a session. Exact-key retries recover every post-consumption phase; resend preserves the predecessor while a non-consumable candidate is delivered and promotes it atomically only after a sent receipt; durable generation phases recover worker crashes; cancellation requires the exact active delivered bearer, charges distinct malformed/wrong/stale/absent/cross-recipient probes, rechecks current token and generation, revokes current and candidate work without resurrection, and replays an exact completed action after revocation; completion and cancellation atomically scrub raw pending recipient, credential-verifier, and profile fields; bounded terminal retention prunes only expired scrubbed metadata; independent durable initiate, resend, verify, and cancel limits charge distinct attempts after exact replay classification; all public lookup failures remain non-enumerating and public signup remains disabled by default.
 - **USER-010** (Application) - PASS: The localized responsive signup surface transitions to a dedicated pending-email route after initiation, immediately scrubs an arrived bearer from URL and history into module-only memory, supports generic resend, enables verification and cancellation only after a delivered bearer arrives, uses independent digest-indexed session replay keys for verify and cancel, clears each key only after acknowledged terminal success, and returns verified users to explicit login rather than assuming a session. English and Russian copy states that account and wallet creation occur only after verification.
 - **TEST-171** (Tests) - PASS: Provider-free JSON and disposable-MySQL qualification proves pending email signup creates no account, player, balance, or session; exact verification creates one inactive identity and zero wallet, commits one deterministic configured starting-balance ledger credit, activates only afterward, and still creates no session. Exact lost-response replay, rate-ceiling replay, successful and suppressed resend, expired-candidate recovery, forced crashes at prepare/token/provider/promote/final boundaries, ownership-bound cancellation at every replacement phase, malformed/wrong/candidate/stale/absent/cross-recipient cancel rejection, concurrent token-generation recheck, terminal cancel replay, browser replay-key cleanup, and a forced post-credit activation failure produce no duplicate mail, identity, or funds and no unusable emailed bearer. Completion and cancellation scrub raw terminal pending credentials and profile data; bounded provider-atomic retention prunes old terminal rows while preserving active work; cancellation and disabled defaults leave no canonical identity residue; v2 contracts, anonymous-route allowlists, bilingual UI source, and visual-matrix states remain exact.
+- **CORE-032** (Application) - PASS: The shared browser and PWA keep their existing cookie-bound API transport unchanged, while the signed mobile runtime injects one Request-correct scoped API transport instead of replacing global fetch. Native requests preserve methods, public allowlisted headers, bodies, paths, query strings, response envelopes, and caller consumption semantics; reject foreign authorities, cookies, JavaScript bearer or CSRF fields, redirects, malformed responses, and cached transport; and never automatically retry money or other mutations.
+- **AUTH-019** (Core) - PASS: Enabled native clients authenticate only with an opaque OS-vault bearer and matching per-session CSRF proof; native requests reject Cookie authority, and JavaScript never receives bearer, CSRF, or guest-browser proof fields. The additive v2 native session probe returns only bounded status, generation, issue, and expiry metadata. Account switching revokes and verifies the predecessor before vault clear and new login, while login, current-user, probe, rotate, and guest envelopes are recursively checked for secret residue before shared JavaScript receives them.
+- **SEC-016** (Core) - PASS: Native API access is disabled unless production explicitly configures the exact generated Capacitor origins as direct OS-network request classifiers and pins the exact canonical backend authority. Browser CORS remains disabled: every API preflight is rejected and native responses emit no Access-Control-Allow-Origin or credential permission. Production also rejects cleartext, unknown origins, unknown configuration fields, redirect-following, and arbitrary request headers. Verified app links accept only the owned HTTPS host and exact enrollment or recovery routes, strip password-reset and enrollment bearers from WebView history immediately into module-only memory across rerenders, and reject relative, malformed, duplicate, unknown-field, fragment, route, authority, and bounded replay violations through digest-only native claims.
+- **SESSION-013** (Core) - PASS: Native session rotation replaces the server bearer and CSRF pair atomically under one session generation so a lost response cannot leave two reusable credentials. A separate monotonically increasing local vault generation advances on every credential issue, replacement, clear, and 401 invalidation and never takes a server-authored value, preventing account-switch ABA. Background, reconnect, foreground, clock rollback, process restore, account switch, and connectivity changes block new mutations until native session probe and authoritative PWA refresh succeed; in-flight work is account, session, and vault-generation bound and stale completions cannot repaint or retry.
+- **TEST-172** (Tests) - PASS: Provider-free Node, Python, API, contract, and source-conformance evidence proves Request semantics, native/public header separation, secret-free recursive envelopes, strict origin and configuration rejection, verified-link parsing and replay, password-reset bearer survival across browser and native rerenders, atomic one-winner rotation, monotonically advancing vault generations without account-switch ABA, stale completion rejection, foreground and reconnect refresh, Android Keystore and iOS Keychain source policy, exact native module ownership, and unchanged browser/PWA fallback. Native SDK, signed-device, store, and live-link evidence are explicitly not claimed.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
