@@ -47,6 +47,15 @@ export const REEL_HOLD_MS = 200;
 export const REDUCED_HOLD_MS = 520;
 // Export the fast unattended reveal so autoplay keeps its existing cadence.
 export const AUTOPLAY_HOLD_MS = 180;
+// Export the three complete attended reel schedules and their governed final-stop bands. (SLOT-032)
+export const SLOT_MOTION_PROFILES = Object.freeze({
+  // Keep Slow inside 3.8-to-4.8 seconds before any separately justified anticipation extension.
+  slow: Object.freeze({ firstStopMs: 3600, staggerMs: 150, label: 'slow' }),
+  // Keep Medium inside 2.8-to-3.6 seconds as the default player-facing profile.
+  medium: Object.freeze({ firstStopMs: 2300, staggerMs: 170, label: 'medium' }),
+  // Keep Fast inside 1.6-to-2.2 seconds while preserving the accepted prior stop geometry.
+  fast: Object.freeze({ firstStopMs: REEL_BASE_STOP_MS, staggerMs: REEL_STAGGER_MS, label: 'fast' }),
+});
 // Store the count of decorative filler tiles rendered above the launch window before travel begins.
 const REEL_LAUNCH_FILLER = 6;
 // Export the base travel rows each landing strip scrolls through before its authoritative rows arrive.
@@ -71,6 +80,10 @@ let spinning = false;
 let selectedLines = 20;
 // Store selectedLineBet so rerenders do not reset the visible line-bet setup.
 let selectedLineBet = 1;
+// Store the player-selected reel speed independently from game rules and the public spin payload. (SLOT-032)
+let selectedSpeed = 'medium';
+// Store the current complete-sequence phase for player-facing status and exact browser evidence. (SLOT-031)
+let presentationPhase = 'idle';
 // Store lineBetFeedbackKey so localized validation feedback survives locale and layout rerenders.
 let lineBetFeedbackKey = '';
 // Store autoplayPlan by reference so input edits update the plan already owned by the control plane.
@@ -391,19 +404,25 @@ function controlRailHtml() {
   return `<section class="panel slots-control"><div class="slots-title"><span class="eyebrow">${safe(tx('kicker'))}</span><h2>${safe(tx('title'))}</h2></div><div class="slots-metric-grid"><label class="slots-metric">${safe(tx('controls.paylines'))}<select id="lines" data-testid="slots-lines"${spinning ? ' disabled' : ''}>${lineOptions}</select></label><label class="slots-metric">${safe(tx('controls.lineBet'))}<input id="lineBet" data-testid="slots-line-bet" type="number" min="${safe(lineBetRules.minimum)}" max="${safe(lineBetRules.maximum)}" step="${safe(lineBetRules.step)}" value="${safe(selectedLineBet)}"${spinning ? ' disabled' : ''} aria-invalid="${lineBetFeedbackKey ? 'true' : 'false'}" aria-describedby="slots-line-bet-feedback"><span id="slots-line-bet-feedback" class="slots-field-message ${lineBetFeedbackKey ? 'error' : ''}" role="status" aria-live="polite" data-testid="slots-line-bet-feedback">${safe(lineBetFeedback)}</span></label></div><button id="spin" data-testid="slots-spin" class="primary slots-spin-button" ${spinning ? 'disabled' : ''}>${safe(spinButtonLabel())}</button><button type="button" class="slots-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(tx('controls.repeat'))}</button><div class="slots-plan"><div class="slots-status-row"><span class="slots-dot"></span><b>${safe(primaryStatus())}</b></div><p class="muted">${safe(tx('autoplay.description'))}</p><div id="auto" class="slots-auto-mount"></div></div><div class="slots-metric-grid"><div class="slots-metric"><span>${safe(tx('metrics.roundCost'))}</span><b data-testid="slots-round-cost">${safe(fm(roundCost()))}</b></div><div class="slots-metric"><span>${safe(tx('metrics.freeSpins'))}</span><b>${safe(fn(freeSpinCount()))}</b></div><div class="slots-metric"><span>${safe(tx('feature.progressiveTitle'))}</span><b data-testid="slots-progressive-status">${safe(progressiveStatusText())}</b></div></div>${botPanelHtml()}</section>`;
 }
 // Define stageHtml to render the fixed cabinet, payline overlay, and result reservation.
-function stageHtml() { return `<section class="panel slots-stage"><div class="slots-stage-top"><div><b>${safe(tx('cabinet.name'))}</b><p class="muted">${safe(tx('cabinet.subtitle'))}</p></div><strong data-testid="slots-progressive-headline">${safe(winHeadline())}</strong></div><div class="slots-cabinet" data-testid="slots-cabinet">${reelGridHtml()}<div class="slots-cabinet-footer"><p class="muted">${safe(cabinetNote())}</p><div class="slots-state-pill${!spinning && lastSpin?.payout > 0 ? ' win' : ''}" role="status">${safe(spinning ? tx('controls.wait') : (lastSpin?.payout > 0 ? tx('controls.winState') : tx('controls.readyState')))}</div></div><div class="slots-lever${spinning ? ' pulled' : ''}" aria-hidden="true"></div></div><div class="slots-result result-box" data-testid="slots-result">${resultSummary()}</div></section>`; }
+function stageHtml() { return `<section class="panel slots-stage"><div class="slots-stage-top"><div><b>${safe(tx('cabinet.name'))}</b><p class="muted">${safe(tx('cabinet.subtitle'))}</p></div><strong data-testid="slots-progressive-headline">${safe(winHeadline())}</strong></div><div class="slots-cabinet" data-testid="slots-cabinet">${reelGridHtml()}<div class="slots-cabinet-footer"><p class="muted">${safe(cabinetNote())}</p><div class="slots-state-pill${!spinning && lastSpin?.payout > 0 ? ' win' : ''}" role="status" aria-live="polite" data-testid="slots-motion-phase">${safe(spinning ? tx(`motion.${presentationPhase}`) : (lastSpin?.payout > 0 ? tx('controls.winState') : tx('controls.readyState')))}</div></div><div class="slots-lever${spinning ? ' pulled' : ''}" aria-hidden="true"></div></div><div class="slots-result result-box" data-testid="slots-result">${resultSummary()}</div></section>`; }
 // Define drawerHtml to render paytable/recent-spin details without affecting cabinet size.
 function drawerHtml() { return `<section class="panel slots-drawer">${isBonusContext() ? featureSummaryHtml() : paytableHtml()}${recentSpinsHtml()}</section>`; }
 // Define render to replace the Slots view atomically with the premium layout.
-function render() { if (!root) return; root.innerHTML = `${styleHtml()}${validationStyleHtml()}<div class="game-layout three-col stable-game slots-premium" data-testid="slots-premium">${controlRailHtml()}${stageHtml()}${drawerHtml()}</div>`; bindControls(); mountPaylineGeometry(); revealRoundId = null; }
+function render() { if (!root) return; root.innerHTML = `${styleHtml()}${validationStyleHtml()}<div class="game-layout three-col stable-game slots-premium" data-testid="slots-premium" data-motion-phase="${safe(presentationPhase)}">${controlRailHtml()}${stageHtml()}${drawerHtml()}</div>`; bindControls(); mountPaylineGeometry(); revealRoundId = null; }
 // Define bindControls to wire the freshly-rendered controls to current state.
 function bindControls() {
+  // Add the presentation-only speed selector beside the wager controls without changing the spin payload. (SLOT-032)
+  root.querySelector('.slots-metric-grid')?.insertAdjacentHTML?.('beforeend', `<label class="slots-metric">${safe(tx('controls.speed'))}<select id="slotsSpeed" data-testid="slots-speed"${spinning ? ' disabled' : ''}><option value="slow">${safe(tx('speed.slow'))}</option><option value="medium">${safe(tx('speed.medium'))}</option><option value="fast">${safe(tx('speed.fast'))}</option></select></label>`);
+  // Restore the player-selected speed after every state or locale rerender.
+  root.querySelector('#slotsSpeed').value = selectedSpeed;
   // Rebuild the view after a supported payline count changes so all cost summaries stay aligned.
   root.querySelector('#lines').onchange = event => { selectedLines = Number(event.target.value || selectedLines); syncAutoplayPlan(); render(); };
   // Validate every typed line-bet edit immediately instead of waiting for Spin.
   root.querySelector('#lineBet').oninput = event => { acceptLineBetInput(event.target); };
   // Recheck committed edits for keyboard and assistive-technology change events.
   root.querySelector('#lineBet').onchange = event => { acceptLineBetInput(event.target); };
+  // Update only the client reel profile and preserve the authoritative backend request.
+  root.querySelector('#slotsSpeed').onchange = event => { selectedSpeed = SLOT_MOTION_PROFILES[event.target.value] ? event.target.value : 'medium'; };
   // Start one manual spin through the same guarded public action used before this fix.
   root.querySelector('#spin').onclick = () => spin(true);
   // Re-fire the previous line setup with one click through the guarded repeat action.
@@ -416,9 +435,13 @@ function bindControls() {
 // Define updateBotPanel to load bot capabilities through the documented bot API.
 async function updateBotPanel() { botInfo = await eligibleBots('slots'); if (root && !spinning) render(); else if (root) pendingRender = true; }
 // Export the per-column deceleration budget so tests can verify the staggered stop schedule. (SLOT-020)
-export function reelStopDuration(column, anticipation) {
-  // Add the stop stagger per column and the final-reel tease extension when early scatters demand it.
-  return REEL_BASE_STOP_MS + column * REEL_STAGGER_MS + (anticipation && column === 4 ? REEL_ANTICIPATION_MS : 0);
+export function reelStopDuration(column, anticipation, profileName = 'fast') {
+  // Resolve only a governed profile and fail closed on internal configuration drift.
+  const profile = SLOT_MOTION_PROFILES[profileName];
+  // Reject unknown speed identities instead of silently changing the player's selection.
+  if (!profile) throw new RangeError('unknown Slots motion profile');
+  // Add the governed stop stagger and the final-reel tease extension only when early scatters demand it.
+  return profile.firstStopMs + column * profile.staggerMs + (anticipation && column === 4 ? REEL_ANTICIPATION_MS : 0);
 }
 
 // Export the landing-strip composition so tests can prove authoritative rows and seamless launches. (SLOT-021)
@@ -460,6 +483,42 @@ function releaseMotionWaiters() {
   // Resolve every abandoned wait exactly once.
   for (const waiter of waiters) waiter.cancel();
 }
+
+// Publish one fixed Slots presentation phase without replacing the active reel strips. (SLOT-031)
+function setSlotsPresentationPhase(phase) {
+  // Accept only the complete documented reel sequence and terminal states.
+  if (!['idle', 'locking', 'accelerating', 'travel', 'decelerating', 'settling', 'settled', 'failed'].includes(phase)) throw new RangeError('unknown Slots presentation phase');
+  // Retain the phase across compatible locale and geometry work.
+  presentationPhase = phase;
+  // Resolve the mounted Slots surface without assuming the route survived an await.
+  const game = root?.querySelector('[data-testid="slots-premium"]');
+  // Publish the closed-vocabulary phase for browser traces.
+  if (game) game.dataset.motionPhase = phase;
+  // Resolve the reserved live region without changing cabinet geometry.
+  const status = root?.querySelector('[data-testid="slots-motion-phase"]');
+  // Publish localized phase copy once when the route remains active.
+  if (status) status.textContent = tx(`motion.${phase}`);
+}
+
+// Schedule acceleration, travel, deceleration, and final-stop status against one governed profile. (SLOT-031)
+function scheduleSlotsPresentationPhases(profileName, reducedMotion) {
+  // Use one short non-repetitive settle for the platform comfort preference.
+  if (reducedMotion) { setSlotsPresentationPhase('settling'); return; }
+  // Resolve the selected immutable speed profile.
+  const profile = SLOT_MOTION_PROFILES[profileName];
+  // Fail closed on internal drift before scheduling any presentation callback.
+  if (!profile) throw new RangeError('unknown Slots motion profile');
+  // Publish acceleration at the same action boundary that locks the controls.
+  setSlotsPresentationPhase('accelerating');
+  // Stop safely when route teardown already disposed the scheduler.
+  if (!motionScope || motionScope.disposed) return;
+  // Publish full-speed strip travel after the bounded acceleration share.
+  motionScope.schedule(() => setSlotsPresentationPhase('travel'), Math.round(profile.firstStopMs * .18), { reducedMotion: false });
+  // Publish progressive deceleration before the first reel stops.
+  motionScope.schedule(() => setSlotsPresentationPhase('decelerating'), Math.round(profile.firstStopMs * .58), { reducedMotion: false });
+  // Publish staggered settling when the first reel reaches its landing window.
+  motionScope.schedule(() => setSlotsPresentationPhase('settling'), profile.firstStopMs, { reducedMotion: false });
+}
 // Export the free-spin tease detector so tests can verify the anticipation threshold across reels.
 export function countEarlyScatters(grid) {
   // Accumulate scatter symbols across rows zero to two and columns zero to three only.
@@ -476,7 +535,7 @@ export function countEarlyScatters(grid) {
   return count;
 }
 // Define runReelLanding to decelerate each decorative strip onto the authoritative grid with staggered stops. (SLOT-020, SLOT-021)
-function runReelLanding(spin) {
+function runReelLanding(spin, profileName) {
   // Wrap the choreography in one promise so the spin flow can await the final stop plus hold.
   return trackedMotionPromise(resolve => {
     // Read the committed grid whose rows every strip must finish on.
@@ -518,7 +577,7 @@ function runReelLanding(spin) {
       // Compute the total downward travel that puts the authoritative rows into the window.
       const travelPx = (tiles.length - 3) * stride;
       // Compute this column's deceleration budget through the tested stagger schedule.
-      const durationMs = reelStopDuration(column, anticipation);
+      const durationMs = reelStopDuration(column, anticipation, profileName);
       // Light the anticipation glow on the final reel while early scatters tease the feature.
       if (anticipation && column === 4) reel.classList.add('anticipating');
       // Force one layout read so the browser commits the launch frame before the target changes. (PR #311 pattern)
@@ -550,7 +609,7 @@ function runReelLanding(spin) {
   });
 }
 // Define load to initialize resources, state, bot status, and the first render.
-async function load() { await initI18n({ domains: [DOMAIN] }); await loadI18nDomain(DOMAIN); const data = await api(currentPlayerPath('/api/v1/games/slots/state')); state = data.state; config = data.config; lastSpin = latestStoredSpin(); if (lastSpin?.active_lines) selectedLines = Number(lastSpin.active_lines); if (lastSpin?.line_bet) selectedLineBet = Number(lastSpin.line_bet); if (lastSpin) lastBet = { active_lines: Number(lastSpin.active_lines), line_bet: Number(lastSpin.line_bet) }; syncAutoplayPlan(); render(); updateBotPanel(); await refreshBalance(); }
+async function load() { presentationPhase = 'idle'; await initI18n({ domains: [DOMAIN] }); await loadI18nDomain(DOMAIN); const data = await api(currentPlayerPath('/api/v1/games/slots/state')); state = data.state; config = data.config; lastSpin = latestStoredSpin(); if (lastSpin?.active_lines) selectedLines = Number(lastSpin.active_lines); if (lastSpin?.line_bet) selectedLineBet = Number(lastSpin.line_bet); if (lastSpin) lastBet = { active_lines: Number(lastSpin.active_lines), line_bet: Number(lastSpin.line_bet) }; syncAutoplayPlan(); render(); updateBotPanel(); await refreshBalance(); }
 // Define spin to run one Slots action through the existing public endpoint.
 async function spin(show = true) {
   // Ignore duplicate manual or autoplay starts while the current spin is committed.
@@ -563,6 +622,8 @@ async function spin(show = true) {
   syncAutoplayPlan();
   // Enter the committed in-progress cabinet state only after controls are safe.
   spinning = true;
+  // Publish the atomic lock before any network or presentation continuation begins.
+  presentationPhase = 'locking';
   // Capture the mounted route identity before any asynchronous work begins.
   const mountedRoot = root;
   // Capture the current generation so a remount cannot inherit this continuation.
@@ -573,16 +634,20 @@ async function spin(show = true) {
   activeSpinCompletion = completion;
   // Read the live reduced-motion preference once at this atomic action boundary. (MOTION-005)
   const reducedMotion = prefersReducedMotion();
-  // Run the full reel choreography only for attended spins without a comfort preference.
-  const animate = show && !reducedMotion;
+  // Use the player profile for manual spins and the complete governed Fast profile for autoplay.
+  const motionProfile = show ? selectedSpeed : 'fast';
+  // Run the complete reel choreography whenever reduced motion does not request a short resolve.
+  const animate = !reducedMotion;
   // Mount the decorative strip overlay only when the full choreography will drive it.
   reelMotionActive = animate;
   // Advance the spin counter that seeds this round's decorative launch filler.
   spinSequence += 1;
   // Play the bounded reel sound matched to the expected travel of this spin mode.
-  reelSound(animate ? 1600 : show ? 420 : 240);
+  reelSound(animate ? reelStopDuration(4, false, motionProfile) : REDUCED_HOLD_MS);
   // Render the committed in-progress state before waiting on the backend.
   render();
+  // Publish the complete sequence schedule without replacing active reel strips.
+  scheduleSlotsPresentationPhases(motionProfile, reducedMotion);
   // Start protected API handling so failures restore an actionable screen.
   try {
     // Submit exactly the corrected values currently represented by the visible controls.
@@ -592,9 +657,9 @@ async function spin(show = true) {
     // Show the storage-committed wager debit before the decorative reels finish landing. (LEDGER-031, issue #583)
     renderCommittedWagerBalance(data.debit);
     // Land the decorative strips on the authoritative grid, or hold briefly for comfort and autoplay modes.
-    if (animate && root === mountedRoot) await runReelLanding(data.spin);
-    // Use the bounded non-animated reveal for reduced-motion and unattended spins.
-    else await waitMotion(show ? REDUCED_HOLD_MS : AUTOPLAY_HOLD_MS);
+    if (animate && root === mountedRoot) await runReelLanding(data.spin, motionProfile);
+    // Use the bounded non-repetitive comfort reveal when the platform requests reduced motion.
+    else await waitMotion(REDUCED_HOLD_MS);
     // Reject a timer continuation released by teardown before adopting authoritative presentation state.
     if (!completion.isCurrent()) return;
     // Adopt authoritative game state returned by the frozen Slots API envelope.
@@ -609,6 +674,8 @@ async function spin(show = true) {
     if (lastSpin) lastBet = { active_lines: Number(lastSpin.active_lines), line_bet: Number(lastSpin.line_bet) };
     // Leave the in-progress state before the settled rerender.
     spinning = false;
+    // Publish terminal settled state before the authoritative result rerender.
+    presentationPhase = 'settled';
     // Drop the decorative overlay now that authoritative cells own the cabinet again.
     reelMotionActive = false;
     // Clear any repaint deferred during the animation because the settled render below applies it.
@@ -633,6 +700,8 @@ async function spin(show = true) {
     if (root !== mountedRoot || mountGeneration !== generation) return;
     // Restore actionable controls after a failed spin.
     spinning = false;
+    // Publish the failure state before restoring the safe authoritative cabinet.
+    presentationPhase = 'failed';
     // Drop the decorative overlay so the failure state shows only authoritative cells.
     reelMotionActive = false;
     // Rerender the safe corrected input state.

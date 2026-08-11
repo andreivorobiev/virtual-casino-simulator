@@ -25,7 +25,7 @@ FRAMES_PER_SECOND = 60
 # Derive one pocket of angular width from the canonical 37-pocket European wheel.
 POCKET_DEGREES = 360 / 37
 # Keep the animation duration the client already waits on before revealing settlement.
-SPIN_SECONDS = 3.6
+SPIN_SECONDS = 16.5
 
 
 # Read the tracked Roulette client once for every assertion.

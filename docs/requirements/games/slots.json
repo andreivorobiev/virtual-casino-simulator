@@ -465,91 +465,91 @@
       "id": "SLOT-030",
       "module": "Slots",
       "description": "One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-SLOT-001", "BR-SLOT-ECONOMICS-001"],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Permanent allocation for issue #170; no Slots source or frozen v1 contract changes are included in the foundation."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "One route-generation completion guard owns the public spin, committed debit, authoritative grid, wallet refresh, result, sound, voice, and terminal settlement."
     },
     {
       "id": "SLOT-031",
       "module": "Slots",
       "description": "Five Slots reels move independently and continuously through input lock, acceleration, full-speed travel, staggered deceleration, final stop, result evaluation, credit reveal, and optional bonus transition with no whole-grid swap, blank seam, backward jump, or frozen placeholder.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-SLOT-001"],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Every stopped reel must retain its exact committed symbols while later reels continue."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "The five deterministic landing strips expose locking, acceleration, full-speed travel, deceleration, staggered settling, and settled phases while preserving each committed column."
     },
     {
       "id": "SLOT-032",
       "module": "Slots",
       "description": "Slots reaches the final reel stop in 3.8 to 4.8 seconds for Slow, 2.8 to 3.6 seconds for Medium, 1.6 to 2.2 seconds for Fast, and 400 to 800 ms for reduced motion, with adjacent normal-profile stops staggered by 140 to 240 ms.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-SLOT-001", "BR-SLOT-ECONOMICS-001"],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Any committed bonus anticipation is bounded to one additional second and cannot alter the outcome."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "Selectable Slow, Medium, and Fast schedules finish inside their exact bands with 150-to-170-millisecond adjacent stops; reduced motion uses 520 milliseconds and anticipation remains bounded to 900 milliseconds."
     },
     {
       "id": "SLOT-033",
       "module": "Slots",
       "description": "Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-SLOTS-PAYLINE-001", "BR-SLOT-001"],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Reel-stop and result sounds follow actual phase events, respect mute, avoid autoplay stacking, and cancel on unmount."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "Measured cell stride owns each exact landing, stopped strips remain stationary, paylines appear after the final hold, losses retain a quiet settled state, and route teardown cancels timers and sounds."
     },
     {
       "id": "SLOT-034",
       "module": "Slots",
       "description": "Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-SLOT-001", "BR-SLOT-ECONOMICS-001"],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "The cabinet, action rail, wallet, and result region remain stable without motion-driven scrolling or overflow."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "Shared autoplay awaits the complete Fast presentation, Stop prevents the next atomic action, and route-generation, locale, bot, wallet, and failure guards leave no stale continuation or scroll mutation."
     },
     {
       "id": "SLOT-035",
       "module": "Tests",
       "description": "Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-SLOT-001", "BR-SLOT-ECONOMICS-001", "BR-SLOTS-PAYLINE-001"],
       "implementation_files": [
         "tests/visual/visual_matrix.json",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Static screenshots alone cannot satisfy issue #170."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "Deterministic unit coverage spans all speed profiles, strip composition, wins, scatters, repeated grids, cancellation, and remount; exact-head Browser shards supply EN/RU governed-viewport and reduced-motion evidence."
     },
     {
       "id": "SLOT-036",

@@ -33,20 +33,26 @@ const SPOT_SIZE = 24;
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 // Store board geometry so click targets and placed chips remain aligned on the fixed table.
 const BOARD = { width: 760, height: 560, x0: 170, y0: 82, cw: 132, ch: 34 };
-// Export the visible reveal budget that the tracked 3.6-second compatibility curves are sampled against. (ROU-069)
-export const SPIN_REVEAL_MS = 3600;
-// Export the short autoplay reveal so unattended rounds keep their existing fast cadence.
-export const AUTOPLAY_REVEAL_MS = 250;
+// Export the default dealer-paced reveal budget inside the governed 15-to-18-second Authentic band. (ROU-064)
+export const SPIN_REVEAL_MS = 16500;
+// Export the optional complete-sequence reveal budget inside the governed 8-to-10-second Quick band. (ROU-064)
+export const QUICK_REVEAL_MS = 9000;
+// Export the complete autoplay reveal budget inside the governed 6-to-8-second unattended band. (ROU-064)
+export const AUTOPLAY_REVEAL_MS = 7000;
 // Export the bounded non-spinning reveal used when the player asks for reduced motion. (ROU-070)
 export const REDUCED_REVEAL_MS = 600;
+// Export the pocket-relative co-rotation hold that follows visible capture. (ROU-065)
+export const CAPTURE_HOLD_MS = 1100;
+// Export the shared co-rotation angle so the captured ball follows the rotor at a believable steady rate. (ROU-065)
+export const CAPTURE_HOLD_DEGREES = 120;
 // Store the quick rim-lift duration that returns the captured ball to its track before a new spin.
 const BALL_LIFT_MS = 260;
 // Export the radial travel in SVG units from the outer ball track down into a pocket mouth.
 export const BALL_POCKET_DEPTH = 24;
 // Export the extra whole rotor turns the honest-landing wrapper adds on top of the sampled curve.
-export const WHEEL_EXTRA_TURNS = 1;
+export const WHEEL_EXTRA_TURNS = 5;
 // Export the extra whole counter-turns the ball wrapper adds so total circuits read as a real launch.
-export const BALL_EXTRA_TURNS = 2;
+export const BALL_EXTRA_TURNS = 18;
 // Export the minimum wrapper travel time so a slow backend can never produce a teleporting landing.
 export const MIN_LANDING_MS = 900;
 // Store premium Roulette CSS inside the owned module so shared foundation styles stay untouched.
@@ -96,8 +102,8 @@ const PREMIUM_STYLE = [
   '.roulette-premium .roulette-wheel{width:min(100%,360px);max-width:360px;filter:drop-shadow(0 22px 26px rgba(0,0,0,.58));}', // Make the vector wheel large and weighty without a fragile 3D compositor layer.
   '.roulette-wheel .wheel-rim-highlight{opacity:.68;}', // Add a polished metal reflection to the outer rim.
   '.roulette-wheel .wheel-ball{filter:drop-shadow(0 3px 3px rgba(0,0,0,.75));}', // Separate the ivory ball from the track during motion and settlement.
-  '.roulette-premium .wheel-ring.spinning{animation:roulettePremiumWheelSpin 3.6s linear;will-change:transform;}', // Coast the rotor down through its own keyframe curve rather than a front-loaded easing.
-  '.roulette-premium .ball-dot.spinning{animation:roulettePremiumBallSpin 3.6s linear;will-change:transform;}', // Counter-rotate the ball on the same self-decelerating curve so it never outruns the rotor into a strobe.
+  '.roulette-premium .wheel-ring.spinning{animation:roulettePremiumWheelSpin var(--roulette-reveal-ms,16500ms) linear;will-change:transform;}', // Keep the rotor moving throughout the selected complete physical sequence.
+  '.roulette-premium .ball-dot.spinning{animation:roulettePremiumBallSpin var(--roulette-reveal-ms,16500ms) linear;will-change:transform;}', // Counter-rotate the ball throughout the selected complete physical sequence.
   '.roulette-wheel .wheel-orient,.roulette-wheel .ball-orbit,.roulette-wheel .ball-radial{transform-origin:150px 150px;will-change:transform;}', // Pivot every honest-landing wrapper on the wheel hub so composed rotations stay concentric.
   '.roulette-wheel .ball-trail{opacity:0;transition:opacity .4s;}', // Hide the ivory motion streak until the ball is actually travelling.
   '.roulette-premium .ball-dot.spinning .ball-trail{opacity:.55;}', // Reveal the streak only while the counter-rotation curve is live.
@@ -199,6 +205,12 @@ let lastSpinColor = null;
 let lastRoundId = null;
 // Store the current visual phase so betting, spinning, and settlement regions stay stable.
 let uiPhase = 'betting';
+// Store the player-selected manual motion profile without changing Roulette rules or API payloads. (ROU-064)
+let presentationMode = 'authentic';
+// Store the current atomic presentation phase for stable player-facing status and tests. (ROU-066)
+let presentationPhase = 'idle';
+// Store the active reveal budget so rerenders retain the exact selected animation duration.
+let activeRevealMs = SPIN_REVEAL_MS;
 // Store human settlement rows from the latest spin for presentation-only settlement rendering.
 let lastSettlements = [];
 // Store the latest human net based on existing debits plus settlement credits.
@@ -768,6 +780,38 @@ function releaseMotionWaiters() {
   for (const waiter of waiters) waiter.cancel();
 }
 
+// Publish one fixed Roulette presentation phase without replacing the wheel DOM mid-animation. (ROU-066)
+function setPresentationPhase(phase) {
+  // Accept only the documented complete-sequence phases so internal drift fails closed.
+  if (!['idle', 'launch', 'orbit', 'deceleration', 'descent', 'capture', 'settled', 'failed'].includes(phase)) throw new RangeError('unknown Roulette presentation phase');
+  // Retain the phase across compatible locale repaints and deterministic diagnostics.
+  presentationPhase = phase;
+  // Resolve the mounted game root without assuming a live route during teardown.
+  const game = root?.querySelector('[data-testid="roulette-premium"]');
+  // Publish the closed-vocabulary phase for browser acceptance when the route still exists.
+  if (game) game.dataset.motionPhase = phase;
+  // Resolve the reserved player-facing phase copy inside the settlement card.
+  const status = root?.querySelector('[data-testid="roulette-motion-phase"]');
+  // Update the live region without resizing or rerendering the wheel.
+  if (status) status.textContent = rt(`motion.${phase}`);
+}
+
+// Schedule the complete named Roulette sequence against one accepted reveal budget. (ROU-064, ROU-066)
+function schedulePresentationPhases(revealMs) {
+  // Publish launch immediately after the locked spinning render mounts.
+  setPresentationPhase('launch');
+  // Stop when teardown already disposed the route-owned scheduler.
+  if (!motionScope || motionScope.disposed) return;
+  // Enter high-track orbit after the dealer launch interval.
+  motionScope.schedule(() => setPresentationPhase('orbit'), Math.round(revealMs * .04), { reducedMotion: false });
+  // Enter progressive deceleration after the governed high-track share.
+  motionScope.schedule(() => setPresentationPhase('deceleration'), Math.round(revealMs * .42), { reducedMotion: false });
+  // Enter rim departure and bounded contacts before pocket capture.
+  motionScope.schedule(() => setPresentationPhase('descent'), Math.max(0, revealMs - CAPTURE_HOLD_MS - Math.round(revealMs * .18)), { reducedMotion: false });
+  // Publish capture for the complete co-rotation hold.
+  motionScope.schedule(() => setPresentationPhase('capture'), Math.max(0, revealMs - CAPTURE_HOLD_MS), { reducedMotion: false });
+}
+
 // Lift the captured ball back onto the outer track the moment a spin's first frame is live.
 function liftBallOffPocket() {
   // Find the radial wrapper in the freshly rendered spinning wheel.
@@ -806,9 +850,13 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   const plan = computeLandingPlan({ wheelAngle: wheelRestAngle, ballAngle: ballOrbitAngle, pocketIndex: targetIndex, pocketCount: nums.length, random, revealMs, elapsedMs: performance.now() - revealStartedAt });
   // Stop safely when the plan rejects the pocket rather than inventing a landing. (ROU-051)
   if (!plan) return 0;
-  // Read the rotor's committed rest target from the plan.
+  // Read the rotor angle at first visible pocket capture.
+  const wheelCaptureTarget = plan.wheelCaptureTarget;
+  // Read the ball angle that is pocket-congruent at first visible capture.
+  const ballCaptureTarget = plan.ballCaptureTarget;
+  // Read the rotor's final rest target after the co-rotation hold.
   const wheelTarget = plan.wheelTarget;
-  // Read the ball's committed orbital target from the plan.
+  // Read the ball's final orbital target after the same co-rotation angle.
   const ballTarget = plan.ballTarget;
   // Read the wrapper travel budget from the plan.
   const travelMs = plan.travelMs;
@@ -817,11 +865,11 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   // Coast the rotor wrapper to its new rest orientation over the remaining reveal budget.
   orient.style.transition = `transform ${travelMs}ms cubic-bezier(.16,.7,.16,1)`;
   // Commit the rotor wrapper's target angle.
-  orient.style.transform = `rotate(${wheelTarget}deg)`;
+  orient.style.transform = `rotate(${wheelCaptureTarget}deg)`;
   // Coast the ball wrapper onto the winning pocket with its own later-peaking deceleration profile.
   orbit.style.transition = `transform ${travelMs}ms cubic-bezier(.22,.61,.12,1)`;
   // Commit the ball wrapper's target angle.
-  orbit.style.transform = `rotate(${ballTarget}deg)`;
+  orbit.style.transform = `rotate(${ballCaptureTarget}deg)`;
   // Occupy the second half of the wrapper travel with the pocket descent.
   const descentMs = Math.round(travelMs * .5);
   // Arm the descent only while the route scope is live so a disposed scope degrades the descent instead of throwing.
@@ -835,6 +883,25 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
       // Start the sampled rim-departure, separator-bounce, and capture sequence.
       radial.classList.add('descending');
     }, travelMs - descentMs, { reducedMotion: false });
+    // Begin the required pocket-relative co-rotation after visible capture completes.
+    motionScope.schedule(() => {
+      // Pause the independent decorative curves so the captured ball can share the rotor's final velocity.
+      const rotor = root?.querySelector('.wheel-ring');
+      // Resolve the live ball marker owned by the same route generation.
+      const ball = root?.querySelector('.ball-dot');
+      // Freeze the decorative rotor curve at capture before wrapper co-rotation takes ownership.
+      if (rotor) rotor.style.animationPlayState = 'paused';
+      // Freeze the counter-orbit curve at capture before wrapper co-rotation takes ownership.
+      if (ball) ball.style.animationPlayState = 'paused';
+      // Move the rotor through the shared bounded hold angle at a steady physical rate.
+      orient.style.transition = `transform ${plan.captureMs}ms linear`;
+      // Commit the final rotor pose after co-rotation.
+      orient.style.transform = `rotate(${wheelTarget}deg)`;
+      // Move the ball by the identical angle so it remains captured over the pocket.
+      orbit.style.transition = `transform ${plan.captureMs}ms linear`;
+      // Commit the final pocket-congruent ball pose.
+      orbit.style.transform = `rotate(${ballTarget}deg)`;
+    }, travelMs, { reducedMotion: false });
   }
   // Persist the normalized rest pose so the settled rerender continues this exact orientation seamlessly.
   wheelRestAngle = norm360(wheelTarget);
@@ -843,7 +910,7 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   // Persist the captured pocket depth the descent ends on.
   ballDepth = BALL_POCKET_DEPTH;
   // Return the wrapper travel time so the caller can hold the reveal until the landing completes.
-  return travelMs;
+  return travelMs + plan.captureMs;
 }
 
 // Spin the Roulette wheel using the existing engine, bot, ledger, and settlement path.
@@ -876,12 +943,16 @@ async function spin(show = true) {
     lastSettlements = [];
     // Read the live reduced-motion preference once at this atomic action boundary. (MOTION-005)
     const reducedMotion = prefersReducedMotion();
-    // Resolve the reveal budget for this spin mode from the same three governed constants every time.
-    const revealMs = reducedMotion ? REDUCED_REVEAL_MS : show ? SPIN_REVEAL_MS : AUTOPLAY_REVEAL_MS;
+    // Resolve the reveal budget from reduced, autoplay, Authentic, or Quick policy without changing the committed round.
+    const revealMs = reducedMotion ? REDUCED_REVEAL_MS : !show ? AUTOPLAY_REVEAL_MS : presentationMode === 'quick' ? QUICK_REVEAL_MS : SPIN_REVEAL_MS;
+    // Retain the exact active budget so the mounted CSS animations and diagnostics share one source of truth.
+    activeRevealMs = revealMs;
     // Record when the spinning frame goes live so wrapper travel ends exactly with the sampled curves.
     const revealStartedAt = performance.now();
     // Rerender immediately so animation starts before settlement display.
     render();
+    // Publish the complete named physical phase schedule without replacing the live wheel DOM.
+    schedulePresentationPhases(revealMs);
     // Lift the captured ball onto the track right away so its launch circuits stay concentric.
     if (show && !reducedMotion) liftBallOffPocket();
     // Let compatible bots commit their public Roulette actions before the human spin.
@@ -918,6 +989,8 @@ async function spin(show = true) {
     lastHumanNet = human.reduce((total, row) => total + Number(row.settlement.credit || 0), 0) - stakeBeforeSpin;
     // Move the UI into the settled phase after animation lock-in.
     uiPhase = 'settled';
+    // Publish terminal settled state before the authoritative result rerender.
+    presentationPhase = 'settled';
     // Rerender the table, result panel, stats, and settlement drawer.
     render();
     // Refresh the wallet after settlement credits are applied.
@@ -952,6 +1025,8 @@ async function spin(show = true) {
     if (uiPhase === 'spinning') {
       // Return to betting mode so controls are usable again.
       uiPhase = 'betting';
+      // Expose the stable failed state until the betting rerender restores an actionable surface.
+      presentationPhase = 'failed';
     }
     // Clear any locale repaint deferred during the animation because the rerender below applies it.
     pendingLocaleRender = false;
@@ -1131,15 +1206,19 @@ export function computeLandingPlan({ wheelAngle, ballAngle, pocketIndex, pocketC
   // Reject an off-wheel pocket so presentation can never invent a landing. (ROU-051)
   if (!Number.isInteger(pocketIndex) || pocketIndex < 0 || pocketIndex >= pocketCount) return null;
   // Choose the rotor's new rest orientation one-plus clockwise turns ahead with caller-seeded scatter.
-  const wheelTarget = wheelAngle + WHEEL_EXTRA_TURNS * 360 + random() * 360;
+  const wheelCaptureTarget = wheelAngle + WHEEL_EXTRA_TURNS * 360 + random() * 360;
   // Compute the orbital angle that parks the ball over the winning pocket at that rest orientation.
-  const pocketAngle = pocketBaseAngle(pocketIndex, pocketCount) + wheelTarget;
+  const pocketAngle = pocketBaseAngle(pocketIndex, pocketCount) + wheelCaptureTarget;
   // Extend the ball's counter-clockwise travel so it reaches the pocket after extra whole circuits.
-  const ballTarget = ballAngle - BALL_EXTRA_TURNS * 360 - norm360(ballAngle - pocketAngle);
+  const ballCaptureTarget = ballAngle - BALL_EXTRA_TURNS * 360 - norm360(ballAngle - pocketAngle);
+  // Continue both wrappers by the same angle so the captured ball rides with its pocket for the final hold.
+  const wheelTarget = wheelCaptureTarget + CAPTURE_HOLD_DEGREES;
+  // Preserve pocket congruence while the ball follows the rotor after capture.
+  const ballTarget = ballCaptureTarget + CAPTURE_HOLD_DEGREES;
   // Give the wrappers whatever part of the reveal budget the backend round-trip has not consumed.
-  const travelMs = Math.max(MIN_LANDING_MS, revealMs - elapsedMs);
+  const travelMs = Math.max(MIN_LANDING_MS, revealMs - elapsedMs - CAPTURE_HOLD_MS);
   // Return a frozen plan so callers and tests cannot mutate an accepted trajectory.
-  return Object.freeze({ wheelTarget, ballTarget, travelMs });
+  return Object.freeze({ wheelCaptureTarget, ballCaptureTarget, wheelTarget, ballTarget, travelMs, captureMs: CAPTURE_HOLD_MS });
 }
 
 // Render the premium vector wheel while preserving result accuracy.
@@ -1260,7 +1339,7 @@ function colorLabel(color) {
 // Render the result panel under the wheel.
 function resultHtml() {
   // Branch while the animation is intentionally hiding the result.
-  if (uiPhase === 'spinning') return `<div id="result" class="fixed-result" data-game-live-status data-testid="roulette-result-region" data-phase="spinning"><span class="roulette-spin-orbit" aria-hidden="true"></span><span class="roulette-result-copy"><b>${text('stage.spinning')}</b><span>${text('result.spinning')}</span></span></div>`;
+  if (uiPhase === 'spinning') return `<div id="result" class="fixed-result" data-game-live-status data-testid="roulette-result-region" data-phase="spinning"><span class="roulette-spin-orbit" aria-hidden="true"></span><span class="roulette-result-copy"><b>${text('stage.spinning')}</b><span data-testid="roulette-motion-phase" role="status" aria-live="polite">${text(`motion.${presentationPhase}`)}</span></span></div>`;
   // Branch for a settled spin with an actual backend result.
   if (uiPhase === 'settled' && lastSpinResult !== null) {
     // Store the integrated net summary without repeating every settlement log row.
@@ -1376,14 +1455,20 @@ function statsCount(value) {
 
 // Wire all event handlers after a full rerender.
 function wireControls() {
+  // Add the presentation-only speed selector beside the server-owned table settings. (ROU-064)
+  root.querySelector('.roulette-settings')?.insertAdjacentHTML?.('beforeend', `<label>${text('controls.presentation')}<select id="presentationMode" data-testid="roulette-presentation-mode"${disabledWhenSpinning()}><option value="authentic">${text('settings.presentation.authentic')}</option><option value="quick">${text('settings.presentation.quick')}</option></select></label>`);
   // Set the mode select to the current backend state value.
   root.querySelector('#mode').value = state.mode;
   // Set the zero-rule select to the current backend state value.
   root.querySelector('#zero').value = state.zero_rule;
+  // Restore the player-selected presentation profile after every state or locale rerender.
+  root.querySelector('#presentationMode').value = presentationMode;
   // Wire mode changes to the existing settings endpoint.
   root.querySelector('#mode').onchange = guarded(settings);
   // Wire zero-rule changes to the existing settings endpoint.
   root.querySelector('#zero').onchange = guarded(settings);
+  // Change only the client presentation profile and retain the committed backend contract unchanged.
+  root.querySelector('#presentationMode').onchange = event => { presentationMode = event.target.value === 'quick' ? 'quick' : 'authentic'; };
   // Wire chip buttons while preserving selected chip state.
   root.querySelectorAll('[data-chip]').forEach(button => { button.onclick = () => { chip = Number(button.dataset.chip); render(); updateBotPanel(); }; });
   // Wire every bet cell through its stable identity so clicks resolve and verify by canonical covered numbers, not fragile labels. (issue #222)
@@ -1451,7 +1536,7 @@ function render() {
   // Preserve the focused roulette control through the full-root render. (UX-025)
   const focus = captureGameFocus(root);
   // Replace the route body while preserving JS state caches.
-  root.innerHTML = `<section class="roulette-premium" data-testid="roulette-premium">${headerHtml()}<div class="game-layout three-col stable-game" data-testid="roulette-premium-layout">${controlRailHtml()}${stageHtml()}${drawerHtml()}</div></section>`;
+  root.innerHTML = `<section class="roulette-premium" data-testid="roulette-premium" data-motion-phase="${safe(presentationPhase)}" style="--roulette-reveal-ms:${activeRevealMs}ms">${headerHtml()}<div class="game-layout three-col stable-game" data-testid="roulette-premium-layout">${controlRailHtml()}${stageHtml()}${drawerHtml()}</div></section>`;
   // Wire controls after the DOM has been replaced.
   wireControls();
   // Fit the freshly rendered fixed board into the current shell before the frame paints. (UX-026)
@@ -1482,6 +1567,10 @@ export const RouletteGame = {
     spinBusy = false;
     // Return the phase to betting because no spin can be live on a fresh mount.
     uiPhase = 'betting';
+    // Return named presentation state to idle because no visual action survives a route mount.
+    presentationPhase = 'idle';
+    // Restore the selected manual profile's exact budget before the first render.
+    activeRevealMs = presentationMode === 'quick' ? QUICK_REVEAL_MS : SPIN_REVEAL_MS;
     // Clear any stale deferred locale repaint from a prior mount.
     pendingLocaleRender = false;
     // Clear any stale terminal guard because a new mount owns future spins.
@@ -1521,6 +1610,8 @@ export const RouletteGame = {
     spinBusy = false;
     // Normalize the phase so a remount never resumes a phantom spin presentation.
     if (uiPhase === 'spinning') uiPhase = 'betting';
+    // Mark the abandoned presentation as aborted without exposing a stale spinning phase on remount.
+    presentationPhase = wasSpinning ? 'failed' : 'idle';
     // Remove the route-owned refit listener so navigation cannot leak viewport handlers. (UX-026)
     if (boardFitListener) { window.removeEventListener('resize', boardFitListener); boardFitListener = null; }
     // Cancel any pending debounced refit because the board is leaving the document.

@@ -11681,91 +11681,111 @@
       "id": "ROU-063",
       "module": "Roulette",
       "description": "One session-bound Roulette spin commits one authoritative pocket and settlement, and wheel, ball, table, result, history, voice, wallet, ledger, and Admin telemetry agree on that pocket and round without overlapping input.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ROU-001",
+        "BR-ROU-LOCKED-REMOVE-001"
+      ],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Permanent allocation for issue #169; no Roulette source or frozen v1 contract changes are included in the foundation."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "The route-owned completion guard, disabled controls, authoritative pocket mapping, wallet refresh, and exact settlement surfaces prove one accepted spin and one terminal presentation."
     },
     {
       "id": "ROU-064",
       "module": "Roulette",
       "description": "Roulette uses the complete named physical sequence with default Authentic reveal in 15 to 18 seconds, optional Quick reveal in 8 to 10 seconds, autoplay reveal in 6 to 8 seconds, and a non-spinning reduced-motion reveal in 400 to 800 ms without changing the committed result.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "The owner timing correction supersedes the earlier 7.5 to 9.5 second recommendation."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "The owner timing correction is now executable policy: Authentic 16.5 seconds, Quick 9 seconds, autoplay 7 seconds, and reduced motion 600 milliseconds."
     },
     {
       "id": "ROU-065",
       "module": "Roulette",
       "description": "The rotor and ball counter-rotate with separate continuous velocity profiles; Authentic mode shows at least 16 ball circuits, progressive deceleration, bounded rim departure and contacts, pocket-relative capture, and at least one second of ball-and-pocket co-rotation without teleport or transform reset.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-001"
+      ],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Final ball alignment must be within half a pocket arc and two CSS pixels on the controlled viewport."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "Deterministic trajectories use at least eighteen ball circuits, five rotor turns, a sampled descent, and a 1.1-second shared 120-degree co-rotation whose start and end remain pocket-congruent."
     },
     {
       "id": "ROU-066",
       "module": "Roulette",
       "description": "Roulette locks wagering and mode controls during the atomic spin, conceals the result until visible pocket capture, and then reveals highlight, history, voice, and wallet celebration exactly once with player-facing phase copy.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ROU-SPINNING-COPY-001",
+        "BR-ROU-LOCKED-REMOVE-001",
+        "BR-ROU-001"
+      ],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "This strengthens existence-only ROU-042 and ROU-054 without changing Roulette mathematics."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "Closed-vocabulary live phase copy updates in a reserved region while every wager, mode, remove, and spin control remains locked until the authoritative result is revealed once."
     },
     {
       "id": "ROU-067",
       "module": "Roulette",
       "description": "Roulette navigation, refresh, autoplay stop, locale change, mute, and API failure recover the authoritative committed round once or a safe pre-commit betting state and leave no duplicate ledger/history event, orbit, glow, timer, sound, or disabled-control residue.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ROU-REDUCED-MOTION-001",
+        "BR-ROU-001"
+      ],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Acceptance includes route-away/return and refresh at both pre-commit and post-commit boundaries."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "Route-generation ownership, timer-scope disposal, cancel-released waits, stale wallet guards, locale deferral, and safe failure recovery prevent stale or duplicate presentation work."
     },
     {
       "id": "ROU-068",
       "module": "Tests",
       "description": "Roulette motion acceptance maps at least 100 committed spins and supplies exact-head frame, transform, capture, alignment, geometry, cleanup, wallet/history/ledger, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001",
+        "BR-ROU-001"
+      ],
       "implementation_files": [
         "tests/visual/visual_matrix.json",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Static screenshots alone cannot satisfy issue #169."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "The listener-free trajectory suite maps one hundred deterministic committed rounds; standard exact-head Browser shards provide EN/RU governed-viewport motion, reduced-motion, geometry, wallet, and cleanup evidence."
     },
     {
       "id": "ROU-069",
@@ -12307,91 +12327,109 @@
       "id": "SLOT-030",
       "module": "Slots",
       "description": "One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001",
+        "BR-SLOT-ECONOMICS-001"
+      ],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Permanent allocation for issue #170; no Slots source or frozen v1 contract changes are included in the foundation."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "One route-generation completion guard owns the public spin, committed debit, authoritative grid, wallet refresh, result, sound, voice, and terminal settlement."
     },
     {
       "id": "SLOT-031",
       "module": "Slots",
       "description": "Five Slots reels move independently and continuously through input lock, acceleration, full-speed travel, staggered deceleration, final stop, result evaluation, credit reveal, and optional bonus transition with no whole-grid swap, blank seam, backward jump, or frozen placeholder.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Every stopped reel must retain its exact committed symbols while later reels continue."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "The five deterministic landing strips expose locking, acceleration, full-speed travel, deceleration, staggered settling, and settled phases while preserving each committed column."
     },
     {
       "id": "SLOT-032",
       "module": "Slots",
       "description": "Slots reaches the final reel stop in 3.8 to 4.8 seconds for Slow, 2.8 to 3.6 seconds for Medium, 1.6 to 2.2 seconds for Fast, and 400 to 800 ms for reduced motion, with adjacent normal-profile stops staggered by 140 to 240 ms.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001",
+        "BR-SLOT-ECONOMICS-001"
+      ],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Any committed bonus anticipation is bounded to one additional second and cannot alter the outcome."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "Selectable Slow, Medium, and Fast schedules finish inside their exact bands with 150-to-170-millisecond adjacent stops; reduced motion uses 520 milliseconds and anticipation remains bounded to 900 milliseconds."
     },
     {
       "id": "SLOT-033",
       "module": "Slots",
       "description": "Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001",
+        "BR-SLOT-001"
+      ],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Reel-stop and result sounds follow actual phase events, respect mute, avoid autoplay stacking, and cancel on unmount."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "Measured cell stride owns each exact landing, stopped strips remain stationary, paylines appear after the final hold, losses retain a quiet settled state, and route teardown cancels timers and sounds."
     },
     {
       "id": "SLOT-034",
       "module": "Slots",
       "description": "Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001",
+        "BR-SLOT-ECONOMICS-001"
+      ],
       "implementation_files": [
         "web/games/slots.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "The cabinet, action rail, wallet, and result region remain stable without motion-driven scrolling or overflow."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "Shared autoplay awaits the complete Fast presentation, Stop prevents the next atomic action, and route-generation, locale, bot, wallet, and failure guards leave no stale continuation or scroll mutation."
     },
     {
       "id": "SLOT-035",
       "module": "Tests",
       "description": "Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001",
+        "BR-SLOT-ECONOMICS-001",
+        "BR-SLOTS-PAYLINE-001"
+      ],
       "implementation_files": [
         "tests/visual/visual_matrix.json",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Static screenshots alone cannot satisfy issue #170."
+      "changed_in": "issue-170-motion-quality",
+      "notes": "Deterministic unit coverage spans all speed profiles, strip composition, wins, scatters, repeated grids, cancellation, and remount; exact-head Browser shards supply EN/RU governed-viewport and reduced-motion evidence."
     },
     {
       "id": "SLOT-036",

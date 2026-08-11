@@ -1540,7 +1540,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('roulette motion compatibility suite failed')
     # Record the listener-free anti-strobe, whole-turn, and reduced-motion proof.
-    run_case('UI-ROU-MOTION-001',['ROU-069','ROU-070','TEST-102'],run_roulette_motion_tests)
+    run_case('UI-ROU-MOTION-001',['ROU-063','ROU-064','ROU-065','ROU-066','ROU-067','ROU-068','ROU-069','ROU-070','TEST-102'],run_roulette_motion_tests)
     # Execute one dependency-light Node frontend suite without opening a listener or browser.
     def run_game_frontend_node_test(relative_path, failure_message):
         # Let controlled local environments point at the bundled runtime while hosted CI uses its ordinary node command.
@@ -1550,9 +1550,9 @@ def run_api_tests():
         # Fail the named central case with a bounded diagnostic tail when focused behavior regresses.
         if result.returncode!=0: raise AssertionError(f'{failure_message}: {(result.stdout+result.stderr)[-1800:]}')
     # Record deterministic landing, API/timer teardown, exactly-once completion, and clean-remount Roulette proof.
-    run_case('UI-ROU-PRESENTATION-001',['ROU-072'],lambda: run_game_frontend_node_test(Path('tests/games/roulette/test_frontend.mjs'),'Roulette presentation suite failed'))
+    run_case('UI-ROU-PRESENTATION-001',['ROU-063','ROU-064','ROU-065','ROU-066','ROU-067','ROU-068','ROU-072'],lambda: run_game_frontend_node_test(Path('tests/games/roulette/test_frontend.mjs'),'Roulette presentation suite failed'))
     # Record deterministic strips, stagger/anticipation, API/landing teardown, and clean-remount Slots proof.
-    run_case('UI-SLOT-PRESENTATION-001',['SLOT-037'],lambda: run_game_frontend_node_test(Path('tests/games/slots/test_frontend.mjs'),'Slots presentation suite failed'))
+    run_case('UI-SLOT-PRESENTATION-001',['SLOT-030','SLOT-031','SLOT-032','SLOT-033','SLOT-034','SLOT-035','SLOT-037'],lambda: run_game_frontend_node_test(Path('tests/games/slots/test_frontend.mjs'),'Slots presentation suite failed'))
     # Record the shared committed-debit renderer and catalog-wide presentation-order proof.
     run_case('UI-WALLET-TIMING-001',['LEDGER-031','TEST-151'],lambda: run_game_frontend_node_test(Path('tests/wallet_timing.mjs'),'wallet timing suite failed'))
     # Execute the complete same-origin Swagger inventory and adapter contract without a listener.
@@ -8260,11 +8260,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Define the hosted runtime proof for the tracked compatibility curves.
                     def roulette_motion_curve_runtime():
                         # Require the rotor to run the named sampled coast-down without a second easing layer.
-                        assert roulette_motion_runtime['rotor']=={'name':'roulettePremiumWheelSpin','timing':'linear','duration':'3.6s','keyframes':21}
+                        assert roulette_motion_runtime['rotor']=={'name':'roulettePremiumWheelSpin','timing':'linear','duration':'16.5s','keyframes':21}
                         # Require the ball to use its corresponding sampled counter-rotation curve.
-                        assert roulette_motion_runtime['ball']=={'name':'roulettePremiumBallSpin','timing':'linear','duration':'3.6s','keyframes':21}
+                        assert roulette_motion_runtime['ball']=={'name':'roulettePremiumBallSpin','timing':'linear','duration':'16.5s','keyframes':21}
                     # Record the exact live-animation identity before settlement removes the spinning classes.
-                    run_case('BR-ROU-MOTION-CURVE-001',['ROU-069','ROU-070','TEST-102'],roulette_motion_curve_runtime)
+                    run_case('BR-ROU-MOTION-CURVE-001',['ROU-064','ROU-065','ROU-068','ROU-069','ROU-070','TEST-102'],roulette_motion_curve_runtime)
                     # Read the spinning-state settlement card before the timed settlement rerender can replace it. (ROU-058, TEST-059)
                     roulette_spinning_settlement_text=page.get_by_test_id('roulette-settlement-card').inner_text()
                     # Define the player-facing spinning copy regression for issue #234.
@@ -8272,7 +8272,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Require the live card to show localized progress language instead of the old layout/debug note.
                         assert ('Spin in progress' in roulette_spinning_settlement_text or 'Спин выполняется' in roulette_spinning_settlement_text) and 'No layout resize' not in roulette_spinning_settlement_text and 'Макет не меняет размер' not in roulette_spinning_settlement_text
                     # Record the focused Roulette spinning-copy browser assertion.
-                    run_case('BR-ROU-SPINNING-COPY-001',['ROU-058','TEST-059'],roulette_spinning_settlement_copy)
+                    run_case('BR-ROU-SPINNING-COPY-001',['ROU-058','ROU-066','TEST-059'],roulette_spinning_settlement_copy)
                     # Read the open bet-slip Remove button while the spin has locked the current wager set. (ROU-059, TEST-061)
                     roulette_locked_remove_disabled=page.locator('[data-testid="roulette-bet-slip"] [data-clear]').first.is_disabled()
                     # Define the focused locked-wager Remove-button regression for issue #240.
@@ -8280,11 +8280,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Require the Remove action to be inert while the spin is resolving the already committed wager.
                         assert roulette_locked_remove_disabled
                     # Record the focused Roulette locked-wager remove-control browser assertion.
-                    run_case('BR-ROU-LOCKED-REMOVE-001',['ROU-059','TEST-061'],roulette_locked_remove_button)
+                    run_case('BR-ROU-LOCKED-REMOVE-001',['ROU-059','ROU-063','ROU-066','TEST-061'],roulette_locked_remove_button)
                     # Capture the locked spinning state before the backend result is presented.
                     viewport_shot('roulette-premium-spinning.png')
                     # Wait for the fixed result region to reach the settled phase.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=7000)
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=20000)
                     # Wait for the Roulette voice probe to observe the announcement queued after settlement refresh.
                     page.wait_for_function("() => window.__casinoAudioEvents.some(event => event.kind === 'voice_start' && event.gameId === 'roulette')", timeout=3000)
                     # Define the premium_roulette_settled function used by this module.
@@ -8319,7 +8319,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_test_id('roulette-bet-slip').is_visible()
                         # Verify recent stats remain visible after settlement.
                         assert page.get_by_test_id('roulette-stats-spark').is_visible()
-                    run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-042','ROU-043','ROU-044','ROU-046','ROU-049','ROU-050','ROU-052','ROU-053','ROU-054','ROU-055','ROU-056','AUDIO-010'],premium_roulette_settled)
+                    run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-042','ROU-043','ROU-044','ROU-046','ROU-049','ROU-050','ROU-052','ROU-053','ROU-054','ROU-055','ROU-056','ROU-063','ROU-065','ROU-066','ROU-067','ROU-068','AUDIO-010'],premium_roulette_settled)
                     # Let the short physical ball-settle accent complete before capturing static evidence.
                     page.wait_for_timeout(700)
                     # Capture settled-state visual evidence for the Roulette worker handback.
@@ -8403,7 +8403,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Request stop while the current committed spin is allowed to finish safely.
                     page.get_by_test_id('roulette-auto-stop').click()
                     # Wait for that committed spin to settle before capturing route-return persistence evidence.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=7000)
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=10000)
                     run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
                     # Collapse autoplay after verification so route-return evidence restores the gameplay-first composition.
                     page.get_by_test_id('roulette-autoplay-disclosure').locator('summary').click()
@@ -8458,7 +8458,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Read the authoritative result from the exact response used by this evidence row.
                                     presentation_result=str(presentation_spin_response.value.json()['data']['round']['result'])
                                     # Wait for the actual action to settle before starting the next matrix row.
-                                    page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'",timeout=7000)
+                                    page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'",timeout=20000)
                                     # Require result panel and wheel identity to converge on the response after the changed branch completes.
                                     assert page.get_by_test_id('roulette-result-region').get_attribute('data-result-number')==presentation_result and page.get_by_test_id('roulette-wheel').get_attribute('data-selected-result')==presentation_result
                         # Restore the ordinary English primary-desktop route for downstream Roulette checks.
@@ -8470,7 +8470,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Execute the new real normal/reduced action matrix inside the same permanent owner case.
                         roulette_presentation_evidence_matrix()
                     # Extend the existing permanent reduced-motion case without adding a new Browser inventory row.
-                    run_case('BR-ROU-REDUCED-MOTION-001',['ROU-070','ROU-072','TEST-102'],roulette_reduced_motion_and_presentation)
+                    run_case('BR-ROU-REDUCED-MOTION-001',['ROU-064','ROU-067','ROU-068','ROU-070','ROU-072','TEST-102'],roulette_reduced_motion_and_presentation)
                     # Resize to the authoritative desktop-compact matrix viewport.
                     page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(350)
                     # Verify the compact desktop layout keeps the dominant stage between two subordinate rails.
@@ -8978,7 +8978,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Execute the new real normal/reduced action matrix inside the same permanent owner case.
                         slots_presentation_evidence_matrix()
                     # Extend the existing permanent economics case without adding a new Browser inventory row.
-                    run_case('BR-SLOT-ECONOMICS-001',['SLOT-010','SLOT-011','SLOT-012','SLOT-013','SLOT-014','SLOT-015','SLOT-016','SLOT-017','SLOT-018','SLOT-019','SLOT-036','SLOT-037'],slots_economics_and_presentation)
+                    run_case('BR-SLOT-ECONOMICS-001',['SLOT-010','SLOT-011','SLOT-012','SLOT-013','SLOT-014','SLOT-015','SLOT-016','SLOT-017','SLOT-018','SLOT-019','SLOT-030','SLOT-032','SLOT-034','SLOT-035','SLOT-036','SLOT-037'],slots_economics_and_presentation)
                     # Refresh idle boxes after the focused real spin so the existing animation comparison uses one baseline.
                     idle_box=page.get_by_test_id('slots-cabinet').bounding_box(); idle_result_box=page.get_by_test_id('slots-result').bounding_box()
                     # Start one real spin through the browser-visible control.
@@ -9041,7 +9041,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert abs(idle_result_box['height']-result_result_box['height']) < 2
                         # Verify the premium Slots route avoids page-level horizontal overflow.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
-                    run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','I18N-010','TEST-064','TEST-117','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
+                    run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','SLOT-030','SLOT-031','SLOT-032','SLOT-033','SLOT-034','SLOT-035','I18N-010','TEST-064','TEST-117','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                     # Navigate to Keno and wait for the premium route shell to mount.
                     page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
                     # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)

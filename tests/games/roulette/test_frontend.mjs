@@ -170,7 +170,7 @@ function installFakeBrowser() {
 // Install the browser seam before shared frontend modules read global state.
 const browser = installFakeBrowser();
 // Import the tested game exports only after installing the minimal browser global.
-const { RouletteGame, computeLandingPlan, pocketBaseAngle, norm360, createRouletteSpinCompletion, createRouletteMotionWait, SPIN_REVEAL_MS, AUTOPLAY_REVEAL_MS, REDUCED_REVEAL_MS, MIN_LANDING_MS, WHEEL_EXTRA_TURNS, BALL_EXTRA_TURNS } = await import('../../../web/games/roulette.js');
+const { RouletteGame, computeLandingPlan, pocketBaseAngle, norm360, createRouletteSpinCompletion, createRouletteMotionWait, SPIN_REVEAL_MS, QUICK_REVEAL_MS, AUTOPLAY_REVEAL_MS, REDUCED_REVEAL_MS, CAPTURE_HOLD_MS, CAPTURE_HOLD_DEGREES, MIN_LANDING_MS, WHEEL_EXTRA_TURNS, BALL_EXTRA_TURNS } = await import('../../../web/games/roulette.js');
 // Resolve the repository root from this game-specific test directory.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 // Read the production browser module as UTF-8 text for guard-wiring assertions.
@@ -189,6 +189,14 @@ async function waitFor(predicate, message) {
   // Give chained promises a bounded number of microtask turns to reach the expected boundary.
   for (let attempt = 0; attempt < 100; attempt += 1) { if (predicate()) return; await Promise.resolve(); }
   // Fail with one stable diagnostic when production code never reached the boundary.
+  throw new Error(message);
+}
+
+// Advance staged production timers until the requested asynchronous boundary is observable.
+async function advanceClockUntil(predicate, message) {
+  // Alternate timer batches and promise continuations because each governed motion phase schedules the next stage after an await.
+  for (let attempt = 0; attempt < 100; attempt += 1) { if (predicate()) return; browser.clock.runAll(); await Promise.resolve(); }
+  // Fail with the same bounded diagnostic discipline as listener-free ordinary waits.
   throw new Error(message);
 }
 
@@ -236,18 +244,33 @@ test('ROU-051 landing plan rejects pockets that are not on the rendered wheel', 
 // Verify ROU-070 the wrappers travel whole extra circuits in opposite directions without teleporting.
 test('ROU-070 wrapper travel adds bounded whole-turn circuits in opposite directions', () => {
   const plan = computeLandingPlan({ wheelAngle: 45, ballAngle: 200, pocketIndex: 17, pocketCount: 38, random: createSeededRandom('rou-turns'), revealMs: SPIN_REVEAL_MS, elapsedMs: 250 }); // Compute one representative plan.
-  const wheelTravel = plan.wheelTarget - 45; // Measure the rotor wrapper's clockwise travel.
+  const wheelTravel = plan.wheelCaptureTarget - 45; // Measure the rotor wrapper's clockwise travel before capture.
   assert.ok(wheelTravel >= WHEEL_EXTRA_TURNS * 360 && wheelTravel < (WHEEL_EXTRA_TURNS + 1) * 360, 'rotor travels its extra turns plus bounded scatter'); // Prove the rotor always advances forward through its governed extra turns.
-  const ballTravel = 200 - plan.ballTarget; // Measure the ball wrapper's counter-clockwise travel.
+  const ballTravel = 200 - plan.ballCaptureTarget; // Measure the ball wrapper's counter-clockwise travel before capture.
   assert.ok(ballTravel >= BALL_EXTRA_TURNS * 360 && ballTravel < (BALL_EXTRA_TURNS + 1) * 360, 'ball counter-travels its extra circuits plus pocket alignment'); // Prove the ball always counter-rotates through its governed circuits.
 });
 
 // Verify ROU-054 the travel budget absorbs backend latency without ever teleporting the landing.
 test('ROU-054 travel budget floors at the minimum landing time under slow round-trips', () => {
   const fast = computeLandingPlan({ wheelAngle: 0, ballAngle: 0, pocketIndex: 5, pocketCount: 37, random: createSeededRandom('rou-fast'), revealMs: SPIN_REVEAL_MS, elapsedMs: 200 }); // Compute a plan with a fast backend.
-  assert.equal(fast.travelMs, SPIN_REVEAL_MS - 200); // Prove a fast round-trip uses the remaining reveal budget exactly.
-  const slow = computeLandingPlan({ wheelAngle: 0, ballAngle: 0, pocketIndex: 5, pocketCount: 37, random: createSeededRandom('rou-slow'), revealMs: SPIN_REVEAL_MS, elapsedMs: 3500 }); // Compute a plan with a slow backend.
+  assert.equal(fast.travelMs, SPIN_REVEAL_MS - 200 - CAPTURE_HOLD_MS); // Prove a fast round-trip reserves the required co-rotation hold.
+  const slow = computeLandingPlan({ wheelAngle: 0, ballAngle: 0, pocketIndex: 5, pocketCount: 37, random: createSeededRandom('rou-slow'), revealMs: SPIN_REVEAL_MS, elapsedMs: SPIN_REVEAL_MS }); // Compute a plan with a slow backend.
   assert.equal(slow.travelMs, MIN_LANDING_MS); // Prove the landing keeps its minimum travel instead of snapping.
+});
+
+// Verify ROU-065 pocket capture remains congruent throughout the required shared co-rotation hold.
+test('ROU-065 capture hold advances ball and rotor together for at least one second', () => {
+  const plan = computeLandingPlan({ wheelAngle: 17, ballAngle: 291, pocketIndex: 12, pocketCount: 37, random: createSeededRandom('rou-capture'), revealMs: SPIN_REVEAL_MS, elapsedMs: 100 }); // Compute one complete Authentic path.
+  assert.ok(plan.captureMs >= 1000); // Require at least one full second of visible pocket-relative co-rotation.
+  assert.equal(plan.wheelTarget - plan.wheelCaptureTarget, CAPTURE_HOLD_DEGREES); // Require the rotor to own the exact shared hold angle.
+  assert.equal(plan.ballTarget - plan.ballCaptureTarget, CAPTURE_HOLD_DEGREES); // Require the captured ball to advance by the identical angle.
+  assert.ok(congruent(plan.ballCaptureTarget, pocketBaseAngle(12, 37) + plan.wheelCaptureTarget)); // Prove congruence at first capture.
+  assert.ok(congruent(plan.ballTarget, pocketBaseAngle(12, 37) + plan.wheelTarget)); // Prove congruence at final reveal.
+});
+
+// Verify ROU-068 at least one hundred deterministic committed trajectories preserve their authoritative pocket.
+test('ROU-068 one hundred committed trajectories remain pocket-congruent and deterministic', () => {
+  for (let round = 0; round < 100; round += 1) { const pocketCount = round % 2 ? 37 : 38; const pocketIndex = round % pocketCount; const seed = `rou-accepted-${round}`; const first = computeLandingPlan({ wheelAngle: round * 3.7, ballAngle: round * 7.1, pocketIndex, pocketCount, random: createSeededRandom(seed), revealMs: SPIN_REVEAL_MS, elapsedMs: round % 500 }); const second = computeLandingPlan({ wheelAngle: round * 3.7, ballAngle: round * 7.1, pocketIndex, pocketCount, random: createSeededRandom(seed), revealMs: SPIN_REVEAL_MS, elapsedMs: round % 500 }); assert.deepEqual(first, second); assert.ok(congruent(first.ballTarget, pocketBaseAngle(pocketIndex, pocketCount) + first.wheelTarget)); }
 });
 
 // Verify DICE-001 one committed round id always replays the identical decorative trajectory.
@@ -261,7 +284,10 @@ test('DICE-001 seeded landing scatter is deterministic per round identity', () =
 // Verify MOTION-005 the reduced-motion reveal stays inside the governed 400-800 ms comfort band.
 test('MOTION-005 reveal budgets keep their governed ordering and comfort band', () => {
   assert.ok(REDUCED_REVEAL_MS >= 400 && REDUCED_REVEAL_MS <= 800); // Prove the comfort reveal honors the governed band.
-  assert.ok(AUTOPLAY_REVEAL_MS < REDUCED_REVEAL_MS && REDUCED_REVEAL_MS < SPIN_REVEAL_MS); // Prove the three reveal modes stay strictly ordered.
+  assert.ok(SPIN_REVEAL_MS >= 15000 && SPIN_REVEAL_MS <= 18000); // Prove Authentic stays in the dealer-paced band.
+  assert.ok(QUICK_REVEAL_MS >= 8000 && QUICK_REVEAL_MS <= 10000); // Prove Quick retains the complete sequence in its optional band.
+  assert.ok(AUTOPLAY_REVEAL_MS >= 6000 && AUTOPLAY_REVEAL_MS <= 8000); // Prove autoplay cannot collapse into a sub-second reveal.
+  assert.ok(REDUCED_REVEAL_MS < AUTOPLAY_REVEAL_MS && AUTOPLAY_REVEAL_MS < QUICK_REVEAL_MS && QUICK_REVEAL_MS < SPIN_REVEAL_MS); // Prove the four reveal modes stay strictly ordered.
 });
 
 // Verify MOTION-002 every landing timer runs through the guarded route-owned scope.
@@ -469,9 +495,9 @@ test('ROU-072 delayed final bot refresh cannot repaint a remounted route', async
   // Start an immediate-response public spin.
   const oldAction = firstRoot.querySelector('#spin').onclick();
   // Wait for the production landing timer and advance it to final cleanup.
-  await waitFor(() => browser.clock.pending >= 1, 'Roulette did not reach its bot-refresh landing wait'); browser.clock.runAll();
-  // Wait until the old action is blocked on the delayed final bot-panel read.
-  await waitFor(() => browser.botRequests === botCount + 1, 'Roulette did not reach its delayed final bot refresh');
+  await waitFor(() => browser.clock.pending >= 1, 'Roulette did not reach its bot-refresh landing wait');
+  // Drive every governed motion stage until the old action is blocked on the delayed final bot-panel read.
+  await advanceClockUntil(() => browser.botRequests === botCount + 1, 'Roulette did not reach its delayed final bot refresh');
   // Dispose the old route while its already-settled action still awaits bot markup.
   RouletteGame.unmount(); browser.clock.runAll();
   // Mount a new generation whose immediate bot response owns its panel.
@@ -509,9 +535,9 @@ test('ROU-072 rejected final bot refresh after remount has no stale side effect'
   // Start one immediate-response public spin.
   const oldAction = firstRoot.querySelector('#spin').onclick();
   // Advance the actual landing so the action reaches final bot cleanup.
-  await waitFor(() => browser.clock.pending >= 1, 'Roulette did not reach its rejected bot-refresh landing wait'); browser.clock.runAll();
-  // Wait until the old action is blocked on its final bot-panel read.
-  await waitFor(() => browser.botRequests === botCount + 1, 'Roulette did not reach its rejected final bot refresh');
+  await waitFor(() => browser.clock.pending >= 1, 'Roulette did not reach its rejected bot-refresh landing wait');
+  // Drive every governed motion stage until the old action is blocked on its final bot-panel read.
+  await advanceClockUntil(() => browser.botRequests === botCount + 1, 'Roulette did not reach its rejected final bot refresh');
   // Dispose the old route while final cleanup still owns the pending read.
   RouletteGame.unmount(); browser.clock.runAll();
   // Mount a distinct route whose immediate bot response owns its presentation.
@@ -553,9 +579,9 @@ test('ROU-072 current final bot refresh failure preserves live feedback', async 
   // Start one immediate-response public spin.
   const action = currentRoot.querySelector('#spin').onclick();
   // Advance the actual landing so current cleanup reaches the delayed bot read.
-  await waitFor(() => browser.clock.pending >= 1, 'Roulette did not reach its live bot-refresh landing wait'); browser.clock.runAll();
-  // Wait until final bot cleanup is pending on the current route.
-  await waitFor(() => browser.botRequests === botCount + 1, 'Roulette did not reach its live final bot refresh');
+  await waitFor(() => browser.clock.pending >= 1, 'Roulette did not reach its live bot-refresh landing wait');
+  // Drive every governed motion stage until final bot cleanup is pending on the current route.
+  await advanceClockUntil(() => browser.botRequests === botCount + 1, 'Roulette did not reach its live final bot refresh');
   // Build a hostile response that rejects bot markup construction.
   const rejectedBotData = new Proxy({}, { get(target, property) { if (property === 'capabilities') throw new Error('live-bot-secret'); return Reflect.get(target, property); } });
   // Release the current request into updateBotPanel's rethrow path.
@@ -589,9 +615,9 @@ test('ROU-072 delayed wallet refresh cannot mutate a remounted shell', async () 
   // Start an immediate-response real spin.
   const oldAction = firstRoot.querySelector('#spin').onclick();
   // Wait until real motion timers are scheduled, then advance the landing.
-  await waitFor(() => browser.clock.pending >= 1, 'Roulette did not reach its real landing wait'); browser.clock.runAll();
-  // Wait until the old action is blocked inside its side-effect-free wallet fetch.
-  await waitFor(() => browser.walletRequests === walletCount + 1, 'Roulette did not reach the delayed wallet fetch');
+  await waitFor(() => browser.clock.pending >= 1, 'Roulette did not reach its real landing wait');
+  // Drive every governed motion stage until the old action is blocked inside its side-effect-free wallet fetch.
+  await advanceClockUntil(() => browser.walletRequests === walletCount + 1, 'Roulette did not reach the delayed wallet fetch');
   // Tear down the old route while that second await is pending.
   RouletteGame.unmount(); browser.clock.runAll();
   // Mount a distinct root whose immediate wallet refresh now owns shell state.
