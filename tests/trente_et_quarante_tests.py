@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Trente et Quarante rules and settlement tests on the shared core. (#147, TEQ-001/002)"""
 
 # Import a deterministic seeded PRNG for the house-edge property check.

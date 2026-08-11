@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Secret-safe recovery evidence contracts for MYSQL-006 and TOOL-004."""
 
 # Import annotations so immutable records can reference their own types.

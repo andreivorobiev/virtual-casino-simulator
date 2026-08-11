@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Thread-safe Operations status aggregation for issue #72."""
 
 # Import a re-entrant lock so overlapping monitoring calls retain monotonic heartbeat state.

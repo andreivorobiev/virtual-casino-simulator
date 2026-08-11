@@ -1,9 +1,9 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Define the CasinoError class that groups related behavior.
 class CasinoError(Exception):
     # Define the __init__ function used by this module.
     def __init__(self, code: str, message: str, status: int = 400, details=None):
-        # Execute this statement as part of the module's documented control flow.
         super().__init__(message)
         # Set self.code to the value needed for the next operation.
         self.code = code
@@ -18,42 +18,36 @@ class CasinoError(Exception):
 class NotFoundError(CasinoError):
     # Define the __init__ function used by this module.
     def __init__(self, message="Not found", details=None):
-        # Execute this statement as part of the module's documented control flow.
         super().__init__("NOT_FOUND", message, 404, details)
 
 # Define the ValidationError class that groups related behavior.
 class ValidationError(CasinoError):
     # Define the __init__ function used by this module.
     def __init__(self, message="Invalid request", details=None):
-        # Execute this statement as part of the module's documented control flow.
         super().__init__("VALIDATION_ERROR", message, 400, details)
 
 # Define the UnauthorizedError class that groups related behavior.
 class UnauthorizedError(CasinoError):
     # Define the __init__ function used by this module.
     def __init__(self, message="Authentication is required", details=None):
-        # Execute this statement as part of the module's documented control flow.
         super().__init__("UNAUTHORIZED", message, 401, details)
 
 # Define the ForbiddenError class that groups related behavior.
 class ForbiddenError(CasinoError):
     # Define the __init__ function used by this module.
     def __init__(self, message="Permission denied", details=None):
-        # Execute this statement as part of the module's documented control flow.
         super().__init__("FORBIDDEN", message, 403, details)
 
 # Define the InsufficientFundsError class that groups related behavior.
 class InsufficientFundsError(CasinoError):
     # Define the __init__ function used by this module.
     def __init__(self, message="Not enough balance for this action", details=None):
-        # Execute this statement as part of the module's documented control flow.
         super().__init__("INSUFFICIENT_FUNDS", message, 400, details)
 
 # Define the ConflictError class that groups related behavior.
 class ConflictError(CasinoError):
     # Define the __init__ function used by this module.
     def __init__(self, message="Request conflicts with current state", details=None):
-        # Execute this statement as part of the module's documented control flow.
         super().__init__("CONFLICT", message, 409, details)
 
 # Define the RequestTooLargeError class for bounded production request bodies.

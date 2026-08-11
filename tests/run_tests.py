@@ -1,12 +1,12 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Run the repository's API, Browser, Long, governance, and focused test inventories.
 import argparse, base64, hashlib, importlib, io, json, math, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
 # Import date arithmetic for fixed-window Guest Trials retention tests.
 from datetime import datetime, timedelta, timezone
 # Import source inspection so browser progress totals follow declared run_case calls automatically.
 import inspect
-# Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
 # Set ROOT to the value needed for the next operation.
 ROOT = Path(__file__).resolve().parents[1]
@@ -157,11 +157,8 @@ def api(base, path, method='GET', body=None, ok=True, auth_token='__default__', 
     except urllib.error.HTTPError as e:
         # Set payload to the value needed for the next operation.
         payload=json.loads(e.read().decode('utf-8'))
-    # Branch when the following condition is true.
     if ok and not payload.get('ok'): raise AssertionError(payload)
-    # Branch when the following condition is true.
     if not ok and payload.get('ok'): raise AssertionError('expected failure but got ok')
-    # Return the computed value to the caller.
     return payload['data'] if payload.get('ok') else payload
 
 # Send exact JSON bytes so parser-boundary tests can exercise non-standard constants. (CORE-025, TEST-055)
@@ -195,7 +192,6 @@ def login_default_user(base):
     session=api(base,'/api/v2/auth/login','POST',{'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD},auth_token=None)['session']
     # Set SESSION_TOKEN to the value needed for the next operation.
     SESSION_TOKEN=session['token']
-    # Return the computed value to the caller.
     return SESSION_TOKEN
 
 # Define the start_server function used by this module.
@@ -206,7 +202,6 @@ def start_server():
     base=f'http://127.0.0.1:{port}'
     # Record the isolated listener identity so acceptance handbacks can prove loopback hygiene.
     print(f'Test server PID {proc.pid} listening on {base}',flush=True)
-    # Iterate through the collection to process each item.
     for _ in range(80):
         # Start protected logic so failures can be handled safely.
         try: login_default_user(base); return proc,base
@@ -1412,6 +1407,8 @@ def run_api_tests():
         result=subprocess.run([sys.executable,'-m','unittest',module_name,'-v'],cwd=str(ROOT),capture_output=True,text=True,timeout=600)
         # Fail the named central case when any focused assertion fails, preserving the child's diagnostic tail.
         if result.returncode!=0: raise AssertionError(f'{failure_message}: {result.stderr[-1500:]}')
+    # Prove the governed source-header migration, vendor exclusion, write safety, and filler ratchet. (issue #441)
+    run_case('FILE-HEADER-POLICY-001',['COMMENT-001','TOOL-009'],lambda: run_unit_module('tests.file_header_policy_tests','file header policy suite failed'))
     # Record the exact-source payload and shipped-asset budget checkpoint. (issue #323, TEST-159)
     run_case('PERF-PAYLOAD-BUDGET-001',['TEST-159'],lambda: run_unit_module('tests.unit.payload_frontend_budget_tests','payload and frontend budget suite failed'))
     # Record compact shell/Roulette projections and frozen-response compatibility. (issue #323, TEST-166)
@@ -2387,25 +2384,21 @@ def run_api_tests():
             terms=api(base,'/api/v2/me/terms',auth_token=token); assert terms['terms']['accepted'] is True
             # Set out to the value needed for the next operation.
             out=api(base,'/api/v2/auth/logout','POST',{},auth_token=token); assert out['logged_out'] is True
-            # Execute this statement as part of the module's documented control flow.
             api(base,'/api/v2/auth/session',ok=False,auth_token=token)
             # Set inactive_email to the value needed for the next operation.
             inactive_email='inactive@example.local'
             # Start protected logic so repeated local runs can reuse the same inactive user.
             try:
-                # Execute this statement as part of the module's documented control flow.
                 auth_core.create_user(inactive_email,'inactive-password','Inactive Player')
             # Handle the expected failure path for the protected logic.
             except Exception:
                 # Intentionally leave this block empty.
                 pass
-            # Execute this statement as part of the module's documented control flow.
             auth_core.set_user_status(inactive_email,'inactive')
             # Set inactive to the value needed for the next operation.
             inactive=api(base,'/api/v2/auth/login','POST',{'email':inactive_email,'password':'inactive-password'},ok=False,auth_token=None); assert inactive['error']['code']=='FORBIDDEN'
             # Refresh the harness Admin session after the concurrent-session and logout proof (issue #226).
             login_default_user(base)
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-AUTH-001',['AUTH-001','SESSION-001','SESSION-007','SESSION-012','USER-001','TERMS-001'],auth_backend)
         # Store wallet integrity evidence for the later server-restart persistence check.
         integrity_state={}
@@ -3155,7 +3148,6 @@ def run_api_tests():
             expected_game_revisions={game['id']:VERSION_MANIFEST['modules'][game['id']] for game in casino_config.GAMES}
             # Require every published game revision to match the canonical module manifest exactly.
             assert {game['id']:game['revision'] for game in state['games']}==expected_game_revisions
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-CORE-001',['CORE-001','CORE-016','TEST-003'],core)
 
         # Define catalog_foundation to prove every integration surface discovers the same games.
@@ -3181,7 +3173,6 @@ def run_api_tests():
         # Execute the catalog, driver, route-metadata, and shared resolver acceptance gate.
         run_case('API-CATALOG-001',['CORE-021','SESSION-005','TEST-042'],catalog_foundation)
 
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
         # Record collision-free Phase 0 registry, catalog-discovery, and translation-readiness evidence.
         run_case('API-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],validate_i18n_resources)
@@ -3208,9 +3199,7 @@ def run_api_tests():
             sess=api(base,'/api/v1/autoplay/start','POST',{'game_id':'roulette','player_id':'human','speed':'medium','round_limit':3,'plan':{'type':'test'}})['session']; assert sess['status']=='running'
             # Set stopped to the value needed for the next operation.
             stopped=api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':sess['autoplay_id']})['session']; assert stopped['stop_requested'] is True
-            # Execute this statement as part of the module's documented control flow.
             assert api(base,'/api/v1/admin/autoplay')['sessions']
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-CONTROL-001',['BOT-001','BOT-003','BOT-009','BOT-010','BOT-011','ADMIN-023','AUDIO-001','AUDIO-002','AUDIO-010','AUTO-001','AUTO-003'],bots_audio_autoplay)
         # Define the roulette function used by this module.
         def roulette():
@@ -3230,13 +3219,11 @@ def run_api_tests():
             api(base,'/api/v1/games/roulette/bets','POST',{'player_id':'human','amount':10,'bet_type':'red','covered_numbers':['1','3','5','7','9','12','14','16','18','19','21','23','25','27','30','32','34','36']})
             # Attempt another forced result and require server-owned settlement plus persisted rules.
             spin=api(base,'/api/v1/games/roulette/spin','POST',{'force_result':'0'}); st=api(base,'/api/v1/games/roulette/state')['state']; assert str(spin['round']['result']) in {str(number) for number in range(37)}|{'00'} and st['zero_rule']=='en_prison'
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-ROU-001',['ROU-010','ROU-011','ROU-030','ROU-032','LEDGER-001'],roulette)
         # Define the slots function used by this module.
         def slots():
             # Set s to the value needed for the next operation.
             s=api(base,'/api/v1/games/slots/spin','POST',{'player_id':'human','active_lines':20,'line_bet':1}); assert len(s['spin']['grid'])==3; assert s['spin']['cost'] in (0,20); assert 'paytable' in s['config']
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-SLOT-001',['SLOT-001','SLOT-002','SLOT-003'],slots)
         # Define the blackjack function used by this module.
         def blackjack():
@@ -3245,7 +3232,6 @@ def run_api_tests():
             # must not depend on a single random hand.
             # Set rid to the value needed for the next operation.
             rid=None
-            # Iterate through the collection to process each item.
             for _ in range(20):
                 # Call an asynchronous API/helper and wait for the result before continuing.
                 api(base,'/api/v1/casino/reset','POST',{})
@@ -3253,9 +3239,7 @@ def run_api_tests():
                 login_default_user(base)
                 # Set bj to the value needed for the next operation.
                 bj=api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':'human','bet_amount':10}); rid=bj['round']['round_id']; assert rid
-                # Branch when the following condition is true.
                 if bj['round']['status']=='player_turn':
-                    # Execute this statement as part of the module's documented control flow.
                     break
             # Handle the fallback branch when prior conditions did not match.
             else:
@@ -3265,7 +3249,6 @@ def run_api_tests():
             api(base,'/api/v1/games/blackjack/settings','POST',{'decks':8},ok=False)
             # Set api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id to the value needed for the next operation.
             api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':'human','bet_amount':10},ok=False)
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-BJ-001',['BJ-010','BJ-011','BJ-020'],blackjack)
         # Define blackjack_insurance_phase_guard to prove revealed rounds cannot mutate the wallet through insurance.
         def blackjack_insurance_phase_guard():
@@ -3415,7 +3398,6 @@ def run_api_tests():
             surrender_state['rounds']={'bj_surrender':{'round_id':'bj_surrender','player_id':'human','dealer':{'cards':['10C','8D'],'hole_card_hidden':True},'hands':[{'hand_id':'hand_surrender','cards':['9S','7H'],'bet':10,'status':'active','actions':[]}],'active_hand_index':0,'status':'player_turn'}}
             # Execute surrender and verify half the wager is due back.
             surrender_round=blackjack_engine.surrender(surrender_state,'bj_surrender'); assert surrender_round['hands'][0]['payout_due']==5
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-BJ-002',['BJ-002','BJ-003','BJ-004','BJ-005','BJ-006','BJ-007','BJ-012','BJ-015','BJ-016','BJ-017','BJ-018','BJ-019','BJ-026','BJ-031','TEST-054'],blackjack_rule_edges)
         # Define the baccarat function used by this module.
         def baccarat():
@@ -3425,7 +3407,6 @@ def run_api_tests():
             login_default_user(base)
             # Set api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':' to the value needed for the next operation.
             api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':'human','amount':10,'bet_type':'banker'}); d=api(base,'/api/v1/games/baccarat/deal','POST',{}); assert d['coup']['player_cards'] and d['coup']['banker_cards']; assert d['bot_bets'] is not None
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-BAC-001',['BAC-001','BAC-010','BAC-030'],baccarat)
         # Define the keno function used by this module.
         def keno():
@@ -3433,7 +3414,6 @@ def run_api_tests():
             p=api(base,'/api/v1/games/keno/state')['paytable']; assert set(map(int,p.keys()))==set(range(1,21))
             # Set api(base,'/api/v1/games/keno/tickets','POST',{'player_id':'h to the value needed for the next operation.
             api(base,'/api/v1/games/keno/tickets','POST',{'player_id':'human','amount':5,'spots':[1,2,3]}); d=api(base,'/api/v1/games/keno/draw','POST',{}); assert len(d['draw']['drawn'])==20
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-KENO-001',['KENO-001','KENO-002','KENO-010'],keno)
         # Define the bingo function used by this module.
         def bingo():
@@ -3441,7 +3421,6 @@ def run_api_tests():
             api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'human','amount':5,'pattern':'line'}); r=api(base,'/api/v1/games/bingo/reset','POST',{}); assert r['refunds']
             # Require a terminal competitive settlement rather than the removed guaranteed human win. (issue #405)
             api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'human','amount':5,'pattern':'line'}); a=api(base,'/api/v1/games/bingo/auto','POST',{'max_calls':75}); assert a['session']['status'] in ('won','no_win')
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-BINGO-001',['BINGO-001','BINGO-010','BINGO-020'],bingo)
         # Define the private_sessions function used by this module.
         def private_sessions():
@@ -3517,7 +3496,6 @@ def run_api_tests():
             assert ledger_a and all(row['player_id']==user_a for row in ledger_a)
             # Verify user B ledger view contains only user B rows.
             assert ledger_b and all(row['player_id']==user_b for row in ledger_b)
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-GAME-STATE-ISOLATION-001',['ROU-010','SLOT-019','BJ-020','BAC-010','KENO-008','BINGO-020','LEDGER-001','AUTO-001'],private_sessions)
         # Define the admin function used by this module.
         def admin():
@@ -3551,7 +3529,6 @@ def run_api_tests():
             terms=api(base,f'/api/v1/admin/users/{user_id}/terms','POST',{'accepted':True})['user']; assert terms['terms_status']=='accepted'
             # Set localized to the user after Admin preserves account locale settings.
             localized=api(base,f'/api/v1/admin/users/{user_id}/locale','POST',{'language':'en-US','format_locale':'en-US','use_browser_locale':False})['user']; assert localized['language']=='en-US' and localized['format_locale']=='en-US'
-        # Execute this statement as part of the module's documented control flow.
         run_case('API-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-014','DOC-001','LOG-001','ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','TEST-003'],admin)
     # Run cleanup logic regardless of success or failure.
     finally:
@@ -3627,9 +3604,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 browser=p.chromium.launch(headless=True)
             # Handle the expected failure path for the protected logic.
             except Exception as exc:
-                # Execute this statement as part of the module's documented control flow.
                 record('BR-SETUP-001',['TEST-010'],'FAIL','Playwright browser runtime missing or blocked: '+str(exc).split('\n')[0])
-                # Return the computed value to the caller.
                 return 2
             # Execute the real-login and PWA producer/consumer body only on its declared owner.
             if browser_shard_owns_group('auth_backend_pwa'):
@@ -4019,7 +3994,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             console_errors=[]; page_errors=[]; http_errors=[]; provider_requests=[]
             # Set page.on('console', lambda msg: console_errors.append(msg.tex to the value needed for the next operation.
             page.on('console', lambda msg: console_errors.append(msg.text) if msg.type=='error' else None)
-            # Execute this statement as part of the module's documented control flow.
             page.on('pageerror', lambda err: page_errors.append(str(err)))
             # Capture failing response URLs so authorization regressions are diagnosable.
             page.on('response', lambda response: http_errors.append(f'{response.status} {response.url}') if response.status >= 400 else None)
@@ -4585,7 +4559,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         shot('after-pass-password-reset-initiate.png')
                         # Return to the login gate so the existing real-backend authentication flow remains unchanged.
                         page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001','AUTH-UI-002','RESET-004','TEST-071','TEST-158'],auth_login_gate)
                     # Reselect the Russian gate through the visible control when this shard skipped the producing cases.
                     if not browser_shard_owns('BR-TOUCH-TARGET-AUTH-001'): page.get_by_test_id('auth-locale-select').select_option('ru-RU')
@@ -4601,7 +4574,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('terms-gate').wait_for(timeout=5000)
                     # Capture terms evidence for the frontend auth handback.
                     shot('auth_terms_gate.png')
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-TERMS-001',['TERMS-001','TERMS-002','TERMS-003'],lambda: assert_condition(page.get_by_test_id('accept-terms').is_visible(),'terms gate missing'))
                     # Accept terms through the published real-backend current-user endpoint.
                     with page.expect_response(lambda response: response.url.endswith('/api/v2/auth/terms/accept') and response.request.method == 'POST') as terms_accept_info:
@@ -4635,7 +4607,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         shot('after-pass-my-settings-sound-off.png')
                         # Return to the lobby so later account-provider acceptance starts from its existing route.
                         page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003','USER-008','USER-009','TEST-158'],auth_shell)
                     # Define provider-free authenticated account-method and callback lifecycle visual acceptance. (OAUTH-010)
                     def oauth_runtime_browser():
@@ -4859,7 +4830,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('shell-locale-select').select_option('en-US')
                     # Wait for the runtime locale state to reflect the shell switch.
                     page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'en-US'")
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-AUTH-LOCALE-001',['I18N-003','AUTH-UI-001'],lambda: route_before_locale and page.get_by_test_id('lobby').is_visible() and page.locator('#balance').inner_text()=='5,250.50')
                     # Logout through the shell control to verify the browser returns to the login gate.
                     page.get_by_test_id('logout').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
@@ -4867,7 +4837,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     logout_me_status=page.evaluate("async () => { const response=await fetch('/api/v2/me', {credentials:'include'}); return {status:response.status, ok:(await response.json()).ok}; }")
                     # Reload the browser document to prove current-user bootstrapping does not resurrect the old session.
                     page.reload(wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001','SESSION-006'],lambda: logout_me_status['status']==401 and logout_me_status['ok'] is False and page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
                     # Re-login after logout so the existing browser suite can continue authenticated.
                     page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
@@ -4919,7 +4888,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_text('All games use play tokens only').is_visible()
                         # Verify the all-games navigation keeps Baccarat reachable.
                         assert page.get_by_test_id('nav-baccarat').is_visible()
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
                     # Define governed touch-target acceptance for authenticated shell and Slots controls. (issue #283)
                     def shell_and_slots_touch_target_floor():
@@ -5053,7 +5021,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         timing=page.evaluate("""async () => { const mod=await import('/core/ui.js'); const player=window.CasinoCurrentUser.player; const before=Number(player.token_balance); const accepted=mod.renderCommittedWagerBalance({player_id:player.player_id,amount:-1,balance_after:before-1}); const rendered=Number(String(document.querySelector('#balance')?.textContent||'').replace(/[^0-9.-]/g,'')); const foreign=mod.renderCommittedWagerBalance({player_id:'foreign',amount:-1,balance_after:0}); await mod.refreshBalance(); return {accepted,rendered,expected:before-1,foreign}; }""")
                         # Require exact intermediate rendering, foreign-event refusal, and authoritative refresh recovery.
                         assert timing['accepted'] is True and timing['rendered']==timing['expected'] and timing['foreign'] is False,timing
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-TOKEN-WALLET-001',['TOKEN-001','TOKEN-002','LEDGER-025','LEDGER-031','TEST-151'],token_wallet)
                     # Define the premium_lobby function used by this module.
                     def premium_lobby():
@@ -5174,7 +5141,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
                         # Confirm the English lobby copy is restored for downstream browser cases.
                         assert_lobby_localized('en-US')
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-LOBBY-001',['CORE-005','CORE-006','CORE-016','UX-008','UX-023','I18N-004','TEST-069','UX-012','TEST-072'],premium_lobby)
                     # Define catalog_navigation to cover search and category facets from module metadata.
                     def catalog_navigation():
@@ -8201,7 +8167,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.screenshot(path=str(screenshots/'after-pass-shell-roulette-tablet.png'),full_page=False)
                         # Restore desktop dimensions before gameplay interaction coverage continues.
                         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-ROU-PREMIUM-001',['ROU-041','ROU-043','ROU-045','ROU-048','ROU-049','UX-007','UX-009'],premium_roulette_layout)
                     # Capture the key-clean desktop Roulette shell as after-pass evidence.
                     shot('after-pass-shell-roulette-desktop.png')
@@ -8261,7 +8226,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert roulette_focus=={'testid':'roulette-spin','visible':True,'width':3,'offset':2},roulette_focus
                         # Record exact-head evidence of the fallback on a real localized game control.
                         game_evidence('after-pass-game-polish-focus-roulette-ru-RU-desktop_primary.png','roulette',['betting','keyboard_focus'],'ru-RU','desktop_primary')
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','I18N-010','ROU-046','TEST-117'],roulette_i18n_state)
                     # Require the fresh non-Admin shell to remain silent before any explicit audio opt-in. (AUDIO-010)
                     assert page.evaluate("() => window.__casinoAudioEvents.length") == 0
@@ -8355,7 +8319,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_test_id('roulette-bet-slip').is_visible()
                         # Verify recent stats remain visible after settlement.
                         assert page.get_by_test_id('roulette-stats-spark').is_visible()
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-042','ROU-043','ROU-044','ROU-046','ROU-049','ROU-050','ROU-052','ROU-053','ROU-054','ROU-055','ROU-056','AUDIO-010'],premium_roulette_settled)
                     # Let the short physical ball-settle accent complete before capturing static evidence.
                     page.wait_for_timeout(700)
@@ -8441,7 +8404,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('roulette-auto-stop').click()
                     # Wait for that committed spin to settle before capturing route-return persistence evidence.
                     page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=7000)
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
                     # Collapse autoplay after verification so route-return evidence restores the gameplay-first composition.
                     page.get_by_test_id('roulette-autoplay-disclosure').locator('summary').click()
@@ -9079,7 +9041,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert abs(idle_result_box['height']-result_result_box['height']) < 2
                         # Verify the premium Slots route avoids page-level horizontal overflow.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','I18N-010','TEST-064','TEST-117','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                     # Navigate to Keno and wait for the premium route shell to mount.
                     page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
@@ -9441,7 +9402,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         keno_singular_result=page.get_by_test_id('keno-result').inner_text()
                         # Require singular English copy and reject the reported plural grammar defect.
                         assert '1 catch on a 1-spot ticket' in keno_singular_result and '1 catches' not in keno_singular_result
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','KENO-023','KENO-024','TEST-066','AUTO-012','UX-007','UX-009'],premium_keno)
                     # Resize to the governed mobile viewport for Keno containment coverage.
                     page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(300)
@@ -9591,7 +9551,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_test_id('blackjack-autoplay-panel').is_visible()
                         # Verify the bot compatibility panel is rendered without game-module coupling.
                         assert page.get_by_test_id('blackjack-bot-panel').is_visible()
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-BJ-001',['BJ-028','BJ-029','BJ-030','AUTO-014'],blackjack_premium)
                     # Switch Blackjack locale in place to verify gameplay state is preserved.
                     page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.initI18n({ domains: ['games/blackjack'] }); await i18n.loadI18nDomain('games/blackjack'); await i18n.setLocale('ru-RU', { persistLocal: false }); }""")
@@ -9601,7 +9560,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.get_by_test_id('blackjack-hand-0').is_visible()
                         # Verify the selected backend round id did not change on locale switch.
                         assert page.get_by_test_id('blackjack-round-id').get_attribute('data-round-id')==blackjack_round_id
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-BJ-I18N-001',['I18N-002','BJ-028'],blackjack_i18n)
                     # Restore English for later browser assertions that use fixed English text.
                     page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
@@ -10900,7 +10858,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size(users_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
                         # Navigate to the existing language surface after the new governance workspaces.
                         page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','ADMIN-026','ADMIN-033','AUTH-015','AUTH-016','OAUTH-011','OAUTH-012','I18N-009','TEST-081','TEST-112','TEST-158','TEST-167'],admin_users_browser)
                     # Prove the Admin Guest Trials section reports de-identified account-free telemetry. (issue #317)
                     def admin_guest_trials_browser():
@@ -11077,9 +11034,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             write_json(guest_analytics.TRIALS_PATH,original_analytics)
                     # Execute the de-identified Guest Trials Admin regression.
                     run_case('BR-ADMIN-GUEST-001',['GUEST-001','GUEST-003','GUEST-004','GUEST-005','TEST-081'],admin_guest_trials_browser)
-                    # Execute this statement as part of the module's documented control flow.
                     page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-AUDIO-001',['AUDIO-002','AUDIO-005'],lambda: page.get_by_test_id('admin-preview-voice').is_visible())
                     # Define the Phase 0 registry, formatter, fallback, discovery, and visual evidence gate.
                     def localization_foundation_browser():
@@ -11159,7 +11114,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
                         # Wait for the rendered diagnostics to catch up with the runtime state.
                         page.wait_for_function("() => document.querySelector('[data-testid=\"admin-locale-state\"]')?.textContent?.includes('ru-RU')")
-                        # Execute this statement as part of the module's documented control flow.
                         assert 'ru-RU' in page.get_by_test_id('admin-locale-state').inner_text()
                         # Reload Admin to verify browser-local persistence.
                         page.reload(wait_until='networkidle')
@@ -11169,7 +11123,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('admin-tab-language').click()
                         # Wait for the rendered diagnostics to show restored Russian.
                         page.wait_for_function("() => document.querySelector('[data-testid=\"admin-locale-state\"]')?.textContent?.includes('ru-RU')")
-                        # Execute this statement as part of the module's documented control flow.
                         assert 'ru-RU' in page.get_by_test_id('admin-locale-state').inner_text()
                         # Reopen Players & Bots to verify the affected Admin surface uses Russian resources.
                         page.get_by_test_id('admin-tab-players').click()
@@ -11187,17 +11140,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                         # Clear the test preference so later manual sessions start from defaults.
                         page.evaluate("localStorage.removeItem('casino.locale.settings.v1')")
-                    # Execute this statement as part of the module's documented control flow.
                     run_case('BR-I18N-ADMIN-001',['I18N-001','I18N-003'],admin_i18n)
                 # Preserve exact case accounting when the active shard does not own Admin state.
                 else:
                     # Advance every contiguous Bingo, Blackjack, Baccarat, feedback, and Admin case.
                     skip_browser_affinity('bingo_admin')
-                # Branch when the following condition is true.
                 if console_errors or page_errors or http_errors: raise AssertionError('Browser errors: '+str(console_errors+page_errors+http_errors))
             # Handle the expected failure path for the protected logic.
             except Exception:
-                # Execute this statement as part of the module's documented control flow.
                 shot('browser_failure.png'); raise
             # Run cleanup logic regardless of success or failure.
             finally: browser.close()
@@ -11310,27 +11260,21 @@ def main():
     if args.shard_count>1 and not (args.browser or args.verify_browser_shards): ap.error('--shard-count applies only to --browser or --verify-browser-shards')
     # Run aggregate shard verification alone using the detector-owned expected selection.
     if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count,affected_games)
-    # Branch when the following condition is true.
     if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live and not args.request_latency: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
         # Build the credential-free MySQL callback only for the explicit benchmark selector.
         request_latency_callback=(lambda: run_case('REQUEST-LATENCY-MYSQL-001',['TEST-148'],lambda: run_request_latency_provider('mysql',args.request_latency_output))) if args.request_latency=='mysql' else None
-        # Branch when the following condition is true.
         if args.storage or args.mysql_live or args.mysql_migrations_live: run_storage_tests(include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback)
         # Run the JSON provider only through its explicit benchmark selector.
         if args.request_latency=='json': run_case('REQUEST-LATENCY-JSON-001',['TEST-148'],lambda: run_request_latency_provider('json',args.request_latency_output))
-        # Branch when the following condition is true.
         if args.api: run_api_tests()
-        # Branch when the following condition is true.
         if args.browser:
             # Set code to the value needed for the next operation.
             code=run_browser_tests(args.heartbeat_seconds,args.stall_seconds,args.timeout_seconds,args.shard_count,args.shard_index,affected_games)
-            # Branch when the following condition is true.
             if code: return code
     # Run cleanup logic regardless of success or failure.
     finally: save_results()
     # Return success after all selected suites complete normally.
     return 0
-# Branch when the following condition is true.
 if __name__=='__main__': raise SystemExit(main())

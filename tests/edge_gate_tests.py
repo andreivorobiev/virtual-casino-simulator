@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused listener-free edge preparation and observation evidence for TEST-050."""
 
 # Import copies so policy mutations cannot affect shared fixtures.

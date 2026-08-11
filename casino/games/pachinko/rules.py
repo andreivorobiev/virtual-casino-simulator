@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Pachinko rules: the twelve-row pin field and its thirteen payout pockets. (#142)
 
 A ball drops through twelve rows of pins, bouncing left or right at each row, and settles in one of

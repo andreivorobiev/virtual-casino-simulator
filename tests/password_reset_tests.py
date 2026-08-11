@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused enumeration-safe password-recovery service tests. (#334, RESET-001..003)"""
 
 # Import the standard unittest framework used by the repository's focused suites.

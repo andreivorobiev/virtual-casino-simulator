@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Sanitized Package D0 payload and shipped-asset composition baseline."""
 
 # Import argument parsing for the explicit evidence-consumer command.

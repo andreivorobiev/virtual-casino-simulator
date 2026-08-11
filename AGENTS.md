@@ -101,11 +101,13 @@ GitHub is the source of truth after this payload is pushed. Work must happen thr
 
 ## Commenting policy
 
-- Every meaningful executable Python and JavaScript line must have an inline or immediately adjacent comment explaining purpose.
-- Closing braces, blank lines, pure punctuation, and generated data do not need comments.
+- Every tracked first-party Python and JavaScript file must carry the exact NOTICE-derived copyright line and `SPDX-License-Identifier: Apache-2.0` at its language-valid header position.
+- Every active source file must have a substantive module docstring or leading purpose comment; semantic `__init__.py` package markers may remain license-only.
+- Comments explain intent, invariants, failure modes, money-safety rules, deliberate deviations, or issue context that the code cannot express by itself.
+- Do not generate syntax-restating comments or reintroduce a known filler template merely to increase comment density.
+- Vendored third-party source keeps its upstream ownership and license notices and is excluded from first-party header insertion.
 - JSON files cannot contain comments; add adjacent Markdown docs when needed.
 - HTML/CSS/YAML/OpenAPI files require clear section-level comments where comments are syntactically legal.
-- Do not add uncommented executable Python or JavaScript lines.
 - When you touch a file, improve comment clarity in that file.
 
 ## Visual UI policy
@@ -130,7 +132,7 @@ python scripts/validate_module_boundaries.py
 python scripts/validate_requirements.py
 python scripts/validate_versions.py
 python scripts/generate_docs.py --check
-python scripts/check_comment_density.py
+python scripts/check_file_headers.py --check
 ```
 
 `validate_game_catalog.py` and `generate_docs.py --check` are enforced by CI

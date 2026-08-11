@@ -1,5 +1,6 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Comment policy: comments state intent and constraints; self-evident lines stay bare.
-# This file is on the audited-quality exemption list in check_comment_density.py (issue #555).
 import base64
 import hashlib
 import hmac
@@ -1255,7 +1256,6 @@ def revoke_session_by_id(session_id: str) -> None:
         if not isinstance(state, dict) or "sessions" not in state:
             # Reset to a fresh default sessions document before mutation.
             state = default_sessions()
-        # Iterate through the collection to process each item.
         for session in state.get("sessions", []):
             # Branch when the stored session identifier matches without touching bearer material.
             if session.get("session_id") == session_id:

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free Big Six production static-asset cache probe for issue #223."""
 
 # Import in-memory streams for one standards-compliant WSGI request.

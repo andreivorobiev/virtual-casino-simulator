@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated issue #88 Sic Bo browser module without shared shell edits.
 
 // Import session-aware API helpers so caller identity remains compatibility-only input.

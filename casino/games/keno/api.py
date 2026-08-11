@@ -1,15 +1,12 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Keno API actions, ticket persistence, draw execution, and settlement orchestration.
 from casino.core.state_store import load_player_game_state, save_player_game_state
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
-# Import required dependency so this module can use its public functions or constants.
 from casino.core import players
 # Import the one canonical game-money boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.keno import engine
 
 # Set GAME_ID to the value needed for the next operation.
@@ -30,7 +27,6 @@ def payload(player_id: str, state=None):
     public = {k: v for k, v in state.items() if k != "pending_draw"}
     # Set visible_players to the value needed for private game payloads.
     visible_players = [p for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
-    # Return the computed value to the caller.
     return {"game":GAME_ID, "state":public, "player": players.get_player(player_id), "players": visible_players, "paytable": engine.PAYTABLE}
 
 # Settle one committed draw exactly once, finalize its terminal state, and persist the finalized round. (issues #430, #555)
@@ -47,7 +43,6 @@ def settle_committed_draw(player_id: str, state: dict, d: dict):
         bal=players.get_player(t["player_id"])["balance"]
         # Branch so history rows append only for first-time payouts and replays cannot duplicate them. (issue #403)
         if not replayed: append_history(GAME_ID,d["round_id"],t["player_id"],"ticket",f"{len(t['spots'])} spots",t["amount"],"win" if r["payout"] else "loss",r["payout"],bal,{"drawn":d["drawn"],"spots":t["spots"],"catches":r["catches"]})
-        # Execute this statement as part of the module's documented control flow.
         settlements.append({"result":r,"ledger":credit,"replayed":replayed})
     # Apply the terminal draw mutations exactly once and release the settlement commitment.
     engine.finalize_draw(state, d)
@@ -84,7 +79,6 @@ def register(router):
         item=engine.add_ticket(state, player_id, body.get("spots",[]), amount)
         # Debit the purchase under its storage-atomic placement-time action identity so a recovered replay cannot double-charge. (issue #555)
         SETTLEMENT.apply_once(player_id=player_id, signed_amount=-amount, transaction_type="KENO_TICKET_PURCHASED", action_key=f"{item['ticket_id']}:wager", round_id=item["ticket_id"], request_fingerprint=f"{item['ticket_id']}:{item['spots']}:{amount}", details={"ticket_id": item["ticket_id"], "spots": item["spots"]})
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return {"ticket": item, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -101,7 +95,6 @@ def register(router):
         item=engine.remove_ticket(state,ticket_id,player_id)
         # Refund the durable ticket exactly once so a replayed clear returns the original event instead of minting a second refund. (issue #555)
         SETTLEMENT.apply_once(player_id=player_id, signed_amount=item["amount"], transaction_type="KENO_TICKET_REFUND", action_key=f"{ticket_id}:refund", round_id=ticket_id, request_fingerprint=f"{ticket_id}:refund:{item['amount']}", details={"ticket_id":ticket_id})
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return {"cleared":item, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.

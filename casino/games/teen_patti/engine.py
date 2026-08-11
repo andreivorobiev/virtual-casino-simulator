@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic Teen Patti Practice rules for GitHub issue #150.
 
 Teen Patti is a three-card poker played against the dealer. The player antes, sees three cards, then folds

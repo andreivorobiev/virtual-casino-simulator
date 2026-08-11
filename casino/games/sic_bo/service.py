@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Ledger-only, reload-safe, exactly-once Sic Bo orchestration for issue #88."""
 
 # Import conservative action-id validation for persisted retry identities.

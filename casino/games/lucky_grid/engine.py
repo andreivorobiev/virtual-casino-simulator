@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Lucky Grid rules for the shared settlement core: entropy, bet validation, and resolution. (#153)
 
 Every function is pure and deterministic given its inputs, so the shared core can settle a grid, replay

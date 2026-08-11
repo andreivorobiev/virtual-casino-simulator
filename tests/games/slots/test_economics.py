@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Browser-free proof for the SLOT-036 economics-only controller slice."""
 
 # Import JSON parsing for exact localized resource checks.

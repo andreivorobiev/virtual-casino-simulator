@@ -1,4 +1,5 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Import required dependency so this module can use the frozen v1 Baccarat API.
 import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import required dependency so this module can render safe HTML and refresh the shared wallet.

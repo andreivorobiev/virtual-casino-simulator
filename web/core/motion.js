@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Define the platform preference queried by every reduced-motion decision.
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 

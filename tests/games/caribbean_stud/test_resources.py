@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Resource parity checks for the isolated Caribbean Stud draft."""
 
 # Import JSON parsing for paired locale resources.

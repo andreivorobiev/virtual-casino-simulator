@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Disposable MySQL 8.4 migration, runtime-grant, restart, and lock evidence for TEST-048."""
 
 # Import UTC timing for short-lived synthetic recovery proofs.

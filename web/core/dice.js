@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Keep the unsigned 32-bit range explicit so seeded samples normalize to [0, 1).
 const UINT32_RANGE = 0x100000000;
 

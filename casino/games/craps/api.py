@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only Craps API adapter for GitHub issue #90."""
 
 # Import server-side entropy for authoritative production dice rolls.

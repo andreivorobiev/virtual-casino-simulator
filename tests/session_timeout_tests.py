@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused tests for registered-account idle and absolute session-timeout enforcement. (SESSION-009)"""
 
 # Import timing primitives to build fixed-age session fixtures.

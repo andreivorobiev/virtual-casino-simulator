@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free regression tests for the issue #430 settlement-core checkpoint."""
 
 # Import non-finite constants for money-boundary rejection cases.

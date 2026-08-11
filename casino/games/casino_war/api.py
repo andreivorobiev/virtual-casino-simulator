@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-compatible Casino War API adapter with replay-safe ledger settlement.
 
 Requirements: CORE-009, CORE-011, LEDGER-005, LEDGER-006, LEDGER-007,

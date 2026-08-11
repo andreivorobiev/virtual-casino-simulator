@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-compatible, ledger-only API adapter for issue #94."""
 
 # Import regular-expression validation for bounded client retry identifiers.

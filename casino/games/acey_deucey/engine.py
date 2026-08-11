@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Acey-Deucey / In-Between rules for GitHub issue #149."""
 
 # Import hashing so deal action ids produce stable reload-safe round ids.

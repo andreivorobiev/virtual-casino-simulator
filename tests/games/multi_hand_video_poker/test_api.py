@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused session-binding and exactly-once API tests for issue #94."""
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.

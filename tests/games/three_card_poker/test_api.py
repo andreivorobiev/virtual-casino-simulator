@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session, persistence, and exactly-once Three Card Poker API tests."""
 
 # Import deep-copy support to model provider document boundaries.

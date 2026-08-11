@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused secret-safe recovery evidence tests for TEST-049."""
 
 # Import copies so tamper tests never mutate shared fixture objects.

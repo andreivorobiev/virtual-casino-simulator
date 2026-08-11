@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Marble Race rules: the six marbles, the two bets, and their track-takeout payouts. (#157)
 
 Six equally fast marbles race and finish in a fully random order. A win bet backs one marble to finish

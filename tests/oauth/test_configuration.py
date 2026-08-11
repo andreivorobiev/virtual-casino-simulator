@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused OAuth disabled-configuration diagnostic tests for issue #70.
 
 Requirements: OAUTH-001, OAUTH-002, and TEST-045.

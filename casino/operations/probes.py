@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Dependency probes that return fixed, secret-safe Operations diagnostics."""
 
 # Import operating-system access only for the dedicated build-SHA environment value.

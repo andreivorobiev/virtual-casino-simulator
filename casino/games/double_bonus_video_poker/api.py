@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Additive v1 route registration for the isolated Double Bonus Video Poker module (#131)."""
 
 # Import the shared authenticated player resolver so session binding always wins.

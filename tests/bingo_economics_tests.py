@@ -1,4 +1,5 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Bingo economics regression tests for issue #405 (guaranteed-win session), #420 (CSPRNG draws), and #452 (house-edged paytable and guaranteed competitor field)."""
 
 # Import atexit so the module-scoped scratch directory is always released at interpreter exit.

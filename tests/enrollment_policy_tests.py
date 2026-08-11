@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Durable enrollment-policy resolution tests. (AUTH-013)"""
 
 # Import hashes so the additive v2 contract remains bound to its reviewed bytes.

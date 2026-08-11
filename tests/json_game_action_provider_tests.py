@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused JSON Phase0c action-journal and reset-visibility tests for issue #430."""
 
 # Import deterministic context cleanup for provider injection.

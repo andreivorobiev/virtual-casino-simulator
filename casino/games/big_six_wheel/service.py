@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Ledger-only, retry-safe orchestration for Big Six Wheel spins."""
 
 # Import cryptographic index selection for production wheel outcomes.

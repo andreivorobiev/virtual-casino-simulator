@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Map a pull request's changed files to the games whose browser coverage must run. (issue #468 item 4)
 #
 # Output contract (stdout, one line):

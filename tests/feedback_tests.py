@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused provider-neutral tests for issue #349 problem reports."""
 
 # Import base64 helpers for constructing and inspecting browser-style evidence.

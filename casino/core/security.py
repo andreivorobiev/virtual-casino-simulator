@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Restricted-preview request security policy for SEC-010 and AUTH-007."""
 
 # Import constant-time comparison for origin and CSRF values.

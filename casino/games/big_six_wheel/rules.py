@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Big Six Wheel rules for the explicit 54-segment simulator profile."""
 
 # Import an immutable mapping wrapper so callers cannot change the paytable at runtime.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Lucky Grid rules: the nine-cell board, the pick count, and match payouts. (#153)
 
 Lucky Grid hides three prizes on random distinct cells of a nine-cell board. The player picks three

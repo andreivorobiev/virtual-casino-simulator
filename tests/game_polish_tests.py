@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free acceptance for the cross-game copy and keyboard-focus repair."""
 
 # Import JSON parsing so canonical locale resources can be checked without a browser.

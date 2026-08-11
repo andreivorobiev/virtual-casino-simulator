@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Run TEST-042/TEST-047/TEST-092 real-browser UI cycles across every catalog game."""
 
 import argparse  # Parse total-cycle, parallelism, timeout, and artifact options.

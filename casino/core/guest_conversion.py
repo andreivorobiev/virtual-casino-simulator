@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Explicit, idempotent conversion of a Guest Trial into a durable first-party Casino user. (#378)
 
 A guest trial owns a `player_id` bound to a wallet, ledger, and history. Conversion creates a full local

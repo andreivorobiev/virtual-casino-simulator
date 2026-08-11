@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused isolated-router tests for issue #72 Operations endpoint policy."""
 
 # Import JSON serialization for complete degraded-payload leak checks.

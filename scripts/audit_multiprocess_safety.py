@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Build a fail-closed Package C inventory before any second Gunicorn worker."""
 
 # Import syntax-tree parsing for structural proof without importing Casino runtime modules.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Trente et Quarante rules: card values, the two rows, and payout multipliers. (#147)
 
 Trente et Quarante ("thirty and forty") deals two rows of cards, Noir first then Rouge, each until its

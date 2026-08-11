@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Catalog-discovered Long Suite driver for Over/Under 7."""
 
 # Cover every proposition so each valid two-dice total produces one returned-token settlement.

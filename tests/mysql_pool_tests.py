@@ -1,4 +1,5 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import thread-pool helpers for bounded 1/2/4/8 concurrency evidence.
 from concurrent.futures import ThreadPoolExecutor
 # Import JSON so secret-free metric snapshots can be inspected exactly.

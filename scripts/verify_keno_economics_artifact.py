@@ -1,7 +1,8 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Fail-closed identity and completeness verification for hosted KENO-027 evidence.
 
 Comment policy: comments state intent and constraints; self-evident lines stay bare.
-This file is on the audited-quality exemption list in check_comment_density.py (issue #555).
 """
 
 import json

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused governance tests for per-game requirement source assembly."""
 
 # Import JSON support for tracked source-union assertions.

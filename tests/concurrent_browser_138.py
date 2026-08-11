@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Run the issue #225 exact-138 real-browser qualification on a disposable loopback runtime."""
 
 import argparse  # Parse the immutable qualification profile and artifact locations.

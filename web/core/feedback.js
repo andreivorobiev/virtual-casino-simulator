@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Privacy-reduced authenticated problem-report controller for issue #349.
 
 // Submit reports only through the additive v2 API envelope.

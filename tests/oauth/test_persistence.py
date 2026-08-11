@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Transactional OAuth persistence tests for issue #326.
 
 Requirements: OAUTH-003, OAUTH-004, OAUTH-009, STORAGE-001, STORAGE-002,

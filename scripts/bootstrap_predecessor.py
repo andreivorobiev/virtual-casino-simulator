@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Create fail-closed TOOL-003 provenance for the one-time v9.2.0 predecessor recovery."""
 
 # Import argument parsing for the workflow-owned recovery inputs.

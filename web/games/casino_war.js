@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Provide the isolated Casino War browser module for GitHub issue #82.
 // Requirements: CARD-002, CORE-008, I18N-001, I18N-002.
 

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Governed real-engine economics proof for SLOT-036."""
 
 # Import JSON so the hosted Long lane publishes machine-readable evidence.

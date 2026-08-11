@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free conformance and hostile tests for issue #430 Phase0c slice 2."""
 
 # Import immutable-data assignment errors for receipt and snapshot proof.

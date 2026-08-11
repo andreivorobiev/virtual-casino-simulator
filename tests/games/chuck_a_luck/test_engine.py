@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused deterministic engine and ledger-recovery tests for issue #89."""
 
 # Import the dependency-free standard test runner.

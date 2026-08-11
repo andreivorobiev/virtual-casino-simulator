@@ -27,7 +27,7 @@ python scripts/validate_contracts.py
 python scripts/validate_module_boundaries.py
 python scripts/validate_requirements.py
 python scripts/validate_versions.py
-python scripts/check_comment_density.py
+python scripts/check_file_headers.py --check
 ```
 
 Do not change gameplay behavior for this first task. Only fix repository-bootstrap, governance, contract, test, documentation, or commenting-policy issues.

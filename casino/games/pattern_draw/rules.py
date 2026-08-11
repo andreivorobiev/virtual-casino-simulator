@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Pattern Draw rules: the nine-cell grid, its patterns, and payout multipliers. (#155)
 
 Pattern Draw lights each of a three-by-three grid's nine cells independently with even odds, then settles

@@ -1,5 +1,6 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Comment policy: comments state intent and constraints; self-evident lines stay bare.
-# This file is on the audited-quality exemption list in check_comment_density.py (issue #555).
 import pathlib
 import re
 # sys.path manipulation below needs sys before any casino import resolves.

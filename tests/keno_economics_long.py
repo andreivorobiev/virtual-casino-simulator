@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Governed exact-outcome Long proof for KENO-027."""
 
 # Import JSON so hosted Long publishes a machine-readable exact-proof artifact.

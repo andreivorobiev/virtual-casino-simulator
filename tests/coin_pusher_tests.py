@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Coin Pusher rules and settlement tests on the shared core. (#156, COINP-001/002)"""
 
 # Import product for the exhaustive house-edge proof over every shelf-and-push combination.

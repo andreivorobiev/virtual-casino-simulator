@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic Andar Bahar rules for GitHub issue #140.
 
 Requirements used before permanent IDs: CARD-001, CARD-002, LEDGER-001,

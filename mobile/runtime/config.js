@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Define the only configuration keys allowed into the signed mobile web bundle.
 const ALLOWED_KEYS = new Set(["environment", "backendBaseUrl", "allowInsecureLocalDevelopment"]);
 // Define local-only host names that may use HTTP when development explicitly opts in.

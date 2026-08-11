@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic rule tests for issue #140 and CARD-001."""
 
 # Import the dependency-free standard test runner.

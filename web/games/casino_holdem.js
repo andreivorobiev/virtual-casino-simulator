@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated Casino Hold'em browser module for GitHub issue #139.
 
 // Import authenticated envelope-aware API helpers without sending caller-owned player ids.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Color Wheel rules: segment layout, bet catalog, and payout multipliers. (#152)
 
 The wheel has twenty fixed segments arranged so red and black alternate around three green house

@@ -166,7 +166,7 @@ python scripts/generate_docs.py --check
 python scripts/validate_requirements.py
 python scripts/validate_versions.py
 python scripts/validate_module_boundaries.py
-python scripts/check_comment_density.py
+python scripts/check_file_headers.py --check
 ```
 
 Game, API, ledger, auth, storage, UI, security, release, or operational changes

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Reusable self-scoped ledger pagination for authenticated player surfaces. (#352)
 
 This module owns only the privacy and pagination boundary shared by personal history and later

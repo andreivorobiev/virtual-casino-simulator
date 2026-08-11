@@ -1,17 +1,14 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Bingo API actions, card purchases, session persistence, and settlement orchestration.
 from casino.core.state_store import load_player_game_state, save_player_game_state
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
-# Import required dependency so this module can use its public functions or constants.
 from casino.core import players, logger
 # Import the shared id factory so pre-session purchases have stable settlement identities.
 from casino.core.ids import new_id
 # Import the one canonical game-money boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.bingo import engine
 # Import bot capability profiles so every session seats funded competitor cards. (issue #405)
 from casino.bots import profiles
@@ -76,7 +73,6 @@ def payload(player_id: str, state=None):
     state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
     # Set visible_players to the value needed for private game payloads.
     visible_players = [p for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
-    # Return the computed value to the caller.
     return {"game":GAME_ID,"state":state,"player":players.get_player(player_id),"players":visible_players}
 
 
@@ -84,9 +80,7 @@ def payload(player_id: str, state=None):
 def settle_if_done(sess):
     # Set credits to the value needed for the next operation.
     credits=[]
-    # Branch when the following condition is true.
     if sess and sess.get("status") == "won":
-        # Iterate through the collection to process each item.
         for card in sess.get("cards", []):
             # Credit only a real winning card; synthetic house spoilers end sessions but are never paid. (issue #452)
             if card.get("status") == "won" and card.get("source") != "house" and not card.get("credited"):
@@ -108,7 +102,6 @@ def settle_if_done(sess):
         append_history(GAME_ID, sess["session_id"], sess["player_id"], "session", sess["pattern"], sess["amount"], "no_win", 0, players.get_player(sess["player_id"])["balance"], {"called": sess.get("called", []), "max_calls": sess.get("max_calls")})
         # Guard against duplicate audit rows if settlement is re-entered with the archived session.
         sess["loss_recorded"] = True
-    # Return the computed value to the caller.
     return credits
 
 
@@ -141,9 +134,7 @@ def register(router):
             sess=engine.start_session(state, player_id, amount, pattern, bot_players=bot_players)
         # Handle the expected failure path for the protected logic.
         except Exception:
-            # Execute this statement as part of the module's documented control flow.
             SETTLEMENT.apply_once(player_id=player_id, signed_amount=amount, transaction_type="BINGO_CARD_REFUND_AFTER_ERROR", round_id=purchase_id, action_key=f"{purchase_id}:human:refund", request_fingerprint=f"{purchase_id}:{player_id}:{pattern}:{amount}:refund", details={"pattern":pattern})
-            # Iterate through the collection to process each item.
             for bp in bot_players:
                 # Never refund a synthetic house seat: it was never debited from any wallet. (issue #452)
                 if bp.get("source") == "house":
@@ -151,9 +142,7 @@ def register(router):
                     continue
                 # Return each already-debited bot stake so a failed start never strands bot funds. (issue #405)
                 SETTLEMENT.apply_once(player_id=bp["player_id"], signed_amount=bp["amount"], transaction_type="BOT_BINGO_CARD_REFUND_AFTER_ERROR", round_id=purchase_id, action_key=f"{purchase_id}:bot:{bp['player_id']}:refund", request_fingerprint=f"{purchase_id}:{bp['player_id']}:{pattern}:{bp['amount']}:refund", details={"pattern":pattern, "bot_id": bp.get("bot_id")})
-            # Execute this statement as part of the module's documented control flow.
             raise
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return {"session":sess, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -166,7 +155,6 @@ def register(router):
         state=load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set sess,n to the value needed for the next operation.
         sess,n=engine.call_next(state); credits=settle_if_done(sess)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return {"session":sess,"called":n,"label":engine.ball_label(n),"credits":credits, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -181,7 +169,6 @@ def register(router):
         state=load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set sess,calls to the value needed for the next operation.
         sess,calls=engine.auto_play(state, int(body.get("max_calls",1))); credits=settle_if_done(sess)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return {"session":sess,"calls":calls,"labels":[engine.ball_label(n) for n in calls],"credits":credits, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -196,29 +183,22 @@ def register(router):
         sess=state.get("active_session")
         # Set refunds to the value needed for the next operation.
         refunds=[]
-        # Branch when the following condition is true.
         if sess and sess.get("status") == "active":
-            # Branch when the following condition is true.
             if not sess.get("called"):
-                # Iterate through the collection to process each item.
                 for card in sess.get("cards", []):
                     # Never refund a synthetic house spoiler seat: it was never debited from any wallet. (issue #452)
                     if card.get("source") == "house":
                         # Skip the unfunded spoiler card.
                         continue
-                    # Execute this statement as part of the module's documented control flow.
                     event, _replayed = SETTLEMENT.apply_once(player_id=card["player_id"], signed_amount=card["amount"], transaction_type="BINGO_CARD_REFUND", round_id=sess["session_id"], action_key=f"{card['card_id']}:refund", request_fingerprint=f"{card['card_id']}:{sess['session_id']}:{card['amount']}:refund", details={"card_id": card["card_id"]})
                     # Preserve the historical event list response shape.
                     refunds.append(event)
-                # Execute this statement as part of the module's documented control flow.
                 append_history(GAME_ID, sess["session_id"], sess["player_id"], "session", sess["pattern"], sess["amount"], "refunded", sum(abs(r["amount"]) for r in refunds), players.get_player(sess["player_id"])["balance"], {"reason":"reset_before_calls"})
             # Handle the fallback branch when prior conditions did not match.
             else:
-                # Execute this statement as part of the module's documented control flow.
                 append_history(GAME_ID, sess["session_id"], sess["player_id"], "session", sess["pattern"], sess["amount"], "abandoned", 0, players.get_player(sess["player_id"])["balance"], {"called":sess.get("called",[])})
                 # Set logger.warning("bingo_session_abandoned", session_id to the value needed for the next operation.
                 logger.warning("bingo_session_abandoned", session_id=sess["session_id"], calls=len(sess.get("called",[])))
         # Set state["active_session"] to the value needed for the next operation.
         state["active_session"] = None
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return {"refunds":refunds, **payload(player_id, state)}

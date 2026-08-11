@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused SESSION-005 Sic Bo route-binding tests for issue #88."""
 
 # Import the dependency-free standard unit-test runner.

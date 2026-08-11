@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Owner-controlled administrator grants, revocations, and privacy-safe audit history. (#351)"""
 
 # Import hashing for replay keys and the immutable audit chain.

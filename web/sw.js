@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Own the root-scope offline-safe static shell without caching private or authoritative data. (PWA-002)
 // Match the canonical packaged application release used by modules/module-manifest.json.
 const APP_VERSION = '0.9.5.69';

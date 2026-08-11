@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Invite-only OAuth orchestration with one-time browser-bound flows.
 
 Requirements: AUTH-002, OAUTH-003, OAUTH-004, OAUTH-005, OAUTH-007,

@@ -84,7 +84,7 @@ python scripts/validate_versions.py
 python scripts/validate_contracts.py
 python scripts/validate_module_boundaries.py
 python scripts/generate_docs.py --check
-python scripts/check_comment_density.py
+python scripts/check_file_headers.py --check
 ```
 
 ## Documents

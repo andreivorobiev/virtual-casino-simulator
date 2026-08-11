@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused static contract and module-ownership checks for issue #72."""
 
 # Import JSON parsing for module and compatibility records.

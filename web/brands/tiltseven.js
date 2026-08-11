@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // TiltSeven "Neon Pit" brand definition. Adding another brand is a copy of this file.
 
 // Export the immutable TiltSeven brand descriptor consumed by core/brand.js.

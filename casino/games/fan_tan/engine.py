@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Fan-Tan validation, count resolution, and settlement calculations."""
 
 # Import hashing so retry-safe round ids and request fingerprints are deterministic.

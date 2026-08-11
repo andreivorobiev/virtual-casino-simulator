@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session binding, escrow, retry, and recovery tests for issue #95."""
 
 # Import detached-copy support so memory persistence matches JSON boundaries.

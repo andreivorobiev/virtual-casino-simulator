@@ -1,9 +1,8 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Durable per-player game history access through the configured storage provider.
 import json
-# Import required dependency so this module can use its public functions or constants.
 from casino.config import SCHEMA_VERSION
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
 # Import required dependency so this module can use the configured storage provider.
 from casino.core.storage import get_storage_provider

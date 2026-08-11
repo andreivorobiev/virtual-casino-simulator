@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-bound, escrow-ledger API adapter for Texas Hold'em issue #95.
 
 Requirements: SESSION-005, LEDGER-005, LEDGER-006, LEDGER-007, and LEDGER-023.

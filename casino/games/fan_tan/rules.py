@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Fan-Tan rules profile for the isolated issue #137 slice."""
 
 # Store the stable game id used in state, ledger, and contract payloads.

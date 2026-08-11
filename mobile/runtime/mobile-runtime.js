@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Import the native application lifecycle bridge used to pause new actions while backgrounded.
 import { App } from "@capacitor/app";
 // Import the system browser bridge used to keep external pages outside the casino WebView.

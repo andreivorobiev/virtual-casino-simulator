@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Inert descriptor-driven discovery for independently owned game test suites."""
 
 # Import immutable data records for the discovered case packet.

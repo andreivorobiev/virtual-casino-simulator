@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused tests for the player self-service batch: replay, table profiles, compare. (#162/#164/#160)"""
 
 # Import JSON parsing for the shipped localization resources.

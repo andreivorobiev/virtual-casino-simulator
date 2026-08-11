@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure dice, wager, and settlement rules for Over/Under 7."""
 
 # Import hashing so authenticated action identities derive stable round ids.

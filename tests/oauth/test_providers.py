@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused OAuth provider abstraction and claim-normalization tests for issue #70.
 
 Requirements: OAUTH-005, USER-001, and TEST-045.

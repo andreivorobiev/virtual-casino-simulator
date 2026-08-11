@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused recoverable social-enrollment tests without provider traffic. (OAUTH-013, TEST-168)"""
 
 # Import temporary directories for isolated provider-backed documents.

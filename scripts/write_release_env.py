@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Write the deploy-time build-provenance environment fragment from a verified release manifest. (#287)
 
 The runtime never invokes Git and never inspects checkout paths, so the only supported way to pin a

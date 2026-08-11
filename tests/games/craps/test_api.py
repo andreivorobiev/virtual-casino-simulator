@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused session, reload, and retry-safety tests for issue #90 Craps."""
 
 # Import deep-copy support so fake persistence matches document boundaries.

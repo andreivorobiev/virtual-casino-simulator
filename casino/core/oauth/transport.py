@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Bounded injectable HTTPS JSON transport for OAuth provider adapters.
 
 Requirements: OAUTH-005 and SEC-010. This module never logs URLs, forms, headers,

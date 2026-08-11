@@ -1,4 +1,5 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Store RESOURCE_ROOT so all locale files are loaded from one public web path.
 const RESOURCE_ROOT = '/i18n';
 // Store STORAGE_KEY so browser-local preferences remain isolated from game state.

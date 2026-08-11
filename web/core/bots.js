@@ -1,7 +1,7 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-// Import required dependency so this module can use its public functions or constants.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
+// Shared bot eligibility, lifecycle, and Admin/player rendering helpers.
 import { api, post } from './api.js';
-// Import required dependency so this module can use its public functions or constants.
 import { money, safe } from './ui.js';
 // Export this symbol so other modules can use it through the public module boundary.
 export async function eligibleBots(gameId){try{return await api(`/api/v1/games/${gameId}/eligible-bots`);}catch{return {bots:[],capabilities:{supports_bots:false,strategies:[]}};}}

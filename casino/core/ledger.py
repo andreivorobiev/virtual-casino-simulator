@@ -1,9 +1,9 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import required dependency so this module can use the configured storage provider.
 from casino.core.storage import get_storage_provider
 # Import the shared finite-number boundary before storage provider access.
 from casino.core.validation import require_finite_number
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import ValidationError
 
 
@@ -41,7 +41,6 @@ def find_action(player_id: str, game: str | None, action_key: str) -> dict | Non
 def debit(player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
     # Normalize the finite magnitude before applying the debit sign. (LEDGER-027)
     amount = abs(_normalize_amount(amount))
-    # Return the computed value to the caller.
     return transact(player_id, -amount, transaction_type, game, round_id, details)
 
 # Debit or replay one storage-enforced money action identity.
@@ -55,7 +54,6 @@ def debit_once(player_id: str, amount: float, transaction_type: str, action_key:
 def credit(player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
     # Normalize the finite magnitude before applying credit semantics. (LEDGER-027)
     amount = abs(_normalize_amount(amount))
-    # Return the computed value to the caller.
     return transact(player_id, amount, transaction_type, game, round_id, details)
 
 # Credit or replay one storage-enforced money action identity.

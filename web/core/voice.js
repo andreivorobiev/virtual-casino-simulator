@@ -1,5 +1,6 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-// Import required dependency so this module can use its public functions or constants.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
+// Disabled-by-default sound, speech, and per-player audio preference controls.
 import { api, post } from './api.js';
 // Store audioCtx so later code can read or update this value.
 let audioCtx=null;
@@ -31,7 +32,6 @@ export function speak(text, gameId='global'){
     if(!PERSONAL_SOUND_ENABLED || AUDIO_SETTINGS.master_enabled===false || AUDIO_SETTINGS.voice_enabled===false) return;
     // Store key so later code can read or update this value.
     const key = gameId==='bingo' ? 'announce_bingo_calls' : `announce_${gameId}_results`; if(gameId!=='global' && AUDIO_SETTINGS[key]===false) return;
-    // Execute this statement as part of the module's documented control flow.
     if(!('speechSynthesis' in window)) return;
     // Store u so later code can read or update this value.
     const u=new SpeechSynthesisUtterance(text);
@@ -55,14 +55,11 @@ export function speak(text, gameId='global'){
     u.onerror=e=>audioProbe({kind:'voice_error',gameId,text,error:String(e?.error||e?.message||'speech error')});
     // Record the start request before handing the utterance to the browser speech queue.
     audioProbe({kind:'voice_start',gameId,text});
-    // Execute this statement as part of the module's documented control flow.
     if(speechSynthesis.paused) speechSynthesis.resume?.(); speechSynthesis.speak(u);
-  // Explain this executable/data line so future Codex changes preserve intent.
   }catch(_){ }
 }
 // Export this symbol so other modules can use it through the public module boundary.
 export function clickSound(freq=520,duration=.08,volume=.04){
- // Execute this statement as part of the module's documented control flow.
  if(!canSfx()) return;
  // Record the effect request for long-suite browser audio verification.
  audioProbe({kind:'sfx_start',freq,duration,volume});
@@ -71,7 +68,6 @@ export function clickSound(freq=520,duration=.08,volume=.04){
 }
 // Export this symbol so other modules can use it through the public module boundary.
 export function rouletteRollSound(ms=2500){
- // Execute this statement as part of the module's documented control flow.
  if(!canSfx()) return;
  // Start protected logic so failures can be handled safely.
  try{ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); const ctx=audioCtx; const noise=ctx.createBufferSource(); const buffer=ctx.createBuffer(1, Math.floor(ctx.sampleRate*ms/1000), ctx.sampleRate); const data=buffer.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.max(.05,1-i/data.length); noise.buffer=buffer; const filter=ctx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.value=1800; const gain=ctx.createGain(); gain.gain.value=sfxVolume(.035); noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination); noise.start(); const ticks=setInterval(()=>clickSound(900+Math.random()*700,.025,.025),90); setTimeout(()=>clearInterval(ticks),ms); }catch(_){ }

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused pure-rule tests for the issue #90 Craps engine."""
 
 # Import the standard unit-test runner for dependency-free focused checks.

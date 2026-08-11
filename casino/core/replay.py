@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Bounded, self-scoped round-replay artifacts derived from committed history. (#162)
 
 Product direction (issue #162, 2026-07-23) fixes three rules this foundation enforces:

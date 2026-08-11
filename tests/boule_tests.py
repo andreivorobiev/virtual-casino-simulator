@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Boule rules and settlement tests on the shared core. (#148, BOULE-001/002)"""
 
 # Import the standard unittest framework used by the repository's focused suites.

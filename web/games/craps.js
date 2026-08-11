@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated Craps browser route for GitHub issue #90.
 
 // Import the standard API helpers for session-bound game requests.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic Mississippi Stud rules for GitHub issue #143.
 
 Mississippi Stud is a solo five-card stud where the player builds one hand from two hole cards and three

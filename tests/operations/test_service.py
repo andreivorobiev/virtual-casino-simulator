@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused probe and service tests mapped to issue #72 Operations acceptance."""
 
 # Import JSON serialization so secret-leak assertions inspect the complete public payload.

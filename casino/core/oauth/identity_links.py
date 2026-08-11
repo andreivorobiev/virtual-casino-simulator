@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Injected external-identity links to canonical users and bound players.
 
 Requirements: OAUTH-004 and USER-001. This module never creates users, links by email, or

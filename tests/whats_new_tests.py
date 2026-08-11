@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused server-only What's New eligibility tests. (#165, TOUR-001, TOUR-002, TEST-106)"""
 
 # Import SHA-256 so the additive v2 contract stays pinned to exact reviewed bytes.

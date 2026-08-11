@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Production WSGI adapter for CORE-023 without invoking the development HTTP server."""
 
 # Import JSON encoding for the repository-standard API envelope.

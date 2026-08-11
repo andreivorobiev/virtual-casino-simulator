@@ -1,9 +1,8 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Generate deterministic requirement and documentation indexes from repository sources.
 import argparse
-# Import required dependency so this module can use its public functions or constants.
 import json
-# Import required dependency so this module can use its public functions or constants.
 import pathlib
 # Import subprocess so the documentation index uses Git's canonical tracked/untracked file view.
 import subprocess
@@ -43,17 +42,12 @@ def render_markdown():
     modules = json.loads((ROOT / "modules" / "module-manifest.json").read_text(encoding="utf-8"))
     # Start the generated document with explicit packaged-release and provenance labels.
     lines = ["# Virtual Casino Requirements and Validation", "", f"Packaged application release: {modules['application']}", "", f"Historical source baseline: {modules['source_baseline']}", "", "## Independent module revisions", ""]
-    # Iterate through the collection to process each item.
     for name, version in modules.get("modules", {}).items():
-        # Execute this statement as part of the module's documented control flow.
         lines.append(f"- {name}: {version}")
     # Set lines + to the value needed for the next operation.
     lines += ["", "## Requirements", ""]
-    # Iterate through the collection to process each item.
     for requirement in req.get("requirements", []):
-        # Execute this statement as part of the module's documented control flow.
         lines.append(f"- **{requirement['id']}** ({requirement.get('module','')}) - {requirement.get('status','')}: {requirement.get('description','')}")
-    # Return the computed value to the caller.
     return "\n".join(lines) + "\n"
 
 # Return every repository Markdown path Git considers tracked or ready to add. (DOC-017, TOOL-006)
@@ -180,7 +174,6 @@ def main():
         if stale:
             # Write diagnostic output so the current operation can be inspected.
             print(f"Generated docs are out of date: {', '.join(stale)}; run python scripts/generate_docs.py")
-            # Return the computed value to the caller.
             return 1
         # Report a successful non-mutating generated-document comparison.
         print(f"Generated docs are current: {out.relative_to(ROOT).as_posix()}, {ROOT_INDEX_RELATIVE}")
@@ -192,10 +185,8 @@ def main():
     ROOT_INDEX_PATH.write_text(root_index_text, encoding="utf-8")
     # Write diagnostic output so the current operation can be inspected.
     print(f"Wrote {out.relative_to(ROOT).as_posix()} and {ROOT_INDEX_RELATIVE}")
-    # Return the computed value to the caller.
     return 0
 
-# Branch when the following condition is true.
 if __name__ == "__main__":
     # Raise an error so invalid input or state is reported explicitly.
     raise SystemExit(main())

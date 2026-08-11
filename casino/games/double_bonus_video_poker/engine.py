@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic Double Bonus Video Poker rules for GitHub issue #131.
 
 Double Bonus is a single-hand draw video poker on the standard nine-six pay schedule. The player bets,

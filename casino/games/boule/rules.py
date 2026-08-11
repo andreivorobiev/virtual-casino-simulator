@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Boule rules: the nine-number French wheel, its house number, and payouts. (#148)
 
 Boule draws one number from one to nine. Five is the house number: it belongs to no even-money

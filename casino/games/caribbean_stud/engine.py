@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Caribbean Stud rules for the isolated issue #132 draft slice."""
 
 # Import hashing so player-scoped round ids never expose raw action ids.

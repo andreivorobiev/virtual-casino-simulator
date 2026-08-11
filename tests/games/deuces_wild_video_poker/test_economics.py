@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Economics regression: Deuces Wild is house-side after the four-of-a-kind reduction. (issue #456)
 
 The full-pay schedule was player-positive under optimal hold (best-play RTP ~100.42%). Reducing the

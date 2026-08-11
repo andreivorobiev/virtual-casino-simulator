@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Disabled-until-configured OAuth settings and secret-safe diagnostics.
 
 Requirements: OAUTH-001 and OAUTH-002. No settings here enable provider traffic.

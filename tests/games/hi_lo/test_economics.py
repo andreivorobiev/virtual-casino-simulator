@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Economics regression: Hi-Lo is house-side at every visible rank after rank pricing. (issue #406)
 
 Flat even money let a player always guess the majority direction for a +50.7% edge. Pricing a correct

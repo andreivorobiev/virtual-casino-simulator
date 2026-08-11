@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Disabled private invitation enrollment with recoverable lifecycle semantics. (INVITE-001..006)
 
 The service composes the one-time-token and transactional-mail foundations without exposing a send

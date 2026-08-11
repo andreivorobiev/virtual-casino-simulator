@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only orchestration for Over/Under 7 plays."""
 
 # Import cryptographic randomness for production dice.

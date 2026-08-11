@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Browser-free Long Suite driver rounding regressions for issue #406."""
 
 # Import the dependency-free standard test runner.

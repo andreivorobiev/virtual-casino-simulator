@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure standard-8d Dragon Tiger rules and persistent state transitions.
 
 Proposed requirements: DT-001 through DT-005.

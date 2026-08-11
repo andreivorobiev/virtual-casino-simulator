@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Additive session-bound v1 route adapter for Sic Bo issue #88."""
 
 # Import canonical player-id validation for direct focused-test compatibility.

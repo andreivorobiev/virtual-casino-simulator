@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free tests for compatibility-owned immutable predecessor selection."""
 
 # Import JSON serialization for synthetic compatibility and manifest records.

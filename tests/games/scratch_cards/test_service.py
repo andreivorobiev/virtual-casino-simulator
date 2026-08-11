@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused ledger, retry, reload, and privacy tests for issue #87 Scratch Cards."""
 
 # Import deep-copy support for storage fakes that behave like JSON persistence.

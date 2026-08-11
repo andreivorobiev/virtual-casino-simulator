@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Reload and exactly-once Sic Bo service tests for LEDGER-005/006/007/009."""
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.

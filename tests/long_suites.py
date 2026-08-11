@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Provide long, sharded, deployment-style casino test suites.
 import argparse  # Parse suite, shard, deployment, and audio options.
 import importlib  # Load independently owned per-game drivers from catalog references.

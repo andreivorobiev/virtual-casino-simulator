@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session binding and ledger retry tests for Acey-Deucey."""
 
 # Import deep-copy support so fake persistence models JSON documents.

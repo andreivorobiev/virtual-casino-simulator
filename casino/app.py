@@ -1,48 +1,32 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# WSGI application assembly, request dispatch, and browser asset delivery.
 import argparse
-# Import required dependency so this module can use its public functions or constants.
 import json
-# Import required dependency so this module can use its public functions or constants.
 import mimetypes
-# Import required dependency so this module can use its public functions or constants.
 import os
 # Import regular expressions so player resource paths can be authorization-checked.
 import re
-# Import required dependency so this module can use its public functions or constants.
 import sys
-# Import required dependency so this module can use its public functions or constants.
 import threading
-# Import required dependency so this module can use its public functions or constants.
 import webbrowser
-# Import required dependency so this module can use its public functions or constants.
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-# Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
-# Import required dependency so this module can use its public functions or constants.
 from urllib.parse import urlparse
 
-# Import required dependency so this module can use its public functions or constants.
 from casino.config import DEFAULT_HOST, DEFAULT_PORT, OPENAPI_DIR, WEB_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, GUEST_BINGO_AUTOPLAY_MAX_CALLS, validate_bootstrap_for_startup, PASSKEYS_ENABLED
-# Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import CasinoError, ConflictError, ForbiddenError, ValidationError
 # Import strict JSON-number handling shared with the production WSGI adapter.
 from casino.core.validation import reject_nonfinite_json_constant, require_amount
 # Import host-only CSRF bootstrap helpers shared with the production adapter. (OAUTH-008)
 from casino.core.security import CSRF_COOKIE, cookie_value, csrf_cookie_header, new_csrf_token
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
-# Import required dependency so this module can use its public functions or constants.
 from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, guest_settings, invitations, password_reset, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare, guest_conversion, enrollment_policy
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
-# Import required dependency so this module can use its public functions or constants.
 from casino.admin import register as register_admin
-# Import required dependency so this module can use its public functions or constants.
 from casino.bots.api import register as register_bots
 # Import the disabled OAuth registrar for Admin-only secret-safe diagnostics.
 from casino.core.oauth.api import register as register_oauth
@@ -50,7 +34,6 @@ from casino.core.oauth.api import register as register_oauth
 from casino.core.mail import register as register_mail
 # Import the approved Operations registrar for liveness, readiness, and Admin telemetry.
 from casino.operations import register as register_operations
-# Import required dependency so this module can use its public functions or constants.
 from casino.core import autoplay
 
 # Keep development and browser-test Admin static protection aligned with the production WSGI adapter. (AUTH-008)
@@ -90,7 +73,6 @@ def build_router() -> Router:
     @router.get(r"/api/v1/casino/games")
     # Define the games function used by this module.
     def games(body, query):
-        # Return the computed value to the caller.
         return {"games": list_games(), "catalog": catalog_summary()}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -150,9 +132,7 @@ def build_router() -> Router:
             auth.bootstrap_admin_from_env()
             # Build the unchanged success payload while reset visibility remains private.
             result = {"games": list_games(), "players": players.list_players()}
-        # Execute this statement as part of the module's documented control flow.
         logger.info("casino_reset")
-        # Return the computed value to the caller.
         return result
 
     # Attach this decorator so the following function is registered with the framework.
@@ -172,7 +152,6 @@ def build_router() -> Router:
         auth.require_admin(context["user"])
         # Set kind to the value needed for the next operation.
         kind = query.get("kind", "app")
-        # Return the computed value to the caller.
         return {"logs": logger.recent(kind, int(query.get("limit", 50)))}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -186,7 +165,6 @@ def build_router() -> Router:
     @router.get(r"/api/v1/players/(?P<player_id>[^/]+)")
     # Define the get_player function used by this module.
     def get_player(body, query, player_id):
-        # Return the computed value to the caller.
         return {"player": players.get_player(player_id)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -195,7 +173,6 @@ def build_router() -> Router:
     def create_player(body, query, context):
         # Keep arbitrary player creation behind the Admin authorization boundary.
         auth.require_admin(context["user"])
-        # Return the computed value to the caller.
         return {"player": players.create_player(body.get("display_name", "Player"), body.get("type", "human"), float(body.get("balance", 5000)))}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -213,14 +190,12 @@ def build_router() -> Router:
         amount = require_amount(body.get("amount", 0))
         # Set ev to the value needed for the next operation.
         ev = ledger.credit(player_id, amount, "FAKE_MONEY_ADDED", None, None, {})
-        # Return the computed value to the caller.
         return {"ledger": ev, "player": players.get_player(player_id)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/players/(?P<player_id>[^/]+)/ledger")
     # Define the get_ledger function used by this module.
     def get_ledger(body, query, player_id):
-        # Return the computed value to the caller.
         return {"ledger": ledger.read_recent(player_id, int(query.get("limit", 100)))}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -268,10 +243,8 @@ def build_router() -> Router:
         email = body.get("email") or body.get("username", "")
         # Authenticate the normalized email credential through the backend auth service.
         result = auth.login(email, body.get("password", ""), context.get("client", ""))
-        # Execute this statement as part of the module's documented control flow.
         # Extend the response with host-only session and production CSRF cookies under context policy.
         context.setdefault("response_headers", []).extend(auth.session_cookie_headers(result["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
-        # Return the computed value to the caller.
         return result
 
     # Attach this decorator so the following function is registered with the framework.
@@ -280,10 +253,8 @@ def build_router() -> Router:
     def auth_logout(body, query, context):
         # Set token to the value needed for the next operation.
         token = auth.extract_bearer_token(context.get("headers", {})) or auth.extract_cookie_token(context.get("headers", {}))
-        # Execute this statement as part of the module's documented control flow.
         # Expire both session and production CSRF cookies using the same governed attributes.
         context.setdefault("response_headers", []).extend(auth.clear_cookie_headers(context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
-        # Return the computed value to the caller.
         return auth.logout(token)
 
     # Attach this decorator so the following function is registered with the framework.
@@ -458,7 +429,6 @@ def build_router() -> Router:
         if auth.is_guest(context.get("user") or {}):
             # Bind only through the server-stored unrelated analytics id.
             guest_analytics.record_event(context["user"].get("guest_analytics_id"), "lobby_reached")
-        # Return the computed value to the caller.
         return auth.current_user_payload(context["session"], context["user"])
 
     # Attach this decorator so the following function is registered with the framework.
@@ -469,14 +439,12 @@ def build_router() -> Router:
         if auth.is_guest(context.get("user") or {}):
             # Bind only through the server-stored unrelated analytics id.
             guest_analytics.record_event(context["user"].get("guest_analytics_id"), "lobby_reached")
-        # Return the computed value to the caller.
         return auth.current_user_payload(context["session"], context["user"])
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v2/me/terms")
     # Define the current_user_terms function used by this module.
     def current_user_terms(body, query, context):
-        # Return the computed value to the caller.
         return {"terms": auth.terms_status(context["user"])}
 
     # Attach the published terms acceptance route to the canonical user store.
@@ -659,7 +627,6 @@ def build_router() -> Router:
     def autoplay_stop(body, query, context):
         # Authorize the requested autoplay session before mutating it.
         authorize_autoplay(context, body.get("autoplay_id"))
-        # Return the computed value to the caller.
         return {"session": autoplay.stop(body.get("autoplay_id"))}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -668,7 +635,6 @@ def build_router() -> Router:
     def autoplay_complete(body, query, context):
         # Authorize the requested autoplay session before mutating it.
         authorize_autoplay(context, body.get("autoplay_id"))
-        # Return the computed value to the caller.
         return {"session": autoplay.complete(body.get("autoplay_id"))}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -677,7 +643,6 @@ def build_router() -> Router:
     def autoplay_tick(body, query, context):
         # Authorize the requested autoplay session before mutating it.
         authorize_autoplay(context, body.get("autoplay_id"))
-        # Return the computed value to the caller.
         return {"session": autoplay.tick(body.get("autoplay_id"))}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -686,7 +651,6 @@ def build_router() -> Router:
     def autoplay_finish_stop(body, query, context):
         # Authorize the requested autoplay session before mutating it.
         authorize_autoplay(context, body.get("autoplay_id"))
-        # Return the computed value to the caller.
         return {"session": autoplay.finish_stop(body.get("autoplay_id"))}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -695,7 +659,6 @@ def build_router() -> Router:
     def autoplay_stop_all(body, query, context):
         # Reserve global autoplay mutation for authenticated Admins.
         auth.require_admin(context["user"])
-        # Return the computed value to the caller.
         return {"sessions": autoplay.stop_all()}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -714,7 +677,6 @@ def build_router() -> Router:
         # Return only an autoplay session authorized for the current identity.
         return {"session": authorize_autoplay(context, autoplay_id)}
 
-    # Execute this statement as part of the module's documented control flow.
     register_bots(router)
     # Register every game API from the canonical per-module catalog descriptors.
     register_games(router)
@@ -724,9 +686,7 @@ def build_router() -> Router:
     register_mail(router)
     # Register Operations probes after game routes and before the Admin API surface.
     register_operations(router)
-    # Execute this statement as part of the module's documented control flow.
     register_admin(router)
-    # Return the computed value to the caller.
     return router
 
 # Set ROUTER to the value needed for the next operation.
@@ -746,23 +706,17 @@ class Handler(BaseHTTPRequestHandler):
     def _read_body(self):
         # Set length to the value needed for the next operation.
         length = int(self.headers.get("Content-Length") or 0)
-        # Branch when the following condition is true.
         if not length:
-            # Return the computed value to the caller.
             return {}
         # Set raw to the value needed for the next operation.
         raw = self.rfile.read(length)
-        # Branch when the following condition is true.
         if not raw:
-            # Return the computed value to the caller.
             return {}
         # Start protected logic so failures can be handled safely.
         try:
-            # Return the computed value to the caller.
             return json.loads(raw.decode("utf-8"), parse_constant=reject_nonfinite_json_constant)
         # Handle the expected failure path for the protected logic.
         except (UnicodeDecodeError, json.JSONDecodeError):
-            # Return the computed value to the caller.
             return {"_raw": raw.decode("utf-8", errors="replace")}
 
     # Finish one buffered response without turning a peer disconnect into a second HTTP response.
@@ -786,17 +740,12 @@ class Handler(BaseHTTPRequestHandler):
     def _send_json(self, status, payload, extra_headers=None):
         # Set raw to the value needed for the next operation.
         raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
-        # Execute this statement as part of the module's documented control flow.
         self.send_response(status)
         # Set self.send_header("Content-Type", "application/json; charset to the value needed for the next operation.
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        # Execute this statement as part of the module's documented control flow.
         self.send_header("Content-Length", str(len(raw)))
-        # Execute this statement as part of the module's documented control flow.
         self.send_header("Cache-Control", CACHE_CONTROL_NO_STORE)
-        # Iterate through the collection to process each item.
         for name, value in extra_headers or []:
-            # Execute this statement as part of the module's documented control flow.
             self.send_header(name, value)
         # Finish once so a peer disconnect cannot re-enter the generic API 500 path. (LOG-006)
         return self._finish_response(raw)
@@ -876,13 +825,11 @@ class Handler(BaseHTTPRequestHandler):
             if context.get("redirect"):
                 # Send only the prevalidated same-origin location and application cookies.
                 return self._send_redirect(str(context["redirect"]), context.get("response_headers"))
-            # Execute this statement as part of the module's documented control flow.
             self._send_json(200, {"ok": True, "data": data}, context.get("response_headers"))
         # Handle the expected failure path for the protected logic.
         except CasinoError as e:
             # Set logger.warning("api_error", request_id to the value needed for the next operation.
             logger.warning("api_error", request_id=request_id, code=e.code, path=path)
-            # Execute this statement as part of the module's documented control flow.
             self._send_json(e.status, {"ok": False, "error": {"code": e.code, "message": e.message, "details": e.details}})
         # Handle the expected failure path for the protected logic.
         except Exception:
@@ -893,21 +840,16 @@ class Handler(BaseHTTPRequestHandler):
 
     # Define the do_GET function used by this module.
     def do_GET(self):
-        # Branch when the following condition is true.
         if urlparse(self.path).path.startswith("/api/") or urlparse(self.path).path in {"/healthz", "/readyz"}:
-            # Return the computed value to the caller.
             return self._handle_api()
-        # Return the computed value to the caller.
         return self._serve_static()
 
     # Define the do_POST function used by this module.
     def do_POST(self):
-        # Return the computed value to the caller.
         return self._handle_api()
 
     # Define the do_DELETE function used by this module.
     def do_DELETE(self):
-        # Return the computed value to the caller.
         return self._handle_api()
 
     # Define do_PATCH so published v2 Admin update routes are reachable.
@@ -937,7 +879,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(error.status, {"ok": False, "error": {"code": error.code, "message": error.message, "details": error.details}})
                 # Stop static routing after the authorization boundary returns its response.
                 return
-        # Branch when the following condition is true.
         if path in ("/", ""):
             # Set path to the value needed for the next operation.
             path = "/index.html"
@@ -953,7 +894,6 @@ class Handler(BaseHTTPRequestHandler):
         openapi_request = path.startswith("/openapi/")
         # Resolve the relative path beneath only the selected immutable root.
         rel = Path(path.removeprefix("/openapi/") if openapi_request else path.lstrip("/"))
-        # Branch when the following condition is true.
         if rel.parts and rel.parts[0] == "web":
             # Set rel to the value needed for the next operation.
             rel = Path(*rel.parts[1:])
@@ -961,11 +901,9 @@ class Handler(BaseHTTPRequestHandler):
         target = ((OPENAPI_DIR if openapi_request else WEB_DIR) / rel).resolve()
         # Start protected logic so failures can be handled safely.
         try:
-            # Execute this statement as part of the module's documented control flow.
             target.relative_to((OPENAPI_DIR if openapi_request else WEB_DIR).resolve())
         # Handle the expected failure path for the protected logic.
         except Exception:
-            # Execute this statement as part of the module's documented control flow.
             self.send_error(403); return
         # Return missing or non-YAML contracts without falling back to the application shell.
         if openapi_request and (not target.is_file() or target.suffix != ".yaml"):
@@ -981,11 +919,8 @@ class Handler(BaseHTTPRequestHandler):
         content = target.read_bytes()
         # Publish YAML contracts explicitly while retaining ordinary MIME discovery.
         ctype = "application/yaml; charset=utf-8" if openapi_request else (mimetypes.guess_type(str(target))[0] or "application/octet-stream")
-        # Execute this statement as part of the module's documented control flow.
         self.send_response(200)
-        # Execute this statement as part of the module's documented control flow.
         self.send_header("Content-Type", ctype)
-        # Execute this statement as part of the module's documented control flow.
         self.send_header("Content-Length", str(len(content)))
         # Prevent HTML and lazy JavaScript from surviving a source or route reload. (CORE-026)
         self.send_header("Cache-Control", CACHE_CONTROL_NO_STORE)
@@ -1010,9 +945,7 @@ class Handler(BaseHTTPRequestHandler):
 def serve(host=DEFAULT_HOST, port=DEFAULT_PORT, open_browser=True):
     # Reject unsafe public bootstrap configuration before creating or migrating any runtime state.
     validate_bootstrap_for_startup(host)
-    # Execute this statement as part of the module's documented control flow.
     ensure_dirs()
-    # Execute this statement as part of the module's documented control flow.
     migrate_from_v7_if_needed()
     # Bootstrap default players through the active provider when storage is fresh.
     bootstrap_players(players.default_players)
@@ -1024,9 +957,7 @@ def serve(host=DEFAULT_HOST, port=DEFAULT_PORT, open_browser=True):
     url = f"http://{host}:{port}/"
     # Set logger.info("server_start", url to the value needed for the next operation.
     logger.info("server_start", url=url, version=APP_VERSION)
-    # Branch when the following condition is true.
     if open_browser:
-        # Execute this statement as part of the module's documented control flow.
         threading.Timer(0.75, lambda: webbrowser.open(url)).start()
     # Write diagnostic output so the current operation can be inspected.
     print(f"Virtual Casino Simulator v{APP_VERSION} running at {url}")
@@ -1036,7 +967,6 @@ def serve(host=DEFAULT_HOST, port=DEFAULT_PORT, open_browser=True):
     print("Press Ctrl+C to stop.")
     # Start protected logic so failures can be handled safely.
     try:
-        # Execute this statement as part of the module's documented control flow.
         httpd.serve_forever()
     # Handle the expected failure path for the protected logic.
     except KeyboardInterrupt:
@@ -1044,9 +974,7 @@ def serve(host=DEFAULT_HOST, port=DEFAULT_PORT, open_browser=True):
         pass
     # Run cleanup logic regardless of success or failure.
     finally:
-        # Execute this statement as part of the module's documented control flow.
         logger.info("server_stop")
-        # Execute this statement as part of the module's documented control flow.
         httpd.server_close()
 
 # Define the main function used by this module.
@@ -1064,7 +992,5 @@ def main(argv=None):
     # Set serve(args.host, args.port, open_browser to the value needed for the next operation.
     serve(args.host, args.port, open_browser=not args.no_browser)
 
-# Branch when the following condition is true.
 if __name__ == "__main__":
-    # Execute this statement as part of the module's documented control flow.
     main()

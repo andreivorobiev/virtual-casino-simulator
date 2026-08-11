@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused provider-free and cross-process invitation enrollment acceptance. (TEST-091)"""
 
 # Import independent processes for JSON race proof.

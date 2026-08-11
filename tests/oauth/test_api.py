@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Admin-route tests for the disabled OAuth integration.
 
 Requirements: OAUTH-001, OAUTH-002, and TEST-045.

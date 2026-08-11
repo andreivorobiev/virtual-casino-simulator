@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Validate or explicitly repair the production monitor bearer/digest pairing.
 
 The raw bearer remains only in the root-managed monitor environment file. This tool reads it in

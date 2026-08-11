@@ -1,19 +1,15 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Blackjack API actions, hand persistence, and exactly-once settlement orchestration.
 from casino.core.state_store import load_player_game_state, save_player_game_state
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
 # Import the descriptor allowlist so the handler cannot drift from central router coercion.
 from casino.core.game_rules import declared_fields
-# Import required dependency so this module can use its public functions or constants.
 from casino.core import players, logger
 # Import the one canonical game-money boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.blackjack import engine
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import ValidationError, ConflictError
 
 # Set GAME_ID to the value needed for the next operation.
@@ -28,15 +24,12 @@ def request_player_id(body, query) -> str:
 
 # Define the exposed_round function used by this module.
 def exposed_round(rnd):
-    # Branch when the following condition is true.
     if not rnd: return None
     # Set copy to the value needed for the next operation.
     copy = {**rnd, "dealer": {**rnd["dealer"]}}
-    # Branch when the following condition is true.
     if copy["dealer"].get("hole_card_hidden") and copy["dealer"].get("cards"):
         # Set copy["dealer"] to the value needed for the next operation.
         copy["dealer"] = {**copy["dealer"], "cards": [copy["dealer"]["cards"][0], "??"]}
-    # Return the computed value to the caller.
     return copy
 
 # Define the state_payload function used by this module.
@@ -45,49 +38,39 @@ def state_payload(player_id: str, state=None):
     state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
     # Set visible_players to the value needed for private game payloads.
     visible_players = [p for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
-    # Return the computed value to the caller.
     return {"game": GAME_ID, "state": {"rules": state.get("rules"), "shoe_count": len(state.get("shoe",[])), "rounds": {rid: exposed_round(r) for rid,r in state.get("rounds",{}).items()}}, "player": players.get_player(player_id), "players": visible_players}
 
 # Define the finish_if_needed function used by this module.
 def finish_if_needed(state, rnd):
     # Set credits to the value needed for the next operation.
     credits=[]
-    # Branch when the following condition is true.
     if rnd.get("status") == "settled_pending_credit":
-        # Iterate through the collection to process each item.
         for h in rnd["hands"]:
             # Set due to the value needed for the next operation.
             due = round(float(h.get("payout_due",0)),2)
             # Skip hands whose persisted display flag already survived a completed settlement save. (issue #403)
             if h.get("credited"):
-                # Execute this statement as part of the module's documented control flow.
                 continue
             # Track storage replay evidence so a raced or recovered settlement never repeats side effects. (issue #403)
             replayed = False
-            # Branch when the following condition is true.
             if due > 0:
                 # Commit or replay the payout under the durable deal-time round-and-hand action identity. (issue #403)
                 event, replayed = SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=due, transaction_type="BLACKJACK_SETTLEMENT_CREDIT", round_id=rnd["round_id"], action_key=f"{rnd['round_id']}:{h['hand_id']}:settlement", request_fingerprint=f"{rnd['round_id']}:{h['hand_id']}:{h.get('outcome')}:{due}", details={"hand_id": h["hand_id"], "outcome": h.get("outcome")})
                 # Report only the newly committed event because a replay was already reported by the winning call. (issue #403)
                 if not replayed:
-                    # Execute this statement as part of the module's documented control flow.
                     credits.append(event)
             # Append history only for the committing call so raced or recovered retries cannot duplicate rows. (issue #403)
             if not replayed:
                 # Set bal to the value needed for the next operation.
                 bal = players.get_player(rnd["player_id"])["balance"]
-                # Execute this statement as part of the module's documented control flow.
                 append_history(GAME_ID, rnd["round_id"], rnd["player_id"], "hand", h["hand_id"], h["bet"], h.get("outcome","unknown"), due, bal, {"cards": h["cards"], "dealer": rnd["dealer"]["cards"]})
             # Keep the display flag while the durable ledger action key remains the settlement authority. (issue #403)
             h["credited"] = True
-        # Execute this statement as part of the module's documented control flow.
         engine.settle_round(rnd)
-    # Return the computed value to the caller.
     return credits
 
 # Define the has_active_round function used by this module.
 def has_active_round(state):
-    # Return the computed value to the caller.
     return any(r.get("status") in ("player_turn","settled_pending_credit") for r in state.get("rounds",{}).values())
 
 # Define the register function used by this module.
@@ -105,7 +88,6 @@ def register(router):
         player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Branch when the following condition is true.
         if has_active_round(state):
             # Raise an error so invalid input or state is reported explicitly.
             raise ConflictError("Finish active blackjack rounds before changing table rules")
@@ -117,9 +99,7 @@ def register(router):
             if field in body:
                 # Store the canonical router value for subsequent engine consumption.
                 rules[field] = body[field]
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return state_payload(player_id, state)
 
     # Attach this decorator so the following function is registered with the framework.
@@ -136,11 +116,9 @@ def register(router):
         SETTLEMENT.apply_once(player_id=player_id, signed_amount=-amount, transaction_type="BLACKJACK_INITIAL_BET", round_id=rnd["round_id"], action_key=f"{rnd['round_id']}:wager", request_fingerprint=f"{rnd['round_id']}:{amount}", details={"hand_id": rnd["hands"][0]["hand_id"]})
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Set logger.info("blackjack_round_dealt", round_id to the value needed for the next operation.
         logger.info("blackjack_round_dealt", round_id=rnd["round_id"], player_id=player_id, bet=amount)
-        # Return the computed value to the caller.
         return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -153,9 +131,7 @@ def register(router):
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.hit(state, round_id); credits = finish_if_needed(state, rnd)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -168,9 +144,7 @@ def register(router):
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.stand(state, round_id); credits = finish_if_needed(state, rnd)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -185,11 +159,9 @@ def register(router):
         rnd = engine.get_round(state, round_id)
         # Set h to the value needed for the next operation.
         h = engine.active_hand(rnd)
-        # Branch when the following condition is true.
         if not h: raise ConflictError("No active hand")
         # Set original_bet to the value needed for the next operation.
         original_bet = float(h["bet"]); original_hand_id = h["hand_id"]
-        # Execute this statement as part of the module's documented control flow.
         SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=-original_bet, transaction_type="BLACKJACK_DOUBLE_DEBIT", round_id=round_id, action_key=f"{round_id}:{original_hand_id}:double", request_fingerprint=f"{round_id}:{original_hand_id}:double:{original_bet}", details={"hand_id": original_hand_id})
         # Start protected logic so failures can be handled safely.
         try:
@@ -197,15 +169,11 @@ def register(router):
             rnd = engine.double_down(state, round_id)
         # Handle the expected failure path for the protected logic.
         except Exception:
-            # Execute this statement as part of the module's documented control flow.
             SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=original_bet, transaction_type="BLACKJACK_DOUBLE_REFUND_AFTER_ERROR", round_id=round_id, action_key=f"{round_id}:{original_hand_id}:double-refund", request_fingerprint=f"{round_id}:{original_hand_id}:double-refund:{original_bet}", details={"hand_id": original_hand_id})
-            # Execute this statement as part of the module's documented control flow.
             raise
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -220,11 +188,9 @@ def register(router):
         rnd = engine.get_round(state, round_id)
         # Set h to the value needed for the next operation.
         h = engine.active_hand(rnd)
-        # Branch when the following condition is true.
         if not h: raise ConflictError("No active hand")
         # Set original_bet to the value needed for the next operation.
         original_bet = float(h["bet"]); original_hand_id = h["hand_id"]
-        # Execute this statement as part of the module's documented control flow.
         SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=-original_bet, transaction_type="BLACKJACK_SPLIT_DEBIT", round_id=round_id, action_key=f"{round_id}:{original_hand_id}:split", request_fingerprint=f"{round_id}:{original_hand_id}:split:{original_bet}", details={"hand_id": original_hand_id})
         # Start protected logic so failures can be handled safely.
         try:
@@ -232,15 +198,11 @@ def register(router):
             rnd = engine.split(state, round_id)
         # Handle the expected failure path for the protected logic.
         except Exception:
-            # Execute this statement as part of the module's documented control flow.
             SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=original_bet, transaction_type="BLACKJACK_SPLIT_REFUND_AFTER_ERROR", round_id=round_id, action_key=f"{round_id}:{original_hand_id}:split-refund", request_fingerprint=f"{round_id}:{original_hand_id}:split-refund:{original_bet}", details={"hand_id": original_hand_id})
-            # Execute this statement as part of the module's documented control flow.
             raise
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -253,9 +215,7 @@ def register(router):
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.surrender(state, round_id); credits = finish_if_needed(state, rnd)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -274,21 +234,17 @@ def register(router):
         if rnd.get("status") != "player_turn" or not rnd.get("dealer", {}).get("hole_card_hidden"):
             # Raise before any ledger mutation so revealed or settled rounds cannot create risk-free insurance returns.
             raise ConflictError("Insurance is only available before the dealer hole card is revealed")
-        # Branch when the following condition is true.
         if rnd.get("insurance"):
             # Raise an error so invalid input or state is reported explicitly.
             raise ValidationError("Insurance has already been purchased for this round")
-        # Branch when the following condition is true.
         if engine.card_rank(rnd["dealer"]["cards"][0]) != "A":
             # Raise an error so invalid input or state is reported explicitly.
             raise ValidationError("Insurance is only available when dealer shows an Ace")
         # Set max_ins to the value needed for the next operation.
         max_ins = round(float(rnd["hands"][0]["bet"])/2,2)
-        # Branch when the following condition is true.
         if amount > max_ins:
             # Raise an error so invalid input or state is reported explicitly.
             raise ValidationError("Insurance cannot exceed half the initial wager")
-        # Execute this statement as part of the module's documented control flow.
         SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=-amount, transaction_type="BLACKJACK_INSURANCE_DEBIT", round_id=round_id, action_key=f"{round_id}:insurance:wager", request_fingerprint=f"{round_id}:insurance:{amount}", details={})
         # Set dealer_bj to the value needed for the next operation.
         dealer_bj = engine.hand_total(rnd["dealer"]["cards"])["blackjack"]
@@ -298,9 +254,7 @@ def register(router):
         credit = SETTLEMENT.apply_once(player_id=rnd["player_id"], signed_amount=payout, transaction_type="BLACKJACK_INSURANCE_CREDIT", round_id=round_id, action_key=f"{round_id}:insurance:settlement", request_fingerprint=f"{round_id}:insurance:settlement:{payout}", details={})[0] if payout else None
         # Set rnd["insurance"] to the value needed for the next operation.
         rnd["insurance"] = {"amount": amount, "dealer_blackjack": dealer_bj, "payout": payout}
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"round": exposed_round(rnd), "credit": credit, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -315,11 +269,9 @@ def register(router):
         rnd = engine.get_round(state, round_id)
         # Set h to the value needed for the next operation.
         h = rnd["hands"][0]
-        # Branch when the following condition is true.
         if rnd.get("even_money"):
             # Raise an error so invalid input or state is reported explicitly.
             raise ValidationError("Even money has already been taken")
-        # Branch when the following condition is true.
         if not engine.hand_total(h["cards"])["blackjack"] or engine.card_rank(rnd["dealer"]["cards"][0]) != "A":
             # Raise an error so invalid input or state is reported explicitly.
             raise ValidationError("Even money is only available with player blackjack against dealer Ace")
@@ -329,7 +281,5 @@ def register(router):
         rnd["even_money"] = True; rnd["dealer"]["hole_card_hidden"] = False; rnd["status"] = "settled_pending_credit"
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}

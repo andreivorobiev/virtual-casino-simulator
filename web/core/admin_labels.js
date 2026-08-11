@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Preserve reviewed technical acronyms while normalizing all-caps API identifiers for human-readable Admin copy.
 const HUMAN_LABEL_ACRONYMS = Object.freeze({ api: 'API', csrf: 'CSRF', http: 'HTTP', id: 'ID', oauth: 'OAuth', ui: 'UI', url: 'URL' });
 // Order transaction suffixes from most specific to generic so each ledger event receives one stable localized action.

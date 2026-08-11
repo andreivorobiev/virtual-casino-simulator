@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Funded account allocation and controller metadata for practice opponents."""
 
 # Import the public managed-account accounting seam.

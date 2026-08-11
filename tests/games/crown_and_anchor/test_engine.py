@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Crown and Anchor pure-engine tests for issue #133."""
 
 # Import unittest so the focused module can run without central discovery edits.

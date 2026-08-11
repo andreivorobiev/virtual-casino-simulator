@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Resolve and verify the compatibility-declared predecessor for one packaged release.
 
 Protected publication must not infer rollback from GitHub's release ordering. The repository

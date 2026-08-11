@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused deployment build-provenance fragment tests. (#287, TOOL-007)"""
 
 # Import output redirection so the tool's operator messages never enter suite output.

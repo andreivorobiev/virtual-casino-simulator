@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Ledger-only, retry-safe orchestration for player-owned Scratch Cards."""
 
 # Import deep-copy support so failed actions cannot mutate a loader-owned state object.

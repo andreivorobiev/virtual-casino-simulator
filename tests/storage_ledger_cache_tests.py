@@ -1,4 +1,5 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Prove the JSON ledger tail cache stays byte-identical to full re-parses. (issue #412)
 # Import required dependency so tests can serialize seeded ledger rows exactly like the provider.
 import json

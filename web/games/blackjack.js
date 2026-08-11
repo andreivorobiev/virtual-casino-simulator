@@ -1,4 +1,5 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Import the frozen API helpers used by this frontend module.
 import { api, post, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import shared shell/UI helpers so formatting, cards, toasts, and wallet refreshes stay consistent.

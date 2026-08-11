@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Live Google and Facebook authorization-code adapters with injectable transport.
 
 Requirements: OAUTH-003, OAUTH-005, AUTH-004, and SEC-010. Tokens, codes, claims,

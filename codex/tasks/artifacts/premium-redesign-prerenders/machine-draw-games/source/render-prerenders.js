@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Load path helpers so output and source paths resolve from the workspace root.
 const path = require("node:path");
 // Load filesystem helpers so the PNG output folder exists before screenshots run.

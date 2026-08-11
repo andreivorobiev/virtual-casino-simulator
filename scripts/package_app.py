@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Build and verify deterministic Casino Simulator release artifacts for TOOL-003."""
 
 # Import argument parsing for the build and verification command-line interfaces.

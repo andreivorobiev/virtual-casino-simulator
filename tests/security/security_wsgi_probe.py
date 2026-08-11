@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free hostile-client proof for the restricted-preview WSGI boundary."""
 
 # Import in-memory request streams for direct WSGI calls.

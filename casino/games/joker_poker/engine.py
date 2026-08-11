@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic single-hand Joker Poker rules for GitHub issue #130.
 
 Requirements used: CARD-001, POKER-001, SESSION-005, and JP-001 through JP-004.

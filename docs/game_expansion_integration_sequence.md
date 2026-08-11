@@ -222,7 +222,7 @@ Required visual states are:
 
 ## Validation and listener gate
 
-The final head runs bootstrap, repository rules, API, browser, full long suite 100, catalog, contract, module-boundary, requirement, version, generated-document, and comment-density validation. Focused smoke checks may run earlier but cannot replace the final set. Two members of that set do not gate a new game on their own: `scripts/check_comment_density.py` prints warnings and always exits `0`, so it is advisory only, and `verify_rules.py` imports and exercises only the six original engines (roulette, slots, blackjack, baccarat, keno, bingo), so it validates no expansion-game rules. A new game's rule evidence must come from its own engine/API tests and the catalog-discovered long driver.
+The final head runs bootstrap, repository rules, API, browser, full long suite 100, catalog, contract, module-boundary, requirement, version, generated-document, and file-header validation. Focused smoke checks may run earlier but cannot replace the final set. The file-header gate proves source attribution, purpose documentation, syntax-safe placement, and absence of generated filler; it does not prove a new game's rules. A new game's rule evidence must come from its own engine/API tests and the catalog-discovered long driver.
 
 Any test listener binds only to `127.0.0.1` on an ephemeral port other than 8765. The validation record names its PID and port, stops it after the run, verifies the port is closed, and makes no broad firewall change.
 

@@ -1,29 +1,22 @@
 #!/usr/bin/env python3
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Rule-level validation for Virtual Casino Simulator v9.
 
 Run: python verify_rules.py
 """
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.roulette import rules as rr, engine as re
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.slots import engine as se
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.blackjack import engine as bj
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.baccarat import engine as bac
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.keno import engine as ke
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.bingo import engine as bi
 
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
 # Define the check function used by this module.
 def check(req, cond, msg=''):
-    # Branch when the following condition is true.
     if not cond: raise AssertionError(f'{req} failed: {msg}')
-    # Execute this statement as part of the module's documented control flow.
     RESULTS.append({'requirement_id': req, 'status':'PASS', 'message':msg})
 
 # Define the roulette_tests function used by this module.
@@ -36,21 +29,13 @@ def roulette_tests():
     check('ROU-001', rr.roulette_numbers('single') == ['0']+[str(i) for i in range(1,37)])
     # Set check('ROU-002', rr.roulette_numbers('double') to the value needed for the next operation.
     check('ROU-002', rr.roulette_numbers('double') == ['0','00']+[str(i) for i in range(1,37)])
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-010', has('straight',['17']))
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-011', has('split',['17','20']))
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-012', has('street',['16','17','18']))
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-013', has('corner',['17','18','20','21']))
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-014', has('line',['16','17','18','19','20','21']))
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-015', has('zero_split',['0','00']))
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-016', has('trio',['0','1','2']) or has('trio',['0','00','2']))
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-017', has('top_line',['0','00','1','2','3']))
     # Set b to the value needed for the next operation.
     b=rr.find_bet('double','split',['17','20']); res=re.settle_bet({'amount':5,'covered_numbers':['17','20'],'net_payout':17,'type':'split'},'17')
@@ -62,7 +47,6 @@ def roulette_tests():
     check('ROU-031', res2['credit']==5)
     # Set res3 to the value needed for the next operation.
     res3=re.settle_bet({'amount':10,'covered_numbers':list(rr.RED_NUMBERS),'net_payout':1,'type':'red'},'0','en_prison')
-    # Execute this statement as part of the module's documented control flow.
     check('ROU-032', res3['carry'] is True)
 
 # Define the slots_tests function used by this module.
@@ -75,7 +59,6 @@ def slots_tests():
     check('SLOT-002', spin['active_lines']==5 and spin['cost']==5)
     # Set check('SLOT-003', set(se.PAYLINES.keys()) to the value needed for the next operation.
     check('SLOT-003', set(se.PAYLINES.keys())=={1,3,5,9,20})
-    # Execute this statement as part of the module's documented control flow.
     check('SLOT-004', 'WILD' in se.SYMBOLS and 'SCATTER' in se.SYMBOLS)
 
 # Define the blackjack_tests function used by this module.
@@ -124,11 +107,8 @@ def bingo_tests():
 
 # Define the main function used by this module.
 def main():
-    # Iterate through the collection to process each item.
     for fn in [roulette_tests, slots_tests, blackjack_tests, baccarat_tests, keno_tests, bingo_tests]: fn()
     # Write diagnostic output so the current operation can be inspected.
     print(f'[ok] {len(RESULTS)} rule checks passed')
-    # Iterate through the collection to process each item.
     for r in RESULTS: print(f"  {r['requirement_id']} PASS")
-# Branch when the following condition is true.
 if __name__=='__main__': main()

@@ -1,4 +1,5 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free proof for Admin per-game payout-rate economics. (ADMIN-030, TEST-146)"""
 
 # Import unittest for the dependency-free runner.

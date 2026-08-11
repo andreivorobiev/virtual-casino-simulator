@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Provide one shell-owned wallet celebration controller with no game, API, or wallet authority. (UX-023)
 
 // Bound the stronger celebration to reviewed fake-token gains of at least this amount.
