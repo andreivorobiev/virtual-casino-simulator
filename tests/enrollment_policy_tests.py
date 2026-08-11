@@ -29,8 +29,8 @@ from pathlib import Path
 from casino import config
 # Import the module under test.
 from casino.core import enrollment_policy
-# Import the existing account and invitation services only for public-route boundary patching.
-from casino.core import auth, invitations
+# Import the pending-enrollment and invitation services only for public-route boundary patching.
+from casino.core import auth, invitations, pending_enrollment
 # Import storage so a temporary provider replaces the real data directory.
 from casino.core import storage
 # Import the standard envelopes expected for stale, forbidden, and malformed requests.
@@ -220,8 +220,8 @@ class EnrollmentPolicyTests(unittest.TestCase):
         self.assertIn("required: [audit_version, audit_id, actor_id, reason, at, previous, current, impact, previous_digest, digest]", admin_contract)
         # Parse the explicit restricted-preview compatibility decision.
         compatibility = json.loads((ROOT / "contracts" / "compatibility" / "restricted-preview-security.json").read_text(encoding="utf-8"))
-        # Require artifact v6 for the provider-specific signup policy extension.
-        self.assertEqual(compatibility["version"], 6)
+        # Require artifact v7 for the verified-email pending-enrollment extension.
+        self.assertEqual(compatibility["version"], 7)
         # Read the complete policy decision without accepting implicit defaults.
         policy = compatibility["enrollment_policy"]
         # Require the retained fallback plus separate schema-owned recovery boundaries.
@@ -344,18 +344,16 @@ class EnrollmentEnforcementTests(unittest.TestCase):
                 create_user.assert_not_called()
             # Replace the same durable document with explicit email self-signup permission.
             self._policy(tmp, mode=enrollment_policy.MODE_SELF_SIGNUP, email=True, invitations_enabled=False)
-            # Define one fixed synthetic user result for the existing route sequence.
-            synthetic_user = {"user_id": "synthetic-user", "email": "allowed@example.invalid"}
-            # Define one fixed synthetic login result for response compatibility.
-            synthetic_login = {"session": {"session_id": "synthetic-session"}, "user": synthetic_user}
-            # Patch only the existing mutation seams after policy allowance.
-            with mock.patch.object(auth, "create_user", return_value=synthetic_user) as create_user, mock.patch.object(auth, "accept_terms") as accept_terms, mock.patch.object(auth, "login", return_value=synthetic_login) as login, mock.patch.object(auth, "session_cookie_headers", return_value=[]):
+            # Define the recipient-independent pending-verification response for the allowed route.
+            pending_result = {"status": "verification_pending"}
+            # Patch only the pending-enrollment seam after policy allowance while guarding canonical account mutation.
+            with mock.patch.object(pending_enrollment, "initiate", return_value=pending_result) as initiate, mock.patch.object(auth, "create_user") as create_user:
                 # Dispatch the same public signup contract under an allowed durable policy.
-                result = router.dispatch("POST", "/api/v2/auth/signup", {"email": "allowed@example.invalid", "password": "SyntheticSignupPassw0rd!23", "display_name": "Allowed", "locale": "en-US", "terms_version": "private-beta-1", "accepted": True}, context={"client": "unit", "response_headers": []})
-            # Require the route to preserve the existing authenticated result.
-            self.assertEqual(result, synthetic_login)
-            # Require every existing mutation seam to execute exactly once after logging.
-            self.assertEqual((create_user.call_count, accept_terms.call_count, login.call_count), (1, 1, 1))
+                result = router.dispatch("POST", "/api/v2/auth/signup", {"email": "allowed@example.invalid", "password": "SyntheticSignupPassw0rd!23", "display_name": "Allowed", "locale": "en-US", "terms_version": "private-beta-1", "accepted": True, "idempotency_key": "allowed-signup-key-0001"}, context={"client": "unit", "response_headers": []})
+            # Require the route to preserve the enumeration-safe pending result without creating a session.
+            self.assertEqual(result, pending_result)
+            # Require one pending-enrollment call and no canonical account mutation at signup time.
+            self.assertEqual((initiate.call_count, create_user.call_count), (1, 0))
 
     # Prove invitation redemption enforces policy while retaining one generic denial envelope.
     def test_invitation_route_enforces_policy_and_preserves_generic_denial(self) -> None:
