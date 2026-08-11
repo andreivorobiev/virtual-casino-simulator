@@ -1,6 +1,6 @@
 # Deterministic motion acceptance contract
 
-Status: shared foundation implemented; per-game adoption and visual acceptance remain planned.
+Status: shared foundation implemented; Roulette and Slots adoption accepted at the exact PR head.
 
 Related issues: #74, #168, #169, and #170. Existing timer-safe primitives originated in #97.
 
@@ -13,7 +13,7 @@ The shared foundation in `web/core/motion.js` owns two reusable contracts:
 - `createMotionLifecycle` enforces `idle -> locking -> running -> settling -> settled` with explicit `failed` and `aborted` recovery, one opaque action token, stale-generation rejection, and exact authoritative-result identity.
 - `createMotionTimingProfile` freezes reviewed normal, fast, and reduced-motion budgets and resolves the live comfort preference at each action boundary.
 
-This foundation does not change Roulette or Slots presentation by itself. Their current browser behavior remains unchanged until a game-owned implementation adopts the contract and supplies exact-head browser evidence.
+Roulette and Slots now adopt this contract in their game-owned presentation modules. The shared lifecycle remains the policy boundary; each route owns only its deterministic phase rendering, profile selection, and cleanup.
 
 ## Permanent requirement allocation
 
@@ -22,11 +22,11 @@ The shared family is `MOTION-004` through `MOTION-011`.
 - `MOTION-004`, `MOTION-005`, and `TEST-100` are implemented by this foundation.
 - `MOTION-006` through `MOTION-011` remain `PLANNED` until every adopted game proves authoritative result agreement, non-overlap, recovery, layout and performance, accessibility, localization, and governed evidence.
 
-Roulette owns `ROU-063` through `ROU-068`. Slots owns `SLOT-030` through `SLOT-035`. These IDs are permanent and must not be renumbered or reused. They remain `PLANNED`; the earlier existence-only requirements such as `ROU-042`, `ROU-054`, and `SLOT-020` do not satisfy the new quality contract.
+Roulette owns `ROU-063` through `ROU-068`. Slots owns `SLOT-030` through `SLOT-035`. These IDs are permanent and must not be renumbered or reused. Their exact-head unit and Browser evidence is required in addition to earlier existence-only requirements such as `ROU-042`, `ROU-054`, and `SLOT-020`.
 
-## Roulette adoption gate
+## Roulette adopted profiles
 
-Roulette adoption must preserve the frozen API and existing game mathematics while proving:
+Roulette preserves the frozen API and existing game mathematics while proving:
 
 - one session-bound authoritative pocket and one settlement across wheel, ball, table, result, history, voice, wallet, ledger, and Admin telemetry;
 - default Authentic timing of 15–18 seconds, optional Quick timing of 8–10 seconds, autoplay timing of 6–8 seconds, and a 400–800 ms non-spinning reduced-motion path;
@@ -34,9 +34,9 @@ Roulette adoption must preserve the frozen API and existing game mathematics whi
 - visible control locking, result reveal only after capture, route/refresh/error recovery, exact-once announcement, and zero stale timer, sound, glow, or disabled-control residue; and
 - deterministic mapping tests plus exact-SHA EN/RU motion evidence at all governed viewports, normal and reduced motion, with frame, transform, alignment, layout, and cleanup traces.
 
-## Slots adoption gate
+## Slots adopted profiles
 
-Slots adoption must preserve the frozen API, reel mathematics, and paytable while proving:
+Slots preserves the frozen API, reel mathematics, and paytable while proving:
 
 - one authoritative set of reel stops, grid, wins, bonus/progressive state, round, wallet, ledger, history, and telemetry for each non-overlapping spin;
 - continuous independent reels with no whole-grid swap, blank seam, reverse jump, frozen placeholder, or symbol change after a reel stops;

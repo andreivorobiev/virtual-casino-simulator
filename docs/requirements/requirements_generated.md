@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.61.3
+- application: 9.62.0
 - core: 9.40.1
 - ledger: 9.1.2
 - players: 9.1.1
@@ -16,8 +16,8 @@ Historical source baseline: 9.1.0
 - admin: 1.18.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.6.4
-- slots: 9.4.4
+- roulette: 9.7.0
+- slots: 9.5.0
 - blackjack: 9.1.10
 - baccarat: 9.1.15
 - keno: 9.3.6
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.75.1
-- docs: 1.73.1
+- tests: 1.76.0
+- docs: 1.74.0
 - contracts: 1.59.3
 - tooling: 1.29.0
 - commenting_policy: 2.0.0
@@ -693,12 +693,12 @@ Historical source baseline: 9.1.0
 - **ROU-060** (Roulette) - PASS: Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.
 - **ROU-061** (Roulette) - PASS: Every visible Roulette wagering surface registers correctly labeled bets with no silent no-ops: all 38 straight pockets show their pocket number, every FAST BETS shortcut and grid outside cell shows its canonical outside label even on repeat clicks, all dozen and column cells plus every inside/special marker type show their exact catalog labels, and each racetrack/call control renders every authoritative component label returned for that activation.
 - **ROU-062** (Roulette) - PASS: Roulette uses one consistent escrow model for unspun wagers: placing an open bet debits the authoritative wallet immediately, and activating the visible Clear bets control refunds the exact pending stake before any spin or table-leave cleanup.
-- **ROU-063** (Roulette) - PLANNED: One session-bound Roulette spin commits one authoritative pocket and settlement, and wheel, ball, table, result, history, voice, wallet, ledger, and Admin telemetry agree on that pocket and round without overlapping input.
-- **ROU-064** (Roulette) - PLANNED: Roulette uses the complete named physical sequence with default Authentic reveal in 15 to 18 seconds, optional Quick reveal in 8 to 10 seconds, autoplay reveal in 6 to 8 seconds, and a non-spinning reduced-motion reveal in 400 to 800 ms without changing the committed result.
-- **ROU-065** (Roulette) - PLANNED: The rotor and ball counter-rotate with separate continuous velocity profiles; Authentic mode shows at least 16 ball circuits, progressive deceleration, bounded rim departure and contacts, pocket-relative capture, and at least one second of ball-and-pocket co-rotation without teleport or transform reset.
-- **ROU-066** (Roulette) - PLANNED: Roulette locks wagering and mode controls during the atomic spin, conceals the result until visible pocket capture, and then reveals highlight, history, voice, and wallet celebration exactly once with player-facing phase copy.
-- **ROU-067** (Roulette) - PLANNED: Roulette navigation, refresh, autoplay stop, locale change, mute, and API failure recover the authoritative committed round once or a safe pre-commit betting state and leave no duplicate ledger/history event, orbit, glow, timer, sound, or disabled-control residue.
-- **ROU-068** (Tests) - PLANNED: Roulette motion acceptance maps at least 100 committed spins and supplies exact-head frame, transform, capture, alignment, geometry, cleanup, wallet/history/ledger, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
+- **ROU-063** (Roulette) - PASS: One session-bound Roulette spin commits one authoritative pocket and settlement, and wheel, ball, table, result, history, voice, wallet, ledger, and Admin telemetry agree on that pocket and round without overlapping input.
+- **ROU-064** (Roulette) - PASS: Roulette uses the complete named physical sequence with default Authentic reveal in 15 to 18 seconds, optional Quick reveal in 8 to 10 seconds, autoplay reveal in 6 to 8 seconds, and a non-spinning reduced-motion reveal in 400 to 800 ms without changing the committed result.
+- **ROU-065** (Roulette) - PASS: The rotor and ball counter-rotate with separate continuous velocity profiles; Authentic mode shows at least 16 ball circuits, progressive deceleration, bounded rim departure and contacts, pocket-relative capture, and at least one second of ball-and-pocket co-rotation without teleport or transform reset.
+- **ROU-066** (Roulette) - PASS: Roulette locks wagering and mode controls during the atomic spin, conceals the result until visible pocket capture, and then reveals highlight, history, voice, and wallet celebration exactly once with player-facing phase copy.
+- **ROU-067** (Roulette) - PASS: Roulette navigation, refresh, autoplay stop, locale change, mute, and API failure recover the authoritative committed round once or a safe pre-commit betting state and leave no duplicate ledger/history event, orbit, glow, timer, sound, or disabled-control residue.
+- **ROU-068** (Tests) - PASS: Roulette motion acceptance maps at least 100 committed spins and supplies exact-head frame, transform, capture, alignment, geometry, cleanup, wallet/history/ledger, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
 - **ROU-069** (Roulette) - PASS: The legacy Roulette rotor presentation avoids the reported strobing regression by using a finely sampled monotonic coast-down under linear timing whose modeled 60 Hz rotor step remains below one European-wheel pocket; the browser runtime exposes that same named linear 3.6-second animation while a spin is resolving.
 - **ROU-070** (Roulette) - PASS: The legacy Roulette rotor and ball counter-rotate through whole-turn animation endpoints so releasing their animation cannot introduce an end-of-spin angular pop, and the browser runtime suppresses rotor, ball, settle, and orbit decoration when reduced motion is requested without changing the authoritative result.
 - **ROU-071** (Roulette) - PASS: Persisted open bets carry the catalog layout kind so outside-bet chips render on their outside cells, with a type-based client fallback for bets persisted before the field existed.
@@ -731,12 +731,12 @@ Historical source baseline: 9.1.0
 - **SLOT-026** (Slots) - SUPERSEDED: Slots remains fake-money only.
 - **SLOT-028** (Slots) - PASS: Slots displays read-only cabinet readiness and win state as non-interactive status instead of a primary action button.
 - **SLOT-029** (Slots) - PASS: The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.
-- **SLOT-030** (Slots) - PLANNED: One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.
-- **SLOT-031** (Slots) - PLANNED: Five Slots reels move independently and continuously through input lock, acceleration, full-speed travel, staggered deceleration, final stop, result evaluation, credit reveal, and optional bonus transition with no whole-grid swap, blank seam, backward jump, or frozen placeholder.
-- **SLOT-032** (Slots) - PLANNED: Slots reaches the final reel stop in 3.8 to 4.8 seconds for Slow, 2.8 to 3.6 seconds for Medium, 1.6 to 2.2 seconds for Fast, and 400 to 800 ms for reduced motion, with adjacent normal-profile stops staggered by 140 to 240 ms.
-- **SLOT-033** (Slots) - PLANNED: Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.
-- **SLOT-034** (Slots) - PLANNED: Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.
-- **SLOT-035** (Tests) - PLANNED: Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
+- **SLOT-030** (Slots) - PASS: One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.
+- **SLOT-031** (Slots) - PASS: Five Slots reels move independently and continuously through input lock, acceleration, full-speed travel, staggered deceleration, final stop, result evaluation, credit reveal, and optional bonus transition with no whole-grid swap, blank seam, backward jump, or frozen placeholder.
+- **SLOT-032** (Slots) - PASS: Slots reaches the final reel stop in 3.8 to 4.8 seconds for Slow, 2.8 to 3.6 seconds for Medium, 1.6 to 2.2 seconds for Fast, and 400 to 800 ms for reduced motion, with adjacent normal-profile stops staggered by 140 to 240 ms.
+- **SLOT-033** (Slots) - PASS: Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.
+- **SLOT-034** (Slots) - PASS: Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.
+- **SLOT-035** (Tests) - PASS: Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
 - **SLOT-036** (Slots) - PASS: Slots uses one server-authoritative paytable, scatter award, four-free-spin feature, and constant-size progressive meter; only a paid spin at exactly twenty lines and a 1.00 line bet contributes to or can win the meter, every free spin preserves it, and an earned feature remains locked to its paid-trigger line and stake basis. The frozen v1 cent stake and line-count vocabulary remains accepted, current debit and payout rows reconcile to one result round, and governed evidence proves house-side best play over at least one million paid spins per approved scenario with complete bonus-chain drainage plus localized responsive presentation.
 - **SLOT-037** (Slots) - PASS: Slots preserves the existing fast 180-millisecond unattended hold while attended normal motion uses five independent deterministic decorative strips with staggered deceleration and bounded anticipation over the authoritative grid, true reduced motion uses a strip-free comfort hold, and route-owned action identity makes API, landing, wallet, sound, voice, teardown, and remount continuation exactly once and stale-safe.
 - **KENO-001** (Keno) - PASS: Keno supports numbers 1 through 80.

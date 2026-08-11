@@ -526,6 +526,11 @@
         "betting",
         "keyboard_focus",
         "spinning",
+        "authentic_motion",
+        "quick_motion",
+        "autoplay_motion",
+        "capture",
+        "reduced_motion",
         "settled",
         "route_restored",
         "semantic_game_colors"
@@ -561,6 +566,9 @@
       "states": [
         "idle",
         "spinning",
+        "slow_motion",
+        "medium_motion",
+        "fast_motion",
         "win",
         "multi_win",
         "bonus",

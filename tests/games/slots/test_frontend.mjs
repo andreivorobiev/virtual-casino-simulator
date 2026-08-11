@@ -152,7 +152,7 @@ function installFakeBrowser() {
 // Install the browser seam before shared frontend modules read global state.
 const browser = installFakeBrowser();
 // Import the tested game exports only after installing the minimal browser global.
-const { SlotsGame, composeLandingStrip, reelStopDuration, countEarlyScatters, createSlotsSpinCompletion, createSlotsMotionWait, REEL_BASE_STOP_MS, REEL_STAGGER_MS, REEL_ANTICIPATION_MS, REEL_TRAVEL_BASE_ROWS, REEL_TRAVEL_STEP_ROWS, REDUCED_HOLD_MS, AUTOPLAY_HOLD_MS } = await import('../../../web/games/slots.js');
+const { SlotsGame, composeLandingStrip, reelStopDuration, countEarlyScatters, createSlotsSpinCompletion, createSlotsMotionWait, REEL_BASE_STOP_MS, REEL_STAGGER_MS, REEL_SETTLE_MS, REEL_HOLD_MS, REEL_ANTICIPATION_MS, REEL_TRAVEL_BASE_ROWS, REEL_TRAVEL_STEP_ROWS, REDUCED_HOLD_MS, AUTOPLAY_HOLD_MS, SLOT_MOTION_PROFILES } = await import('../../../web/games/slots.js');
 // Resolve the repository root from this game-specific test directory.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 // Read the production browser module as UTF-8 text for guard-wiring assertions.
@@ -168,6 +168,14 @@ async function waitFor(predicate, message) {
   // Give chained promises a bounded number of microtask turns to reach the expected boundary.
   for (let attempt = 0; attempt < 100; attempt += 1) { if (predicate()) return; await Promise.resolve(); }
   // Fail with one stable diagnostic when production code never reached the boundary.
+  throw new Error(message);
+}
+
+// Advance staged production timers until the requested asynchronous boundary is observable.
+async function advanceClockUntil(predicate, message) {
+  // Alternate timer batches and promise continuations because each governed reel phase schedules the next stage after an await.
+  for (let attempt = 0; attempt < 100; attempt += 1) { if (predicate()) return; browser.clock.runAll(); await Promise.resolve(); }
+  // Fail with the same bounded diagnostic discipline as listener-free ordinary waits.
   throw new Error(message);
 }
 
@@ -220,6 +228,13 @@ test('SLOT-020 reel stops stagger left to right within the 140-240 ms band', () 
   assert.equal(reelStopDuration(3, true), reelStopDuration(3, false)); // Prove earlier reels never inherit the tease extension.
 });
 
+// Verify SLOT-032 every selectable profile lands its fifth reel inside the governed final-stop band.
+test('SLOT-032 slow medium and fast profiles keep exact stop bands and stagger', () => {
+  const bands = { slow: [3800, 4800], medium: [2800, 3600], fast: [1600, 2200] }; // Bind the permanent product bands.
+  for (const [profile, [minimum, maximum]] of Object.entries(bands)) { const finalReveal = reelStopDuration(4, false, profile) + REEL_SETTLE_MS + REEL_HOLD_MS; assert.ok(finalReveal >= minimum && finalReveal <= maximum, `${profile} final reveal ${finalReveal}ms is outside its governed band`); for (let column = 1; column < 5; column += 1) { const gap = reelStopDuration(column, false, profile) - reelStopDuration(column - 1, false, profile); assert.ok(gap >= 140 && gap <= 240, `${profile} stagger ${gap}ms is outside the governed band`); } }
+  assert.deepEqual(Object.keys(SLOT_MOTION_PROFILES), ['slow', 'medium', 'fast']); // Pin the complete public selector vocabulary.
+});
+
 // Verify SLOT-023 the anticipation tease triggers only from scatters visible before the final reel.
 test('SLOT-023 early-scatter detection counts only the first four reels', () => {
   assert.equal(countEarlyScatters(RESULT_GRID), 2); // Count the two scatters landing before the final reel.
@@ -231,7 +246,8 @@ test('SLOT-023 early-scatter detection counts only the first four reels', () => 
 // Verify MOTION-005 the comfort and autoplay reveals keep their governed budgets.
 test('MOTION-005 reduced-motion and autoplay holds keep their governed budgets', () => {
   assert.ok(REDUCED_HOLD_MS >= 400 && REDUCED_HOLD_MS <= 800); // Prove the comfort reveal honors the governed band.
-  assert.equal(AUTOPLAY_HOLD_MS, 180); // Prove unattended cadence is unchanged from the pre-redesign contract.
+  assert.equal(AUTOPLAY_HOLD_MS, 180); // Preserve the legacy fallback constant without using it for full autoplay presentation.
+  assert.match(source, /const motionProfile = show \? selectedSpeed : 'fast';/, 'autoplay must use the complete governed Fast profile'); // Prevent a return to the sub-second unattended shortcut.
 });
 
 // Verify MOTION-002 every reel timer runs through the guarded route-owned scope.
@@ -363,9 +379,9 @@ test('SLOT-037 delayed wallet refresh cannot mutate a remounted shell', async ()
   // Start an immediate-response real spin.
   const oldAction = firstRoot.querySelector('#spin').onclick();
   // Wait until the real landing owns timers, then advance all reel stops and the hold.
-  await waitFor(() => browser.clock.pending >= 2, 'Slots did not reach its real landing wait'); browser.clock.runAll();
-  // Wait until the old action is blocked inside its side-effect-free wallet fetch.
-  await waitFor(() => browser.walletRequests === walletCount + 1, 'Slots did not reach the delayed wallet fetch');
+  await waitFor(() => browser.clock.pending >= 2, 'Slots did not reach its real landing wait');
+  // Drive every governed reel phase until the old action is blocked inside its side-effect-free wallet fetch.
+  await advanceClockUntil(() => browser.walletRequests === walletCount + 1, 'Slots did not reach the delayed wallet fetch');
   // Tear down the old route while that second await is pending.
   SlotsGame.unmount(); browser.clock.runAll();
   // Mount a distinct root whose immediate wallet refresh now owns shell state.

@@ -1,6 +1,6 @@
 {
   "module": "slots",
-  "version": "9.4.4",
+  "version": "9.5.0",
   "paths": [
     "casino/games/slots/",
     "web/games/slots.js",

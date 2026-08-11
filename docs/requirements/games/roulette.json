@@ -1059,91 +1059,91 @@
       "id": "ROU-063",
       "module": "Roulette",
       "description": "One session-bound Roulette spin commits one authoritative pocket and settlement, and wheel, ball, table, result, history, voice, wallet, ledger, and Admin telemetry agree on that pocket and round without overlapping input.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-ROU-001", "BR-ROU-LOCKED-REMOVE-001"],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Permanent allocation for issue #169; no Roulette source or frozen v1 contract changes are included in the foundation."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "The route-owned completion guard, disabled controls, authoritative pocket mapping, wallet refresh, and exact settlement surfaces prove one accepted spin and one terminal presentation."
     },
     {
       "id": "ROU-064",
       "module": "Roulette",
       "description": "Roulette uses the complete named physical sequence with default Authentic reveal in 15 to 18 seconds, optional Quick reveal in 8 to 10 seconds, autoplay reveal in 6 to 8 seconds, and a non-spinning reduced-motion reveal in 400 to 800 ms without changing the committed result.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-ROU-MOTION-CURVE-001", "BR-ROU-REDUCED-MOTION-001"],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "The owner timing correction supersedes the earlier 7.5 to 9.5 second recommendation."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "The owner timing correction is now executable policy: Authentic 16.5 seconds, Quick 9 seconds, autoplay 7 seconds, and reduced motion 600 milliseconds."
     },
     {
       "id": "ROU-065",
       "module": "Roulette",
       "description": "The rotor and ball counter-rotate with separate continuous velocity profiles; Authentic mode shows at least 16 ball circuits, progressive deceleration, bounded rim departure and contacts, pocket-relative capture, and at least one second of ball-and-pocket co-rotation without teleport or transform reset.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-ROU-MOTION-CURVE-001", "BR-ROU-001"],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Final ball alignment must be within half a pocket arc and two CSS pixels on the controlled viewport."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "Deterministic trajectories use at least eighteen ball circuits, five rotor turns, a sampled descent, and a 1.1-second shared 120-degree co-rotation whose start and end remain pocket-congruent."
     },
     {
       "id": "ROU-066",
       "module": "Roulette",
       "description": "Roulette locks wagering and mode controls during the atomic spin, conceals the result until visible pocket capture, and then reveals highlight, history, voice, and wallet celebration exactly once with player-facing phase copy.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-ROU-SPINNING-COPY-001", "BR-ROU-LOCKED-REMOVE-001", "BR-ROU-001"],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "This strengthens existence-only ROU-042 and ROU-054 without changing Roulette mathematics."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "Closed-vocabulary live phase copy updates in a reserved region while every wager, mode, remove, and spin control remains locked until the authoritative result is revealed once."
     },
     {
       "id": "ROU-067",
       "module": "Roulette",
       "description": "Roulette navigation, refresh, autoplay stop, locale change, mute, and API failure recover the authoritative committed round once or a safe pre-commit betting state and leave no duplicate ledger/history event, orbit, glow, timer, sound, or disabled-control residue.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-ROU-REDUCED-MOTION-001", "BR-ROU-001"],
       "implementation_files": [
         "web/games/roulette.js",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Acceptance includes route-away/return and refresh at both pre-commit and post-commit boundaries."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "Route-generation ownership, timer-scope disposal, cancel-released waits, stale wallet guards, locale deferral, and safe failure recovery prevent stale or duplicate presentation work."
     },
     {
       "id": "ROU-068",
       "module": "Tests",
       "description": "Roulette motion acceptance maps at least 100 committed spins and supplies exact-head frame, transform, capture, alignment, geometry, cleanup, wallet/history/ledger, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": ["BR-ROU-MOTION-CURVE-001", "BR-ROU-REDUCED-MOTION-001", "BR-ROU-001"],
       "implementation_files": [
         "tests/visual/visual_matrix.json",
         "docs/motion_acceptance_contract.md"
       ],
       "introduced_in": "work-items-21-30-motion-foundation",
-      "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "Static screenshots alone cannot satisfy issue #169."
+      "changed_in": "issue-169-motion-quality",
+      "notes": "The listener-free trajectory suite maps one hundred deterministic committed rounds; standard exact-head Browser shards provide EN/RU governed-viewport motion, reduced-motion, geometry, wallet, and cleanup evidence."
     },
     {
       "id": "ROU-069",
