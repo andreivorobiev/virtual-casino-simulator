@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.74 Release Notes
+
+## Governed mobile transport and lifecycle core
+
+- Packages accepted secure mobile core PR #680 and closes repository-controlled issue #681 while keeping umbrella issue #183 open for native OAuth handoff, signed-device, verified-link, and store evidence; release-owned application advances to `9.64.1`.
+- Preserves the browser/PWA cookie and double-submit-CSRF path while native requests use a direct OS transport with an OS-vault bearer plus matching per-session CSRF and reject cookies, browser CORS, foreign origins, foreign backends, and secret-bearing JavaScript envelopes.
+- Adds atomic native session probe, rotation, revocation, logout, Guest Trial, account-switch, vault-generation, lifecycle, reconciliation, and process-restore boundaries without automatically retrying money actions.
+- Scrubs and validates exact owned enrollment and password-recovery links, rejects ambiguous or replayed links, and keeps disabled native OAuth handoff explicitly pending under issue #183.
+- Adds Android Keystore and iOS Keychain source contracts, verified-link declarations, debug-only loopback policy, deterministic cross-host Capacitor sync, and host-independent generated Swift path checks.
+- Keeps native transport, public-account routes, shared application readiness, reconnect, background, offline, and stale-render behavior fail closed under deterministic Node, Python, WSGI, Android-source, and iOS-source evidence.
+- Adds permanent `CORE-032`, `AUTH-019`, `SEC-016`, `SESSION-013`, and `TEST-172`; the governed total is exactly 952 requirements.
+- Records the exact canonical package inventory as 759 regular files: v0.9.5.73 inventory 756 plus the packaged mobile client security contract, mobile module descriptor, and this v0.9.5.74 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.42.0`, Mobile `1.0.0` with package `0.2.0`, Players `9.1.2`, Ledger `9.1.2`, tooling `1.30.0`, and every game revision remain exact protected-main values.
+- Retains exact immutable terminal-green v0.9.5.73 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.73 Release Notes
 
 ## Verified email enrollment
