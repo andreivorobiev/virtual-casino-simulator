@@ -1,7 +1,7 @@
 {
   "schema": "casino-mysql-migration-catalog-v1",
   "minimum_runtime_version": 2,
-  "expected_version": 3,
+  "expected_version": 4,
   "apply_policy": "held",
   "migrations": [
     {
@@ -21,6 +21,12 @@
       "name": "game-action-receipts",
       "file": "0003_game_action_receipts.json",
       "sha256": "7fcb2a4997796f170c914480b1a10ebc695c4751ed66679d64774373242c0e7b"
+    },
+    {
+      "version": 4,
+      "name": "game-action-claims",
+      "file": "0004_game_action_claims.json",
+      "sha256": "0a5681988f3210b249799f2aa16e8356ec5dc8b2f67ea5df811e2a2c9eb9a8f6"
     }
   ]
 }
