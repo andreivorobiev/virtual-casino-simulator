@@ -193,7 +193,7 @@
     {
       "id": "auth",
       "route": "/",
-      "selector": "[data-testid='login-gate'], [data-testid='terms-gate'], [data-testid='password-reset-initiate'], [data-testid='password-reset-complete']",
+      "selector": "[data-testid='login-gate'], [data-testid='terms-gate'], [data-testid='password-reset-initiate'], [data-testid='password-reset-complete'], [data-testid='email-verification-pending']",
       "states": [
         "login",
         "guest",
@@ -212,6 +212,11 @@
         "oauth_signup_consent_required",
         "oauth_signup_success",
         "oauth_signup_error",
+        "email_signup_pending",
+        "email_verification_link",
+        "email_verification_resend",
+        "email_verification_cancel",
+        "email_verification_success",
         "password_reset_initiate",
         "password_reset_complete",
         "terms_required",

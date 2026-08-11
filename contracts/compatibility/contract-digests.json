@@ -6,7 +6,7 @@
   "contracts/openapi/admin-users.v2.yaml": "62821630d503adfad6b231dd4fb4693ce2883378aef2fa0e3f4e263d7221d762",
   "contracts/openapi/admin.v1.yaml": "65aabdf392c067a18bd84b106b63f7a223072a958fc21d3837045215d21209c5",
   "contracts/openapi/andar_bahar.v1.yaml": "7d25913c80730f28a66516f75b42739cce01e7d33cd741ca970bf4a92d2fcd25",
-  "contracts/openapi/auth.v2.yaml": "2777f34fdafcf2a0f64fbe924bbc665efbd1ae656d99263de8752067df5b0e57",
+  "contracts/openapi/auth.v2.yaml": "c5b1ba28856645f0495fb70640df67ea37bfec529b04aa4154fca451bbc47812",
   "contracts/openapi/autoplay.v1.yaml": "435d7bf8d4a278e6b56634695f8fcfcb9648f1d8b7297c942ebc6c5c97c0d552",
   "contracts/openapi/baccarat.v1.yaml": "a80b5df3c508158fd3127db20ba49db203fd0fe5e869d780c6038b62429a6dce",
   "contracts/openapi/big_six_wheel.v1.yaml": "ec31240b41fa5e6d18708a9b5cdeeeab59a123e594cb15e595cc2612d7e906db",

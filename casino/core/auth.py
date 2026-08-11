@@ -37,7 +37,7 @@ PASSWORD_ITERATIONS = 120_000
 # The complete anonymous-route allowlist. Three layers must agree byte-for-byte: this set,
 # casino/wsgi.py _validate_restricted_preview_routes (checked at worker boot), and
 # contracts/compatibility/restricted-preview-security.json (checked by validate_contracts and run_tests).
-PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/password-reset/initiate", "/api/v2/auth/password-reset/resend", "/api/v2/auth/password-reset/complete", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}
+PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/signup/resend", "/api/v2/auth/signup/verify", "/api/v2/auth/signup/cancel", "/api/v2/auth/password-reset/initiate", "/api/v2/auth/password-reset/resend", "/api/v2/auth/password-reset/complete", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}
 # Bound the accepted session lifetime to the restricted-preview review interval.
 MAX_SESSION_TTL_SECONDS = 86_400
 # Retain at most one thousand active session records across the single-node preview.
@@ -155,7 +155,7 @@ def verify_password(password: str, encoded: str) -> bool:
 
 def public_user(user: dict) -> dict:
     # Copy the durable identity without exposing its password verifier or internal analytics binding.
-    result = {key: value for key, value in user.items() if key not in ("password_hash", "guest_analytics_id", "oauth_enrollment_id")}
+    result = {key: value for key, value in user.items() if key not in ("password_hash", "guest_analytics_id", "oauth_enrollment_id", "email_enrollment_id")}
     # Publish the username alias required by the v2 contract while email remains compatible.
     result["username"] = user.get("username") or user.get("email") or ""
     # Publish the canonical role list while retaining the historical singular role field.
@@ -240,7 +240,7 @@ def reserve_invited_identity(email: str, invitation_id: str, user_id: str, playe
             # Preserve the original document for operator recovery.
             raise RuntimeError("Authentication user storage is malformed")
         # Reject any already-created canonical account with this mailbox.
-        if any(stored.get("email") == normalized and stored.get("invitation_id") != invitation_id for stored in state["users"]):
+        if any(stored.get("email") == normalized and stored.get("invitation_id") != invitation_id and stored.get("email_enrollment_id") != invitation_id for stored in state["users"]):
             # Keep the conflict generic at the invitation boundary.
             raise ConflictError("invited identity conflicts with an existing account")
         # Resolve the compatible reservation collection on older documents.
@@ -280,7 +280,7 @@ def release_invited_identity(invitation_id: str) -> bool:
             # Preserve the original document for operator recovery.
             raise RuntimeError("Authentication user storage is malformed")
         # Keep a reservation once a canonical account references the same invitation.
-        if any(stored.get("invitation_id") == invitation_id for stored in state["users"]):
+        if any(stored.get("invitation_id") == invitation_id or stored.get("email_enrollment_id") == invitation_id for stored in state["users"]):
             # Return unchanged state because the provisioning saga owns cleanup.
             return state
         # Resolve the compatible reservation collection.
@@ -296,6 +296,102 @@ def release_invited_identity(invitation_id: str) -> bool:
     update_json(USERS_PATH, release, default_users)
     # Return whether an account-free reservation changed.
     return result["released"]
+
+
+# Provision or replay one inactive first-party identity after mailbox verification. (AUTH-018)
+def provision_verified_email_user(email: str, password_hash: str, display_name: str, locale: str, terms_version: str, enrollment_id: str, user_id: str, player_id: str) -> dict:
+    # Normalize the verified mailbox before comparing it with the reserved identity boundary.
+    normalized = normalize_email(email)
+    # Require the server-owned identifiers allocated before token delivery.
+    if not str(enrollment_id or "").startswith("email_enrollment_") or not str(user_id or "").startswith("user_email_") or not str(player_id or "").startswith("player_email_"):
+        # Reject caller-selected identity bindings before canonical storage mutation.
+        raise ValidationError("verified email identity is invalid")
+    # Require one repository-format password verifier rather than accepting raw credential material.
+    if not isinstance(password_hash, str) or not password_hash.startswith("pbkdf2_sha256$") or len(password_hash) > 512:
+        # Fail closed when pending state cannot prove a valid derived credential.
+        raise ValidationError("verified email credential is invalid")
+    # Normalize the user-visible label and governed locale.
+    label = str(display_name or "").strip()[:80] or normalized.split("@", 1)[0]
+    # Restrict persisted language defaults to the two translated enrollment surfaces.
+    accepted_locale = locale if locale in ("en-US", "ru-RU") else "en-US"
+    # Capture one lifecycle instant for the first successful provisioning attempt.
+    now = utc_now()
+    # Publish the exact durable identity selected by the atomic transaction.
+    result = {}
+
+    # Create or replay the inactive identity under its account-free reservation.
+    def provision(state: dict) -> dict:
+        # Reject malformed security state rather than replacing it.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original identity document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Resolve an idempotent prior attempt by the server-owned enrollment identifier.
+        existing = next((stored for stored in state["users"] if stored.get("email_enrollment_id") == enrollment_id), None)
+        # Replay only an exact identity and credential binding.
+        if existing is not None:
+            # Reject any changed mailbox, ids, or verifier on recovery.
+            if existing.get("email") != normalized or existing.get("user_id") != user_id or existing.get("player_id") != player_id or not hmac.compare_digest(str(existing.get("password_hash", "")), password_hash):
+                # Preserve the prior account and require operator reconciliation.
+                raise ConflictError("verified email identity replay conflicts with existing state")
+            # Publish the compatible existing identity.
+            result.update(existing)
+            # Leave the document unchanged until explicit final activation.
+            return state
+        # Reject any unrelated canonical account claiming the verified mailbox or ids.
+        if any(stored.get("email") == normalized or stored.get("user_id") == user_id or stored.get("player_id") == player_id for stored in state["users"]):
+            # Preserve one owner for every canonical identity and wallet.
+            raise ConflictError("verified email identity conflicts with an existing account")
+        # Require the exact account-free reservation created before token consumption.
+        reservation = next((reserved for reserved in state.setdefault("reservations", []) if reserved.get("invitation_id") == enrollment_id and reserved.get("email") == normalized and reserved.get("user_id") == user_id and reserved.get("player_id") == player_id), None)
+        # Fail closed when the recovery boundary is absent or changed.
+        if reservation is None:
+            # Never create an unreserved account from service-supplied identifiers.
+            raise ConflictError("verified email identity reservation is unavailable")
+        # Build the inactive first-party account without creating a session.
+        user = {"user_id": user_id, "email": normalized, "username": normalized, "display_name": label, "role": "player", "roles": ["player"], "status": "provisioning", "player_id": player_id, "password_hash": password_hash, "terms_required": False, "terms_accepted_at": now, "terms_accepted_version": terms_version, "terms_acceptance_source": "verified_email_signup", "locale": accepted_locale, "language": accepted_locale, "created_at": now, "updated_at": now, "identity_provider": "local", "email_verified_at": now, "email_enrollment_id": enrollment_id}
+        # Append the recoverable identity only after successful token consumption.
+        state["users"].append(user)
+        # Publish the newly committed identity.
+        result.update(user)
+        # Return the complete document for atomic persistence.
+        return state
+    # Persist or replay the inactive canonical account.
+    update_json(USERS_PATH, provision, default_users)
+    # Return the inactive identity to the wallet-funding step.
+    return result
+
+
+# Activate one funded verified-email identity and release its reservation atomically. (AUTH-018)
+def activate_verified_email_user(enrollment_id: str, user_id: str, player_id: str) -> dict:
+    # Publish the active account selected by the final transaction.
+    result = {}
+
+    # Commit the final account state only after the caller proves wallet funding.
+    def activate(state: dict) -> dict:
+        # Reject malformed identity state without destructive repair.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the security document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Resolve the exact recoverable verified-email identity.
+        user = next((stored for stored in state["users"] if stored.get("email_enrollment_id") == enrollment_id and stored.get("user_id") == user_id), None)
+        # Refuse absent, mismatched, or operator-disabled identities.
+        if user is None or user.get("player_id") != player_id or user.get("status") not in {"provisioning", "active"}:
+            # Preserve every existing user and reservation.
+            raise ConflictError("verified email identity activation is unavailable")
+        # Activate the canonical account without minting a browser session.
+        user["status"] = "active"
+        # Refresh the lifecycle timestamp for first activation and safe replay.
+        user["updated_at"] = utc_now()
+        # Release only the account-free reservation now owned by this user row.
+        state["reservations"] = [reserved for reserved in state.setdefault("reservations", []) if reserved.get("invitation_id") != enrollment_id]
+        # Publish the complete active identity internally.
+        result.update(user)
+        # Return the complete user document for atomic commit.
+        return state
+    # Persist the activation and reservation cleanup together.
+    update_json(USERS_PATH, activate, default_users)
+    # Return the active identity without creating any session.
+    return result
 
 # Provision or resume one invited local account after its token has been consumed. (INVITE-003)
 def provision_invited_user(email: str, password: str, display_name: str, locale: str, terms_version: str, invitation_id: str, user_id: str, player_id: str) -> dict:

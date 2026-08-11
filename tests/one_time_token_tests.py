@@ -204,6 +204,49 @@ class OneTimeTokenTests(unittest.TestCase):
         # Require the replacement opaque identifier to match the successful result.
         self.assertEqual(result["token_id"], replacement["token_id"])
 
+    # Prove a replacement candidate stays inert until atomic promotion and can be discarded safely. (AUTH-018)
+    def test_candidate_replacement_preserves_predecessor_until_promotion(self):
+        # Issue one active verified-email predecessor.
+        first = self.service.issue("email_verification", "candidate@example.invalid")
+        # Prepare a second bearer without revoking or duplicating the active token.
+        candidate = self.service.prepare_candidate("email_verification", "candidate@example.invalid", first["token_id"])
+        # Require only the predecessor to count as active before provider acceptance.
+        self.assertEqual(self.service.active_count("email_verification", "candidate@example.invalid"), 1)
+        # Reject candidate consumption before explicit promotion.
+        self.assert_generic_token_error(lambda: self.service.consume("email_verification", candidate["token"], subject="candidate@example.invalid"))
+        # Keep the predecessor consumable while the candidate remains unpromoted.
+        self.assertEqual(self.service.consume("email_verification", first["token"], subject="candidate@example.invalid")["token_id"], first["token_id"])
+        # Build an independent active predecessor for the promotion proof.
+        predecessor = self.service.issue("email_verification", "promote@example.invalid")
+        # Prepare its non-consumable delivered candidate.
+        promoted = self.service.prepare_candidate("email_verification", "promote@example.invalid", predecessor["token_id"])
+        # Atomically promote the candidate and revoke exactly its predecessor.
+        self.assertTrue(self.service.promote_candidate(promoted["token_id"], predecessor["token_id"]))
+        # Replay the exact promotion after a simulated lost response.
+        self.assertTrue(self.service.promote_candidate(promoted["token_id"], predecessor["token_id"]))
+        # Reject the superseded bearer only after successful promotion.
+        self.assert_generic_token_error(lambda: self.service.consume("email_verification", predecessor["token"], subject="promote@example.invalid"))
+        # Consume the promoted bearer successfully.
+        self.assertEqual(self.service.consume("email_verification", promoted["token"], subject="promote@example.invalid")["token_id"], promoted["token_id"])
+        # Build one candidate whose provider delivery is modelled as failed.
+        retained = self.service.issue("email_verification", "discard@example.invalid")
+        # Prepare its independent candidate.
+        discarded = self.service.prepare_candidate("email_verification", "discard@example.invalid", retained["token_id"])
+        # Discard only the candidate before provider acceptance.
+        self.assertTrue(self.service.discard_candidate(discarded["token_id"]))
+        # Require the predecessor to remain active after candidate discard.
+        self.assertEqual(self.service.consume("email_verification", retained["token"], subject="discard@example.invalid")["token_id"], retained["token_id"])
+        # Issue one predecessor for abandoned-candidate expiry recovery.
+        expiring_predecessor = self.service.issue("email_verification", "expired-candidate@example.invalid")
+        # Prepare a one-second candidate that models a worker lost before delivery.
+        self.service.prepare_candidate("email_verification", "expired-candidate@example.invalid", expiring_predecessor["token_id"], ttl_seconds=1)
+        # Advance beyond only the candidate lifetime while the predecessor remains active.
+        self.clock.advance(2)
+        # Prepare a new candidate without the abandoned expired row blocking replacement forever.
+        recovered_candidate = self.service.prepare_candidate("email_verification", "expired-candidate@example.invalid", expiring_predecessor["token_id"])
+        # Require the recovered candidate to promote normally.
+        self.assertTrue(self.service.promote_candidate(recovered_candidate["token_id"], expiring_predecessor["token_id"]))
+
     # Prove an approved recoverable consumer may replay only the exact caller idempotency binding. (INVITE-003)
     def test_caller_idempotent_consume_replays_only_same_binding(self):
         # Issue one invitation bearer for a synthetic non-routable recipient.

@@ -138,6 +138,26 @@ INVITATIONS_ENABLED = os.environ.get("CASINO_INVITATIONS_ENABLED", "false").stri
 ENROLLMENT_ENABLED = os.environ.get("CASINO_ENROLLMENT_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
 # Keep open full-account signup disabled until owner-controlled public enrollment is ready.
 SIGNUP_ENABLED = os.environ.get("CASINO_SIGNUP_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Configure the non-cashable balance credited only after a first-party mailbox is verified. (AUTH-018)
+ACCOUNT_STARTING_BALANCE = float(os.environ.get("CASINO_ACCOUNT_STARTING_BALANCE", "5000"))
+# Bound well-formed initiation requests per trusted effective client during one enrollment window. (AUTH-018)
+EMAIL_ENROLLMENT_INITIATE_RATE_LIMIT = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_INITIATE_RATE_LIMIT", "5"))
+# Bound resend requests independently so generic receipts cannot amplify delivery traffic. (AUTH-018)
+EMAIL_ENROLLMENT_RESEND_RATE_LIMIT = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_RESEND_RATE_LIMIT", "5"))
+# Suppress address-only token replacement inside a fixed recipient cooldown. (AUTH-018)
+EMAIL_ENROLLMENT_RESEND_COOLDOWN_SECONDS = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_RESEND_COOLDOWN_SECONDS", "300"))
+# Bound verification attempts independently from one-time-token mismatch counters. (AUTH-018)
+EMAIL_ENROLLMENT_VERIFY_RATE_LIMIT = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_VERIFY_RATE_LIMIT", "20"))
+# Bound distinct cancellation ownership attempts independently from verification.
+EMAIL_ENROLLMENT_CANCEL_RATE_LIMIT = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_CANCEL_RATE_LIMIT", "10"))
+# Define the shared durable enrollment abuse-control window. (AUTH-018)
+EMAIL_ENROLLMENT_RATE_WINDOW_SECONDS = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_RATE_WINDOW_SECONDS", "900"))
+# Fail closed before active keyed enrollment-rate evidence can grow without a bound. (AUTH-018)
+EMAIL_ENROLLMENT_RATE_EVENT_CAP = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_RATE_EVENT_CAP", "5000"))
+# Reconcile an abandoned pre-delivery phase only after this bounded ambiguity window. (AUTH-018)
+EMAIL_ENROLLMENT_DELIVERY_RECOVERY_SECONDS = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_DELIVERY_RECOVERY_SECONDS", "300"))
+# Retain only scrubbed terminal enrollment replay metadata for thirty days.
+EMAIL_ENROLLMENT_TERMINAL_RETENTION_SECONDS = int(os.environ.get("CASINO_EMAIL_ENROLLMENT_TERMINAL_RETENTION_SECONDS", "2592000"))
 # Keep passkey registration and authentication disabled until the WebAuthn ceremony is separately certified.
 PASSKEYS_ENABLED = os.environ.get("CASINO_PASSKEYS_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
 # Keep automated GitHub publication disabled unless an operator explicitly installs credentials and release gates.

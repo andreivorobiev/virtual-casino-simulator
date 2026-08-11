@@ -9,6 +9,8 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import json
 # Import environment access so live provider routing can be scoped and restored safely.
 import os
+# Import regular expressions to extract synthetic bearers from fake provider mail only.
+import re
 # Import required dependency so test data can be written outside the real data directory.
 import tempfile
 # Import required dependency so isolated JSON provider paths are platform-safe.
@@ -183,11 +185,21 @@ class _MySQLMailTransport:
     def __init__(self):
         # Start with no observed provider attempts.
         self.calls = 0
+        # Retain synthetic reserved-domain messages only inside the disposable test process.
+        self.messages = []
 
     # Accept one transient message without retaining any sensitive field.
     def send(self, message):
         # Count the invocation while deliberately discarding the payload.
         self.calls += 1
+        # Store a detached copy for provider-path bearer verification without logging it.
+        self.messages.append(dict(message))
+
+
+# Model one abrupt worker loss during disposable MySQL enrollment recovery.
+class _MySQLEnrollmentCrash(BaseException):
+    # Carry no provider, recipient, or bearer detail.
+    pass
 
 
 # Submit the same transactional-mail request from one independent MySQL process. (MAIL-004)
@@ -1182,10 +1194,14 @@ def _run_mysql_pool_live_measurements(provider):
 def run_mysql_live_provider_path():
     # Import representative provider-backed domains only when live MySQL was requested.
     from casino.bots import profiles
+    # Import release policy used by verified-email enrollment acceptance.
+    from casino import config
     # Import the data root used to derive stable provider document keys.
     from casino.config import DATA_DIR
     # Import core services whose JSON-shaped state must no longer create hybrid files.
-    from casino.core import auth, autoplay, feedback, invitations, ledger, mail, one_time_tokens, players, state_store, storage
+    from casino.core import auth, autoplay, feedback, invitations, ledger, mail, one_time_tokens, pending_enrollment, players, state_store, storage
+    # Import the generic token rejection used by the superseded-bearer assertion.
+    from casino.errors import ValidationError
     # Import OAuth persistence only inside the explicitly requested disposable MySQL gate.
     from casino.core.oauth.persistence import FLOW_DOCUMENT_KEY, FLOW_SECRET_DOCUMENT_KEY, OAuthFlowRecord, OAuthFlowRepository, PersistentIdentityLinkRepository
     # Import UTC helpers for one bounded flow fixture.
@@ -1279,6 +1295,120 @@ def run_mysql_live_provider_path():
             assert len(mail_document.get("deliveries", {})) == 1 and "mysql-mail@example.invalid" not in mail_document_text and "synthetic-mysql-mail-bearer" not in mail_document_text and "token=" not in mail_document_text and "synthetic-provider-token" not in mail_document_text and "mysql-mail-shared-idempotency" not in mail_document_text
             # Require the single durable claim to reach its terminal sent state.
             assert next(iter(mail_document["deliveries"].values()))["status"] == "sent"
+            # Build an independent fake transport for the verified-email MySQL saga.
+            enrollment_transport = _MySQLMailTransport()
+            # Compose one ready mail boundary over a distinct provider-backed document.
+            enrollment_mail = mail.MailService(state_path=DATA_DIR / "mail" / "pending-enrollment-deliveries.json", enabled=True, network_enabled=True, provider="postmark", digest_key=MYSQL_MAIL_TEST_KEY, canonical_origin="https://casino.example.invalid", from_address="security@casino.example.invalid", sending_domain="casino.example.invalid", provider_token="synthetic-provider-token", transport=enrollment_transport)
+            # Reuse the proven token provider while isolating enrollment state by document key.
+            enrollment_service = pending_enrollment.PendingEnrollmentService(store_path=DATA_DIR / "auth" / "pending_enrollments.json", enabled=True, digest_key=MYSQL_MAIL_TEST_KEY, token_service=token_service, mail_service=enrollment_mail, audit_sink=lambda event, **fields: None)
+            # Begin one account-free provider-backed pending enrollment.
+            assert enrollment_service.initiate("mysql-enrollment@example.invalid", MYSQL_INVITATION_PASSWORD, "MySQL Enrollment", "en-US", config.GUEST_TERMS_VERSION, True, "mysql-enrollment-initiate-key-0001", "mysql-enrollment-source-1") == {"status": "verification_pending"}
+            # Repeat the recipient under a distinct caller key to prove provider-atomic uniqueness and enumeration safety.
+            assert enrollment_service.initiate("mysql-enrollment@example.invalid", "Different-MySQL-Enrollment-2026!", "Different MySQL Enrollment", "ru-RU", config.GUEST_TERMS_VERSION, True, "mysql-enrollment-initiate-key-0002", "mysql-enrollment-source-2") == {"status": "verification_pending"}
+            # Require one pending row and one delivery before a successful resend.
+            assert enrollment_transport.calls == 1 and len(state_store.read_json(DATA_DIR / "auth" / "pending_enrollments.json", pending_enrollment.default_pending_enrollments)["enrollments"]) == 1
+            # Extract the predecessor bearer only from transient fake provider mail.
+            predecessor_match = re.search(r"[?&]token=([^\s<]+)", enrollment_transport.messages[0]["text_body"])
+            # Require one exact same-origin predecessor bearer.
+            assert predecessor_match is not None
+            # Remove only the test cooldown to exercise two-phase replacement under MySQL locking.
+            with mock.patch.object(config, "EMAIL_ENROLLMENT_RESEND_COOLDOWN_SECONDS", 0):
+                # Deliver one provider-backed replacement generation.
+                assert enrollment_service.resend("mysql-enrollment@example.invalid", "en-US", "mysql-enrollment-resend-key-0001", "mysql-enrollment-resend-source") == {"status": "verification_pending"}
+            # Require exactly one replacement transport call.
+            assert enrollment_transport.calls == 2
+            # Extract the promoted bearer from the second transient message.
+            replacement_match = re.search(r"[?&]token=([^\s<]+)", enrollment_transport.messages[1]["text_body"])
+            # Require the replacement to exist without persisting its value.
+            assert replacement_match is not None
+            # Prove the predecessor is invalid only after successful provider delivery and promotion.
+            try:
+                # Attempt direct consumption through the purpose-bound token boundary.
+                token_service.consume(pending_enrollment.PURPOSE, predecessor_match.group(1), subject="mysql-enrollment@example.invalid")
+                # Fail if the superseded predecessor unexpectedly remained active.
+                raise AssertionError("superseded enrollment token remained active")
+            # Accept only the repository's generic token rejection.
+            except ValidationError:
+                # Continue after the expected generic rejection.
+                pass
+            # Verify and activate through the replacement bearer exactly once.
+            assert enrollment_service.verify(replacement_match.group(1), "mysql-enrollment@example.invalid", "mysql-enrollment-verify-key-0001", "mysql-enrollment-verify-source") == {"status": "enrolled"}
+            # Replay the exact completed verification without duplicate identity, wallet, credit, or session.
+            assert enrollment_service.verify(replacement_match.group(1), "mysql-enrollment@example.invalid", "mysql-enrollment-verify-key-0001", "mysql-enrollment-verify-source") == {"status": "enrolled"}
+            # Resolve the single active canonical user.
+            enrollment_user = auth.find_user_by_email("mysql-enrollment@example.invalid")
+            # Require one funded active wallet and no implicit session.
+            assert enrollment_user is not None and players.get_player(enrollment_user["player_id"])["balance"] == float(config.ACCOUNT_STARTING_BALANCE) and not any(session.get("user_id") == enrollment_user["user_id"] for session in auth.load_sessions().get("sessions", []))
+            # Require exactly one deterministic starting-balance event.
+            assert sum(1 for event in ledger.read_recent(enrollment_user["player_id"], 20) if event.get("transaction_type") == "ACCOUNT_STARTING_BALANCE") == 1
+            # Build a second provider-backed enrollment whose worker stops after durable provider acceptance.
+            crash_transport = _MySQLMailTransport()
+            # Compose a distinct mail document so the crash proof has one isolated delivery.
+            crash_mail = mail.MailService(state_path=DATA_DIR / "mail" / "pending-enrollment-crash-deliveries.json", enabled=True, network_enabled=True, provider="postmark", digest_key=MYSQL_MAIL_TEST_KEY, canonical_origin="https://casino.example.invalid", from_address="security@casino.example.invalid", sending_domain="casino.example.invalid", provider_token="synthetic-provider-token", transport=crash_transport)
+            # Arm exactly one abrupt provider-recorded stop.
+            crash_armed = {"value": True}
+
+            # Stop after the provider receipt is durable but before promotion/finalization.
+            def enrollment_crash_hook(phase):
+                # Match only the selected durable checkpoint once.
+                if crash_armed["value"] and phase == "provider_recorded":
+                    # Disarm recovery calls before abrupt termination.
+                    crash_armed["value"] = False
+                    # Abort outside ordinary Exception cleanup.
+                    raise _MySQLEnrollmentCrash()
+
+            # Compose the crash-injected service over the same MySQL token and pending documents.
+            crash_service = pending_enrollment.PendingEnrollmentService(store_path=DATA_DIR / "auth" / "pending_enrollments.json", enabled=True, digest_key=MYSQL_MAIL_TEST_KEY, token_service=token_service, mail_service=crash_mail, audit_sink=lambda event, **fields: None, phase_hook=enrollment_crash_hook)
+            # Model one worker loss after sent receipt durability.
+            try:
+                # Begin the second pending enrollment.
+                crash_service.initiate("mysql-enrollment-crash@example.invalid", MYSQL_INVITATION_PASSWORD, "MySQL Crash Enrollment", "en-US", config.GUEST_TERMS_VERSION, True, "mysql-enrollment-crash-initiate-0001", "mysql-enrollment-crash-source")
+                # Fail if the injected durable boundary did not stop the worker.
+                raise AssertionError("enrollment crash boundary did not stop")
+            # Continue only after the exact abrupt-stop fixture.
+            except _MySQLEnrollmentCrash:
+                # Preserve provider documents exactly for recovery.
+                pass
+            # Extract the durably delivered bearer from transient fake mail.
+            crash_match = re.search(r"[?&]token=([^\s<]+)", crash_transport.messages[0]["text_body"])
+            # Require one delivered bearer before verification recovery.
+            assert crash_match is not None
+            # Reconcile promotion/final pending state and complete the emailed bearer.
+            assert crash_service.verify(crash_match.group(1), "mysql-enrollment-crash@example.invalid", "mysql-enrollment-crash-verify-0001", "mysql-enrollment-crash-verify-source") == {"status": "enrolled"}
+            # Create and cancel one provider-backed pending row.
+            assert enrollment_service.initiate("mysql-enrollment-cancel@example.invalid", MYSQL_INVITATION_PASSWORD, "MySQL Cancel Enrollment", "en-US", config.GUEST_TERMS_VERSION, True, "mysql-enrollment-cancel-initiate-0001", "mysql-enrollment-cancel-source") == {"status": "verification_pending"}
+            # Extract its current delivered ownership bearer from transient fake mail.
+            cancel_match = re.search(r"[?&]token=([^\s<]+)", enrollment_transport.messages[2]["text_body"])
+            # Require one cancellation ownership bearer.
+            assert cancel_match is not None
+            # Terminalize cancellation without account, wallet, or session creation.
+            assert enrollment_service.cancel(cancel_match.group(1), "mysql-enrollment-cancel@example.invalid", "mysql-enrollment-cancel-key-0001", "mysql-enrollment-cancel-source") == {"status": "cancelled"} and auth.find_user_by_email("mysql-enrollment-cancel@example.invalid") is None
+            # Read the complete provider document for privacy, replay, crash, and cancellation evidence.
+            enrollment_document = state_store.read_json(DATA_DIR / "auth" / "pending_enrollments.json", pending_enrollment.default_pending_enrollments)
+            # Select terminal rows before retention cleanup.
+            enrollment_terminal_rows = [row for row in enrollment_document["enrollments"] if row.get("status") in {"complete", "cancelled"}]
+            # Require all three terminal results and immediate credential/profile scrubbing.
+            assert len(enrollment_terminal_rows) == 3 and all(not ({"email", "password_hash", "display_name", "locale", "terms_version", "replacement"} & set(row)) for row in enrollment_terminal_rows)
+            # Create one active row that retention cleanup must preserve.
+            assert enrollment_service.initiate("mysql-enrollment-active@example.invalid", MYSQL_INVITATION_PASSWORD, "MySQL Active Enrollment", "en-US", config.GUEST_TERMS_VERSION, True, "mysql-enrollment-active-initiate-0001", "mysql-enrollment-active-source") == {"status": "verification_pending"}
+            # Age only scrubbed terminal rows inside a fixture write before testing provider-atomic pruning.
+            enrollment_document = state_store.read_json(DATA_DIR / "auth" / "pending_enrollments.json", pending_enrollment.default_pending_enrollments)
+            # Assign one unambiguously expired timestamp to terminal metadata only.
+            for enrollment_row in enrollment_document["enrollments"]:
+                # Preserve active and in-flight timestamps exactly.
+                if enrollment_row.get("status") in {"complete", "cancelled"}:
+                    # Age only scrubbed replay metadata.
+                    enrollment_row["updated_at"] = "2000-01-01T00:00:00.000Z"
+            # Persist the synthetic age fixture through the same provider document abstraction.
+            state_store.write_json(DATA_DIR / "auth" / "pending_enrollments.json", enrollment_document)
+            # Trigger bounded cleanup in one ordinary provider transaction.
+            with mock.patch.object(config, "EMAIL_ENROLLMENT_TERMINAL_RETENTION_SECONDS", 1):
+                # Initiate a distinct active row while pruning old terminal metadata.
+                assert enrollment_service.initiate("mysql-enrollment-cleanup@example.invalid", MYSQL_INVITATION_PASSWORD, "MySQL Cleanup Trigger", "en-US", config.GUEST_TERMS_VERSION, True, "mysql-enrollment-cleanup-initiate-0001", "mysql-enrollment-cleanup-source") == {"status": "verification_pending"}
+            # Read the post-cleanup authoritative provider document.
+            enrollment_after_cleanup = state_store.read_json(DATA_DIR / "auth" / "pending_enrollments.json", pending_enrollment.default_pending_enrollments)
+            # Require old terminal rows gone and both active rows retained.
+            assert sorted(row.get("status") for row in enrollment_after_cleanup["enrollments"]) == ["pending", "pending"]
             # Issue one invitation bearer through the already proven token service without invoking live mail.
             invitation_token = token_service.issue(invitations.PURPOSE, MYSQL_INVITATION_RECIPIENT)
             # Build one invitation service only to derive the domain-separated recipient verifier.

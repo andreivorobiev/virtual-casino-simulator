@@ -183,6 +183,10 @@ class TokenService:
 
     # Decide whether a row is currently active at one captured instant.
     def _active(self, row: dict, now: str) -> bool:
+        # Candidate replacement rows remain non-consumable until explicit atomic promotion.
+        if row.get("activation_state") == "candidate":
+            # Preserve the predecessor as the sole active bearer during delivery.
+            return False
         # Terminal consumed or revoked rows can never be active.
         if row.get("consumed_at") or row.get("revoked_at"):
             # Return the terminal-state result immediately.
@@ -364,6 +368,208 @@ class TokenService:
         self._audit("info", "one_time_token_reissued", token_id=record["token_id"], purpose=purpose, audit_id=record["audit_id"], count=outcome["revoked"])
         # Return the replacement bearer exactly once.
         return receipt
+
+    # Prepare one non-consumable replacement while preserving the exact active predecessor. (AUTH-018)
+    def prepare_candidate(self, purpose: str, subject: str, predecessor_token_id: str, *, ttl_seconds: int | None = None, session_binding: str = "", max_attempts: int | None = None) -> dict:
+        # Prepare bearer material through the same purpose, subject, lifetime, and attempt validation.
+        record, receipt = self._prepare(purpose, subject, ttl_seconds=ttl_seconds, session_binding=session_binding, max_attempts=max_attempts)
+        # Mark the durable row non-consumable until provider delivery succeeds.
+        record["activation_state"] = "candidate"
+        # Bind promotion to one opaque predecessor without retaining subject material.
+        record["predecessor_token_id"] = str(predecessor_token_id or "").strip()
+        # Track the candidate creation decision across the provider transaction.
+        outcome = {"created": False}
+
+        # Append only beside the exact active predecessor under one document lock.
+        def mutate(raw_state: Any) -> dict:
+            # Validate the token document before inspecting predecessor state.
+            state = self._state(raw_state)
+            # Resolve the exact active predecessor by opaque identifier.
+            predecessor = next((row for row in state["tokens"] if row.get("token_id") == record["predecessor_token_id"]), None)
+            # Require equal purpose and subject plus current activity.
+            predecessor_matches = predecessor is not None and predecessor.get("purpose") == purpose and hmac.compare_digest(str(predecessor.get("subject_digest", "")), record["subject_digest"]) and self._active(predecessor, record["created_at"])
+            # Reject absent, changed, or inactive predecessor state generically.
+            if not predecessor_matches:
+                # Preserve the complete token document unchanged.
+                return state
+            # Retire expired candidate rows so an abandoned delivery cannot block replacement forever.
+            for existing in state["tokens"]:
+                # Touch only unconsumed, unrevoked candidates for this exact purpose and subject.
+                if existing.get("activation_state") == "candidate" and not existing.get("consumed_at") and not existing.get("revoked_at") and existing.get("purpose") == purpose and hmac.compare_digest(str(existing.get("subject_digest", "")), record["subject_digest"]):
+                    # Revoke only candidates whose governed bearer lifetime has elapsed.
+                    if self._parse(existing.get("expires_at")) < self._parse(record["created_at"]):
+                        # Preserve the retained audit row while removing its blocking state.
+                        existing["revoked_at"] = record["created_at"]
+            # Reject another live candidate or impossible bearer/id collision.
+            if any((row.get("activation_state") == "candidate" and not row.get("consumed_at") and not row.get("revoked_at") and self._parse(row.get("expires_at")) >= self._parse(record["created_at"]) and row.get("purpose") == purpose and hmac.compare_digest(str(row.get("subject_digest", "")), record["subject_digest"])) or hmac.compare_digest(str(row.get("token_digest", "")), record["token_digest"]) or row.get("token_id") == record["token_id"] for row in state["tokens"]):
+                # Preserve existing active and candidate state.
+                return state
+            # Append the non-consumable candidate without touching the predecessor.
+            state["tokens"].append(record)
+            # Publish success only after the candidate row is part of the commit.
+            outcome["created"] = True
+            # Return the complete token document.
+            return state
+        # Commit candidate preparation through JSON locking or MySQL row locking.
+        update_json(self.store_path, mutate, default_tokens)
+        # Reject every predecessor or collision failure through the generic request boundary.
+        if not outcome["created"]:
+            # Emit only fixed purpose and bounded failure class.
+            self._audit("warning", "one_time_token_candidate_rejected", purpose=purpose, reason="predecessor_unavailable")
+            # Preserve the existing generic initiation error.
+            self._invalid_request()
+        # Audit only opaque lifecycle identifiers.
+        self._audit("info", "one_time_token_candidate_prepared", token_id=record["token_id"], purpose=purpose, audit_id=record["audit_id"])
+        # Return the candidate bearer exactly once to the delivery boundary.
+        return receipt
+
+    # Atomically activate one delivered candidate and revoke only its bound predecessor. (AUTH-018)
+    def promote_candidate(self, candidate_token_id: str, predecessor_token_id: str) -> bool:
+        # Normalize opaque identifiers without accepting control characters or absence.
+        candidate_id, predecessor_id = str(candidate_token_id or "").strip(), str(predecessor_token_id or "").strip()
+        # Reject malformed lifecycle identifiers before durable-state inspection.
+        if not candidate_id or not predecessor_id or any(character in candidate_id + predecessor_id for character in "\r\n"):
+            # Preserve the generic request boundary.
+            self._invalid_request()
+        # Capture one shared promotion instant.
+        now = self.clock()
+        # Track whether the exact two-row transition committed.
+        outcome = {"promoted": False, "purpose": None, "audit_id": None}
+
+        # Promote and revoke inside one provider-owned document transaction.
+        def mutate(raw_state: Any) -> dict:
+            # Validate the complete token document.
+            state = self._state(raw_state)
+            # Resolve exact candidate and predecessor rows.
+            candidate = next((row for row in state["tokens"] if row.get("token_id") == candidate_id), None)
+            # Resolve the opaque predecessor independently.
+            predecessor = next((row for row in state["tokens"] if row.get("token_id") == predecessor_id), None)
+            # Accept an exact lost-response replay after the atomic promotion already committed.
+            already_promoted = candidate is not None and predecessor is not None and candidate.get("activation_state") == "active" and candidate.get("promoted_from_token_id") == predecessor_id and not candidate.get("consumed_at") and not candidate.get("revoked_at") and predecessor.get("revoked_at") and candidate.get("purpose") == predecessor.get("purpose") and hmac.compare_digest(str(candidate.get("subject_digest", "")), str(predecessor.get("subject_digest", "")))
+            # Publish the prior committed result without changing either row.
+            if already_promoted:
+                # Bind opaque audit metadata for the ordinary successful return.
+                outcome.update({"promoted": True, "purpose": candidate.get("purpose"), "audit_id": candidate.get("audit_id"), "replay": True})
+                # Return the complete document unchanged.
+                return state
+            # Require a fresh candidate bound to the exact active predecessor.
+            valid = candidate is not None and predecessor is not None and candidate.get("activation_state") == "candidate" and candidate.get("predecessor_token_id") == predecessor_id and not candidate.get("consumed_at") and not candidate.get("revoked_at") and self._parse(candidate.get("expires_at")) >= self._parse(now) and self._active(predecessor, now)
+            # Require purpose and subject equality without exposing either value.
+            valid = valid and candidate.get("purpose") == predecessor.get("purpose") and hmac.compare_digest(str(candidate.get("subject_digest", "")), str(predecessor.get("subject_digest", "")))
+            # Preserve state when any binding changed.
+            if not valid:
+                # Return the complete document without mutation.
+                return state
+            # Make the delivered candidate consumable.
+            candidate["activation_state"] = "active"
+            # Retain only the opaque predecessor id for exact promotion replay recovery.
+            candidate["promoted_from_token_id"] = predecessor_id
+            # Remove the transitional candidate-only pointer after successful binding proof.
+            candidate.pop("predecessor_token_id", None)
+            # Revoke only the exact predecessor at the same captured instant.
+            predecessor["revoked_at"] = now
+            # Publish opaque audit fields after both mutations are staged.
+            outcome.update({"promoted": True, "purpose": candidate.get("purpose"), "audit_id": candidate.get("audit_id")})
+            # Return the complete token document for one atomic commit.
+            return state
+        # Commit promotion through the provider abstraction.
+        update_json(self.store_path, mutate, default_tokens)
+        # Audit successful promotion with opaque identifiers only.
+        if outcome["promoted"] and not outcome.get("replay"):
+            # Record the terminal replacement transition.
+            self._audit("info", "one_time_token_candidate_promoted", token_id=candidate_id, purpose=outcome["purpose"], audit_id=outcome["audit_id"])
+        # Return only whether the exact promotion committed.
+        return outcome["promoted"]
+
+    # Revoke one undelivered candidate without changing its predecessor. (AUTH-018)
+    def discard_candidate(self, candidate_token_id: str) -> bool:
+        # Normalize the opaque candidate identifier.
+        candidate_id = str(candidate_token_id or "").strip()
+        # Reject malformed lifecycle identifiers before durable-state inspection.
+        if not candidate_id or any(character in candidate_id for character in "\r\n"):
+            # Preserve the generic request boundary.
+            self._invalid_request()
+        # Capture one discard instant.
+        now = self.clock()
+        # Track only the bounded transition result.
+        outcome = {"discarded": False, "purpose": None, "audit_id": None}
+
+        # Revoke only a still-pending candidate under the provider lock.
+        def mutate(raw_state: Any) -> dict:
+            # Validate the complete token document.
+            state = self._state(raw_state)
+            # Resolve the exact candidate row.
+            candidate = next((row for row in state["tokens"] if row.get("token_id") == candidate_id), None)
+            # Preserve absent, active, or already terminal rows.
+            if candidate is None or candidate.get("activation_state") != "candidate" or candidate.get("revoked_at") or candidate.get("consumed_at"):
+                # Return the complete document unchanged.
+                return state
+            # Revoke only the non-consumable candidate.
+            candidate["revoked_at"] = now
+            # Publish opaque audit fields after staging the transition.
+            outcome.update({"discarded": True, "purpose": candidate.get("purpose"), "audit_id": candidate.get("audit_id")})
+            # Return the complete document for one commit.
+            return state
+        # Commit through JSON locking or MySQL row locking.
+        update_json(self.store_path, mutate, default_tokens)
+        # Audit only a successful bounded discard.
+        if outcome["discarded"]:
+            # Record no predecessor, subject, or bearer material.
+            self._audit("info", "one_time_token_candidate_discarded", token_id=candidate_id, purpose=outcome["purpose"], audit_id=outcome["audit_id"])
+        # Return only whether one candidate changed.
+        return outcome["discarded"]
+
+    # Authorize one currently active bearer without consuming it. (AUTH-018)
+    def authorize_active(self, purpose: str, token: str, subject: str) -> dict:
+        # Reject malformed purpose, bearer, or subject through the generic token boundary.
+        normalized_subject = self._normalize_subject(subject)
+        # Require the same fixed purpose and nonempty inputs as consumption.
+        if purpose not in PURPOSES or not str(token or "") or not normalized_subject:
+            # Avoid scanning durable state for malformed requests.
+            self._invalid_token()
+        # Compute independent bearer and subject verifiers in process memory only.
+        token_digest = self._digest("bearer", str(token))
+        # Bind authorization to the normalized recipient identity.
+        subject_digest = self._digest("subject", normalized_subject)
+        # Capture one consistent activity instant.
+        now = self.clock()
+        # Retain only opaque success metadata across the provider transaction.
+        outcome = {}
+
+        # Inspect the active token under the same provider serialization used by consumption.
+        def inspect(raw_state: Any) -> dict:
+            # Validate the complete token document before scanning rows.
+            state = self._state(raw_state)
+            # Resolve one matching purpose and bearer verifier.
+            for row in state["tokens"]:
+                # Skip every other purpose without exposing partial matches.
+                if row.get("purpose") != purpose:
+                    # Continue through the bounded retained collection.
+                    continue
+                # Compare the bearer verifier in constant time.
+                if not hmac.compare_digest(str(row.get("token_digest", "")), token_digest):
+                    # Continue without mutating attempt state.
+                    continue
+                # Require current activity and exact subject binding.
+                if self._active(row, now) and hmac.compare_digest(str(row.get("subject_digest", "")), subject_digest):
+                    # Publish only opaque lifecycle identifiers.
+                    outcome.update({"token_id": row.get("token_id"), "purpose": purpose, "audit_id": row.get("audit_id")})
+                # Stop after the unique bearer verifier regardless of its state.
+                break
+            # Return the unchanged complete document.
+            return state
+        # Serialize authorization against concurrent promotion, revoke, and consume mutations.
+        update_json(self.store_path, inspect, default_tokens)
+        # Reject absent, stale, candidate, cross-recipient, revoked, or consumed bearers uniformly.
+        if not outcome.get("token_id"):
+            # Emit no subject or bearer data in internal audit.
+            self._audit("warning", "one_time_token_authorization_rejected", purpose=purpose, reason="unavailable")
+            # Preserve the generic token rejection envelope.
+            self._invalid_token()
+        # Audit only opaque identifiers for the accepted ownership proof.
+        self._audit("info", "one_time_token_authorized", token_id=outcome["token_id"], purpose=purpose, audit_id=outcome.get("audit_id"))
+        # Return no bearer or subject material.
+        return outcome
 
     # Consume one bearer exactly once with mandatory purpose and subject binding.
     def consume(self, purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True, idempotency_key: str = "", include_replay_state: bool = False) -> dict:
@@ -659,6 +865,30 @@ def issue(purpose: str, subject: str, *, ttl_seconds: int | None = None, session
 def reissue(purpose: str, subject: str, *, ttl_seconds: int | None = None, session_binding: str = "", max_attempts: int | None = None) -> dict:
     # Delegate reissue policy to the production service.
     return _service().reissue(purpose, subject, ttl_seconds=ttl_seconds, session_binding=session_binding, max_attempts=max_attempts)
+
+
+# Prepare one non-consumable replacement while retaining its active predecessor.
+def prepare_candidate(purpose: str, subject: str, predecessor_token_id: str, *, ttl_seconds: int | None = None, session_binding: str = "", max_attempts: int | None = None) -> dict:
+    # Delegate candidate preparation to the provider-backed service.
+    return _service().prepare_candidate(purpose, subject, predecessor_token_id, ttl_seconds=ttl_seconds, session_binding=session_binding, max_attempts=max_attempts)
+
+
+# Promote one delivered candidate and revoke its predecessor atomically.
+def promote_candidate(candidate_token_id: str, predecessor_token_id: str) -> bool:
+    # Delegate the exact two-row lifecycle transition.
+    return _service().promote_candidate(candidate_token_id, predecessor_token_id)
+
+
+# Revoke one undelivered candidate without changing its predecessor.
+def discard_candidate(candidate_token_id: str) -> bool:
+    # Delegate candidate cleanup to the provider-backed service.
+    return _service().discard_candidate(candidate_token_id)
+
+
+# Authorize one active bearer without consuming its later verification use.
+def authorize_active(purpose: str, token: str, subject: str) -> dict:
+    # Delegate purpose, subject, expiry, and constant-time bearer validation.
+    return _service().authorize_active(purpose, token, subject)
 
 
 # Consume one bearer exactly once with mandatory subject binding.

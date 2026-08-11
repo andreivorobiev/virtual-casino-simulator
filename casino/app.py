@@ -24,7 +24,7 @@ from casino.core.security import CSRF_COOKIE, cookie_value, csrf_cookie_header, 
 from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, guest_settings, invitations, password_reset, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare, guest_conversion, enrollment_policy
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, guest_settings, invitations, password_reset, pending_enrollment, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare, guest_conversion, enrollment_policy
 from casino.games.registry import catalog_summary, list_games, register_games
 from casino.admin import register as register_admin
 from casino.bots.api import register as register_bots
@@ -329,7 +329,7 @@ def build_router() -> Router:
 
     # Attach a gated public full-account signup endpoint for the owner-approved future enrollment form.
     @router.post(r"/api/v2/auth/signup")
-    # Create a local first-party user only when the explicit signup gate is enabled.
+    # Create only pending verification state when the explicit signup gate is enabled. (AUTH-018)
     def auth_signup(body, query, context):
         # Start a fixed logging-failure boundary before validating or creating an account.
         try:
@@ -344,25 +344,44 @@ def build_router() -> Router:
             # Reject disabled signup before validating account fields to avoid account enumeration.
             raise ForbiddenError("Full account signup is disabled")
         # Reject unsupported fields so public signup cannot smuggle roles, status, wallet, or provider identity.
-        if set(body or {}) - {"email", "password", "display_name", "locale", "terms_version", "accepted"}:
+        if set(body or {}) - {"email", "password", "display_name", "locale", "terms_version", "accepted", "idempotency_key"}:
             # Fail closed through the standard validation envelope.
             raise ValidationError("Signup request contains unsupported fields")
-        # Require explicit terms acceptance for every full account created through public signup.
-        if (body or {}).get("accepted") is not True:
-            # Reject silent signup attempts.
-            raise ValidationError("Signup requires explicit terms acceptance")
-        # Validate password policy before creating a durable identity.
-        auth.validate_enrollment_password(str((body or {}).get("password", "")))
-        # Create a normal local player account with no Admin privileges and no provider identity.
-        user = auth.create_user(str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), role="player", terms_required=False, locale=str((body or {}).get("locale", "en-US")))
-        # Store the accepted terms version on the created account.
-        auth.accept_terms(user["user_id"], str((body or {}).get("terms_version", "")), True, "self_signup")
-        # Create a browser session immediately so the enrollment form can continue into the lobby.
-        result = auth.login(user["email"], str((body or {}).get("password", "")), context.get("client", ""))
-        # Add session and CSRF cookies using the same policy as password login.
-        context.setdefault("response_headers", []).extend(auth.session_cookie_headers(result["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
-        # Return the current-user payload rather than any raw password or signup internals.
-        return result
+        # Begin the account-free verification saga without creating a user, wallet, balance, or session.
+        return pending_enrollment.initiate(str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), str((body or {}).get("locale", "en-US")), str((body or {}).get("terms_version", "")), (body or {}).get("accepted") is True, str((body or {}).get("idempotency_key", "")), str(context.get("client") or ""))
+
+    # Register enumeration-safe verified-email delivery replacement. (AUTH-018)
+    @router.post(r"/api/v2/auth/signup/resend")
+    # Replace the current verification token without creating identity or wallet state.
+    def auth_signup_resend(body, query, context):
+        # Reject fields outside the exact recipient, locale, and replay contract.
+        if not isinstance(body, dict) or set(body) - {"email", "locale", "idempotency_key"}:
+            # Fail closed before recipient lookup.
+            raise ValidationError("Signup request contains unsupported fields")
+        # Delegate the generic response and recoverable delivery generation.
+        return pending_enrollment.resend(str(body.get("email") or ""), str(body.get("locale") or "en-US"), str(body.get("idempotency_key") or ""), str(context.get("client") or ""))
+
+    # Register purpose-bound email verification and exactly-once activation. (AUTH-018, USER-010)
+    @router.post(r"/api/v2/auth/signup/verify")
+    # Provision the account and funded wallet without creating a login session.
+    def auth_signup_verify(body, query, context):
+        # Reject fields outside the exact bearer, recipient, and replay contract.
+        if not isinstance(body, dict) or set(body) - {"token", "email", "idempotency_key"}:
+            # Preserve one generic public verification error.
+            raise ValidationError("Signup verification is unavailable", dict(pending_enrollment.GENERIC_VERIFICATION_DETAILS))
+        # Delegate token consumption and recoverable identity activation.
+        return pending_enrollment.verify(str(body.get("token") or ""), str(body.get("email") or ""), str(body.get("idempotency_key") or ""), str(context.get("client") or ""))
+
+    # Register generic pending-signup cancellation. (AUTH-018)
+    @router.post(r"/api/v2/auth/signup/cancel")
+    # Revoke the current bearer only after mailbox ownership proof without disclosing pending state.
+    def auth_signup_cancel(body, query, context):
+        # Reject fields outside the exact bearer, recipient, and replay contract.
+        if not isinstance(body, dict) or set(body) - {"token", "email", "idempotency_key"}:
+            # Fail closed before recipient lookup.
+            raise ValidationError("Signup request contains unsupported fields")
+        # Delegate ownership-bound terminal cancellation and token revocation.
+        return pending_enrollment.cancel(str(body.get("token") or ""), str(body.get("email") or ""), str(body.get("idempotency_key") or ""), str(context.get("client") or ""))
 
     # Register enumeration-safe password-recovery initiation on the additive public v2 boundary. (RESET-004)
     @router.post(r"/api/v2/auth/password-reset/initiate")

@@ -89,7 +89,7 @@ BROWSER_CASE_AFFINITY_GROUPS={
     # Keep the disposable guest lifecycle and closed-session refresh proof together.
     'guest_lifecycle':('BR-GUEST-TRIAL-001','BR-GUEST-REFRESH-001'),
     # Keep login, terms, wallet, shell, catalog, and responsive lobby state on shard zero.
-    'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-OAUTH-SIGNUP-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
+    'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-OAUTH-SIGNUP-001','BR-VERIFIED-EMAIL-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
     # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
     'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
     # Keep Bingo, Blackjack, Baccarat, feedback, Admin, audio, and i18n state on shard three.
@@ -670,7 +670,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','STORAGE-010','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091','TEST-141'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','STORAGE-010','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091','TEST-141','TEST-171'],storage_tests.run_mysql_live_provider_path)
     # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
     if include_migration_live:
         # Import the service-dependent matrix only after the disposable selector is explicit.
@@ -1214,7 +1214,7 @@ def validate_guest_contracts():
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
     # Preserve the exact anonymous allowlist including private redemption, disabled enrollment, and reviewed provider-latched OAuth routes. (OAUTH-007)
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/password-reset/initiate','/api/v2/auth/password-reset/resend','/api/v2/auth/password-reset/complete','/api/v2/auth/oauth/providers','/api/v2/auth/csrf','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/signup/resend','/api/v2/auth/signup/verify','/api/v2/auth/signup/cancel','/api/v2/auth/password-reset/initiate','/api/v2/auth/password-reset/resend','/api/v2/auth/password-reset/complete','/api/v2/auth/oauth/providers','/api/v2/auth/csrf','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
     # Prove launch stays held, the fixed grant and owner admission control are exact, and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['entry']['starting_play_tokens']==10000 and guest_contract['entry']['admission_change_requires_restart'] is False and guest_contract['entry']['admission_pause_ends_existing_trials'] is False and guest_contract['wallet']['starting_play_tokens_fixed']==10000 and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['admission_write_authority']=='current-active-platform-owner' and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -2125,6 +2125,20 @@ def run_api_tests():
             raise AssertionError('invitation enrollment infrastructure suite failed')
     # Record the listener-free invitation platform proof under its permanent requirements.
     run_case('API-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','INVITE-005','INVITE-006','TEST-091'],run_invitation_tests)
+    # Execute the account-free verified-email activation saga without opening a listener. (TEST-171)
+    def run_verified_email_enrollment_tests():
+        # Import the focused provider-free suite only when its mapped case runs.
+        from tests import verified_email_enrollment_tests
+        # Load exactly the pending, cancellation, replay, and recovery assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(verified_email_enrollment_tests.VerifiedEmailEnrollmentTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any exact saga proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the mapped failure label stable.
+            raise AssertionError('verified email enrollment suite failed')
+    # Record no-preverification identity, ledger funding, no-session, cancellation, and recovery proof.
+    run_case('API-VERIFIED-EMAIL-001',['AUTH-018','USER-010','TEST-171'],run_verified_email_enrollment_tests)
     def run_password_reset_tests():
         # Import the focused recovery suite lazily so API-only discovery stays lightweight.
         from tests import password_reset_tests
@@ -4498,6 +4512,40 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000); page.set_viewport_size({'width':1920,'height':1080})
                     # Record provider-specific signup policy, consent, EN/RU, and visual-matrix evidence.
                     run_case('BR-OAUTH-SIGNUP-001',['OAUTH-013','AUTH-017','TEST-168'],oauth_signup_browser)
+                    # Define pending verified-email URL-scrubbing, localization, and containment acceptance. (AUTH-018)
+                    def verified_email_browser():
+                        # Read the complete governed Auth viewport matrix.
+                        viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                        # Require every desktop, tablet, and mobile acceptance viewport.
+                        assert set(viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                        # Enter through a synthetic bearer link without submitting it to any backend.
+                        page.goto(base+'/enroll/verify?token=synthetic-browser-verification-bearer',wait_until='networkidle')
+                        # Wait for the dedicated account-free pending surface.
+                        page.get_by_test_id('email-verification-pending').wait_for(timeout=5000)
+                        # Require immediate bearer scrubbing from the visible URL and browser history entry.
+                        assert page.url.rstrip('/').endswith('/enroll/verify') and 'token=' not in page.url
+                        # Exercise the pending surface in both installed locales.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch through the visible governed locale control.
+                            page.get_by_test_id('email-verification-locale').select_option(locale)
+                            # Wait for locale state and the replacement pending form to settle.
+                            page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"email-verification-pending\"]')",arg=locale)
+                            # Require verify, resend, cancel, recipient, and login controls to remain visible.
+                            assert all(page.get_by_test_id(testid).is_visible() for testid in ('email-verification-email','email-verification-submit','email-verification-resend','email-verification-cancel','email-verification-login-link'))
+                            # Require the arrived module-local bearer to keep verification available after rerender.
+                            assert not page.get_by_test_id('email-verification-submit').is_disabled()
+                            # Capture every governed viewport without consuming the synthetic bearer.
+                            for viewport_id,viewport in viewports.items():
+                                # Resize to the exact matrix dimensions.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                                # Require both document and pending-panel horizontal containment.
+                                assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"email-verification-pending\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
+                                # Record localized after-pass pending-verification evidence.
+                                game_evidence(f'after-pass-auth-email-verification-{locale}-{viewport_id}.png','auth',['email_signup_pending','email_verification_link'],locale,viewport_id)
+                        # Return to the default login route before downstream browser cases.
+                        page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000); page.set_viewport_size({'width':1920,'height':1080})
+                    # Record bearer scrubbing, bilingual controls, and governed responsive containment.
+                    run_case('BR-VERIFIED-EMAIL-001',['AUTH-018','USER-010','TEST-171'],verified_email_browser)
                     # Define exact geometry acceptance for every primary Auth hit target. (issue #283)
                     def auth_touch_target_floor():
                         # Read every governed viewport from the authoritative visual matrix.

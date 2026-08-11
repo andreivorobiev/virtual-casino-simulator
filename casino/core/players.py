@@ -97,6 +97,48 @@ def ensure_invited_player(player_id: str, display_name: str) -> dict:
     return get_storage_provider().ensure_player(player)
 
 
+# Provision one deterministic zero-balance wallet for verified-email activation. (AUTH-018, USER-010)
+def ensure_email_enrollment_player(player_id: str, display_name: str) -> dict:
+    # Require the server-owned email-enrollment identifier namespace before wallet storage access.
+    if not str(player_id or "").startswith("player_email_"):
+        # Reject caller-selected wallet identifiers outside the verified-email saga.
+        raise ValidationError("email enrollment player identifier is invalid")
+    # Normalize the pending account label without accepting an empty player record.
+    label = str(display_name or "").strip()[:80]
+    # Fail before storage mutation when the verified signup omitted a usable display name.
+    if not label:
+        # Preserve all existing player rows on invalid input.
+        raise ValidationError("display_name is required")
+    # Capture one creation instant used only for the first successful provisioning attempt.
+    now = utc_now()
+    # Create the recoverable inactive wallet at zero so only the ledger can fund it.
+    player = {"player_id": player_id, "display_name": label, "type": "human", "balance": 0.0, "created_at": now, "updated_at": now, "status": "provisioning"}
+    # Delegate insert-or-read semantics to the configured JSON or MySQL provider.
+    existing = get_storage_provider().ensure_player(player)
+    # Reject a conflicting replay that could inherit pre-existing funds or active status.
+    if existing.get("display_name") != label or existing.get("status") not in {"provisioning", "active"}:
+        # Preserve the conflicting wallet for operator investigation.
+        raise ValidationError("email enrollment player replay conflicts with existing state")
+    # Return the exact durable wallet selected by the provider.
+    return existing
+
+
+# Activate one verified-email wallet only after its starting-balance ledger credit is durable. (USER-010)
+def activate_email_enrollment_player(player_id: str) -> dict:
+    # Apply the final status transition under the provider's row-scoped wallet lock.
+    def activate(player: dict) -> None:
+        # Accept only the recoverable provisioning state or an idempotent active replay.
+        if player.get("status") not in {"provisioning", "active"}:
+            # Refuse to revive suspended or otherwise operator-controlled accounts.
+            raise ValidationError("email enrollment player cannot be activated")
+        # Mark the fully funded wallet available to authenticated gameplay.
+        player["status"] = "active"
+        # Refresh the lifecycle timestamp after the successful activation boundary.
+        player["updated_at"] = utc_now()
+    # Return the provider-owned updated row.
+    return update_player(player_id, activate)
+
+
 # Provision one deterministic social-enrollment player idempotently across JSON and MySQL. (OAUTH-013)
 def ensure_social_player(player_id: str, display_name: str) -> dict:
     # Require only the server-owned social-enrollment identifier namespace.
