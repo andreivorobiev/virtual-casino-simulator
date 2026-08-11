@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Safety tests for the issue-scoped real-backend browser harness."""
 
 # Import portable filesystem paths for exact boundary assertions.

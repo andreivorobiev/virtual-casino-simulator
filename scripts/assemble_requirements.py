@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Assemble the checked requirement registry from one spine and per-game shards."""
 
 # Import argument parsing for explicit check, write, and one-time extraction modes.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Facebook identity claim normalization without live provider traffic.
 
 Requirements: OAUTH-005 and USER-001.

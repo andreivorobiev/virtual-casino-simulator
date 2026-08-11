@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Dragon Tiger session, persistence, and ledger-replay tests."""
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.

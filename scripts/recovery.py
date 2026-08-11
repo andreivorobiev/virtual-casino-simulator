@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Run fail-closed encrypted recovery workflows for MYSQL-006 and TOOL-004."""
 
 # Import argument parsing for explicit backup, restore, and evidence-check modes.

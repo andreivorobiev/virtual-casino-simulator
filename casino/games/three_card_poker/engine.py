@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure deterministic Three Card Poker rules for GitHub issue #93.
 
 Requirements: CARD-001, LEDGER-005, LEDGER-006, and LEDGER-007.

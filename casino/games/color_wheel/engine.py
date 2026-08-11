@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Color Wheel rules for the shared settlement core: entropy, bet validation, and resolution. (#152)
 
 These are the only game-specific pieces the shared exactly-once core needs. Every function is pure and

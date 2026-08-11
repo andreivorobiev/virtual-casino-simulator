@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import JSON decoding so tests can compare the complete persisted document.
 import json
 # Import temporary-directory support so tests never touch repository runtime state.

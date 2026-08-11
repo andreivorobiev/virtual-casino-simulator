@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only orchestration for isolated Caribbean Stud."""
 
 # Import copy support so insufficient-funds rollback can restore decision state.

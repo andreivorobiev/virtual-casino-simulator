@@ -1,17 +1,14 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Slots API actions, spin persistence, and exactly-once settlement orchestration.
 from casino.core.state_store import load_player_game_state, save_player_game_state
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_player_id
-# Import required dependency so this module can use its public functions or constants.
 from casino.core import players
 # Import the one canonical game-money boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
 # Import the shared opaque-id helper so debit, spin, credit, and history share one round.
 from casino.core.ids import new_id
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.slots import engine
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "slots"
@@ -62,7 +59,6 @@ def register(router):
         round_id = new_id("slot")
         # Set debit to the value needed for the next operation.
         debit = None
-        # Branch when the following condition is true.
         if cost > 0:
             # Set debit to the value needed for the next operation.
             debit, _debit_replayed = SETTLEMENT.apply_once(player_id=player_id, signed_amount=-cost, transaction_type="SLOTS_SPIN_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=f"{round_id}:{configuration['active_lines']}:{configuration['line_bet']}:{cost}", details={"active_lines": configuration["active_lines"], "line_bet": configuration["line_bet"], "cost": cost})
@@ -70,15 +66,11 @@ def register(router):
         result = engine.spin(state, active_lines, line_bet, round_id=round_id)
         # Set credit to the value needed for the next operation.
         credit = None
-        # Branch when the following condition is true.
         if result["payout"] > 0:
             # Set credit to the value needed for the next operation.
             credit, _credit_replayed = SETTLEMENT.apply_once(player_id=player_id, signed_amount=result["payout"], transaction_type="SLOTS_PAYOUT_CREDIT", round_id=result["round_id"], action_key=f"{result['round_id']}:settlement", request_fingerprint=f"{result['round_id']}:{result['payout']}", details={"wins": result["wins"], "line_payout": result["line_payout"], "scatter_payout": result["scatter_payout"], "progressive_hit": result["progressive_hit"]})
         # Set bal to the value needed for the next operation.
         bal = players.get_player(player_id)["balance"]
-        # Execute this statement as part of the module's documented control flow.
         append_history(GAME_ID, result["round_id"], player_id, "spin", f"{result['active_lines']} lines @ {result['line_bet']}", result["cost"], "win" if result["payout"] else "loss", result["payout"], bal, result)
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"spin": result, "debit": debit, "credit": credit, **payload(player_id, state)}

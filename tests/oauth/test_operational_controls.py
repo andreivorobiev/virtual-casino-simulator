@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Durable provider operational-switch tests for OAUTH-012 and TEST-167."""
 
 # Import temporary directories for isolated provider documents.

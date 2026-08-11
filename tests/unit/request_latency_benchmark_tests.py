@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free unit proof for the TEST-148 request-latency baseline."""
 
 # Import syntax-tree inspection for network and selector policy proof.
@@ -1374,7 +1376,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
         # Require the accepted aggregates plus the action-journal slice to total exactly 942 permanent rows.
-        self.assertEqual(len(requirements), 942)
+        self.assertEqual(len(requirements), 943)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1562,16 +1564,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.1")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the compatible tests patch for append-only action-journal qualification.
-        self.assertEqual(tests_module["version"], "1.74.3")
-        # Require the docs patch for append-only action-journal governance and acceptance.
-        self.assertEqual(docs_module["version"], "1.72.3")
+        # Require the tests minor for the repository-wide file-header policy qualification.
+        self.assertEqual(tests_module["version"], "1.75.0")
+        # Require the docs minor for the replacement commenting policy and contributor guidance.
+        self.assertEqual(docs_module["version"], "1.73.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the compatible contracts patch for the immutable v0.9.5.69 rollback record.
         self.assertEqual(contracts_module["version"], "1.59.2")
-        # Require the compatible tooling minor for the widened OAuth policy validator.
-        self.assertEqual(tooling_module["version"], "1.28.0")
+        # Require the tooling minor for the fail-closed file-header checker and CI gate.
+        self.assertEqual(tooling_module["version"], "1.29.0")
         # Require the compatible Baccarat patch for central settings enforcement.
         self.assertEqual(baccarat_module["version"], "9.1.15")
         # Require the exact compatible Bingo settlement-interface patch.

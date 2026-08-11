@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused issue-86 tests for Big Six rules, settlement, and exactly-once service behavior."""
 
 # Import the standard dependency-free unit-test runner.

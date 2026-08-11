@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Bot-wallet exhaustion, compensation, and self-heal tests for issue #411 Texas Hold'em escrow."""
 
 # Import environment access so durable state is routed into a disposable root before any casino import binds directories.

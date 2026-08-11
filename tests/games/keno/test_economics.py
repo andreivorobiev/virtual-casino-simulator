@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Browser-free proof for the KENO-027 paytable and settlement correction."""
 
 # Import deep-copy support so interrupted draw state can be restored without aliasing.

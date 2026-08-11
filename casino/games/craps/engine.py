@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Pass Line and Don't Pass Craps rules for GitHub issue #90.
 
 Proposed requirements: CRAPS-001, CRAPS-002, and CRAPS-003.

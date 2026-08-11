@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Run the production edge observer with a strictly parsed root-managed bearer."""
 
 # Import command-line parsing for the fixed monitor-file and policy inputs.

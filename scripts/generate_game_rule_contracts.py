@@ -1,4 +1,5 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Generate descriptor-owned OpenAPI request bodies for governed game settings routes."""
 
 # Import JSON formatting so enum members retain exact JSON scalar types inside YAML.

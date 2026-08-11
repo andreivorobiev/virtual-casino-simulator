@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Real-app browser-test launcher with an in-memory isolated-module revision shim."""
 
 # Import argument parsing for explicit loopback port and temporary data paths.

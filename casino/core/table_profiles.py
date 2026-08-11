@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Per-user, per-game personal table profiles. (#164)
 
 Product direction (issue #164, 2026-07-23) fixes the scope this module enforces:

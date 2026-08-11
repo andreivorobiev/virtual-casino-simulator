@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import pathlib so repository-relative source paths can be validated without caller dependence.
 import pathlib
 # Import regular expressions so fact headings and provenance fields use one fail-closed grammar.

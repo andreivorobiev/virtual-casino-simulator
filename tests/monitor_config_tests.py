@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free tests for the root-managed monitor bearer/digest validator."""
 
 # Import secret hashing for synthetic expected configuration.

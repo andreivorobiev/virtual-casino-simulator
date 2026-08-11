@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Diagnostic real-browser smoke for issue #92, never formal after-pass evidence."""
 
 # Import deep-copy support so the in-memory persistence adapter has reload semantics.

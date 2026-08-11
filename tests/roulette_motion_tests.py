@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Roulette rotor and ball motion-quality tests. (#169, ROU-069, ROU-070)
 
 The shipped spin used a heavily front-loaded easing that advanced the rotor by as much as

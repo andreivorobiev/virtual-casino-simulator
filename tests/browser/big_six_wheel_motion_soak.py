@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Long real-browser Big Six motion qualification for GitHub issue #223."""
 
 # Import JSON serialization for the exact-head qualification summary.

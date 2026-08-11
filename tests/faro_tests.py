@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Faro rules and settlement tests on the shared core. (#146, FARO-001/002)"""
 
 # Import the standard unittest framework used by the repository's focused suites.

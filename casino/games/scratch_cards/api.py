@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Additive v1 route registration for the isolated Scratch Cards module."""
 
 # Import canonical player-id validation for legacy focused-router compatibility.

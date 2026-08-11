@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Static frontend, locale, driver, and OpenAPI checks for issue #84."""
 
 # Import JSON parsing for exact locale parity checks.

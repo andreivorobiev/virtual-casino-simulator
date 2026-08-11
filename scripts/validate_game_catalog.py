@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Validate module-owned game catalog metadata and all discoverable integration hooks.
 import importlib  # Resolve backend registration and long-suite driver references.
 import json  # Parse installed shell locale resources for catalog-copy governance.

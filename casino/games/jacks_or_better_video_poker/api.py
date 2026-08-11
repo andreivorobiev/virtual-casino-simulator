@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-bound, retry-safe ledger adapter for Jacks-or-Better issue #91.
 
 Confirmed requirements: LEDGER-005, LEDGER-006, LEDGER-007, and SESSION-005.

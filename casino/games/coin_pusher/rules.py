@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Coin Pusher rules: the shelf threshold, push range, and cascade payouts. (#156)
 
 A dropped coin lands on a shelf that already holds a random pile of earlier coins, and the coin advances

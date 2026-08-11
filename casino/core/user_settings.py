@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Per-user personal preferences and self-only activity reads for My Settings. (#352)
 
 This module owns the personal preference record and the self-scoped view of the authoritative

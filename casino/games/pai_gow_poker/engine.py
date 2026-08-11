@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Pai Gow Poker rules: a 53-card joker deck set into a five-card high
 hand and a two-card low hand, compared against a house-way dealer.
 

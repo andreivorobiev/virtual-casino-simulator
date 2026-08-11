@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused non-finite money-boundary tests for CORE-025, LEDGER-027, MHVP-006, and TEST-055."""
 
 # Import deep-copy support so a corrupt candidate cannot mutate the valid fixture.

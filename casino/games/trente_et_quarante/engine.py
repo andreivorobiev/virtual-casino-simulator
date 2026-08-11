@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Trente et Quarante rules for the shared settlement core: entropy, validation, resolution. (#147)
 
 Every function is pure and deterministic given its inputs, so the shared core can settle a coup, replay

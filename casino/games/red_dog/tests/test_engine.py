@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic pure-engine tests for Red Dog issue #84."""
 
 # Import the standard dependency-free unit-test framework.

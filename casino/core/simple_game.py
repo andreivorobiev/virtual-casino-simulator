@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Shared exactly-once wager-and-settle core for catalog games. (#73 expansion)
 
 Every ledger-backed game repeats the same subtle money contract: draw server entropy, debit a wager,

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Daily Draw Lab rules and settlement tests on the shared core. (#144, DDLAB-001/002)"""
 
 # Import comb for the exact hypergeometric house-edge proof.

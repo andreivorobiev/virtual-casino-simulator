@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Faro rules: the thirteen ranks, the fifty-two-card deck, and payout multipliers. (#146)
 
 Faro deals two cards from a standard fifty-two-card deck: the banker card first, then the player card.

@@ -1,4 +1,5 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Import synchronous localization so structured API failures never expose server-English copy. (I18N-011)
 import { t } from './i18n.js';
 // Name the production host-only double-submit cookie without storing its value globally.
@@ -111,7 +112,6 @@ export async function api(path, options = {}) {
   if (UNSAFE_METHODS.has(method)) headers['X-CSRF-Token'] = cookieValue(CSRF_COOKIE);
   // Store init so later code can read or update this value.
   const init = { method, headers, credentials: 'include', keepalive: options.keepalive === true };
-  // Branch when the following condition is true.
   if (options.body !== undefined) init.body = JSON.stringify(options.body);
   // Retain the response separately so transport rejection can be converted to safe player copy.
   let res;
@@ -121,7 +121,6 @@ export async function api(path, options = {}) {
   let payload;
   // Start protected logic so failures can be handled safely.
   try { payload = await res.json(); } catch (_) { throw playerSafeError('BAD_RESPONSE', res.status); }
-  // Branch when the following condition is true.
   if (!res.ok || !payload.ok) {
     // Store e so later code can read or update this value.
     const e = playerSafeError(payload.error?.code, res.status);
@@ -133,10 +132,8 @@ export async function api(path, options = {}) {
     const SessionExpiredEvent = globalThis.window?.CustomEvent || globalThis.CustomEvent;
     // Notify the shell after the caller's catch path settles, so game-local cleanup cannot repaint stale chrome last.
     if (sessionExpired && SessionExpiredEvent) setTimeout(() => globalThis.window?.dispatchEvent?.(new SessionExpiredEvent('casino-session-expired', { detail: { path: String(path) } })), 0);
-    // Execute this statement as part of the module's documented control flow.
     throw e;
   }
-  // Return the computed value to the caller.
   return payload.data;
 }
 // Export this symbol so other modules can use it through the public module boundary.

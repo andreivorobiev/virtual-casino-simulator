@@ -50,11 +50,11 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.74.3
-- docs: 1.72.3
+- tests: 1.75.0
+- docs: 1.73.0
 - contracts: 1.59.2
-- tooling: 1.28.0
-- commenting_policy: 1.0.0
+- tooling: 1.29.0
+- commenting_policy: 2.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
 - boule: 1.1.4
@@ -544,7 +544,8 @@ Historical source baseline: 9.1.0
 - **LEDGER-030** (Ledger) - PASS: Legacy blackjack, baccarat, roulette, keno, and bingo settlement and refund credits commit through storage-atomic exactly-once action keys derived from identifiers durable at placement, with history and counters gated on first commitment, so concurrent requests and crash-window recoveries can never double-pay a wager.
 - **STORAGE-009** (Storage) - PASS: JSON ledger reads serve from a stat-guarded incremental tail cache with per-player indexing that stays byte-equivalent to a full reparse, including malformed-line skipping, external appends, and truncation resets, and bootstrap seeding is idempotent per row on both providers.
 - **TEST-135** (Tests) - PASS: Requirement-mapped cases fail when their predicate returns false, tautological always-true predicates are refused by a source invariant, requirement-mapped game cases pin per-player server-issued evidence, and every per-game, embedded, and tracked frontend suite executes in continuous integration.
-- **TOOL-009** (Tooling) - PASS: The comment-density gate counts only comment lines and whitespace-delimited inline comments as documentation and fails its workflow below an enforced repository-wide floor.
+- **TOOL-009** (Tooling) - PASS: The historical comment-density command remains a compatible fail-closed entry point that delegates to the governed first-party file-header, purpose-documentation, and generated-filler policy gate.
+- **COMMENT-001** (Commenting Policy) - PASS: Every tracked first-party Python and JavaScript source carries the exact NOTICE-derived copyright and Apache-2.0 SPDX header at a language-valid position, preserves executable behavior and upstream vendor notices, states a substantive file purpose, and contains no governed machine-generated filler template.
 - **TOOL-010** (Tooling) - PASS: Contract validation enforces module-to-contract matrix coverage and frozen digest currency for every declared and curated entry, and a merge-safe regeneration mode rebuilds both compatibility artifacts from module descriptors without dropping curated rows or standalone freezes.
 - **UX-022** (Application) - PASS: Each of the forty-three catalog games that previously lacked repeat-bet behavior renders one localized secondary Repeat bet control, keeps it unavailable until a player-owned settled wager configuration exists, and uses one activation to submit a fresh exactly-once game action with that exact base configuration without replaying later draw, hold, call, fold, or hand-setting decisions. Repeat remains guarded while work is active and introduces no parallel timer.
 - **TEST-137** (Tests) - PASS: Listener-free exact-source acceptance pins the complete forty-three-game repeat catalog, paired English and Russian copy, semantic button hooks, settled-wager guards, shared game-action delegation, in-flight exclusion, event wiring, and timer-free execution. Hosted exact-head Browser acceptance renders every control in both locales, proves one real backend-funded exact-configuration repeat, checks containment and fixed-feedback clearance, and captures eight after-pass visual rows across all governed viewport classes.

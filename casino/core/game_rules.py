@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure validation helpers for descriptor-owned game rule domains."""
 
 # Import finite-number checks so descriptor bounds cannot contain NaN or infinity.

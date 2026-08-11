@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only Deuces Wild API adapter for issue #92.
 
 Existing requirements: SESSION-005, LEDGER-005, LEDGER-006, LEDGER-007,

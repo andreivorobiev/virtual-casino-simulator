@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused play-token receipt derivation tests. (#161, RECEIPT-001, RECEIPT-002)"""
 
 # Import SHA-256 so the additive v2 contract stays pinned to exact reviewed bytes.

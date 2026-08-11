@@ -1,4 +1,5 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import JSON support so runtime version metadata can come from the canonical manifest.
 import json
 # Import Path so the manifest is resolved relative to this source checkout or packaged tree.

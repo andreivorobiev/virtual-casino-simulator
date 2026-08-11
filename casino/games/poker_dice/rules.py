@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Poker Dice rules: dice faces, hand categories, and payout multipliers. (#151)
 
 Poker Dice rolls five dice whose six faces are the poker ranks nine, ten, jack, queen, king, and ace.

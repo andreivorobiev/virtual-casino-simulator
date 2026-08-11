@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Launch the real casino app with isolated Dragon Tiger browser-test storage.
 
 This issue-local harness never reads or writes the repository's shared ``data/``

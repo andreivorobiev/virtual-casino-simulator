@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Additive v1 router registration for the isolated Trente et Quarante module on the core. (#147)"""
 
 # Import the canonical player-id validator used by current game endpoints.

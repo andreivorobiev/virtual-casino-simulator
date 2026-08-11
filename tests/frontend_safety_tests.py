@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free frontend safety regression for SEC-013, UX-021, CORE-028, and TEST-136."""
 
 # Import portable paths for tracked-source and runtime-output assertions.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused provider-free tests for transactional-mail safety and lifecycle policy. (TEST-090)"""
 
 # Import JSON parsing so tests can inspect persistence without application helpers.

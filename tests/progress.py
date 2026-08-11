@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Flushed progress, heartbeat, stall, timeout, and cleanup reporting for TEST-010/TEST-042."""
 
 # Import the low-level main-thread interrupt used to stop a timed-out synchronous suite.

@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Provide the isolated issue #95 browser module without shared shell edits.
 // Requirements: CARD-002, I18N-001, I18N-002, CORE-008, and MOTION-002.
 

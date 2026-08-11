@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Disabled-by-default transactional-mail boundary with privacy-safe durable state. (MAIL-001..006)
 
 This infrastructure prepares fixed enrollment and recovery messages without exposing a consumer

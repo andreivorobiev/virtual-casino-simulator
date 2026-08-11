@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Run the BAC-026/TEST-099 exact-source 2,000-round Baccarat UI qualification."""
 
 import argparse  # Parse only bounded output, progress, and headed-debug options.

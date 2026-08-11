@@ -1,5 +1,6 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import required dependency so tests can inspect provider implementation details.
 import inspect
 # Import required dependency so thread and process ledger calls can overlap safely.

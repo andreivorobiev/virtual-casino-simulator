@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic standard-8d Dragon Tiger engine tests."""
 
 # Import standard unit-test support.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """De-identified, retention-bounded guest-trial analytics for restricted-preview Admin use."""
 
 # Import date arithmetic for raw and aggregate retention enforcement.

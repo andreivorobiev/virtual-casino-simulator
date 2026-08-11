@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused deterministic tests for issue #207 progress reporting under TEST-010/TEST-042."""
 
 # Import an in-memory text stream for exact formatting assertions.

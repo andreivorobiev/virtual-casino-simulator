@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated issue #93 browser module without shared shell edits.
 
 // Import session-aware API helpers so compatibility player ids remain subordinate to the authenticated session.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Recoverable provider-subject enrollment into canonical Casino accounts. (OAUTH-013)
 
 The provider subject is the only external identity key. Provider email and display name are optional

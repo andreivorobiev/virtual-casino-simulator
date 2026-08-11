@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Catalog-discovered long-suite driver for Big Six Wheel after #110/#77 integration."""
 
 # Exercise one complete round through only public session-bound actions.

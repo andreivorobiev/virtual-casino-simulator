@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic Four Card Poker rules for GitHub issue #141.
 
 Four Card Poker deals the player five cards to build their best four-card hand and the dealer six cards to

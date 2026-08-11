@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free TEST-046 probe for the production WSGI transport adapter."""
 
 # Import in-memory streams for synthetic WSGI request bodies.

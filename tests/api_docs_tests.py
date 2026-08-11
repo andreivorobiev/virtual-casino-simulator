@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free complete Swagger contract inventory for API-003 and TEST-152."""
 
 # Import portable paths for source-bound inventory checks.

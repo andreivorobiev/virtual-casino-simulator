@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Unit tests for CARD-001 and POKER-001 primitives."""
 
 # Import the standard unit-test runner so this file remains dependency-free.

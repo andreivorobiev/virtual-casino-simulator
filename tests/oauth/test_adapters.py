@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Mock-network Google and Facebook adapter tests for issue #326.
 
 Requirements: OAUTH-003, OAUTH-005, OAUTH-010, SEC-010, and TEST-045.

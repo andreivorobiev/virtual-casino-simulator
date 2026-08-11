@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Real-browser isolated-surface verification for issue #87 without claiming backend acceptance."""
 
 # Import a partial helper so the static server can be rooted at the repository.

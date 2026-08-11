@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic Sic Bo rule tests mapped to DICE-001 and LEDGER-023."""
 
 # Import the dependency-free standard unit-test runner.

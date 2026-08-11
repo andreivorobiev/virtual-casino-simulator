@@ -1,4 +1,5 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Generate the catalog-wide server-authority inventory for issue #191."""
 
 # Import JSON support for the deterministic machine-readable certification artifact.

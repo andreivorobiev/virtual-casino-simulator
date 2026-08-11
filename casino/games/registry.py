@@ -1,11 +1,11 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import copy support so public API metadata cannot mutate runtime registration entries.
 import copy
 # Import dynamic module support so per-game descriptors own backend registration.
 import importlib
 # Import the canonical catalog and expansion target from the shared configuration facade.
 from casino.config import GAMES, GAME_CATALOG_TARGET
-# Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import MODULE_REVISIONS
 
 # Define the list_games function used by this module.
@@ -22,7 +22,6 @@ def list_games():
         item["kind"] = item.get("category")
         # Add the compatible public record to the API response.
         out.append(item)
-    # Return the computed value to the caller.
     return out
 
 # Define catalog_summary so API and tests can report current and target catalog capacity.

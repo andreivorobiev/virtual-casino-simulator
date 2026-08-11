@@ -1,15 +1,11 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Durable autoplay sessions and stop-safe control-plane state.
 from __future__ import annotations
-# Import required dependency so this module can use its public functions or constants.
 from casino.config import DATA_DIR, SCHEMA_VERSION
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import read_json, write_json
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import ValidationError, NotFoundError
 # Import a reentrant lock so nested autoplay lifecycle helpers preserve one registry transaction.
 from threading import RLock
@@ -27,7 +23,6 @@ VALID_STATUSES = {"starting", "running", "pause_requested", "paused", "stop_requ
 
 # Define the default_state function used by this module.
 def default_state() -> dict:
-    # Return the computed value to the caller.
     return {"schema_version": SCHEMA_VERSION, "sessions": []}
 
 
@@ -35,11 +30,9 @@ def default_state() -> dict:
 def load_state() -> dict:
     # Set st to the value needed for the next operation.
     st = read_json(AUTOPLAY_PATH, default_state)
-    # Branch when the following condition is true.
     if not isinstance(st, dict) or "sessions" not in st:
         # Set st to the value needed for the next operation.
         st = default_state()
-    # Return the computed value to the caller.
     return st
 
 
@@ -47,7 +40,6 @@ def load_state() -> dict:
 def save_state(st: dict) -> None:
     # Set st["schema_version"] to the value needed for the next operation.
     st["schema_version"] = SCHEMA_VERSION
-    # Execute this statement as part of the module's documented control flow.
     write_json(AUTOPLAY_PATH, st)
 
 
@@ -57,11 +49,8 @@ def list_sessions(active_only: bool = False) -> list[dict]:
     with AUTOPLAY_REGISTRY_LOCK:
         # Load one complete immutable-on-return registry snapshot.
         sessions = load_state().get("sessions", [])
-    # Branch when the following condition is true.
     if active_only:
-        # Return the computed value to the caller.
         return [s for s in sessions if s.get("status") in ("starting", "running", "pause_requested", "paused", "stop_requested")]
-    # Return the computed value to the caller.
     return sessions[-200:]
 
 # Define the get_session function used by this module.
@@ -74,39 +63,24 @@ def get_session(autoplay_id: str) -> dict:
 
 # Define the start function used by this module.
 def start(game_id: str, player_id: str = "human", speed: str = "medium", round_limit: int = 25, plan: dict | None = None, limits: dict | None = None) -> dict:
-    # Branch when the following condition is true.
     if speed not in VALID_SPEEDS:
         # Raise an error so invalid input or state is reported explicitly.
         raise ValidationError("Autoplay speed must be slow, medium, or fast")
     # Set session to the value needed for the next operation.
     session = {
-        # Execute this statement as part of the module's documented control flow.
         "autoplay_id": new_id("auto"),
-        # Execute this statement as part of the module's documented control flow.
         "game_id": game_id,
-        # Execute this statement as part of the module's documented control flow.
         "player_id": player_id,
-        # Execute this statement as part of the module's documented control flow.
         "status": "running",
-        # Execute this statement as part of the module's documented control flow.
         "speed": speed,
-        # Execute this statement as part of the module's documented control flow.
         "round_limit": int(round_limit or 1),
-        # Execute this statement as part of the module's documented control flow.
         "rounds_completed": 0,
-        # Execute this statement as part of the module's documented control flow.
         "stop_requested": False,
-        # Execute this statement as part of the module's documented control flow.
         "plan": plan or {},
-        # Execute this statement as part of the module's documented control flow.
         "limits": limits or {},
-        # Execute this statement as part of the module's documented control flow.
         "started_at": utc_now(),
-        # Execute this statement as part of the module's documented control flow.
         "updated_at": utc_now(),
-        # Execute this statement as part of the module's documented control flow.
         "last_action_at": None,
-        # Execute this statement as part of the module's documented control flow.
         "events": [{"ts": utc_now(), "event": "autoplay_started"}],
     }
     # Serialize the complete append transaction so concurrent starts cannot overwrite sibling session ids.
@@ -119,17 +93,13 @@ def start(game_id: str, player_id: str = "human", speed: str = "medium", round_l
         st["sessions"] = st["sessions"][-200:]
         # Commit the complete updated registry while this transaction still owns the lock.
         save_state(st)
-    # Return the computed value to the caller.
     return session
 
 
 # Define the _find function used by this module.
 def _find(st: dict, autoplay_id: str) -> dict:
-    # Iterate through the collection to process each item.
     for s in st.get("sessions", []):
-        # Branch when the following condition is true.
         if s.get("autoplay_id") == autoplay_id:
-            # Return the computed value to the caller.
             return s
     # Raise an error so invalid input or state is reported explicitly.
     raise NotFoundError(f"Autoplay session {autoplay_id} was not found")
@@ -155,7 +125,6 @@ def update(autoplay_id: str, **fields) -> dict:
         s["updated_at"] = utc_now()
         # Commit the complete registry before another lifecycle request can load it.
         save_state(st)
-    # Return the computed value to the caller.
     return s
 
 
@@ -177,19 +146,16 @@ def stop(autoplay_id: str) -> dict:
         s["updated_at"] = utc_now()
         # Commit the complete registry before releasing transaction ownership.
         save_state(st)
-    # Return the computed value to the caller.
     return s
 
 
 # Define the finish_stop function used by this module.
 def finish_stop(autoplay_id: str) -> dict:
-    # Return the computed value to the caller.
     return update(autoplay_id, status="stopped", stop_requested=True)
 
 
 # Define the complete function used by this module.
 def complete(autoplay_id: str) -> dict:
-    # Return the computed value to the caller.
     return update(autoplay_id, status="completed")
 
 
@@ -211,7 +177,6 @@ def tick(autoplay_id: str) -> dict:
         s["updated_at"] = utc_now()
         # Commit the complete registry before releasing transaction ownership.
         save_state(st)
-    # Return the computed value to the caller.
     return s
 
 

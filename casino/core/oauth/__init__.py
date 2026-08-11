@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Disabled-by-default OAuth provider foundation for GitHub issue #70.
 
 Requirements: OAUTH-001 through OAUTH-005 and USER-001. The integrated package

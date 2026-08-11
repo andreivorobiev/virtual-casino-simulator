@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Provide one session-aware player resolver for current and future game endpoints.
 from casino.core.validation import require_player_id  # Reuse canonical player-id validation.
 

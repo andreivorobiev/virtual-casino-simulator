@@ -1,4 +1,6 @@
-"""Prove issue #441's inert file-header policy foundation without migrating source."""
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+"""Prove issue #441's enforced file-header policy, safe writer, and migration boundaries."""
 
 # Import codec constants so byte-order-mark preservation can be asserted exactly.
 import codecs
@@ -22,7 +24,7 @@ if str(ROOT) not in sys.path:
     # Prepend the repository so a globally installed package cannot shadow the local checker.
     sys.path.insert(0, str(ROOT))
 
-# Import the exact Phase A checker API after establishing the repository import boundary.
+# Import the exact checker API after establishing the repository import boundary.
 from scripts import check_file_headers as policy
 
 
@@ -161,6 +163,14 @@ class FileHeaderPolicyTests(unittest.TestCase):
         selected = policy.tracked_source_paths(self.root, ("package",))
         # Confirm the one expected canonical path is selected.
         self.assertEqual(selected, (tracked.resolve(),))
+
+    def test_tracked_inventory_excludes_vendored_third_party_source(self) -> None:
+        """Keep first-party copyright headers out of vendored JavaScript."""
+
+        first_party = self._source("web/app.js", b"// First-party shell.\n")
+        self._source("web/vendor/library.js", b"/*! Upstream license. */\n")
+        selected = policy.tracked_source_paths(self.root, ("web",))
+        self.assertEqual(selected, (first_party.resolve(),))
 
     # Verify read-only mode reports policy debt and leaves source bytes untouched.
     def test_check_mode_never_writes(self) -> None:

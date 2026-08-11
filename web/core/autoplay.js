@@ -1,5 +1,6 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-// Import required dependency so this module can use its public functions or constants.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
+// Shared autoplay controls, session polling, and stop-safe player interactions.
 import { api, post, currentPlayerId } from './api.js';
 // Import the loaded common dictionary so start failures use player-facing localized copy.
 import { t } from './i18n.js';
@@ -17,7 +18,6 @@ function dispatch(msg){ window.dispatchEvent(new CustomEvent('casino-toast',{det
 function getSession(id){ if(!sessions.has(id)) sessions.set(id,{id,starting:false,running:false,stopRequested:false,remaining:0,requestedRounds:25,speed:'medium',timer:null,serverId:null,rateLimitRetries:0,boxes:new Set(),onTick:null}); return sessions.get(id); }
 // Define the setUi function that implements this UI or API behavior.
 function setUi(s){
-  // Execute this statement as part of the module's documented control flow.
   for(const box of s.boxes){
     // Store badge so later code can read or update this value.
     const badge=box.querySelector('.badge'), start=box.querySelector('.start'), stop=box.querySelector('.stop'), rounds=box.querySelector('.rounds'), speed=box.querySelector('.speed');
@@ -97,7 +97,6 @@ async function stopAfterFailure(s,error){
 }
 // Define the loop function that implements this UI or API behavior.
 async function loop(s){
-  // Execute this statement as part of the module's documented control flow.
   if(!s.running) return;
   // Set if(s.serverId){ try{ const d to the value needed for the next operation.
   if(s.serverId){ try{ const d=await api(`/api/v1/autoplay/sessions/${s.serverId}`); if(d.session?.stop_requested || d.session?.status==='stop_requested') s.stopRequested=true; }catch{} }
@@ -126,11 +125,9 @@ export function renderAutoplay({id,onTick,plan={},defaultRounds=25,roundsLabel='
   box.innerHTML=`<div class="row"><h3>Auto play</h3><span class="badge">Off</span></div><div class="row"><label>Speed <select class="speed" data-testid="${id}-auto-speed"><option value="slow">Slow</option><option value="medium">Medium</option><option value="fast">Fast</option></select></label><label>${roundsLabel} <input class="rounds" data-testid="${id}-auto-rounds" type="number" min="1" max="10000" value="${s.requestedRounds}"></label></div><div class="row"><button class="start" data-testid="${id}-auto-start">Start auto</button><button class="stop" data-testid="${id}-auto-stop" disabled>Stop</button></div>`;
   // Restore the retained speed after a game rerender recreates the widget. (AUTO-015)
   box.querySelector('.speed').value=s.speed;
-  // Execute this statement as part of the module's documented control flow.
   s.boxes.add(box);
   // Set box.querySelector('.start').onclick to the value needed for the next operation.
   box.querySelector('.start').onclick=async()=>{
-    // Execute this statement as part of the module's documented control flow.
     if(s.starting || s.running) return;
     // Set s.remaining to the value needed for the next operation.
     s.remaining=Math.max(1, Number(box.querySelector('.rounds').value||1)); s.requestedRounds=s.remaining;
@@ -172,10 +169,8 @@ export function renderAutoplay({id,onTick,plan={},defaultRounds=25,roundsLabel='
   box.querySelector('.stop').onclick=()=>stopAutoplay(id);
   // Set box._stop to the value needed for the next operation.
   box._stop=()=>stopAutoplay(id);
-  // Execute this statement as part of the module's documented control flow.
   setUi(s);
   // Set box.addEventListener('DOMNodeRemovedFromDocument',() to the value needed for the next operation.
   box.addEventListener('DOMNodeRemovedFromDocument',()=>s.boxes.delete(box));
-  // Return the computed value to the caller.
   return box;
 }

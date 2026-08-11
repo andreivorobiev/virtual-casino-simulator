@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Exact callback URL, state, nonce, and query validation for issue #70.
 
 Requirements: OAUTH-003. These helpers do not register public routes.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic rules, privacy, and settlement tests for issue #95."""
 
 # Import unittest for dependency-free focused execution.

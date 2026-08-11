@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Provider-neutral game-action contract checkpoint for issue #430 Phase0c slice 2.
 
 This module defines immutable action identities, declared resources, snapshots, plans,

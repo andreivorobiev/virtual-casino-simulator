@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated issue #92 Deuces Wild Video Poker browser module.
 
 // Import session-aware API helpers so the authenticated router remains authoritative.

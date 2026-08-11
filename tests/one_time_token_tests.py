@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused deterministic and cross-process acceptance for inert one-time-token infrastructure."""
 
 # Import process and thread executors for bounded exactly-once race evidence.

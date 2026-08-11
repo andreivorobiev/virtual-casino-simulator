@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Optional session wellness reminders, break controls, and neutral session summaries. (#167)
 
 Everything here is opt-in and off by default. The module deliberately offers no reward, streak,

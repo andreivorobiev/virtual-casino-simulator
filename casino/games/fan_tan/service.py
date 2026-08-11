@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Ledger-only, retry-safe orchestration for Fan-Tan rounds."""
 
 # Import cryptographic index selection for production pile counts.

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free proof for the #323 shell and Roulette payload projections."""
 
 # Import deterministic JSON sizing for before/after projection assertions.

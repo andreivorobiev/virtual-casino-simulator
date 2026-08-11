@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Keno drawn-ball rail layout regression test. (#320-adjacent, KENO-026)
 
 After a draw, the twenty result balls render in a single horizontal rail. The rail is a flex

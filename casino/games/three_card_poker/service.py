@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Replay-safe state and ledger coordination for Three Card Poker.
 
 Requirements: SESSION-005, STORAGE-001, STORAGE-002, LEDGER-005,

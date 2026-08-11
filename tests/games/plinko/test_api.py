@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session isolation and exactly-once service tests for integrated Plinko."""
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.

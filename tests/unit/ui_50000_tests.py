@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused TEST-092 proofs for the exact-source 50,000-cycle UI harness."""
 
 import argparse  # Build narrow command namespaces without invoking the CLI parser.

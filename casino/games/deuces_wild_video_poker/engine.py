@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic full-pay Deuces Wild engine for GitHub issue #92.
 
 Existing requirements: CARD-001, POKER-001, LEDGER-005, and LEDGER-023.

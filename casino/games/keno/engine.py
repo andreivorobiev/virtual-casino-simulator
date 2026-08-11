@@ -1,11 +1,9 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Pure Keno ticket, draw, match, and payout calculations.
 import random
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import ValidationError
 
 # Set GAME_ID to the value needed for the next operation.
@@ -63,18 +61,14 @@ PAYTABLE = {
 
 # Define the default_state function used by this module.
 def default_state():
-    # Return the computed value to the caller.
     return {"open_tickets": [], "last_draws": []}
 
 # Define the normalize_spots function used by this module.
 def normalize_spots(spots):
     # Set nums to the value needed for the next operation.
     nums = sorted({int(x) for x in spots})
-    # Branch when the following condition is true.
     if not 1 <= len(nums) <= 20: raise ValidationError("Pick 1 to 20 Keno spots")
-    # Branch when the following condition is true.
     if nums[0] < 1 or nums[-1] > 80: raise ValidationError("Keno numbers must be 1 through 80")
-    # Return the computed value to the caller.
     return nums
 
 # Define the add_ticket function used by this module.
@@ -83,18 +77,13 @@ def add_ticket(state, player_id, spots, amount, source="manual"):
     nums = normalize_spots(spots)
     # Set ticket to the value needed for the next operation.
     ticket = {"ticket_id": new_id("keno"), "player_id": player_id, "spots": nums, "amount": amount, "source": source, "created_at": utc_now()}
-    # Execute this statement as part of the module's documented control flow.
     state.setdefault("open_tickets", []).append(ticket)
-    # Return the computed value to the caller.
     return ticket
 
 # Define the remove_ticket function used by this module.
 def remove_ticket(state, ticket_id, player_id):
-    # Iterate through the collection to process each item.
     for i,t in enumerate(state.setdefault("open_tickets", [])):
-        # Branch when the following condition is true.
         if t["ticket_id"] == ticket_id and t["player_id"] == player_id:
-            # Return the computed value to the caller.
             return state["open_tickets"].pop(i)
     # Raise an error so invalid input or state is reported explicitly.
     raise ValidationError("Keno ticket was not found")
@@ -123,7 +112,6 @@ def commit_draw(state):
         mult = row.get(caught, 0)
         # Set payout to the value needed for the next operation.
         payout = round(float(t["amount"])*mult, 2)
-        # Execute this statement as part of the module's documented control flow.
         results.append({"ticket": t, "catches": catches, "catch_count": caught, "multiplier": mult, "payout": payout})
     # Return the complete committed draw; the caller persists it as the pending settlement before crediting.
     return {"round_id": rid, "timestamp": utc_now(), "drawn": drawn, "results": results}

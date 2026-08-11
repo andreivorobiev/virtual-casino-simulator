@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated Over/Under 7 route for GitHub issue #135.
 // Import standard API helpers so requests use the shared envelope.
 import { api, post } from '../core/api.js';

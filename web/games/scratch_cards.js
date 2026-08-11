@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated issue #87 Scratch Cards browser module without shared shell edits.
 
 // Import session-aware API helpers so the shared resolver can override every caller identity.

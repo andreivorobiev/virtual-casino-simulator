@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Version-aware What's New tour eligibility for curated release entries. (#165)
 
 Product direction (issue #165, 2026-07-23) fixes three rules this module exists to enforce:

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Server-authoritative Plinko rules accepted for GitHub issue #136.
 
 Permanent requirements: PLINKO-001 through PLINKO-005.

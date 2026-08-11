@@ -1,5 +1,6 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-// Import required dependency so this module can use its public functions or constants.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
+// Shared browser formatting, wallet, evidence, and game-control helpers.
 import { api, post, currentPlayerId, withCurrentPlayer } from './api.js';
 // Import the locale-aware formatter so shared game helpers cannot leak English labels in Russian.
 import { formatMoney } from './i18n.js';

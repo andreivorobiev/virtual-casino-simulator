@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-bound Red Dog API adapter with replay-safe ledger settlement.
 
 Requirements: CORE-009, CORE-011, CORE-012, SESSION-005, LEDGER-005,

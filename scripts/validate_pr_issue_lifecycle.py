@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Require pull requests to bind delivered work to GitHub's automatic issue closure."""
 
 # Import JSON support for the immutable Actions event payload.

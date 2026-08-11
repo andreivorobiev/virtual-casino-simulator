@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure validation, deterministic dice, settlement, and state helpers for Chuck-a-Luck."""
 
 # Import deep-copy support so public payloads cannot mutate persisted nested rows.

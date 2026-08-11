@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused deterministic engine tests for issue #130 and POKER-001."""
 
 # Import the standard unit-test runner for dependency-free focused checks.

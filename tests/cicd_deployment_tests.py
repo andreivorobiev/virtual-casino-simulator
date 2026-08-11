@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Listener-free CI/CD workflow policy tests for TOOL-002/008 and TEST-036/133."""
 
 # Import Python syntax inspection for listener-free browser ownership policy tests.

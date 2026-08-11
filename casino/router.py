@@ -1,13 +1,11 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Route registration, request coercion, identity guards, and response-envelope dispatch.
 import inspect
-# Import required dependency so this module can use its public functions or constants.
 import re
 # Import monotonic timing for coarse guest latency buckets.
 import time
-# Import required dependency so this module can use its public functions or constants.
 from urllib.parse import urlparse, parse_qs
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import CasinoError, NotFoundError
 # Import the shared resolver so every current and future game route is session-bound centrally.
 from casino.core.request_player import resolve_authenticated_player, sanitize_game_intent
@@ -135,11 +133,8 @@ class Route:
 
     # Define the match function used by this module.
     def match(self, method: str, path: str):
-        # Branch when the following condition is true.
         if self.method != method.upper():
-            # Return the computed value to the caller.
             return None
-        # Return the computed value to the caller.
         return self.regex.match(path)
 
 # Define the Router class that groups related behavior.
@@ -151,27 +146,21 @@ class Router:
 
     # Define the add function used by this module.
     def add(self, method: str, pattern: str, handler):
-        # Execute this statement as part of the module's documented control flow.
         self.routes.append(Route(method, pattern, handler))
-        # Return the computed value to the caller.
         return handler
 
     # Define the get function used by this module.
     def get(self, pattern: str):
         # Define the deco function used by this module.
         def deco(fn):
-            # Execute this statement as part of the module's documented control flow.
             self.add("GET", pattern, fn); return fn
-        # Return the computed value to the caller.
         return deco
 
     # Define the post function used by this module.
     def post(self, pattern: str):
         # Define the deco function used by this module.
         def deco(fn):
-            # Execute this statement as part of the module's documented control flow.
             self.add("POST", pattern, fn); return fn
-        # Return the computed value to the caller.
         return deco
 
     # Define patch so v2 Admin updates can use their published HTTP method.
@@ -187,9 +176,7 @@ class Router:
     def delete(self, pattern: str):
         # Define the deco function used by this module.
         def deco(fn):
-            # Execute this statement as part of the module's documented control flow.
             self.add("DELETE", pattern, fn); return fn
-        # Return the computed value to the caller.
         return deco
 
     # Define the dispatch function used by this module.
@@ -218,11 +205,9 @@ class Router:
             query["player_id"] = player_id
             # Publish the resolution for future context-aware game handlers.
             context["resolved_player_id"] = player_id
-        # Iterate through the collection to process each item.
         for route in self.routes:
             # Set m to the value needed for the next operation.
             m = route.match(method, path)
-            # Branch when the following condition is true.
             if m:
                 # Set kwargs to the value needed for the next operation.
                 kwargs = m.groupdict()

@@ -1,4 +1,5 @@
-// AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Import API helpers so Admin tabs continue using the frozen v1 contract.
 import { api, post } from './core/api.js';
 // Import UI helpers for escaping user/server text and showing transient status.

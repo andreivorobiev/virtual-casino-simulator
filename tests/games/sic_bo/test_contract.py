@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused additive v1 contract checks for the unregistered issue #88 slice."""
 
 # Import repository-relative path handling for the game-owned OpenAPI document.

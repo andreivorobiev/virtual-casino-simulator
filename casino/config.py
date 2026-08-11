@@ -1,13 +1,11 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Repository paths, environment policy, and descriptor-driven game catalog configuration.
 from pathlib import Path
 # Import JSON support so per-module game descriptors form the canonical runtime catalog.
 import json
-# Import required dependency so this module can use its public functions or constants.
 import hashlib
-# Import required dependency so this module can use its public functions or constants.
 import ipaddress
-# Import required dependency so this module can use its public functions or constants.
 import os
 # Import the packaged application release from the canonical version-manifest loader.
 from casino.module_versions import APP_VERSION
@@ -205,7 +203,6 @@ def is_loopback_host(host: str) -> bool:
     normalized = str(host or "").strip().lower().strip("[]")
     # Treat the conventional local hostname as loopback without depending on DNS resolution.
     if normalized == "localhost":
-        # Return the computed value to the caller.
         return True
     # Start protected logic so invalid or wildcard host values fail closed as non-loopback.
     try:
@@ -213,7 +210,6 @@ def is_loopback_host(host: str) -> bool:
         return ipaddress.ip_address(normalized).is_loopback
     # Handle hostnames and malformed addresses as externally reachable bindings.
     except ValueError:
-        # Return the computed value to the caller.
         return False
 
 # Define the validate_bootstrap_for_startup function used before any runtime state is mutated.

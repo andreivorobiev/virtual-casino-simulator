@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Daily Draw Lab rules for the shared settlement core: entropy, validation, resolution. (#144)
 
 Every function is pure and deterministic given its inputs, so the shared core can settle a draw, replay

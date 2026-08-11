@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Isolated additive v1 route registration for Operations probes."""
 
 # Import regular expressions so caller-controlled strings must match public contract shapes.

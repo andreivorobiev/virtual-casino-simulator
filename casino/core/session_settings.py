@@ -1,4 +1,5 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import future annotations so the tuple return hint parses on the supported interpreter.
 from __future__ import annotations
 # Import the shared schema version so the stored document stays consistent with peer settings docs.

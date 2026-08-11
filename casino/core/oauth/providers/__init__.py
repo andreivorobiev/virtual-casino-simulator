@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Static local, Google, and Facebook provider definitions for issue #70.
 
 Requirements: OAUTH-001 and OAUTH-005.

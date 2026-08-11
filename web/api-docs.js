@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Enumerate every governed OpenAPI source so one Swagger URL exposes the complete published API. (API-003)
 const contractFiles = Object.freeze([
   // Group the first reviewed contracts without inventing runtime discovery or hidden endpoints.

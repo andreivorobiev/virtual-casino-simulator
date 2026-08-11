@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Long-suite driver for Roulette."""
 
 # Store red numbers so the outside-bet payload remains contract-compatible.

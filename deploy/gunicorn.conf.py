@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Loopback-only Gunicorn policy for the CORE-023 supervised service."""
 
 # Import environment access for the non-secret listener port override used by isolated smoke tests.

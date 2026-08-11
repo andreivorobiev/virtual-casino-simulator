@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Route-free exactly-once settlement adapter for shared game cores. (issue #430)
 
 The storage provider already owns atomic action identity, balance mutation, and durable

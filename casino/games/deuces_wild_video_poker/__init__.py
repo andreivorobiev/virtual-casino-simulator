@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Isolated Deuces Wild Video Poker package for GitHub issue #92."""
 
 # Re-export the stable game identifier for game-local adapters and focused tests.

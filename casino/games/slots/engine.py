@@ -1,13 +1,10 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Import finite-number checks so the public stake boundary rejects NaN and infinity.
 import math
-# Import required dependency so this module can use its public functions or constants.
 import random
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import ValidationError
 
 # Set GAME_ID to the value needed for the next operation.
@@ -18,28 +15,18 @@ _rng = random.SystemRandom()
 SYMBOLS = ["CHERRY", "LEMON", "BAR", "BELL", "SEVEN", "WILD", "SCATTER"]
 # Set REELS to the value needed for the next operation.
 REELS = [
-    # Explain this executable/data line so future Codex changes preserve intent.
     ["CHERRY","LEMON","BAR","CHERRY","BELL","LEMON","WILD","BAR","CHERRY","SEVEN","LEMON","SCATTER","BELL","BAR"],
-    # Explain this executable/data line so future Codex changes preserve intent.
     ["LEMON","CHERRY","BAR","BELL","LEMON","WILD","CHERRY","BAR","SEVEN","LEMON","BELL","SCATTER","BAR","CHERRY"],
-    # Explain this executable/data line so future Codex changes preserve intent.
     ["BAR","LEMON","CHERRY","BELL","WILD","LEMON","BAR","CHERRY","SEVEN","SCATTER","BELL","LEMON","BAR","CHERRY"],
-    # Explain this executable/data line so future Codex changes preserve intent.
     ["CHERRY","BAR","LEMON","BELL","CHERRY","WILD","BAR","LEMON","SEVEN","BELL","SCATTER","CHERRY","BAR","LEMON"],
-    # Explain this executable/data line so future Codex changes preserve intent.
     ["LEMON","CHERRY","BAR","WILD","BELL","LEMON","CHERRY","BAR","SEVEN","SCATTER","BELL","LEMON","BAR","CHERRY"],
 ]
 # Set PAYLINES to the value needed for the next operation.
 PAYLINES = {
-    # Execute this statement as part of the module's documented control flow.
     1: [[1,1,1,1,1]],
-    # Execute this statement as part of the module's documented control flow.
     3: [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2]],
-    # Execute this statement as part of the module's documented control flow.
     5: [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2]],
-    # Execute this statement as part of the module's documented control flow.
     9: [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,0,1,2,1],[1,2,1,0,1]],
-    # Execute this statement as part of the module's documented control flow.
     20: [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,0,1,2,1],[1,2,1,0,1],[0,1,1,1,0],[2,1,1,1,2],[1,0,0,0,1],[1,2,2,2,1],[0,1,0,1,0],[2,1,2,1,2],[0,2,0,2,0],[2,0,2,0,2],[1,0,2,0,1],[1,2,0,2,1],[0,2,1,0,2]],
 }
 # Line-pay multipliers rebalance the real shipped reels to the approved house-side band. (SLOT-036)
@@ -268,7 +255,6 @@ def effective_configuration(state, active_lines, line_bet):
 def render_grid(stops):
     # Set grid to the value needed for the next operation.
     grid = [[], [], []]
-    # Iterate through the collection to process each item.
     for reel, stop in zip(REELS, stops):
         # Set L to the value needed for the next operation.
         L = len(reel)
@@ -278,18 +264,15 @@ def render_grid(stops):
         for r in range(3):
             # Append exactly one symbol from this reel to each visible row.
             grid[r].append(symbols[r])
-    # Return the computed value to the caller.
     return grid
 
 # Define the evaluate function used by this module.
 def evaluate(grid, active_lines, line_bet):
-    # Branch when the following condition is true.
     if active_lines not in PAYLINES:
         # Raise an error so invalid input or state is reported explicitly.
         raise ValidationError("active_lines must be one of 1,3,5,9,20")
     # Collect authoritative win rows and the independently reconcilable line return.
     wins=[]; line_payout=0.0
-    # Iterate through the collection to process each item.
     for idx,line in enumerate(PAYLINES[active_lines]):
         # Set seq to the value needed for the next operation.
         seq = [grid[row][col] for col,row in enumerate(line)]
@@ -297,19 +280,15 @@ def evaluate(grid, active_lines, line_bet):
         base = next((s for s in seq if s not in ("WILD", "SCATTER")), seq[0])
         # Set count to the value needed for the next operation.
         count=0
-        # Iterate through the collection to process each item.
         for s in seq:
-            # Branch when the following condition is true.
             if s == base or s == "WILD": count += 1
             # Handle the fallback branch when prior conditions did not match.
             else: break
         # Set mult to the value needed for the next operation.
         mult = PAYTABLE.get(base, {}).get(count, 0)
-        # Branch when the following condition is true.
         if mult:
             # Set payout to the value needed for the next operation.
             payout = round(mult*line_bet,2); line_payout += payout
-            # Execute this statement as part of the module's documented control flow.
             wins.append({"line_index": idx, "line": line, "sequence": seq, "symbol": base, "count": count, "multiplier": mult, "payout": payout})
     # Set scatter_count to the value needed for the next operation.
     scatter_count = sum(1 for row in grid for s in row if s == "SCATTER")
@@ -317,9 +296,7 @@ def evaluate(grid, active_lines, line_bet):
     free_spins_awarded = FREE_SPINS_AWARDED if scatter_count >= FREE_SPIN_SCATTER_THRESHOLD else 0
     # Price visible scatters from the same authoritative table published to the API and browser.
     scatter_payout = round(line_bet * SCATTER_PAYS.get(scatter_count, 0), 2)
-    # Branch when the following condition is true.
     if scatter_payout:
-        # Execute this statement as part of the module's documented control flow.
         wins.append({"scatter_count": scatter_count, "symbol":"SCATTER", "payout": scatter_payout, "kind":"scatter"})
     # Reconcile the complete non-progressive return from its two disjoint sources.
     payout = round(line_payout + scatter_payout, 2)
@@ -342,7 +319,6 @@ def spin(state, active_lines=5, line_bet=1.0, round_id=None):
         state["free_spin_basis"] = {"active_lines": active_lines, "line_bet": line_bet}
     # Set cost to the value needed for the next operation.
     cost = configuration["cost"]
-    # Branch when the following condition is true.
     if free: state["free_spins"] = int(state.get("free_spins",0)) - 1
     # Draw each reel stop from the CSPRNG instance instead of the seedable module generator. (issue #420)
     stops = [_rng.randrange(len(r)) for r in REELS]
@@ -350,7 +326,6 @@ def spin(state, active_lines=5, line_bet=1.0, round_id=None):
     grid = render_grid(stops)
     # Set result to the value needed for the next operation.
     result = evaluate(grid, active_lines, line_bet)
-    # Branch when the following condition is true.
     if result["free_spins_awarded"]:
         # Set state["free_spins"] to the value needed for the next operation.
         state["free_spins"] = int(state.get("free_spins",0)) + result["free_spins_awarded"]
@@ -368,7 +343,6 @@ def spin(state, active_lines=5, line_bet=1.0, round_id=None):
     progressive_after_contribution = store_progressive_meter(state, progressive_before + progressive_contribution)
     # Default the additive jackpot component so every result reconciles without missing keys.
     result["progressive_hit"] = 0.0
-    # Branch when the following condition is true.
     if not free and configuration["progressive_eligible"] and any(w.get("symbol") == "SEVEN" and w.get("count") == 5 for w in result["wins"]):
         # Set result["payout"] + to the value needed for the next operation.
         result["payout"] = round(result["payout"] + progressive_after_contribution, 2)
@@ -380,9 +354,7 @@ def spin(state, active_lines=5, line_bet=1.0, round_id=None):
     round_id = round_id or new_id("slot")
     # Set spin_data to the value needed for the next operation.
     spin_data = {"round_id": round_id, "timestamp": utc_now(), "stops": stops, "grid": grid, "requested_active_lines": configuration["requested_active_lines"], "requested_line_bet": configuration["requested_line_bet"], "active_lines": active_lines, "line_bet": line_bet, "cost": cost, **result, "free_spin": free, "free_spins_remaining": state.get("free_spins",0), "progressive_eligible": configuration["progressive_eligible"], "progressive_basis": dict(state.get("progressive_basis", {})), "progressive_before": progressive_before, "progressive_contribution": progressive_contribution, "progressive": state.get("progressive")}
-    # Execute this statement as part of the module's documented control flow.
     state.setdefault("last_spins", []).append(spin_data)
     # Set state["last_spins"] to the value needed for the next operation.
     state["last_spins"] = state["last_spins"][-100:]
-    # Return the computed value to the caller.
     return spin_data

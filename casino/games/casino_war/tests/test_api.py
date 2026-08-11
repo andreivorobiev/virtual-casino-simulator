@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Replay, ledger, and session-bound Casino War controller tests."""
 
 # Import deep-copy support to simulate persistence boundaries.

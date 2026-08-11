@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused TOOL-003 tests for deterministic release and rollback provenance."""
 
 # Import JSON support for fixture manifests and provenance assertions.

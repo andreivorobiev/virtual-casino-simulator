@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Durable external-provider operational kill switches. (OAUTH-012)
 
 Signup method flags decide whether a new account may be created.  These switches are deliberately

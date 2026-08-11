@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused real-backend browser validation for the isolated Chuck-a-Luck slice."""
 
 # Import argument parsing for optional evidence output.

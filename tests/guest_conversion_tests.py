@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused guest-to-account conversion tests. (#378, CONVERT-001/002)"""
 
 # Import a bounded thread pool for deterministic concurrent wallet-ownership proof.

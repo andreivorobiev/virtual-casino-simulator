@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Isolated Four Card Poker browser module for GitHub issue #141 without shared shell edits.
 
 // Import session-aware API helpers so compatibility player ids stay subordinate to the session.

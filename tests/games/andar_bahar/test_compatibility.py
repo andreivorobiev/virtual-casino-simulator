@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Frozen-v1 compatibility and browser-resource regressions for issue #409."""
 
 # Import hashing for exact LF-stable contract and decision-record evidence.

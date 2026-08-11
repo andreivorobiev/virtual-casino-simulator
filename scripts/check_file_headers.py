@@ -1,8 +1,6 @@
-"""Check and safely add repository file headers without changing executable behavior.
-
-Phase A for issue #441 deliberately provides an inert policy foundation.  The
-checker is not wired into CI and does not migrate existing source files.
-"""
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+"""Enforce and safely add governed first-party source headers without behavior changes."""
 
 # Import argument parsing so the checker exposes explicit read-only and bounded-write modes.
 import argparse
@@ -32,6 +30,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SPDX_LINE = "SPDX-License-Identifier: Apache-2.0"
 # Require NOTICE to remain the authoritative source for the fixed copyright year and holder text.
 COPYRIGHT_PATTERN = re.compile(r"^Copyright 2026 .+$")
+# Exclude vendored third-party sources whose upstream license notices must remain authoritative.
+EXCLUDED_SOURCE_PREFIXES = ("web/vendor/",)
 # Recognize a legal Python encoding cookie only in the first or second physical source line.
 PYTHON_ENCODING_COOKIE = re.compile(r"^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)")
 # Recognize all physical newline encodings so mixed-newline files fail closed.
@@ -68,7 +68,7 @@ class HeaderPolicyError(ValueError):
 
 # Store one path-specific policy failure in a stable machine-testable representation.
 class PolicyFinding(NamedTuple):
-    """Describe one selected file that does not satisfy the Phase A policy."""
+    """Describe one selected file that does not satisfy the source-header policy."""
 
     # Preserve the repository-relative path for concise operator output.
     path: str
@@ -191,6 +191,10 @@ def tracked_source_paths(root: Path, boundaries: tuple[str, ...] = ()) -> tuple[
             continue
         # Normalize Git separators for consistent boundary matching on Windows.
         relative_posix = relative_text.replace("\\", "/")
+        # Leave third-party vendored source under its upstream ownership and license terms.
+        if any(relative_posix.startswith(prefix) for prefix in EXCLUDED_SOURCE_PREFIXES):
+            # Skip vendored bytes before any first-party header or purpose checks.
+            continue
         # Reject absolute or parent-traversing inventory entries even though Git normally forbids them.
         if relative_posix.startswith("/") or ".." in Path(relative_posix).parts:
             # Treat unexpected Git metadata as unsafe rather than trying to repair it.
@@ -393,8 +397,8 @@ def _has_exact_header(
         # Select governed text only from line comments so string literals never become false headers.
         if line.lstrip().startswith(("#", "//", "/*", "*"))  # Restrict marker detection to comments.
         and (  # Require either governed marker text after confirming comment syntax.
-            "Copyright " in _comment_text(line)  # Detect any copyright marker for conflict checks.
-            or "SPDX-License-Identifier:" in _comment_text(line)  # Detect any SPDX marker for conflict checks.
+            _comment_text(line).startswith("Copyright ")  # Detect a copyright marker, not prose naming one.
+            or _comment_text(line).startswith("SPDX-License-Identifier:")  # Detect an SPDX marker prefix.
         )
     ]
     # Define the only accepted exact governed marker sequence.
@@ -859,7 +863,7 @@ def run_repository(
 
     # Refuse any write without an explicit narrower-than-root boundary.
     if write and not boundaries:
-        # Prevent an accidental repository-wide migration during the inert Phase A.
+        # Prevent an accidental repository-wide rewrite outside explicit operator boundaries.
         raise HeaderPolicyError("--write requires at least one explicit --path boundary")
     # Resolve NOTICE once before source inspection or staging.
     copyright_line = notice_copyright(root)
@@ -926,7 +930,7 @@ def run_repository(
     return PolicyRun(changed=len(staged) if write else 0, findings=())
 
 
-# Build the narrow Phase A command-line interface.
+# Build the narrow source-header command-line interface.
 def _parser() -> argparse.ArgumentParser:
     """Return the command-line parser without reading process-global arguments."""
 
@@ -947,7 +951,7 @@ def _parser() -> argparse.ArgumentParser:
         default=[],  # Use an empty selection only for check mode.
         help="repository-relative file or directory boundary; repeat as needed",  # Explain safe use.
     )  # Finish path-option registration.
-    # Allow an explicit current filler baseline without making Phase A depend on a new repository file.
+    # Allow an explicit current filler baseline for future monotonic debt migrations.
     parser.add_argument("--filler-baseline", type=Path)
     # Allow an explicit prior baseline for monotonic transition validation.
     parser.add_argument("--previous-filler-baseline", type=Path)

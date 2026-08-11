@@ -95,7 +95,7 @@ Intentional exceptions and follow-up issue:
 - [ ] python scripts/validate_requirements.py
 - [ ] python scripts/validate_versions.py
 - [ ] python scripts/generate_docs.py --check
-- [ ] python scripts/check_comment_density.py
+- [ ] python scripts/check_file_headers.py --check
 
 ## Screenshots or evidence
 

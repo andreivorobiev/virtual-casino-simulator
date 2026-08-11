@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic Casino Hold'em rules for GitHub issue #139.
 
 Requirements used: CARD-001, POKER-001, LEDGER-005, LEDGER-006, LEDGER-023, SESSION-005, TOKEN-001.

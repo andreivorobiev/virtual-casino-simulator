@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Daily Draw Lab rules: the number pool, the draw size, and per-pick paytables. (#144)
 
 Daily Draw Lab draws five distinct numbers from one to thirty. The player marks one to five numbers, and

@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Provide the isolated Red Dog browser module for GitHub issue #84.
 // Requirements: CARD-002, CORE-008, I18N-001, I18N-002, UX-001, UX-002, UX-003, UX-006.
 

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Four Card Poker engine and service tests. (#141, FOURCP-001/002)"""
 
 # Import deep copy so the in-memory state store isolates every saved document.

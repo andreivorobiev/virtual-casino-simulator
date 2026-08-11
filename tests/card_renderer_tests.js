@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Exercise CARD-002 without requiring a browser or third-party JavaScript test runner.
 
 // Import strict assertions for deterministic unit failures.

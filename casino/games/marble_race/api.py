@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Additive v1 router registration for the isolated Marble Race module on the settlement core. (#157)"""
 
 # Import the canonical player-id validator used by current game endpoints.

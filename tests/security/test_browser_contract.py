@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Browser-client CSRF and guest context-proof contract wrapper for TEST-047 and TEST-080."""
 
 # Import executable discovery for local and CI Node runtimes.

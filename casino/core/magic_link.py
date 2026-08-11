@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Disabled optional passwordless magic-link login over the token and mail foundations. (#337)
 
 This service composes the purpose-bound one-time-token platform (#331) and the transactional-mail

@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Browser-free proof for the Package D0 payload/frontend baseline."""
 
 # Import abstract-syntax inspection for the source-policy gate.

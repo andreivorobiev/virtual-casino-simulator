@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Versioned MySQL migration and DDL-free runtime compatibility for MYSQL-005."""
 
 # Import annotations so immutable migration records can reference their own types.

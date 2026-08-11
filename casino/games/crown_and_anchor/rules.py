@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Crown and Anchor symbol dice rules for issue #133."""
 
 # Identify this module consistently across state, ledger, and contract proposal files.

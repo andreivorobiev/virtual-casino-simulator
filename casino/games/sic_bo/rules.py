@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable 50-position Sic Bo rules and payout metadata for issue #88."""
 
 # Import pair generation for the fifteen distinct two-die combinations.

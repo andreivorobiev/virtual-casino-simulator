@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated Dragon Tiger browser module for GitHub issue #83.
 
 // Import session-bound API helpers without sending a caller-selected player id.

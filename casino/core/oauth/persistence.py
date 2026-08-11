@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Cross-process OAuth flow, proof, rate, and identity-link persistence.
 
 Requirements: OAUTH-003, OAUTH-004, OAUTH-008, OAUTH-009, STORAGE-001,

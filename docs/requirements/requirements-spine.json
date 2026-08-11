@@ -8716,17 +8716,40 @@
     {
       "id": "TOOL-009",
       "module": "Tooling",
-      "description": "The comment-density gate counts only comment lines and whitespace-delimited inline comments as documentation and fails its workflow below an enforced repository-wide floor.",
+      "description": "The historical comment-density command remains a compatible fail-closed entry point that delegates to the governed first-party file-header, purpose-documentation, and generated-filler policy gate.",
       "status": "PASS",
-      "api_tests": [],
+      "api_tests": [
+        "FILE-HEADER-POLICY-001"
+      ],
       "browser_tests": [],
       "implementation_files": [
         "scripts/check_comment_density.py",
-        "verify_rules.py"
+        "scripts/check_file_headers.py",
+        ".github/workflows/comment-density.yml"
       ],
       "introduced_in": "issue-416-density-gate",
-      "changed_in": "issue-416-density-gate",
-      "notes": "The previous heuristic counted URLs, anchors, and hex colors as documentation and the gate returned success unconditionally; the verify_rules shebang displaced by the auto-commenter and the filler line injected into its module docstring were repaired in the same change."
+      "changed_in": "issue-441-file-header-policy",
+      "notes": "Issue #441 superseded the density ratio with objective source-header, purpose, syntax-placement, and exact-filler checks while preserving the old command for durable documentation and automation compatibility."
+    },
+    {
+      "id": "COMMENT-001",
+      "module": "Commenting Policy",
+      "description": "Every tracked first-party Python and JavaScript source carries the exact NOTICE-derived copyright and Apache-2.0 SPDX header at a language-valid position, preserves executable behavior and upstream vendor notices, states a substantive file purpose, and contains no governed machine-generated filler template.",
+      "status": "PASS",
+      "api_tests": [
+        "FILE-HEADER-POLICY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "AGENTS.md",
+        "docs/commenting_policy.md",
+        "scripts/check_file_headers.py",
+        "tests/file_header_policy_tests.py",
+        ".github/workflows/comment-density.yml"
+      ],
+      "introduced_in": "issue-441-file-header-policy",
+      "changed_in": "issue-441-file-header-policy",
+      "notes": "The fixed 2026 holder text comes verbatim from NOTICE; vendored JavaScript under web/vendor retains upstream ownership, semantic package markers may remain license-only, and the one-time migration removed only exact comment-token filler while preserving Python executable-token fingerprints."
     },
     {
       "id": "TOOL-010",

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 # Regenerate the reviewed Browser duration profile from exact sharded result evidence. (issue #502)
 import json
 # Inspect finite float measurements without coercing arbitrary-precision integers.

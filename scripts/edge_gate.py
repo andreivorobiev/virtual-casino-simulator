@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Validate and observe the restricted-preview edge without mutating deployment state."""
 
 # Import argument parsing for the repository validator and read-only observation commands.

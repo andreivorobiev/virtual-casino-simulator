@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Read-only Compare Games attributes derived from the catalog. (#160)
 
 Product direction (issue #160, 2026-07-23) fixes what this module may and may not expose:

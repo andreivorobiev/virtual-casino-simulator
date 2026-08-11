@@ -1,19 +1,15 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
+# Baccarat API actions, validation, persistence, and exactly-once settlement orchestration.
 from casino.core.state_store import load_player_game_state, save_player_game_state
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
 # Import the descriptor allowlist so the handler cannot drift from central router coercion.
 from casino.core.game_rules import declared_fields
-# Import required dependency so this module can use its public functions or constants.
 from casino.core import players, logger
 # Import the one canonical game-money boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
-# Import required dependency so this module can use its public functions or constants.
 from casino.games.baccarat import engine
-# Import required dependency so this module can use its public functions or constants.
 from casino.errors import ConflictError
 
 # Set GAME_ID to the value needed for the next operation.
@@ -38,7 +34,6 @@ def settle_committed_coup(player_id: str, state: dict, coup: dict):
         credit = None
         # Track storage replay evidence so a raced or recovered settlement never repeats side effects. (issue #403)
         replayed = False
-        # Branch when the following condition is true.
         if res["credit"] > 0:
             # Commit or replay the payout under the durable placement-time bet action identity. (issue #403)
             credit, replayed = SETTLEMENT.apply_once(player_id=b["player_id"], signed_amount=res["credit"], transaction_type="BACCARAT_SETTLEMENT_CREDIT", action_key=f"{b['bet_id']}:settlement", round_id=coup["round_id"], request_fingerprint=f"{b['bet_id']}:{res['outcome']}:{res['credit']}", details={"bet_id": b["bet_id"], "outcome": res["outcome"]})
@@ -46,9 +41,7 @@ def settle_committed_coup(player_id: str, state: dict, coup: dict):
         if not replayed:
             # Set bal to the value needed for the next operation.
             bal = players.get_player(b["player_id"])["balance"]
-            # Execute this statement as part of the module's documented control flow.
             append_history(GAME_ID, coup["round_id"], b["player_id"], b["type"], b["label"], b["amount"], res["outcome"], res["credit"], bal, coup)
-        # Execute this statement as part of the module's documented control flow.
         settlements.append({"bet": b, "settlement": res, "ledger": credit})
     # Apply the terminal coup mutations exactly once and release the settlement commitment.
     engine.finalize_coup(state, coup)
@@ -74,7 +67,6 @@ def payload(player_id: str, state=None):
     public["shoe_count"] = len(state.get("shoe",[]))
     # Set visible_players to the value needed for private game payloads.
     visible_players = [p for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
-    # Return the computed value to the caller.
     return {"game": GAME_ID, "state": public, "player": players.get_player(player_id), "players": visible_players}
 
 
@@ -93,7 +85,6 @@ def register(router):
         player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Branch when the following condition is true.
         if state.get("open_bets"):
             # Raise an error so invalid input or state is reported explicitly.
             raise ConflictError("Deal or clear open baccarat bets before changing settings")
@@ -105,7 +96,6 @@ def register(router):
             if field in body:
                 # Store the canonical router value for subsequent engine consumption.
                 rules[field] = body[field]
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return payload(player_id, state)
 
     # Attach this decorator so the following function is registered with the framework.
@@ -122,9 +112,7 @@ def register(router):
         item = engine.add_bet(state, player_id, body.get("bet_type"), amount)
         # Debit the stake under its storage-atomic placement-time action identity so a recovered replay cannot double-charge. (issue #555)
         SETTLEMENT.apply_once(player_id=player_id, signed_amount=-amount, transaction_type="BACCARAT_BET_PLACED", action_key=f"{item['bet_id']}:wager", round_id=item["bet_id"], request_fingerprint=f"{item['bet_id']}:{item['type']}:{amount}", details={"bet_id": item["bet_id"], "bet_type": item["type"]})
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"bet": item, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -141,9 +129,7 @@ def register(router):
         item = engine.remove_bet(state, bet_id, player_id)
         # Refund the durable bet exactly once so a replayed clear returns the original event instead of minting a second refund. (issue #555)
         SETTLEMENT.apply_once(player_id=player_id, signed_amount=item["amount"], transaction_type="BACCARAT_BET_REFUND", action_key=f"{bet_id}:refund", round_id=bet_id, request_fingerprint=f"{bet_id}:refund:{item['amount']}", details={"bet_id": bet_id})
-        # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
-        # Return the computed value to the caller.
         return {"cleared": item, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
@@ -166,5 +152,4 @@ def register(router):
         settlements = settle_committed_coup(player_id, state, coup)
         # Set logger.info("baccarat_coup_dealt", round_id to the value needed for the next operation.
         logger.info("baccarat_coup_dealt", round_id=coup["round_id"], winner=coup["winner"], bet_count=len(coup["bets"]))
-        # Return the computed value to the caller.
         return {"coup": coup, "settlements": settlements, "bot_bets": [], **payload(player_id, state)}

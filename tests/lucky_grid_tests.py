@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Lucky Grid rules and settlement tests on the shared core. (#153, LGRID-001/002)"""
 
 # Import combinations for the exhaustive house-edge proof over every prize placement.

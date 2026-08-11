@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Player-facing explanations derived from committed play-token ledger movements. (#161)
 
 Every receipt is derived from data the ledger already committed: the signed amount, the transaction

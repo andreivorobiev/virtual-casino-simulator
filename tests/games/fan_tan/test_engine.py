@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Deterministic Fan-Tan rules tests for GitHub issue #137."""
 
 # Import the dependency-free standard test runner.

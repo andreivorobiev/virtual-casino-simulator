@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused listener-free tests for privacy-safe Admin session control."""
 
 # Import a bounded worker pool for idempotent concurrent revocation proof.

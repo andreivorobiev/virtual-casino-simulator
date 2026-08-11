@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the isolated Caribbean Stud browser module for GitHub issue #132.
 
 // Import authenticated envelope-aware API helpers without caller-owned player ids.

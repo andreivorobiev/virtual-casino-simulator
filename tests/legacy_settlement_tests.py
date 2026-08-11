@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Exactly-once settlement, CSPRNG shuffle, and read-side rules-clamp evidence for legacy blackjack and baccarat. (issues #403, #404, #420)"""
 
 # Import environment access so durable state is routed into a disposable root before any casino import binds directories.

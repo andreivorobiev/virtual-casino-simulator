@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Economics regression: the practice table holds a house edge after the pot rake. (issue #456)
 
 Three server opponents always call and the human may only call or fold, so playing every hand to

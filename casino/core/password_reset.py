@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Disabled enumeration-safe password recovery for canonical local accounts. (#334)
 
 The service composes the purpose-bound one-time-token foundation (#331) and the transactional-mail

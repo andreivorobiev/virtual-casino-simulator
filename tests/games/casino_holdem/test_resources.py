@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Resource and canonical descriptor tests for Casino Hold'em issue #139."""
 
 # Import JSON parsing for locale and descriptor validation.

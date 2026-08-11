@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused Scratch Cards rule, validation, and public-masking tests for issue #87."""
 
 # Import the dependency-free standard test runner.

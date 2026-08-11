@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Additive v1 router registration for the isolated Color Wheel module built on the settlement core. (#152)"""
 
 # Import the canonical player-id validator used by current game endpoints.

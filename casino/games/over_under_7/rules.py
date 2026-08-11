@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable two-dice Over/Under 7 rules for GitHub issue #135."""
 
 # Import an immutable mapping wrapper so paytable constants cannot be changed at runtime.

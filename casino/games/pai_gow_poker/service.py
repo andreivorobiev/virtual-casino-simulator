@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only orchestration for isolated Pai Gow Poker.
 
 One ante debit prepares the deal; the set decision reveals the house-way dealer

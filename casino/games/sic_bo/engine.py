@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Sic Bo validation, deterministic dice seams, settlement, and state helpers.
 
 Requirements used: DICE-001, LEDGER-005, LEDGER-006, and LEDGER-023.

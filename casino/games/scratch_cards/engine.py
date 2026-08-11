@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Pure Scratch Cards rules, deterministic ticket generation, and public-state masking."""
 
 # Import decimal arithmetic so play-token prizes avoid binary floating-point drift.

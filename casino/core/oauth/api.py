@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Versioned Admin, availability, linking, callback, and unlink OAuth routes.
 
 Requirements: OAUTH-001, OAUTH-002, OAUTH-007, OAUTH-008, OAUTH-009, and

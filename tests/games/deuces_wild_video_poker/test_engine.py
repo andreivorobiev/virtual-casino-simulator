@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Focused deterministic engine tests for issue #92 and CARD-001/POKER-001."""
 
 # Import deep-copy support for proving settled replay leaves state unchanged.

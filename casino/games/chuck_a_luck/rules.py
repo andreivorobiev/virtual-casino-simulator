@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Immutable Chuck-a-Luck dice and number-wager rules."""
 
 # Import a read-only mapping wrapper so runtime callers cannot alter the payout profile.

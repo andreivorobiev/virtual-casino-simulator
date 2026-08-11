@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Real-shell browser harness for the intentionally unregistered issue #88 slice."""
 
 # Import argument parsing for explicit loopback listener controls.

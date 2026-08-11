@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Active-brand selection and runtime application so the whole app is one config swap.
 
 // Import the default brand descriptor; a second brand is imported and swapped here.

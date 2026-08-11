@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Isolated Texas Hold'em Practice Table package for GitHub issue #95."""
 
 # Export the stable game identifier from the package boundary.

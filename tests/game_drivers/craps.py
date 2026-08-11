@@ -1,3 +1,5 @@
+# Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+# SPDX-License-Identifier: Apache-2.0
 """Catalog-discovered long-suite driver for Craps after issue #77 integration."""
 
 # Bound a random point sequence while leaving an effectively impossible failure observable.

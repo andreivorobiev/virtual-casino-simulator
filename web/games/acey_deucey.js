@@ -1,3 +1,5 @@
+// Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
+// SPDX-License-Identifier: Apache-2.0
 // Implement the catalog-integrated Acey-Deucey browser module for GitHub issue #149.
 
 // Import authenticated envelope-aware API helpers without caller-owned player ids.
