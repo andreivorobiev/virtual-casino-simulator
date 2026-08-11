@@ -10,14 +10,17 @@ import json
 import os
 # Import portable paths for external evidence containment.
 from pathlib import Path
+# Import process-path control so direct script execution resolves this checkout.
+import sys
 # Import temporary-file allocation beside the caller-owned output.
 import tempfile
 
-# Reuse the baseline's strict evidence schema instead of creating a weaker parser.
-from tests import request_latency_benchmark as baseline
-
 # Resolve the checkout so evidence files cannot be written into tracked source.
 ROOT = Path(__file__).resolve().parents[1]
+# Prefer the current checkout before importing the strict baseline package.
+sys.path.insert(0, str(ROOT))
+# Reuse the baseline's strict evidence schema instead of creating a weaker parser.
+from tests import request_latency_benchmark as baseline
 # Version the target decision independently from the measurement schema.
 SCHEMA = "performance-target-gate/v1"
 # Bound every input before parsing untrusted hosted artifact bytes.

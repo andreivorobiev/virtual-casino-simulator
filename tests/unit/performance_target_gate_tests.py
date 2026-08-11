@@ -6,6 +6,10 @@
 import copy
 # Import JSON rendering for bounded external evidence fixtures.
 import json
+# Import subprocess execution for direct-script import-path proof.
+import subprocess
+# Import the active interpreter path for the isolated command.
+import sys
 # Import temporary directories for caller-owned packets.
 import tempfile
 # Import the standard unit-test framework.
@@ -172,6 +176,23 @@ class PerformanceTargetGateTests(unittest.TestCase):
         self.assertIn("python tests/performance_target_gate.py", workflow)
         # Require source-bound aggregate evidence retention.
         self.assertIn("request-latency-evidence-${{ github.sha }}", workflow)
+
+    # Prove direct script execution resolves the repository package on hosted Python.
+    def test_direct_script_help_resolves_checkout_imports(self) -> None:
+        # Execute only argument parsing so no evidence or runtime state is created.
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "tests" / "performance_target_gate.py"), "--help"],
+            # Resolve from the repository root just like hosted CI.
+            cwd=str(ROOT),
+            # Capture bounded help output for return-code inspection only.
+            capture_output=True,
+            # Decode the fixed parser output.
+            text=True,
+            # Bound the import/bootstrap proof.
+            timeout=30,
+        )
+        # Require successful direct import and argument-parser construction.
+        self.assertEqual(result.returncode, 0)
 
 
 # Support focused direct execution.
