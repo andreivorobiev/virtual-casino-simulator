@@ -1,3 +1,19 @@
+# Virtual Casino Simulator v0.9.5.73 Release Notes
+
+## Verified email enrollment
+
+- Packages accepted verified-email enrollment PR #678 and closes repository-controlled issue #69; release-owned application advances to `9.63.1`.
+- Keeps email/password enrollment disabled by default and creates no canonical user, player, balance, or session before mailbox verification.
+- Makes verification recoverable and exactly once: it provisions an inactive identity and zero-balance wallet, credits the configured starting balance through one deterministic ledger action, then activates without silently creating a login session.
+- Preserves the active bearer during two-phase resend until provider acceptance, requires bearer ownership for cancellation, and rate-limits distinct initiate, resend, verify, and cancel attempts without charging exact replay recovery.
+- Scrubs terminal pending credentials and profile data immediately, prunes only expired scrubbed metadata, and preserves active or in-flight enrollment work.
+- Adds additive v2 initiate, resend, verify, and cancel behavior with provider-free JSON and disposable-MySQL evidence while leaving `/api/v1` frozen.
+- Adds responsive English and Russian pending-verification UI while retaining manual-invite admission, disabled public signup, disabled live mail/provider traffic, and explicit post-verification login.
+- Adds permanent `AUTH-018`, `USER-010`, and `TEST-171`; the governed total is exactly 947 requirements.
+- Records the exact canonical package inventory as 756 regular files: v0.9.5.72 inventory 754 plus the packaged pending-enrollment module and this v0.9.5.73 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.41.0`, Players `9.1.2`, Ledger `9.1.2`, tooling `1.29.2`, and every game revision remain exact protected-main values.
+- Retains exact immutable terminal-green v0.9.5.72 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.72 Release Notes
 
 ## Exact-source request-latency acceptance
