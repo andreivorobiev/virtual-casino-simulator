@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.76.1
-- docs: 1.74.1
+- tests: 1.77.0
+- docs: 1.74.2
 - contracts: 1.59.4
-- tooling: 1.29.0
+- tooling: 1.29.1
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
@@ -631,6 +631,7 @@ Historical source baseline: 9.1.0
 - **TEST-168** (Tests) - PASS: Listener-free provider-signup qualification proves independent Google and Facebook policy, acknowledgement, readiness, start/callback recheck, state/nonce/PKCE, rate, cancellation, replay, same-email isolation, existing-link collision, deterministic retry, post-link failure recovery, same-subject concurrency, revocation non-resurrection, secret-safe logs and errors, bilingual accessible controls, and complete Auth visual-matrix containment without real credentials or provider network access.
 - **LEDGER-034** (Ledger) - PASS: The JSON provider commits new exactly-once money identities and projection acknowledgements through one fsynced append-only journal instead of rewriting all historical actions. Provider-local caches consume only monotonic external tails, crash recovery visits only pending identities, compatible ledger projection checks use an immutable identity index, and bounded compaction replaces settled event copies with verified ledger references while retaining at most 200 bytes per settled action in the checkpoint.
 - **TEST-169** (Tests) - PASS: Listener-free isolated JSON evidence proves new exactly-once actions perform zero whole-history action-snapshot rewrites, use one durable commit and one projection append, keep replay byte-identical, preserve pre-journal snapshots across restart, incrementally observe another provider's journal tail, fail closed on partial records, compact below 200 bytes per settled action, and preserve process-racing and lost-response recovery semantics.
+- **TEST-170** (Tests) - PASS: Exact-source hosted qualification produces complete listener-free JSON and disposable-MySQL request-latency grids, retains only aggregate evidence, and fails closed unless every single-request warm authenticated game-state read is at most 100 milliseconds p50 and 200 milliseconds p95 while every concurrency-four game-state read is at most 250 milliseconds p95 and strictly exceeds 3.37 requests per second. The idempotent write and concurrency-eight rows remain diagnostic. The target decision remains bound to one immutable checkout, runs inside the existing guarded MySQL lifecycle, and preserves the accepted one-worker/two-thread topology because the multiprocess inventory still blocks a second worker.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

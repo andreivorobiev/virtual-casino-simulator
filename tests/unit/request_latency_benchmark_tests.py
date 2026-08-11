@@ -1376,7 +1376,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
         # Require the accepted aggregates plus the action-journal slice to total exactly 942 permanent rows.
-        self.assertEqual(len(requirements), 943)
+        self.assertEqual(len(requirements), 944)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1443,6 +1443,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-168": "Tests",  # Bind social-signup API, concurrency, and Browser evidence.
             "LEDGER-034": "Ledger",  # Bind append-only action-journal and compaction ownership.
             "TEST-169": "Tests",  # Bind deterministic action-journal compatibility and scaling evidence.
+            "TEST-170": "Tests",  # Bind exact-source performance target enforcement.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1564,16 +1565,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.1")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the tests patch for v0.9.5.71 release qualification.
-        self.assertEqual(tests_module["version"], "1.76.1")
-        # Require the docs patch for v0.9.5.71 release governance.
-        self.assertEqual(docs_module["version"], "1.74.1")
+        # Require the tests minor for exact-source performance target enforcement.
+        self.assertEqual(tests_module["version"], "1.77.0")
+        # Require the docs patch for the completed performance decision.
+        self.assertEqual(docs_module["version"], "1.74.2")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the compatible contracts patch for the immutable v0.9.5.71 rollback record.
         self.assertEqual(contracts_module["version"], "1.59.4")
-        # Require the tooling minor for the fail-closed file-header checker and CI gate.
-        self.assertEqual(tooling_module["version"], "1.29.0")
+        # Require the tooling patch for hosted evidence production and retention.
+        self.assertEqual(tooling_module["version"], "1.29.1")
         # Require the compatible Baccarat patch for central settings enforcement.
         self.assertEqual(baccarat_module["version"], "9.1.15")
         # Require the exact compatible Bingo settlement-interface patch.

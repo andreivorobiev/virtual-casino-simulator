@@ -10628,6 +10628,27 @@
       "notes": "Deterministic operation and retained-byte assertions are release gates; wall-clock timing remains diagnostic so shared-runner variance cannot weaken or flake the integrity proof."
     },
     {
+      "id": "TEST-170",
+      "module": "Tests",
+      "description": "Exact-source hosted qualification produces complete listener-free JSON and disposable-MySQL request-latency grids, retains only aggregate evidence, and fails closed unless every single-request warm authenticated game-state read is at most 100 milliseconds p50 and 200 milliseconds p95 while every concurrency-four game-state read is at most 250 milliseconds p95 and strictly exceeds 3.37 requests per second. The idempotent write and concurrency-eight rows remain diagnostic. The target decision remains bound to one immutable checkout, runs inside the existing guarded MySQL lifecycle, and preserves the accepted one-worker/two-thread topology because the multiprocess inventory still blocks a second worker.",
+      "status": "PASS",
+      "api_tests": [
+        "PERF-TARGET-GATE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/performance_target_gate.py",
+        "tests/unit/performance_target_gate_tests.py",
+        "tests/request_latency_benchmark.py",
+        "tests/run_tests.py",
+        ".github/workflows/ci.yml",
+        "docs/performance_payload_projections.md"
+      ],
+      "introduced_in": "issue-323-performance-target-gate",
+      "changed_in": "issue-323-performance-target-gate",
+      "notes": "The retained packets expose only the existing fixed provider, route-family, concurrency, aggregate latency, throughput, error, byte-count, schema, and source-commit fields. No production load, listener, provider setting, database schema, worker-count, thread-count, or pool-default change is authorized or performed."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
