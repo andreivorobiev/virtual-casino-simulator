@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.70 Release Notes
+
+## Governed first-party source headers
+
+- Packages accepted content PR #672 and closes repository-controlled issue #441; release-owned application advances to `9.61.3`.
+- Replaces the generated every-line comment-density mandate with one governed copyright, SPDX, and substantive file-purpose header for first-party Python and JavaScript sources.
+- Removes 1,260 known machine-generated filler comments while preserving executable bytes and meaningful rationale, security, compatibility, and requirement comments.
+- Keeps vendored Swagger JavaScript byte-identical and explicitly outside the first-party authorship gate.
+- Adds a fail-closed header validator, focused policy tests, bootstrap and CI integration, and a compatibility entry point for the retired density command.
+- Carries permanent requirement `COMMENT-001` and updates `TOOL-009`; the governed total is exactly 943 requirements.
+- Records the exact canonical package inventory as 752 regular files: v0.9.5.69 inventory 751 plus this v0.9.5.70 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.40.1`, Ledger `9.1.2`, tooling `1.29.0`, Commenting Policy `2.0.0`, and every game revision remain exact protected-main values.
+- Retains exact immutable terminal-green v0.9.5.69 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.69 Release Notes
 
 ## Append-only JSON ledger action journal

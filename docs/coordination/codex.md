@@ -1,28 +1,28 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-10T23:31:14Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-11T01:07:00Z.
 
 ## Current branch / active Codex work
 
-- Protected main is exact action-journal merge `5d39f47ab61aa8b28001120f9fbc0f3f773f8408`, following terminal-green v0.9.5.68 source `697de74129758c91b2f4748d596a2bec2b0f79e0`.
-- Isolated branch `codex/release-v0.9.5.69` prepares the repository-standard release packet from exact protected main.
-- Normal PR #669 closed repository-controlled issue #432; the remaining queue is being re-audited against the deployed v0.9.5.69 baseline.
+- Protected main is exact file-header policy merge `53adc33b6af6cdf9eeae363b041db0b7ee4a79af`, following terminal-green v0.9.5.69 source `69e9e2cab88c47bf7d51b519ff0f0e9aeb1b1c13`.
+- Isolated branch `codex/release-v0.9.5.70` prepares the repository-standard release packet from exact protected main.
+- Normal PR #672 closed repository-controlled issue #441; the remaining queue continues after terminal v0.9.5.70 deployment.
 
 ## Accepted scope and requirements
 
-- PR #669 replaces per-action whole-history JSON action snapshot rewrites with one append-only commit and one projection marker while retaining legacy snapshot readability.
-- Cross-process tails, pending-only crash recovery, indexed projection lookup, fail-closed corruption handling, and bounded periodic compaction preserve exactly-once settlement behavior.
-- Requirements total exactly 942 after permanent `LEDGER-034` and `TEST-169`; no release identifier is allocated.
+- PR #672 replaces generated per-line comment density with governed first-party copyright, SPDX, and substantive file-purpose headers.
+- The migration removes 1,260 known machine-generated filler comments while preserving meaningful rationale and leaving vendored Swagger assets byte-identical.
+- Requirements total exactly 943 after permanent `COMMENT-001` and updated `TOOL-009`; no release identifier is allocated.
 
 ## Version and contract allocation
 
-- Release versions advance only to package `0.9.5.69`, application `9.61.2`, contracts `1.59.2`, tests `1.74.3`, and docs `1.72.3`; tooling remains content-owned `1.28.0`.
-- Core remains content-owned `9.40.1` and Ledger remains content-owned `9.1.2`; every game revision remains exact protected-main values.
-- The compatibility record retains exact terminal-green v0.9.5.68 source `697de74129758c91b2f4748d596a2bec2b0f79e0`, archive SHA-256 `94c66cd5a175e3781f351aa9de506239e741596e602d5d82dd8f7ad6dc6aa0ad`, and manifest SHA-256 `4b33e043d13080e644c454ae6d9689939d813fc158956a4849d39295a85ad0ed`.
+- Release versions advance only to package `0.9.5.70`, application `9.61.3`, contracts `1.59.3`, tests `1.75.1`, and docs `1.73.1`; tooling remains content-owned `1.29.0`.
+- Core remains content-owned `9.40.1`, Ledger remains `9.1.2`, Commenting Policy remains `2.0.0`, and every game revision remains exact protected-main values.
+- The compatibility record retains exact terminal-green v0.9.5.69 source `69e9e2cab88c47bf7d51b519ff0f0e9aeb1b1c13`, archive SHA-256 `c07011d22214759a989f249af515e6a27adf59e72febadec2f6fba22009b91a5`, and manifest SHA-256 `c00eaeb6becc63e7ad6a1ab005fd5d0db857f70fbab73d0a31265a233a36adf2`.
 
 ## Rollback, validation, and handback
 
 - Rollback remains application-only at exact schema 2; database rollback is prohibited outside `TOOL-003`. The migration catalog remains minimum 2 / expected 3 / apply held.
-- The canonical deployable inventory is exactly 751 regular files: terminal v0.9.5.68 inventory 750 plus this compatibility record.
+- The canonical deployable inventory is exactly 752 regular files: terminal v0.9.5.69 inventory 751 plus this compatibility record.
 - Local validation is browser-free; fresh hosted all-nine evidence remains mandatory before normal merge and immutable publication.
-- No provider traffic, provider-console change, public-policy activation, public launch, database migration, game, settlement semantics, paytable, or wagering-economics change is claimed.
+- No executable behavior, provider traffic, provider-console change, public-policy activation, public launch, database migration, game, settlement semantics, paytable, or wagering-economics change is claimed.
