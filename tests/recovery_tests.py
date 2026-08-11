@@ -52,6 +52,8 @@ MIGRATION_CHAIN = SCHEMA_CONTRACT["migration_chain_sha256"]
 MIGRATIONS = load_catalog()[0]
 # Bind the exact schema-two applied prefix.
 MINIMUM_MIGRATION_CHAIN = migration_chain_digest(MIGRATIONS, MINIMUM_SCHEMA_VERSION)
+# Bind the preserved schema-three receipt-only applied prefix.
+INTERMEDIATE_MIGRATION_CHAIN = migration_chain_digest(MIGRATIONS, 3)
 
 
 # Construct all pairwise-independent synthetic key roles.
@@ -590,18 +592,20 @@ class RecoveryEvidenceTests(unittest.TestCase):
                     # Use the same valid destination evidence to isolate schema compatibility.
                     recovery.validate_recovery_manifest(recovery.sign_evidence(foreign, EVIDENCE_KEY), EVIDENCE_KEY, acknowledgement, DESTINATION_KEY, NOW)
 
-    # Prove recovery context binds schema two to its prefix and schema three to the full chain.
+    # Prove recovery context binds every compatible schema to its exact applied prefix.
     def test_recovery_context_accepts_only_exact_runtime_prefix(self):
-        # Exercise both bridge-compatible schema identities.
-        for version, chain in ((MINIMUM_SCHEMA_VERSION, MINIMUM_MIGRATION_CHAIN), (EXPECTED_SCHEMA_VERSION, MIGRATION_CHAIN)):
+        # Enumerate clean schema two, three, and four with their exact prefix digests.
+        compatible = ((MINIMUM_SCHEMA_VERSION, MINIMUM_MIGRATION_CHAIN), (3, INTERMEDIATE_MIGRATION_CHAIN), (EXPECTED_SCHEMA_VERSION, MIGRATION_CHAIN))
+        # Exercise every bridge-compatible schema identity.
+        for version, chain in compatible:
             # Build one exact sanitized recovery context.
             context = {"release_sha": "b" * 40, "app_version": "9.2.0", "mysql_schema_version": version, "migration_chain_sha256": chain, "source_target_hmac_sha256": "d" * 64}
             # Require exact identity preservation.
             with self.subTest(version=version):
                 # Validate the version-specific applied prefix.
                 self.assertEqual(recovery.validate_backup_context(context), context)
-        # Pair each accepted version with the other version's chain.
-        mismatches = ((MINIMUM_SCHEMA_VERSION, MIGRATION_CHAIN), (EXPECTED_SCHEMA_VERSION, MINIMUM_MIGRATION_CHAIN))
+        # Pair each accepted version with every other version's chain.
+        mismatches = tuple((version, foreign_chain) for version, own_chain in compatible for _foreign_version, foreign_chain in compatible if foreign_chain != own_chain)
         # Require cross-paired recovery evidence to fail closed.
         for version, chain in mismatches:
             # Build the mismatched but syntactically valid context.

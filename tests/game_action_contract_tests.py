@@ -10,6 +10,8 @@ from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 # Import abstract-class inspection for the provider boundary proof.
 import inspect
+# Import repository paths for the inert route/game activation gate.
+from pathlib import Path
 # Import unittest for the standalone focused suite.
 import unittest
 
@@ -28,6 +30,8 @@ from casino.core.game_action import (
     GameActionPlan,
     # Import immutable committed receipt values.
     GameActionReceipt,
+    # Import provider-neutral lifecycle resolution values.
+    GameActionResolution,
     # Import explicit bounded resource declarations.
     GameActionResources,
     # Import immutable provider snapshot values.
@@ -46,6 +50,8 @@ from casino.core.game_action import (
     canonical_fingerprint,
     # Import the shared provider entry validation.
     validate_execution_request,
+    # Import resolver entry validation.
+    validate_resolution_request,
     # Import the plan/resource validation boundary.
     validate_plan,
 )
@@ -63,6 +69,8 @@ class _FakeGameActionProvider(GameActionExecutor):
         self.states = deepcopy(states or {})
         # Store immutable committed receipts by their durable scope keys.
         self.receipts = {}
+        # Store immutable winning lifecycle dispositions by durable scope keys.
+        self.claims = {}
         # Count provider snapshot reads for mismatch-before-planner assertions.
         self.snapshot_reads = 0
         # Import a same-process lock only for deterministic conformance tests.
@@ -71,13 +79,15 @@ class _FakeGameActionProvider(GameActionExecutor):
         self._lock = threading.RLock()
 
     # Restore fake-owned projections after a hostile planner side effect.
-    def _restore(self, *, wallets, states, receipts) -> None:
+    def _restore(self, *, wallets, states, receipts, claims) -> None:
         # Restore the exact wallet projection.
         self.wallets = wallets
         # Restore the exact game-state projection.
         self.states = states
         # Restore the exact immutable receipt registry.
         self.receipts = receipts
+        # Restore the exact immutable lifecycle claim registry.
+        self.claims = claims
 
     # Execute the abstract semantics in memory for contract conformance only.
     def execute_game_action_once(self, *, identity, resources, planner):
@@ -95,6 +105,16 @@ class _FakeGameActionProvider(GameActionExecutor):
                     raise ConflictError("Game action key conflicts with committed semantics")
                 # Return the exact immutable committed receipt as a replay.
                 return existing, True
+            # Inspect a resolver-owned tombstone before reading any provider resource.
+            claim = self.claims.get(identity.scope_key)
+            # Reject changed semantics or late execution behind an immutable tombstone.
+            if claim is not None:
+                # Reject fingerprint or resource mismatch without planner/RNG.
+                if claim[0] != identity or claim[1] != resources:
+                    # Preserve the immutable winning claim.
+                    raise ConflictError("Game action key conflicts with durable semantics")
+                # Refuse every late action behind a resolver winner.
+                raise ConflictError("Game action was durably resolved as uncommitted")
             # Record the first provider resource read only after durable-key lookup.
             self.snapshot_reads += 1
             # Capture exact declared wallet balances.
@@ -109,18 +129,20 @@ class _FakeGameActionProvider(GameActionExecutor):
             saved_states = deepcopy(self.states)
             # Preserve the immutable receipt registry before planner execution.
             saved_receipts = dict(self.receipts)
+            # Preserve lifecycle claims before invoking the planner.
+            saved_claims = dict(self.claims)
             try:
                 # Invoke the new-action planner exactly once.
                 plan = planner(snapshot_before)
             except BaseException:
                 # Restore fake state if a hostile planner mutated its closure before raising.
-                self._restore(wallets=saved_wallets, states=saved_states, receipts=saved_receipts)
+                self._restore(wallets=saved_wallets, states=saved_states, receipts=saved_receipts, claims=saved_claims)
                 # Preserve the planner's exact focused-test exception.
                 raise
             # Detect any fake provider mutation performed through a planner closure.
-            if self.wallets != saved_wallets or self.states != saved_states or self.receipts != saved_receipts:
+            if self.wallets != saved_wallets or self.states != saved_states or self.receipts != saved_receipts or self.claims != saved_claims:
                 # Restore every fake-owned projection before failing closed.
-                self._restore(wallets=saved_wallets, states=saved_states, receipts=saved_receipts)
+                self._restore(wallets=saved_wallets, states=saved_states, receipts=saved_receipts, claims=saved_claims)
                 # Reject the impure planner before a receipt commit.
                 raise ValidationError("Game action planner must be side-effect free")
             # Require the exact immutable plan type.
@@ -152,8 +174,41 @@ class _FakeGameActionProvider(GameActionExecutor):
             )
             # Retain the exact receipt under the durable scope key.
             self.receipts[identity.scope_key] = receipt
+            # Publish the immutable execute disposition with its compatible semantics.
+            self.claims[identity.scope_key] = (identity, resources, "execute")
             # Return the new committed receipt with replay false.
             return receipt, False
+
+    # Resolve committed, pending, or resolver-first action state without planning.
+    def resolve_game_action(self, *, identity, resources):
+        # Validate exact provider-neutral resolver inputs.
+        validate_resolution_request(identity=identity, resources=resources)
+        # Serialize fake lifecycle resolution for deterministic conformance proof.
+        with self._lock:
+            # Return an immutable committed receipt when execution won first.
+            existing = self.receipts.get(identity.scope_key)
+            # Resolve a compatible prior receipt without invoking planner behavior.
+            if existing is not None:
+                # Reject changed identity or resources.
+                if existing.identity != identity or existing.resources != resources:
+                    # Preserve the committed result.
+                    raise ConflictError("Game action key conflicts with committed semantics")
+                # Return the complete committed resolution.
+                return GameActionResolution(status="committed", receipt=existing)
+            # Inspect an earlier resolver-owned tombstone.
+            claim = self.claims.get(identity.scope_key)
+            # Validate or create the immutable terminal no-result claim.
+            if claim is not None:
+                # Reject changed identity or resources.
+                if claim[0] != identity or claim[1] != resources:
+                    # Preserve the existing claim unchanged.
+                    raise ConflictError("Game action key conflicts with durable semantics")
+            # Append the exact resolver-owned tombstone when this scope is unused.
+            else:
+                # Preserve identity, resources, and finite disposition.
+                self.claims[identity.scope_key] = (identity, resources, "uncommitted")
+            # Return the terminal provider-neutral no-result state.
+            return GameActionResolution(status="uncommitted")
 
 
 # Build the shared player-state resource set used by conformance tests.
@@ -711,6 +766,47 @@ class GameActionContractTests(unittest.TestCase):
         # Apply money movement exactly once.
         self.assertEqual(provider.wallets["player-a"], 1_150)
 
+    # Prove provider-neutral resolution is finite, immutable, and planner-free.
+    def test_resolution_contract_committed_uncommitted_and_conflict_semantics(self):
+        # Build one isolated lifecycle conformance fake.
+        provider = _FakeGameActionProvider(wallets={"player-a": 1_000}, states={"example-state:player-a": {"actions": 0}})
+        # Build exact shared resources.
+        resources = _resources()
+        # Resolve one unused identity before any executor owns it.
+        uncommitted_identity = _identity(resources=resources, action_key="resolver-first")
+        # Commit the resolver-owned tombstone without planner behavior.
+        uncommitted = provider.resolve_game_action(identity=uncommitted_identity, resources=resources)
+        # Return the exact terminal no-result shape.
+        self.assertEqual(uncommitted, GameActionResolution(status="uncommitted"))
+        # Reject a late executor before snapshot or planner invocation.
+        with self.assertRaisesRegex(ConflictError, "^Game action was durably resolved as uncommitted$"):
+            # Attempt execution behind the immutable resolver claim.
+            provider.execute_game_action_once(identity=uncommitted_identity, resources=resources, planner=lambda _snapshot: self.fail("late executor invoked planner"))
+        # Build and execute one distinct action first.
+        committed_identity = _identity(resources=resources, action_key="executor-first")
+        # Commit one exact paid receipt.
+        receipt, replayed = provider.execute_game_action_once(identity=committed_identity, resources=resources, planner=_paid_plan)
+        # Require a new commit rather than replay.
+        self.assertFalse(replayed)
+        # Resolve the original immutable committed result without planner access.
+        committed = provider.resolve_game_action(identity=committed_identity, resources=resources)
+        # Bind status and receipt exactly.
+        self.assertEqual(committed, GameActionResolution(status="committed", receipt=receipt))
+        # Build changed semantics under the resolver-owned scope.
+        changed = _identity(resources=resources, request={"choice": "changed"}, action_key="resolver-first")
+        # Reject changed resolver reuse without rewriting the tombstone.
+        with self.assertRaisesRegex(ConflictError, "^Game action key conflicts with durable semantics$"):
+            # Attempt changed semantic resolution.
+            provider.resolve_game_action(identity=changed, resources=resources)
+        # Require committed status to carry one exact receipt.
+        with self.assertRaisesRegex(ValidationError, "^Committed game action resolution requires a receipt$"):
+            # Attempt a malformed committed lifecycle result.
+            GameActionResolution(status="committed")
+        # Require uncommitted status never to expose a stale receipt.
+        with self.assertRaisesRegex(ValidationError, "^Non-committed game action resolution cannot contain a receipt$"):
+            # Attempt to attach committed material to a no-result state.
+            GameActionResolution(status="uncommitted", receipt=receipt)
+
     # Prove the production checkpoint remains abstract and provider/game/route inert.
     def test_boundary_is_abstract_and_source_has_no_provider_route_or_game_imports(self):
         # Require the executor to remain an abstract provider contract.
@@ -731,8 +827,23 @@ class GameActionContractTests(unittest.TestCase):
         self.assertNotIn("JsonStorageProvider", source)
         # Reject MySQL provider implementation names.
         self.assertNotIn("MySQLStorageProvider", source)
-        # Preserve the explicit no-production-atomicity checkpoint disclaimer.
-        self.assertIn("no JSON/MySQL implementation", source)
+        # Preserve the explicit route/game/API integration exclusion.
+        self.assertIn("no route, game, or public API integration", source)
+
+    # Prove the Phase A lifecycle bridge remains absent from every route and game module.
+    def test_lifecycle_bridge_has_no_route_or_game_activation(self):
+        # Resolve the repository-owned application package from this focused test path.
+        casino_root = Path(__file__).resolve().parents[1] / "casino"
+        # Enumerate public application wiring and every isolated game source deterministically.
+        candidate_paths = tuple(sorted((casino_root / "games").rglob("*.py"))) + (casino_root / "app.py", casino_root / "router.py")
+        # Read the exact internal lifecycle method names that must remain inert in Phase A.
+        forbidden = ("execute_game_action_once", "resolve_game_action")
+        # Inspect every route/game candidate without importing or executing it.
+        for path in candidate_paths:
+            # Decode repository source as strict UTF-8.
+            source = path.read_text(encoding="utf-8")
+            # Reject activation of either internal provider boundary outside casino/core.
+            self.assertTrue(all(name not in source for name in forbidden), path.relative_to(casino_root.parent).as_posix())
 
     # Prove public execution validation rejects lookalike values without planner calls.
     def test_execution_boundary_rejects_lookalikes_before_planner(self):

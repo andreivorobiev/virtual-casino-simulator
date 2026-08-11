@@ -1,11 +1,10 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Provider-neutral game-action contract checkpoint for issue #430 Phase0c slice 2.
+"""Provider-neutral game-action execution and lifecycle resolution contracts.
 
 This module defines immutable action identities, declared resources, snapshots, plans,
-receipts, and the abstract execution boundary that future storage providers must
-implement. It intentionally contains no JSON/MySQL implementation, route integration,
-game integration, or production atomicity claim.
+receipts, and the abstract execution and resolution boundaries implemented by storage
+providers. It intentionally contains no route, game, or public API integration.
 """
 
 # Import postponed annotations so recursive immutable value hints stay readable.
@@ -52,6 +51,8 @@ MAX_CANONICAL_INTEGER = MAX_INTEGER_CENTS
 IDENTITY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
 # Require one lowercase SHA-256 digest at durable identity boundaries.
 FINGERPRINT_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+# Enumerate the only provider-neutral lifecycle results exposed to future internal callers.
+GAME_ACTION_RESOLUTION_STATUSES = frozenset({"pending", "committed", "uncommitted"})
 
 
 # Define one immutable canonical JSON array representation.
@@ -776,20 +777,44 @@ class GameActionReceipt:
             raise ValidationError("Game action receipt result is inconsistent")
 
 
+# Report one immutable provider-neutral action lifecycle result without replaying work.
+@dataclass(frozen=True, slots=True)
+class GameActionResolution:
+    # Store whether execution is still owned, committed, or durably uncommitted.
+    status: str
+    # Return the exact immutable receipt only for a committed action.
+    receipt: GameActionReceipt | None = None
+
+    # Require status and receipt presence to agree exactly.
+    def __post_init__(self) -> None:
+        # Reject unknown or coercible lifecycle states.
+        if type(self.status) is not str or self.status not in GAME_ACTION_RESOLUTION_STATUSES:
+            # Publish one fixed provider-neutral validation failure.
+            raise ValidationError("Game action resolution status is invalid")
+        # Require committed resolution to carry the complete immutable receipt.
+        if self.status == "committed" and type(self.receipt) is not GameActionReceipt:
+            # Prevent a committed claim without authoritative recovery material.
+            raise ValidationError("Committed game action resolution requires a receipt")
+        # Require pending and uncommitted results to disclose no receipt-like value.
+        if self.status != "committed" and self.receipt is not None:
+            # Prevent partial or stale outcome material on non-committed paths.
+            raise ValidationError("Non-committed game action resolution cannot contain a receipt")
+
+
 # Define the provider planner callable accepted by the abstract boundary.
 GameActionPlanner = Callable[[GameActionSnapshot], GameActionPlan]
 
 
-# Define the provider-neutral execution boundary without implementing persistence.
+# Define the provider-neutral execution and resolution boundary without provider details.
 class GameActionExecutor(ABC):
-    """Abstract boundary future providers must implement as one durable action.
+    """Abstract boundary providers implement as one durable action lifecycle.
 
     Implementations must validate identity/resources first, inspect durable action-key
     reuse before snapshot creation, reject a fingerprint/resource mismatch before the
     planner (and therefore RNG), call the planner at most once for a new action, commit
     its complete immutable receipt, and return the original receipt on compatible replay.
-    This abstract checkpoint does not assert that any current production provider meets
-    those requirements.
+    Resolution never invokes the planner: it observes committed execution, reports lock
+    ownership as pending, or wins an immutable cancellation claim before execution.
     """
 
     # Commit or replay one paid or zero-cost game action.
@@ -802,6 +827,17 @@ class GameActionExecutor(ABC):
         planner: GameActionPlanner,
     ) -> tuple[GameActionReceipt, bool]:
         # Concrete providers must supply the reviewed durable boundary later.
+        raise NotImplementedError
+
+    # Resolve one action without planning, replaying, or mutating game resources.
+    @abstractmethod
+    def resolve_game_action(
+        self,
+        *,
+        identity: GameActionIdentity,
+        resources: GameActionResources,
+    ) -> GameActionResolution:
+        # Concrete providers must race execution and cancellation through one claim identity.
         raise NotImplementedError
 
 
@@ -819,3 +855,15 @@ def validate_execution_request(*, identity, resources, planner) -> None:
     if not callable(planner):
         # Reject a missing or scalar planner.
         raise ValidationError("Game action planner is invalid")
+
+
+# Validate resolver entry types before any provider lock, claim, or receipt lookup.
+def validate_resolution_request(*, identity, resources) -> None:
+    # Require the exact immutable action identity.
+    if type(identity) is not GameActionIdentity:
+        # Reject arbitrary identity-like resolver inputs.
+        raise ValidationError("Game action identity is invalid")
+    # Require the exact immutable resource declaration.
+    if type(resources) is not GameActionResources:
+        # Reject arbitrary resource-like resolver inputs.
+        raise ValidationError("Game action resources are invalid")

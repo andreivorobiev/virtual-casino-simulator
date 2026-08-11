@@ -593,6 +593,16 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
         # Fail the mapped case whenever any provider-boundary assertion fails.
         if not result.wasSuccessful(): raise AssertionError('JSON game-action provider suite failed')
+    # Define one listener-free runner for schema-four MySQL lifecycle transactions.
+    def run_mysql_game_action_provider_tests():
+        # Import the deterministic transactional model only for its named case.
+        from tests import mysql_game_action_provider_tests
+        # Load the complete executor, resolver, rollback, and schema-gate test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(mysql_game_action_provider_tests.MySQLGameActionProviderTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the mapped case whenever any MySQL lifecycle assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('MySQL game-action provider suite failed')
     # Define one focused unittest runner for provider-neutral player-game-state atomicity.
     def run_player_state_atomic_tests():
         # Load only the CORE-030 player-state atomicity test class.
@@ -626,15 +636,19 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         # Fail the named central case when any focused assertion failed.
         if not result.wasSuccessful(): raise AssertionError('MySQL migration policy suite failed')
     # Map the listener-free policy suite to the permanent migration requirements.
-    run_case('MYSQL-MIGRATION-001',['MYSQL-005','MYSQL-007','MYSQL-008','STORAGE-007','TEST-048'],run_mysql_migration_policy_tests)
+    run_case('MYSQL-MIGRATION-001',['MYSQL-005','MYSQL-007','MYSQL-008','MYSQL-009','STORAGE-007','TEST-048','TEST-174'],run_mysql_migration_policy_tests)
     # Map the listener-free recovery suite to the permanent recovery requirements.
-    run_case('RECOVERY-POLICY-001',['MYSQL-006','MYSQL-008','TOOL-004','TEST-049'],run_recovery_policy_tests)
+    run_case('RECOVERY-POLICY-001',['MYSQL-006','MYSQL-008','MYSQL-009','TOOL-004','TEST-049','TEST-174'],run_recovery_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','AUDIO-010','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','LEDGER-033','LEDGER-034','STORAGE-005','STORAGE-006','TEST-043','TEST-164','TEST-169'],storage_tests.run_json_action_idempotency)
     # Execute provider-owned journal recovery, contention, reset, and fail-closed proof. (#430)
     run_case('STORAGE-GAME-ACTION-ONCE-001',['STORAGE-011'],run_json_game_action_provider_tests)
+    # Prove immutable JSON claims, pending resolution, restart tombstones, and late-executor refusal.
+    run_case('STORAGE-GAME-ACTION-LIFECYCLE-001',['CORE-031','STORAGE-013','TEST-174'],run_json_game_action_provider_tests)
+    # Prove schema-four MySQL claim, transaction, resolver, replay, and rollback parity.
+    run_case('MYSQL-GAME-ACTION-LIFECYCLE-001',['MYSQL-009','STORAGE-013','TEST-174'],run_mysql_game_action_provider_tests)
     # Prove player-scoped JSON concurrency, rollback, fallback, isolation, and MySQL delegation.
     run_case('STORAGE-PLAYER-STATE-ATOMIC-001',['CORE-030','STORAGE-001','STORAGE-002'],run_player_state_atomic_tests)
     # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
@@ -676,7 +690,7 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','MYSQL-007','MYSQL-008','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','MYSQL-007','MYSQL-008','MYSQL-009','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141','TEST-174'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -1826,6 +1840,8 @@ def run_api_tests():
             raise AssertionError('game-action contract suite failed')
     # Record bounded identity, fingerprint, planner-order, paid, zero-cost, and receipt semantics.
     run_case('API-GAMECORE-003',['CORE-031'],run_game_action_contract_tests)
+    # Record provider-neutral pending, committed, uncommitted, conflict, and no-planner resolution.
+    run_case('API-GAME-ACTION-LIFECYCLE-001',['CORE-031','STORAGE-013','TEST-174'],run_game_action_contract_tests)
     # Execute the complete host-runnable mobile security and lifecycle suite without a native SDK. (TEST-172)
     def run_mobile_core_security_tests():
         # Import the focused mobile suite only when its named case runs.

@@ -841,6 +841,15 @@ def run_mysql_schema_provider_path():
     # Import storage helpers lazily so this test does not require a MySQL service.
     from casino.core import mysql_migrations, storage
 
+    # Construct one fully initialized lazy provider for MySQL seam injection without a connection.
+    def isolated_provider():
+        # Bind planner/reset identity to an exact reserved local fixture target.
+        config = storage.MySQLConfig(host="127.0.0.1", port=3306, user="fixture", password="synthetic", database="casino_fixture")
+        # Keep the unused lazy pool bounded to one physical session if a regression opens it.
+        pool_config = storage.MySQLPoolConfig(capacity=1, checkout_wait_ms=100, connect_timeout_seconds=1)
+        # Initialize config, planner guards, reset-local state, readiness, and the unopened pool normally.
+        return storage.MySQLStorageProvider(config=config, pool_config=pool_config)
+
     # Load the checksum-verified canonical migration catalog.
     migrations, expected, minimum, catalog_sha256 = mysql_migrations.load_catalog()
     # Join exact driver statements for lightweight structural assertions.
@@ -877,8 +886,8 @@ def run_mysql_schema_provider_path():
     assert "start_transaction" in document_source and "FOR UPDATE" in document_source
     # Require absent-row materialization, locked update, commit, and rollback behavior.
     assert "INSERT INTO casino_documents" in document_source and "UPDATE casino_documents" in document_source and "connection.commit()" in document_source and "connection.rollback()" in document_source
-    # Construct an uninitialized provider for bounded MySQL-like seam injection.
-    strict_provider = object.__new__(storage.MySQLStorageProvider)
+    # Construct a fully initialized but connection-free provider for bounded seam injection.
+    strict_provider = isolated_provider()
     # Return one valid driver-decoded object through the existing read behavior.
     strict_provider.read_document = lambda key, default: {"schema_version": 1}
     # Require strict read to preserve valid MySQL-decoded provider values.
@@ -977,6 +986,8 @@ def run_mysql_schema_provider_path():
         raise AssertionError("strict MySQL update accepted invalid shape")
     # Require start, rollback, and close without commit or mutator invocation.
     assert strict_connection.started and strict_connection.rolled_back and strict_connection.closed and not strict_connection.committed and strict_mutator_calls == []
+    # Reaching the stubbed transaction proves the active planner guard accepted the exact fixture target.
+    assert strict_provider._planner_key() == ("127.0.0.1", 3306, "casino_fixture")
     # Require no durable document UPDATE statement after strict shape refusal.
     assert all(not statement.lstrip().upper().startswith("UPDATE CASINO_DOCUMENTS") for statement in strict_connection.cursor_instance.statements)
     # Read the storage-enforced action transaction implementation source.
@@ -1025,8 +1036,8 @@ def run_mysql_schema_provider_path():
             self.closed = True
     # Build one exact indexed row with driver-compatible money and details values.
     indexed_row = {"ledger_id": "led_indexed", "ts": "2026-08-10T00:00:00.000Z", "player_id": "human", "game": "storage", "round_id": "round-indexed", "transaction_type": "TEST_INDEXED", "amount": -5, "balance_before": 100, "balance_after": 95, "details_json": '{"ledger_action_key":"action-indexed"}'}
-    # Construct a provider without opening a real pool or database.
-    indexed_provider = object.__new__(storage.MySQLStorageProvider)
+    # Construct another initialized provider without opening a real pool or database.
+    indexed_provider = isolated_provider()
     # Bypass schema readiness after the migration source assertions above.
     indexed_provider.ensure_ready = lambda: None
     # Return one hit connection for the first exact lookup.
@@ -1043,6 +1054,10 @@ def run_mysql_schema_provider_path():
     indexed_provider.connect = lambda: miss_connection
     # Require a clean optional miss and connection cleanup.
     assert indexed_provider.find_ledger_action("human", "storage", "action-missing") is None and miss_connection.closed
+    # Close both still-empty lazy pools so fixtures prove no hidden connector allocation.
+    strict_provider.close_pool()
+    # Close the independent indexed fixture pool as well.
+    indexed_provider.close_pool()
     # Read runtime readiness source after migration ownership moved out of the provider.
     runtime_source = inspect.getsource(storage.MySQLStorageProvider.ensure_ready)
     # Require only the read-only compatibility verifier at runtime.

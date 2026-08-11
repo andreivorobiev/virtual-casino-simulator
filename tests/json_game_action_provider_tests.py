@@ -4,6 +4,8 @@
 
 # Import deterministic context cleanup for provider injection.
 from contextlib import contextmanager
+# Import portable error numbers for lock-contention adversarial proof.
+import errno
 # Import bounded process coordination for cross-process gate proof.
 import multiprocessing
 # Import exact JSON encoding for corrupt durable-state fixtures.
@@ -18,6 +20,8 @@ import posixpath
 import queue
 # Import temporary isolated roots for every focused test.
 from pathlib import Path
+# Import module injection for platform-independent Windows lock-path tests.
+import sys
 # Import bounded local concurrency for reentrant visibility proof.
 import threading
 # Import bounded timing only for proving contenders remain blocked.
@@ -33,7 +37,7 @@ from casino import admin, app
 # Import the storage module for generic-provider compatibility patches.
 from casino.core import storage as storage_module
 # Import immutable Phase0c action values used by the provider conformance cases.
-from casino.core.game_action import GameActionIdentity, GameActionMovement, GameActionPlan, GameActionResources
+from casino.core.game_action import GameActionIdentity, GameActionMovement, GameActionPlan, GameActionResolution, GameActionResources
 # Import the JSON provider and test injection boundary.
 from casino.core.storage import HISTORY_FIELDS, JsonStorageProvider, StorageProvider, bootstrap_players, set_provider_for_tests
 # Import stable public failures asserted by hostile cases.
@@ -449,6 +453,10 @@ class JsonGameActionProviderTests(unittest.TestCase):
         self.assertFalse(replayed)
         # Require exact debit-plus-credit wallet convergence.
         self.assertEqual(11.5, self.provider.load_players(_players)["players"][0]["balance"])
+        # Require one append-only ledger row for each exact signed movement.
+        ledger_rows = self.provider.read_ledger_recent("human", 10)
+        # Preserve debit then payout order without duplicate replay rows.
+        self.assertEqual([-1, 2.5], [row["amount"] for row in ledger_rows])
         # Require the exact action-owned state projection.
         self.assertEqual(1, dict(receipt.snapshot_after.state_value("slots:human").items)["spins"])
         # Count planner calls after the durable receipt exists.
@@ -486,10 +494,258 @@ class JsonGameActionProviderTests(unittest.TestCase):
         # Require wallet bytes remain unchanged.
         self.assertEqual(11.5, self.provider.load_players(_players)["players"][0]["balance"])
 
+    # Prove JSON reset preserves immutable history while isolating fresh same-key work by epoch.
+    def test_reset_epoch_preserves_history_blocks_gap_and_allows_fresh_key(self):
+        # Seed the exact wallet required by the paid action.
+        self.provider.bootstrap_players(_players())
+        # Bind one durable action in implicit legacy epoch one.
+        resources, identity = _resources(), _identity(action_key="reset-epoch", resources=_resources())
+        # Commit the original action and its immutable lifecycle rows.
+        first_receipt, replayed = self.provider.execute_game_action_once(identity=identity, resources=resources, planner=_paid_plan)
+        # Require one new epoch-one commit.
+        self.assertFalse(replayed)
+        # Hold reset, fresh bootstrap, and phase release under the existing global gate.
+        with self.provider.reset_transaction():
+            # Require the new namespace to remain unavailable through caller bootstrap.
+            self.assertEqual({"schema_version": 1, "current_epoch": 2, "phase": "resetting"}, json.loads(self.provider.game_action_epoch_path().read_text(encoding="utf-8")))
+            # Refuse action execution before planner or another claim.
+            with self.assertRaisesRegex(ConflictError, "reset is in progress"):
+                # Keep a replacement planner unreachable.
+                self.provider.execute_game_action_once(identity=identity, resources=resources, planner=lambda _snapshot: self.fail("reset gap invoked planner"))
+            # Return finite pending without a tombstone while reset owns visibility.
+            self.assertEqual(GameActionResolution(status="pending"), self.provider.resolve_game_action(identity=identity, resources=resources))
+            # Bootstrap the exact compatible wallet inside the reentrant gate.
+            self.provider.bootstrap_players(_players())
+        # Publish the second namespace only after bootstrap succeeds.
+        self.assertEqual({"schema_version": 1, "current_epoch": 2, "phase": "ready"}, json.loads(self.provider.game_action_epoch_path().read_text(encoding="utf-8")))
+        # Execute the identical caller key as fresh work in epoch two.
+        second_receipt, replayed = self.provider.execute_game_action_once(identity=identity, resources=resources, planner=_paid_plan)
+        # Require a planner-backed fresh commit rather than old receipt replay.
+        self.assertFalse(replayed)
+        # Preserve equivalent deterministic result semantics without sharing lifecycle identity.
+        self.assertEqual(first_receipt, second_receipt)
+        # Resolve the current action through the provider-neutral public result shape.
+        public_resolution = self.provider.resolve_game_action(identity=identity, resources=resources)
+        # Render only public contract objects as an API/logging proxy.
+        public_rendering = repr(second_receipt) + repr(public_resolution)
+        # Keep private epoch field names and values out of receipts and resolutions.
+        self.assertNotIn("reset_epoch", public_rendering)
+        # Keep the private singleton control name out of public result material too.
+        self.assertNotIn("current_epoch", public_rendering)
+        # Read the complete private epoch-scoped receipt registry.
+        receipt_registry = json.loads(self.provider.game_action_receipts_path().read_text(encoding="utf-8"))
+        # Retain the same scope once in each immutable namespace.
+        self.assertEqual({"1", "2"}, set(receipt_registry["receipts_by_epoch"]))
+        # Read the corresponding claim history.
+        claim_registry = json.loads(self.provider.game_action_claims_path().read_text(encoding="utf-8"))
+        # Retain both execute claims without deleting or rewriting the old winner.
+        self.assertEqual({"1", "2"}, set(claim_registry["claims_by_epoch"]))
+        # Append only the current epoch's two ledger movements after reset cleared prior rows.
+        self.assertEqual(2, len(self.provider.read_ledger_recent("human", 10)))
+
+    # Prove JSON reset body/finalize failure restores epoch and every prior byte exactly.
+    def test_reset_epoch_failure_restores_complete_legacy_bytes(self):
+        # Seed one wallet and committed legacy epoch-one action.
+        self.provider.bootstrap_players(_players())
+        # Commit exact lifecycle and mutable state before rollback proof.
+        self.provider.execute_game_action_once(identity=_identity(action_key="reset-rollback"), resources=_resources(), planner=_paid_plan)
+        # Snapshot every provider byte before the failed reset begins.
+        before = _data_snapshot(self.provider)
+        # Fail caller bootstrap after phase resetting has been durably written.
+        with self.assertRaisesRegex(RuntimeError, "bootstrap failed"):
+            # Enter the exact reset transaction.
+            with self.provider.reset_transaction():
+                # Surface one caller-body failure.
+                raise RuntimeError("bootstrap failed")
+        # Restore the legacy missing-epoch-file shape and every immutable/mutable byte.
+        self.assertEqual(before, _data_snapshot(self.provider))
+        # Save the production epoch writer for a finalize-only failure seam.
+        original_writer = self.provider._write_game_action_epoch
+        # Define one failure that permits resetting publication but refuses ready release.
+        def fail_ready(*, current_epoch, phase):
+            # Interrupt only the final visibility transition.
+            if phase == "ready":
+                # Model one durable write failure before publication.
+                raise OSError("synthetic finalize failure")
+            # Delegate the resetting write unchanged.
+            return original_writer(current_epoch=current_epoch, phase=phase)
+        # Inject the phase-two write failure for one complete reset attempt.
+        with mock.patch.object(self.provider, "_write_game_action_epoch", side_effect=fail_ready):
+            # Normalize only the original synthetic failure after exact rollback.
+            with self.assertRaisesRegex(OSError, "finalize failure"):
+                # Run reset with a successful bounded bootstrap body.
+                with self.provider.reset_transaction():
+                    # Recreate the default wallet before finalization fails.
+                    self.provider.bootstrap_players(_players())
+        # Restore the complete pre-reset tree after finalize failure too.
+        self.assertEqual(before, _data_snapshot(self.provider))
+
+    # Prove resolver-first, executor-first, pending, conflicts, and legacy compatibility.
+    def test_resolution_claims_are_immutable_planner_free_and_restart_safe(self):
+        # Seed the exact wallet required by the paid plan.
+        self.provider.bootstrap_players(_players())
+        # Build one complete resource declaration.
+        resources = _resources()
+        # Resolve one unused identity before execution.
+        resolver_first = _identity(action_key="resolver-first", resources=resources)
+        # Commit the immutable no-result tombstone.
+        resolution = self.provider.resolve_game_action(identity=resolver_first, resources=resources)
+        # Return the exact provider-neutral terminal shape.
+        self.assertEqual(GameActionResolution(status="uncommitted"), resolution)
+        # Capture exact provider bytes after the first resolver claim.
+        first_bytes = self.provider.game_action_claims_path().read_bytes()
+        # Replay resolution without rewriting append-only claim bytes.
+        self.assertEqual(resolution, self.provider.resolve_game_action(identity=resolver_first, resources=resources))
+        # Preserve exact claim bytes on compatible replay.
+        self.assertEqual(first_bytes, self.provider.game_action_claims_path().read_bytes())
+        # Reject a late executor without invoking its planner.
+        with self.assertRaisesRegex(ConflictError, "^Game action was durably resolved as uncommitted$"):
+            # Attempt execution behind the resolver-owned tombstone.
+            self.provider.execute_game_action_once(identity=resolver_first, resources=resources, planner=lambda _snapshot: self.fail("late executor invoked planner"))
+        # Reject changed resolver semantics without rewriting the winning row.
+        changed = _identity(action_key="resolver-first", resources=resources, request={"stake_cents": 200})
+        # Require one fixed durable-semantic conflict.
+        with self.assertRaisesRegex(ConflictError, "^Game action key conflicts with durable semantics$"):
+            # Attempt changed semantic resolution.
+            self.provider.resolve_game_action(identity=changed, resources=resources)
+        # Preserve exact claim bytes after conflict.
+        self.assertEqual(first_bytes, self.provider.game_action_claims_path().read_bytes())
+        # Execute one distinct identity first.
+        executor_first = _identity(action_key="executor-first", resources=resources)
+        # Commit its complete receipt.
+        receipt, replayed = self.provider.execute_game_action_once(identity=executor_first, resources=resources, planner=_paid_plan)
+        # Require one new execution.
+        self.assertFalse(replayed)
+        # Resolve the exact immutable committed receipt.
+        self.assertEqual(GameActionResolution(status="committed", receipt=receipt), self.provider.resolve_game_action(identity=executor_first, resources=resources))
+        # Remove only claims to simulate an exact schema-three JSON receipt store.
+        self.provider.game_action_claims_path().unlink()
+        # Preserve exact receipt registry bytes across legacy committed resolution.
+        receipt_bytes = self.provider.game_action_receipts_path().read_bytes()
+        # Resolve the legacy receipt without backfilling or rewriting claims.
+        self.assertEqual(GameActionResolution(status="committed", receipt=receipt), self.provider.resolve_game_action(identity=executor_first, resources=resources))
+        # Keep the legacy receipt byte-for-byte unchanged.
+        self.assertEqual(receipt_bytes, self.provider.game_action_receipts_path().read_bytes())
+        # Keep the absent claim registry absent on legacy read compatibility.
+        self.assertFalse(self.provider.game_action_claims_path().exists())
+        # Hold the provider instance lock to model an active same-process executor.
+        ready = threading.Event()
+        # Collect the finite concurrent resolver result.
+        output = []
+        # Define one contender that resolves while the main thread owns execution.
+        def contender():
+            # Signal that the resolver thread started.
+            ready.set()
+            # Retain the finite provider-neutral result.
+            output.append(self.provider.resolve_game_action(identity=_identity(action_key="pending", resources=resources), resources=resources))
+        # Acquire the executor-owned instance lock before starting the contender.
+        with self.provider.lock:
+            # Start the resolver in another thread.
+            worker = threading.Thread(target=contender)
+            # Launch the bounded contender.
+            worker.start()
+            # Require the contender to reach its resolution call.
+            self.assertTrue(ready.wait(2))
+            # Allow the nonblocking call to complete while ownership remains held.
+            worker.join(2)
+            # Require no blocking behind active execution.
+            self.assertFalse(worker.is_alive())
+        # Return exact pending without durable claim mutation.
+        self.assertEqual([GameActionResolution(status="pending")], output)
+
+    # Prove nonblocking resolution masks only genuine lock contention.
+    def test_nonblocking_lock_fails_closed_on_filesystem_and_descriptor_errors(self):
+        # Build one fake Windows lock module so every failure path runs on every host.
+        lock_module = mock.Mock(LK_NBLCK=1, LK_UNLCK=2)
+
+        # Build one context-manager path around a caller-owned fake handle.
+        def fake_path(handle):
+            # Construct one path-like mock with a writable parent seam.
+            path = mock.MagicMock()
+            # Return the supplied handle from the binary append context.
+            path.open.return_value.__enter__.return_value = handle
+            # Preserve ordinary context exit behavior.
+            path.open.return_value.__exit__.return_value = False
+            # Return the complete path-like fixture.
+            return path
+
+        # Exercise seek, write, flush, and locking failures independently.
+        failures = ("seek", "write", "flush", "locking")
+        # Run the Windows branch deterministically even on POSIX CI.
+        with mock.patch.object(storage_module.os, "name", "nt"), mock.patch.dict(sys.modules, {"msvcrt": lock_module}):
+            # Visit each exact failing operation.
+            for operation in failures:
+                # Identify the bounded adversarial step.
+                with self.subTest(operation=operation):
+                    # Allocate a fresh binary-handle test double.
+                    handle = mock.MagicMock()
+                    # Return an empty file for lock-byte initialization by default.
+                    handle.seek.return_value = 0
+                    # Return one stable descriptor for the locking call.
+                    handle.fileno.return_value = 7
+                    # Reset the shared module behavior between cases.
+                    lock_module.locking.reset_mock(side_effect=True)
+                    # Inject one non-contention I/O failure at the selected boundary.
+                    if operation == "locking":
+                        # Fail the lock call with a descriptor-level I/O error.
+                        lock_module.locking.side_effect = OSError(errno.EIO, "synthetic")
+                    else:
+                        # Fail the selected handle method before lock ownership.
+                        getattr(handle, operation).side_effect = OSError(errno.EIO, "synthetic")
+                    # Require the unexpected filesystem/descriptor error to propagate.
+                    with self.assertRaises(OSError):
+                        # Attempt the complete nonblocking lock context.
+                        with self.provider._try_exclusive_process_file_lock(fake_path(handle)):
+                            # Keep the protected body unreachable on acquisition failure.
+                            self.fail("unexpected lock acquisition")
+            # Allocate one fresh handle for exact contention classification.
+            contender_handle = mock.MagicMock()
+            # Require one existing lock byte so setup does not write.
+            contender_handle.seek.return_value = 1
+            # Return one stable descriptor for the contender.
+            contender_handle.fileno.return_value = 8
+            # Raise only the documented access-denied contention code.
+            lock_module.locking.side_effect = OSError(errno.EACCES, "synthetic")
+            # Convert genuine lock contention to the finite unavailable result.
+            with self.provider._try_exclusive_process_file_lock(fake_path(contender_handle)) as acquired:
+                # Require exact false without swallowing other failures.
+                self.assertFalse(acquired)
+
+    # Prove a stopped pre-planner reservation becomes terminal without a second planner.
+    def test_resolver_converts_prepared_restart_to_uncommitted(self):
+        # Allocate one isolated provider that stops at the prepared boundary.
+        with tempfile.TemporaryDirectory() as directory:
+            # Construct the one-shot provider.
+            provider = _ActionFailureProvider(Path(directory) / "data", "prepared")
+            # Seed the exact paid wallet.
+            provider.bootstrap_players(_players())
+            # Build the exact action semantics.
+            resources = _resources()
+            # Bind one restart-stable identity.
+            identity = _identity(action_key="prepared-resolve", resources=resources)
+            # Stop before planner invocation.
+            with self.assertRaises(SystemExit):
+                # Begin the original execution attempt.
+                provider.execute_game_action_once(identity=identity, resources=resources, planner=_paid_plan)
+            # Resolve through a fresh provider after the stopped owner disappears.
+            restarted = JsonStorageProvider(provider.data_dir)
+            # Commit one immutable uncommitted tombstone without planning.
+            self.assertEqual(GameActionResolution(status="uncommitted"), restarted.resolve_game_action(identity=identity, resources=resources))
+            # Remove the obsolete pre-planner journal.
+            self.assertFalse(restarted.game_action_journal_path().exists())
+            # Preserve the original wallet exactly.
+            self.assertEqual(10, restarted.load_players(_players)["players"][0]["balance"])
+            # Leave no ledger movement for the uncommitted action.
+            self.assertEqual([], restarted.read_ledger_recent("human", 10))
+            # Reject every late executor without planner/RNG.
+            with self.assertRaisesRegex(ConflictError, "^Game action was durably resolved as uncommitted$"):
+                # Attempt late execution behind the tombstone.
+                restarted.execute_game_action_once(identity=identity, resources=resources, planner=lambda _snapshot: self.fail("late planner invoked"))
+
     # Prove every durable post-plan boundary converges on restart without new planner entropy.
     def test_restart_recovery_reuses_durable_plan_at_every_projection_boundary(self):
         # Exercise every post-plan write and cleanup checkpoint.
-        for boundary in ("planned", "wallet_applied", "state_applied", "receipt_committed", "cleanup"):
+        for boundary in ("planned", "wallet_applied", "ledger_applied", "state_applied", "receipt_committed", "cleanup"):
             # Identify the exact injected boundary.
             with self.subTest(boundary=boundary):
                 # Allocate an isolated data root for this failure boundary.
@@ -520,6 +776,8 @@ class JsonGameActionProviderTests(unittest.TestCase):
                     self.assertEqual([], planner_calls)
                     # Require exactly one wallet result.
                     self.assertEqual(11.5, restarted.load_players(_players)["players"][0]["balance"])
+                    # Require exactly one debit and payout ledger row after every restart boundary.
+                    self.assertEqual(2, len(restarted.read_ledger_recent("human", 10)))
                     # Require journal cleanup after convergence.
                     self.assertFalse(restarted.game_action_journal_path().exists())
 
@@ -622,6 +880,8 @@ class JsonGameActionProviderTests(unittest.TestCase):
             self.provider.game_action_journal_path().parent / "journal.json.tmp-stale",
             # Seed one receipt temp.
             self.provider.game_action_journal_path().parent / "receipts.json.tmp-stale",
+            # Seed one lifecycle-claim temp.
+            self.provider.game_action_journal_path().parent / "claims.json.tmp-stale",
             # Seed one state temp.
             self.provider.game_action_journal_path().parent / "states.json.tmp-stale",
         ]

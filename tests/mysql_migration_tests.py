@@ -4,6 +4,8 @@
 
 # Import deep-copy JSON handling for proof tamper cases.
 import json
+# Import SHA-256 for immutable predecessor migration bytes.
+import hashlib
 # Import in-memory streams for secret-safe CLI output assertions.
 import io
 # Import output redirection for isolated command-line failure tests.
@@ -201,16 +203,16 @@ class MySQLMigrationTests(unittest.TestCase):
     def test_catalog_contract_is_exact(self):
         # Load the verified immutable migration catalog.
         migrations, expected, minimum, catalog_sha256 = mysql_migrations.load_catalog()
-        # Require the three explicit sequential migrations and bridge runtime window.
-        self.assertEqual([item.version for item in migrations], [1, 2, 3])
+        # Require the four explicit sequential migrations and bridge runtime window.
+        self.assertEqual([item.version for item in migrations], [1, 2, 3, 4])
         # Require the separately versioned runtime window.
-        self.assertEqual((minimum, expected), (2, 3))
+        self.assertEqual((minimum, expected), (2, 4))
         # Require the public contract to bind the closed apply policy.
         self.assertEqual(mysql_migrations.schema_contract()["apply_policy"], "held")
         # Require canonical SHA-256 identities.
         self.assertRegex(catalog_sha256, r"^[0-9a-f]{64}$")
         # Require every listed migration to retain a distinct checksum.
-        self.assertEqual(len({item.checksum for item in migrations}), 3)
+        self.assertEqual(len({item.checksum for item in migrations}), 4)
         # Pin the two immutable predecessor files byte-for-byte.
         self.assertEqual(
             [item.checksum for item in migrations[:2]],
@@ -221,8 +223,10 @@ class MySQLMigrationTests(unittest.TestCase):
         )
         # Pin both the unchanged schema-two prefix and the deterministic schema-three chain.
         self.assertEqual(mysql_migrations.migration_chain_digest(migrations, 2), "72fa8f8918022d5bcd29ba286bd96ab6f319ea0ea6aee5e376e1ff71c2eeedd8")
-        # Require one reviewed complete chain identity for the new catalog tail.
-        self.assertEqual(mysql_migrations.migration_chain_digest(migrations), "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
+        # Pin the unchanged schema-three prefix containing exact legacy receipt bytes.
+        self.assertEqual(mysql_migrations.migration_chain_digest(migrations, 3), "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
+        # Require one reviewed complete chain identity for the schema-four catalog tail.
+        self.assertEqual(mysql_migrations.migration_chain_digest(migrations), "0fa4dcd42d590bc64b10323fd2362129776d5e0b4dcde8c6262070e615a7060b")
 
     # Prove catalog loading rejects absent or alternate apply policy.
     def test_catalog_apply_policy_is_exact_and_closed(self):
@@ -261,9 +265,9 @@ class MySQLMigrationTests(unittest.TestCase):
         # Load the checksum-verified schema-three migration through the production parser.
         migrations, expected, _, _ = mysql_migrations.load_catalog()
         # Select only the new receipt-capacity migration tail.
-        migration = migrations[-1]
+        migration = migrations[2]
         # Require the exact stable migration identity.
-        self.assertEqual((expected, migration.version, migration.name), (3, 3, "game-action-receipts"))
+        self.assertEqual((expected, migration.version, migration.name), (4, 3, "game-action-receipts"))
         # Require exactly one additive table and no stored enforcement object.
         self.assertEqual(len(migration.statements), 1)
         # Read the complete additive table statement once.
@@ -301,6 +305,55 @@ class MySQLMigrationTests(unittest.TestCase):
         # Reject any trigger, routine, saga, compensation, or journal object in this capacity slice.
         self.assertTrue(all(term not in " ".join(migration.statements).lower() for term in ("trigger", "procedure", "function", "journal", "saga", "compensation")))
 
+    # Prove schema four adds immutable claims and binds byte-preserved receipts exactly.
+    def test_schema_four_claim_boundary_and_receipt_binding_are_exact(self):
+        # Load the checksum-verified catalog without touching a database.
+        migrations, expected, minimum, _catalog_sha256 = mysql_migrations.load_catalog()
+        # Select only the schema-four lifecycle migration.
+        migration = migrations[3]
+        # Require exact catalog identity and unchanged compatibility floor.
+        self.assertEqual((minimum, expected, migration.version, migration.name), (2, 4, 4, "game-action-claims"))
+        # Require the reviewed twelve-statement epoch/additive/backfill/binding sequence.
+        self.assertEqual(12, len(migration.statements))
+        # Join exact statements only for bounded forbidden-object proof.
+        joined = "\n".join(migration.statements)
+        # Require one exact singleton epoch and readiness table first.
+        self.assertIn("CREATE TABLE casino_game_action_epoch_state", migration.statements[0])
+        # Bind the singleton, signed-range epoch, and finite readiness phases.
+        self.assertTrue(all(fragment in migration.statements[0] for fragment in ("CHECK (state_id = 1)", "current_epoch BETWEEN 1 AND 9223372036854775807", "phase IN ('ready', 'resetting')")))
+        # Seed only the reviewed epoch-one ready singleton.
+        self.assertEqual("INSERT INTO casino_game_action_epoch_state (state_id, current_epoch, phase) VALUES (1, 1, 'ready')", migration.statements[1])
+        # Backfill every legacy receipt into epoch one before replacing its primary key.
+        self.assertIn("ADD COLUMN reset_epoch BIGINT UNSIGNED NOT NULL DEFAULT 1", migration.statements[2])
+        # Remove the epoch default before runtime can omit namespace ownership.
+        self.assertEqual("ALTER TABLE casino_game_action_receipts ALTER COLUMN reset_epoch DROP DEFAULT", migration.statements[3])
+        # Require the epoch-prefixed receipt primary key.
+        self.assertIn("PRIMARY KEY (reset_epoch, game_id, player_id, action_key)", migration.statements[4])
+        # Require one immutable claims table with the same epoch-prefixed scope key.
+        self.assertIn("CREATE TABLE casino_game_action_claims", migration.statements[5])
+        # Require exact reset-epoch action-scope ownership.
+        self.assertIn("PRIMARY KEY (reset_epoch, game_id, player_id, action_key)", migration.statements[5])
+        # Require the only two finite dispositions.
+        self.assertIn("disposition IN ('execute', 'uncommitted')", migration.statements[5])
+        # Require the composite semantic key used by the receipt foreign key.
+        self.assertIn("UNIQUE KEY uq_game_action_claim_semantics (reset_epoch, game_id, player_id, action_key, disposition, request_fingerprint)", migration.statements[5])
+        # Require legacy receipt backfill to copy identity, fingerprint, and resources without touching receipt bytes.
+        self.assertEqual("INSERT INTO casino_game_action_claims (reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, disposition) SELECT reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, 'execute' FROM casino_game_action_receipts", migration.statements[6])
+        # Require the temporary execute default only for backfill-compatible column creation.
+        self.assertIn("claim_disposition", migration.statements[7])
+        # Remove the default before runtime can insert implicit ownership.
+        self.assertEqual("ALTER TABLE casino_game_action_receipts ALTER COLUMN claim_disposition DROP DEFAULT", migration.statements[8])
+        # Require every receipt to remain execute-only.
+        self.assertIn("CHECK (claim_disposition = 'execute')", migration.statements[9])
+        # Require one exact child composite index.
+        self.assertIn("(reset_epoch, game_id, player_id, action_key, claim_disposition, request_fingerprint)", migration.statements[10])
+        # Require a no-cascade composite foreign key to the immutable winner.
+        self.assertIn("REFERENCES casino_game_action_claims (reset_epoch, game_id, player_id, action_key, disposition, request_fingerprint) ON UPDATE RESTRICT ON DELETE RESTRICT", migration.statements[11])
+        # Reject mutation helpers and stored execution objects from the bridge.
+        self.assertTrue(all(term not in joined.lower() for term in ("trigger", "procedure", "function", "enum", "on duplicate key update", "delete from", "update casino_game_action")))
+        # Preserve exact immutable schema-three descriptor bytes.
+        self.assertEqual("7fcb2a4997796f170c914480b1a10ebc695c4751ed66679d64774373242c0e7b", hashlib.sha256((mysql_migrations.MIGRATION_ROOT / "0003_game_action_receipts.json").read_bytes()).hexdigest())
+
     # Prove held application refuses before connection state, lock, DDL, or metadata mutation.
     def test_public_apply_is_held_before_connection_access(self):
         # Allocate one hostile connection whose attributes and methods must stay untouched.
@@ -312,37 +365,38 @@ class MySQLMigrationTests(unittest.TestCase):
         # Require no cursor, autocommit assignment, lock, DDL, or state write.
         self.assertEqual(connection.mock_calls, [])
 
-    # Prove release packaging binds and requires the exact schema-three inventory.
-    def test_package_inventory_requires_schema_three(self):
+    # Prove release packaging binds and requires the exact schema-four inventory.
+    def test_package_inventory_requires_schema_four(self):
         # Calculate release schema provenance from the selected source tree.
         inventory = package_app.mysql_schema_inventory(package_app.ROOT)
-        # Require the schema-two-to-three bridge runtime window.
-        self.assertEqual((inventory["minimum_version"], inventory["expected_version"]), (2, 3))
+        # Require the schema-two-through-four bridge runtime window.
+        self.assertEqual((inventory["minimum_version"], inventory["expected_version"]), (2, 4))
         # Require package provenance to bind the held application policy.
         self.assertEqual(inventory["apply_policy"], "held")
         # Require the same deterministic chain as the migration runtime.
-        self.assertEqual(inventory["migration_chain_sha256"], "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
+        self.assertEqual(inventory["migration_chain_sha256"], "0fa4dcd42d590bc64b10323fd2362129776d5e0b4dcde8c6262070e615a7060b")
         # Require every immutable migration path in the archive's mandatory allowlist.
         self.assertTrue(
             {
                 "migrations/mysql/0001_initial.json",
                 "migrations/mysql/0002_action_identity.json",
                 "migrations/mysql/0003_game_action_receipts.json",
+                "migrations/mysql/0004_game_action_claims.json",
                 "migrations/mysql/catalog.json",
             }.issubset(package_app.REQUIRED_FILES)
         )
         # Read the tracked source inventory and add the new checkpoint file before commit.
-        repository_paths = [*package_app.tracked_paths(package_app.ROOT), "migrations/mysql/0003_game_action_receipts.json"]
+        repository_paths = [*package_app.tracked_paths(package_app.ROOT), "migrations/mysql/0004_game_action_claims.json"]
         # Select the exact package inventory through the production allowlist.
         selected = package_app.select_release_files(package_app.ROOT, repository_paths)
-        # Require the schema-three descriptor to be physically packaged.
-        self.assertIn("migrations/mysql/0003_game_action_receipts.json", selected)
+        # Require the schema-four descriptor to be physically packaged.
+        self.assertIn("migrations/mysql/0004_game_action_claims.json", selected)
         # Remove only the new migration from an otherwise complete source inventory.
-        missing_three = [path for path in repository_paths if path != "migrations/mysql/0003_game_action_receipts.json"]
+        missing_four = [path for path in repository_paths if path != "migrations/mysql/0004_game_action_claims.json"]
         # Require package selection to fail before creating an incomplete archive.
-        with self.assertRaisesRegex(ValueError, "0003_game_action_receipts"):
+        with self.assertRaisesRegex(ValueError, "0004_game_action_claims"):
             # Attempt selection without the catalog-required migration.
-            package_app.select_release_files(package_app.ROOT, missing_three)
+            package_app.select_release_files(package_app.ROOT, missing_four)
 
     # Prove migration configuration never falls back to runtime credentials or weak/reused keys.
     def test_migration_configuration_is_isolated(self):
@@ -558,8 +612,8 @@ class MySQLMigrationTests(unittest.TestCase):
                 clock.now.return_value = datetime(2026, 7, 16, 18, 30, tzinfo=timezone.utc)
                 # Execute the non-mutating pending dry run.
                 pending = mysql_migrations.dry_run(connection, synthetic_config(), proof_path)
-        # Require all three migration versions to remain pending.
-        self.assertEqual([item.version for item in pending], [1, 2, 3])
+        # Require all four migration versions to remain pending.
+        self.assertEqual([item.version for item in pending], [1, 2, 3, 4])
         # Require every database statement during pending dry-run to be SELECT.
         self.assertTrue(connection.statements and all(statement.lstrip().upper().startswith("SELECT") for statement, _ in connection.statements))
 
@@ -637,12 +691,12 @@ class MySQLMigrationTests(unittest.TestCase):
         # Require no lock, read, DDL, or metadata statement.
         self.assertEqual(connection.statements, [])
 
-    # Prove clean schema-two and schema-three prefixes are both runtime compatible.
-    def test_runtime_accepts_only_clean_exact_schema_two_or_three_prefixes(self):
+    # Prove clean schema-two, schema-three, and schema-four prefixes are runtime compatible.
+    def test_runtime_accepts_only_clean_exact_schema_two_three_or_four_prefixes(self):
         # Load the checksum-bound complete catalog.
         migrations, _, _, _ = mysql_migrations.load_catalog()
         # Exercise both reviewed runtime versions.
-        for version in (2, 3):
+        for version in (2, 3, 4):
             # Build one exact clean prefix state.
             state = clean_schema_state(migrations, version)
             # Patch only the SELECT-backed state reader.
@@ -653,8 +707,8 @@ class MySQLMigrationTests(unittest.TestCase):
         refused = (
             # Schema one is below the closed bridge window.
             clean_schema_state(migrations, 1),
-            # Schema four is an unknown future state.
-            mysql_migrations.SchemaState(True, 4, "clean", None, "0" * 64, tuple(), True),
+            # Schema five is an unknown future state.
+            mysql_migrations.SchemaState(True, 5, "clean", None, "0" * 64, tuple(), True),
             # Applying schema three is not runtime-visible.
             mysql_migrations.SchemaState(True, 2, "applying", 3, mysql_migrations.migration_chain_digest(migrations, 2), tuple(), True),
             # Dirty schema three is not runtime-visible.
