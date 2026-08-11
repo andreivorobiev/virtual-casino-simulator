@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.74 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages the default-off governed mobile transport and lifecycle core without changing any game descriptor, route, outcome, wallet action, or economics.
+
 The v0.9.5.73 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages disabled-by-default verified email enrollment without changing any game descriptor, route, outcome, wallet action, or economics.
 
 The v0.9.5.72 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages exact-source request-latency acceptance without changing any game descriptor, route, outcome, wallet action, or economics.

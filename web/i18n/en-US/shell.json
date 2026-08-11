@@ -286,6 +286,8 @@
   "whatsNew.entry.0_9_5_69.body": "This release makes JSON exactly-once action writes append-only, cross-process visible, crash-recoverable, and periodically compacted without changing game or wallet behavior.",
   "whatsNew.entry.0_9_5_73.title": "Verified email enrollment",
   "whatsNew.entry.0_9_5_73.body": "This release adds disabled-by-default verified email enrollment without creating an account, wallet, or session before confirmation.",
+  "whatsNew.entry.0_9_5_74.title": "Secure mobile lifecycle core",
+  "whatsNew.entry.0_9_5_74.body": "This release adds a default-off OS-vault native session transport and governed lifecycle and deep-link boundaries while preserving browser and PWA behavior.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
