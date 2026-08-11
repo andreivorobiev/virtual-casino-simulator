@@ -1413,6 +1413,8 @@ def run_api_tests():
     run_case('PERF-PAYLOAD-BUDGET-001',['TEST-159'],lambda: run_unit_module('tests.unit.payload_frontend_budget_tests','payload and frontend budget suite failed'))
     # Record compact shell/Roulette projections and frozen-response compatibility. (issue #323, TEST-166)
     run_case('PERF-PAYLOAD-PROJECTION-001',['TEST-166'],lambda: run_unit_module('tests.unit.performance_projection_tests','payload projection suite failed'))
+    # Enforce the issue-323 exact-source JSON/MySQL latency decision boundary. (issue #323, TEST-170)
+    run_case('PERF-TARGET-GATE-001',['TEST-170'],lambda: run_unit_module('tests.unit.performance_target_gate_tests','performance target gate suite failed'))
     # Record the fail-closed process-safety inventory used before any worker-count increase. (issue #323, TEST-160)
     run_case('PERF-MULTIPROCESS-SAFETY-001',['TEST-160'],lambda: run_unit_module('tests.unit.multiprocess_safety_audit_tests','multiprocess safety audit suite failed'))
     # Record the descriptor-owned game-suite discovery boundary without migrating game descriptors yet. (issue #434, TEST-161)

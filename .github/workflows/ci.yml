@@ -64,12 +64,28 @@ jobs:
           python -m unittest tests.issue_lifecycle_tests
           python verify_rules.py
           python -m unittest tests.test_progress
-          python tests/run_tests.py --storage --mysql-migrations-live
+          # Capture the exact-source JSON baseline before the disposable MySQL lifecycle.
+          python tests/run_tests.py --request-latency json --request-latency-output "$RUNNER_TEMP/request-latency-json.json"
+          # Capture MySQL evidence inside the existing guarded migration and cleanup boundary.
+          python tests/run_tests.py --storage --mysql-migrations-live --request-latency mysql --request-latency-output "$RUNNER_TEMP/request-latency-mysql.json"
+          # Fail closed unless both complete provider grids satisfy issue #323 targets.
+          python tests/performance_target_gate.py --json-evidence "$RUNNER_TEMP/request-latency-json.json" --mysql-evidence "$RUNNER_TEMP/request-latency-mysql.json" --output "$RUNNER_TEMP/performance-target-acceptance.json"
           python tests/run_tests.py --api
           python scripts/validate_game_catalog.py
           python scripts/validate_agent_memory.py
           python scripts/validate_requirements.py
           python scripts/validate_versions.py
+      # Retain only aggregate exact-source timing and the bounded acceptance decision. (issue #323, TEST-170)
+      - name: Upload request-latency evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: request-latency-evidence-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/request-latency-json.json
+            ${{ runner.temp }}/request-latency-mysql.json
+            ${{ runner.temp }}/performance-target-acceptance.json
+          if-no-files-found: error
+          retention-days: 14
       # Provide a JavaScript runtime for the frontend contract suites. (issue #413)
       - uses: actions/setup-node@v4
         with:

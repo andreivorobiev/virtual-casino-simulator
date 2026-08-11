@@ -21,6 +21,8 @@ Listener-free `PERF-PAYLOAD-PROJECTION-001` evidence requires the shell projecti
 
 The Roulette frontend suite additionally proves the catalog is loaded once for the active mode and reused after a real route remount. Normal exact-head API, contract, Browser, Long, requirements, version, module-boundary, comment-density, and diff gates remain mandatory.
 
-## Remaining operational evidence
+## Exact-source target gate
 
-This repository change does not claim the issue's production latency targets or authorize a production load test. Those targets require comparable isolated-provider or separately authorized read-only operational evidence. Scaling stays on the current topology unless that evidence shows a need for an owner cost/topology decision.
+Hosted CI now produces comparable listener-free JSON and disposable-MySQL evidence from the exact checkout and fails closed unless every single-request warm authenticated game-state read stays at or below 100 ms p50 and 200 ms p95, while every concurrency-four game-state read stays at or below 250 ms p95 and strictly above the recorded 3.37 requests-per-second baseline. The same job retains both aggregate-only packets and one sanitized acceptance decision under `TEST-170`; the idempotent Boule write and concurrency-eight rows remain diagnostic rather than being mislabeled as the issue's read targets.
+
+The accepted multiprocess inventory still blocks a second worker, and the payload projections already satisfy their reduction budgets. Therefore the completed target gate keeps the deployed one-worker/two-thread topology instead of turning a performance program into an unreviewed cost or process-safety change.
