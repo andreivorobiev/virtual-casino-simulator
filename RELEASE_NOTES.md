@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.72 Release Notes
+
+## Exact-source request-latency acceptance
+
+- Packages accepted performance PR #676 and closes repository-controlled issue #323; release-owned application advances to `9.62.2`.
+- Enforces the issue's authenticated game-state latency targets against complete exact-source JSON and disposable-MySQL benchmark grids in hosted CI.
+- Requires concurrency-one reads to remain at or below 100 ms p50 and 200 ms p95, and concurrency-four reads to remain at or below 250 ms p95 while strictly exceeding 3.37 requests per second.
+- Retains only aggregate, sanitized performance evidence; idempotent write and concurrency-eight rows remain diagnostic rather than release thresholds.
+- Preserves the accepted one-worker/two-thread production topology because the multiprocess inventory still blocks a second worker.
+- Keeps frozen APIs, game behavior, money, settlement, paytables, providers, database schema, and restricted-preview policy unchanged.
+- Adds permanent `TEST-170` exact-source performance acceptance; the governed total is exactly 944 requirements.
+- Records the exact canonical package inventory as 754 regular files: v0.9.5.71 inventory 753 plus this v0.9.5.72 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.40.1`, Ledger `9.1.2`, tooling `1.29.1`, and every game revision remain exact protected-main values.
+- Retains exact immutable terminal-green v0.9.5.71 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.71 Release Notes
 
 ## Roulette and Slots motion quality

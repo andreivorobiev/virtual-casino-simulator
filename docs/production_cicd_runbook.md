@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.71`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.72`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -193,6 +193,8 @@ v0.9.5.69 packages accepted append-only action-journal PR #669 and closes reposi
 v0.9.5.70 packages accepted file-header policy PR #672 and closes repository-controlled issue #441. First-party Python and JavaScript sources now carry governed copyright, SPDX, and substantive purpose headers; generated per-line filler comments are removed, meaningful rationale remains, and vendored Swagger assets remain byte-identical and excluded. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.69 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.71 packages accepted motion-quality PR #674 and closes repository-controlled issues #169 and #170. Roulette and Slots expose governed real-duration, autoplay, and reduced-motion profiles with deterministic phase ownership, safe route recovery, and scroll stability while preserving all game mathematics and settlement behavior. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.70 as the application-only predecessor; database rollback remains prohibited.
+
+v0.9.5.72 packages accepted performance-target PR #676 and closes repository-controlled issue #323. Exact-source hosted JSON and disposable-MySQL request-latency grids now fail closed against the accepted authenticated game-state read targets while write and concurrency-eight cohorts remain diagnostic and the one-worker/two-thread production topology remains unchanged. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.71 as the application-only predecessor; database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
