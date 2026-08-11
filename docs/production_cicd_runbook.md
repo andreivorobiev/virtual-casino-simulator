@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.74`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.75`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -199,6 +199,8 @@ v0.9.5.72 packages accepted performance-target PR #676 and closes repository-con
 v0.9.5.73 packages accepted verified-email enrollment PR #678 and closes repository-controlled issue #69. Email/password enrollment remains disabled by default; no canonical user, player, balance, or session exists before bearer verification, and successful verification still requires a separate login. Recoverable resend, ownership-bound cancellation, rate controls, terminal scrubbing, and bounded retention authorize no live mail/provider traffic or public signup. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.72 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.74 packages accepted secure mobile-core PR #680, closes repository-controlled issue #681, and leaves umbrella issue #183 open for native OAuth handoff, signed-device, verified-link, store, and physical-device evidence. The default-off native path uses direct OS transport, OS-vault bearer plus matching session CSRF, exact lifecycle generations, and governed deep-link scrubbing while browser/PWA cookie behavior remains unchanged. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.73 as the application-only predecessor; database rollback remains prohibited.
+
+v0.9.5.75 packages accepted inert game-action lifecycle Phase A PR #686, closes bounded issue #685, and leaves umbrella issue #683 open for governed route and game adoption. Provider-neutral JSON and exact clean-schema-four MySQL storage can converge immutable execute-or-uncommitted claims, exact receipts, resolver-first cancellation, and reset epochs, but no route, game, public API, or production path activates that capacity. The catalog remains minimum 2, expected 4, and apply held; deployment must prove exact schema 2 before and after activation while invoking no migration or grant mutation. Its compatibility record retains exact terminal-green v0.9.5.74 as the application-only predecessor; database rollback remains prohibited. Issues #168 and #488 also remain open.
 
 ## Historical first-rollout blocker
 
