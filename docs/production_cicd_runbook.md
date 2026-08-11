@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.70`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.71`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -191,6 +191,8 @@ v0.9.5.68 packages accepted policy-gated social-signup PR #666 and closes reposi
 v0.9.5.69 packages accepted append-only action-journal PR #669 and closes repository-controlled issue #432. The JSON provider appends one fsynced commit and one projection marker per new exactly-once action, incrementally observes cross-process tails, recovers pending identities only, fails closed on corrupt or conflicting records, and periodically compacts settled references below 200 bytes per action while retaining legacy snapshot readability. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.68 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.70 packages accepted file-header policy PR #672 and closes repository-controlled issue #441. First-party Python and JavaScript sources now carry governed copyright, SPDX, and substantive purpose headers; generated per-line filler comments are removed, meaningful rationale remains, and vendored Swagger assets remain byte-identical and excluded. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.69 as the application-only predecessor; database rollback remains prohibited.
+
+v0.9.5.71 packages accepted motion-quality PR #674 and closes repository-controlled issues #169 and #170. Roulette and Slots expose governed real-duration, autoplay, and reduced-motion profiles with deterministic phase ownership, safe route recovery, and scroll stability while preserving all game mathematics and settlement behavior. Deployment must prove exact schema 2 before and after activation while invoking no migration. Its compatibility record retains exact terminal-green v0.9.5.70 as the application-only predecessor; database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
