@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.70 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages the governed first-party source-header policy without changing any game descriptor, route, outcome, wallet action, or economics.
+
 The v0.9.5.69 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages the append-only JSON exactly-once action journal without changing any game descriptor, route, outcome, wallet action, or economics.
 
 The v0.9.5.68 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages disabled-by-default Google and Facebook signup into canonical accounts without changing any game descriptor, route, outcome, wallet action, or economics.
