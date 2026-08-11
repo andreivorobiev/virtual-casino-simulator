@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Virtual Casino auth and current-user API
   version: v2
-  description: Additive v2 contract for authenticated private-invite play, guest trials, policy-enforced signup and invitation redemption, current-user state, terms acceptance, play-token balance flows, and disabled-by-default provider linking and sign-in.
+  description: Additive v2 contract for authenticated private-invite play, guest trials, verified-email pending signup and invitation redemption, current-user state, terms acceptance, play-token balance flows, and disabled-by-default provider linking and sign-in.
 servers:
   - url: /api/v2
 x-casino-enrollment-policy:
@@ -126,7 +126,7 @@ paths:
           description: Empty standard envelope; the recovered value travels only in the Set-Cookie header, never the response body.
   /auth/signup:
     post:
-      summary: Create a first-party account only when the resolved enrollment policy allows public email signup.
+      summary: Begin account-free verified-email enrollment only when policy and transactional mail are ready.
       operationId: auth_v2_signup
       requestBody:
         required: true
@@ -136,11 +136,11 @@ paths:
               $ref: '#/components/schemas/SignupRequest'
       responses:
         '200':
-          description: Standard API envelope carrying the authenticated new account session.
+          description: Generic pending-verification acknowledgement; no account, player, balance, or session exists yet.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthEnvelope'
+                $ref: '#/components/schemas/SignupPendingEnvelope'
         '400':
           description: Standard envelope for invalid email, password, locale, terms, or unsupported account fields.
           content:
@@ -149,6 +149,69 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '403':
           description: The resolved enrollment policy denies signup or its operational decision cannot be logged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/signup/resend:
+    post:
+      summary: Replace a pending email-verification bearer with an enumeration-safe acknowledgement.
+      operationId: auth_v2_signup_resend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupResendRequest'
+      responses:
+        '200':
+          description: Identical pending acknowledgement regardless of recipient lookup outcome.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupPendingEnvelope'
+  /auth/signup/verify:
+    post:
+      summary: Consume a purpose-bound bearer and recoverably provision, ledger-fund, then activate an account without a session.
+      operationId: auth_v2_signup_verify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupVerifyRequest'
+      responses:
+        '200':
+          description: Identifier-free activation receipt; the client must sign in explicitly.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupVerifiedEnvelope'
+        '400':
+          description: Generic rejection for malformed, expired, consumed, cancelled, mismatched, or unavailable verification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/signup/cancel:
+    post:
+      summary: Revoke one pending verification generation only with its current delivered bearer.
+      operationId: auth_v2_signup_cancel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupCancelRequest'
+      responses:
+        '200':
+          description: Terminal cancellation receipt after current-bearer ownership proof.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupCancelledEnvelope'
+        '400':
+          description: Generic rejection for absent, malformed, stale, revoked, candidate, cross-recipient, rate-limited, or raced cancellation ownership.
           content:
             application/json:
               schema:
@@ -853,7 +916,7 @@ components:
           enum: [tiltseven_first_party]
     SignupRequest:
       type: object
-      required: [email, password, display_name, accepted, terms_version]
+      required: [email, password, display_name, locale, accepted, terms_version, idempotency_key]
       additionalProperties: false
       properties:
         email:
@@ -875,7 +938,104 @@ components:
           enum: [true]
         terms_version:
           type: string
-    LoginRequest:
+        idempotency_key:
+          type: string
+          minLength: 16
+          maxLength: 200
+    SignupResendRequest:
+      type: object
+      required: [email, locale, idempotency_key]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+        idempotency_key:
+          type: string
+          minLength: 16
+          maxLength: 200
+    SignupVerifyRequest:
+      type: object
+      required: [token, email, idempotency_key]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        idempotency_key:
+          type: string
+          minLength: 16
+          maxLength: 200
+    SignupCancelRequest:
+      type: object
+      required: [token, email, idempotency_key]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 16
+          maxLength: 512
+        email:
+          type: string
+          format: email
+        idempotency_key:
+          type: string
+          minLength: 16
+          maxLength: 200
+    SignupPendingEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [status]
+          additionalProperties: false
+          properties:
+            status:
+              type: string
+              enum: [verification_pending]
+    SignupVerifiedEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [status]
+          additionalProperties: false
+          properties:
+            status:
+              type: string
+              enum: [enrolled]
+    SignupCancelledEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [status]
+          additionalProperties: false
+          properties:
+            status:
+              type: string
+              enum: [cancelled]
     LoginRequest:
       type: object
       required: [username, password]

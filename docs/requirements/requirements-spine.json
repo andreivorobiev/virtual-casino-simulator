@@ -10648,6 +10648,72 @@
       "introduced_in": "issue-323-performance-target-gate",
       "changed_in": "issue-323-performance-target-gate",
       "notes": "The retained packets expose only the existing fixed provider, route-family, concurrency, aggregate latency, throughput, error, byte-count, schema, and source-commit fields. No production load, listener, provider setting, database schema, worker-count, thread-count, or pool-default change is authorized or performed."
+    },
+    {
+      "id": "AUTH-018",
+      "module": "Core",
+      "description": "Policy-enabled first-party email signup persists only recoverable pending credentials and a purpose-bound verification delivery before confirmation: no canonical user, player, balance, or session exists. Verification consumes the current bearer under caller idempotency, reserves mailbox uniqueness, provisions an inactive local identity, creates a zero-balance inactive wallet, credits the configured starting balance through one deterministic ledger.credit_once action, then activates wallet and user without creating a session. Exact-key retries recover every post-consumption phase; resend preserves the predecessor while a non-consumable candidate is delivered and promotes it atomically only after a sent receipt; durable generation phases recover worker crashes; cancellation requires the exact active delivered bearer, charges distinct malformed/wrong/stale/absent/cross-recipient probes, rechecks current token and generation, revokes current and candidate work without resurrection, and replays an exact completed action after revocation; completion and cancellation atomically scrub raw pending recipient, credential-verifier, and profile fields; bounded terminal retention prunes only expired scrubbed metadata; independent durable initiate, resend, verify, and cancel limits charge distinct attempts after exact replay classification; all public lookup failures remain non-enumerating and public signup remains disabled by default.",
+      "status": "PASS",
+      "api_tests": [
+        "API-VERIFIED-EMAIL-001"
+      ],
+      "browser_tests": [
+        "BR-VERIFIED-EMAIL-001"
+      ],
+      "implementation_files": [
+        "casino/core/pending_enrollment.py",
+        "casino/core/auth.py",
+        "casino/core/players.py",
+        "casino/app.py",
+        "casino/wsgi.py",
+        "casino/config.py",
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "issue-69-verified-email-enrollment",
+      "changed_in": "issue-69-verified-email-enrollment",
+      "notes": "The v1 API remains frozen. Provider delivery, public signup, and production configuration remain independently disabled; verification success requires a later explicit login."
+    },
+    {
+      "id": "USER-010",
+      "module": "Application",
+      "description": "The localized responsive signup surface transitions to a dedicated pending-email route after initiation, immediately scrubs an arrived bearer from URL and history into module-only memory, supports generic resend, enables verification and cancellation only after a delivered bearer arrives, uses independent digest-indexed session replay keys for verify and cancel, clears each key only after acknowledged terminal success, and returns verified users to explicit login rather than assuming a session. English and Russian copy states that account and wallet creation occur only after verification.",
+      "status": "PASS",
+      "api_tests": [
+        "API-VERIFIED-EMAIL-001"
+      ],
+      "browser_tests": [
+        "BR-VERIFIED-EMAIL-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-69-verified-email-enrollment",
+      "changed_in": "issue-69-verified-email-enrollment",
+      "notes": "Browser module memory and one random session-scoped replay key are the only client-side recovery state; the raw bearer is never written to sessionStorage."
+    },
+    {
+      "id": "TEST-171",
+      "module": "Tests",
+      "description": "Provider-free JSON and disposable-MySQL qualification proves pending email signup creates no account, player, balance, or session; exact verification creates one inactive identity and zero wallet, commits one deterministic configured starting-balance ledger credit, activates only afterward, and still creates no session. Exact lost-response replay, rate-ceiling replay, successful and suppressed resend, expired-candidate recovery, forced crashes at prepare/token/provider/promote/final boundaries, ownership-bound cancellation at every replacement phase, malformed/wrong/candidate/stale/absent/cross-recipient cancel rejection, concurrent token-generation recheck, terminal cancel replay, browser replay-key cleanup, and a forced post-credit activation failure produce no duplicate mail, identity, or funds and no unusable emailed bearer. Completion and cancellation scrub raw terminal pending credentials and profile data; bounded provider-atomic retention prunes old terminal rows while preserving active work; cancellation and disabled defaults leave no canonical identity residue; v2 contracts, anonymous-route allowlists, bilingual UI source, and visual-matrix states remain exact.",
+      "status": "PASS",
+      "api_tests": [
+        "API-VERIFIED-EMAIL-001"
+      ],
+      "browser_tests": [
+        "BR-VERIFIED-EMAIL-001"
+      ],
+      "implementation_files": [
+        "tests/verified_email_enrollment_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json",
+        "contracts/compatibility/restricted-preview-security.json"
+      ],
+      "introduced_in": "issue-69-verified-email-enrollment",
+      "changed_in": "issue-69-verified-email-enrollment",
+      "notes": "All mailbox, password, token, provider, and digest values are synthetic and isolated; no live mail, provider, DNS, public enablement, or production mutation is performed."
     }
   ]
 }

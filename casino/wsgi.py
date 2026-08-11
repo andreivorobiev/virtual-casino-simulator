@@ -165,7 +165,7 @@ def _json_response(start_response, status: int, payload: dict, extra_headers=Non
 # Initialize provider-neutral state once during production worker boot.
 def _validate_restricted_preview_routes() -> None:
     # Require exactly the reviewed anonymous fixed routes plus separately matched OAuth paths. (issues #317, #326, #332, #378, #224)
-    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/password-reset/initiate", "/api/v2/auth/password-reset/resend", "/api/v2/auth/password-reset/complete", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}:
+    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/signup/resend", "/api/v2/auth/signup/verify", "/api/v2/auth/signup/cancel", "/api/v2/auth/password-reset/initiate", "/api/v2/auth/password-reset/resend", "/api/v2/auth/password-reset/complete", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/healthz"}:
         # Fail startup rather than allowing compatibility metadata to broaden public access.
         raise RuntimeError("Restricted preview public routes do not match the accepted allowlist")
     # Inspect registered method and pattern pairs without invoking any route.
@@ -173,7 +173,7 @@ def _validate_restricted_preview_routes() -> None:
         # Normalize the pattern only for fixed forbidden-route detection.
         pattern = str(route.pattern).lower()
         # Reject any unreviewed signup or public registration route during restricted preview.
-        if (("signup" in pattern and pattern != "/api/v2/auth/signup") or ("/register" in pattern and pattern != "/api/v2/me/passkeys/register")):
+        if (("signup" in pattern and pattern not in {"/api/v2/auth/signup", "/api/v2/auth/signup/resend", "/api/v2/auth/signup/verify", "/api/v2/auth/signup/cancel"}) or ("/register" in pattern and pattern != "/api/v2/me/passkeys/register")):
             # Keep the diagnostic free of private route or configuration details.
             raise RuntimeError("Restricted preview does not permit signup routes")
         # Reject every OAuth action route outside the exact reviewed disabled-by-default v2 shapes.

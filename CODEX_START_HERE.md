@@ -313,6 +313,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/server_authority_certification.md`](docs/server_authority_certification.md) — Server-Authority and Hostile-Client Certification
 - [`docs/settlement_interface.md`](docs/settlement_interface.md) — Catalog-Wide Settlement Interface
 - [`docs/transactional_mail_runbook.md`](docs/transactional_mail_runbook.md) — Transactional mail runbook
+- [`docs/verified_email_enrollment.md`](docs/verified_email_enrollment.md) — Verified-email enrollment
 - [`docs/visual_design_standard.md`](docs/visual_design_standard.md) — Visual Design Standard
 
 ### Mobile integration documentation

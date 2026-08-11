@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus the action-journal slice to total exactly 942 permanent rows.
-        self.assertEqual(len(requirements), 944)
+        # Require the accepted aggregates plus verified-email enrollment to total exactly 947 permanent rows.
+        self.assertEqual(len(requirements), 947)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1444,6 +1444,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "LEDGER-034": "Ledger",  # Bind append-only action-journal and compaction ownership.
             "TEST-169": "Tests",  # Bind deterministic action-journal compatibility and scaling evidence.
             "TEST-170": "Tests",  # Bind exact-source performance target enforcement.
+            "AUTH-018": "Core",  # Bind account-free verified-email activation to the identity boundary.
+            "USER-010": "Application",  # Bind the bilingual pending-verification browser lifecycle.
+            "TEST-171": "Tests",  # Bind exactly-once funding and recovery evidence.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():
@@ -1557,24 +1560,24 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
         # Parse the Deuces descriptor after removing its final game-owned history scan.
         deuces_module = json.loads((ROOT / "modules" / "deuces_wild_video_poker.json").read_text(encoding="utf-8"))
-        # Require the compatible Core minor for policy-gated social enrollment.
-        self.assertEqual(core_module["version"], "9.40.1")
+        # Require the compatible Core minor for verified-email pending enrollment.
+        self.assertEqual(core_module["version"], "9.41.0")
         # Require the compatible Ledger patch for the public read-only point seam.
         self.assertEqual(ledger_module["version"], "9.1.2")
         # Require the exact compatible Players patch for explicit row insertion.
-        self.assertEqual(players_module["version"], "9.1.1")
+        self.assertEqual(players_module["version"], "9.1.2")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the tests patch for v0.9.5.72 release qualification.
-        self.assertEqual(tests_module["version"], "1.77.1")
-        # Require the docs patch for v0.9.5.72 release governance.
-        self.assertEqual(docs_module["version"], "1.74.3")
+        # Require the tests minor for verified-email lifecycle and browser qualification.
+        self.assertEqual(tests_module["version"], "1.78.0")
+        # Require the docs minor for verified-email lifecycle governance.
+        self.assertEqual(docs_module["version"], "1.75.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
-        # Require the compatible contracts patch for the immutable v0.9.5.72 rollback record.
-        self.assertEqual(contracts_module["version"], "1.59.5")
-        # Require the tooling patch for hosted evidence production and retention.
-        self.assertEqual(tooling_module["version"], "1.29.1")
+        # Require the contracts minor for three additive verified-email lifecycle routes.
+        self.assertEqual(contracts_module["version"], "1.60.0")
+        # Require the tooling patch for the expanded anonymous-route compatibility gate.
+        self.assertEqual(tooling_module["version"], "1.29.2")
         # Require the compatible Baccarat patch for central settings enforcement.
         self.assertEqual(baccarat_module["version"], "9.1.15")
         # Require the exact compatible Bingo settlement-interface patch.
@@ -1585,8 +1588,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.7.0")
         # Require the compatible Slots minor for selectable governed reel profiles.
         self.assertEqual(slots_module["version"], "9.5.0")
-        # Require the compatible Application patch for v0.9.5.72 packaging.
-        self.assertEqual(application_module["version"], "9.62.2")
+        # Require the compatible Application minor for the pending verification surface.
+        self.assertEqual(application_module["version"], "9.63.0")
         # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
         self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

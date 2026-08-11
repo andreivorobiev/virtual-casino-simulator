@@ -6,10 +6,10 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.62.2
-- core: 9.40.1
+- application: 9.63.0
+- core: 9.41.0
 - ledger: 9.1.2
-- players: 9.1.1
+- players: 9.1.2
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.77.1
-- docs: 1.74.3
-- contracts: 1.59.5
-- tooling: 1.29.1
+- tests: 1.78.0
+- docs: 1.75.0
+- contracts: 1.60.0
+- tooling: 1.29.2
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
@@ -632,6 +632,9 @@ Historical source baseline: 9.1.0
 - **LEDGER-034** (Ledger) - PASS: The JSON provider commits new exactly-once money identities and projection acknowledgements through one fsynced append-only journal instead of rewriting all historical actions. Provider-local caches consume only monotonic external tails, crash recovery visits only pending identities, compatible ledger projection checks use an immutable identity index, and bounded compaction replaces settled event copies with verified ledger references while retaining at most 200 bytes per settled action in the checkpoint.
 - **TEST-169** (Tests) - PASS: Listener-free isolated JSON evidence proves new exactly-once actions perform zero whole-history action-snapshot rewrites, use one durable commit and one projection append, keep replay byte-identical, preserve pre-journal snapshots across restart, incrementally observe another provider's journal tail, fail closed on partial records, compact below 200 bytes per settled action, and preserve process-racing and lost-response recovery semantics.
 - **TEST-170** (Tests) - PASS: Exact-source hosted qualification produces complete listener-free JSON and disposable-MySQL request-latency grids, retains only aggregate evidence, and fails closed unless every single-request warm authenticated game-state read is at most 100 milliseconds p50 and 200 milliseconds p95 while every concurrency-four game-state read is at most 250 milliseconds p95 and strictly exceeds 3.37 requests per second. The idempotent write and concurrency-eight rows remain diagnostic. The target decision remains bound to one immutable checkout, runs inside the existing guarded MySQL lifecycle, and preserves the accepted one-worker/two-thread topology because the multiprocess inventory still blocks a second worker.
+- **AUTH-018** (Core) - PASS: Policy-enabled first-party email signup persists only recoverable pending credentials and a purpose-bound verification delivery before confirmation: no canonical user, player, balance, or session exists. Verification consumes the current bearer under caller idempotency, reserves mailbox uniqueness, provisions an inactive local identity, creates a zero-balance inactive wallet, credits the configured starting balance through one deterministic ledger.credit_once action, then activates wallet and user without creating a session. Exact-key retries recover every post-consumption phase; resend preserves the predecessor while a non-consumable candidate is delivered and promotes it atomically only after a sent receipt; durable generation phases recover worker crashes; cancellation requires the exact active delivered bearer, charges distinct malformed/wrong/stale/absent/cross-recipient probes, rechecks current token and generation, revokes current and candidate work without resurrection, and replays an exact completed action after revocation; completion and cancellation atomically scrub raw pending recipient, credential-verifier, and profile fields; bounded terminal retention prunes only expired scrubbed metadata; independent durable initiate, resend, verify, and cancel limits charge distinct attempts after exact replay classification; all public lookup failures remain non-enumerating and public signup remains disabled by default.
+- **USER-010** (Application) - PASS: The localized responsive signup surface transitions to a dedicated pending-email route after initiation, immediately scrubs an arrived bearer from URL and history into module-only memory, supports generic resend, enables verification and cancellation only after a delivered bearer arrives, uses independent digest-indexed session replay keys for verify and cancel, clears each key only after acknowledged terminal success, and returns verified users to explicit login rather than assuming a session. English and Russian copy states that account and wallet creation occur only after verification.
+- **TEST-171** (Tests) - PASS: Provider-free JSON and disposable-MySQL qualification proves pending email signup creates no account, player, balance, or session; exact verification creates one inactive identity and zero wallet, commits one deterministic configured starting-balance ledger credit, activates only afterward, and still creates no session. Exact lost-response replay, rate-ceiling replay, successful and suppressed resend, expired-candidate recovery, forced crashes at prepare/token/provider/promote/final boundaries, ownership-bound cancellation at every replacement phase, malformed/wrong/candidate/stale/absent/cross-recipient cancel rejection, concurrent token-generation recheck, terminal cancel replay, browser replay-key cleanup, and a forced post-credit activation failure produce no duplicate mail, identity, or funds and no unusable emailed bearer. Completion and cancellation scrub raw terminal pending credentials and profile data; bounded provider-atomic retention prunes old terminal rows while preserving active work; cancellation and disabled defaults leave no canonical identity residue; v2 contracts, anonymous-route allowlists, bilingual UI source, and visual-matrix states remain exact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
