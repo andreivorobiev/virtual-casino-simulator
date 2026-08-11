@@ -1,9 +1,9 @@
 // Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 // SPDX-License-Identifier: Apache-2.0
 // Import required dependency so this module can call the frozen API envelope safely.
-import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout, oauthLinks, oauthProviders, redeemInvitation, startOAuth, unlinkOAuth } from './core/api.js';
+import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, holdTransientBearer, logClient, login, logout, oauthLinks, oauthProviders, publicAuthRouteKind, redeemInvitation, startOAuth, unlinkOAuth } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
-import { renderTokenBalance, toast, tokens, safe, renderPremiumTag, installStableRouteRenders, auditLayoutContainment } from './core/ui.js';
+import { renderTokenBalance, toast, tokens, safe, renderPremiumTag, installStableRouteRenders, auditLayoutContainment, createNavigationOwnership, mountOwnedRoute, awaitOwnedRouteEffect } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
 import { getLocaleState, initI18n, onLocaleChange, registerI18nDomains, setLocale, t } from './core/i18n.js';
 // Import the offline-safe shell controller for exact-version updates and authoritative reconnects. (PWA-001, PWA-002)
@@ -29,10 +29,14 @@ let latestState = null;
 let shellConnected = false;
 // Cache the authenticated current-user payload so wallet and profile UI stay consistent.
 let currentSession = null;
+// Own every asynchronous shell route so public-account navigation can invalidate stale game work. (SESSION-013)
+const shellNavigationOwnership = createNavigationOwnership();
 // Retain a just-submitted signup mailbox only in module memory for the pending verification screen. (AUTH-018)
 let pendingEnrollmentEmail = '';
 // Retain an arrived verification bearer only in module memory after scrubbing browser history. (AUTH-018)
 let emailVerificationBearer = '';
+// Retain an arrived password-reset bearer only in module memory across locale and route rerenders. (SEC-016)
+let passwordResetBearerToken = '';
 // Hold the current pre-expiration warning timer so session replacement cannot leave a stale alert. (SESSION-012)
 let sessionWarningTimer = null;
 // Own BFCache-safe wallet controller replacement for the complete application module lifetime.
@@ -290,7 +294,9 @@ function isGuestSession() {
 }
 
 // Clear every shell-owned authenticated cache before showing any logged-out gate.
-function clearAuthenticatedShellState() {
+function clearAuthenticatedShellState(options = {}) {
+  // Invalidate every pending route operation unless a public-route caller already advanced ownership.
+  if (options.invalidateNavigation !== false) shellNavigationOwnership.invalidate();
   // Cancel any warning owned by the session being discarded.
   clearTimeout(sessionWarningTimer);
   // Clear the handle so a later session can schedule independently.
@@ -595,25 +601,49 @@ async function renderOAuthAccountControls() {
 // Report whether the current URL names the separately approved private invitation redemption surface. (INVITE-005)
 function isInvitationRoute() {
   // Match only the canonical path; all other anonymous paths retain the normal private-beta login gate.
-  return location.pathname.replace(/\/$/, '') === '/enroll/invitation';
+  return publicAuthRouteKind(location.pathname) === 'invitation';
 }
 
 // Report whether the current URL names the full-account enrollment surface.
 function isSignupRoute() {
   // Match only the canonical signup path; all other anonymous paths retain the normal login gate.
-  return location.pathname.replace(/\/$/, '') === '/enroll/signup';
+  return publicAuthRouteKind(location.pathname) === 'signup';
 }
 
 // Report whether the current URL names the verified-email pending enrollment surface. (AUTH-018)
 function isEmailVerificationRoute() {
   // Match only the canonical verification path so other anonymous routes retain their established gates.
-  return location.pathname.replace(/\/$/, '') === '/enroll/verify';
+  return publicAuthRouteKind(location.pathname) === 'verification';
 }
 
 // Report whether the current URL names the public password-recovery destination. (RESET-004)
 function isPasswordResetRoute() {
   // Match only the canonical path so arbitrary anonymous URLs remain at the login gate.
-  return location.pathname.replace(/\/$/, '') === '/account/reset';
+  return publicAuthRouteKind(location.pathname) === 'reset';
+}
+
+// Render one exact public account destination for cold load, history, or warm native link arrival. (SEC-016)
+function renderPublicAuthRoute() {
+  // Classify the current path through the shared exact route allowlist.
+  const route = publicAuthRouteKind(location.pathname);
+  // Leave ordinary casino and login routes untouched when no public account gate owns the URL.
+  if (!route) return false;
+  // Advance navigation ownership before teardown so pending imports, mounts, and failures become stale synchronously.
+  shellNavigationOwnership.invalidate();
+  // Tear down an authenticated shell exactly once before a warm public link can replace its outlet.
+  if (currentSession || active || latestState || gameDescriptors.length) clearAuthenticatedShellState({ invalidateNavigation: false });
+  // Render each existing public gate without passing transient bearer material through arguments.
+  if (route === 'invitation') renderInvitationGate(); else if (route === 'signup') void renderSignupGate(); else if (route === 'verification') renderEmailVerificationGate(); else renderPasswordResetGate();
+  // Report that the public gate owns the route so authenticated navigation cannot overwrite it.
+  return true;
+}
+
+// Consume a native link bearer from module memory or fall back to the browser URL path. (SEC-016)
+function transientRouteBearer(path) {
+  // Prefer the native runtime's one-shot reader so query credentials never enter WebView history.
+  const nativeBearer = window.CasinoMobileDeepLink?.consumeBearer?.(path) || '';
+  // Preserve the established browser route when no native bearer exists.
+  return nativeBearer || new URL(location.href).searchParams.get('token') || '';
 }
 
 // Render enumeration-safe recovery initiation or bearer completion without mounting casino routes. (RESET-004)
@@ -626,8 +656,14 @@ function renderPasswordResetGate(message = '', success = false) {
   const view = document.getElementById('view');
   // Apply the shared auth layout and remove protected-region semantics.
   view.className = 'screen auth-screen'; view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
-  // Read the transient bearer only to choose and submit the completion form.
-  const token = new URL(location.href).searchParams.get('token') || '';
+  // Read a newly arrived transient bearer once without discarding a value held across rerenders.
+  const arrivalToken = transientRouteBearer('/account/reset');
+  // Capture a new bearer only in module memory after native or browser route validation.
+  passwordResetBearerToken = holdTransientBearer(passwordResetBearerToken, arrivalToken);
+  // Use the held bearer for locale rerenders and lost-response retry without restoring URL state.
+  const token = passwordResetBearerToken;
+  // Strip browser password-reset bearer material before the form paints or any later log can observe it. (SEC-016)
+  if (token && new URL(location.href).searchParams.has('token')) history.replaceState({}, '', '/account/reset');
   // Render initiation when no bearer is present and completion when the mail link supplied one.
   view.innerHTML = token ? `<section class="auth-panel" data-testid="password-reset-complete"><p class="eyebrow">${safe(t('recovery.eyebrow', {}, 'shell'))}</p><h1>${safe(t('recovery.completeTitle', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('recovery.completeCopy', {}, 'shell'))}</p><form id="password-reset-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="reset-email" type="email" autocomplete="email" required></label><label>${safe(t('recovery.newPassword', {}, 'shell'))}<input id="reset-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><button class="primary" type="submit">${safe(t('recovery.complete', {}, 'shell'))}</button><p id="reset-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/">${safe(t('recovery.back', {}, 'shell'))}</a></section>` : `<section class="auth-panel" data-testid="password-reset-initiate"><p class="eyebrow">${safe(t('recovery.eyebrow', {}, 'shell'))}</p><h1>${safe(t('recovery.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('recovery.copy', {}, 'shell'))}</p><form id="password-reset-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="reset-email" type="email" autocomplete="email" required></label><button class="primary" type="submit">${safe(t('recovery.send', {}, 'shell'))}</button><p id="reset-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/">${safe(t('recovery.back', {}, 'shell'))}</a></section>`;
   // Submit the currently rendered initiation or completion form through one bounded handler.
@@ -642,6 +678,8 @@ function renderPasswordResetGate(message = '', success = false) {
       if (token) {
         // Submit the exact transient bearer, mailbox, replacement, and caller key.
         await api('/api/v2/auth/password-reset/complete', { method: 'POST', body: { token, email: document.getElementById('reset-email').value.trim(), new_password: document.getElementById('reset-password').value, idempotency_key: crypto.randomUUID() } });
+        // Drop the module-only bearer after the terminal server acknowledgement.
+        passwordResetBearerToken = '';
         // Remove the bearer from browser history immediately after terminal success.
         history.replaceState({}, '', '/');
         // Return to sign-in with a privacy-safe completion acknowledgement.
@@ -773,7 +811,7 @@ async function emailVerificationIdempotency(token, action = 'verify') {
 // Render verified-email pending, resend, cancellation, and completion controls. (AUTH-018, USER-010)
 function renderEmailVerificationGate(message = '', success = false) {
   // Capture a newly arrived bearer exactly once before removing it from browser history.
-  const arrivalToken = new URL(location.href).searchParams.get('token') || '';
+  const arrivalToken = transientRouteBearer('/enroll/verify');
   // Retain only current-arrival bearer material in module memory.
   if (arrivalToken) {
     // Hold the bearer for the pending verification request only.
@@ -905,7 +943,7 @@ let invitationBearerToken = '';
 // Render the account-free private invitation enrollment form without creating state on page load. (INVITE-003, INVITE-005)
 function renderInvitationGate(message = '', success = false) {
   // Read the bearer from the canonical URL exactly once per arrival rather than on every submit.
-  const arrivalToken = new URL(location.href).searchParams.get('token') || '';
+  const arrivalToken = transientRouteBearer('/enroll/invitation');
   // Capture a newly-arrived bearer without clobbering the held value on locale-driven rerenders.
   if (arrivalToken) {
     // Keep the bearer only in module-local memory for the pending redemption.
@@ -914,7 +952,9 @@ function renderInvitationGate(message = '', success = false) {
     history.replaceState({}, '', '/enroll/invitation');
   }
   // Clear any stale authenticated shell identity while the public route is displayed.
-  window.CasinoCurrentUser = null;
+  currentSession = null; window.CasinoCurrentUser = null;
+  // Remove the prior authenticated feedback reporter before mounting the public form.
+  syncFeedbackReporter(null);
   // Keep the casino shell and lobby layout locked behind successful enrollment and later login.
   document.body.classList.remove('lobby-active', 'guest-trial-active');
   // Apply the established authentication layout at all governed viewports.
@@ -940,7 +980,7 @@ async function handleInvitationSubmit(event) {
   // Resolve the generic live status outlet.
   const message = document.getElementById('invitation-message');
   // Prefer the entry-captured module-local bearer; fall back to the URL only for direct deep submissions. (issue #417 residual)
-  const token = invitationBearerToken || new URL(location.href).searchParams.get('token') || '';
+  const token = invitationBearerToken || transientRouteBearer('/enroll/invitation');
   // Disable repeated clicks until the exact request settles.
   const submit = document.querySelector('[data-testid="invitation-submit"]');
   // Prevent a second in-flight mutation from this form.
@@ -1097,6 +1137,8 @@ async function handleTermsAccept() {
 
 // Refresh the current-user session and choose the correct first screen.
 async function refreshCurrentSession() {
+  // Let an exact public account route own cold load before an existing vault session can repaint it.
+  if (renderPublicAuthRoute()) return false;
   // Start protected current-user loading so anonymous browsers see the login gate.
   try {
     // Read the planned v2 current-user endpoint.
@@ -1106,11 +1148,13 @@ async function refreshCurrentSession() {
     // Confirm that authoritative session refresh succeeded for reconnect handling.
     return true;
   // Handle missing or expired sessions by showing the browser login gate.
-  } catch (_) {
+  } catch (err) {
+    // Preserve the existing shell and fail closed on offline, stale, malformed, throttled, or server errors.
+    if (err?.code !== 'UNAUTHORIZED') throw err;
     // Clear the current session so no stale wallet can render.
     currentSession = null;
     // Render the exact account-free enrollment path, signup path, or the normal private-beta login gate.
-    if (isInvitationRoute()) renderInvitationGate(); else if (isSignupRoute()) void renderSignupGate(); else if (isEmailVerificationRoute()) renderEmailVerificationGate(); else if (isPasswordResetRoute()) renderPasswordResetGate(); else renderLoginGate();
+    if (!renderPublicAuthRoute()) renderLoginGate();
     // Report the expired or absent session without exposing backend diagnostics.
     return false;
   }
@@ -1394,6 +1438,8 @@ async function refreshShellState(options = {}) {
 
 // Rebuild session, wallet, catalog, and the active route before releasing actions after reconnect. (PWA-002)
 async function refreshAfterReconnect() {
+  // Preserve a warm native account route without probing and repainting an old vault session over it.
+  if (renderPublicAuthRoute()) return { status: 'public-auth-route' };
   // Preserve the current or URL-owned route before session refresh rerenders the shell.
   const restoredRoute = active || routeFromLocation();
   // Revalidate the browser session before trusting any cached wallet or game state.
@@ -1408,6 +1454,8 @@ async function refreshAfterReconnect() {
 export async function navigate(route, options = {}) {
   // Branch when an unauthenticated browser tries to navigate before the auth gate is complete.
   if (!currentSession || currentSession.terms?.required) return;
+  // Claim a fresh epoch so this navigation supersedes every earlier pending route operation.
+  const navigationTicket = shellNavigationOwnership.claim();
   // Store the requested route for error reporting.
   let targetRoute = route;
   // End any in-flight shell celebration before game teardown or route remount can replace content.
@@ -1469,6 +1517,8 @@ export async function navigate(route, options = {}) {
       view.setAttribute('role', 'region'); view.setAttribute('aria-label', safe(t('settings.title', {}, 'shell')));
       // Render caller-owned preferences, history, or guest conversion.
       await renderMySettings(view);
+      // Restore a newer public route when settings completed after losing navigation ownership.
+      if (!shellNavigationOwnership.owns(navigationTicket)) { renderPublicAuthRoute(); return; }
       // Stop before the game-loader branch.
       return;
     }
@@ -1484,22 +1534,42 @@ export async function navigate(route, options = {}) {
     view.innerHTML = `<div class="panel loading-panel"><h2>${safe(t('routeRestore.title', { game: routeLabel(targetRoute) }, 'shell'))}</h2></div>`;
     // Resolve the descriptor for the selected game route.
     const desc = gameDescriptors.find(game => game.id === targetRoute);
-    // Load the game class through the module registry.
-    const game = await loadGame(desc);
-    // Mount the game into the same route outlet used by the original app.
-    await game.mount(view);
+    // Load and mount the game only while this navigation keeps exact ownership across both awaits.
+    const mountedRoute = await mountOwnedRoute({
+      // Resolve the selected module through the established cached dynamic loader.
+      load: () => loadGame(desc),
+      // Mount the resolved game into the same route outlet used by the original app.
+      mount: game => game.mount(view),
+      // Recheck the captured shell ticket after import, mount, and failure boundaries.
+      owns: () => shellNavigationOwnership.owns(navigationTicket),
+      // Unmount stale post-mount work and restore only the exact newer public-account route.
+      onStale: (game, mountStarted) => { if (mountStarted) game?.unmount?.(); renderPublicAuthRoute(); },
+    });
+    // Stop before observers or wallet repaint when a newer route invalidated this game navigation.
+    if (mountedRoute.stale) return;
     // Prepare shared game rails for intentional keyboard and touch scrolling.
     observeGameScrollRegions(view);
     // Refresh the authenticated token wallet after route mount.
     updateCurrentUserShell();
   // Handle navigation errors with a route-local recovery panel.
   } catch (err) {
+    // Never replace a newer public gate with an error produced by stale asynchronous route work.
+    if (!shellNavigationOwnership.owns(navigationTicket)) { renderPublicAuthRoute(); return; }
     // Convert any protected-route auth failure into the logged-out recovery gate instead of a stale game error panel.
     if (err?.code === 'UNAUTHORIZED') { renderExpiredSessionGate(); return; }
     // Write diagnostic output so the current operation can be inspected.
     console.error(err);
-    // Record the navigation failure with route context.
-    await logClient('navigation_error', { route: targetRoute, message: err.message, stack: err.stack });
+    // Record the failure while requiring ownership again after diagnostic I/O before any fallback repaint.
+    const ownsAfterLog = await awaitOwnedRouteEffect({
+      // Publish only the bounded route and error diagnostics used by the existing Admin signal.
+      run: () => logClient('navigation_error', { route: targetRoute, message: err.message, stack: err.stack }),
+      // Recheck the exact captured ticket after the asynchronous diagnostic completes.
+      owns: () => shellNavigationOwnership.owns(navigationTicket),
+      // Restore a warm public-account route without painting the stale game error surface.
+      onStale: () => renderPublicAuthRoute(),
+    });
+    // Stop before the route outlet changes when diagnostic completion was stale.
+    if (!ownsAfterLog) return;
     // Read the route outlet for the fallback panel.
     const view = document.getElementById('view');
     // Keep a failed game route out of the lobby-only flex containment contract.
@@ -1525,6 +1595,8 @@ async function init() {
   bindFeedbackDialog();
   // Register the offline-safe shell and keep server actions locked until reconnect refresh completes.
   initPwa({ onReconnect: refreshAfterReconnect });
+  // Publish reusable controller construction separately from authoritative initial data readiness.
+  window.dispatchEvent(new CustomEvent('casino:shared-app-controller-ready'));
   // Render an immediate restored-game placeholder before slow session and casino-state calls finish.
   renderInitialRouteRestore();
   // Recalculate active-route visibility whenever responsive navigation layout changes.
@@ -1563,7 +1635,7 @@ async function init() {
   // Repaint persistent shell text when the locale changes.
   onLocaleChange(() => { localizeFeedback(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
   // Restore game routes through browser Back and Forward without remounting stale history entries.
-  window.addEventListener('popstate', () => { if (currentSession && !currentSession.terms?.required) navigate(routeFromLocation(), { history: 'none' }); });
+  window.addEventListener('popstate', () => { if (renderPublicAuthRoute()) return; if (currentSession && !currentSession.terms?.required) { document.body.classList.remove('auth-locked'); void navigate(routeFromLocation(), { history: 'none' }); } else renderLoginGate(); });
   // Read the add-token button from the wallet popover.
   const addButton = document.getElementById('add-token-btn');
   // Wire token addition through the planned ledger-backed current-user endpoint.
@@ -1635,12 +1707,20 @@ async function init() {
   } catch (err) {
     // Show the startup error in the shell toast.
     toast(`Could not load state: ${err.message}`);
-    // Record the initial load failure for Admin telemetry.
-    await logClient('initial_state_error', { message: err.message });
+    // Attempt bounded Admin telemetry without replacing the original authority failure.
+    try { await logClient('initial_state_error', { message: err.message }); } catch (_) { /* Preserve the original startup failure. */ }
+    // Reject readiness so native bootstrap cannot mark a failed current-user refresh green.
+    throw err;
   }
   // Poll shell state periodically for connection and player-count status.
   setInterval(() => { if (currentSession && !currentSession.terms?.required) refreshShellState({ quiet: true }); }, 30000);
 }
 
-// Start the premium shell controller.
-init();
+// Start the premium shell controller and publish an explicit native readiness handshake.
+void init().then(() => {
+  // Release native recovery only after the shared shell and authoritative controller are initialized.
+  window.dispatchEvent(new CustomEvent('casino:shared-app-ready'));
+}).catch(() => {
+  // Signal a bounded initialization failure without exposing configuration or state details.
+  window.dispatchEvent(new CustomEvent('casino:shared-app-error'));
+});

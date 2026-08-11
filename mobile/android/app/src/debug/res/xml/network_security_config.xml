@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only cleartext exceptions are limited to exact emulator and loopback authorities. -->
+<network-security-config>
+    <!-- Keep the default debug policy encrypted for every non-loopback destination. -->
+    <base-config cleartextTrafficPermitted="false" />
+    <!-- Permit only local developer listeners in the debug source set. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

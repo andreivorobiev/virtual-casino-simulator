@@ -69,6 +69,17 @@ def build_router() -> Router:
         # Return the authorized session for callers that need it.
         return session
 
+    # Build current-user data while keeping the browser session projection byte-compatible.
+    def current_user_projection(context):
+        # Build a fresh canonical payload so client-specific projection never mutates stored session state.
+        payload = auth.current_user_payload(context["session"], context["user"])
+        # Remove only the browser-readable CSRF companion from exact native current-user reads.
+        if context.get("mobile_client"):
+            # Keep wrong-route native credential fields visible to the plugin's fail-closed residue scan.
+            payload["session"].pop("csrf_token", None)
+        # Return the browser-compatible or native secret-free projection.
+        return payload
+
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/casino/games")
     # Define the games function used by this module.
@@ -244,7 +255,12 @@ def build_router() -> Router:
         # Authenticate the normalized email credential through the backend auth service.
         result = auth.login(email, body.get("password", ""), context.get("client", ""))
         # Extend the response with host-only session and production CSRF cookies under context policy.
-        context.setdefault("response_headers", []).extend(auth.session_cookie_headers(result["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
+        if not context.get("mobile_client"):
+            # Preserve the browser/PWA host-only cookie path byte-for-byte outside native mode.
+            context.setdefault("response_headers", []).extend(auth.session_cookie_headers(result["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
+        else:
+            # Publish server generation only inside the native issuance envelope consumed by the OS bridge.
+            result["session"]["generation"] = 1
         return result
 
     # Attach this decorator so the following function is registered with the framework.
@@ -254,7 +270,9 @@ def build_router() -> Router:
         # Set token to the value needed for the next operation.
         token = auth.extract_bearer_token(context.get("headers", {})) or auth.extract_cookie_token(context.get("headers", {}))
         # Expire both session and production CSRF cookies using the same governed attributes.
-        context.setdefault("response_headers", []).extend(auth.clear_cookie_headers(context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
+        if not context.get("mobile_client"):
+            # Preserve browser cookie expiry while native mode clears only its OS vault.
+            context.setdefault("response_headers", []).extend(auth.clear_cookie_headers(context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
         return auth.logout(token)
 
     # Attach this decorator so the following function is registered with the framework.
@@ -268,9 +286,17 @@ def build_router() -> Router:
         # Create one isolated principal only after explicit current-version guest terms acceptance.
         guest = auth.create_guest(context.get("client", ""), body.get("accepted") is True, body.get("terms_version", ""), body.get("locale", "en-US"), body.get("device", "unknown"))
         # Set a browser-session cookie with no durable credential so closing the browser drops the trial.
-        context.setdefault("response_headers", []).extend(auth.guest_cookie_headers(guest["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
+        if not context.get("mobile_client"):
+            # Preserve the browser-session cookie only for browser/PWA callers.
+            context.setdefault("response_headers", []).extend(auth.guest_cookie_headers(guest["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
         # Build the same current-user payload shape the shell already consumes for registered logins.
         payload = auth.current_user_payload(guest["session"], guest["user"])
+        # Return native bearer material only to the native plugin, which strips it before JavaScript.
+        if context.get("mobile_client"):
+            # Include the exact active bearer inside the native response boundary.
+            payload["session"]["token"] = guest["session"]["token"]
+            # Publish server generation only to native OS-vault issuance.
+            payload["session"]["generation"] = guest["session"].get("generation", 1)
         # Return the raw browser-context proof exactly once so the shell can keep it in sessionStorage.
         payload["guest_browser_nonce"] = guest["browser_nonce"]
         # Return the guest session payload without exposing any durable credential or internal identifier.
@@ -312,6 +338,10 @@ def build_router() -> Router:
     @router.get(r"/api/v2/auth/csrf")
     # Re-issue the host-only double-submit cookie exactly like the packaged shell bootstrap.
     def auth_csrf_bootstrap(body, query, context):
+        # Reject native callers because their OS-vault boundary never uses browser cookie bootstrap.
+        if context.get("mobile_client"):
+            # Preserve the native no-cookie contract before deriving or emitting any CSRF value.
+            raise ForbiddenError("Browser client is required")
         # Read request headers only to select the correct existing proof.
         headers = context.get("headers", {})
         # Reuse an active session's distinct CSRF value without authenticating a context-bound guest cookie.
@@ -422,8 +452,10 @@ def build_router() -> Router:
             raise ForbiddenError("Guest trial is required")
         # End only the authenticated guest principal, revoking every resumable credential and state pointer.
         auth.end_guest_trial(context.get("user") or {})
-        # Expire the guest session cookie so the browser stops presenting it.
-        context.setdefault("response_headers", []).extend(auth.clear_cookie_headers(context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
+        # Expire browser cookies only; the native OS-vault route forbids Set-Cookie authority.
+        if not context.get("mobile_client"):
+            # Clear both host-only browser credentials after terminal guest shutdown.
+            context.setdefault("response_headers", []).extend(auth.clear_cookie_headers(context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
         # Return a simple ended acknowledgement with no recoverable material.
         return {"ended": True}
 
@@ -448,7 +480,59 @@ def build_router() -> Router:
         if auth.is_guest(context.get("user") or {}):
             # Bind only through the server-stored unrelated analytics id.
             guest_analytics.record_event(context["user"].get("guest_analytics_id"), "lobby_reached")
-        return auth.current_user_payload(context["session"], context["user"])
+        # Return the native-safe projection without changing the browser/PWA response shape.
+        return current_user_projection(context)
+
+    # Expose one identifier-minimal current-session probe only to the native bearer boundary. (AUTH-019)
+    @router.get(r"/api/v2/auth/mobile/session")
+    # Revalidate OS-vault credentials after process, foreground, connectivity, or clock changes.
+    def auth_mobile_session(body, query, context):
+        # Reject browser/PWA callers so this surface cannot alter cookie behavior.
+        if not context.get("mobile_client"):
+            # Keep the native session surface unavailable outside an enabled Capacitor origin.
+            raise ForbiddenError("Native client is required")
+        # Resolve the already-authorized record without serializing credential or account data.
+        session = context["session"]
+        # Return an intentionally minimal probe envelope as defense in depth against bridge leakage.
+        return {"authenticated": True, "session": {"generation": session.get("generation", 1), "issued_at": session.get("issued_at") or session.get("created_at"), "expires_at": session.get("expires_at"), "status": session.get("status")}}
+
+    # Rotate one native bearer/CSRF pair atomically with no predecessor overlap. (SESSION-013)
+    @router.post(r"/api/v2/auth/mobile/session/rotate")
+    # Replace the current native credential under exact generation compare-and-swap.
+    def auth_mobile_session_rotate(body, query, context):
+        # Reject browser/PWA callers before reading rotation input.
+        if not context.get("mobile_client"):
+            # Preserve the cookie session contract unchanged.
+            raise ForbiddenError("Native client is required")
+        # Reject all fields except the exact vault generation.
+        if set(body or {}) != {"expected_generation"}:
+            # Fail closed without mutating the current session.
+            raise ValidationError("Mobile session rotation request is invalid")
+        # Resolve the presented bearer exclusively from native Authorization.
+        token = auth.extract_bearer_token(context.get("headers", {}))
+        # Commit one exact atomic replacement under the authenticated session id.
+        rotated = auth.rotate_mobile_session(context["session"]["session_id"], token, body.get("expected_generation"))
+        # Build canonical current-user data after the replacement commits.
+        payload = auth.current_user_payload(rotated, context["user"])
+        # Include the new bearer only for native plugin capture and stripping.
+        payload["session"]["token"] = rotated["token"]
+        # Include the compare-and-swap generation only in native issuance.
+        payload["session"]["generation"] = rotated["generation"]
+        # Return the new bearer and CSRF pair with the advanced generation.
+        return payload
+
+    # Revoke one native session for logout or verified account switch. (SESSION-013)
+    @router.post(r"/api/v2/auth/mobile/session/revoke")
+    # Revoke the authenticated native bearer without emitting browser cookies.
+    def auth_mobile_session_revoke(body, query, context):
+        # Reject browser/PWA callers and any body-controlled session selector.
+        if not context.get("mobile_client") or body not in ({}, None):
+            # Stop before touching stored sessions.
+            raise ForbiddenError("Native client is required")
+        # Revoke only the exact Authorization bearer resolved by the WSGI authority boundary.
+        result = auth.logout(auth.extract_bearer_token(context.get("headers", {})))
+        # Return one identifier-free terminal acknowledgement.
+        return {"revoked": result["logged_out"] is True}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v2/me")
@@ -458,7 +542,8 @@ def build_router() -> Router:
         if auth.is_guest(context.get("user") or {}):
             # Bind only through the server-stored unrelated analytics id.
             guest_analytics.record_event(context["user"].get("guest_analytics_id"), "lobby_reached")
-        return auth.current_user_payload(context["session"], context["user"])
+        # Return the native-safe projection without changing the browser/PWA response shape.
+        return current_user_projection(context)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v2/me/terms")

@@ -10,6 +10,36 @@ const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const GUEST_NONCE_KEY = 'casino.guestBrowserNonce';
 // Keep public authentication attempts from broadcasting a protected-session expiry event.
 const SESSION_EXPIRY_PUBLIC_PATHS = ['/api/v2/auth/login', '/api/v2/auth/guest'];
+// Route API traffic through the native scoped hook when present while leaving browser and PWA fetch unchanged. (issue #183)
+const transportFetch = (input, init) => globalThis.CasinoMobileTransport?.fetch ? globalThis.CasinoMobileTransport.fetch(input, init) : fetch(input, init);
+// Detect the native OS-vault transport without reading any credential or platform secret. (MOBILE core issue #183)
+const nativeSessionTransport = () => globalThis.CasinoMobileTransport?.managesSession === true;
+// Retain the sole native account-switch transaction so login and guest issuance cannot interleave.
+let nativeAccountSwitchInFlight = false;
+
+// Revoke one predecessor and issue one replacement as an exclusive native account-switch action. (SESSION-013)
+async function runNativeAccountSwitch(action) {
+  // Preserve unchanged browser/PWA behavior when no OS-vault transport owns the session.
+  if (!nativeSessionTransport()) return action();
+  // Reject overlapping login or guest creation before either can mutate the native vault.
+  if (nativeAccountSwitchInFlight) {
+    // Stop through the existing localized conflict boundary before any predecessor mutation.
+    throw playerSafeError('MOBILE_ACCOUNT_SWITCH_IN_PROGRESS', 409);
+  }
+  // Claim the complete prepare-through-issuance transaction synchronously before yielding.
+  nativeAccountSwitchInFlight = true;
+  // Run the exact native transaction while always releasing the local mutex afterward.
+  try {
+    // Revoke, verify, and clear any predecessor before issuing the replacement.
+    await globalThis.CasinoMobileTransport.prepareAccountSwitch();
+    // Return only the result from the caller's single login or guest action.
+    return await action();
+  // Release the process-local mutex after success or failure so an explicit later attempt may proceed.
+  } finally {
+    // Clear only the boolean ownership marker; no session material is retained here.
+    nativeAccountSwitchInFlight = false;
+  }
+}
 // Map stable server codes to player-safe localized categories without duplicating endpoint prose. (I18N-011)
 const API_ERROR_KEYS = new Map([
   ['INSUFFICIENT_FUNDS', 'errors.insufficientTokens'],
@@ -72,12 +102,14 @@ function cookieValue(name) {
 
 // Recover a missing double-submit cookie once so a precached or restarted browser session is never stranded on the sign-in form. (issue #224)
 async function ensureCsrfCookie() {
+  // Native transport loads matching session CSRF only inside the OS vault and never exposes a cookie to JavaScript.
+  if (nativeSessionTransport()) return;
   // Keep the fast path allocation-free when the browser already holds a proof.
   if (cookieValue(CSRF_COOKIE)) return;
   // Start protected recovery so a failed bootstrap cannot mask the caller's own error surface.
   try {
     // Ask the public bootstrap route to re-issue the host-only cookie without caching the response.
-    await fetch('/api/v2/auth/csrf', { credentials: 'include', cache: 'no-store' });
+    await transportFetch('/api/v2/auth/csrf', { credentials: 'include', cache: 'no-store' });
   // Convert transport failures into the fail-closed empty-proof path below.
   } catch (_) { /* the absent-cookie check below reports the stable failure */ }
   // Fail closed with a stable code when the browser still holds no proof after one recovery attempt.
@@ -94,7 +126,7 @@ export async function api(path, options = {}) {
   // Resolve the request method once before applying browser integrity policy.
   const method = String(options.method || (options.body !== undefined ? 'POST' : 'GET')).toUpperCase();
   // Fail closed before any authoritative request when the browser is explicitly offline. (PWA-002)
-  if (navigator.onLine === false) {
+  if (!nativeSessionTransport() && navigator.onLine === false) {
     // Use one generic message because the localized PWA banner owns player-facing explanation.
     const error = playerSafeError('OFFLINE');
     // Stop before fetch so no queued mutation can replay after reconnect.
@@ -109,14 +141,14 @@ export async function api(path, options = {}) {
   // Recover a missing proof before any unsafe request can leave the browser.
   if (UNSAFE_METHODS.has(method)) await ensureCsrfCookie();
   // Attach the host-only double-submit value to every state-changing browser request.
-  if (UNSAFE_METHODS.has(method)) headers['X-CSRF-Token'] = cookieValue(CSRF_COOKIE);
+  if (UNSAFE_METHODS.has(method) && !nativeSessionTransport()) headers['X-CSRF-Token'] = cookieValue(CSRF_COOKIE);
   // Store init so later code can read or update this value.
-  const init = { method, headers, credentials: 'include', keepalive: options.keepalive === true };
+  const init = { method, headers, credentials: nativeSessionTransport() ? 'omit' : 'include', keepalive: options.keepalive === true };
   if (options.body !== undefined) init.body = JSON.stringify(options.body);
   // Retain the response separately so transport rejection can be converted to safe player copy.
   let res;
   // Prevent browser or network implementation details from reaching game-facing catch handlers.
-  try { res = await fetch(path, init); } catch (_) { throw playerSafeError('OFFLINE'); }
+  try { res = await transportFetch(path, init); } catch (_) { throw playerSafeError('OFFLINE'); }
   // Store payload; so later code can read or update this value.
   let payload;
   // Start protected logic so failures can be handled safely.
@@ -140,12 +172,22 @@ export async function api(path, options = {}) {
 export const post = (path, body = {}) => api(path, { method: 'POST', body });
 // Export this symbol so other modules can use it through the public module boundary.
 export const del = (path, body = {}) => api(path, { method: 'DELETE', body });
+// Preserve one already-validated transient bearer when a locale or lifecycle rerender has no new arrival. (SEC-016)
+export const holdTransientBearer = (current, arrived) => String(arrived || current || '');
+
+// Classify the exact public account route so cold and warm native links share one gate selector. (SEC-016)
+export function publicAuthRouteKind(pathname) {
+  // Normalize one optional trailing slash without decoding or accepting nested paths.
+  const path = String(pathname || '').replace(/\/$/, '');
+  // Return only the four existing public account gates; every other path stays unclassified.
+  return ({ '/enroll/invitation': 'invitation', '/enroll/signup': 'signup', '/enroll/verify': 'verification', '/account/reset': 'reset' })[path] || '';
+}
 // Export this symbol so the shell can read the authenticated v2 current-user payload.
 export const currentUser = () => api('/api/v2/me');
 // Verify logout through a raw current-user probe so the session-expired event does not race the logged-out copy.
 async function sessionStillAuthenticatedAfterLogout() {
-  // Request the authoritative current-user envelope using only browser-managed cookies.
-  const res = await fetch('/api/v2/me', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } });
+  // Request authority through browser cookies or the native OS vault without mixing modes.
+  const res = await transportFetch('/api/v2/me', { method: 'GET', credentials: nativeSessionTransport() ? 'omit' : 'include', headers: { Accept: 'application/json' } });
   // Store payload so the verification can distinguish a real 401 from a broken response.
   let payload;
   // Parse the standard envelope before deciding whether logout really completed.
@@ -169,7 +211,10 @@ async function sessionStillAuthenticatedAfterLogout() {
   throw error;
 }
 // Export this symbol so the shell can start an authenticated browser session.
-export const login = body => post('/api/v2/auth/login', body);
+export const login = async body => {
+  // Keep native predecessor revocation and replacement issuance inside one exclusive transaction.
+  return runNativeAccountSwitch(() => post('/api/v2/auth/login', body));
+};
 // Read boolean-only provider availability for the logged-out sign-in surface. (OAUTH-007)
 export const oauthProviders = () => api('/api/v2/auth/oauth/providers');
 // Start one browser-bound sign-in or explicitly confirmed authenticated link flow. (OAUTH-008)
@@ -182,7 +227,7 @@ export const unlinkOAuth = provider => post(`/api/v2/me/oauth/${encodeURICompone
 export const redeemInvitation = body => post('/api/v2/auth/redeem-invitation', body);
 // Export this symbol so the shell can end the current authenticated browser session.
 export async function logout() {
-  // Ask the backend to revoke the active session and expire both auth cookies.
+  // Ask the backend to revoke the session; only browser mode emits cookie expiry.
   const result = await post('/api/v2/auth/logout', {});
   // Re-read current user outside the normal helper so verification cannot repaint the wrong gate.
   const stillAuthenticated = await sessionStillAuthenticatedAfterLogout();
@@ -200,10 +245,10 @@ export async function logout() {
 }
 // Start one account-free disposable guest trial from the login surface. (issue #317)
 export async function guestTrial(body) {
-  // Create the disposable principal only after the caller supplies explicit consent metadata.
-  const payload = await post('/api/v2/auth/guest', body);
+  // Revoke and replace a native predecessor atomically with guest issuance under the local mutex.
+  const payload = await runNativeAccountSwitch(() => post('/api/v2/auth/guest', body));
   // Capture the one-time proof before any protected guest request can be sent.
-  sessionStorage.setItem(GUEST_NONCE_KEY, String(payload.guest_browser_nonce || ''));
+  if (!nativeSessionTransport()) sessionStorage.setItem(GUEST_NONCE_KEY, String(payload.guest_browser_nonce || ''));
   // Remove the transport-only proof from application state and UI inspection surfaces.
   delete payload.guest_browser_nonce;
   // Return the standard current-user payload consumed by the shell.

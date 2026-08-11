@@ -286,6 +286,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/localization_foundation.md`](docs/localization_foundation.md) — Phase 0 localization foundation
 - [`docs/long_test_suites.md`](docs/long_test_suites.md) — Long Casino Test Suites
 - [`docs/marketing_customization.md`](docs/marketing_customization.md) — Marketing and brand customization
+- [`docs/mobile_security_threat_model.md`](docs/mobile_security_threat_model.md) — Mobile client security and lifecycle threat model
 - [`docs/motion_acceptance_contract.md`](docs/motion_acceptance_contract.md) — Deterministic motion acceptance contract
 - [`docs/mysql_connection_pool.md`](docs/mysql_connection_pool.md) — MySQL connection lifecycle
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
@@ -319,7 +320,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 ### Mobile integration documentation
 
 - [`mobile/ios/App/CapApp-SPM/README.md`](mobile/ios/App/CapApp-SPM/README.md) — CapApp-SPM
-- [`mobile/README.md`](mobile/README.md) — Capacitor mobile foundation
+- [`mobile/README.md`](mobile/README.md) — Capacitor mobile client foundation
 
 ### Test-scoped instructions
 

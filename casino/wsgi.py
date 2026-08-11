@@ -20,7 +20,7 @@ from casino.app import CACHE_CONTROL_NO_STORE, ROUTER
 # Import production runtime and packaged-static configuration.
 from casino.config import APP_VERSION, OPENAPI_DIR, WEB_DIR, validate_bootstrap_for_startup, validate_production_runtime
 # Import standard application errors for stable public envelopes.
-from casino.errors import CasinoError, ForbiddenError, RequestTooLargeError, ValidationError
+from casino.errors import CasinoError, ForbiddenError, RequestTooLargeError, UnauthorizedError, ValidationError
 # Import strict JSON-number handling shared with the development HTTP adapter.
 from casino.core.validation import reject_nonfinite_json_constant
 # Import authentication and application logging through the existing core boundaries.
@@ -210,12 +210,22 @@ def _initialize_runtime() -> SecurityPolicy:
 
 # Enforce the established authentication and player-resource boundary before route dispatch.
 def _authorize_request(method: str, path: str, body: dict, headers: dict, client: str, policy: SecurityPolicy) -> dict:
+    # Detect only an explicitly enabled exact Capacitor origin carrying the native client marker. (SEC-016)
+    mobile_request = headers.get("X-Casino-Mobile-Client") == "1" and headers.get("Origin") in policy.mobile_origins
+    # Reject a claimed native client when its origin is absent or not explicitly enabled.
+    if headers.get("X-Casino-Mobile-Client") == "1" and not mobile_request:
+        # Fail closed before authentication or route dispatch.
+        raise ForbiddenError("Native client origin is not allowed")
+    # Reject every cookie on native transport so browser and native authorities cannot be mixed.
+    if mobile_request and headers.get("Cookie"):
+        # Fail before bearer resolution or mutation.
+        raise ForbiddenError("Native client cookies are not allowed")
     # Create the route context without accepting proxy-authored client identity.
-    context = {"headers": headers, "client": client, "response_headers": [], "secure_cookie": True, "include_csrf_cookie": True, "session_samesite": policy.same_site}
+    context = {"headers": headers, "client": client, "response_headers": [], "secure_cookie": True, "include_csrf_cookie": not mobile_request, "session_samesite": policy.same_site, "mobile_client": mobile_request}
     # Leave only the centrally declared public API and liveness routes anonymous.
     if auth.is_public_api_path(path):
         # Require exact Origin plus the bootstrap double-submit token for every anonymous mutation.
-        validate_request_integrity(method, headers, policy)
+        validate_request_integrity(method, headers, policy, allowed_origins=policy.mobile_origins if mobile_request else None, require_csrf=not mobile_request)
         # Return the anonymous context before session lookup.
         return context
     # Resolve the root-managed deployment monitor token only for the reviewed read-only probes.
@@ -232,8 +242,12 @@ def _authorize_request(method: str, path: str, body: dict, headers: dict, client
         return context
     # Authenticate the direct request headers through the canonical session service.
     session, user = auth.authenticate_headers(headers)
+    # Require native authentication to use an OS-vault bearer, never cookie fallback.
+    if mobile_request and not auth.extract_bearer_token(headers):
+        # Reject before session CSRF comparison.
+        raise UnauthorizedError("Native bearer is required")
     # Require a distinct per-session CSRF secret for every authenticated mutation.
-    validate_request_integrity(method, headers, policy, str(session.get("csrf_token") or ""))
+    validate_request_integrity(method, headers, policy, str(session.get("csrf_token") or ""), policy.mobile_origins if mobile_request else None)
     # Keep restricted-preview access on manually provisioned local identities and disposable guests only.
     if str(user.get("identity_provider") or "local").lower() not in ("local", "guest"):
         # Reject linked providers until the separately held public-launch gate while permitting #317 guests.
@@ -415,6 +429,10 @@ class CasinoWSGIApplication:
                 self.rate_limiter.check(effective.client, requests_per_window=runtime_rate_policy["requests_per_window"], window_seconds=runtime_rate_policy["window_seconds"])
             # Record only method and route class, never path, query, headers, body, or credentials.
             logger.info("request_accepted", request_id=request_id, method=method, route_class=route_class)
+            # Reject every browser preflight because native OS networking does not require CORS. (SEC-016)
+            if method == "OPTIONS" and path.startswith("/api/"):
+                # Fail before route dispatch and emit no cross-origin read authority.
+                raise ForbiddenError("Browser access to native transport is not allowed")
             # Route APIs, probes, and every non-GET request through application dispatch.
             if path.startswith("/api/") or path in PROBE_PATHS or method != "GET":
                 # Return the canonical API response iterable.
@@ -426,13 +444,13 @@ class CasinoWSGIApplication:
             # Record only fixed request metadata and the bounded error code.
             logger.warning("request_rejected", request_id=request_id, method=method, route_class=route_class, code=exc.code)
             # Preserve the standard error envelope without request-derived details.
-            return _json_response(start_response, exc.status, {"ok": False, "error": {"code": exc.code, "message": exc.message, "details": {}}}, effective_scheme=effective_scheme)
+            return _json_response(start_response, exc.status, {"ok": False, "error": {"code": exc.code, "message": exc.message, "details": {}}}, [], effective_scheme)
         # Prevent unexpected exception text, traceback values, or configuration from entering logs or responses.
         except Exception:
             # Record only the bounded correlation and normalized route identity.
             logger.error("request_exception", request_id=request_id, method=method, route_class=route_class)
             # Return a generic message plus the bounded request id to the client.
-            return _json_response(start_response, 500, {"ok": False, "error": {"code": "INTERNAL_ERROR", "message": "Internal server error", "details": {"request_id": request_id}}}, effective_scheme=effective_scheme)
+            return _json_response(start_response, 500, {"ok": False, "error": {"code": "INTERNAL_ERROR", "message": "Internal server error", "details": {"request_id": request_id}}}, [], effective_scheme)
 
 
 # Construct the single WSGI application object during Gunicorn worker import.

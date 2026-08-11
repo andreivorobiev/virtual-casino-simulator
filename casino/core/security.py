@@ -28,6 +28,8 @@ from casino.errors import ForbiddenError, RateLimitError, ValidationError
 
 # Name the explicit canonical-origin configuration used by production request validation.
 CANONICAL_ORIGIN_ENV = "CASINO_CANONICAL_ORIGIN"
+# Name the optional exact Capacitor-origin allowlist, disabled by default. (SEC-016)
+MOBILE_ORIGINS_ENV = "CASINO_MOBILE_ORIGINS"
 # Name the exact direct loopback proxy address trusted to supply forwarding metadata.
 TRUSTED_PROXY_ENV = "CASINO_TRUSTED_PROXY"
 # Name the fail-closed restricted-preview mode switch.
@@ -100,6 +102,8 @@ class SecurityPolicy:
     rate_requests: int
     # Preserve the fixed-window duration in seconds.
     rate_window_seconds: int
+    # Preserve only exact reviewed Capacitor origins; an empty tuple disables native access.
+    mobile_origins: tuple[str, ...] = ()
 
     # Load and validate the complete production policy without exposing supplied values.
     @classmethod
@@ -126,8 +130,32 @@ class SecurityPolicy:
         rate_requests = _bounded_integer(current, RATE_REQUESTS_ENV, 1_200, 1, 10_000)
         # Parse the fixed-window duration within one second and one hour.
         rate_window_seconds = _bounded_integer(current, RATE_WINDOW_ENV, 60, 1, 3_600)
+        # Parse the optional direct-native origin classifier without granting browser CORS authority.
+        mobile_origins = _parse_mobile_origins(str(current.get(MOBILE_ORIGINS_ENV, "")).strip())
         # Return an immutable policy that request handling can safely share across threads.
-        return cls(origin, authority, proxy, same_site, max_body_bytes, rate_requests, rate_window_seconds)
+        return cls(origin, authority, proxy, same_site, max_body_bytes, rate_requests, rate_window_seconds, mobile_origins)
+
+
+# Parse a default-off bounded set of exact Capacitor origins. (SEC-016)
+def _parse_mobile_origins(value: str) -> tuple[str, ...]:
+    # Preserve disabled behavior when production has not explicitly enabled native clients.
+    if not value:
+        # Return one immutable empty allowlist.
+        return ()
+    # Split a short comma-delimited operator value without accepting blank entries.
+    candidates = value.split(",")
+    # Bound configuration cardinality and reject duplicates before normalization.
+    if len(candidates) > 2 or any(candidate != candidate.strip() or not candidate for candidate in candidates) or len(set(candidates)) != len(candidates):
+        # Name only the public setting in fail-closed diagnostics.
+        raise RuntimeError(f"{MOBILE_ORIGINS_ENV} must contain unique exact Capacitor origins")
+    # Permit only the generated Android and iOS WebView authority forms.
+    supported = {"https://localhost", "capacitor://localhost"}
+    # Reject wildcards, paths, ports, credentials, and every unreviewed authority.
+    if any(candidate not in supported for candidate in candidates):
+        # Keep supplied configuration out of logs and exception text.
+        raise RuntimeError(f"{MOBILE_ORIGINS_ENV} contains an unsupported origin")
+    # Return deterministic order for contract and evidence comparisons.
+    return tuple(sorted(candidates))
 
 
 # Store the trusted effective transport identity for one request.
@@ -306,7 +334,7 @@ def cookie_value(headers: dict, name: str) -> str:
 
 
 # Validate exact Origin and CSRF proof for every state-changing request.
-def validate_request_integrity(method: str, headers: dict, policy: SecurityPolicy, expected_csrf: str | None = None) -> None:
+def validate_request_integrity(method: str, headers: dict, policy: SecurityPolicy, expected_csrf: str | None = None, allowed_origins: tuple[str, ...] | None = None, require_csrf: bool = True) -> None:
     # Leave read-only methods unchanged.
     if method.upper() not in UNSAFE_METHODS:
         # Return before consulting browser-authored integrity headers.
@@ -314,9 +342,15 @@ def validate_request_integrity(method: str, headers: dict, policy: SecurityPolic
     # Read the one browser or non-browser Origin value.
     origin = str(headers.get("Origin", ""))
     # Require exact byte-for-byte origin equality, including scheme and optional port.
-    if not origin or not hmac.compare_digest(origin, policy.canonical_origin):
+    accepted_origins = allowed_origins if allowed_origins is not None else (policy.canonical_origin,)
+    # Compare every bounded exact origin with constant-time semantics.
+    if not origin or not any(hmac.compare_digest(origin, accepted) for accepted in accepted_origins):
         # Reject missing, null, malformed, and foreign origins with the same diagnostic.
         raise ForbiddenError("Request origin is not allowed")
+    # Stop after exact native Origin validation when no ambient credential exists yet.
+    if not require_csrf:
+        # Public native authentication has no cookie authority to forge across origins.
+        return
     # Read the explicit CSRF proof header without logging or normalizing it.
     supplied = str(headers.get(CSRF_HEADER, ""))
     # Use the authenticated session token when available, otherwise the bootstrap double-submit cookie.

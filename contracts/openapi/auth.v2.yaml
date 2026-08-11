@@ -547,6 +547,76 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  # Native session probes are enabled only for an exact configured Capacitor Origin and OS-vault bearer.
+  /auth/mobile/session:
+    get:
+      summary: Revalidate a native OS-vault bearer with identifier-free session metadata.
+      operationId: auth_v2_mobile_session_probe
+      security:
+        - nativeBearer: []
+      responses:
+        '200':
+          description: Minimal authenticated state with no bearer, CSRF, account, player, wallet, or guest proof.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NativeSessionProbeEnvelope'
+        '401':
+          description: The native bearer is absent, stale, expired, or revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: The native marker or exact configured Capacitor Origin is absent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/mobile/session/rotate:
+    post:
+      summary: Atomically replace a native bearer and matching CSRF pair under server session generation.
+      operationId: auth_v2_mobile_session_rotate
+      security:
+        - nativeBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NativeSessionRotationRequest'
+      responses:
+        '200':
+          description: The native plugin must commit and strip the issued bearer and CSRF before JavaScript receives the remaining current-user envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NativeSessionIssuedEnvelope'
+        '409':
+          description: Generation, predecessor bearer, or session identity changed; the client must sign in again.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/mobile/session/revoke:
+    post:
+      summary: Revoke the exact native Authorization bearer before OS-vault clear or account switch.
+      operationId: auth_v2_mobile_session_revoke
+      security:
+        - nativeBearer: []
+      responses:
+        '200':
+          description: Identifier-free revocation acknowledgement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NativeSessionRevokedEnvelope'
+        '401':
+          description: The predecessor bearer is already absent, expired, or revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /auth/terms/accept:
     post:
       summary: Record private beta toy-simulator terms acceptance for the current user.
@@ -696,7 +766,78 @@ components:
       type: apiKey
       in: cookie
       name: casino_session
+    nativeBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque OS-vault session credential
   schemas:
+    NativeSessionRotationRequest:
+      type: object
+      required: [expected_generation]
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          description: Server session generation supplied only from native secure storage.
+    NativeSessionProbeEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [authenticated, session]
+          additionalProperties: false
+          properties:
+            authenticated:
+              type: boolean
+              enum: [true]
+            session:
+              type: object
+              required: [generation, issued_at, expires_at, status]
+              additionalProperties: false
+              properties:
+                generation:
+                  type: integer
+                  minimum: 1
+                issued_at:
+                  type: string
+                  format: date-time
+                expires_at:
+                  type: string
+                  format: date-time
+                status:
+                  type: string
+                  enum: [active]
+    NativeSessionIssuedEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/NativeIssuedCurrentUser'
+    NativeSessionRevokedEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [revoked]
+          additionalProperties: false
+          properties:
+            revoked:
+              type: boolean
     PasswordResetInitiateRequest:
       type: object
       required: [email, locale, idempotency_key]
@@ -1134,7 +1275,7 @@ components:
           enum: [casino_user_id]
     CurrentUser:
       type: object
-      required: [user, player, session, terms]
+      required: [user, player, session, terms, session_status]
       properties:
         user:
           $ref: '#/components/schemas/UserSummary'
@@ -1144,6 +1285,24 @@ components:
           $ref: '#/components/schemas/SessionSummary'
         terms:
           $ref: '#/components/schemas/TermsStatus'
+        session_status:
+          $ref: '#/components/schemas/SessionStatusSummary'
+    NativeIssuedCurrentUser:
+      type: object
+      description: Native-only issuance wire shape; the OS bridge removes bearer, CSRF, and guest proof fields before exposing the envelope to shared JavaScript.
+      required: [user, player, session, terms, session_status]
+      additionalProperties: false
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        player:
+          $ref: '#/components/schemas/PlayerSummary'
+        session:
+          $ref: '#/components/schemas/NativeIssuedSession'
+        terms:
+          $ref: '#/components/schemas/TermsStatus'
+        session_status:
+          $ref: '#/components/schemas/SessionStatusSummary'
     GuestCurrentUser:
       allOf:
         - $ref: '#/components/schemas/CurrentUser'
@@ -1243,12 +1402,64 @@ components:
         csrf_token:
           type: string
           description: Per-session anti-CSRF value returned only to the authenticated same-origin client.
+        token:
+          type: string
+          description: Optional issuance-only bearer retained for compatible non-cookie clients; browser requests continue to use the host-only cookie and never persist this field.
         issued_at:
           type: string
           format: date-time
         expires_at:
           type: string
           format: date-time
+    NativeIssuedSession:
+      type: object
+      description: Native issuance-only session material consumed atomically by the OS vault bridge and never returned to shared JavaScript.
+      required: [session_id, token, csrf_token, generation, issued_at, expires_at]
+      additionalProperties: false
+      properties:
+        session_id:
+          type: string
+        token:
+          type: string
+          minLength: 32
+        csrf_token:
+          type: string
+          minLength: 32
+        generation:
+          type: integer
+          minimum: 1
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    SessionStatusSummary:
+      type: object
+      required: [expires_at, idle_expires_at, absolute_expires_at, warn_at, warning_seconds, expires_in_seconds, policy_enabled]
+      additionalProperties: false
+      properties:
+        expires_at:
+          type: string
+          format: date-time
+        idle_expires_at:
+          type: string
+          format: date-time
+        absolute_expires_at:
+          type: string
+          format: date-time
+        warn_at:
+          type: string
+          format: date-time
+          nullable: true
+        warning_seconds:
+          type: integer
+          minimum: 0
+        expires_in_seconds:
+          type: integer
+          minimum: 0
+        policy_enabled:
+          type: boolean
     TermsStatus:
       type: object
       required: [required_version, accepted, accepted_version]

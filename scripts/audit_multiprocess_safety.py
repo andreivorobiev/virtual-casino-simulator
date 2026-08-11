@@ -98,6 +98,7 @@ AUTH_SESSION_ROOTS = {
     "revoke_session_by_id",  # Include the owner-confirmed single-session revocation path.
     "revoke_sessions_for_user",  # Include user session revocation.
     "revoke_sessions_for_user_method",  # Include method-scoped revocation.
+    "rotate_mobile_session",  # Include atomic native bearer-and-CSRF replacement.
     "save_sessions",  # Include direct compatibility snapshot writes.
     "set_user_password",  # Include password-driven session mutation.
     "update_user_by_id",  # Include user-driven session mutation.

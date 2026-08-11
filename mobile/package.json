@@ -1,8 +1,8 @@
 {
   "name": "virtual-casino-simulator-mobile",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Capacitor iOS and Android foundation for Virtual Casino Simulator issue #188.",
+  "description": "Governed Capacitor security and lifecycle foundation for Virtual Casino Simulator issue #183.",
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "engines": {
@@ -14,8 +14,8 @@
     "validate": "node --test tests/*.test.mjs",
     "check": "pnpm run validate && pnpm run sync:ci",
     "doctor": "cap doctor",
-    "sync": "pnpm run build && cap sync",
-    "sync:ci": "pnpm run build:ci && cap sync",
+    "sync": "pnpm run build && cap sync && node scripts/normalize-capacitor-sync.mjs",
+    "sync:ci": "pnpm run build:ci && cap sync && node scripts/normalize-capacitor-sync.mjs",
     "run:android": "cap run android",
     "run:ios": "cap run ios",
     "open:android": "cap open android",

@@ -53,6 +53,8 @@ class RestrictedPreviewWSGITests(unittest.TestCase):
             environment["CASINO_RESTRICTED_PREVIEW"] = "1"
             # Select the strongest same-origin cookie policy.
             environment["CASINO_SESSION_SAMESITE"] = "Strict"
+            # Enable only the two reviewed origins for direct OS-network request classification. (SEC-016)
+            environment["CASINO_MOBILE_ORIGINS"] = "capacitor://localhost,https://localhost"
             # Exercise the focused 4 KiB request body bound.
             environment["CASINO_MAX_BODY_BYTES"] = "4096"
             # Keep the hostile matrix below a generous per-client request limit.

@@ -1,0 +1,61 @@
+{
+  "issue": 183,
+  "status": "core-transport-session-source-complete-oauth-and-device-evidence-pending",
+  "requirements": [
+    "CORE-032",
+    "AUTH-019",
+    "SEC-016",
+    "SESSION-013",
+    "TEST-172"
+  ],
+  "canonical_backend_origin": "https://casino.tiltseven.com",
+  "browser_session": {
+    "authority": "host-only cookie plus double-submit CSRF",
+    "compatibility": "byte-compatible",
+    "native_transport_used": false
+  },
+  "native_session": {
+    "authority": "OS-vault bearer plus matching per-session CSRF",
+    "cookies": "forbidden",
+    "javascript_token_storage": "forbidden",
+    "vault_generation": "monotonic-local-never-server-authored",
+    "session_generation": "server-CAS-only",
+    "rotation": "atomic-predecessor-replacement",
+    "money_retry": "forbidden"
+  },
+  "native_cors": {
+    "status": "disabled",
+    "preflight": "rejected",
+    "response_origin_header": "forbidden",
+    "allow_credentials": false,
+    "wildcard": false
+  },
+  "deep_links": {
+    "authority": "exact-owned-https-host",
+    "routes": [
+      "/enroll/invitation",
+      "/enroll/verify",
+      "/account/reset"
+    ],
+    "history": "credential-free-immediate-replacement",
+    "replay": "bounded-vault-fingerprint"
+  },
+  "lifecycle": {
+    "background_mutations": "blocked",
+    "foreground_and_reconnect": "probe-then-authoritative-PWA-refresh",
+    "stale_completion": "rejected-by-vault-generation",
+    "process_restore": "probe-required"
+  },
+  "platform_evidence": {
+    "android_source": "Keystore AES-GCM encrypted record and verified-link manifest",
+    "ios_source": "ThisDeviceOnly non-synchronizing Keychain and associated-domain entitlement",
+    "native_oauth_handoff": "pending issues 183, 184, 185, and 195",
+    "signed_device_evidence": "pending issues 184, 185, and 195"
+  },
+  "non_goals": [
+    "No live provider, DNS, signing, store, or deployment mutation.",
+    "No claim that disabled browser OAuth has a native system-browser callback handoff.",
+    "No change to frozen API v1, game, PWA, or settlement behavior.",
+    "No claim that host-only tests replace signed Android or iOS device evidence."
+  ]
+}

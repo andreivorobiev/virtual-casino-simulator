@@ -1,40 +1,49 @@
-# Capacitor mobile foundation
+# Capacitor mobile client foundation
 
-This directory implements the bounded Phase 1 foundation approved by GitHub issue #188. It packages the existing `web/` product into reproducible Capacitor iOS and Android projects without changing browser source behavior or the frozen `/api/v1` and `/api/v2` paths.
+This directory contains the repo-owned source foundation for issues #183, #184, #185, and #195. Version `0.2.0` adds a native security and lifecycle boundary around the existing browser product. The independently governed repository module begins at `mobile` module version `1.0.0`; that governance version is intentionally distinct from the installable package version.
 
-## Version and toolchain
+The core transport and session slice is source-complete and host-testable. It is not a complete native OAuth, signed-device, or store-release claim. Native system-browser OAuth callback/handoff work remains in #183; Android device/App-Link evidence remains #184, iOS device/Universal-Link evidence remains #185, and cross-platform release evidence remains #195. No provider, DNS, signing, store, public-launch, or production setting is changed here.
 
-- Mobile foundation version: `0.1.0` (the private package version in `package.json`).
-- Package manager: pnpm `11.7.0`.
-- Node.js: `22` or newer.
-- Capacitor core, CLI, Android, and iOS: `8.4.2`.
-- Native lifecycle plugins are pinned independently in `package.json` and locked transitively in `pnpm-lock.yaml`.
-- The only dependency build script permitted by `pnpm-workspace.yaml` is the pinned platform-specific `esbuild` binary installer.
+## Browser and native authorities
 
-This lane does not create a formal packaged application release and does not alter the aggregate module manifest owned by the separate #77 integration lane. The packaged application release was `9.1.1` when this foundation landed (2026-07-14); for the current release see `modules/module-manifest.json` (`application`).
+Browser and PWA requests retain the existing host-only session cookie and same-origin double-submit CSRF flow. The native runtime does not rewrite global `fetch`. Shared API code selects an injected Request-compatible native transport only when the signed Capacitor entry point publishes it.
 
-> **Status: unverified against the current backend.** This foundation has not been revalidated since it landed, while the backend has since added the deployment request-integrity policy (exact-Origin checking, per-session double-submit CSRF, SameSite session cookies) and the frontend added a service worker. The cross-origin `fetch` rewrite described below has not been demonstrated end to end against a deployed backend, and no CI workflow builds or tests this directory. Treat the runtime claims here as design intent, not verified behavior.
+Native requests use an opaque bearer and the matching per-session CSRF proof from Android Keystore-encrypted storage or iOS Keychain. Cookies, JavaScript-authored Authorization/CSRF/guest-proof headers, arbitrary public headers, redirects, caches, foreign origins, and automatic money-action retries are rejected. Login, guest, rotation, current-user, and probe responses are stripped in native code, then recursively checked again before shared JavaScript can receive them.
+
+Server session generation and local vault generation are separate. Server generation is used only for atomic rotation compare-and-swap. The monotonic local vault generation advances on credential issue, replacement, clear, and authoritative 401; it never takes a server value, so switching from account A to account B cannot create an ABA match for a late response.
 
 ## Configuration contract
 
-Every build requires a JSON configuration file with exactly these public fields:
+Every build accepts exactly three public fields:
 
 ```json
 {
   "environment": "development",
-  "backendBaseUrl": "https://replace-with-an-approved-backend.example"
+  "backendBaseUrl": "https://casino.tiltseven.com",
+  "nativeOrigins": [
+    "capacitor://localhost",
+    "https://localhost"
+  ]
 }
 ```
 
-`backendBaseUrl` must be an HTTPS origin with no credentials, path, query, or fragment. The only HTTP exception is an explicit `allowInsecureLocalDevelopment: true` build targeting `localhost`, `127.0.0.1`, or the Android emulator bridge `10.0.2.2`. Missing, unsafe, malformed, or secret-like configuration fails before the shared app loads. Environment-specific `dist/` and synced native web assets are ignored by Git.
+The backend must be one HTTPS origin without credentials, path, query, or fragment. The generated Capacitor origins are exact and complete. Unknown or secret-like fields fail closed. `CASINO_MOBILE_ORIGINS` classifies direct OS-network requests only: browser CORS stays disabled, every API preflight is rejected, and native responses emit no cross-origin read authority.
 
-Android enables cleartext transport only in its debug source set so the explicit emulator bridge can work; release builds retain the platform HTTPS default. Android application backup is disabled as a conservative foundation for later secure-session work.
+Android's release source permits no cleartext. Its debug source uses an explicit network security file limited to `localhost`, `127.0.0.1`, and `10.0.2.2`, while committed runtime configuration still requires HTTPS.
 
-Never put passwords, tokens, signing keys, certificates, private endpoints, or production secrets in these files. Native secure session storage is a later #187 phase and is intentionally not claimed by this foundation.
+Never put passwords, tokens, signing keys, certificates, private endpoints, provider credentials, or production secrets in mobile configuration or bundled assets.
 
-## Reproducible commands
+## Lifecycle and links
 
-Run from this directory with Node and pnpm available:
+Cold start, process restore, foreground, reconnect, connectivity edges, clock rollback, and account switch require a native session probe. Foreground and reconnect then call the existing authoritative PWA reconnect boundary before controls reopen. Background prevents new mutations; stale completions cannot repaint. Money actions are never queued or retried automatically.
+
+Only exact owned HTTPS account links are accepted. Enrollment and password-reset bearers move into module-only memory and are removed from WebView history immediately. A bounded digest-only replay inventory lives in the OS vault. Unknown routes, authorities, fields, duplicate query keys, fragments, malformed bearer material, and callback state/nonce additions fail closed.
+
+Provider OAuth remains disabled by default. Programmatic provider navigation, system-browser callback return, and native callback state/nonce handoff are deliberately outside this slice and remain explicit #183/#184/#185/#195 work rather than an implied mobile capability.
+
+## Reproducible host checks
+
+From this directory with the pinned Node and pnpm versions:
 
 ```powershell
 pnpm install --frozen-lockfile
@@ -44,41 +53,6 @@ pnpm run sync:ci
 pnpm run check
 ```
 
-For an approved environment, keep its public configuration outside Git and pass only its local path:
+Repository CI runs the pure Node tests without installing mobile packages, plus the Python/API/contract/security gates. Android compilation still requires a supported JDK and Android SDK. iOS compilation and simulator evidence require macOS, Xcode, and the governed signing boundary.
 
-```powershell
-$env:CASINO_MOBILE_CONFIG = "C:\secure-local-path\casino-mobile.json"
-pnpm run sync
-```
-
-Android requires a supported JDK and Android SDK/Android Studio:
-
-```powershell
-pnpm run run:android
-```
-
-iOS generation and sync can be validated on any Node host, but building or running requires macOS with supported Xcode and CocoaPods/SPM tooling:
-
-```bash
-pnpm run run:ios
-```
-
-`pnpm run open:android` and `pnpm run open:ios` open the generated projects when their platform IDE exists. Signing, store submission, developer enrollment, remote hosting, and production security mutation are outside #188.
-
-`pnpm run doctor` reports optional platform-tooling readiness separately; it is not part of the host-runnable `pnpm run check` gate because ordinary Linux/Windows CI hosts cannot provide Xcode.
-
-## Implemented native foundations
-
-- The generated native WebView always loads bundled shared assets; `server.url` is deliberately absent.
-- Root-relative `/api/` requests are translated to one validated backend origin without changing paths, payloads, response envelopes, or browser behavior.
-- Offline state blocks new API actions and never queues or automatically retries ledger-affecting requests.
-- Backend transport and 5xx failures show a native-only recoverable status banner without exposing endpoint details.
-- Backgrounding blocks new mutation requests while an already-started request may finish; foregrounding refreshes native network status and emits additive lifecycle events.
-- Safe-area and dynamic-viewport CSS remains scoped to the Capacitor bundle. Native keyboard events expose measured overlap without modifying shared browser CSS.
-- External HTTP(S) links open in the system browser rather than replacing the signed casino WebView.
-
-The native-only banner affects the existing `auth` and `shell_lobby` mobile surfaces and the `VIS-COPY-001`, `VIS-LAYOUT-003`, `VIS-RESPONSIVE-001`, and `VIS-EVIDENCE-001` gates. The frozen visual matrix is not edited by #188; simulator/emulator evidence is required when platform tooling is available.
-
-## Host-tooling limits
-
-Native project generation and host-runnable configuration tests do not prove an installable signed release. Android compilation requires a local JDK and Android SDK. iOS compilation and simulator evidence require macOS/Xcode. Record exact missing tools and the generated/sync evidence in the draft PR rather than weakening platform security settings.
+The complete source policy and explicit evidence limits are in `docs/mobile_security_threat_model.md` and `contracts/compatibility/mobile-client-security.json`.

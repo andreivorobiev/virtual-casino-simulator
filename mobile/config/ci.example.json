@@ -1,4 +1,8 @@
 {
   "environment": "ci",
-  "backendBaseUrl": "https://backend.example.invalid"
+  "backendBaseUrl": "https://casino.tiltseven.com",
+  "nativeOrigins": [
+    "capacitor://localhost",
+    "https://localhost"
+  ]
 }

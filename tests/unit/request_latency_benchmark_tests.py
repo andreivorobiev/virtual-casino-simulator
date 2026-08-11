@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus verified-email enrollment to total exactly 947 permanent rows.
-        self.assertEqual(len(requirements), 947)
+        # Require the accepted aggregates plus five issue #183 mobile-core requirements to total exactly 952 permanent rows.
+        self.assertEqual(len(requirements), 952)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1393,6 +1393,11 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-151": "Tests",  # Preserve wallet-timing evidence ownership.
             "API-003": "Contracts",  # Preserve API-doc ownership.
             "TEST-152": "Tests",  # Preserve API-doc evidence ownership.
+            "CORE-032": "Application",  # Preserve scoped native transport ownership.
+            "AUTH-019": "Core",  # Preserve native bearer/CSRF ownership.
+            "SEC-016": "Core",  # Preserve native origin and link ownership.
+            "SESSION-013": "Core",  # Preserve native lifecycle ownership.
+            "TEST-172": "Tests",  # Preserve mobile-core evidence ownership.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
             "AUTO-015": "Autoplay",  # Bind lifecycle reconciliation to the control plane.
@@ -1542,6 +1547,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         contracts_module = json.loads((ROOT / "modules" / "contracts.json").read_text(encoding="utf-8"))
         # Parse the tooling descriptor for the compatible bridge addition.
         tooling_module = json.loads((ROOT / "modules" / "tooling.json").read_text(encoding="utf-8"))
+        # Parse the first independently governed mobile descriptor.
+        mobile_module = json.loads((ROOT / "modules" / "mobile.json").read_text(encoding="utf-8"))
         # Parse the Roulette descriptor for the compatible presentation addition.
         roulette_module = json.loads((ROOT / "modules" / "roulette.json").read_text(encoding="utf-8"))
         # Parse the Slots descriptor for the compatible presentation addition.
@@ -1560,24 +1567,26 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
         # Parse the Deuces descriptor after removing its final game-owned history scan.
         deuces_module = json.loads((ROOT / "modules" / "deuces_wild_video_poker.json").read_text(encoding="utf-8"))
-        # Require the compatible Core minor for verified-email pending enrollment.
-        self.assertEqual(core_module["version"], "9.41.0")
+        # Require the compatible Core minor for native session and origin security.
+        self.assertEqual(core_module["version"], "9.42.0")
         # Require the compatible Ledger patch for the public read-only point seam.
         self.assertEqual(ledger_module["version"], "9.1.2")
         # Require the exact compatible Players patch for explicit row insertion.
         self.assertEqual(players_module["version"], "9.1.2")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the tests patch for v0.9.5.73 release qualification.
-        self.assertEqual(tests_module["version"], "1.78.1")
-        # Require the docs patch for v0.9.5.73 release governance.
-        self.assertEqual(docs_module["version"], "1.75.1")
+        # Require the tests minor for mobile-core lifecycle qualification.
+        self.assertEqual(tests_module["version"], "1.79.0")
+        # Require the docs minor for the mobile security threat model and requirements.
+        self.assertEqual(docs_module["version"], "1.76.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
-        # Require the contracts patch for the immutable v0.9.5.73 rollback record.
-        self.assertEqual(contracts_module["version"], "1.60.1")
-        # Require the tooling patch for the expanded anonymous-route compatibility gate.
-        self.assertEqual(tooling_module["version"], "1.29.2")
+        # Require the contracts minor for additive native session and compatibility schemas.
+        self.assertEqual(contracts_module["version"], "1.61.0")
+        # Require the tooling minor for deterministic native build and sync qualification.
+        self.assertEqual(tooling_module["version"], "1.30.0")
+        # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
+        self.assertEqual((mobile_module["version"], mobile_module["package_version"]), ("1.0.0", "0.2.0"))
         # Require the compatible Baccarat patch for central settings enforcement.
         self.assertEqual(baccarat_module["version"], "9.1.15")
         # Require the exact compatible Bingo settlement-interface patch.
@@ -1588,8 +1597,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.7.0")
         # Require the compatible Slots minor for selectable governed reel profiles.
         self.assertEqual(slots_module["version"], "9.5.0")
-        # Require the compatible Application patch for v0.9.5.73 packaging.
-        self.assertEqual(application_module["version"], "9.63.1")
+        # Require the compatible Application minor for scoped native lifecycle integration.
+        self.assertEqual(application_module["version"], "9.64.0")
         # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
         self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

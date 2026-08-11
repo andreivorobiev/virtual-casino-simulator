@@ -1826,6 +1826,20 @@ def run_api_tests():
             raise AssertionError('game-action contract suite failed')
     # Record bounded identity, fingerprint, planner-order, paid, zero-cost, and receipt semantics.
     run_case('API-GAMECORE-003',['CORE-031'],run_game_action_contract_tests)
+    # Execute the complete host-runnable mobile security and lifecycle suite without a native SDK. (TEST-172)
+    def run_mobile_core_security_tests():
+        # Import the focused mobile suite only when its named case runs.
+        from tests import mobile_core_security_tests
+        # Load the complete native transport, session, config, link, and source-conformance class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(mobile_core_security_tests.MobileCoreSecurityTests)
+        # Execute once with concise output and no listener or network access.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the permanent case when any host-runnable proof fails.
+        if not result.wasSuccessful():
+            # Keep the central failure stable while unittest retains exact subtest evidence.
+            raise AssertionError('mobile core security suite failed')
+    # Record the additive native transport, session, lifecycle, deep-link, and source-policy proof.
+    run_case('API-MOBILE-CORE-001',['CORE-032','AUTH-019','SEC-016','SESSION-013','TEST-172'],run_mobile_core_security_tests)
     # Execute the Color Wheel rules and settlement proof without opening a listener.
     def run_color_wheel_tests():
         # Load only the focused Color Wheel class.
@@ -10554,8 +10568,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD}); page.goto(base+'/admin',wait_until='networkidle'); page.get_by_test_id('admin-tab-operations').wait_for(timeout=5000)
                         # Retain only diagnostics emitted by the controlled account-free invitation journey.
                         invitation_expected_console=console_errors[invitation_console_index:]; invitation_expected_http=http_errors[invitation_http_index:]; invitation_expected_page_errors=page_errors[invitation_page_error_index:]
-                        # Require exactly four anonymous session probes and two contract-shaped generic redemption rejections.
-                        assert len(invitation_expected_http)==6 and sum(value.startswith('401 ') and value.endswith('/api/v2/me') for value in invitation_expected_http)==4 and sum(value.startswith('400 ') and value.endswith('/api/v2/auth/redeem-invitation') for value in invitation_expected_http)==2, invitation_expected_http
+                        # Require zero anonymous current-user probes and only the two contract-shaped generic redemption rejections.
+                        assert len(invitation_expected_http)==2 and sum(value.endswith('/api/v2/me') for value in invitation_expected_http)==0 and sum(value.startswith('400 ') and value.endswith('/api/v2/auth/redeem-invitation') for value in invitation_expected_http)==2, invitation_expected_http
                         # Require the browser to report no JavaScript failure and only its standard failed-resource console lines.
                         assert invitation_expected_page_errors==[] and len(invitation_expected_console)==len(invitation_expected_http) and all('Failed to load resource' in value for value in invitation_expected_console), invitation_expected_console+invitation_expected_page_errors
                         # Remove only the verified controlled diagnostics so every unrelated HTTP or console failure remains fatal.

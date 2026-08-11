@@ -1061,7 +1061,7 @@ def create_session(user: dict, client: str = "", auth_method: str = "local") -> 
         # Reject unreviewed authentication authorities before issuing bearer material.
         raise ValidationError("Session authentication method is invalid")
     # Build the durable session record with independent bearer and CSRF material.
-    session = {"session_id": new_id("session"), "user_id": user["user_id"], "token": secrets.token_urlsafe(32), "csrf_token": new_csrf_token(), "status": "active", "created_at": now, "updated_at": now, "expires_at": session_expiry(), "client": client, "auth_method": auth_method}
+    session = {"session_id": new_id("session"), "user_id": user["user_id"], "token": secrets.token_urlsafe(32), "csrf_token": new_csrf_token(), "generation": 1, "status": "active", "created_at": now, "updated_at": now, "expires_at": session_expiry(), "client": client, "auth_method": auth_method}
     # Define the atomic mutation that preserves concurrent same-user sessions. (SESSION-007)
     def mutate(state: dict) -> dict:
         # Normalize malformed persisted state into the canonical sessions container.
@@ -1085,7 +1085,7 @@ def create_session(user: dict, client: str = "", auth_method: str = "local") -> 
 
 def public_session(session: dict) -> dict:
     # Copy public session metadata without exposing the bearer token, client, or guest proof digest.
-    result = {key: value for key, value in session.items() if key not in {"token", "client", "guest_browser_nonce_hash", "guest_departed_at", "guest_action_count"}}
+    result = {key: value for key, value in session.items() if key not in {"token", "generation", "client", "guest_browser_nonce_hash", "guest_departed_at", "guest_action_count"}}
     # Publish the contract's issued_at alias from the durable creation timestamp.
     result["issued_at"] = session.get("issued_at") or session.get("created_at")
     # Return the contract-compatible session summary.
@@ -1343,6 +1343,50 @@ def logout(token: str) -> dict:
     # Persist the revocation atomically so a concurrent login is never clobbered. (SESSION-007)
     update_json(SESSIONS_PATH, mutate, default_sessions)
     return {"logged_out": changed["value"]}
+
+
+# Atomically replace one native session's bearer and CSRF pair under an exact generation. (SESSION-013)
+def rotate_mobile_session(session_id: str, token: str, expected_generation: int) -> dict:
+    # Validate bounded caller generation before entering provider mutation.
+    if not isinstance(expected_generation, int) or isinstance(expected_generation, bool) or expected_generation < 1:
+        # Reject malformed or absent generation without touching session state.
+        raise ValidationError("Mobile session generation is invalid")
+    # Retain only the newly committed session outside the provider transaction.
+    rotated = {}
+    # Define one exact compare-and-swap over the current session record.
+    def mutate(state: dict) -> dict:
+        # Normalize malformed persisted state through the existing session schema.
+        if not isinstance(state, dict) or "sessions" not in state:
+            # Use the canonical empty document before failing the missing-session match.
+            state = default_sessions()
+        # Inspect only active retained sessions for the exact opaque identity.
+        for stored in state.get("sessions", []):
+            # Match session id, bearer, status, and generation in one provider lock.
+            if stored.get("session_id") == session_id and stored.get("status") == "active" and hmac.compare_digest(str(stored.get("token") or ""), str(token or "")) and stored.get("generation", 1) == expected_generation:
+                # Replace the bearer before any concurrent request can observe two valid credentials.
+                stored["token"] = secrets.token_urlsafe(32)
+                # Replace the matching CSRF proof in the same atomic transaction.
+                stored["csrf_token"] = new_csrf_token()
+                # Advance generation so every predecessor action and completion becomes stale.
+                stored["generation"] = expected_generation + 1
+                # Record only a bounded activity timestamp.
+                stored["updated_at"] = utc_now()
+                # Copy the committed record for the response after provider commit.
+                rotated.update(dict(stored))
+                # Stop after the unique session match.
+                break
+        # Reject stale, replayed, expired, or mismatched rotation without mutation.
+        if not rotated:
+            # Use one generic conflict so no session detail is disclosed.
+            raise ConflictError("Mobile session changed; sign in again")
+        # Stamp the canonical state schema after successful replacement.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the atomically mutated document.
+        return state
+    # Persist one compare-and-swap; a lost response intentionally forces login with no dual credential.
+    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Return the exact committed secret pair only to the native OS-vault response boundary.
+    return rotated
 
 # Revoke one session by its opaque identifier so a timed-out account cannot resume it. (SESSION-009)
 def revoke_session_by_id(session_id: str) -> None:

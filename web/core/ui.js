@@ -223,6 +223,60 @@ export function installStableRouteRenders(root, getRouteId, onAfterRender){
   // Report successful installation for browser-free regression tests.
   return true;
 }
+
+// Create one monotonic owner for asynchronous shell navigation so stale route work cannot repaint a newer surface. (SESSION-013)
+export function createNavigationOwnership() {
+  // Keep the process-local epoch private so callers can compare only opaque numeric tickets.
+  let epoch = 0;
+  // Return the minimal claim, invalidate, and comparison boundary used by the shared shell.
+  return {
+    // Claim a fresh navigation epoch while invalidating every earlier asynchronous route operation.
+    claim: () => { epoch += 1; return epoch; },
+    // Invalidate current route work without granting a replacement navigation operation ownership.
+    invalidate: () => { epoch += 1; return epoch; },
+    // Accept a completion only when its captured ticket still owns the exact current epoch.
+    owns: ticket => Number.isInteger(ticket) && ticket === epoch,
+  };
+}
+
+// Load and mount one game only while the caller's navigation ticket remains authoritative. (SESSION-013)
+export async function mountOwnedRoute({ load, mount, owns, onStale }) {
+  // Retain the loaded game so stale post-mount work can run its exact lifecycle cleanup.
+  let game = null;
+  // Track whether game mount started so an unmounted import never receives an unnecessary teardown hook.
+  let mountStarted = false;
+  // Contain import or mount failures so stale failures never escape into the route error renderer.
+  try {
+    // Resolve the dynamic game module through the caller-owned loader.
+    game = await load();
+    // Restore the newer route and stop before mount when ownership changed during import.
+    if (!owns()) { onStale(game, mountStarted); return { game, mounted: false, stale: true }; }
+    // Record mount ownership before calling game code so a partial or rejected stale mount is cleaned up.
+    mountStarted = true;
+    // Mount only after the post-import ownership check succeeds.
+    await mount(game);
+    // Tear down the stale game and restore the newer route when ownership changed during mount.
+    if (!owns()) { onStale(game, mountStarted); return { game, mounted: false, stale: true }; }
+    // Return the owned mounted game so the shell may attach observers and refresh chrome.
+    return { game, mounted: true, stale: false };
+  // Suppress only errors that completed after ownership moved to a newer route.
+  } catch (error) {
+    // Restore the newer route without exposing a stale game error panel.
+    if (!owns()) { onStale(game, mountStarted); return { game, mounted: false, stale: true }; }
+    // Preserve an owned import or mount failure for the existing route-local recovery boundary.
+    throw error;
+  }
+}
+
+// Await one route-owned side effect and reject its continuation when ownership changes during the await. (SESSION-013)
+export async function awaitOwnedRouteEffect({ run, owns, onStale }) {
+  // Complete the caller-owned diagnostic or preparation effect without assuming route ownership survived.
+  await run();
+  // Restore the newer route and stop its caller before any stale presentation mutation.
+  if (!owns()) { onStale(); return false; }
+  // Authorize the caller's next synchronous presentation step only for the still-current route.
+  return true;
+}
 // Report whether one element carries player-meaningful content that must never be hidden. (UX-026)
 function carriesMeaningfulContent(el){
   // Treat interactive controls as always meaningful because hiding them removes gameplay.
