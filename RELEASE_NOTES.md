@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.75 Release Notes
+
+## Inert game-action lifecycle bridge
+
+- Packages accepted game-action lifecycle Phase A PR #686 and closes bounded issue #685 while keeping umbrella issue #683 open for governed route and game adoption; release-owned application advances to `9.64.2`.
+- Adds one provider-neutral execute-or-uncommitted claim contract so resolver-first cancellation prevents later planning and committed actions replay their exact immutable receipt.
+- Gives the JSON provider durable epoch-scoped claims and receipts, fail-closed pending lock handling, crash recovery, and reset rollback while preserving older immutable history outside current lookups.
+- Adds checksum-bound MySQL migration `0004_game_action_claims.json` with a positive ready-or-resetting reset epoch, epoch-prefixed immutable claims and receipts, and byte-preserving schema-three receipt backfill.
+- Keeps schema-four lifecycle methods eligible only on exact clean schema 4, while application startup retains clean schema 2, 3, and 4 compatibility and the migration catalog remains `apply_policy=held`.
+- Proves capacity-one Admin reset bootstrap, reset/action ordering, resolver/executor convergence, exact replay and conflict behavior, append-only grants, and disposable-MySQL parity without activating the bridge through any route or game.
+- Adds permanent `STORAGE-013`, `MYSQL-009`, and `TEST-174`; the governed total is exactly 955 requirements.
+- Records the exact canonical package inventory as 761 regular files: v0.9.5.74 inventory 759 plus the packaged schema-four migration descriptor and this v0.9.5.75 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.43.0`, tooling `1.31.0`, Players `9.1.2`, Ledger `9.1.2`, Mobile `1.0.0`, and every game revision remain exact protected-main values.
+- Retains exact immutable terminal-green v0.9.5.74 as the application-only schema-2 rollback predecessor; database rollback is prohibited, production remains schema 2, and no migration, grant, API, route, game, provider, or public-policy activation is authorized. Issues #168, #488, and #683 remain open.
+
 # Virtual Casino Simulator v0.9.5.74 Release Notes
 
 ## Governed mobile transport and lifecycle core
