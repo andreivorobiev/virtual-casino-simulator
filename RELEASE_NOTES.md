@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.71 Release Notes
+
+## Roulette and Slots motion quality
+
+- Packages accepted content PR #674 and closes repository-controlled issues #169 and #170; release-owned application advances to `9.62.1`.
+- Gives Roulette governed Authentic, Quick, autoplay, and reduced-motion profiles with deterministic wheel, ball, capture, reveal, and settlement phases.
+- Gives Slots governed Slow, Medium, Fast, anticipation, and reduced-motion reel profiles with deterministic acceleration, staggered stopping, and recovery.
+- Preserves route ownership and vertical scroll position throughout real-duration spins, re-entry, settlement, and autoplay transitions.
+- Keeps frozen APIs, game mathematics, paytables, wager acceptance, exactly-once settlement, providers, and restricted-preview policy unchanged.
+- Updates the permanent Roulette and Slots motion requirements without allocating or reusing requirement identifiers; the governed total remains exactly 943 requirements.
+- Records the exact canonical package inventory as 753 regular files: v0.9.5.70 inventory 752 plus this v0.9.5.71 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.40.1`, Ledger `9.1.2`, tooling `1.29.0`, Roulette `9.7.0`, Slots `9.5.0`, and every other game revision remain exact protected-main values.
+- Retains exact immutable terminal-green v0.9.5.70 as the application-only schema-2 rollback predecessor; database rollback is prohibited outside `TOOL-003`.
+
 # Virtual Casino Simulator v0.9.5.70 Release Notes
 
 ## Governed first-party source headers
