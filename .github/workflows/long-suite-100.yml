@@ -49,6 +49,11 @@ jobs:
       - name: Verify Keno exact economics artifact
         if: matrix.shard == 1
         run: python scripts/verify_keno_economics_artifact.py logs/test-runs/keno-economics-exact.json
+      # Execute all 46 catalog-owned proofs after the two separately retained deep artifacts exist. (TEST-175)
+      - name: Prove complete game economics registry
+        if: matrix.shard == 1
+        timeout-minutes: 25
+        run: python -m tests.game_economics_registry_tests --execute --artifact logs/test-runs/game-economics-registry.json
       - name: Upload long-suite shard artifacts
         if: always()
         uses: actions/upload-artifact@v4

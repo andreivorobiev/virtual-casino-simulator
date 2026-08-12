@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.80.1
-- docs: 1.77.1
+- tests: 1.81.0
+- docs: 1.78.0
 - contracts: 1.61.2
-- tooling: 1.31.0
+- tooling: 1.32.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.4
 - poker_dice: 1.1.2
@@ -644,6 +644,7 @@ Historical source baseline: 9.1.0
 - **STORAGE-013** (Storage) - PASS: JSON and clean-schema-four MySQL storage expose one provider-neutral game-action lifecycle resolver. The first exact semantic claimant wins an immutable execute or uncommitted disposition within the current reset epoch; resolver lock contention or reset unavailability returns pending without a claim, committed resolution returns the original complete receipt, resolver-first prevents every late planner and mutation, conflicts are detected before resource reads, and no claim or receipt is updated or deleted. A successful governed reset advances one durable unavailable namespace through resetting to ready, preserves prior immutable history while making it unreachable to current action lookups, and permits the same external key to execute freshly only after bootstrap completes.
 - **MYSQL-009** (MySQL) - PASS: Schema four adds a singleton positive reset epoch with exact ready-or-resetting phase plus immutable binary-collated, epoch-prefixed game-action claims and receipts. Existing schema-three receipts are backfilled into epoch one execute claims without changing receipt JSON or hashes; new receipts require an explicit execute disposition and matching composite claim through RESTRICT ownership. Runtime claims and receipts are SELECT-and-INSERT only, the epoch singleton is SELECT-and-UPDATE only, execution commits claim, wallets, ledger rows, game state, and receipt in one transaction, and reset holds one target-scoped nonblocking named lock across epoch advance, mutable clear, same-session bootstrap, and exact ready finalization.
 - **TEST-174** (Tests) - PASS: Provider-neutral, JSON, transactional MySQL-model, migration, disposable-MySQL, storage, recovery, release, and CI evidence proves resolver-first and executor-first convergence, finite pending lock waits, exact replay and changed-input conflict, planner at most once, no late execution after uncommitted, crash recovery at every JSON projection boundary, exact wallet/state/ledger/receipt convergence, schema-three receipt byte preservation during schema-four epoch-one backfill, runtime append-only grants, clean schema-two/three compatibility, exact clean-schema-four lifecycle eligibility, and held application. Reset evidence proves action-versus-reset orderings, claim-zero/planner-zero resetting gaps, same-session capacity-one bootstrap, fresh same-key execution in a new epoch, old immutable history retention without cross-epoch replay, exact JSON rollback, durable MySQL reset failure and later recovery, nonblocking concurrent reset refusal, and no route, game, API, log, or deployment activation.
+- **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

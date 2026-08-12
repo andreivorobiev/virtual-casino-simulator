@@ -72,6 +72,8 @@ jobs:
           python tests/performance_target_gate.py --json-evidence "$RUNNER_TEMP/request-latency-json.json" --mysql-evidence "$RUNNER_TEMP/request-latency-mysql.json" --output "$RUNNER_TEMP/performance-target-acceptance.json"
           python tests/run_tests.py --api
           python scripts/validate_game_catalog.py
+          # Fail closed on missing games, stale production economics sources, or absent proof selectors. (TEST-175)
+          python -m tests.game_economics_registry_tests
           python scripts/validate_agent_memory.py
           python scripts/validate_requirements.py
           python scripts/validate_versions.py

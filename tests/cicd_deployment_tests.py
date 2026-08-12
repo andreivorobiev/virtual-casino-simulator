@@ -284,11 +284,17 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Run the governed Keno module exactly once rather than multiplying proof across shards.
         self.assertEqual(workflow_text.count("python -m tests.keno_economics_long"), 1)
         # Keep both exact proof and artifact-identity steps on the single shard-one owner.
-        keno_steps = workflow_text.split("- name: Prove Keno exact economics", 1)[1].split("- name: Upload long-suite shard artifacts", 1)[0]
+        keno_steps = workflow_text.split("- name: Prove Keno exact economics", 1)[1].split("- name: Prove complete game economics registry", 1)[0]
         # Require both governed steps to declare shard one explicitly.
         self.assertEqual(keno_steps.count("if: matrix.shard == 1"), 2)
         # Require fail-closed semantic verification of the exact evidence identity before upload.
         self.assertIn("python scripts/verify_keno_economics_artifact.py logs/test-runs/keno-economics-exact.json", keno_steps)
+        # Isolate the complete catalog proof so its shard and artifact contract cannot weaken the Keno checks.
+        economics_step = workflow_text.split("- name: Prove complete game economics registry", 1)[1].split("- name: Upload long-suite shard artifacts", 1)[0]
+        # Run the complete registry once on the shard that already owns its deep Slots and Keno prerequisites.
+        self.assertEqual(economics_step.count("if: matrix.shard == 1"), 1)
+        # Require the executable registry to write the aggregate artifact uploaded by the workflow.
+        self.assertIn("python -m tests.game_economics_registry_tests --execute --artifact logs/test-runs/game-economics-registry.json", economics_step)
         # Reject direct-file Keno execution for the same import-path reason.
         self.assertNotIn("run: python tests/keno_economics_long.py", workflow_text)
         # Upload terminal evidence even when one shard command fails.

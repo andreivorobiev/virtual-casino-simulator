@@ -10907,6 +10907,27 @@
       "notes": "TEST-173 remains reserved by the separate parked issue #168 worktree and is not reused. All database identities and money are disposable synthetic fixtures; no production database, deployment, route, game, or public API is touched."
     },
     {
+      "id": "TEST-175",
+      "module": "Tests",
+      "description": "A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.",
+      "status": "PASS",
+      "api_tests": [
+        "ECONOMICS-REGISTRY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/game_economics_registry.json",
+        "tests/game_economics_registry_tests.py",
+        "tests/run_tests.py",
+        ".github/workflows/ci.yml",
+        ".github/workflows/long-suite-100.yml",
+        "docs/game_catalog_governance.md"
+      ],
+      "introduced_in": "issue-456-catalog-economics-registry",
+      "changed_in": "issue-456-catalog-economics-registry",
+      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",

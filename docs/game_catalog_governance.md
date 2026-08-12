@@ -58,6 +58,12 @@ Count-based completion alone does not close a game leaf or umbrella issue. A gam
 - `/api/v1/casino/games` and `/api/v1/casino/state` preserve their existing `games` arrays and add catalog/frontend metadata plus current and target counts.
 - `casino/core/request_player.py` and the router bind every `/api/v1/games/*` request to the authenticated player's session before a game handler runs.
 
+## Economics proof registry
+
+`tests/game_economics_registry.json` is the catalog-derived prevention gate for issue #456 and requirement `TEST-175`. It has exactly one entry for every runtime descriptor in `casino.config.GAMES`; catalog addition, removal, rename, or duplicate registration fails until the economics disposition is reviewed. Each entry records total-return units, a house-side or explicitly accepted fair classification, a strict RTP bound, method and sampling budget, permanent product requirement owner, exact production engine and settlement paths, their combined source digest, executable proof selectors, and any separately retained long-proof artifact.
+
+The source-only gate runs in ordinary CI and rejects stale production bytes, absent or renamed proofs, copied test-side probability models, player-positive bounds, or informal fairness exemptions. Long Suite 100 executes the complete registry after the existing one-million-spin Slots and exact 230-class Keno artifacts are written, then uploads `logs/test-runs/game-economics-registry.json` with one sanitized PASS row per catalog game. Fan-Tan is the sole intentionally fair entry under the explicit issue #256 decision; every other current settleable game is house-side. A gameplay-math change still requires its game-specific defect, rules and requirement update, module bump, and engine-owned evidence before the registry digest can be refreshed.
+
 ## Rule-setting descriptors
 
 Any catalog game that registers a `POST` route ending in `/settings` must declare a `game.rules` object in its module descriptor. The catalog validator registers each backend against an in-memory router without opening a listener, then requires exact parity between the discovered route and `rules.settings_route`.
