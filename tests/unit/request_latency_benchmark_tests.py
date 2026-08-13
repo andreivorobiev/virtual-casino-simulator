@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus CI compute governance to total exactly 973 permanent rows.
-        self.assertEqual(len(requirements), 973)
+        # Require the accepted aggregates plus generic module-version governance to total exactly 975 permanent rows.
+        self.assertEqual(len(requirements), 975)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1413,6 +1413,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-182": "Tests",  # Bind deterministic missing-key diagnostic evidence.
             "TOOL-017": "Tooling",  # Bind fail-closed long-suite and release-candidate compute filtering.
             "TEST-183": "Tests",  # Bind exact context and PR-only optimization evidence.
+            "TOOL-018": "Tooling",  # Bind generic descriptor equality and exact-base monotonic version governance.
+            "TEST-184": "Tests",  # Bind helper, downgrade, and shared-pin-removal evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
@@ -1545,79 +1547,4 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(test_149), 1)
         # Require the evidence requirement to remain Tests-owned.
         self.assertEqual(test_149[0]["module"], "Tests")
-        # Parse the core descriptor for the enrollment-policy compatible addition.
-        core_module = json.loads((ROOT / "modules" / "core.json").read_text(encoding="utf-8"))
-        # Parse the Ledger descriptor for the indexed lookup addition.
-        ledger_module = json.loads((ROOT / "modules" / "ledger.json").read_text(encoding="utf-8"))
-        # Parse the players descriptor for the row-scoped creation boundary.
-        players_module = json.loads((ROOT / "modules" / "players.json").read_text(encoding="utf-8"))
-        # Parse the Admin descriptor for the additive owner-only routes.
-        admin_module = json.loads((ROOT / "modules" / "admin.json").read_text(encoding="utf-8"))
-        # Parse the tests descriptor.
-        tests_module = json.loads((ROOT / "modules" / "tests.json").read_text(encoding="utf-8"))
-        # Parse the docs descriptor independently.
-        docs_module = json.loads((ROOT / "modules" / "docs.json").read_text(encoding="utf-8"))
-        # Parse the Audio descriptor for the compatible muted-default repair.
-        audio_module = json.loads((ROOT / "modules" / "audio.json").read_text(encoding="utf-8"))
-        # Parse the contracts descriptor for the additive enrollment-mode contract.
-        contracts_module = json.loads((ROOT / "modules" / "contracts.json").read_text(encoding="utf-8"))
-        # Parse the tooling descriptor for the compatible bridge addition.
-        tooling_module = json.loads((ROOT / "modules" / "tooling.json").read_text(encoding="utf-8"))
-        # Parse the first independently governed mobile descriptor.
-        mobile_module = json.loads((ROOT / "modules" / "mobile.json").read_text(encoding="utf-8"))
-        # Parse the Roulette descriptor for the compatible presentation addition.
-        roulette_module = json.loads((ROOT / "modules" / "roulette.json").read_text(encoding="utf-8"))
-        # Parse the Slots descriptor for the compatible presentation addition.
-        slots_module = json.loads((ROOT / "modules" / "slots.json").read_text(encoding="utf-8"))
-        # Parse the Application descriptor for the compatible shared-wallet addition.
-        application_module = json.loads((ROOT / "modules" / "application.json").read_text(encoding="utf-8"))
-        # Parse the Baccarat descriptor for the compatible commitment-boundary repair.
-        baccarat_module = json.loads((ROOT / "modules" / "baccarat.json").read_text(encoding="utf-8"))
-        # Parse the Bingo descriptor for the compatible paytable and fixed-field repair.
-        bingo_module = json.loads((ROOT / "modules" / "bingo.json").read_text(encoding="utf-8"))
-        # Parse the Keno descriptor for the compatible commitment-boundary repair.
-        keno_module = json.loads((ROOT / "modules" / "keno.json").read_text(encoding="utf-8"))
-        # Parse the Blackjack descriptor for the compatible focus-preservation repair.
-        blackjack_module = json.loads((ROOT / "modules" / "blackjack.json").read_text(encoding="utf-8"))
-        # Parse the Autoplay descriptor for the compatible lifecycle reconciliation repair.
-        autoplay_module = json.loads((ROOT / "modules" / "autoplay.json").read_text(encoding="utf-8"))
-        # Parse the Deuces descriptor after removing its final game-owned history scan.
-        deuces_module = json.loads((ROOT / "modules" / "deuces_wild_video_poker.json").read_text(encoding="utf-8"))
-        # Require the compatible Core minor for the provider-neutral lifecycle bridge.
-        self.assertEqual(core_module["version"], "9.43.1")
-        # Require the compatible Ledger patch for the public read-only point seam.
-        self.assertEqual(ledger_module["version"], "9.1.2")
-        # Require the exact compatible Players patch for explicit row insertion.
-        self.assertEqual(players_module["version"], "9.1.3")
-        # Require the compatible Admin patch that serves the canonical requirement aggregate.
-        self.assertEqual(admin_module["version"], "1.18.1")
-        # Require the Tests minor for CI compute regression evidence.
-        self.assertEqual(tests_module["version"], "1.91.0")
-        # Require the Docs minor for CI compute requirement governance.
-        self.assertEqual(docs_module["version"], "1.87.0")
-        # Require the exact compatible Audio patch for explicit personal sound opt-in.
-        self.assertEqual(audio_module["version"], "9.1.3")
-        # Require the Contracts patch for the immutable v0.9.5.77 rollback record.
-        self.assertEqual(contracts_module["version"], "1.61.4")
-        # Require the Tooling minor that removes redundant PR compute without weakening gates.
-        self.assertEqual(tooling_module["version"], "1.37.0")
-        # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
-        self.assertEqual((mobile_module["version"], mobile_module["package_version"]), ("1.0.0", "0.2.0"))
-        # Require the compatible Baccarat patch for its localized lobby tags and copy.
-        self.assertEqual(baccarat_module["version"], "9.1.16")
-        # Require the compatible Bingo patch for its localized lobby tags.
-        self.assertEqual(bingo_module["version"], "9.3.7")
-        # Require the compatible Keno patch for its localized lobby tags.
-        self.assertEqual(keno_module["version"], "9.3.7")
-        # Require the compatible Roulette patch for its localized lobby tags.
-        self.assertEqual(roulette_module["version"], "9.7.2")
-        # Require the compatible Slots patch for localized tags and Russian description copy.
-        self.assertEqual(slots_module["version"], "9.5.1")
-        # Require the compatible Application patch for additive missing-key diagnostics.
-        self.assertEqual(application_module["version"], "9.67.3")
-        # Require Blackjack to carry its localized lobby tags after central settings enforcement.
-        self.assertEqual(blackjack_module["version"], "9.1.11")
-        # Require Autoplay to carry phase-safe shared-rate-limit recovery.
-        self.assertEqual(autoplay_module["version"], "1.1.6")
-        # Require the Deuces patch for its normalized Russian lobby tags.
-        self.assertEqual(deuces_module["version"], "1.1.4")
+        # Module descriptor equality and monotonicity are governed generically by TEST-184 instead of conflict-prone literals.

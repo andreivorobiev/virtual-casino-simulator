@@ -1,5 +1,7 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
+# Import argument parsing for an exact pull-request baseline manifest.
+import argparse
 # Import JSON support for canonical, module, and compatibility manifests.
 import json
 # Import pathlib so every validated surface is resolved from the repository root.
@@ -31,6 +33,57 @@ MODULE_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 PROJECT_VERSION_RE = re.compile(r'^version\s*=\s*"([^"]+)"', re.MULTILINE)
 # Extract historical source provenance from the package metadata.
 SOURCE_BASELINE_RE = re.compile(r'^source_baseline\s*=\s*"([^"]+)"', re.MULTILINE)
+
+# Convert one already shape-validated semantic module revision to a comparable tuple.
+def module_version_tuple(version):
+    # Reject non-strings and malformed semantic revisions before integer conversion.
+    if not isinstance(version, str) or not MODULE_VERSION_RE.fullmatch(version):
+        return None
+    # Compare major, minor, and patch as integers rather than lexicographic text.
+    return tuple(int(part) for part in version.split("."))
+
+# Compare the current manifest with an exact pull-request baseline without hard-coded module pins.
+def validate_module_monotonicity(modules, baseline_path, errors):
+    # Skip the PR-only comparison when no baseline was supplied by the caller.
+    if baseline_path is None:
+        return
+    # Load the immutable event-base manifest selected by the CI workflow.
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    # Require a real module mapping before comparisons can be meaningful.
+    baseline_modules = baseline.get("modules")
+    if not isinstance(baseline_modules, dict) or not baseline_modules:
+        # Fail closed on a malformed or unrelated baseline artifact.
+        errors.append("baseline manifest must contain a non-empty modules object")
+        return
+    # Reject removal of any previously governed module from the current aggregate.
+    missing = sorted(set(baseline_modules) - set(modules))
+    if missing:
+        # Report every removed owner in one deterministic diagnostic.
+        errors.append("current manifest removed baseline modules: " + ", ".join(missing))
+    # Compare every shared module while permitting explicitly added module descriptors.
+    for module in sorted(set(modules) & set(baseline_modules)):
+        # Parse both values through the same semantic-version shape gate.
+        current = module_version_tuple(modules[module])
+        previous = module_version_tuple(baseline_modules[module])
+        # Let the ordinary format checks own malformed current values.
+        if current is None:
+            continue
+        # Treat malformed baseline evidence as a fail-closed governance error.
+        if previous is None:
+            errors.append(f"baseline module {module} version is not semantic x.y.z")
+            continue
+        # Reject any major, minor, or patch downgrade relative to the exact PR base.
+        if current < previous:
+            errors.append(f"module {module} version {modules[module]} is below baseline {baseline_modules[module]}")
+
+# Parse the optional exact-base input independently from packaged application identity.
+def parse_args(argv=None):
+    # Describe the generic descriptor and monotonic revision validator.
+    parser = argparse.ArgumentParser(description="Validate canonical application and module version governance.")
+    # Accept a checked-out PR-base manifest only from workflows or focused tests that possess exact base bytes.
+    parser.add_argument("--baseline-manifest", type=pathlib.Path)
+    # Return the caller-selected immutable baseline path.
+    return parser.parse_args(argv)
 
 # Define require_snippet to validate a human-readable canonical marker.
 def require_snippet(path, snippet, description, errors):
@@ -100,7 +153,9 @@ def validate_runtime_versions(data, errors):
         errors.append("configured games missing canonical module revisions: " + ", ".join(missing_games))
 
 # Define main to validate packaged-release and independent-module version policy.
-def main():
+def main(argv=None):
+    # Parse the optional monotonic baseline before loading current source bytes.
+    args = parse_args(argv)
     # Load the canonical aggregate manifest before checking derived surfaces.
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     # Collect all drift and format errors so one run provides a complete repair list.
@@ -159,6 +214,8 @@ def main():
         if body.get("version") != version:
             # Report the existing manifest-to-file mismatch class.
             errors.append(f"module {module} version mismatch between aggregate and module file")
+    # Enforce monotonic module growth against the exact pull-request base when CI supplies it.
+    validate_module_monotonicity(modules, args.baseline_manifest, errors)
     # Run imported runtime comparisons only when canonical keys needed by the loader exist.
     if packaged_version and source_baseline and modules:
         # Validate API, Admin, and game-registry source values through their runtime imports.
