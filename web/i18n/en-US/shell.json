@@ -290,6 +290,8 @@
   "whatsNew.entry.0_9_5_74.body": "This release adds a default-off OS-vault native session transport and governed lifecycle and deep-link boundaries while preserving browser and PWA behavior.",
   "whatsNew.entry.0_9_5_75.title": "Game-action lifecycle bridge",
   "whatsNew.entry.0_9_5_75.body": "This release adds an inert provider-neutral action claim and reset-epoch bridge while migration application and every game and API adoption remain held.",
+  "whatsNew.entry.0_9_5_76.title": "Complete catalog economics audit",
+  "whatsNew.entry.0_9_5_76.body": "This release adds deterministic economics qualification for all 46 games and 74 wager selectors without changing game math, paytables, or settlement behavior.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
