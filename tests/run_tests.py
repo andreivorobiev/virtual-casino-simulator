@@ -87,7 +87,7 @@ BROWSER_AFFECTED_GAMES=None
 # Declare producer/consumer case groups whose inline browser state must stay on one shard.
 BROWSER_CASE_AFFINITY_GROUPS={
     # Keep the real backend login and service-worker lifecycle in one isolated context.
-    'auth_backend_pwa':('BR-AUTH-BACKEND-001','BR-PWA-001'),
+    'auth_backend_pwa':('BR-AUTH-BACKEND-001','BR-PWA-001','BR-PWA-UPDATE-001'),
     # Keep the disposable guest lifecycle and closed-session refresh proof together.
     'guest_lifecycle':('BR-GUEST-TRIAL-001','BR-GUEST-REFRESH-001'),
     # Keep login, terms, wallet, shell, catalog, and responsive lobby state on shard zero.
@@ -3858,6 +3858,70 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert not pwa_page.is_closed()
                     # Execute the narrowed PWA foundation regression and exact-head evidence corpus.
                     run_case('BR-PWA-001',['PWA-001','PWA-002','TEST-095'],pwa_installable_shell)
+                    # Prove one explicit update converges every controlled same-origin tab without a second click. (PWA-003)
+                    def pwa_multitab_one_click_update():
+                        # Use a distinct prior script URL while serving the same governed worker body so Chromium performs a real update lifecycle.
+                        previous_worker_version=f'{packaged_version}-previous'
+                        # Isolate registration, CacheStorage, navigation, and controller ownership from the broader authenticated browser context.
+                        update_context=browser.new_context(viewport={'width':1440,'height':900},service_workers='allow')
+                        # Retain every opened page for exact controller convergence and bounded cleanup.
+                        update_pages=[]
+                        # Guarantee registration, cache, and tab cleanup even when one lifecycle assertion fails.
+                        try:
+                            # Open API docs first because it does not register the application worker on its own.
+                            docs_page=update_context.new_page(); update_pages.append(docs_page); docs_page.goto(f'{base}/api-docs',wait_until='domcontentloaded')
+                            # Install and activate one prior-URL worker, then wait until the seed client is controlled.
+                            prior_identity=docs_page.evaluate("""async version => { const registration=await navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(version)}`,{scope:'/'}); await navigator.serviceWorker.ready; if (!navigator.serviceWorker.controller) await new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true})); return {active:registration.active?.scriptURL||'',controller:navigator.serviceWorker.controller?.scriptURL||'',waiting:Boolean(registration.waiting)}; }""",previous_worker_version)
+                            # Require a settled prior controller without an update already waiting.
+                            assert prior_identity=={'active':f'{base}/sw.js?v={previous_worker_version}','controller':f'{base}/sw.js?v={previous_worker_version}','waiting':False},prior_identity
+                            # Open the public signup client while the prior worker controls the same-origin tab population.
+                            signup_page=update_context.new_page(); update_pages.append(signup_page); signup_page.goto(f'{base}/enroll/signup',wait_until='domcontentloaded')
+                            # Open the Casino shell so its production PWA boot deterministically registers the canonical worker.
+                            casino_page=update_context.new_page(); update_pages.append(casino_page); casino_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded')
+                            # Wait until Chromium exposes the canonical worker in the waiting slot while the prior controller remains active.
+                            docs_page.wait_for_function("version => navigator.serviceWorker.getRegistration('/').then(registration => Boolean(registration?.waiting) && new URL(registration.waiting.scriptURL).searchParams.get('v')===version)",arg=packaged_version,timeout=20000)
+                            # Require production PWA initialization and the real waiting-worker banner before clicking.
+                            casino_page.wait_for_function("() => window.CasinoPwa?.state()==='update' && document.querySelector('[data-testid=pwa-update-reload]')",timeout=8000)
+                            # Count controller changes after all three old-controller clients exist and before the single apply action.
+                            for update_page in update_pages:
+                                # Install one passive per-page counter without changing registration or navigation behavior.
+                                update_page.evaluate("() => { sessionStorage.setItem('__casinoPwaControllerChanges','0'); navigator.serviceWorker.addEventListener('controllerchange',()=>{ sessionStorage.setItem('__casinoPwaControllerChanges',String(Number(sessionStorage.getItem('__casinoPwaControllerChanges')||'0')+1)); },{capture:true}); }")
+                            # Snapshot the authentic waiting boundary and exact one-button cardinality.
+                            before_update=casino_page.evaluate("""async version => { const registration=await navigator.serviceWorker.getRegistration('/'); return {active:registration?.active?.scriptURL||'',waiting:registration?.waiting?.scriptURL||'',controller:navigator.serviceWorker.controller?.scriptURL||'',state:window.CasinoPwa?.state()||'',buttons:document.querySelectorAll('[data-testid=pwa-update-reload]').length,expected:version}; }""",packaged_version)
+                            # Require the prior controller, canonical waiting worker, update state, and one visible apply control.
+                            assert before_update['active'].endswith(f'/sw.js?v={previous_worker_version}') and before_update['controller'].endswith(f'/sw.js?v={previous_worker_version}') and before_update['waiting'].endswith(f'/sw.js?v={packaged_version}') and before_update['state']=='update' and before_update['buttons']==1,before_update
+                            # Click exactly once and bind the navigation to the controllerchange-owned reload.
+                            with casino_page.expect_navigation(wait_until='domcontentloaded',timeout=20000):
+                                # Use the player-visible production control without invoking private controller methods.
+                                casino_page.get_by_test_id('pwa-update-reload').click()
+                            # Require every previously controlled same-origin page to adopt the canonical controller.
+                            for update_page in update_pages:
+                                # Wait on each real Navigator.serviceWorker controller rather than shared registration state alone.
+                                update_page.wait_for_function("version => new URL(navigator.serviceWorker.controller?.scriptURL||location.href).searchParams.get('v')===version",arg=packaged_version,timeout=12000)
+                            # Read the settled registration, one-reload navigation, banner residue, and exact per-client controller changes.
+                            final_update=casino_page.evaluate("""async () => { const registration=await navigator.serviceWorker.getRegistration('/'); const banner=document.querySelector('[data-testid=pwa-banner]'); return {active:registration?.active?.scriptURL||'',waiting:Boolean(registration?.waiting),controller:navigator.serviceWorker.controller?.scriptURL||'',pageVersion:window.CasinoPwa?.version||'',navigation:performance.getEntriesByType('navigation')[0]?.type||'',buttons:document.querySelectorAll('[data-testid=pwa-update-reload]').length,bannerVisible:Boolean(banner && !banner.hidden),controllerChanges:Number(sessionStorage.getItem('__casinoPwaControllerChanges')||'0')}; }""")
+                            # Read the unchanged API-docs and signup documents' controller-change observations.
+                            peer_updates=[update_page.evaluate("() => ({controller:navigator.serviceWorker.controller?.scriptURL||'',changes:Number(sessionStorage.getItem('__casinoPwaControllerChanges')||'0')})") for update_page in (docs_page,signup_page)]
+                            # Require one stable canonical worker, no waiting/banner residue, exactly one Casino reload, and all three clients changed once.
+                            assert final_update['active'].endswith(f'/sw.js?v={packaged_version}') and not final_update['waiting'] and final_update['controller'].endswith(f'/sw.js?v={packaged_version}') and final_update['pageVersion']==packaged_version and final_update['navigation']=='reload' and final_update['buttons']==0 and not final_update['bannerVisible'] and final_update['controllerChanges']==1 and all(row['controller'].endswith(f'/sw.js?v={packaged_version}') and row['changes']==1 for row in peer_updates),{'final':final_update,'peers':peer_updates}
+                            # Resolve the governed after-pass artifact path for the real multi-tab convergence boundary.
+                            update_target=screenshots/'after-pass-pwa-multitab-one-click-en-us-desktop-compact.png'
+                            # Capture the stable post-update Casino shell without unrelated transient UI.
+                            casino_page.screenshot(path=str(update_target),full_page=True,animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                            # Bind the artifact to exact source, existing matrix states, locale, viewport, and per-client controller facts.
+                            update_metadata={'evidence_class':'after_pass','branch':os.environ.get('GITHUB_HEAD_REF') or subprocess.check_output(['git','branch','--show-current'],cwd=str(ROOT),text=True).strip() or 'detached','commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=str(ROOT),text=True).strip(),'surface':'pwa_shell','states':['update_available','route_restored'],'locale':'en-US','viewport':{'id':'desktop_compact','width':1440,'height':900},'path':str(update_target.relative_to(ROOT)).replace('\\','/'),'tabs':['casino','api_docs','signup'],'apply_clicks':1,'navigation_type':final_update['navigation'],'waiting_residue':final_update['waiting'],'controller_changes':[final_update['controllerChanges'],*[row['changes'] for row in peer_updates]]}
+                            # Write self-describing exact-head evidence beside the screenshot.
+                            update_target.with_suffix('.json').write_text(json.dumps(update_metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+                        # Always remove this case's registrations, caches, and tabs without touching other browser contexts.
+                        finally:
+                            # Choose any surviving page as the same-origin cleanup owner.
+                            cleanup_page=next((page for page in update_pages if not page.is_closed()),None)
+                            # Remove only Casino service-worker registrations and caches when a page reached the origin.
+                            if cleanup_page: cleanup_page.evaluate("async () => { const registrations=await navigator.serviceWorker.getRegistrations(); await Promise.all(registrations.map(registration => registration.unregister())); const names=await caches.keys(); await Promise.all(names.filter(name => name.startsWith('casino-static-shell-v')).map(name => caches.delete(name))); }")
+                            # Close the isolated context once so every page and listener is released together.
+                            update_context.close()
+                    # Execute the real three-client update regression under the same producer/consumer shard affinity.
+                    run_case('BR-PWA-UPDATE-001',['PWA-003','TEST-095','TEST-153'],pwa_multitab_one_click_update)
                 # Close the focused page even when its assertions fail.
                 finally:
                     # Release the isolated backend-login browser context before the existing broad UI suite.

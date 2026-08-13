@@ -6834,11 +6834,12 @@
     {
       "id": "TEST-095",
       "module": "Tests",
-      "description": "Browser-free policy tests prove canonical cache identity, exact public-static allowlisting including every imported brand module, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
+      "description": "Browser-free policy tests prove canonical cache identity, exact public-static allowlisting including every imported brand module, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, message-lifetime ownership of skipWaiting, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, a real one-click multi-tab update with zero waiting/banner residue, update failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-PWA-001"
+        "BR-PWA-001",
+        "BR-PWA-UPDATE-001"
       ],
       "implementation_files": [
         "tests/pwa_tests.py",
@@ -6846,8 +6847,8 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "pr-425-tiltseven-neon-pit",
-      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage now fails when the active brand import graph is absent from the cache allowlist; Android/iOS metadata is still checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "issue-578-pwa-multitab-recurrence",
+      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage now fails when the active brand import graph or event.waitUntil activation ownership is absent; the real Browser case uses isolated Casino, API-docs, and signup clients. Android/iOS metadata is still checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",
@@ -9622,21 +9623,24 @@
     {
       "id": "PWA-003",
       "module": "Application",
-      "description": "Apply update resolves a worker still transitioning from installing to waiting, sends exactly one SKIP_WAITING command, reloads only after controllerchange, and fails visibly after bounded transition or activation timeouts.",
+      "description": "Apply update resolves a worker still transitioning from installing to waiting, sends exactly one SKIP_WAITING command whose service-worker message lifetime owns skipWaiting through settlement, reloads only after controllerchange, converges every controlled same-origin tab to the canonical worker without a second click or tab close, and fails visibly after bounded transition or activation timeouts.",
       "status": "PASS",
       "api_tests": [
         "PWA-001"
       ],
       "browser_tests": [
-        "BR-PWA-001"
+        "BR-PWA-001",
+        "BR-PWA-UPDATE-001"
       ],
       "implementation_files": [
+        "web/sw.js",
         "web/core/pwa.js",
-        "tests/pwa_tests.py"
+        "tests/pwa_tests.py",
+        "tests/run_tests.py"
       ],
       "introduced_in": "issue-578-pwa-one-click",
-      "changed_in": "issue-578-pwa-one-click",
-      "notes": "No forced reload or service-worker cache-policy change is introduced."
+      "changed_in": "issue-578-pwa-multitab-recurrence",
+      "notes": "The message event now extends only the explicit skipWaiting promise; install remains non-coercive, cache policy is unchanged, and a real Browser case proves Casino, API docs, and signup clients all converge after one player-visible Apply action."
     },
     {
       "id": "UX-025",
@@ -9739,7 +9743,7 @@
     {
       "id": "TEST-153",
       "module": "Tests",
-      "description": "Focused listener-free evidence covers wallet ordering, localized structured errors, Russian token terminology, PWA installing-to-waiting application, autoplay reconciliation and phase-safe rate-limit recovery, Bingo reset disclosure, persistent game focus and announcements, Roulette hit targets, and PR issue-closing governance.",
+      "description": "Focused listener-free evidence covers wallet ordering, localized structured errors, Russian token terminology, PWA installing-to-waiting application with message-lifetime ownership, autoplay reconciliation and phase-safe rate-limit recovery, Bingo reset disclosure, persistent game focus and announcements, Roulette hit targets, and PR issue-closing governance; exact-head Browser evidence additionally proves one-click canonical-worker convergence across Casino, API-docs, and signup tabs.",
       "status": "PASS",
       "api_tests": [
         "UI-WALLET-TIMING-001",
@@ -9748,19 +9752,22 @@
       ],
       "browser_tests": [
         "BR-PWA-001",
+        "BR-PWA-UPDATE-001",
         "BR-BINGO-001",
         "BR-I18N-FOUNDATION-001"
       ],
       "implementation_files": [
         "tests/issue_lifecycle_tests.py",
         "tests/pwa_tests.py",
+        "tests/browser_case_durations.json",
+        "tests/cicd_deployment_tests.py",
         "tests/frontend_safety.mjs",
         "tests/wallet_timing.mjs",
         "tests/run_tests.py"
       ],
       "introduced_in": "all-remaining-bugs-regression",
-      "changed_in": "issue-555-quality-hardening",
-      "notes": "Hosted Browser qualification reuses existing permanent cases and creates no new shard inventory owner."
+      "changed_in": "issue-578-pwa-multitab-recurrence",
+      "notes": "The new Browser case stays in the existing auth/PWA producer-consumer affinity, creates an isolated registration context, performs one visible Apply click, proves three controllerchange observations and zero waiting/banner residue, and closes every tab and registration in finally cleanup."
     },
     {
       "id": "TEST-154",

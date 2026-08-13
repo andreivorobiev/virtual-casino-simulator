@@ -149,8 +149,8 @@ self.addEventListener('activate', event => {
 
 // Handle only explicit update activation and read-only canonical-version proof messages.
 self.addEventListener('message', event => {
-  // Activate a waiting worker only after the visible client update action requests it.
-  if (event.data?.type === 'SKIP_WAITING') { self.skipWaiting(); return; }
+  // Keep the explicit activation alive until skipWaiting settles so every controlled same-origin tab can converge. (PWA-003)
+  if (event.data?.type === 'SKIP_WAITING') { event.waitUntil(self.skipWaiting()); return; }
   // Reply to version probes without exposing cache contents or client identity.
   if (event.data?.type === 'GET_VERSION' && event.source) event.source.postMessage({ type: 'PWA_VERSION', version: APP_VERSION });
 });

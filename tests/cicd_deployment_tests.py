@@ -359,8 +359,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Extract permanent literal IDs in deterministic source order.
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Require the current exact suite inventory after adding verified-email acceptance.
-        self.assertEqual(len(case_ids), 115)
+        # Require the current exact suite inventory after adding real multi-tab PWA update acceptance.
+        self.assertEqual(len(case_ids), 116)
         # Import the listener-free runner module so the test uses its exact reviewed packer.
         from tests import run_tests as browser_runner_module
         # Compute the same deterministic six-runner partition used by the workflow.
@@ -378,7 +378,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
         # Pin the exact accepted current-profile distribution across six runners.
-        self.assertEqual(shard_loads, (202, 203, 202, 203, 203, 202))
+        self.assertEqual(shard_loads, (206, 205, 205, 205, 204, 205))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 2)
         # Require exact union and nonduplication across all declared owners.
