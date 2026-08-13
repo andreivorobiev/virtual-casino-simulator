@@ -557,6 +557,13 @@ def assert_condition(value, message):
     # Raise a focused assertion when the mapped acceptance predicate is false.
     assert value, message
 
+# Format one bounded Roulette i18n failure with the exact runtime evidence needed for diagnosis. (I18N-013)
+def roulette_i18n_failure_diagnostic(state):
+    # Normalize a missing or malformed snapshot without hiding the original diagnostic fields.
+    snapshot=state if isinstance(state,dict) else {}
+    # Return locale, loaded domains, and exact missing keys in one stable assertion message.
+    return f"Roulette i18n audit failed: locale={snapshot.get('locale')!r}; loadedDomains={snapshot.get('loadedDomains', [])!r}; missingKeys={snapshot.get('missingKeys', [])!r}"
+
 # Resolve exact request-latency source provenance without accepting a branch name.
 def request_latency_source_commit():
     # Start one bounded read-only Git query without trusting caller environment.
@@ -1469,6 +1476,8 @@ def run_api_tests():
     run_case('GOV-REQUIREMENT-SHARDS-001',['TEST-165'],lambda: run_unit_module('tests.requirements_sharding_tests','requirement sharding suite failed'))
     # Reject stale requirement inventories, placeholder gates, and reviewed production-unused exports. (issue #711)
     run_case('GOV-DEAD-ARTIFACTS-001',['TOOL-016','TEST-181'],lambda: run_unit_module('tests.dead_artifact_tests','dead artifact cleanup suite failed'))
+    # Preserve actionable locale, domain, and missing-key evidence at both cumulative Roulette audits. (issue #702)
+    run_case('UI-ROULETTE-I18N-DIAGNOSTICS-001',['I18N-013','TEST-182'],lambda: run_unit_module('tests.roulette_i18n_diagnostics_tests','Roulette i18n diagnostics suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
@@ -8343,8 +8352,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         visible_lines={line.strip() for line in page.locator('body').inner_text().splitlines() if line.strip()}
                         # Verify none of the reported resource keys escaped into rendered text.
                         assert roulette_visible_keys.isdisjoint(visible_lines), f'Visible i18n keys: {sorted(roulette_visible_keys & visible_lines)}'
+                        # Read the complete cumulative locale state so a failure names the exact missing resources.
+                        roulette_locale_state=page.evaluate("() => window.CasinoI18n.getLocaleState()")
                         # Verify the runtime did not encounter any missing resources during the normal shell and Roulette flow.
-                        assert page.evaluate("() => window.CasinoI18n.getLocaleState().missingKeyCount") == 0
+                        assert roulette_locale_state['missingKeyCount'] == 0, roulette_i18n_failure_diagnostic(roulette_locale_state)
                     # Define the premium_roulette_layout function used by this module.
                     def premium_roulette_layout():
                         # Verify the premium three-zone layout is mounted.
@@ -8434,8 +8445,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert not any(prefix in roulette_english_text for prefix in ('header.','controls.','stage.','result.','betSlip.','settlement.','scoreboard.','stats.','status.','settings.','bets.'))
                     # Verify Roulette values use explicit fake-money language instead of the legacy diamond-like glyph.
                     assert 'play tokens' in roulette_english_text and '\ufffd' not in roulette_english_text and '\u00e2\u2014\u02c6' not in roulette_english_text
+                    # Read the module-owned cumulative locale state so a failure preserves exact diagnostics.
+                    roulette_module_locale_state=page.evaluate("import('/core/i18n.js').then(i18n => i18n.getLocaleState())")
                     # Verify the English route resolved every requested i18n key.
-                    assert page.evaluate("import('/core/i18n.js').then(i18n => i18n.getLocaleState().missingKeyCount)") == 0
+                    assert roulette_module_locale_state['missingKeyCount'] == 0, roulette_i18n_failure_diagnostic(roulette_module_locale_state)
                     # Let the newly mounted route complete paint before capturing idle evidence.
                     page.wait_for_timeout(300)
                     # Capture idle-state visual evidence before any wager is placed.

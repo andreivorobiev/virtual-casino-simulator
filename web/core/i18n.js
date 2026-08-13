@@ -376,7 +376,7 @@ export function getLocaleState() {
   // Store the complete registry separately so metadata-only entries never become selectable accidentally.
   const localeRegistry = manifest?.locales || [];
   // Return a serializable snapshot with ready selectors, complete metadata, and catalog-driven domains.
-  return { locale: activeLocale, fallbackLocale: manifest?.fallbackLocale || 'en-US', formatLocale, useBrowserLocale, schemaVersion: manifest?.schemaVersion || 1, registryVersion: manifest?.registryVersion || 'fallback', loadedDomains: [...loadedDomains].sort(), registeredDomains: [...registeredDomains].sort(), missingKeyCount: missingKeys.size, locales: localeRegistry.filter(locale => readyLocaleIds().has(locale.id)), localeRegistry, plannedLocales: localeRegistry.filter(locale => !readyLocaleIds().has(locale.id)).map(locale => locale.id), domains: [...registeredDomains].sort() };
+  return { locale: activeLocale, fallbackLocale: manifest?.fallbackLocale || 'en-US', formatLocale, useBrowserLocale, schemaVersion: manifest?.schemaVersion || 1, registryVersion: manifest?.registryVersion || 'fallback', loadedDomains: [...loadedDomains].sort(), registeredDomains: [...registeredDomains].sort(), missingKeyCount: missingKeys.size, missingKeys: [...missingKeys].sort(), locales: localeRegistry.filter(locale => readyLocaleIds().has(locale.id)), localeRegistry, plannedLocales: localeRegistry.filter(locale => !readyLocaleIds().has(locale.id)).map(locale => locale.id), domains: [...registeredDomains].sort() };
 }
 
 // Export formatNumber as the locale-aware numeric formatter.
