@@ -39,6 +39,8 @@ let pendingEnrollmentEmail = '';
 let emailVerificationBearer = '';
 // Retain an arrived password-reset bearer only in module memory across locale and route rerenders. (SEC-016)
 let passwordResetBearerToken = '';
+// Invalidate asynchronous logged-out capability reads whenever locale or route rendering replaces the login gate. (UX-028)
+let loginGateGeneration = 0;
 // Hold the current pre-expiration warning timer so session replacement cannot leave a stale alert. (SESSION-012)
 let sessionWarningTimer = null;
 // Own BFCache-safe wallet controller replacement for the complete application module lifetime.
@@ -440,86 +442,131 @@ function renderLoginGate(message = '') {
   document.body.classList.remove('guest-trial-active');
   // Resolve explicit caller feedback before a fixed provider completion acknowledgement.
   const authMessage = message || oauthCompletionCopy();
-  // Render the browser login gate with private-beta toy-simulator acknowledgement.
-  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><a href="/account/reset" data-testid="password-reset-entry">${safe(t('recovery.forgot', {}, 'shell'))}</a><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-signup" data-testid="signup-entry"><a class="secondary" href="/enroll/signup" data-testid="signup-entry-link">${safe(t('signup.cta', {}, 'shell'))}</a><p class="auth-guest-copy">${safe(t('signup.entryCopy', {}, 'shell'))}</p></div><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button" disabled aria-disabled="true">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
+  // Claim one generation before asynchronous policy reads can populate this exact login render.
+  const generation = ++loginGateGeneration;
+  // Render one guest-first decision hierarchy with a single shared terms row and one polite status owner. (UX-028)
+  view.innerHTML = `<section class="auth-panel auth-entry" data-testid="login-gate"><header class="auth-entry-header"><div><h1>${safe(t('brand.title', {}, 'shell'))}</h1><p id="auth-legal-line" class="auth-legal-line">${safe(t('auth.legalLine', {}, 'shell'))}</p></div><label class="auth-locale-switch"><span>${safe(t('auth.language', {}, 'shell'))}</span><select id="auth-locale-select" data-testid="auth-locale-select" aria-label="${safe(t('language.aria', {}, 'shell'))}"></select></label></header><div id="auth-guest-slot" class="auth-primary-slot" data-testid="auth-guest-slot" aria-busy="true"><p class="auth-capability-loading">${safe(t('status.loading', {}, 'shell'))}</p></div><label class="check-row auth-terms-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox"><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><p id="auth-message" class="auth-message" data-testid="oauth-callback-message" role="status" aria-live="polite" aria-atomic="true">${safe(authMessage)}</p><section class="auth-signin" aria-labelledby="auth-signin-heading"><h2 id="auth-signin-heading">${safe(t('auth.signinHeading', {}, 'shell'))}</h2><form id="login-form" class="auth-form auth-signin-form" novalidate><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><button class="secondary auth-signin-submit" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><a class="auth-reset-link" href="/account/reset" data-testid="password-reset-entry">${safe(t('recovery.forgot', {}, 'shell'))}</a></form></section><div id="auth-tertiary" class="auth-tertiary"><div id="auth-account-slot"></div><div id="auth-provider-slot"></div></div></section>`;
   // Wire the auth-screen locale selector and rerender the gate after switching.
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
   document.getElementById('login-form').onsubmit = handleLoginSubmit;
-  // Wire the account-free guest-trial entry so a visitor can start a disposable session without login. (issue #317)
-  const guestButton = document.getElementById('guest-trial-button');
-  // Start a guest trial on click only when the configuration-driven button is present.
-  if (guestButton) guestButton.onclick = handleGuestTrial;
-  // Resolve the durable owner-controlled guest admission switch before enabling anonymous entry. (GUEST-001)
-  void applyGuestTrialPolicy();
-  // Resolve provider availability after the password and guest controls are already usable.
-  void enableAvailableOAuthSignIn();
+  // Delegate disclosure activation from the stable gate so async slot replacement cannot detach behavior.
+  document.querySelector('[data-testid="login-gate"]').onclick = event => { const button = event.target.closest('[data-auth-disclosure]'); if (button) toggleAuthDisclosure(button); };
+  // Clear only the shared terms error after explicit acceptance without disturbing API or session feedback.
+  document.getElementById('login-terms-check').onchange = event => { if (event.currentTarget.checked && document.getElementById('auth-message')?.dataset.validation === 'terms') setAuthStatus(''); };
+  // Resolve guest and enrollment actions independently so provider latency cannot delay the primary path. (GUEST-001)
+  void renderLoginPolicyActions(generation);
+  // Resolve provider availability into actions that exist only when they can be used. (OAUTH-007)
+  void renderLoginProviderActions(generation);
 }
 
-// Apply the public guest-admission capability to the logged-out entry without trusting browser state. (GUEST-001)
-async function applyGuestTrialPolicy() {
-  // Resolve the stable button and disclosure from the current login render.
-  const button = document.getElementById('guest-trial-button');
-  // Resolve the copy independently so unavailable state remains explicit to assistive users.
-  const copy = document.querySelector('[data-testid="guest-trial-copy"]');
-  // Stop if route navigation replaced the login gate before this task began.
-  if (!button || !copy) return;
-  // Start protected capability loading so any failure leaves anonymous creation disabled.
+// Replace the shared Auth status through the only live region on the logged-out decision surface. (UX-028)
+function setAuthStatus(copy, kind = '') {
+  // Resolve the single document-owned outlet from the active login generation.
+  const outlet = document.getElementById('auth-message');
+  // Stop when route or session entry has already replaced the login gate.
+  if (!outlet) return;
+  // Publish only localized product copy through the stable reserved-height region.
+  outlet.textContent = copy;
+  // Retain one low-cardinality validation owner so acceptance can clear only its own message.
+  outlet.dataset.validation = kind;
+}
+
+// Enforce one terms rule and one focus/error behavior for both guest and password entry. (UX-028)
+function requireLoginTerms() {
+  // Read the one shared acknowledgement checkbox from the active login gate.
+  const checkbox = document.getElementById('login-terms-check');
+  // Continue only after the visitor explicitly accepted the current private-beta terms.
+  if (checkbox?.checked === true) return true;
+  // Publish the identical localized validation copy regardless of which entry action was invoked.
+  setAuthStatus(t('auth.termsRequired', {}, 'shell'), 'terms');
+  // Move keyboard and assistive focus to the exact control that needs action.
+  checkbox?.focus();
+  // Prevent every auth mutation until explicit acceptance exists.
+  return false;
+}
+
+// Toggle one button-owned disclosure without motion or additional live-region output. (UX-028)
+function toggleAuthDisclosure(button) {
+  // Read the controlled content id from the semantic disclosure button.
+  const target = document.getElementById(button.getAttribute('aria-controls'));
+  // Stop without mutation when malformed markup cannot resolve the owned disclosure.
+  if (!target) return;
+  // Flip the current semantic expansion state from the button's exact boolean string.
+  const expanded = button.getAttribute('aria-expanded') !== 'true';
+  // Publish the new state for keyboard and assistive technology users.
+  button.setAttribute('aria-expanded', String(expanded));
+  // Keep the disclosure out of layout and reading order until requested.
+  target.hidden = !expanded;
+}
+
+// Render guest and enrollment actions only after the public policy authorizes their exact state. (GUEST-001, UX-028)
+async function renderLoginPolicyActions(generation) {
+  // Start protected capability loading so a failed policy never creates an unauthorized action.
   try {
     // Read only boolean enrollment capabilities from the public no-state endpoint.
     const policy = await api('/api/v2/auth/enrollment-policy');
-    // Enable the native control only for an exact server-published true value.
-    button.disabled = policy.guest_trials_enabled !== true;
-    // Mirror native state for assistive technology.
-    button.setAttribute('aria-disabled', String(button.disabled));
-    // Replace the token disclosure only when new guest creation is currently held.
-    copy.textContent = button.disabled ? t('auth.guestUnavailable', {}, 'shell') : t('auth.guestInfo', {}, 'shell');
-  // Keep a failed capability request fail-closed and understandable without exposing transport details.
+    // Ignore a completed read when locale, route, or session entry replaced its owning generation.
+    if (generation !== loginGateGeneration || !document.querySelector('[data-testid="login-gate"]')) return;
+    // Resolve the dedicated primary slot after ownership is revalidated.
+    const guestSlot = document.getElementById('auth-guest-slot');
+    // Render the real guest action only when the server advertises exact availability.
+    guestSlot.innerHTML = policy.guest_trials_enabled === true ? `<button id="guest-trial-button" class="primary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-summary" data-testid="guest-trial-copy">${safe(t('auth.guestSummary', {}, 'shell'))}</p><button class="auth-disclosure-button" data-testid="guest-disclosure-toggle" data-auth-disclosure type="button" aria-expanded="false" aria-controls="guest-trial-details">${safe(t('auth.guestDetails', {}, 'shell'))}</button><p id="guest-trial-details" class="auth-disclosure-copy" data-testid="guest-trial-details" hidden>${safe(t('auth.guestInfo', {}, 'shell'))}</p>` : `<span class="auth-chip" data-testid="guest-trial-unavailable">${safe(t('auth.guestUnavailable', {}, 'shell'))}</span>`;
+    // Mark the primary slot settled after exact policy-owned markup replaces the loading placeholder.
+    guestSlot.setAttribute('aria-busy', 'false');
+    // Wire guest creation only when the policy rendered the actionable control.
+    document.getElementById('guest-trial-button')?.addEventListener('click', handleGuestTrial);
+    // Resolve the separate tertiary account slot without mixing it with provider availability.
+    const accountSlot = document.getElementById('auth-account-slot');
+    // Render signup only when authorized; otherwise render an explanatory invite-only disclosure chip.
+    accountSlot.innerHTML = policy.signup_enabled === true ? `<a class="auth-tertiary-link" href="/enroll/signup" data-testid="signup-entry-link">${safe(t('signup.cta', {}, 'shell'))}</a>` : `<button class="auth-chip auth-chip-button" data-testid="signup-invite-only" data-auth-disclosure type="button" aria-expanded="false" aria-controls="signup-invite-only-copy">${safe(t('signup.inviteOnly', {}, 'shell'))}</button><p id="signup-invite-only-copy" class="auth-disclosure-copy" data-testid="signup-invite-only-copy" hidden>${safe(t('signup.entryCopy', {}, 'shell'))}</p>`;
+  // Keep a failed capability request fail-closed while preserving ordinary password sign-in.
   } catch (_) {
-    // Preserve disabled native state when the authoritative policy cannot be read.
-    button.disabled = true;
-    // Preserve matching assistive state.
-    button.setAttribute('aria-disabled', 'true');
-    // Explain temporary unavailability through localized product copy.
-    copy.textContent = t('auth.guestUnavailable', {}, 'shell');
+    // Ignore stale failure completion after a replacement login generation owns the document.
+    if (generation !== loginGateGeneration) return;
+    // Resolve the route-owned slot and suppress a late failure after navigation replaced the login document.
+    const guestSlot = document.getElementById('auth-guest-slot');
+    // Leave the replacement route untouched when the original login slot no longer exists.
+    if (!guestSlot) return;
+    // Replace the primary placeholder with noninteractive, localized fail-closed copy.
+    guestSlot.innerHTML = `<span class="auth-chip" data-testid="auth-capability-unavailable">${safe(t('auth.capabilityUnavailable', {}, 'shell'))}</span>`;
+    // Mark the primary capability slot complete even though no mutation action is available.
+    guestSlot.setAttribute('aria-busy', 'false');
+    // Publish policy failure only when more important caller/session feedback does not already exist.
+    if (!document.getElementById('auth-message')?.textContent) setAuthStatus(t('auth.capabilityUnavailable', {}, 'shell'));
   }
 }
 
-// Enable only independently released providers while retaining disabled-by-default login behavior. (OAUTH-007)
-async function enableAvailableOAuthSignIn() {
-  // Read the provider-status region from the current login render.
-  const region = document.querySelector('.oauth-provider-status');
-  // Stop when navigation replaced the login screen before the request began.
-  if (!region) return;
+// Render only independently available providers and omit the complete provider block otherwise. (OAUTH-007, UX-028)
+async function renderLoginProviderActions(generation) {
   // Start protected availability loading so local-password and guest entry remain usable on failure.
   try {
     // Fetch only fixed provider ids and boolean availability.
     const result = await oauthProviders();
     // Select exact provider identifiers whose complete runtime and independent network gate are ready.
-    const available = new Set((result.providers || []).filter(item => item.available === true).map(item => item.provider));
-    // Configure each reviewed provider button independently.
-    for (const provider of ['google', 'facebook']) {
-      // Read the provider's stable login control.
-      const button = document.querySelector(`[data-testid="oauth-${provider}"]`);
-      // Skip a stale render or malformed response without affecting local login.
-      if (!button) continue;
-      // Enable only an exact provider reported available by the bounded public contract.
-      button.disabled = !available.has(provider);
-      // Keep assistive state aligned with native disabled behavior.
-      button.setAttribute('aria-disabled', String(button.disabled));
-      // Navigate only after a server-created one-time flow succeeds.
-      button.onclick = button.disabled ? null : () => beginOAuth(provider, 'signin');
-    }
-    // Mark the visual matrix state according to any fully released provider.
-    region.dataset.testid = available.size ? 'oauth-providers-available' : 'oauth-providers-disabled';
-    // Explain the private-invite boundary whenever a provider is available.
-    region.querySelector('[data-testid="oauth-provider-message"]').textContent = available.size ? t('auth.oauthInviteOnly', {}, 'shell') : t('auth.oauthUnavailable', {}, 'shell');
-  // Keep controls disabled and show a stable retry-safe message on status failure.
+    const available = new Set((result.providers || []).filter(item => ['google', 'facebook'].includes(item.provider) && item.available === true).map(item => item.provider));
+    // Ignore a completed read when locale, route, or session entry replaced its owning generation.
+    if (generation !== loginGateGeneration || !document.querySelector('[data-testid="login-gate"]')) return;
+    // Resolve the provider-only tertiary slot after exact generation ownership is confirmed.
+    const providerSlot = document.getElementById('auth-provider-slot');
+    // Ignore route replacement that removed the provider slot after the generation check.
+    if (!providerSlot) return;
+    // Omit the complete provider region when no provider is actionable.
+    providerSlot.innerHTML = available.size ? `<section class="auth-provider-actions" data-testid="oauth-providers-available" aria-label="${safe(t('auth.oauthDivider', {}, 'shell'))}">${['google', 'facebook'].filter(provider => available.has(provider)).map(provider => `<button class="oauth-provider-button" data-testid="oauth-${safe(provider)}" type="button">${safe(t(`auth.oauth${provider === 'google' ? 'Google' : 'Facebook'}`, {}, 'shell'))}</button>`).join('')}</section>` : '';
+    // Wire only controls that exist after the server reported that provider available.
+    for (const provider of available) document.querySelector(`[data-testid="oauth-${provider}"]`)?.addEventListener('click', () => beginOAuth(provider, 'signin'));
+  // Omit provider actions and use the single status owner on availability failure.
   } catch (_) {
-    // Stamp the governed failure state without exposing transport or configuration details.
-    region.dataset.testid = 'oauth-providers-status-error';
-    // Preserve all local auth controls and publish one generic localized status.
-    region.querySelector('[data-testid="oauth-provider-message"]').textContent = t('auth.oauthStatusError', {}, 'shell');
+    // Ignore stale failure completion after a replacement login generation owns the document.
+    if (generation !== loginGateGeneration) return;
+    // Resolve the route-owned provider slot and suppress late failures after navigation.
+    const providerSlot = document.getElementById('auth-provider-slot');
+    // Leave replacement route markup untouched when the original slot no longer exists.
+    if (!providerSlot) return;
+    // Keep the provider slot action-free while exposing a stable test state outside live semantics.
+    providerSlot.innerHTML = '<span data-testid="oauth-providers-status-error" hidden></span>';
+    // Publish generic localized provider feedback only when caller/session feedback is not already visible.
+    if (!document.getElementById('auth-message')?.textContent) setAuthStatus(t('auth.oauthStatusError', {}, 'shell'));
   }
 }
 
@@ -1080,10 +1127,16 @@ async function enterAuthenticated(session) {
 async function handleLoginSubmit(event) {
   // Prevent the browser from reloading during the auth flow.
   event.preventDefault();
+  // Enforce shared terms before native credential validation so both entry paths focus the same control.
+  if (!requireLoginTerms()) return;
+  // Preserve native email/password validity after the shared terms decision has passed.
+  if (!event.currentTarget.reportValidity()) return;
   // Read the shared message outlet for validation and API errors.
   const message = document.getElementById('auth-message');
   // Start protected login logic so validation errors stay inside the auth panel.
   try {
+    // Clear stale validation or session copy before the exact sign-in request begins.
+    setAuthStatus('');
     // Read the email from the browser-visible login field.
     const email = document.getElementById('login-email').value.trim();
     // Read the password from the browser-visible login field.
@@ -1107,18 +1160,20 @@ async function handleGuestTrial() {
   const message = document.getElementById('auth-message');
   // Start protected guest logic so any rejection stays inside the auth panel.
   try {
-    // Read the visible shared consent checkbox rather than inferring acceptance from the button click.
-    const accepted = document.getElementById('login-terms-check')?.checked === true;
-    // Require an affirmative action before any anonymous identity, wallet, or telemetry is created.
-    if (!accepted) throw new Error(t('auth.guestTermsRequired', {}, 'shell'));
+    // Enforce the exact same acknowledgement, copy, and focus behavior as password sign-in.
+    if (!requireLoginTerms()) return;
+    // Clear stale validation or session copy before the exact guest request begins.
+    setAuthStatus('');
     // Create the isolated disposable guest session with exact versioned consent metadata.
-    const session = await guestTrial({ accepted, terms_version: 'private-beta-1', locale: getLocaleState().locale, device: innerWidth < 600 ? 'mobile' : innerWidth < 1100 ? 'tablet' : 'desktop' });
+    const session = await guestTrial({ accepted: true, terms_version: 'private-beta-1', locale: getLocaleState().locale, device: innerWidth < 600 ? 'mobile' : innerWidth < 1100 ? 'tablet' : 'desktop' });
     // Enter the authenticated shell using the same payload shape as a registered login.
     await enterAuthenticated(session);
   // Handle a disabled or failed guest entry with local auth-panel feedback.
   } catch (err) {
-    // Render the API error without leaving the login gate.
-    if (message) message.textContent = err.message;
+    // Map capacity and rate boundaries to concise product copy without exposing raw server codes.
+    const copy = err.status === 403 ? t('auth.guestCapacityFull', {}, 'shell') : err.status === 429 ? t('auth.guestRateLimited', {}, 'shell') : err.message;
+    // Render the localized failure through the same stable region used by every auth outcome.
+    if (message) setAuthStatus(copy);
   }
 }
 

@@ -10934,6 +10934,49 @@
       "notes": "TEST-173 remains reserved by the separate parked issue #168 worktree and is not reused. All database identities and money are disposable synthetic fixtures; no production database, deployment, route, game, or public API is touched."
     },
     {
+      "id": "UX-028",
+      "module": "Application",
+      "description": "The logged-out browser entry presents one guest-first decision hierarchy: a concise legal line, policy-authorized guest primary action, one shared terms acknowledgement and polite status owner, secondary password sign-in, compact locale preference, invite-only disclosure when signup is held, and only provider or signup actions that are currently actionable. The settled default gate renders no disabled interactive controls, keeps complete guest lifecycle wording behind a real button-owned disclosure, maps guest capacity and rate boundaries to localized product copy, and fits brand, legal, guest, terms, and sign-in decisions without document scrolling at 375 by 812 CSS pixels.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-AUTH-LOGIN-001",
+        "BR-OAUTH-001",
+        "BR-TOUCH-TARGET-AUTH-001",
+        "BR-GUEST-TRIAL-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/styles.css",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-697-signin-decision-hierarchy",
+      "changed_in": "issue-697-signin-decision-hierarchy",
+      "notes": "Issue #697 redesigns only logged-out rendering and frontend validation. Existing authentication, guest, enrollment-policy, and OAuth endpoints remain unchanged and no provider or public signup capability is activated."
+    },
+    {
+      "id": "TEST-176",
+      "module": "Tests",
+      "description": "Browser evidence exercises the policy-aware logged-out hierarchy in English and Russian across every governed viewport plus the issue-specific 375 by 812 mobile boundary. It proves default signup and provider omission, zero disabled controls, actionable signup and provider inclusion, one live status owner, identical shared terms copy and checkbox focus for guest and password entry, unchanged lifecycle disclosure wording, reduced-motion stability, touch targets, horizontal containment, short-desktop fit, and mobile no-scroll containment.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-AUTH-LOGIN-001",
+        "BR-OAUTH-001",
+        "BR-TOUCH-TARGET-AUTH-001",
+        "BR-GUEST-TRIAL-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/frontend_safety.mjs",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-697-signin-decision-hierarchy",
+      "changed_in": "issue-697-signin-decision-hierarchy",
+      "notes": "The Browser cases keep provider navigation synthetic, preserve every existing backend call, and emit after-pass evidence from exact changed bytes rather than activating held enrollment or OAuth capability."
+    },
+    {
       "id": "TEST-175",
       "module": "Tests",
       "description": "A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.",
