@@ -18,32 +18,45 @@ Packaged release numbers use the four-part scheme documented in [the release ver
 4. It refuses to overwrite an existing tag that points at a different commit.
 5. It resolves the exact predecessor from the current compatibility record, downloads only that immutable release manifest, and verifies the manifest's version, tag, and full source commit before packaging.
 6. It publishes or reuses the matching GitHub Release assets.
-7. It downloads those hosted assets back into the deployment job.
-8. It connects to the production host over SSH.
-9. It verifies checksums and the exact commit/tag on the host.
-10. It installs the archive under `/opt/casino/releases/<commit-sha>`.
-11. It runs the selected release's read-only `bridge-check-schema2` with command-scoped release-root imports and refuses cutover unless the database is exact clean checksum-valid schema `2`.
-12. It validates that the root-managed monitor bearer matches the application-only SHA-256 digest without printing either value.
-13. It writes `/etc/casino/release.env` with the exact `CASINO_BUILD_SHA`.
-14. It atomically repoints `/opt/casino/current`.
-15. It restarts the Casino service and reloads nginx.
-16. It runs authenticated production readiness through `scripts/run_edge_monitor.py`, which strictly parses only the root-managed Authorization assignment and calls `scripts/edge_gate.py observe` without shell evaluation.
-17. It proves the selector still resolves to the exact selected release and reruns that release's read-only exact-schema-two bridge check.
-18. If a post-switch check fails, it rolls the application symlink back to the previous release. Database rollback is never automatic.
+7. The workflow stops after hosted-asset verification. It owns publication and never opens an inbound production connection.
+8. `casino-release-poller.timer` runs on the production host every five minutes and queries the public GitHub Releases API.
+9. The poller compares the installed four-part version with the newest stable release and never downgrades.
+10. For a newer release, the host downloads the exact archive, manifest, and checksum file directly from GitHub.
+11. It verifies the canonical two-file checksum list, manifest artifact binding, exact tag and full source commit, complete packaged inventory, rollback declaration, monitor configuration, and the candidate's read-only `bridge-check-schema2` before any production selector or environment mutation.
+12. It stages the archive under `/opt/casino/releases/<commit-sha>`, writes a candidate `release.env`, captures the current selector and fragment, then atomically repoints `/opt/casino/current`.
+13. It restarts Casino, reloads nginx, rechecks exact schema `2`, runs the authenticated edge observation, and requires `/healthz` to be live plus `/readyz` to report the exact candidate application version and build SHA.
+14. If any post-switch check fails, it restores the prior application symlink and `release.env`, restarts the service, re-observes the prior release, and writes a durable alarm. Database rollback is prohibited.
+15. After success, it atomically refreshes `/usr/local/libexec/casino-release-poller` from the verified active release and clears the alarm.
+16. The existing edge-monitor timer runs `check-lag`; a published release that remains newer than production for more than three poll intervals fails loudly and records `release_delivery_lag`.
 
-The bridge deployment invokes no migration command and changes no database schema, data, grant, account, secret, or server global. Both schema checks import `casino` and `scripts` from the exact selected immutable release rather than the upload staging directory or an assumed installed package.
+The pull bridge invokes no migration command and changes no database schema, data, grant, account, provider, or server global. Candidate, activated, and rolled-back schema checks import `casino` and `scripts` from the exact selected immutable release. The retired GitHub-runner SSH leg is not an emergency fallback; issue #450 documents the unrevived self-hosted-runner alternative.
 
-## Required GitHub Actions secrets
+## Release API credential
 
-These repository secrets must exist before automatic deployment can reach the server:
+The repository is public, so the poller normally requires no GitHub credential. If GitHub's anonymous API limit is insufficient, install one fine-grained token with access only to this repository's **Contents: read** and **Metadata: read** surfaces. The poller accepts it only through the root-managed optional `/etc/casino/release-poller.env` assignment:
 
-- `CASINO_DEPLOY_SSH_HOST`: production SSH host name or IP.
-- `CASINO_DEPLOY_SSH_PORT`: SSH port. This is optional when the host uses `22`.
-- `CASINO_DEPLOY_SSH_USER`: SSH user allowed to stage and activate the release.
-- `CASINO_DEPLOY_SSH_KEY`: private SSH key for that user.
-- `CASINO_DEPLOY_KNOWN_HOSTS`: pinned known-hosts entry for the production host.
+```text
+CASINO_GITHUB_RELEASE_TOKEN=<fine-grained-read-only-token>
+```
 
-Do not paste these values into tickets, PRs, screenshots, browser tests, or chat transcripts.
+The same file may override `CASINO_RELEASE_POLL_INTERVAL_SECONDS=300` and `CASINO_RELEASE_LAG_INTERVAL_MULTIPLIER=3`. Do not place a token on a command line or paste it into tickets, PRs, screenshots, browser tests, or chat transcripts. The production host needs no inbound GitHub Actions credential, SSH allowlist, deploy key, or runner agent.
+
+## Owner host-install gate for #732
+
+Repository acceptance stops before this section is executed. The owner performs this one host step only after a unique immutable release containing the poller is published and its three hosted assets pass the normal release verifier.
+
+1. Download `checksums.txt`, `release-manifest.json`, and `virtual_casino_simulator_package.zip` from that exact GitHub Release into one new root-owned temporary directory. Do not use branch, source-archive, or Actions-artifact bytes.
+2. Verify the two checksum records, then run the currently installed `scripts/package_app.py --verify-only` with the expected full commit, tag, and `--require-rollback` arguments.
+3. Extract the archive, run the extracted release's verifier against the same three assets, run its monitor configuration `check`, and run its command-scoped `bridge-check-schema2`. Stop on any mismatch.
+4. Create `/usr/local/libexec` root-owned mode `0755` if it is absent, then install the extracted `deploy/pull/casino-release-poller.sh` at `/usr/local/libexec/casino-release-poller` with root ownership and mode `0755`.
+5. Install `casino-release-poller.service.template` and `casino-release-poller.timer.template` as `/etc/systemd/system/casino-release-poller.service` and `.timer`; replace the edge-monitor service with its same-release template. Keep `/etc/casino/release-poller.env` absent for anonymous public access or create it root-owned mode `0640` with only the optional values above.
+6. Run `systemd-analyze verify` on all three service/timer files, then `systemctl daemon-reload`. Do not enable the timer yet.
+7. While the new immutable release is newer than the installed application, execute `sudo /usr/local/libexec/casino-release-poller rollback-drill` exactly once. It must activate and health-check the candidate, restore the exact predecessor, recheck schema `2` and authenticated health, leave the predecessor live, and log `decision=rollback_drill` without an alarm.
+8. Execute `sudo systemctl start casino-release-poller.service`. Within one polling interval it must install the same verified release, expose its exact version and SHA in authenticated readiness, keep schema `2`, and clear `/var/lib/casino/release-poller/alarm`.
+9. Enable future pulls with `sudo systemctl enable --now casino-release-poller.timer`; restart the edge-monitor timer so its next successful observation includes the release-lag check.
+10. Paste only sanitized evidence to issue #732: release tag/full SHA, asset-verifier PASS, rollback-drill predecessor/candidate identities, before/after selector targets, schema `2` before/drill/after, exact readiness version/SHA, timer next-run timestamp, alarm absence, and `systemctl is-enabled/is-active` results. Never paste tokens or environment-file bytes.
+
+If the drill or first delivery fails, leave the alarm and journal intact, keep the restored predecessor live, disable the poller timer, and stop. Do not retry with altered bytes; inspect `journalctl -u casino-release-poller.service` and open a bounded follow-up.
 
 ## Required production host settings
 
@@ -204,25 +217,21 @@ v0.9.5.75 packages accepted inert game-action lifecycle Phase A PR #686, closes 
 
 v0.9.5.76 packages accepted complete catalog economics PR #691 and records issue #456 complete. The repository now validates all 46 games and 74 wager selectors through source-bound deterministic expectations, with retained deep Slots and Keno artifacts, while game engines, paytables, APIs, wager acceptance, wallet behavior, and settlements remain unchanged. The catalog remains minimum 2, expected 4, and apply held; deployment must prove exact schema 2 before and after activation while invoking no migration or grant mutation. Its compatibility record retains exact terminal-green v0.9.5.75 as the application-only predecessor; database rollback remains prohibited.
 
-## Historical first-rollout blocker
+## Retired push-delivery history
 
-The CI/CD code merged and the exact `v9.5.6` release was published successfully.
+The original GitHub-hosted deployment job published releases successfully but could not reach the source-restricted production SSH ingress. Its first SSH connection timed out before remote command success, asset transfer, or activation, and repeated ordinary releases therefore accumulated while production stayed stale. Installing broader inbound credentials would not repair that network ownership mismatch.
 
-The deployment job then stopped before touching production because the repository did not have the SSH deployment secrets listed above. The failed step was the SSH preparation step, so no files were uploaded, no service was restarted, and production remained unchanged.
+Issue #732 retires that designed-to-fail leg. Protected-main Actions own immutable publication only; the production host owns delivery through the pull timer. Do not restore or rerun the old SSH job. A future self-hosted runner remains a separately governed alternative under closed issue #450, not a fallback inside this runbook.
 
-That failure is expected until the secrets are installed. It is not related to a user browser login.
+## One-time pull setup checklist
 
-## One-time setup checklist
+1. Keep the existing monitor bearer and application digest pair valid with the read-only `check` command above.
+2. Complete the exact owner host-install gate in this document once, including the rollback drill before enabling the timer.
+3. Confirm both `casino-release-poller.timer` and `casino-edge-monitor.timer` are enabled and have future trigger times.
+4. Confirm the poller alarm is absent and direct authenticated readiness reports the installed immutable release version and full SHA.
+5. Attach sanitized host evidence to #732; keep umbrella #435 open until that evidence is accepted.
 
-1. Add the five GitHub Actions secrets listed above.
-2. Install or rotate the production monitor bearer token.
-3. Store the bearer value in `/etc/casino/edge-monitor.env`.
-4. Use the explicit `repair-digest` command above to derive the application digest without shell or log exposure.
-5. Run read-only `check`.
-6. Restart the service once after changing host environment files.
-7. Rerun an eligible deployment path, or push the next protected-main release. Do not rerun an unchanged hosted job when the runner cannot reach source-restricted SSH ingress.
-
-After this one-time setup is correct, future protected-main merges should roll out without manual browser login.
+After this setup is green, future unique packaged releases should reach production within one poll interval without an inbound deployment connection or manual browser login.
 
 ## Domain behavior
 
@@ -251,4 +260,4 @@ The release verifier authenticates the compatibility record's exact application-
 
 Do not deploy unversioned protected `main` bytes by hand.
 
-The production source of truth is the GitHub Release asset built from the exact protected-main commit. If a later protected-main commit should go live, create a new packaged version and let the production workflow publish and deploy it.
+The production source of truth is the GitHub Release asset built from the exact protected-main commit. If a later protected-main commit should go live, create a new packaged version, let the protected-main workflow publish it, and let the host poller perform the verified delivery.

@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Listener-free CI/CD workflow policy tests for TOOL-002/008 and TEST-036/133."""
+"""Listener-free CI/CD workflow policy tests for TOOL-002/008/015 and TEST-036/133/180."""
 
 # Import Python syntax inspection for listener-free browser ownership policy tests.
 import ast
@@ -101,93 +101,35 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         # Reject any release-list API ordering as a rollback policy input.
         self.assertNotIn('gh api "repos/${GITHUB_REPOSITORY}/releases', text)
 
-    # Prove deployment consumes hosted Release assets rather than untrusted local build outputs.
-    def test_workflow_deploys_hosted_release_assets(self):
+    # Prove publication verifies hosted Release assets rather than trusting local build outputs.
+    def test_workflow_verifies_hosted_release_assets(self):
         # Read the workflow source as inert text.
         text = self.workflow_text()
         # Require post-publication download of the three canonical assets.
         self.assertIn('gh release download "${RELEASE_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir published --clobber', text)
         # Require hosted assets to be verified against exact commit, tag, and rollback provenance.
         self.assertIn('python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "${GITHUB_SHA}" --expected-tag "${RELEASE_TAG}" --require-rollback', text)
-        # Require only the verified hosted directory to flow into deployment.
+        # Preserve the existing bounded Actions artifact as publication evidence.
         self.assertIn("name: production-release-assets", text)
-        # Reject deployment from the runner's local dist directory.
-        self.assertNotIn("scp -P \"${port}\" dist/", text)
+        # Reject any consumer job because the host downloads the immutable public Release directly.
+        self.assertNotIn("uses: actions/download-artifact", text)
+        # Reject deployment from either the runner's local dist directory or its hosted download directory.
+        self.assertNotIn("scp -P", text)
 
-    # Prove host activation includes rollback and authenticated edge observation.
-    def test_workflow_rolls_back_when_health_fails(self):
+    # Prove the workflow publishes only and cannot contact or mutate production.
+    def test_workflow_retires_the_dead_ssh_deployment_leg(self):
         # Read the workflow source as inert text.
         text = self.workflow_text()
-        # Require the prior release symlink to be captured before mutation.
-        self.assertIn('prior_release="$(readlink -f /opt/casino/current || true)"', text)
-        # Require a rollback function instead of a one-way symlink move.
-        self.assertIn("rollback() {", text)
-        # Require atomic symlink movement through current.next.
-        self.assertIn("mv -Tf /opt/casino/current.next /opt/casino/current", text)
-        # Require the generated build-provenance fragment to be installed.
-        self.assertIn("scripts/write_release_env.py", text)
-        # Require the root-managed bearer and application digest to match before symlink cutover.
-        monitor_validation = text.index("scripts/validate_monitor_config.py")
-        # Locate the release symlink mutation that follows all pre-cutover gates.
-        release_switch = text.index('ln -sfn "${release_root}" /opt/casino/current.next')
-        # Prove read-only monitor validation precedes the production release switch.
-        self.assertLess(monitor_validation, release_switch)
-        # Locate rollback activation separately from the rollback function definition.
-        rollback_trap = text.index("trap rollback ERR")
-        # Prove pre-cutover monitor validation fails without invoking production rollback mutation.
-        self.assertLess(monitor_validation, rollback_trap)
-        # Prove rollback protection begins before the first release-owned environment mutation.
-        self.assertLess(rollback_trap, text.index('install -m 0640 -o root -g root "${staging}/release.env" /etc/casino/release.env'))
-        # Require workflow use to remain read-only; repair is an explicit owner operation.
-        self.assertIn("scripts/validate_monitor_config.py\" check --monitor-env /etc/casino/edge-monitor.env --application-env /etc/casino/casino.env", text)
-        # Require final edge observation through the packaged non-shell credential runner.
-        self.assertIn("scripts/run_edge_monitor.py --monitor-env /etc/casino/edge-monitor.env --policy /opt/casino/current/deploy/edge/restricted-preview.json", text)
-        # Reject shell sourcing because the Authorization assignment intentionally contains a scheme separator.
-        self.assertNotIn(". /etc/casino/edge-monitor.env", text)
-        # Reject a nested shell command boundary for any root-managed monitor value.
-        self.assertNotIn("bash -lc", text)
-
-    # Prove the bridge deployment keeps schema two unchanged and never invokes migration.
-    def test_workflow_checks_schema_two_before_and_after_cutover_without_migration(self):
-        # Read the inert workflow source.
-        text = self.workflow_text()
-        # Pin the command-scoped candidate-root binding used by both checks.
-        bound_check = 'PYTHONPATH="${release_root}" /opt/casino/venv/bin/python "${release_root}/scripts/mysql_migrate.py" bridge-check-schema2'
-        # Require exactly one pre-cutover and one post-activation proof.
-        self.assertEqual(text.count(bound_check), 2)
-        # Locate the pre-cutover proof.
-        candidate_check = text.index(bound_check)
-        # Locate the post-activation proof independently.
-        activated_check = text.rindex(bound_check)
-        # Require the candidate proof before rollback activation or production mutation.
-        self.assertLess(candidate_check, text.index("trap rollback ERR"))
-        # Require the post-activation proof after service restart and edge monitoring.
-        self.assertGreater(activated_check, text.index("/opt/casino/current/scripts/run_edge_monitor.py"))
-        # Require active selector identity to equal the same selected release root.
-        selector_identity = 'test "$(readlink -f /opt/casino/current)" = "${release_root}"'
-        # Prove selector identity before the second schema check.
-        self.assertLess(text.index(selector_identity), activated_check)
-        # Require both proofs before staging cleanup and trap removal.
-        self.assertLess(activated_check, text.index('rm -rf "${staging}" "${prior_env}"'))
-        # Reject any migration apply command in the production workflow.
-        self.assertNotIn("mysql_migrate.py apply", text)
-        # Reject backup proof or migration identity plumbing in the activation job.
-        self.assertNotIn("--backup-proof", text)
-        # Reject database rollback commands or server-global changes.
-        self.assertNotIn("SET GLOBAL", text.upper())
-
-    # Prove the workflow requires scoped SSH secrets and does not embed host identities.
-    def test_workflow_requires_scoped_ssh_secrets(self):
-        # Read the workflow source as inert text.
-        text = self.workflow_text()
-        # Require every SSH input to come from GitHub secrets.
-        for secret_name in ("CASINO_DEPLOY_SSH_HOST", "CASINO_DEPLOY_SSH_USER", "CASINO_DEPLOY_SSH_KEY", "CASINO_DEPLOY_KNOWN_HOSTS"):
-            # Check the exact secret reference appears in the workflow.
-            self.assertIn(f"secrets.{secret_name}", text)
-        # Reject checked-in production hostnames or usernames in the workflow body.
-        self.assertNotIn("casino.tiltseven.com", text)
-        # Reject the deprecated monitor cookie as a workflow-owned dependency.
-        self.assertNotIn("CASINO_EDGE_MONITOR_COOKIE", text)
+        # Require one publication job and no second production deployment job.
+        self.assertIn("publish-release:", text)
+        # Reject the dead ordinary deployment job entirely.
+        self.assertNotIn("deploy-production:", text)
+        # Reject every runner-to-host transport and credential seam.
+        for forbidden in ("CASINO_DEPLOY_SSH_HOST", "CASINO_DEPLOY_SSH_PORT", "CASINO_DEPLOY_SSH_USER", "CASINO_DEPLOY_SSH_KEY", "CASINO_DEPLOY_KNOWN_HOSTS", "ssh -p", "scp -P", "known_hosts"):
+            # Require the retired boundary to stay absent.
+            self.assertNotIn(forbidden, text)
+        # Preserve the release publication name used by protected-main accounting.
+        self.assertIn("name: Publish exact-main release", text)
 
 
 # Validate ordinary qualification acceleration without starting a browser, listener, or workflow.

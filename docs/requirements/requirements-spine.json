@@ -4622,7 +4622,7 @@
     {
       "id": "OPS-006",
       "module": "Operations",
-      "description": "Production readiness and Admin Operations accept a root-managed SHA-256-verified monitor bearer only for GET /readyz and GET /api/v2/admin/operations, while every other API route continues to require a normal authenticated session. Deployment validates the split root-managed bearer and application digest before cutover, an explicit root-operator repair mode can atomically align only the digest, and post-cutover observation loads the Authorization assignment through a strict non-shell reader without logging any protected value.",
+      "description": "Production readiness and Admin Operations accept a root-managed SHA-256-verified monitor bearer only for GET /readyz and GET /api/v2/admin/operations, while every other API route continues to require a normal authenticated session. Pull deployment validates the split root-managed bearer and application digest before cutover, an explicit root-operator repair mode can atomically align only the digest, and post-cutover observation loads the Authorization assignment through a strict non-shell reader without logging any protected value.",
       "status": "PASS",
       "api_tests": [
         "SERVICE-WSGI-001",
@@ -4645,8 +4645,8 @@
         "tests/monitor_config_tests.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "0.9.5.9",
-      "notes": "The monitor token is not a browser login, is never stored in cleartext by the application, is omitted from anonymous liveness, and cannot access /api/v2/me, gameplay, account, or mutation routes. Validation, repair, and observation-loader output is secret-free; workflow use is read-only and any repair remains an explicit root-owner operation."
+      "changed_in": "issue-732-release-poller",
+      "notes": "The monitor token is not a browser login, is never stored in cleartext by the application, is omitted from anonymous liveness, and cannot access /api/v2/me, gameplay, account, or mutation routes. Validation, repair, observation, and pull-poller output are secret-free; any repair remains an explicit root-owner operation."
     },
     {
       "id": "TEST-044",
@@ -7136,7 +7136,7 @@
     {
       "id": "TOOL-008",
       "module": "Tooling",
-      "description": "Protected-main CI/CD publishes or reuses the immutable GitHub Release for the exact merged commit, refuses packaged-version tag reuse across different commits, resolves rollback only from the current compatibility record, verifies the exact downloaded predecessor manifest, requires every extracted-host workflow script inside the archive, deploys only hosted release assets over SSH, validates the monitor bearer/digest before cutover, writes build provenance, switches /opt/casino/current atomically, loads the monitor Authorization assignment through a non-shell reader for edge observation, and rolls back the application symlink and release fragment if post-cutover health fails.",
+      "description": "Protected-main CI/CD publishes or reuses the immutable GitHub Release for the exact merged commit, refuses packaged-version tag reuse across different commits, resolves rollback only from the current compatibility record, verifies the exact downloaded predecessor manifest, and packages every host-required script. Production delivery is owned by the host pull poller rather than runner SSH; it downloads only hosted release assets, validates checksums, provenance, monitor configuration and schema two before cutover, writes build provenance, switches /opt/casino/current atomically, verifies authenticated live identity, and rolls back the application symlink and release fragment if post-cutover health fails.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-CICD-001"
@@ -7149,6 +7149,9 @@
         "scripts/resolve_release_predecessor.py",
         "scripts/validate_monitor_config.py",
         "scripts/run_edge_monitor.py",
+        "deploy/pull/casino-release-poller.sh",
+        "deploy/systemd/casino-release-poller.service.template",
+        "deploy/systemd/casino-release-poller.timer.template",
         "scripts/write_release_env.py",
         "scripts/edge_gate.py",
         "docs/production_service.md",
@@ -7156,13 +7159,13 @@
         "tests/release_artifact_tests.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "0.9.5.9",
-      "notes": "The workflow has no manual dispatch path, never uses release-list ordering for rollback policy, never repairs root-managed monitor configuration automatically, and never shell-sources the root-managed Authorization assignment. The archive inventory is checked against every Python script invoked from the extracted or active release on the host. Deployment requires scoped SSH secrets and uses the root-managed monitor bearer for readiness rather than a browser login."
+      "changed_in": "issue-732-release-poller",
+      "notes": "The publication workflow has no manual dispatch or production-connection path, never uses release-list ordering for rollback policy, never repairs root-managed monitor configuration automatically, and never shell-sources the root-managed Authorization assignment. The host needs no inbound Actions credentials. Pull delivery uses the root-managed monitor bearer for readiness rather than a browser login and keeps migration application held."
     },
     {
       "id": "TEST-133",
       "module": "Tests",
-      "description": "Listener-free CI/CD evidence verifies the production workflow's protected-main trigger, immutable version-conflict refusal, compatibility-declared predecessor selection, exact downloaded-manifest binding, rejection of release-list ordering, workflow-derived extracted-host script inventory, hosted-asset download and verification, scoped SSH secret usage, secret-safe monitor pair validation and explicit atomic repair, exact non-shell Authorization handoff, generated release.env installation, post-cutover edge observation, and application rollback path.",
+      "description": "Listener-free CI/CD evidence verifies the production workflow's protected-main trigger, immutable version-conflict refusal, compatibility-declared predecessor selection, exact downloaded-manifest binding, rejection of release-list ordering, workflow-derived extracted-host script inventory, hosted-asset publication and verification, absence of runner-to-host SSH credentials or commands, secret-safe monitor pair validation and explicit atomic repair, exact non-shell Authorization handoff, generated release.env installation, post-cutover edge observation, and application rollback path.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-CICD-001"
@@ -7181,8 +7184,8 @@
         "scripts/run_edge_monitor.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "0.9.5.9",
-      "notes": "This proof reads inert workflow text and isolated temporary environment fixtures only; shell-significant synthetic bearer bytes remain inert and are never executed. It does not open SSH, publish a release, deploy, mutate production configuration, mutate DNS, or run a browser."
+      "changed_in": "issue-732-release-poller",
+      "notes": "This proof reads inert workflow text and isolated temporary environment fixtures only; shell-significant synthetic bearer bytes remain inert and are never executed. It does not open SSH, query GitHub, publish a release, deploy, mutate production configuration, mutate DNS, or run a browser."
     },
     {
       "id": "STORAGE-008",
@@ -11055,6 +11058,72 @@
       "introduced_in": "issue-699-russian-catalog",
       "changed_in": "issue-699-russian-catalog",
       "notes": "The focused validator and unit suite are listener-free; hosted Browser evidence remains the acceptance source for rendered card copy and responsive containment."
+    },
+    {
+      "id": "OPS-007",
+      "module": "Operations",
+      "description": "Production delivery is a host-owned pull state machine: a root systemd timer queries the newest stable immutable GitHub Release at a bounded cadence, never downgrades, alarms when a newer release remains undelivered for more than three intervals, preserves the exact prior application selector and provenance fragment for rollback, and reports success only after public liveness plus authenticated readiness identify the exact expected version and full source SHA.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-PULL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "deploy/pull/casino-release-poller.sh",
+        "deploy/systemd/casino-release-poller.service.template",
+        "deploy/systemd/casino-release-poller.timer.template",
+        "deploy/systemd/casino-edge-monitor.service.template",
+        "scripts/edge_gate.py",
+        "docs/production_cicd_runbook.md",
+        "tests/release_poller_tests.py"
+      ],
+      "introduced_in": "issue-732-release-poller",
+      "changed_in": "issue-732-release-poller",
+      "notes": "Repository acceptance is listener-free and makes no host connection. The first systemd install, one rollback drill, first pull activation, and sanitized host evidence remain an explicit owner-operated gate on issue #732; umbrella #435 stays open until that evidence is accepted."
+    },
+    {
+      "id": "TOOL-015",
+      "module": "Tooling",
+      "description": "The packaged release contains a root-owned pull poller plus systemd service and timer templates. The poller accepts only a canonical stable GitHub Release, downloads the exact three hosted assets, verifies the two-record checksum file, manifest artifact and source provenance, complete package policy, monitor pairing and exact clean schema two before selector mutation, switches the application atomically, updates its stable executable only after successful health, and performs application-only rollback without migration, grant, provider, or database-rollback authority.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-PULL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "deploy/pull/casino-release-poller.sh",
+        "deploy/systemd/casino-release-poller.service.template",
+        "deploy/systemd/casino-release-poller.timer.template",
+        "deploy/systemd/casino-edge-monitor.service.template",
+        "scripts/edge_gate.py",
+        ".github/workflows/deploy-production.yml",
+        "scripts/package_app.py",
+        "docs/production_cicd_runbook.md"
+      ],
+      "introduced_in": "issue-732-release-poller",
+      "changed_in": "issue-732-release-poller",
+      "notes": "Protected-main workflow publication retains its existing context and immutable-release checks but has no SSH, SCP, inbound credential, or host mutation leg. Anonymous GitHub API access is the default; an optional fine-grained token is limited to repository Contents and Metadata read access and never appears in argv or output."
+    },
+    {
+      "id": "TEST-180",
+      "module": "Tests",
+      "description": "Listener-free release-delivery evidence executes numeric compare and no-downgrade decisions, exact stable-release metadata inspection, canonical checksum and source-provenance verification, corrupt-asset rejection before the full verifier, and fail-closed hostile metadata cases. Static order proofs require immutable and schema-two gates before production mutation, application-only rollback and a rollback-drill path, five-minute persistent scheduling, three-interval lag detection, and complete retirement of runner SSH credentials and commands.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-PULL-001",
+        "DEPLOY-CICD-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/release_poller_tests.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py",
+        "deploy/pull/casino-release-poller.sh",
+        ".github/workflows/deploy-production.yml"
+      ],
+      "introduced_in": "issue-732-release-poller",
+      "changed_in": "issue-732-release-poller",
+      "notes": "Synthetic files and API records stay in disposable directories. The suite opens no listener, makes no GitHub or production request, invokes no service manager, and performs no release, host, database, provider, secret, DNS, or billing mutation."
     },
     {
       "id": "TEST-175",

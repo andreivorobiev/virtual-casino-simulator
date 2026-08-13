@@ -1,0 +1,15 @@
+[Unit]
+# Poll immutable releases without accepting inbound deployment connections.
+Description=Poll GitHub Releases for a newer Casino Simulator build
+
+[Timer]
+# Give the network and application a bounded startup window before the first check.
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30s
+Persistent=true
+Unit=casino-release-poller.service
+
+[Install]
+# Activate the pull loop only after the owner completes the runbook install gate.
+WantedBy=timers.target
