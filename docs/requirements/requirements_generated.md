@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.67.1
+- application: 9.67.2
 - core: 9.43.1
 - mobile: 1.0.0
 - ledger: 9.1.2
@@ -14,7 +14,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.18.0
+- admin: 1.18.1
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.2
@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.88.0
-- docs: 1.84.0
+- tests: 1.89.0
+- docs: 1.85.0
 - contracts: 1.61.4
-- tooling: 1.35.0
+- tooling: 1.36.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.5
 - poker_dice: 1.1.3
@@ -655,6 +655,8 @@ Historical source baseline: 9.1.0
 - **TEST-180** (Tests) - PASS: Listener-free release-delivery evidence executes numeric compare and no-downgrade decisions, exact stable-release metadata inspection, canonical checksum and source-provenance verification, corrupt-asset rejection before the full verifier, and fail-closed hostile metadata cases. Static order proofs require immutable and schema-two gates before production mutation, application-only rollback and a rollback-drill path, five-minute persistent scheduling, three-interval lag detection, and complete retirement of runner SSH credentials and commands.
 - **TOOL-014** (Tooling) - PASS: Every issue closed as completed must retain verifiable rollout evidence through a merged pull request in this repository, using either GitHub's native pull-request cross-reference or an explicit `Rolled out with #NNN` issue marker. The default-branch workflow labels missing evidence, posts one idempotent repair instruction, clears the label after valid evidence appears, never reopens issues, and exempts explicit not-planned dispositions.
 - **TEST-179** (Tests) - PASS: Listener-free tests prove explicit rollout-marker parsing, native pull-request cross-reference filtering, repository-local merged status, rejection of unmerged and foreign candidates, idempotent label and comment repair, concurrent first-use label creation, not-planned and open-issue exemptions, and the workflow's issue-metadata-only permission and trigger boundary.
+- **TOOL-016** (Tooling) - PASS: Repository governance exposes one canonical generated requirements aggregate, contains no success-exiting placeholder PR-scope checker, and keeps reviewed production-unused JavaScript names outside public module export surfaces.
+- **TEST-181** (Tests) - PASS: Dependency-free evidence proves the obsolete top-level requirements snapshot and inert scope placeholder are absent, the canonical aggregate remains available, every historical pointer names the canonical aggregate, and each issue-711 JavaScript symbol remains absent from named export declarations.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.

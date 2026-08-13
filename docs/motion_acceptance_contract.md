@@ -8,18 +8,15 @@ Related issues: #74, #168, #169, and #170. Existing timer-safe primitives origin
 
 Motion presents an outcome that the server or game engine has already committed. It never chooses randomness, changes a wager or payout, mutates a wallet, writes a ledger event, or creates a replacement result. Frozen `/api/v1` game contracts remain unchanged.
 
-The shared foundation in `web/core/motion.js` owns two reusable contracts:
+The active shared primitive in `web/core/motion.js` is `createMotionTimerScope`. It owns cancellable asynchronous callbacks, live reduced-motion resolution, and route/reload teardown without choosing or mutating an outcome. Game routes continue to own their deterministic presentation phases, reviewed timing budgets, result binding, and cleanup.
 
-- `createMotionLifecycle` enforces `idle -> locking -> running -> settling -> settled` with explicit `failed` and `aborted` recovery, one opaque action token, stale-generation rejection, and exact authoritative-result identity.
-- `createMotionTimingProfile` freezes reviewed normal, fast, and reduced-motion budgets and resolves the live comfort preference at each action boundary.
-
-Roulette and Slots now adopt this contract in their game-owned presentation modules. The shared lifecycle remains the policy boundary; each route owns only its deterministic phase rendering, profile selection, and cleanup.
+The earlier unused `createMotionLifecycle` and `createMotionTimingProfile` exports were retired by issue #711 before catalog-wide adoption. Their permanent requirement IDs remain in the registry as retired history and cannot be reused.
 
 ## Permanent requirement allocation
 
 The shared family is `MOTION-004` through `MOTION-011`.
 
-- `MOTION-004`, `MOTION-005`, and `TEST-100` are implemented by this foundation.
+- `MOTION-004`, `MOTION-005`, and `TEST-100` are retired historical allocations for the unused lifecycle/profile prototype.
 - `MOTION-006` through `MOTION-011` remain `PLANNED` until every adopted game proves authoritative result agreement, non-overlap, recovery, layout and performance, accessibility, localization, and governed evidence.
 
 Roulette owns `ROU-063` through `ROU-068`. Slots owns `SLOT-030` through `SLOT-035`. These IDs are permanent and must not be renumbered or reused. Their exact-head unit and Browser evidence is required in addition to earlier existence-only requirements such as `ROU-042`, `ROU-054`, and `SLOT-020`.

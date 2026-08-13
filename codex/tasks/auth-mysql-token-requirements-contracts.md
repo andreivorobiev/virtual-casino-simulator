@@ -29,7 +29,7 @@
 ## Scope
 
 - Impacted modules: docs, contracts, tooling, application.
-- Owned files: `docs/requirements/requirements.json`, `docs/requirements/requirements.md`, `docs/requirements/requirements_generated.md`, `docs/requirements.json`, `contracts/openapi/*.v2.yaml`, `contracts/compatibility/*`, `modules/docs.json`, `modules/contracts.json`, `modules/tooling.json`, `modules/module-manifest.json`, `codex/tasks/auth-mysql-token-*.md`.
+- Owned files: `docs/requirements/requirements.json`, `docs/requirements/requirements.md`, `docs/requirements/requirements_generated.md`, `contracts/openapi/*.v2.yaml`, `contracts/compatibility/*`, `modules/docs.json`, `modules/contracts.json`, `modules/tooling.json`, `modules/module-manifest.json`, `codex/tasks/auth-mysql-token-*.md`.
 - Files not to touch: `casino/**`, `web/**`, `tests/**` except validator metadata if absolutely required.
 - Allowed adjacent files: `scripts/validate_requirements.py`, `scripts/validate_contracts.py` only if new requirement or contract validation support is required.
 

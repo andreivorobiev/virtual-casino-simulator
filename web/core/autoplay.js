@@ -114,8 +114,6 @@ async function loop(s){
 // Export this symbol so other modules can use it through the public module boundary.
 export function stopAutoplay(id){ const s=getSession(id); s.stopRequested=true; clearTimeout(s.timer); s.timer=null; setUi(s); if(s.serverId) post('/api/v1/autoplay/stop',{autoplay_id:s.serverId}).catch(error=>dispatch(error.message)); setTimeout(()=>finishStop(s).catch(error=>dispatch(error.message)),30); }
 // Export this symbol so other modules can use it through the public module boundary.
-export function stopAllAutoplay(){ for(const id of sessions.keys()) stopAutoplay(id); post('/api/v1/autoplay/stop-all',{}).catch(()=>{}); }
-// Export this symbol so other modules can use it through the public module boundary.
 export function renderAutoplay({id,onTick,plan={},defaultRounds=25,roundsLabel='Rounds'}){
   // Store s so later code can read or update this value.
   const s=getSession(id); s.onTick=onTick; if(!s.running && !s.starting && s.remaining<=0) s.requestedRounds=defaultRounds;

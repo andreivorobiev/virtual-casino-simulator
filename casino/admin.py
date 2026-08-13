@@ -24,8 +24,8 @@ from casino.core.storage import get_storage_provider
 from casino.bots import profiles, practice_opponents
 from casino.errors import ForbiddenError, NotFoundError, ValidationError
 
-# Set REQ_PATH to the value needed for the next operation.
-REQ_PATH = DOCS_DIR / "requirements.json"
+# Serve the canonical generated requirement aggregate rather than the retired top-level snapshot. (TOOL-016)
+REQ_PATH = DOCS_DIR / "requirements" / "requirements.json"
 # Set TEST_RESULTS_PATH to the value needed for the next operation.
 TEST_RESULTS_PATH = LOG_DIR / "test-runs" / "latest_results.json"
 # Set ADMIN_USERS_PATH to the value needed for the next operation.

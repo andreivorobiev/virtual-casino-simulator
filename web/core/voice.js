@@ -74,7 +74,3 @@ export function rouletteRollSound(ms=2500){
 }
 // Export this symbol so other modules can use it through the public module boundary.
 export function reelSound(ms=700){ if(!canSfx())return; const ticks=setInterval(()=>clickSound(200+Math.random()*200,.04,.025),70); setTimeout(()=>clearInterval(ticks),ms); }
-// Export this symbol so other modules can use it through the public module boundary.
-export function voiceSettingsHtml(){return '<p class="muted">Sound and voice settings moved to Admin -> Audio & Voice.</p>';}
-// Export this symbol so other modules can use it through the public module boundary.
-export function bindVoiceSettings(){/* full settings are admin-owned in v9.1 */}
