@@ -21,12 +21,8 @@ def default_players() -> dict:
 
 # Define the load_players function used by this module.
 def load_players() -> dict:
-    # Set state to the configured provider's player document.
-    state = get_storage_provider().load_players(default_players)
-    if not isinstance(state, dict) or "players" not in state:
-        # Set state to the value needed for the next operation.
-        state = default_players()
-    return state
+    # Return only the configured provider's validated player document.
+    return get_storage_provider().load_players(default_players)
 
 # Define the list_players function used by this module.
 def list_players() -> list[dict]:
