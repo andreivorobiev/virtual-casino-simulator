@@ -25,6 +25,7 @@ Release-only: no
 ## Coordination
 
 - Issue(s), matching the closing references above:
+- Issues this PR rolls out (must match merged closing/cross-references):
 - Task packet:
 - Branch:
 - Parallel workers or stacked PRs:

@@ -1,0 +1,34 @@
+name: Issue Rollout Link
+
+# Check each completed closure, re-check later repair comments, and summarize durable stragglers weekly.
+on:
+  issues:
+    types: [closed]
+  issue_comment:
+    types: [created, edited]
+  schedule:
+    - cron: '17 9 * * 1'
+  workflow_dispatch:
+
+# Permit only repository reads plus issue labels/comments; no source, PR, release, or deployment writes.
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  enforce_rollout_link:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Read the immutable default-branch enforcement script for issue-triggered workflows.
+      - uses: actions/checkout@v4
+      # Use the repository's governed Python baseline without installing dependencies.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Apply or clear only the durable rollout-link label and emit a bounded weekly summary.
+      - name: Enforce completed issue rollout linkage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/enforce_issue_rollout_link.py

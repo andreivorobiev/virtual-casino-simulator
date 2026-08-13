@@ -158,6 +158,14 @@ priority label using this policy.
 An issue author may describe impact and urgency, but must not place a proposed
 priority in the title. Priority is recorded only through the canonical label.
 
+## Completed issue rollout traceability
+
+- An issue may remain closed as `completed` only when at least one merged pull request in this repository is linked through GitHub's native cross-reference timeline or an explicit `Rolled out with #NNN` issue comment.
+- Automatic closure counts only when the closing commit belongs to a merged pull request that cross-references the issue; a bare commit or unmerged PR is not rollout evidence.
+- Issues closed as `not_planned` are exempt from the pull-request requirement but must retain the decision rationale in the issue body or closing comment.
+- The default-branch issue workflow applies `needs-rollout-link` and one idempotent repair comment when evidence is missing. It removes that label after a later comment or weekly sweep verifies a merged PR.
+- Enforcement never reopens an issue, changes its state reason, edits historical content, or treats arbitrary `#NNN` mentions as rollout evidence.
+
 ## Triage procedure
 
 1. Audit every open issue before making bulk changes.

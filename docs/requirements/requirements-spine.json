@@ -11127,6 +11127,43 @@
       "notes": "Synthetic files and API records stay in disposable directories. The suite opens no listener, makes no GitHub or production request, invokes no service manager, and performs no release, host, database, provider, secret, DNS, or billing mutation."
     },
     {
+      "id": "TOOL-014",
+      "module": "Tooling",
+      "description": "Every issue closed as completed must retain verifiable rollout evidence through a merged pull request in this repository, using either GitHub's native pull-request cross-reference or an explicit `Rolled out with #NNN` issue marker. The default-branch workflow labels missing evidence, posts one idempotent repair instruction, clears the label after valid evidence appears, never reopens issues, and exempts explicit not-planned dispositions.",
+      "status": "PASS",
+      "api_tests": [
+        "ISSUE-ROLLOUT-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "scripts/enforce_issue_rollout_link.py",
+        ".github/workflows/issue-rollout-link.yml",
+        ".github/pull_request_template.md",
+        "AGENTS.md",
+        "docs/issue_prioritization.md"
+      ],
+      "introduced_in": "issue-723-rollout-link-enforcement",
+      "changed_in": "issue-723-rollout-link-enforcement",
+      "notes": "The workflow may write only the needs-rollout-link label and one marker comment. It has no source, issue-state, pull-request, release, provider, deployment, signup, OAuth, or production authority."
+    },
+    {
+      "id": "TEST-179",
+      "module": "Tests",
+      "description": "Listener-free tests prove explicit rollout-marker parsing, native pull-request cross-reference filtering, repository-local merged status, rejection of unmerged and foreign candidates, idempotent label and comment repair, concurrent first-use label creation, not-planned and open-issue exemptions, and the workflow's issue-metadata-only permission and trigger boundary.",
+      "status": "PASS",
+      "api_tests": [
+        "ISSUE-ROLLOUT-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/issue_rollout_link_tests.py",
+        ".github/workflows/ci.yml"
+      ],
+      "introduced_in": "issue-723-rollout-link-enforcement",
+      "changed_in": "issue-723-rollout-link-enforcement",
+      "notes": "The deterministic suite uses an in-memory GitHub client model and opens no listener or network connection. Hosted acceptance additionally runs the default-branch issue workflow against repository issue metadata."
+    },
+    {
       "id": "TEST-175",
       "module": "Tests",
       "description": "A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.",
