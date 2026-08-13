@@ -1,42 +1,28 @@
 # Claude status
 
-Written by Claude only. Codex reads this; do not edit it. Last updated 2026-08-07.
+Written by Claude only. Codex reads this; do not edit it. Last updated 2026-08-13.
 
 ## Pull requests I authored (drafts; I never merge)
 
-| PR | Branch | What it is | State |
-|---|---|---|---|
-| (opening) | `claude/account-admin-omnibus` | Account/enrollment/product-admin omnibus (#333, #334/#69, #335, #336, #351, #352, #349, #388, #378, #209) | **draft / WIP**, base `339de540f632c5b2897213b0223e4aa415171c9b`; #388 backend landed; remaining items in progress; not for merge until marked ready |
-| #609 | `claude/607-viewport-containment-action-stability` | Issue #607 containment + action stability | merged |
+None in flight. The 2026-08-07 account/enrollment/product-admin omnibus is fully landed (`claude/account-admin-omnibus` tip `c8f78c73` is an ancestor of main via #638 and the follow-on integrations); that row is retired.
 
-## Active work — account/enrollment/product-admin omnibus (owner-directed 2026-08-07)
+## Active work — owner audit execution program (2026-08-13)
 
-One draft PR per the owner packet. Base = exact protected main `339de54`. Constraints: `/api/v1` frozen; all new enrollment/provider behavior disabled by default; no live provider/mail/public/DNS/billing/production action; no touch to `casino/games/**`, `casino/core/ledger.py`, `casino/core/settlement.py`, paytables, deployment, PR #450. Fresh IDs only (TEST-159..168 reserved; main max TEST-157).
+The owner commissioned a full repository audit (unmerged PRs, all 302 closed issues verified claim-vs-code, fix/refactor review, architecture, pipeline) and approved the resulting execution program. Everything is filed as tickets for Codex — Claude authored the tickets and is deliberately NOT opening implementation PRs for them, to keep the highest-collision files (tests/run_tests.py, deploy lanes) single-author.
 
-Ten items and current state:
-1. #388 session-timeout policy — **backend landed** (enabled toggle, warning_minutes 0-10 <idle, updated_at/updated_by provenance, read-only session_status descriptor for registered+guest, Admin route actor stamp). UI + contract + tests + i18n pending.
-2. #351 platform-owner RBAC lifecycle — pending (role_audit hash-chain core, grant/revoke, local-password step-up; provider step-up = recorded blocker).
-3. #334/#69 account recovery — pending (wire existing password_reset service; disabled by default).
-4. #333 enrollment readiness + Admin UI + provider kill switches — pending.
-5. #335 disabled-by-default provider self-signup — pending (scaffolding-to-the-gate; shared identity gate NOT widened — deferred blocker).
-6. #336 provider readiness/revocation/deletion evidence — pending (in-repo scaffolding + runbook + templates; console evidence = owner blocker).
-7. #352 My Settings destination — pending (server foundation exists).
-8. #349 feedback privacy/retention/deletion/export — pending (manual-only; publication adapter excluded — no owner approval).
-9. #378 guest-trial conversion UI + admin-assisted — pending (API exists).
-10. #209 read-only launch-readiness dashboard — pending.
+- **Program tickets:** #697 (login redesign — has three open owner questions; ask before building), #698-#722 (audit findings; #698 P1 wallet corruption, #732 P1 deploy), #723 (issue-PR linking rule + enforcement workflow), #727-#730 (owner-approved monolith split series: run_tests.py, storage package, admin.js, app.js), #731 (file-length standard + register), #732 (P1: pull-based production deploy on the prod host; the dead SSH leg retires; owner executes the host install step from the runbook).
+- **Sequencing and hard boundaries** are in the owner's program prompt; the load-bearing ones: #727 slices must prove case-inventory equality per slice and keep the shard-union verification intact; no contracts/ schema changes except the additive-v2 admin surface in #701; required status contexts keep their exact names; #723's linking rule applies to every closure in this program.
+- Observed 2026-08-13: #698 already fixed and merged (#725), #699 in draft (#726) — thank you for the fast pickup.
+- Owner decision: the dedicated-VM idea is shelved; #732 needs no VM. #450 stays closed as a documented alternative.
 
 ## File claims / high collision risk
 
-- Will touch: `casino/core/session_settings.py`, `casino/core/auth.py`, `casino/admin.py`, `casino/app.py`, `casino/wsgi.py` (allowlist blocks only, no gate widening), new `casino/core/role_audit.py`, `casino/core/oauth/**` (signup scaffolding), `web/admin.js`, `web/app.js`, `web/core/pwa.js`, `web/i18n/{en-US,ru-RU}/{shell,admin}.json`, `contracts/openapi/*.v2.yaml` + `contracts/compatibility/*`, `docs/requirements/requirements.json` (+ generated), `tests/**`, module descriptors + manifest, these coordination records.
-- No touch: `casino/games/**`, `casino/core/ledger.py`, `casino/core/settlement.py`, paytables, deployment/release paths, `codex.md`.
+- None held by Claude. The five audited comment-quality files, keno/baccarat engines, and guest limiter from the #555 program are all on main; Claude claims nothing while the split series (#727-#730) is in flight.
 
 ## Questions / requests for Codex
 
-- This is a WIP draft opened for visibility and pipeline entry per the owner packet; please do not integrate until it is marked ready-for-review with a green final head. I will run the full local matrix mirroring all nine workflow families before requesting review.
+- When any reconciliation touches `tests/run_tests.py` or shared governance files, please diff the contributor's final head against post-merge main for the owned files — the two historical content drops both happened there (#573 restore, #574 restore).
 
 ## Blockers I am waiting on (owner or Codex)
 
-- Live enablement of any enrollment/provider/mail/public behavior: separate Workroom + #209 gate (out of scope for this PR).
-- #336 provider-console/DNS/deletion evidence: provider console (owner).
-- #335 shared-auth-gate widening: deferred follow-up under Workroom approval.
-- #351 provider step-up semantics: recorded owner decision pending.
+- #732 host-install step waits on the runbook handback; the owner runs it.
