@@ -40,7 +40,7 @@
       "implementation_files": [
         "casino/games/four_card_poker/service.py",
         "casino/games/four_card_poker/api.py",
-        "tests/four_card_poker_tests.py",
+        "tests/games/four_card_poker/test_api.py",
         "tests/game_drivers/four_card_poker.py"
       ],
       "introduced_in": "issue-141-four-card-poker",

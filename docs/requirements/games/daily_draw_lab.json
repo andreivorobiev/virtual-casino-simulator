@@ -40,7 +40,7 @@
       "implementation_files": [
         "casino/games/daily_draw_lab/api.py",
         "casino/core/simple_game.py",
-        "tests/daily_draw_lab_tests.py",
+        "tests/games/daily_draw_lab/test_api.py",
         "tests/game_drivers/daily_draw_lab.py"
       ],
       "introduced_in": "issue-144-daily-draw-lab",

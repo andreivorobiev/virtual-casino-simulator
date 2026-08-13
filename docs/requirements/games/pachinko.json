@@ -40,7 +40,7 @@
       "implementation_files": [
         "casino/games/pachinko/api.py",
         "casino/core/simple_game.py",
-        "tests/pachinko_tests.py",
+        "tests/games/pachinko/test_api.py",
         "tests/game_drivers/pachinko.py"
       ],
       "introduced_in": "issue-142-pachinko",

@@ -443,7 +443,7 @@ def skip_browser_affinity(group_name):
     BROWSER_CASE_SEQ+=len(group_case_ids)
 
 # Map each game to its one dedicated deep browser acceptance case so unaffected games can be skipped. (issue #468 item 4)
-BROWSER_GAME_ACCEPTANCE_CASES={'acey_deucey':'BR-AD-001', 'andar_bahar':'BR-AB-001', 'big_six_wheel':'BR-BIG-SIX-001', 'caribbean_stud':'BR-CS-001', 'casino_holdem':'BR-CH-001', 'casino_war':'BR-CW-001', 'chuck_a_luck':'BR-CHUCK-001', 'craps':'BR-CRAPS-001', 'crown_and_anchor':'BR-CAA-001', 'deuces_wild_video_poker':'BR-DWVP-001', 'double_bonus_video_poker':'BR-DBVP-001', 'dragon_tiger':'BR-DT-001', 'fan_tan':'BR-FAN-TAN-001', 'hi_lo':'BR-HILO-001', 'jacks_or_better_video_poker':'BR-JOBVP-001', 'joker_poker':'BR-JP-001', 'let_it_ride':'BR-LIR-001', 'mississippi_stud':'BR-MSTUD-001', 'multi_hand_video_poker':'BR-MHVP-001', 'over_under_7':'BR-OU7-001', 'pai_gow_poker':'BR-PGP-001', 'plinko':'BR-PLINKO-001', 'red_dog':'BR-RD-001', 'scratch_cards':'BR-SCRATCH-001', 'sic_bo':'BR-SIC-BO-001', 'teen_patti':'BR-TEEN-PATTI-001', 'texas_holdem_practice_table':'BR-THPT-001', 'three_card_poker':'BR-TCP-001'}
+BROWSER_GAME_ACCEPTANCE_CASES={'acey_deucey':'BR-AD-001', 'andar_bahar':'BR-AB-001', 'big_six_wheel':'BR-BIG-SIX-001', 'caribbean_stud':'BR-CS-001', 'casino_holdem':'BR-CH-001', 'casino_war':'BR-CW-001', 'chuck_a_luck':'BR-CHUCK-001', 'craps':'BR-CRAPS-001', 'crown_and_anchor':'BR-CAA-001', 'daily_draw_lab':'BR-DAILY-DRAW-LAB-001', 'deuces_wild_video_poker':'BR-DWVP-001', 'double_bonus_video_poker':'BR-DBVP-001', 'dragon_tiger':'BR-DT-001', 'fan_tan':'BR-FAN-TAN-001', 'faro':'BR-FARO-001', 'four_card_poker':'BR-FOUR-CARD-POKER-001', 'hi_lo':'BR-HILO-001', 'jacks_or_better_video_poker':'BR-JOBVP-001', 'joker_poker':'BR-JP-001', 'let_it_ride':'BR-LIR-001', 'mississippi_stud':'BR-MSTUD-001', 'multi_hand_video_poker':'BR-MHVP-001', 'over_under_7':'BR-OU7-001', 'pachinko':'BR-PACHINKO-001', 'pai_gow_poker':'BR-PGP-001', 'plinko':'BR-PLINKO-001', 'red_dog':'BR-RD-001', 'scratch_cards':'BR-SCRATCH-001', 'sic_bo':'BR-SIC-BO-001', 'teen_patti':'BR-TEEN-PATTI-001', 'texas_holdem_practice_table':'BR-THPT-001', 'three_card_poker':'BR-TCP-001', 'trente_et_quarante':'BR-TEQ-001'}
 # Invert the map once so run_case can resolve a dedicated case's owning game in constant time.
 _BROWSER_ACCEPTANCE_CASE_GAME={case_id:game_id for game_id,case_id in BROWSER_GAME_ACCEPTANCE_CASES.items()}
 
@@ -1482,6 +1482,8 @@ def run_api_tests():
     run_case('CI-COMPUTE-001',['TOOL-017','TEST-183'],lambda: run_unit_module('tests.ci_compute_tests','CI compute optimization suite failed'))
     # Enforce generic descriptor equality and exact-base monotonic revisions without shared pin literals. (issue #707)
     run_case('GOV-MODULE-VERSIONS-001',['TOOL-018','TEST-184'],lambda: run_unit_module('tests.module_version_governance_tests','module version governance suite failed'))
+    # Bind the five newest games to dedicated Browser cases, per-game suites, duration packing, and affected-game selection. (issue #712)
+    run_case('GOV-NEWEST-GAME-BROWSER-COVERAGE-001',['TEST-185'],lambda: run_unit_module('tests.newest_game_browser_coverage_tests','newest-game Browser coverage suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
@@ -1943,7 +1945,7 @@ def run_api_tests():
     # Execute the Faro rules and settlement proof without opening a listener.
     def run_faro_tests():
         # Load only the focused Faro class.
-        from tests import faro_tests
+        from tests.games.faro import test_api as faro_tests
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(faro_tests.FaroTests)
         # Execute the suite with concise in-process reporting.
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
@@ -1956,7 +1958,7 @@ def run_api_tests():
     # Execute the Trente et Quarante rules and settlement proof without opening a listener.
     def run_trente_et_quarante_tests():
         # Load only the focused Trente et Quarante class.
-        from tests import trente_et_quarante_tests
+        from tests.games.trente_et_quarante import test_api as trente_et_quarante_tests
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(trente_et_quarante_tests.TrenteEtQuaranteTests)
         # Execute the suite with concise in-process reporting.
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
@@ -1969,7 +1971,7 @@ def run_api_tests():
     # Execute the Pachinko rules and settlement proof without opening a listener.
     def run_pachinko_tests():
         # Load only the focused Pachinko class.
-        from tests import pachinko_tests
+        from tests.games.pachinko import test_api as pachinko_tests
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(pachinko_tests.PachinkoTests)
         # Execute the suite with concise in-process reporting.
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
@@ -2034,7 +2036,7 @@ def run_api_tests():
     # Execute the Daily Draw Lab rules and settlement proof without opening a listener.
     def run_daily_draw_lab_tests():
         # Load only the focused Daily Draw Lab class.
-        from tests import daily_draw_lab_tests
+        from tests.games.daily_draw_lab import test_api as daily_draw_lab_tests
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(daily_draw_lab_tests.DailyDrawLabTests)
         # Execute the suite with concise in-process reporting.
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
@@ -2047,7 +2049,7 @@ def run_api_tests():
     # Execute the Four Card Poker engine and settlement proof without opening a listener.
     def run_four_card_poker_tests():
         # Load only the focused Four Card Poker class.
-        from tests import four_card_poker_tests
+        from tests.games.four_card_poker import test_api as four_card_poker_tests
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(four_card_poker_tests.FourCardPokerTests)
         # Execute the suite with concise in-process reporting.
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
@@ -6121,6 +6123,86 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the expansion matrix under each game-specific permanent test allocation.
                 run_case('BR-CATALOG-EXPANSION-001',['CWHEEL-001','CWHEEL-002','PDICE-001','PDICE-002','BOULE-001','BOULE-002','FARO-001','FARO-002','TEQ-001','TEQ-002','PACH-001','PACH-002','COINP-001','COINP-002','MARBLE-001','MARBLE-002','PATTERN-001','PATTERN-002','LGRID-001','LGRID-002','DDLAB-001','DDLAB-002','FOURCP-001','FOURCP-002','TEST-119','TEST-120','TEST-121','TEST-122','TEST-123','TEST-124','TEST-125','TEST-126','TEST-128','TEST-129','TEST-130','TEST-131'],catalog_expansion_visuals)
+                # Read the authoritative wallet rendered by the shared shell as a numeric play-token balance. (issue #712, TEST-185)
+                def newest_game_wallet_value():
+                    # Strip grouping separators while retaining the exact fractional amount.
+                    return page.evaluate("() => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, ''))")
+                # Require one simple settled-round game to wager, settle, refresh its wallet, and recover its repeat state after reload.
+                def newest_simple_game_acceptance(game_id, ready_testid, endpoint_suffix, action, result_testid, repeat_testid):
+                    # Enter the catalog-owned route and wait for its stable module marker.
+                    page.get_by_test_id(f'nav-{game_id}').click(); page.get_by_test_id(ready_testid).wait_for(timeout=10000)
+                    # Capture the pre-action wallet so a stale rendered value cannot satisfy settlement evidence accidentally.
+                    before=newest_game_wallet_value()
+                    # Observe the one real mutation response while the supplied control callback starts the wager.
+                    with page.expect_response(lambda response: response.request.method=='POST' and endpoint_suffix in response.url,timeout=10000) as response_info: action()
+                    # Read the standard API envelope and bind the rendered wallet to its authoritative player payload.
+                    payload=response_info.value.json()['data']; expected=float(payload['player']['balance'])
+                    # Wait for terminal controls and the exact response-owned wallet to become visible.
+                    page.get_by_test_id(repeat_testid).wait_for(state='visible',timeout=10000); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=10000)
+                    # Wait for the game-owned presentation to finish after the wallet refresh, then require its terminal status and repeat action.
+                    page.wait_for_function("ids => { const result=document.querySelector(`[data-testid=\"${ids.result}\"]`); const repeat=document.querySelector(`[data-testid=\"${ids.repeat}\"]`); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",arg={'result':result_testid,'repeat':repeat_testid},timeout=10000)
+                    # Re-read the settled controls so this assertion remains bound to the visible terminal frame.
+                    assert page.get_by_test_id(result_testid).inner_text().strip() and page.get_by_test_id(repeat_testid).is_enabled()
+                    # Require the action to have produced an authoritative wallet observation, allowing a legitimate push to equal the prior balance.
+                    assert isinstance(before,(int,float)) and newest_game_wallet_value()==expected
+                    # Reload the canonical deep link and require server-owned repeat and wallet recovery without a second mutation.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id(ready_testid).wait_for(timeout=10000); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=10000)
+                    # Require the route, repeat control, and authoritative wallet to survive the reload.
+                    assert page.url.split('?',1)[0].endswith(f'/games/{game_id}') and page.get_by_test_id(repeat_testid).is_enabled() and newest_game_wallet_value()==expected
+                    # Return to the lobby so every dedicated case begins from the same shell state.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Exercise Faro through its real deal endpoint and reload-safe recent-round state.
+                def faro_browser_acceptance():
+                    # Use the default rank and five-token chip for one real settled deal.
+                    newest_simple_game_acceptance('faro','faro','/api/v1/games/faro/deals',lambda: page.get_by_test_id('faro-deal').click(),'faro-result','faro-repeat')
+                # Record Faro's dedicated affected-game acceptance case.
+                run_case('BR-FARO-001',['FARO-001','FARO-002','TEST-185'],faro_browser_acceptance)
+                # Exercise Trente et Quarante through its real coup endpoint and reload-safe recent-round state.
+                def trente_et_quarante_browser_acceptance():
+                    # Use the default rouge bet and five-token chip for one real settled coup.
+                    newest_simple_game_acceptance('trente_et_quarante','trente-et-quarante','/api/v1/games/trente-et-quarante/coups',lambda: page.get_by_test_id('teq-deal').click(),'teq-result','teq-repeat')
+                # Record Trente et Quarante's dedicated affected-game acceptance case.
+                run_case('BR-TEQ-001',['TEQ-001','TEQ-002','TEST-185'],trente_et_quarante_browser_acceptance)
+                # Exercise Pachinko through its real drop endpoint and reload-safe recent-round state.
+                def pachinko_browser_acceptance():
+                    # Use the default five-token chip for one real server-owned pin path.
+                    newest_simple_game_acceptance('pachinko','pachinko','/api/v1/games/pachinko/drops',lambda: page.get_by_test_id('pachinko-drop').click(),'pachinko-result','pachinko-repeat')
+                # Record Pachinko's dedicated affected-game acceptance case.
+                run_case('BR-PACHINKO-001',['PACH-001','PACH-002','TEST-185'],pachinko_browser_acceptance)
+                # Exercise Daily Draw Lab through a marked number, real draw, and reload-safe recent-round state.
+                def daily_draw_lab_browser_acceptance():
+                    # Mark number one before invoking the otherwise shared settled-round helper.
+                    def draw_once():
+                        # Select one legal number and start the real draw.
+                        page.locator('[data-number="1"]').click(); page.get_by_test_id('daily-draw-lab-go').click()
+                    # Bind the draw response, terminal wallet, and recovered repeat control.
+                    newest_simple_game_acceptance('daily_draw_lab','daily-draw-lab','/api/v1/games/daily-draw-lab/draws',draw_once,'daily-draw-lab-result','daily-draw-lab-repeat')
+                # Record Daily Draw Lab's dedicated affected-game acceptance case.
+                run_case('BR-DAILY-DRAW-LAB-001',['DDLAB-001','DDLAB-002','TEST-185'],daily_draw_lab_browser_acceptance)
+                # Exercise Four Card Poker's two-step real deal and decision lifecycle.
+                def four_card_poker_browser_acceptance():
+                    # Enter the catalog-owned route and wait for the stable game root.
+                    page.get_by_test_id('nav-four_card_poker').click(); page.get_by_test_id('four-card-poker').wait_for(timeout=10000)
+                    # Set a small legal ante and explicitly dispatch change before starting the round.
+                    page.locator('[data-ante]').fill('2'); page.locator('[data-ante]').dispatch_event('change')
+                    # Start one real deal and wait for the player decision stage.
+                    with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/four-card-poker/rounds'),timeout=10000): page.locator('[data-deal]').click()
+                    # Require the one-times play option before committing the terminal decision.
+                    page.locator('[data-play="1"]').wait_for(timeout=10000)
+                    # Observe the real terminal response while choosing one-times play.
+                    with page.expect_response(lambda response: response.request.method=='POST' and '/api/v1/games/four-card-poker/rounds/' in response.url and response.url.endswith('/decisions'),timeout=10000) as response_info: page.locator('[data-play="1"]').click()
+                    # Bind the rendered wallet to the terminal response's authoritative player value.
+                    expected=float(response_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=10000)
+                    # Require the settled result and enabled repeat action.
+                    page.get_by_test_id('four-card-poker-result').wait_for(timeout=10000); assert page.locator('[data-action="repeat"]').is_enabled()
+                    # Reload and require the exact settled route, wallet, and repeat state to recover without another wager.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('four-card-poker').wait_for(timeout=10000); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=10000)
+                    # Prove both authoritative terminal result and repeat controls survived the reload.
+                    assert page.get_by_test_id('four-card-poker-result').inner_text().strip() and page.locator('[data-action="repeat"]').is_enabled() and newest_game_wallet_value()==expected
+                    # Return to the lobby for the next independent Browser case.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Record Four Card Poker's dedicated affected-game acceptance case.
+                run_case('BR-FOUR-CARD-POKER-001',['FOURCP-001','FOURCP-002','TEST-185'],four_card_poker_browser_acceptance)
                 # Prove every catalog game keeps its enabled controls vertically reachable in the fixed-height shell. (issue #221, CORE-015, UX-004, TEST-139)
                 def control_reachability():
                     # Pin the two governed desktop viewports where clipped controls were originally reported.

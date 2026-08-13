@@ -1714,7 +1714,7 @@
         "client_tamper_refresh"
       ],
       "evidence": [
-        "tests/run_tests.py",
+        "tests/games/faro/test_api.py",
         "tests/run_tests.py",
         "tests/storage_tests.py"
       ]
@@ -1747,7 +1747,7 @@
         "client_tamper_refresh"
       ],
       "evidence": [
-        "tests/run_tests.py",
+        "tests/games/trente_et_quarante/test_api.py",
         "tests/run_tests.py",
         "tests/storage_tests.py"
       ]
@@ -1780,7 +1780,7 @@
         "client_tamper_refresh"
       ],
       "evidence": [
-        "tests/run_tests.py",
+        "tests/games/pachinko/test_api.py",
         "tests/run_tests.py",
         "tests/storage_tests.py"
       ]
@@ -1945,7 +1945,7 @@
         "client_tamper_refresh"
       ],
       "evidence": [
-        "tests/run_tests.py",
+        "tests/games/daily_draw_lab/test_api.py",
         "tests/run_tests.py",
         "tests/storage_tests.py"
       ]
@@ -1988,7 +1988,7 @@
         "client_tamper_refresh"
       ],
       "evidence": [
-        "tests/run_tests.py",
+        "tests/games/four_card_poker/test_api.py",
         "tests/run_tests.py",
         "tests/storage_tests.py"
       ]
