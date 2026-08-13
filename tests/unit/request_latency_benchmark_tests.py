@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus Roulette diagnostic governance to total exactly 971 permanent rows.
-        self.assertEqual(len(requirements), 971)
+        # Require the accepted aggregates plus CI compute governance to total exactly 973 permanent rows.
+        self.assertEqual(len(requirements), 973)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1411,6 +1411,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-181": "Tests",  # Bind deterministic dead-artifact absence evidence.
             "I18N-013": "Application",  # Bind actionable cumulative Roulette diagnostics to i18n state.
             "TEST-182": "Tests",  # Bind deterministic missing-key diagnostic evidence.
+            "TOOL-017": "Tooling",  # Bind fail-closed long-suite and release-candidate compute filtering.
+            "TEST-183": "Tests",  # Bind exact context and PR-only optimization evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
@@ -1589,16 +1591,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.3")
         # Require the compatible Admin patch that serves the canonical requirement aggregate.
         self.assertEqual(admin_module["version"], "1.18.1")
-        # Require the Tests minor for Roulette diagnostic regression evidence.
-        self.assertEqual(tests_module["version"], "1.90.0")
-        # Require the Docs minor for Roulette diagnostic requirement governance.
-        self.assertEqual(docs_module["version"], "1.86.0")
+        # Require the Tests minor for CI compute regression evidence.
+        self.assertEqual(tests_module["version"], "1.91.0")
+        # Require the Docs minor for CI compute requirement governance.
+        self.assertEqual(docs_module["version"], "1.87.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the Contracts patch for the immutable v0.9.5.77 rollback record.
         self.assertEqual(contracts_module["version"], "1.61.4")
-        # Require the Tooling minor that retires misleading repository artifacts and exports.
-        self.assertEqual(tooling_module["version"], "1.36.0")
+        # Require the Tooling minor that removes redundant PR compute without weakening gates.
+        self.assertEqual(tooling_module["version"], "1.37.0")
         # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
         self.assertEqual((mobile_module["version"], mobile_module["package_version"]), ("1.0.0", "0.2.0"))
         # Require the compatible Baccarat patch for its localized lobby tags and copy.

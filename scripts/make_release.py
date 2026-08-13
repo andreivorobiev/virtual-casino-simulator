@@ -8,6 +8,8 @@ import argparse
 import hashlib
 # Import JSON support for canonical packaged application metadata.
 import json
+# Import environment access so the PR-only evidence mode cannot be invoked outside GitHub Actions.
+import os
 # Import portable paths for repository and ignored distribution locations.
 import pathlib
 # Import filesystem cleanup for stale ignored candidate outputs.
@@ -53,6 +55,13 @@ VALIDATIONS = [
     [sys.executable, "-m", "unittest", "tests.cicd_deployment_tests"],
     # Validate listener-free WSGI parity, fail-closed configuration, and service hardening.
     [sys.executable, "-m", "unittest", "tests.production_service_tests"],
+]
+# Name the exact sibling required contexts that supply validator evidence for an unpublished PR candidate.
+PR_GATE_VALIDATIONS = [
+    "required-context:ci",
+    "required-context:contract_tests",
+    "required-context:module_boundaries",
+    "required-context:docs",
 ]
 # Define the post-package copied-release lifecycle gate separately because it consumes the built archive.
 COPIED_SERVICE_SMOKE = [sys.executable, "tests/production_service_smoke.py", "--archive", "dist/virtual_casino_simulator_package.zip"]
@@ -111,6 +120,8 @@ def parse_args():
     parser.add_argument("--release-tag")
     # Supply the immediately previous release manifest for rollback eligibility.
     parser.add_argument("--previous-manifest", type=pathlib.Path)
+    # Permit only the hosted pull-request candidate lane to consume exact-head sibling gate evidence.
+    parser.add_argument("--use-pr-gate-evidence", action="store_true")
     # Return the validated command-line namespace.
     return parser.parse_args()
 
@@ -119,6 +130,17 @@ def parse_args():
 def main():
     # Parse caller inputs before running expensive repository validators.
     args = parse_args()
+    # Reject the optimized path outside the one unpublished GitHub pull-request candidate boundary.
+    if args.use_pr_gate_evidence and not (
+        os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+        and bool(os.environ.get("GITHUB_HEAD_REF"))
+        and args.app_version is None
+        and args.release_tag is None
+        and args.previous_manifest is None
+    ):
+        # Keep local, manual, main, and release-event candidates on the complete canonical validation sequence.
+        raise SystemExit("--use-pr-gate-evidence is restricted to unpublished GitHub pull-request candidates")
     # Load the canonical packaged application release from the aggregate manifest.
     canonical_version = json.loads((ROOT / "modules" / "module-manifest.json").read_text(encoding="utf-8"))["application"]
     # Reject any manual workflow input that diverges from canonical repository metadata.
@@ -141,7 +163,9 @@ def main():
         # Report the invariant without echoing potentially private repository paths.
         raise SystemExit("tracked checkout must be clean before release validation")
     # Run every fixed validator before deleting or writing ignored candidate outputs.
-    for command in VALIDATIONS:
+    validations_to_run = [] if args.use_pr_gate_evidence else VALIDATIONS
+    # Run the complete canonical list unless exact-head sibling required contexts own the PR evidence.
+    for command in validations_to_run:
         # Isolate the state-mutating API suite from repository runtime fixtures.
         if command is API_VALIDATION:
             # Run the exact command against a Git-archived clean source copy.
@@ -157,9 +181,13 @@ def main():
     # Start the deterministic packager command with portable validation evidence.
     package_command = [sys.executable, "scripts/package_app.py"]
     # Add each completed validation command to the checksum-bound manifest.
-    for command in VALIDATIONS:
+    for command in validations_to_run:
         # Preserve fixed validation order for byte-reproducible JSON output.
         package_command.extend(["--validation", command_label(command)])
+    # Bind an optimized PR candidate to its exact required-context evidence without claiming local execution.
+    for validation in PR_GATE_VALIDATIONS if args.use_pr_gate_evidence else []:
+        # Preserve explicit provenance for every sibling workflow that must pass before merge.
+        package_command.extend(["--validation", validation])
     # Record the copied-release process gate that must pass before candidate checksums are finalized.
     package_command.extend(["--validation", command_label(COPIED_SERVICE_SMOKE)])
     # Bind the candidate to a canonical release tag only on a release event.

@@ -71,7 +71,8 @@ jobs:
       # Pull requests build and validate a checksum-bound but unpublished candidate.
       - name: Build pull-request candidate
         if: github.event_name == 'pull_request'
-        run: python scripts/make_release.py
+        # Sibling required contexts validate this same exact head; this lane proves packaging and copied-release smoke only. (issue #710)
+        run: python scripts/make_release.py --use-pr-gate-evidence
       # Manual runs prove that caller input cannot diverge from canonical repository metadata.
       - name: Build manual candidate
         if: github.event_name == 'workflow_dispatch'
