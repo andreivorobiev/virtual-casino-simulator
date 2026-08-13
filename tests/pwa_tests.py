@@ -175,6 +175,10 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertNotIn("skipWaiting", install_block)
         # Require explicit client-requested activation and read-only version response protocols.
         self.assertIn("event.data?.type === 'SKIP_WAITING'", worker)
+        # Require the message event to own skipWaiting until activation settles across controlled tabs. (PWA-003)
+        self.assertIn("event.waitUntil(self.skipWaiting())", worker)
+        # Reject the fire-and-forget form that may terminate before Chromium promotes the waiting worker.
+        self.assertNotIn("{ self.skipWaiting(); return; }", worker)
         # Require the exact low-cardinality version response.
         self.assertIn("{ type: 'PWA_VERSION', version: APP_VERSION }", worker)
 
@@ -215,6 +219,31 @@ class PwaFoundationTests(unittest.TestCase):
         # Require the captured real-listener result to remain fail-closed.
         self.assertIn("assert stale_client_state=='stale-client',stale_client_state", pwa_case)
 
+    # Require exact-head Browser evidence to exercise a real one-click multi-tab worker promotion. (PWA-003, TEST-095)
+    def test_browser_acceptance_exercises_multitab_update(self):
+        # Read the Browser harness as governed source without starting Chromium locally.
+        harness = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Isolate the real update case so synthetic PWA display states cannot satisfy this contract.
+        update_case = harness[harness.index("def pwa_multitab_one_click_update"):harness.index("run_case('BR-PWA-UPDATE-001")]
+        # Require the prior worker to use a distinct URL derived from canonical module metadata.
+        self.assertIn("previous_worker_version=f'{packaged_version}-previous'", update_case)
+        # Require all three production-shaped same-origin clients from the reproduced regression.
+        self.assertIn("docs_page.goto(f'{base}/api-docs'", update_case)
+        # Require the public signup client independently from the API-docs seed.
+        self.assertIn("signup_page.goto(f'{base}/enroll/signup'", update_case)
+        # Require the Casino client to observe the genuine waiting-worker banner.
+        self.assertIn("window.CasinoPwa?.state()==='update'", update_case)
+        # Require exactly one player-visible Apply click in the entire real update case.
+        self.assertEqual(update_case.count("get_by_test_id('pwa-update-reload').click()"), 1)
+        # Require the single click to be bound to the controllerchange-owned reload.
+        self.assertIn("expect_navigation(wait_until='domcontentloaded'", update_case)
+        # Require each controlled tab to prove the canonical controller independently.
+        self.assertIn("for update_page in update_pages", update_case)
+        # Require terminal waiting and banner residue to be absent after the one reload.
+        self.assertIn("not final_update['waiting']", update_case)
+        # Require the exact Browser case to remain mapped to the permanent update requirements.
+        self.assertIn("run_case('BR-PWA-UPDATE-001',['PWA-003','TEST-095','TEST-153']", harness)
+
     # Require page-side offline controls and authoritative reconnect behavior.
     def test_client_fails_closed_and_refreshes_authoritatively(self):
         # Read the PWA controller source.
@@ -238,7 +267,7 @@ class PwaFoundationTests(unittest.TestCase):
         # Require authoritative reconnect to preserve a fail-closed failure state.
         self.assertIn("renderPwaState('reconnect-failed')", client)
         # Require offline API calls to fail before fetch and carry a stable code.
-        self.assertLess(api_source.index("navigator.onLine === false"), api_source.index("await fetch(path, init)"))
+        self.assertLess(api_source.index("navigator.onLine === false"), api_source.index("await transportFetch(path, init)"))
         # Require the stable no-replay offline error to flow through the localized safe-error boundary.
         self.assertIn("playerSafeError('OFFLINE')", api_source)
         # Require the shared safe-error constructor to preserve the machine-readable code separately.
@@ -254,7 +283,7 @@ class PwaFoundationTests(unittest.TestCase):
         # Require login and guest-entry failures to stay local to their public auth forms.
         self.assertIn("SESSION_EXPIRY_PUBLIC_PATHS", api_source)
         # Require the shared teardown helper to clear cached current-user state.
-        self.assertIn("currentSession = null", app[app.index("function clearAuthenticatedShellState()"):app.index("function renderExpiredSessionGate()")])
+        self.assertIn("currentSession = null", app[app.index("function clearAuthenticatedShellState(options = {})"):app.index("function renderExpiredSessionGate()")])
         # Require the session-expired shell path to run shared teardown before rendering login.
         self.assertLess(app.index("clearAuthenticatedShellState()", app.index("function renderExpiredSessionGate()")), app.index("renderLoginGate(t('pwa.expiredSession'", app.index("function renderExpiredSessionGate()")))
         # Require protected-route authorization failure handling to precede the generic game-load error panel.
@@ -520,7 +549,7 @@ equal([lifecycleListeners.size, timerCallbacks.size, displayWrites], [0, 0, 9], 
         # Require initial authenticated rendering before the new controller baseline is seeded.
         self.assertLess(app.index("const initialBalance = updateCurrentUserShell()"), app.index("walletCelebrationLifecycle.mount(initialBalance)"))
         # Require session teardown to dispose and forget the controller before clearing identity.
-        teardown = app[app.index("function clearAuthenticatedShellState()"):app.index("function renderExpiredSessionGate()")]
+        teardown = app[app.index("function clearAuthenticatedShellState(options = {})"):app.index("function renderExpiredSessionGate()")]
         # Compare exact lifecycle ordering inside the shared teardown helper.
         self.assertLess(teardown.index("walletCelebrationLifecycle.unmount('session-cleared')"), teardown.index("currentSession = null"))
         # Require route navigation to interrupt decoration before previous-game unmount.
