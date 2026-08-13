@@ -1199,8 +1199,14 @@ function revealActiveNav() {
   if (!nav) return;
   // Read the active catalog route after the navigation layout is measurable.
   const activeItem = nav.querySelector('.nav-item.active');
-  // Center a late-catalog active route inside desktop and mobile horizontal navigation.
-  if (activeItem) nav.scrollLeft = Math.max(0, activeItem.offsetLeft - ((nav.clientWidth - activeItem.offsetWidth) / 2));
+  // Stop when the current surface has no active game route to reveal.
+  if (!activeItem) return;
+  // Measure rendered coordinates so topbar columns and localized widths cannot skew offset-based centering.
+  const navBounds = nav.getBoundingClientRect();
+  // Measure the active route in the same viewport coordinate system as its navigation container.
+  const itemBounds = activeItem.getBoundingClientRect();
+  // Center the active route by applying its rendered displacement to the current horizontal scroll position.
+  nav.scrollLeft += itemBounds.left - navBounds.left - ((navBounds.width - itemBounds.width) / 2);
 }
 
 // Render the premium top navigation from the route registry.

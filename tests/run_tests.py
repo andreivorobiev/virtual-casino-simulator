@@ -4459,7 +4459,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Read the exact safety acknowledgement from the locale-owned shell resource.
                             expected_safety=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['auth.termsCheck']
                             # Require the guest surface to preserve the full fake-money/play-token safety wording.
-                            assert expected_safety in page.locator('label.check-row').inner_text()
+                            assert expected_safety in page.get_by_test_id('login-gate').locator('label.check-row').inner_text()
                             # Require the protected authenticated topbar, wallet, and diagnostics provenance to remain absent for guests.
                             assert not page.get_by_test_id('premium-topbar').is_visible() and not page.get_by_test_id('premium-wallet').is_visible() and not page.get_by_test_id('shell-status').is_visible()
                             # Capture exact-head restricted-preview guest evidence at every governed viewport.
