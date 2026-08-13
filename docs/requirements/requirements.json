@@ -11276,6 +11276,43 @@
       "notes": "The suite reads workflow and source text and exercises pure argument guards only; it opens no listener, browser, GitHub, database, provider, credential, or production connection."
     },
     {
+      "id": "TOOL-018",
+      "module": "Tooling",
+      "description": "Independent module revisions are validated generically from the aggregate and every module descriptor, and pull-request CI rejects any semantic downgrade or removal against the immutable event-base manifest. The sanctioned bump helper updates only the selected descriptor and its aggregate entry; conflict-prone per-module version literals are prohibited from the request-latency oracle.",
+      "status": "PASS",
+      "api_tests": [
+        "GOV-MODULE-VERSIONS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "scripts/validate_versions.py",
+        "scripts/bump_module_version.py",
+        ".github/workflows/ci.yml",
+        "tests/module_version_governance_tests.py"
+      ],
+      "introduced_in": "issue-707-generic-module-version-governance",
+      "changed_in": "issue-707-generic-module-version-governance",
+      "notes": "The exact-base manifest is fetched by immutable SHA only on pull requests. Local and protected-main validation retain descriptor equality and complete version-shape checks without requiring Git history."
+    },
+    {
+      "id": "TEST-184",
+      "module": "Tests",
+      "description": "Listener-free evidence proves the sanctioned helper produces an aligned monotonic bump without shared test-pin edits, downgrades and removals fail against an exact baseline, new modules remain additive, CI fetches the immutable pull-request base SHA, and the former request-latency module-version literals remain absent.",
+      "status": "PASS",
+      "api_tests": [
+        "GOV-MODULE-VERSIONS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/module_version_governance_tests.py",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-707-generic-module-version-governance",
+      "changed_in": "issue-707-generic-module-version-governance",
+      "notes": "All mutations occur below a disposable temporary root; the suite opens no listener, browser, GitHub, database, provider, credential, or production connection."
+    },
+    {
       "id": "TEST-175",
       "module": "Tests",
       "description": "A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.",

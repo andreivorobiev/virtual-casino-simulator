@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.91.0
-- docs: 1.87.0
+- tests: 1.92.0
+- docs: 1.88.0
 - contracts: 1.61.4
-- tooling: 1.37.0
+- tooling: 1.38.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.5
 - poker_dice: 1.1.3
@@ -661,6 +661,8 @@ Historical source baseline: 9.1.0
 - **TEST-182** (Tests) - PASS: Listener-free evidence seeds a representative Roulette translation miss, proves the assertion formatter names its locale, loaded domains, and exact missing key, and binds both cumulative Browser assertions to that shared formatter.
 - **TOOL-017** (Tooling) - PASS: Ordinary pull requests classify Long Suite 100 scope fail closed, skip all four workers only for an explicitly documentation-only diff while preserving the exact required aggregate context, and build unpublished release candidates from exact-head sibling required-context evidence without repeating their validators. Manual, protected-main, and release-event candidates retain the complete canonical validation sequence.
 - **TEST-183** (Tests) - PASS: Listener-free tests prove the documentation-only classifier, behavior-bearing fail-closed paths, exact long_suite_100 gate identity, successful-or-explicit-skip dependency contract, one PR-only optimized release command, full manual and release commands, and rejection of local optimized-mode use before subprocess execution.
+- **TOOL-018** (Tooling) - PASS: Independent module revisions are validated generically from the aggregate and every module descriptor, and pull-request CI rejects any semantic downgrade or removal against the immutable event-base manifest. The sanctioned bump helper updates only the selected descriptor and its aggregate entry; conflict-prone per-module version literals are prohibited from the request-latency oracle.
+- **TEST-184** (Tests) - PASS: Listener-free evidence proves the sanctioned helper produces an aligned monotonic bump without shared test-pin edits, downgrades and removals fail against an exact baseline, new modules remain additive, CI fetches the immutable pull-request base SHA, and the former request-latency module-version literals remain absent.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.

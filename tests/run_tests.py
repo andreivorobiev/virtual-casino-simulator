@@ -1480,6 +1480,8 @@ def run_api_tests():
     run_case('UI-ROULETTE-I18N-DIAGNOSTICS-001',['I18N-013','TEST-182'],lambda: run_unit_module('tests.roulette_i18n_diagnostics_tests','Roulette i18n diagnostics suite failed'))
     # Prove docs-only long-suite filtering and exact-head sibling-gate release evidence without weakening contexts. (issue #710)
     run_case('CI-COMPUTE-001',['TOOL-017','TEST-183'],lambda: run_unit_module('tests.ci_compute_tests','CI compute optimization suite failed'))
+    # Enforce generic descriptor equality and exact-base monotonic revisions without shared pin literals. (issue #707)
+    run_case('GOV-MODULE-VERSIONS-001',['TOOL-018','TEST-184'],lambda: run_unit_module('tests.module_version_governance_tests','module version governance suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)

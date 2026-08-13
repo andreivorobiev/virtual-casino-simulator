@@ -77,7 +77,14 @@ jobs:
           python -m tests.game_economics_registry_tests
           python scripts/validate_agent_memory.py
           python scripts/validate_requirements.py
-          python scripts/validate_versions.py
+          # Compare every module generically with the exact pull-request base; protected-main pushes retain ordinary validation. (TEST-184)
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
+            git show "${{ github.event.pull_request.base.sha }}:modules/module-manifest.json" > "$RUNNER_TEMP/module-manifest-base.json"
+            python scripts/validate_versions.py --baseline-manifest "$RUNNER_TEMP/module-manifest-base.json"
+          else
+            python scripts/validate_versions.py
+          fi
       # Retain only aggregate exact-source timing and the bounded acceptance decision. (issue #323, TEST-170)
       - name: Upload request-latency evidence
         uses: actions/upload-artifact@v4
