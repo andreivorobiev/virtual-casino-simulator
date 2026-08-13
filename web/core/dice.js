@@ -38,7 +38,7 @@ function randomSample(random) {
 // Create a compact Mulberry32 generator from a numeric or string seed.
 export function createSeededRandom(seed) {
   let state = normalizeSeed(seed); // Store private generator state for this seeded sequence.
-  // Return the deterministic hook consumed by rollDie and rollDice.
+  // Return the deterministic hook consumed by the public grouped-dice helper.
   return function seededRandom() {
     state = (state + 0x6d2b79f5) >>> 0; // Advance the sequence by the algorithm constant.
     let value = state; // Copy state before applying the output mixing steps.
@@ -46,12 +46,6 @@ export function createSeededRandom(seed) {
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61); // Apply the second 32-bit mix.
     return ((value ^ (value >>> 14)) >>> 0) / UINT32_RANGE; // Normalize the mixed word to [0, 1).
   };
-}
-
-// Roll one die with configurable sides and an injectable random source.
-export function rollDie({ sides = 6, random = Math.random } = {}) {
-  const validSides = requirePositiveInteger("sides", sides); // Validate the die before sampling.
-  return Math.floor(randomSample(random) * validSides) + 1; // Map the sample uniformly to a one-based face.
 }
 
 // Roll an ordered group of independent dice through the same random source.

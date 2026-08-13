@@ -39,12 +39,6 @@ async function main() {
   assert.match(hidden, / safe"/);
   // Verify the unsafe handler text is absent.
   assert.doesNotMatch(hidden, /onclick/);
-  // Render a labeled responsive card group.
-  const group = renderer.renderCardGroup(['AS', '10D'], { label: 'Player hand' });
-  // Verify group semantics and the multi-character ten rank.
-  assert.match(group, /role="group" aria-label="Player hand"/);
-  // Verify both cards render under the group.
-  assert.equal((group.match(/role="img"/g) || []).length, 2);
   // Simulate a platform that requests reduced motion.
   const reduced = renderer.prefersReducedMotion(query => ({ matches: query.includes('reduce') }));
   // Verify the media-query adapter reports the preference.

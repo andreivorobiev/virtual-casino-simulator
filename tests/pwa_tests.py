@@ -350,7 +350,7 @@ class PwaFoundationTests(unittest.TestCase):
         # Build one dependency-free deterministic DOM, clock, and lifecycle harness around the real module.
         script = f"""
 // Import the exact production controller rather than copying any implementation into the test.
-import {{ createWalletCelebration, createWalletCelebrationLifecycle, MAX_COIN_COUNT }} from {json.dumps(module_url)};
+import {{ createWalletCelebration, createWalletCelebrationLifecycle }} from {json.dumps(module_url)};
 // Fail with one focused label when a deterministic contract assertion is false.
 const assert = (condition, label) => {{ if (!condition) throw new Error(label); }};
 // Compare structured values without depending on object identity.
@@ -468,7 +468,7 @@ const firstCoinLayer = body.children[0];
 // Retain its scheduled callback for hostile replay after interruption.
 const staleLargeGainCallback = timerHistory.at(-1);
 // Require the exact large-gain class, two owned nodes, and bounded coin count.
-equal([amount.textContent, controllerSnapshot().active, controllerSnapshot().nodes, firstCoinLayer.children.length], ['400.00', 'big-gain', 2, MAX_COIN_COUNT], 'large gain bounded');
+equal([amount.textContent, controllerSnapshot().active, controllerSnapshot().nodes, firstCoinLayer.children.length], ['400.00', 'big-gain', 2, 12], 'large gain bounded');
 // Overlap the large gain with a newer ordinary gain before its timer settles.
 lifecycle.update(425, settleDisplay);
 // Require the older action to terminalize once and the latest exact amount to win immediately.

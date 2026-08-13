@@ -48,10 +48,10 @@ Game workers remain responsible for game-specific paytables. For example, Jacks-
 Import from `web/core/cards.js`, and include `web/core/cards.css` from the consuming game's isolated stylesheet or page assembly:
 
 ```javascript
-import { renderCard, renderCardGroup } from '../core/cards.js';
+import { renderCard } from '../core/cards.js';
 
 const held = renderCard('AH', { selected: true });
-const hand = renderCardGroup(['AH', '10D', '3C'], { label: 'Player hand' });
+const hand = ['AH', '10D', '3C'].map(card => renderCard(card)).join('');
 ```
 
 `renderCard` accepts compact strings or `{ rank, suit }` objects. Use `{ hidden: true }` or the compatibility marker `??` for a face-down card. The renderer:

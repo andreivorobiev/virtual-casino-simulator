@@ -434,5 +434,3 @@ export function safe(s){ return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'
 export function renderPremiumTag(label){ return `<span class="tag">${safe(label)}</span>`; }
 // Export this symbol so later game workers can reuse compact shell rail metrics.
 export function renderShellMetric(label,value){ return `<div class="mini-stat"><span>${safe(label)}</span><strong>${safe(value)}</strong></div>`; }
-// Export this symbol so later game workers can reuse signed ledger amount formatting.
-export function signedMoney(n){ const amount=Number(n||0); return `${amount>=0?'+':'-'}${money(Math.abs(amount))}`; }

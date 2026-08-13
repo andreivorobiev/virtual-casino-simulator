@@ -1467,6 +1467,8 @@ def run_api_tests():
     run_case('GOV-GAME-SUITES-001',['TEST-161'],run_complete_game_suite_discovery)
     # Record deterministic requirement-source partitioning and aggregate drift rejection. (issue #434, TEST-165)
     run_case('GOV-REQUIREMENT-SHARDS-001',['TEST-165'],lambda: run_unit_module('tests.requirements_sharding_tests','requirement sharding suite failed'))
+    # Reject stale requirement inventories, placeholder gates, and reviewed production-unused exports. (issue #711)
+    run_case('GOV-DEAD-ARTIFACTS-001',['TOOL-016','TEST-181'],lambda: run_unit_module('tests.dead_artifact_tests','dead artifact cleanup suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)

@@ -3,11 +3,11 @@
 // Provide one shell-owned wallet celebration controller with no game, API, or wallet authority. (UX-023)
 
 // Bound the stronger celebration to reviewed fake-token gains of at least this amount.
-export const BIG_GAIN_THRESHOLD = 250;
+const BIG_GAIN_THRESHOLD = 250;
 // Bound the decorative coin layer so one update cannot grow the document without limit.
-export const MAX_COIN_COUNT = 12;
+const MAX_COIN_COUNT = 12;
 // Bound every normal-motion effect before lifecycle cleanup removes all transient state.
-export const CELEBRATION_DURATION_MS = 1200;
+const CELEBRATION_DURATION_MS = 1200;
 
 // Format one already-authoritative numeric wallet value without adding a currency glyph.
 function defaultFormatAmount(value) {

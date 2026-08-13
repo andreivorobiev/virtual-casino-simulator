@@ -65,18 +65,6 @@ export function renderCard(card, options = {}) {
   return `<span class="${classes}" role="img" aria-label="${escapeHtml(normalized.label)}"${selected ? ' aria-current="true"' : ''}><span class="playing-card__rank" aria-hidden="true">${escapeHtml(normalized.rank)}</span><span class="playing-card__suit" aria-hidden="true">${escapeHtml(normalized.symbol)}</span></span>`;
 }
 
-// Render a responsive labeled group without introducing timers or animation state.
-export function renderCardGroup(cards, options = {}) {
-  // Require a real array so accidental strings are not rendered character by character.
-  if (!Array.isArray(cards)) throw new TypeError('cards must be an array');
-  // Use a caller-provided accessible name or a neutral default.
-  const label = escapeHtml(options.label || 'Playing cards');
-  // Apply shared card options consistently to every item in the group.
-  const rendered = cards.map(card => renderCard(card, options.cardOptions || {})).join('');
-  // Return a flex-based group whose companion CSS wraps at narrow widths.
-  return `<div class="playing-card-group" role="group" aria-label="${label}">${rendered}</div>`;
-}
-
 // Report the user's reduced-motion preference without requiring a browser global.
 export function prefersReducedMotion(matchMedia = globalThis.matchMedia) {
   // Avoid animation when the platform exposes and matches the standard media query.
