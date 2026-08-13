@@ -182,6 +182,21 @@ class PwaFoundationTests(unittest.TestCase):
         # Require the exact low-cardinality version response.
         self.assertIn("{ type: 'PWA_VERSION', version: APP_VERSION }", worker)
 
+    # Require client registration to observe an update that starts before listener wiring completes. (PWA-003)
+    def test_client_closes_existing_installation_observer_race(self):
+        # Read the production PWA controller as the executable lifecycle contract.
+        client = (ROOT / "web" / "core" / "pwa.js").read_text(encoding="utf-8")
+        # Require one shared observer to accept an already captured installing worker.
+        self.assertIn("function observeInstallingWorker(installing)", client)
+        # Require immediate state inspection in addition to future state-change observation.
+        self.assertIn("installing.addEventListener('statechange', revealWhenInstalled);", client)
+        # Require the immediate inspection to occur after listener attachment so no later transition is lost.
+        self.assertLess(client.index("installing.addEventListener('statechange', revealWhenInstalled);"), client.index("revealWhenInstalled();"))
+        # Require registration to inspect an installation that predates the updatefound listener callback.
+        self.assertIn("observeInstallingWorker(registration.installing);", client)
+        # Require a final waiting-slot read after listener wiring closes the installation-to-waiting edge.
+        self.assertGreater(client.rindex("if (registration.waiting) { updateWaiting = true; renderPwaState('update'); }"), client.index("registration.addEventListener('updatefound'"))
+
     # Require browser acceptance to serialize activation before a controlled reload and controller proof.
     def test_browser_acceptance_serializes_worker_readiness(self):
         # Read the browser acceptance harness as governed source without starting Chromium.
