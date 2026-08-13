@@ -3956,7 +3956,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             guest_results=[]
             # Default the admission-UI proof to true for shards that do not own the guest lifecycle group.
             guest_policy_disabled_result=True
-            # Exercise the truthful disabled login control once on the shard that owns guest lifecycle Browser evidence.
+            # Exercise truthful policy omission once on the shard that owns guest lifecycle Browser evidence. (UX-028)
             if browser_shard_owns_group('guest_lifecycle'):
                 # Create one isolated context so the mocked read-only policy cannot affect real guest creation cases.
                 guest_policy_context=browser.new_context(viewport=guest_viewports['desktop_primary'])
@@ -3966,10 +3966,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 guest_policy_page.route('**/api/v2/auth/enrollment-policy',lambda route: route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'enrollment_mode':'closed','signup_enabled':False,'signup_methods':{'email':False,'google':False,'facebook':False},'guest_trials_enabled':False,'invitation_enrollment_enabled':False,'guest_conversion_enabled':True,'passkeys_enabled':False,'canonical_identity':'casino_user_id','shared_auth_origin':'tiltseven_first_party'}})))
                 # Start protected inspection so the isolated browser context always closes.
                 try:
-                    # Navigate to the real login shell and wait for the mocked policy to settle.
-                    guest_policy_page.goto(base,wait_until='networkidle'); guest_policy_page.get_by_test_id('login-gate').wait_for(timeout=5000)
-                    # Require native disabled state, matching assistive state, and explicit unavailable copy.
-                    guest_policy_disabled_result=guest_policy_page.get_by_test_id('guest-trial-button').is_disabled() and guest_policy_page.get_by_test_id('guest-trial-button').get_attribute('aria-disabled')=='true' and bool(guest_policy_page.get_by_test_id('guest-trial-copy').inner_text().strip())
+                    # Navigate to the real login shell and wait for the mocked policy-owned unavailable chip.
+                    guest_policy_page.goto(base,wait_until='networkidle'); guest_policy_page.get_by_test_id('guest-trial-unavailable').wait_for(timeout=5000)
+                    # Require the unauthorized mutation control to be absent with no disabled interactive substitute.
+                    guest_policy_disabled_result=guest_policy_page.get_by_test_id('guest-trial-button').count()==0 and guest_policy_page.get_by_test_id('guest-trial-unavailable').is_visible() and guest_policy_page.locator('[data-testid="login-gate"] :is(button,input,select):disabled').count()==0
                 # Destroy the mocked context before real guest creation begins.
                 finally:
                     # Close page, routes, cookies, and storage together.
@@ -3985,25 +3985,39 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Start protected guest verification so context and temporary credentials always close.
                     try:
                         # Navigate without a seeded cookie so the real backend returns the login gate.
-                        guest_page.goto(base,wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                        guest_page.goto(base,wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=5000); guest_page.get_by_test_id('guest-trial-button').wait_for(timeout=5000)
                         # Select the tested locale through the browser-visible login control.
                         guest_page.get_by_test_id('auth-locale-select').select_option(guest_locale)
                         # Wait until translated disposable terms copy replaces the prior locale.
                         guest_page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=guest_locale)
                         # Prove a button click without affirmative consent creates no session or route transition.
                         guest_page.get_by_test_id('guest-trial-button').click(); guest_page.wait_for_timeout(100)
-                        # Require the localized validation message and unchanged login surface.
-                        assert guest_page.get_by_test_id('login-gate').is_visible() and guest_page.locator('#auth-message').inner_text().strip()
-                        # Focus the consent row for visible keyboard-state evidence.
-                        guest_page.get_by_test_id('login-terms-check').focus()
+                        # Require the localized shared validation message, unchanged login surface, and exact checkbox focus.
+                        assert guest_page.get_by_test_id('login-gate').is_visible() and guest_page.locator('#auth-message').inner_text().strip()==read_i18n_json(ROOT/'web'/'i18n'/guest_locale/'shell.json')['auth.termsRequired'] and guest_page.evaluate("() => document.activeElement?.dataset.testid==='login-terms-check'")
+                        # Require the lifecycle disclosure to be collapsed and button-owned before interaction.
+                        assert guest_page.get_by_test_id('guest-disclosure-toggle').get_attribute('aria-expanded')=='false' and guest_page.get_by_test_id('guest-trial-details').is_hidden()
+                        # Expand the real disclosure without animation or a second live announcement.
+                        guest_page.get_by_test_id('guest-disclosure-toggle').click()
+                        # Require the unchanged complete lifecycle wording and exact expanded semantics.
+                        assert guest_page.get_by_test_id('guest-disclosure-toggle').get_attribute('aria-expanded')=='true' and guest_page.get_by_test_id('guest-trial-details').inner_text()==read_i18n_json(ROOT/'web'/'i18n'/guest_locale/'shell.json')['auth.guestInfo'] and guest_page.evaluate("() => getComputedStyle(document.querySelector('[data-testid=guest-trial-details]')).animationName==='none'")
+                        # Collapse optional lifecycle detail before fit evidence and downstream actions.
+                        guest_page.get_by_test_id('guest-disclosure-toggle').click()
+                        # Require one live owner and no permanently disabled interactive element in the settled default gate.
+                        assert guest_page.locator('[data-testid="login-gate"] [aria-live]').count()==1 and guest_page.locator('[data-testid="login-gate"] :is(button,input,select):disabled').count()==0
+                        # Require brand, legal line, guest, terms, and returning-user block above the 375-by-812 fold.
+                        if guest_viewport_id=='mobile':
+                            # Read the complete accepted mobile geometry from the browser after policy settlement.
+                            mobile_fit=guest_page.evaluate("() => ({scrollHeight:document.documentElement.scrollHeight,innerHeight,guest:document.querySelector('[data-testid=guest-trial-button]')?.getBoundingClientRect().bottom||0,terms:document.querySelector('[data-testid=login-terms-check]')?.closest('label')?.getBoundingClientRect().bottom||0,signin:document.querySelector('.auth-signin')?.getBoundingClientRect().bottom||0,legal:document.querySelector('#auth-legal-line')?.getBoundingClientRect().bottom||0})")
+                            # Reject document scroll or any required decision extending below the exact phone viewport.
+                            assert mobile_fit['scrollHeight']<=mobile_fit['innerHeight']+1 and max(mobile_fit['guest'],mobile_fit['terms'],mobile_fit['signin'],mobile_fit['legal'])<=mobile_fit['innerHeight']+1,mobile_fit
                         # Require the complete login surface to stay inside the page viewport.
                         assert guest_page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
                         # Capture localized unaccepted-consent and disclosure evidence.
-                        guest_evidence(guest_page,f'after-pass-guest-auth-unaccepted-{guest_locale}-{guest_viewport_id}.png','auth',['guest','guest_terms_unaccepted','guest_disclosure'],guest_locale,guest_viewport_id)
+                        guest_evidence(guest_page,f'after-pass-guest-auth-unaccepted-{guest_locale}-{guest_viewport_id}.png','auth',['guest','guest_terms_unaccepted','guest_disclosure','reduced_motion'],guest_locale,guest_viewport_id)
                         # Accept the visible versioned terms through the native checkbox.
                         guest_page.get_by_test_id('login-terms-check').check()
                         # Capture the explicit accepted state separately from the required unaccepted state.
-                        guest_evidence(guest_page,f'after-pass-guest-auth-accepted-{guest_locale}-{guest_viewport_id}.png','auth',['guest','guest_terms_accepted','guest_disclosure'],guest_locale,guest_viewport_id)
+                        guest_evidence(guest_page,f'after-pass-guest-auth-accepted-{guest_locale}-{guest_viewport_id}.png','auth',['guest','guest_terms_accepted','guest_disclosure','reduced_motion'],guest_locale,guest_viewport_id)
                         # Observe real guest creation after affirmative consent.
                         with guest_page.expect_response(lambda response: response.url.endswith('/api/v2/auth/guest') and response.request.method=='POST') as guest_response_info:
                             # Start the disposable session through the visible account-free action.
@@ -4099,7 +4113,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Destroy the replacement context and its now-revoked cookie.
                 replacement_context.close()
             # Record the full locale, viewport, consent, lifecycle, authorization, refresh, and browser-close matrix.
-            run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','GUEST-006','USER-008','USER-009','CONVERT-003','TEST-081','TEST-158'],lambda: guest_policy_disabled_result and len(guest_results)==8 and all(result['created'] and result['role']=='guest' and result['balance']==10000.0 and result['conversion_visible'] and result['marker']=='true' and result['top_up_hidden'] and result['expiry_notice'] and result['game_entered'] and result['admin_code']=='FORBIDDEN' and result['ended'] and result['contained'] for result in guest_results) and all(guest_close_results))
+            run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','GUEST-006','UX-028','USER-008','USER-009','CONVERT-003','TEST-081','TEST-158','TEST-176'],lambda: guest_policy_disabled_result and len(guest_results)==8 and all(result['created'] and result['role']=='guest' and result['balance']==10000.0 and result['conversion_visible'] and result['marker']=='true' and result['top_up_hidden'] and result['expiry_notice'] and result['game_entered'] and result['admin_code']=='FORBIDDEN' and result['ended'] and result['contained'] for result in guest_results) and all(guest_close_results))
             # Record the separately named same-context refresh and browser-context loss acceptance.
             run_case('BR-GUEST-REFRESH-001',['GUEST-002','TEST-081'],lambda: len(guest_results)==8 and all(result['ended'] for result in guest_results) and all(guest_close_results))
             # Refresh the direct API harness Admin session after the browser login added a concurrent session (issue #226).
@@ -4474,61 +4488,59 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
                     # Record guest/restricted-preview title, access-boundary, safety-copy, locale, and viewport acceptance.
                     run_case('BR-SHELL-BRAND-GUEST-001',['UX-014','TEST-079'],guest_restricted_brand_copy)
-                    # Define disabled OAuth control, localization, no-request, and visual evidence acceptance.
+                    # Define policy-aware OAuth omission, localization, no-request, and visual evidence acceptance. (UX-028)
                     def oauth_disabled_browser():
                         # Read all four governed Auth viewports from the authoritative visual matrix.
                         viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
                         # Require the complete desktop, compact, tablet, and mobile matrix.
                         assert set(viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
-                        # Exercise the disabled controls in every installed Auth locale.
+                        # Exercise default action omission in every installed Auth locale.
                         for locale in ('en-US','ru-RU'):
                             # Switch the visible login gate through its own localized selector.
                             page.get_by_test_id('auth-locale-select').select_option(locale)
                             # Wait for the synchronous gate rerender and active locale state.
                             page.wait_for_function("locale => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === locale",arg=locale)
-                            # Select one locale-specific control label as the DOM rerender barrier for evidence.
-                            expected_google={'en-US':'Continue with Google','ru-RU':'Продолжить с Google'}[locale]
-                            # Wait until the visible disabled control contains the active locale's exact copy.
-                            page.wait_for_function("expected => document.querySelector('[data-testid=\"oauth-google\"]')?.textContent.trim() === expected",arg=expected_google)
-                            # Read fresh controls after the locale-triggered DOM replacement.
-                            google=page.get_by_test_id('oauth-google'); facebook=page.get_by_test_id('oauth-facebook')
-                            # Require both semantic controls and their explanation to be visible.
-                            assert google.is_visible() and facebook.is_visible() and page.get_by_test_id('oauth-provider-message').is_visible()
-                            # Require native disabled state plus the redundant accessibility state.
-                            assert google.is_disabled() and facebook.is_disabled() and google.get_attribute('aria-disabled')=='true' and facebook.get_attribute('aria-disabled')=='true'
-                            # Require no navigation or submission target on either held control.
-                            assert google.get_attribute('href') is None and facebook.get_attribute('href') is None and google.get_attribute('formaction') is None and facebook.get_attribute('formaction') is None
-                            # Programmatically invoke both controls to prove no handler, popup, or navigation is attached.
-                            page.evaluate("() => { document.querySelector('[data-testid=\"oauth-google\"]').click(); document.querySelector('[data-testid=\"oauth-facebook\"]').click(); }")
-                            # Require the browser to remain on the local login page with zero provider-action traffic.
-                            assert page.url.rstrip('/')==base and not provider_requests
-                            # Capture exact-head after-pass evidence at both governed viewports.
+                            # Wait for the policy-owned invite chip to prove asynchronous capability settlement.
+                            page.get_by_test_id('signup-invite-only').wait_for(timeout=5000)
+                            # Require unavailable signup and provider actions to be absent rather than disabled.
+                            assert page.get_by_test_id('signup-entry-link').count()==0 and page.get_by_test_id('oauth-google').count()==0 and page.get_by_test_id('oauth-facebook').count()==0 and page.get_by_test_id('oauth-providers-available').count()==0
+                            # Expand the invite-only explanation through its real button-owned disclosure.
+                            page.get_by_test_id('signup-invite-only').click()
+                            # Require exact expanded semantics and localized explanatory copy.
+                            assert page.get_by_test_id('signup-invite-only').get_attribute('aria-expanded')=='true' and page.get_by_test_id('signup-invite-only-copy').is_visible() and page.get_by_test_id('signup-invite-only-copy').inner_text()==read_i18n_json(ROOT/'web'/'i18n'/locale/'shell.json')['signup.entryCopy']
+                            # Collapse the optional explanation before governed fit evidence.
+                            page.get_by_test_id('signup-invite-only').click()
+                            # Require no dead controls, no provider action traffic, and one live status owner.
+                            assert page.locator('[data-testid="login-gate"] :is(button,input,select):disabled').count()==0 and not provider_requests and page.locator('[data-testid="login-gate"] [aria-live]').count()==1
+                            # Capture exact-head default-policy evidence at every governed viewport.
                             for viewport_id,viewport in viewports.items():
                                 # Resize to the matrix dimensions before checking layout and capturing evidence.
                                 page.set_viewport_size(viewport); page.wait_for_timeout(150)
                                 # Require neither the document nor the Auth scroll container/card to overflow horizontally.
                                 assert page.evaluate("() => { const screen=document.querySelector('.auth-screen'); const panel=document.querySelector('.auth-panel'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && screen.scrollWidth <= screen.clientWidth + 1 && panel.scrollWidth <= panel.clientWidth + 1; }")
-                                # Write the PNG and metadata sidecar through the shared exact-head evidence helper.
-                                game_evidence(f'after-pass-auth-oauth-providers-disabled-{locale}-{viewport_id}.png','auth',['oauth_providers_disabled'],locale,viewport_id)
-                        # Override only the boolean public status endpoint without contacting any provider.
+                                # Write policy-aware omission evidence through the shared exact-head helper.
+                                game_evidence(f'after-pass-auth-policy-default-{locale}-{viewport_id}.png','auth',['policy_default','invite_only','oauth_actions_omitted'],locale,viewport_id)
+                        # Override the read-only enrollment endpoint with actionable signup policy.
+                        page.route('**/api/v2/auth/enrollment-policy',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"enrollment_mode":"self-signup","signup_enabled":true,"signup_methods":{"email":true,"google":true,"facebook":false},"guest_trials_enabled":true,"invitation_enrollment_enabled":true,"guest_conversion_enabled":true,"passkeys_enabled":false,"canonical_identity":"casino_user_id","shared_auth_origin":"tiltseven_first_party"}}'))
+                        # Publish one sign-in-ready provider and keep the second unavailable.
                         page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","available":true,"signup_available":false},{"provider":"facebook","available":false,"signup_available":false}]}}'))
-                        # Exercise available-provider copy and native states in both locales.
+                        # Exercise available signup and provider actions in both locales.
                         for locale in ('en-US','ru-RU'):
-                            # Trigger a fresh status request through the visible locale rerender.
+                            # Trigger fresh policy and provider reads through the visible locale rerender.
                             page.get_by_test_id('auth-locale-select').select_option(locale)
-                            # Wait until the exact available state and one independently enabled provider commit.
-                            page.get_by_test_id('oauth-providers-available').wait_for(timeout=5000)
-                            # Require only the released provider to be interactive.
-                            assert not page.get_by_test_id('oauth-google').is_disabled() and page.get_by_test_id('oauth-facebook').is_disabled()
-                            # Capture every governed viewport without activating the sensitive navigation action.
+                            # Wait until the exact available provider and signup actions commit.
+                            page.get_by_test_id('oauth-providers-available').wait_for(timeout=5000); page.get_by_test_id('signup-entry-link').wait_for(timeout=5000)
+                            # Require only released actions to exist, with no disabled Facebook substitute.
+                            assert page.get_by_test_id('oauth-google').is_visible() and page.get_by_test_id('oauth-facebook').count()==0 and page.get_by_test_id('signup-entry-link').is_visible() and page.get_by_test_id('signup-invite-only').count()==0 and page.locator('[data-testid="login-gate"] :is(button,input,select):disabled').count()==0
+                            # Capture every governed viewport without activating sensitive navigation.
                             for viewport_id,viewport in viewports.items():
                                 # Resize to the exact matrix dimensions.
                                 page.set_viewport_size(viewport); page.wait_for_timeout(100)
-                                # Require the Auth panel and provider controls to remain horizontally contained.
+                                # Require the Auth panel and available controls to remain horizontally contained.
                                 assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
                                 # Record available-provider after-pass evidence without a provider request.
-                                game_evidence(f'after-pass-auth-oauth-providers-available-{locale}-{viewport_id}.png','auth',['oauth_providers_available'],locale,viewport_id)
-                        # Replace public status with one generic unavailable envelope.
+                                game_evidence(f'after-pass-auth-oauth-providers-available-{locale}-{viewport_id}.png','auth',['signup_available','oauth_providers_available'],locale,viewport_id)
+                        # Replace public provider status with one generic unavailable envelope.
                         page.unroute('**/api/v2/auth/oauth/providers')
                         # Intercept the next status request as a fixed server failure.
                         page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"PROVIDER_UNAVAILABLE","message":"Provider is temporarily unavailable"}}'))
@@ -4536,10 +4548,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         for locale in ('en-US','ru-RU'):
                             # Trigger a fresh failed status request through the visible locale rerender.
                             page.get_by_test_id('auth-locale-select').select_option(locale)
-                            # Wait for the governed low-cardinality error marker.
-                            page.get_by_test_id('oauth-providers-status-error').wait_for(timeout=5000)
-                            # Require both provider actions to remain native-disabled after failure.
-                            assert page.get_by_test_id('oauth-google').is_disabled() and page.get_by_test_id('oauth-facebook').is_disabled()
+                            # Wait for the governed low-cardinality attached error marker.
+                            page.get_by_test_id('oauth-providers-status-error').wait_for(state='attached',timeout=5000)
+                            # Require provider actions absent and the sole live owner to expose localized feedback.
+                            assert page.get_by_test_id('oauth-google').count()==0 and page.get_by_test_id('oauth-facebook').count()==0 and page.locator('[data-testid="login-gate"] [aria-live]').count()==1 and page.get_by_test_id('oauth-callback-message').inner_text()==read_i18n_json(ROOT/'web'/'i18n'/locale/'shell.json')['auth.oauthStatusError']
                             # Capture every governed viewport for the generic failure state.
                             for viewport_id,viewport in viewports.items():
                                 # Resize to exact governed dimensions before capture.
@@ -4547,19 +4559,23 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Require no page or Auth-panel horizontal spill.
                                 assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
                                 # Record generic status-error evidence without raw server or provider detail.
-                                game_evidence(f'after-pass-auth-oauth-status-error-{locale}-{viewport_id}.png','auth',['oauth_provider_status_error'],locale,viewport_id)
-                        # Restore the real default-held endpoint before downstream login acceptance.
+                                game_evidence(f'after-pass-auth-oauth-status-error-{locale}-{viewport_id}.png','auth',['oauth_provider_status_error','oauth_actions_omitted'],locale,viewport_id)
+                        # Restore the real default-held provider endpoint before downstream login acceptance.
                         page.unroute('**/api/v2/auth/oauth/providers')
+                        # Restore the real default-held enrollment policy alongside provider status.
+                        page.unroute('**/api/v2/auth/enrollment-policy')
                         # Remove the intentionally generated 503 from the broad unexpected-response collector.
                         http_errors.clear()
-                        # Trigger one final real disabled status refresh through the visible locale selector.
-                        page.get_by_test_id('auth-locale-select').select_option('ru-RU')
-                        # Wait for the default-held state before downstream Auth tests continue.
-                        page.get_by_test_id('oauth-providers-disabled').wait_for(timeout=5000)
+                        # Trigger one final real policy-aware refresh through a guaranteed locale change.
+                        page.get_by_test_id('auth-locale-select').select_option('en-US')
+                        # Wait for invite-only policy and provider omission before downstream Auth tests continue.
+                        page.get_by_test_id('signup-invite-only').wait_for(timeout=5000); page.wait_for_function("() => !document.querySelector('[data-testid=oauth-providers-available]')")
+                        # Restore Russian through a second real change so downstream login coverage receives fresh default policy.
+                        page.get_by_test_id('auth-locale-select').select_option('ru-RU'); page.get_by_test_id('signup-invite-only').wait_for(timeout=5000)
                         # Restore the primary viewport while leaving Russian selected for the existing login flow.
                         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
-                    # Record provider-disabled EN/RU controls, no-request behavior, and visual evidence.
-                    run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','OAUTH-007','OAUTH-010','TEST-045','TEST-093'],oauth_disabled_browser)
+                    # Record policy-aware EN/RU action omission, availability, errors, and visual evidence.
+                    run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','OAUTH-007','OAUTH-010','UX-028','TEST-045','TEST-093','TEST-176'],oauth_disabled_browser)
                     # Define social-signup policy, consent, localization, and containment acceptance. (OAUTH-013)
                     def oauth_signup_browser():
                         # Read all governed Auth viewports from the authoritative visual matrix.
@@ -4652,14 +4668,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         touch_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
                         # Require the complete desktop, tablet, and mobile viewport set.
                         assert set(touch_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
-                        # Name each login control and use the clickable parent row for the small checkbox glyph.
-                        auth_targets=[{'name':'email','selector':'[data-testid="login-email"]'},{'name':'password','selector':'[data-testid="login-password"]'},{'name':'locale','selector':'[data-testid="auth-locale-select"]'},{'name':'terms-row','selector':'[data-testid="login-terms-check"]','closest':'.check-row'},{'name':'submit','selector':'[data-testid="login-submit"]'},{'name':'google','selector':'[data-testid="oauth-google"]'},{'name':'facebook','selector':'[data-testid="oauth-facebook"]'}]
+                        # Name each default actionable login control and use the clickable parent row for the checkbox glyph.
+                        auth_targets=[{'name':'guest','selector':'[data-testid="guest-trial-button"]'},{'name':'guest-details','selector':'[data-testid="guest-disclosure-toggle"]'},{'name':'terms-row','selector':'[data-testid="login-terms-check"]','closest':'.check-row'},{'name':'email','selector':'[data-testid="login-email"]'},{'name':'password','selector':'[data-testid="login-password"]'},{'name':'locale','selector':'[data-testid="auth-locale-select"]'},{'name':'submit','selector':'[data-testid="login-submit"]'},{'name':'reset','selector':'[data-testid="password-reset-entry"]'},{'name':'invite-only','selector':'[data-testid="signup-invite-only"]'}]
                         # Exercise the real localized Auth surface in both governed locales.
                         for locale in ('en-US','ru-RU'):
                             # Switch through the visible locale control so the whole gate rerenders normally.
                             page.get_by_test_id('auth-locale-select').select_option(locale)
                             # Wait for the active locale and replacement DOM to settle.
                             page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"login-email\"]')",arg=locale)
+                            # Wait for both independently loaded policy actions before measuring their hit geometry.
+                            page.get_by_test_id('guest-trial-button').wait_for(timeout=5000); page.get_by_test_id('signup-invite-only').wait_for(timeout=5000)
                             # Measure and capture every governed viewport for this locale.
                             for viewport_id,viewport in touch_viewports.items():
                                 # Apply the exact visual-matrix dimensions before reading hit geometry.
@@ -4677,7 +4695,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Wait for the restored Russian gate before handing off to the login case.
                         page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'ru-RU' && document.querySelector('[data-testid=\"login-email\"]')")
                     # Execute Auth touch-target acceptance under the adopted governance requirements.
-                    run_case('BR-TOUCH-TARGET-AUTH-001',['UX-018','TEST-087'],auth_touch_target_floor)
+                    run_case('BR-TOUCH-TARGET-AUTH-001',['UX-018','UX-028','TEST-087','TEST-176'],auth_touch_target_floor)
                     # Define the auth_login_gate function used by this module.
                     def auth_login_gate():
                         # Verify the login panel is visible before casino routes mount.
@@ -4686,6 +4704,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert not page.get_by_test_id('premium-topbar').is_visible()
                         # Verify the required toy-simulator terms checkbox is visible.
                         assert page.get_by_test_id('login-terms-check').is_visible()
+                        # Wait for the default policy-aware guest and invite-only decisions to settle.
+                        page.get_by_test_id('guest-trial-button').wait_for(timeout=5000); page.get_by_test_id('signup-invite-only').wait_for(timeout=5000)
+                        # Require one concise legal line, one live status owner, and zero disabled interactive elements.
+                        assert page.locator('#auth-legal-line').count()==1 and page.locator('[data-testid="login-gate"] [aria-live]').count()==1 and page.locator('[data-testid="login-gate"] :is(button,input,select):disabled').count()==0
+                        # Fill valid credential shapes so shared terms validation runs before the password API.
+                        page.get_by_test_id('login-email').fill('terms-check@example.invalid'); page.get_by_test_id('login-password').fill('not-a-real-password')
+                        # Invoke returning-user sign-in without terms through the visible secondary action.
+                        page.get_by_test_id('login-submit').click()
+                        # Require the same localized inline validation and exact checkbox focus as guest entry.
+                        assert page.get_by_test_id('oauth-callback-message').inner_text()==read_i18n_json(ROOT/'web'/'i18n'/'ru-RU'/'shell.json')['auth.termsRequired'] and page.evaluate("() => document.activeElement?.dataset.testid==='login-terms-check'")
+                        # Clear test-only credential shapes before the later real backend login flow.
+                        page.get_by_test_id('login-email').fill(''); page.get_by_test_id('login-password').fill('')
                         # Verify the bounded auth terms control now meets the enlarged touch-target height. (issue #283, auth control)
                         terms_row_height=page.evaluate("() => { const box=document.querySelector('[data-testid=\"login-terms-check\"]'); const row=box?box.closest('.check-row'):null; return row?row.getBoundingClientRect().height:0; }")
                         # Require the clickable terms row to reach at least the governed 42px target.
@@ -4699,6 +4729,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert submit_box and (submit_box['y'] + submit_box['height']) <= 720 + 1
                         # Capture short-viewport sign-in fit evidence for the auth handback.
                         shot('after-pass-auth-signin-fit-1280x720.png')
+                        # Constrain the gate to the issue-specific 375-by-812 phone viewport.
+                        page.set_viewport_size({'width':375,'height':812}); page.wait_for_timeout(150)
+                        # Read the brand, legal, guest, terms, and returning-user geometry after exact policy settlement.
+                        phone_fit=page.evaluate("() => ({scrollHeight:document.documentElement.scrollHeight,innerHeight,brand:document.querySelector('.auth-entry-header')?.getBoundingClientRect().bottom||0,legal:document.querySelector('#auth-legal-line')?.getBoundingClientRect().bottom||0,guest:document.querySelector('[data-testid=guest-trial-button]')?.getBoundingClientRect().bottom||0,terms:document.querySelector('[data-testid=login-terms-check]')?.closest('label')?.getBoundingClientRect().bottom||0,signin:document.querySelector('.auth-signin')?.getBoundingClientRect().bottom||0})")
+                        # Require the complete first decision hierarchy without page scroll or below-fold actions.
+                        assert phone_fit['scrollHeight']<=phone_fit['innerHeight']+1 and max(phone_fit['brand'],phone_fit['legal'],phone_fit['guest'],phone_fit['terms'],phone_fit['signin'])<=phone_fit['innerHeight']+1,phone_fit
+                        # Capture issue-specific mobile decision-hierarchy evidence outside the standard viewport sidecar matrix.
+                        shot('after-pass-auth-decision-ru-RU-mobile-375x812.png')
                         # Restore the primary viewport for downstream auth coverage.
                         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                         # Open enumeration-safe public recovery through the visible sign-in affordance. (RESET-004)
@@ -4708,8 +4746,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Capture the public recovery initiation surface without submitting any mailbox value.
                         shot('after-pass-password-reset-initiate.png')
                         # Return to the login gate so the existing real-backend authentication flow remains unchanged.
-                        page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
-                    run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001','AUTH-UI-002','RESET-004','TEST-071','TEST-158'],auth_login_gate)
+                        page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000); page.get_by_test_id('guest-trial-button').wait_for(timeout=5000); page.set_viewport_size({'width':1920,'height':1080})
+                    run_case('BR-AUTH-LOGIN-001',['AUTH-001','TERMS-001','AUTH-UI-002','RESET-004','UX-028','TEST-071','TEST-158','TEST-176'],auth_login_gate)
                     # Reselect the Russian gate through the visible control when this shard skipped the producing cases.
                     if not browser_shard_owns('BR-TOUCH-TARGET-AUTH-001'): page.get_by_test_id('auth-locale-select').select_option('ru-RU')
                     # Keep the Russian locale selected by the OAuth acceptance loop for login persistence coverage.

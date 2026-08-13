@@ -1376,7 +1376,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
         # Require the accepted aggregates plus the issue #456 catalog economics gate to total exactly 956 permanent rows.
-        self.assertEqual(len(requirements), 956)
+        self.assertEqual(len(requirements), 958)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1580,9 +1580,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
         # Require the Tests patch for immutable v0.9.5.76 release qualification.
-        self.assertEqual(tests_module["version"], "1.84.0")
+        self.assertEqual(tests_module["version"], "1.85.0")
         # Require the Docs patch for immutable v0.9.5.76 release governance.
-        self.assertEqual(docs_module["version"], "1.80.0")
+        self.assertEqual(docs_module["version"], "1.81.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the Contracts patch for the immutable v0.9.5.76 rollback record.
@@ -1602,7 +1602,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the compatible Slots minor for selectable governed reel profiles.
         self.assertEqual(slots_module["version"], "9.5.0")
         # Require the compatible Application patch for v0.9.5.76 packaging.
-        self.assertEqual(application_module["version"], "9.65.0")
+        self.assertEqual(application_module["version"], "9.66.0")
         # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
         self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

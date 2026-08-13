@@ -218,8 +218,12 @@ assert.match(adminSource, /\/api\/v2\/admin\/rate-limits[\s\S]*?admin-rate-limit
 assert.match(voiceSource, /AUDIO_SETTINGS=\{master_enabled:false,[\s\S]*?sfx_enabled:false,[\s\S]*?voice_enabled:false,[\s\S]*?announce_roulette_results:false,[\s\S]*?announce_blackjack_results:false,[\s\S]*?announce_baccarat_results:false,[\s\S]*?announce_bingo_calls:false,[\s\S]*?announce_keno_results:false\}/);
 // Require the Admin Guest Trials surface to publish and save the owner admission switch. (GUEST-001, GUEST-004)
 assert.match(adminSource, /\/api\/v2\/admin\/guest-trials\/settings[\s\S]*?admin-guest-trials-enabled[\s\S]*?admin-save-guest-policy/);
-// Require anonymous entry to remain disabled until the public provider-backed policy explicitly allows it. (GUEST-001, GUEST-002)
-assert.match(appSource, /guest-trial-button[\s\S]*?disabled aria-disabled="true"[\s\S]*?applyGuestTrialPolicy[\s\S]*?policy\.guest_trials_enabled !== true/);
+// Require anonymous entry to exist only after the public provider-backed policy explicitly allows it. (GUEST-001, GUEST-002, UX-028)
+assert.match(appSource, /auth-guest-slot[\s\S]*?renderLoginPolicyActions[\s\S]*?policy\.guest_trials_enabled === true \? `<button id="guest-trial-button"/);
+// Require unavailable provider actions to be omitted instead of rendering permanently disabled controls. (OAUTH-007, UX-028)
+assert.doesNotMatch(appSource, /data-testid="oauth-providers-disabled"/);
+// Require password and guest entry to share the same terms validator and single status owner. (UX-028)
+assert.match(appSource, /function requireLoginTerms\(\)[\s\S]*?setAuthStatus\(t\('auth\.termsRequired'[\s\S]*?async function handleLoginSubmit[\s\S]*?if \(!requireLoginTerms\(\)\) return;[\s\S]*?async function handleGuestTrial[\s\S]*?if \(!requireLoginTerms\(\)\) return;/);
 // Require settled containment loss to reach Admin telemetry through the frozen client-log helper. (UX-026)
 assert.match(appSource, /logClient\('layout_overflow', \{ route: active \|\| 'none', viewport: /);
 // Require Roulette to center and scale its fixed board through the measured continuous fit. (UX-026)
