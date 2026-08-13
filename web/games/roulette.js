@@ -73,7 +73,7 @@ const PREMIUM_STYLE = [
   '.roulette-premium .chip-row{gap:5px;}', // Keep all chip values available without an oversized control band.
   '.roulette-premium .chip{width:42px;height:42px;min-height:42px;font-size:10px;box-shadow:0 5px 13px rgba(0,0,0,.42);}', // Give chip selectors a physical table-chip scale.
   '.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;}', // Keep secondary choices aligned in predictable lanes.
-  '.roulette-fast-grid button,.roulette-call-grid button,.roulette-secondary-actions button{min-height:32px;padding:6px 7px;border-color:rgba(255,255,255,.14);border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));font-size:11px;}', // Style utility bets as player controls rather than diagnostics.
+  '.roulette-fast-grid button,.roulette-call-grid button,.roulette-secondary-actions button{min-height:42px;padding:6px 7px;border-color:rgba(255,255,255,.14);border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));font-size:11px;}', // Keep every high-frequency utility bet at the owner-approved 42px touch floor. (UX-018)
   '.roulette-fast-grid button[data-outbtn="red"]{background:linear-gradient(180deg,#b72835,#75141d);}', // Give the red shortcut its casino color cue.
   '.roulette-fast-grid button[data-outbtn="black"]{background:linear-gradient(180deg,#252a28,#080b0a);}', // Give the black shortcut its casino color cue.
   '.roulette-advanced{margin-top:9px;border:1px solid var(--border);border-radius:10px;background:rgba(0,0,0,.14);}', // Contain advanced rules and automation without making them dominate the rail.

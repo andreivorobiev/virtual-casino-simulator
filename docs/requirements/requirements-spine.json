@@ -5919,11 +5919,14 @@
       ],
       "implementation_files": [
         "docs/visual_design_standard.md",
-        "web/styles.css"
+        "web/styles.css",
+        "web/games/roulette.js",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-283-touch-target-floor",
       "changed_in": "issue-283-touch-target-floor",
-      "notes": "Issue #283 codifies owner-approved Option A and the 42px behavior already shipped by the scoped Auth, shell, and Slots remediations."
+      "notes": "Issue #283 codifies owner-approved Option A and applies the 42px floor to the scoped Auth, shell, Slots, and remaining high-frequency Roulette fast-bet, call-bet, toggle, and rebet controls."
     },
     {
       "id": "TEST-089",
@@ -5946,7 +5949,7 @@
     {
       "id": "TEST-087",
       "module": "Tests",
-      "description": "Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.",
+      "description": "Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, Slots wager/autoplay controls, and Roulette fast-bet, call-bet, toggle, and rebet controls meet the 42px floor without horizontal clipping in en-US and ru-RU at all four governed viewports; Roulette also proves keyboard-visible focus.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -5954,11 +5957,12 @@
         "BR-TOUCH-TARGET-001"
       ],
       "implementation_files": [
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-283-touch-target-floor",
       "changed_in": "issue-283-touch-target-floor",
-      "notes": "Issue #283 after-pass evidence is stored at logs/test-runs/after-pass-touch-target-auth-*.png, after-pass-touch-target-shell-*.png, and after-pass-touch-target-slots-*.png with matching VIS-EVIDENCE-001 sidecars."
+      "notes": "Issue #283 after-pass evidence is stored at logs/test-runs/after-pass-touch-target-auth-*.png, after-pass-touch-target-shell-*.png, after-pass-touch-target-slots-*.png, and after-pass-touch-target-roulette-*.png with matching VIS-EVIDENCE-001 sidecars."
     },
     {
       "id": "GUEST-001",
@@ -9637,7 +9641,7 @@
     {
       "id": "UX-025",
       "module": "Application",
-      "description": "Full-root game rerenders preserve stable control focus and mirror authoritative result copy into a document-lifetime live region; ordinary controls provide a 44-pixel minimum target while Roulette precision inside-bet controls provide a 24-pixel hit area with their compact visual marker retained.",
+      "description": "Full-root game rerenders preserve stable control focus and mirror authoritative result copy into a document-lifetime live region; primary and high-frequency controls provide the adopted 42-pixel minimum target with 44 pixels recommended where layout allows, while Roulette precision inside-bet controls provide a 24-pixel hit area with their compact visual marker retained.",
       "status": "PASS",
       "api_tests": [
         "FRONTEND-SAFETY-001"
@@ -9648,6 +9652,7 @@
         "BR-BINGO-001",
         "BR-BJ-001",
         "BR-BAC-001",
+        "BR-TOUCH-TARGET-001",
         "BR-GAME-COLOR-001",
         "BR-CATALOG-EXPANSION-001"
       ],
@@ -9664,8 +9669,8 @@
         "web/games/four_card_poker.js"
       ],
       "introduced_in": "issue-421-accessibility-remediation",
-      "changed_in": "issue-421-accessibility-remediation",
-      "notes": "The adopted visual standard uses a 44-pixel ordinary-control floor; the precision Roulette overlay is the bounded 24-pixel exception permitted by WCAG 2.2 target-size minimum spacing."
+      "changed_in": "issue-283-roulette-touch-targets",
+      "notes": "Issue #283 reconciles this later requirement to owner-approved Option A: 42 pixels is required for primary and high-frequency controls, 44 pixels is recommended, and the precision Roulette overlay remains the bounded 24-pixel exception permitted by WCAG 2.2 target-size minimum spacing."
     },
     {
       "id": "UX-026",

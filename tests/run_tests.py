@@ -4973,14 +4973,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Verify the all-games navigation keeps Baccarat reachable.
                         assert page.get_by_test_id('nav-baccarat').is_visible()
                     run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
-                    # Define governed touch-target acceptance for authenticated shell and Slots controls. (issue #283)
-                    def shell_and_slots_touch_target_floor():
+                    # Define governed touch-target acceptance for authenticated shell, Slots, and Roulette controls. (issue #283)
+                    def shell_slots_and_roulette_touch_target_floor():
                         # Read the exact responsive dimensions from the visual matrix.
                         touch_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
                         # Name every shell selector covered by the owner-approved floor.
                         shell_selectors=['.nav-item','#shell-locale-select','#logout-btn','#catalog-search','.catalog-category','#wallet-menu-summary']
                         # Name the reported Slots wager and autoplay controls plus the primary action.
                         slots_selectors=['[data-testid="slots-lines"]','[data-testid="slots-line-bet"]','[data-testid="slots-spin"]','[data-testid="slots-auto-speed"]','[data-testid="slots-auto-rounds"]','[data-testid="slots-auto-start"]','[data-testid="slots-auto-stop"]']
+                        # Name every remaining high-frequency Roulette utility-control group owned by the reopened issue.
+                        roulette_selectors=['.roulette-fast-grid button','.roulette-call-grid button','#toggleSpots','#rebet']
                         # Exercise both installed player-facing locales on the real authenticated route.
                         for locale in ('en-US','ru-RU'):
                             # Switch the mounted shell through its visible locale selector.
@@ -5009,6 +5011,24 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 assert page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
                                 # Capture the affected game surface in its idle touch-target state.
                                 game_evidence(f'after-pass-touch-target-slots-{locale.lower()}-{viewport_id}.png','slots',['idle','touch_target_floor'],locale,viewport_id)
+                                # Open Roulette through the real navigation before measuring its high-frequency controls.
+                                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
+                                # Reveal the player-operated racetrack controls through their semantic disclosure.
+                                page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
+                                # Measure every visible fast-bet, call-bet, toggle, and rebet target in its real rendered layout.
+                                roulette_diagnostics=page.evaluate("""selectors => { const records=[]; for(const selector of selectors){ for(const element of document.querySelectorAll(selector)){ const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); if(style.display==='none'||style.visibility==='hidden'||(rect.width===0&&rect.height===0)) continue; records.push({selector,width:rect.width,height:rect.height}); } } return records; }""",roulette_selectors)
+                                # Require every Roulette selector and each of its live controls to meet the adopted two-dimensional floor.
+                                assert {item['selector'] for item in roulette_diagnostics}==set(roulette_selectors) and all(item['width']>=41.5 and item['height']>=41.5 for item in roulette_diagnostics),roulette_diagnostics
+                                # Move focus between real fast-bet controls with a keyboard event so focus-visible styling is exercised.
+                                page.locator('.roulette-fast-grid button').first.focus(); page.keyboard.press('Tab')
+                                # Verify keyboard focus lands on another high-frequency control with a visible production indicator.
+                                roulette_focus=page.evaluate("() => { const element=document.activeElement; const style=getComputedStyle(element); return {inside:Boolean(element?.matches('.roulette-fast-grid button')),visible:element?.matches(':focus-visible')===true,outline:style.outlineStyle,width:parseFloat(style.outlineWidth)||0}; }")
+                                # Reject missing keyboard focus or an invisible focus ring on the repaired Roulette control set.
+                                assert roulette_focus['inside'] and roulette_focus['visible'] and roulette_focus['outline']!='none' and roulette_focus['width']>=1,roulette_focus
+                                # Reject document and control-rail horizontal clipping at each governed responsive size.
+                                assert page.evaluate("() => { const rail=document.querySelector('[data-testid=\"roulette-control-rail\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && rail.scrollWidth<=rail.clientWidth+1; }")
+                                # Capture exact-locale and exact-viewport proof for the Roulette touch-target matrix state.
+                                game_evidence(f'after-pass-touch-target-roulette-{locale.lower()}-{viewport_id}.png','roulette',['betting','keyboard_focus','touch_target_floor'],locale,viewport_id)
                                 # Return to the stable Lobby surface before the next viewport or locale.
                                 page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                         # Restore the default locale and primary viewport for downstream shell acceptance.
@@ -5016,7 +5036,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Wait for the restored English Lobby before the next case begins.
                         page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US' && document.querySelector('[data-testid=\"lobby\"]')")
                     # Execute authenticated shell and affected-game touch-target acceptance.
-                    run_case('BR-TOUCH-TARGET-001',['UX-018','TEST-087'],shell_and_slots_touch_target_floor)
+                    run_case('BR-TOUCH-TARGET-001',['UX-018','UX-025','TEST-087'],shell_slots_and_roulette_touch_target_floor)
                     # Prove the player-facing brand block carries no internal version or release-stage metadata in either locale. (issue #321)
                     def shell_brand_copy():
                         # Enumerate internal metadata tokens that must never appear in the player brand block.

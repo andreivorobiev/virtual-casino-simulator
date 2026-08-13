@@ -1580,9 +1580,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
         # Require the Tests patch for immutable v0.9.5.76 release qualification.
-        self.assertEqual(tests_module["version"], "1.81.1")
+        self.assertEqual(tests_module["version"], "1.82.0")
         # Require the Docs patch for immutable v0.9.5.76 release governance.
-        self.assertEqual(docs_module["version"], "1.78.1")
+        self.assertEqual(docs_module["version"], "1.79.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the Contracts patch for the immutable v0.9.5.76 rollback record.
@@ -1598,7 +1598,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Keno settlement-interface patch.
         self.assertEqual(keno_module["version"], "9.3.6")
         # Require the compatible Roulette minor for selectable governed motion profiles.
-        self.assertEqual(roulette_module["version"], "9.7.0")
+        self.assertEqual(roulette_module["version"], "9.7.1")
         # Require the compatible Slots minor for selectable governed reel profiles.
         self.assertEqual(slots_module["version"], "9.5.0")
         # Require the compatible Application patch for v0.9.5.76 packaging.

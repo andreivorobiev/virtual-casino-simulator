@@ -17,7 +17,7 @@ Historical source baseline: 9.1.0
 - admin: 1.18.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.7.0
+- roulette: 9.7.1
 - slots: 9.5.0
 - blackjack: 9.1.10
 - baccarat: 9.1.15
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.81.1
-- docs: 1.78.1
+- tests: 1.82.0
+- docs: 1.79.0
 - contracts: 1.61.3
 - tooling: 1.32.0
 - commenting_policy: 2.0.0
@@ -407,7 +407,7 @@ Historical source baseline: 9.1.0
 - **OTT-002** (Core) - PASS: One-time-token consumers receive only generic invalid_request or invalid_token errors across malformed, cross-purpose, subject/session mismatch, inactive-subject, replay, expiry, revocation, and exhausted-attempt cases; raw bearer, subject, and session values never enter persistence, results, errors, or audit events, frozen v1 remains unchanged, and the inert v2 component and compatibility contracts require future consumers to reject ambiguous callbacks and enforce bounded initiation, exact CSRF/origin checks, safe redirects, active subjects, and separate delivery approval.
 - **UX-018** (UX) - PASS: Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.
 - **TEST-089** (Tests) - PASS: Listener-free and MySQL-live evidence verifies the one-time-token lifecycle: deterministic issue and consume, generic rejection, strict purpose, subject, and session binding, replay, expiry, revocation, bounded attempts, retention, atomic reissue, cross-process exactly-once consumption, and absence of raw bearer, subject, session, or digest material from public results and audit events.
-- **TEST-087** (Tests) - PASS: Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
+- **TEST-087** (Tests) - PASS: Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, Slots wager/autoplay controls, and Roulette fast-bet, call-bet, toggle, and rebet controls meet the 42px floor without horizontal clipping in en-US and ru-RU at all four governed viewports; Roulette also proves keyboard-visible focus.
 - **GUEST-001** (Core) - PASS: Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 10,000-play-token wallet with no add-token path, enforces a provider-backed owner switch for new-trial admission plus configurable active-principal, per-source creation-rate, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, leaves existing trials untouched when admission pauses, and never accepts caller-authored role, player, balance, expiry, or credential fields.
 - **GUEST-002** (Application) - PASS: The en-US and ru-RU login surface discloses the fixed 10,000-token disposable play-only guest terms, requires affirmative consent, and leaves new-trial entry natively disabled with explicit localized copy unless the public provider-backed policy reports admission enabled; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.
 - **GUEST-003** (Core) - PASS: Guest telemetry stores only an unrelated analytics id, server timestamps, bounded lifecycle reason, locale, coarse device class, registered game slug, named journey milestones, allowlisted action/error categories, coarse latency buckets, fake-token-only aggregates, and bounded event/counter summaries; it never stores user, player, auth-session, cookie, browser-proof, email, network, or user-agent identifiers, retains raw rows for 30 days and daily aggregates for 400 days, and exposes sanitized cleanup success and failure health.
@@ -588,7 +588,7 @@ Historical source baseline: 9.1.0
 - **I18N-011** (Application) - PASS: Player-facing API failures derive localized copy from stable error code or HTTP category while preserving code, details, and status separately, and all Russian resources use the canonical token terminology instead of the retired casino-chip stem.
 - **AUTO-015** (Autoplay) - PASS: Autoplay retains speed and requested count across game rerenders, reconciles an existing authoritative session before creating another, records every server tick, phase-safely retries temporary API rate limits without replaying a completed game action, and discards the resumable server id only after finish-stop succeeds.
 - **PWA-003** (Application) - PASS: Apply update resolves a worker still transitioning from installing to waiting, sends exactly one SKIP_WAITING command, reloads only after controllerchange, and fails visibly after bounded transition or activation timeouts.
-- **UX-025** (Application) - PASS: Full-root game rerenders preserve stable control focus and mirror authoritative result copy into a document-lifetime live region; ordinary controls provide a 44-pixel minimum target while Roulette precision inside-bet controls provide a 24-pixel hit area with their compact visual marker retained.
+- **UX-025** (Application) - PASS: Full-root game rerenders preserve stable control focus and mirror authoritative result copy into a document-lifetime live region; primary and high-frequency controls provide the adopted 42-pixel minimum target with 44 pixels recommended where layout allows, while Roulette precision inside-bet controls provide a 24-pixel hit area with their compact visual marker retained.
 - **UX-026** (Application) - PASS: Every game and lobby component renders fully inside the viewport or a designed scroll region at all supported viewports from 320 CSS pixels wide upward: the document never scrolls horizontally, meaningful content is never clipped by a hidden-overflow container, governed desktop Roulette and Bingo boards consume the exact remaining center-stage height above the fixed status bar, fixed-geometry boards scale continuously to their measured shell instead of relying on discrete breakpoints, and the shell reports settled containment loss to Admin telemetry as one bounded layout_overflow client-log event per route-and-viewport cell per session.
 - **UX-027** (Application) - PASS: An in-game action never reloads the document, never changes the route, and never resets the player's reading position: same-route full-root rerenders preserve the outlet scroll offsets, every scrolled internal rail, and the focused control when it carries a stable identity; document scroll is restored synchronously and across the next two layout frames so delayed browser clamps on stacked game pages cannot move the player; stranded keyboard focus parks on the focusable game region instead of the document body; and scroll resets to the top only when navigation intentionally changes the route.
 - **TOOL-012** (Tooling) - PASS: Every substantive pull request must list delivered issues under a stable Issues resolved section using GitHub-native closing keywords; standard release-only pull requests must explicitly declare their exception.
