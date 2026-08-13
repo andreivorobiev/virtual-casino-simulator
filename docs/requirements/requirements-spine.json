@@ -1443,7 +1443,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1458,7 +1458,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1475,7 +1475,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1492,7 +1492,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1507,7 +1507,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1524,7 +1524,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1539,7 +1539,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1554,7 +1554,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1586,7 +1586,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1601,7 +1601,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1616,7 +1616,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1631,7 +1631,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1646,7 +1646,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1661,7 +1661,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
