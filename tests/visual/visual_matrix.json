@@ -160,6 +160,10 @@
     {
       "id": "VIS-CATALOG-001",
       "rule": "Catalog search, category filters, and restored game routes preserve accessible controls, readable cards, and the authenticated shared shell."
+    },
+    {
+      "id": "VIS-TOUCH-001",
+      "rule": "Primary and high-frequency controls expose a hit area of at least 42 CSS pixels in both dimensions, with keyboard-visible focus and no responsive clipping."
     }
   ],
   "surfaces": [
@@ -530,6 +534,7 @@
       "states": [
         "betting",
         "keyboard_focus",
+        "touch_target_floor",
         "spinning",
         "authentic_motion",
         "quick_motion",
@@ -560,6 +565,7 @@
         "VIS-SCROLL-002",
         "VIS-HIERARCHY-001",
         "VIS-RESPONSIVE-001",
+        "VIS-TOUCH-001",
         "VIS-EVIDENCE-001",
         "VIS-CATALOG-001"
       ]
