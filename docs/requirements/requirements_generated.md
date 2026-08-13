@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.66.0
+- application: 9.67.0
 - core: 9.43.1
 - mobile: 1.0.0
 - ledger: 9.1.2
@@ -17,57 +17,57 @@ Historical source baseline: 9.1.0
 - admin: 1.18.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.7.1
-- slots: 9.5.0
-- blackjack: 9.1.10
-- baccarat: 9.1.15
-- keno: 9.3.6
-- bingo: 9.3.6
-- multi_hand_video_poker: 1.1.1
-- casino_war: 1.1.1
-- big_six_wheel: 1.1.3
-- red_dog: 1.1.1
-- dragon_tiger: 1.1.1
-- hi_lo: 1.1.2
-- three_card_poker: 1.1.2
-- jacks_or_better_video_poker: 1.1.2
-- deuces_wild_video_poker: 1.1.3
-- scratch_cards: 1.1.1
-- sic_bo: 1.1.3
-- chuck_a_luck: 1.1.2
-- craps: 1.1.1
-- crown_and_anchor: 1.1.3
-- over_under_7: 1.1.3
-- plinko: 1.1.1
-- fan_tan: 1.1.3
-- andar_bahar: 1.1.3
-- acey_deucey: 1.1.2
-- caribbean_stud: 1.1.1
-- let_it_ride: 1.1.1
-- casino_holdem: 1.1.1
-- double_bonus_video_poker: 1.1.2
-- mississippi_stud: 1.1.2
-- joker_poker: 1.1.1
-- texas_holdem_practice_table: 1.1.2
-- pai_gow_poker: 1.1.2
-- teen_patti: 1.1.2
-- tests: 1.85.1
-- docs: 1.81.1
+- roulette: 9.7.2
+- slots: 9.5.1
+- blackjack: 9.1.11
+- baccarat: 9.1.16
+- keno: 9.3.7
+- bingo: 9.3.7
+- multi_hand_video_poker: 1.1.2
+- casino_war: 1.1.2
+- big_six_wheel: 1.1.4
+- red_dog: 1.1.2
+- dragon_tiger: 1.1.2
+- hi_lo: 1.1.3
+- three_card_poker: 1.1.3
+- jacks_or_better_video_poker: 1.1.3
+- deuces_wild_video_poker: 1.1.4
+- scratch_cards: 1.1.2
+- sic_bo: 1.1.4
+- chuck_a_luck: 1.1.3
+- craps: 1.1.2
+- crown_and_anchor: 1.1.4
+- over_under_7: 1.1.4
+- plinko: 1.1.2
+- fan_tan: 1.1.4
+- andar_bahar: 1.1.4
+- acey_deucey: 1.1.3
+- caribbean_stud: 1.1.2
+- let_it_ride: 1.1.2
+- casino_holdem: 1.1.2
+- double_bonus_video_poker: 1.1.3
+- mississippi_stud: 1.1.3
+- joker_poker: 1.1.2
+- texas_holdem_practice_table: 1.1.3
+- pai_gow_poker: 1.1.3
+- teen_patti: 1.1.3
+- tests: 1.86.0
+- docs: 1.82.0
 - contracts: 1.61.3
-- tooling: 1.32.0
+- tooling: 1.33.0
 - commenting_policy: 2.0.0
-- color_wheel: 1.1.4
-- poker_dice: 1.1.2
-- boule: 1.1.4
-- faro: 1.1.4
-- trente_et_quarante: 1.1.3
-- pachinko: 1.1.3
-- coin_pusher: 1.1.3
-- marble_race: 1.1.4
-- pattern_draw: 1.1.3
-- lucky_grid: 1.1.3
-- daily_draw_lab: 1.1.4
-- four_card_poker: 1.1.3
+- color_wheel: 1.1.5
+- poker_dice: 1.1.3
+- boule: 1.1.5
+- faro: 1.1.5
+- trente_et_quarante: 1.1.4
+- pachinko: 1.1.4
+- coin_pusher: 1.1.4
+- marble_race: 1.1.5
+- pattern_draw: 1.1.4
+- lucky_grid: 1.1.4
+- daily_draw_lab: 1.1.5
+- four_card_poker: 1.1.4
 
 ## Requirements
 
@@ -586,6 +586,7 @@ Historical source baseline: 9.1.0
 - **TEST-152** (Tests) - PASS: Listener-free and hosted browser evidence proves the Swagger selector exactly matches every contracts/openapi YAML file, assets and licensing are pinned locally, both HTTP adapters map the stable docs and contract URLs safely, one exact contract serves with YAML media type, and the rendered selector includes the complete governed inventory.
 - **TOKEN-007** (Application) - PASS: A successful wallet top-up clears its amount and closes its popover immediately after the authoritative current-user payload commits, before any secondary shell refresh can race a repeat click.
 - **I18N-011** (Application) - PASS: Player-facing API failures derive localized copy from stable error code or HTTP category while preserving code, details, and status separately, and all Russian resources use the canonical token terminology instead of the retired casino-chip stem.
+- **I18N-012** (Application) - PASS: Every installed game descriptor owns complete ordered ru-RU lobby-card labels, kickers, descriptions, and tags; the Russian catalog never falls back to English or mixed-Latin card copy, and catalog validation fails closed on missing, blank, count-drifted, or untranslated fields.
 - **AUTO-015** (Autoplay) - PASS: Autoplay retains speed and requested count across game rerenders, reconciles an existing authoritative session before creating another, records every server tick, phase-safely retries temporary API rate limits without replaying a completed game action, and discards the resumable server id only after finish-stop succeeds.
 - **PWA-003** (Application) - PASS: Apply update resolves a worker still transitioning from installing to waiting, sends exactly one SKIP_WAITING command whose service-worker message lifetime owns skipWaiting through settlement, reloads only after controllerchange, converges every controlled same-origin tab to the canonical worker without a second click or tab close, and fails visibly after bounded transition or activation timeouts.
 - **UX-025** (Application) - PASS: Full-root game rerenders preserve stable control focus and mirror authoritative result copy into a document-lifetime live region; primary and high-frequency controls provide the adopted 42-pixel minimum target with 44 pixels recommended where layout allows, while Roulette precision inside-bet controls provide a 24-pixel hit area with their compact visual marker retained.
@@ -648,6 +649,7 @@ Historical source baseline: 9.1.0
 - **TEST-176** (Tests) - PASS: Browser evidence exercises the policy-aware logged-out hierarchy in English and Russian across every governed viewport plus the issue-specific 375 by 812 mobile boundary. It proves default signup and provider omission, zero disabled controls, actionable signup and provider inclusion, one live status owner, identical shared terms copy and checkbox focus for guest and password entry, unchanged lifecycle disclosure wording, reduced-motion stability, touch targets, horizontal containment, short-desktop fit, and mobile no-scroll containment.
 - **STORAGE-014** (Storage) - PASS: Money-bearing player storage fails closed across JSON and MySQL instead of substituting funded defaults or coercing corrupt balances. Only a genuinely absent JSON wallet document may select reviewed bootstrap defaults; malformed encoding or JSON, duplicate keys or wallet identities, invalid player collections, and non-finite, negative, sub-cent, coerced, or out-of-range balances stop reads, bootstrap, updates, action snapshots, and ledger settlements through one value-free operator-recovery boundary. JSON preserves the authoritative corrupt bytes and one exact content-addressed forensic copy without automatic repair or replacement.
 - **TEST-177** (Tests) - PASS: Listener-free JSON and MySQL-model evidence proves absent-file bootstrap compatibility, syntax and structural corruption refusal, fixed secret-free diagnostics, exact content-addressed forensic preservation, idempotent repeated refusal, zero default-factory reach, zero balance, ledger, and action-journal mutation, public player-service propagation, blocked legacy and exactly-once settlements, blocked bootstrap, explicit verified-byte restoration, one correct post-recovery debit, provider-parity error normalization, and mandatory connection cleanup.
+- **TEST-178** (Tests) - PASS: Catalog-derived static and browser evidence proves all 46 installed games have exact ru-RU field and ordered-tag parity, zero fallback to English or mixed-Latin card strings, seeded untranslated-label and tag drift rejection, exact rendered-card equality, horizontal containment, and governed evidence across both locales and all four required lobby viewports.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.

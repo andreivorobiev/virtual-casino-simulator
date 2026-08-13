@@ -1,6 +1,6 @@
 {
   "module": "mississippi_stud",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "paths": ["casino/games/mississippi_stud/", "web/games/mississippi_stud.js", "web/i18n/en-US/games/mississippi_stud.json", "web/i18n/ru-RU/games/mississippi_stud.json"],
   "requirements_prefixes": ["MSTUD"],
   "contracts": ["contracts/openapi/mississippi_stud.v1.yaml"],
@@ -9,7 +9,19 @@
     "backend": {"register": "casino.games.mississippi_stud.api:register"},
     "frontend": {"module": "./games/mississippi_stud.js", "export": "MississippiStudGame", "ready_testid": "mississippi-stud", "i18n_domain": "games/mississippi_stud", "i18n_probe": "action.deal"},
     "tests": {"long_driver": "tests.game_drivers.mississippi_stud:play"},
-    "translations": {"ru-RU": {"label": "Миссисипи Стад", "kicker": "Покер", "description": "Покер на три улицы: анте, ставка 1x–3x или сброс перед каждой общей картой, расчёт через журнал жетонов."}},
+    "translations": {
+      "ru-RU": {
+        "label": "Миссисипи Стад",
+        "kicker": "Покер",
+        "description": "Покер на три улицы: анте, ставка 1×–3× или сброс перед каждой общей картой, расчёт через журнал жетонов.",
+        "tags": [
+          "Карты",
+          "Покер",
+          "Стратегия",
+          "Журнал жетонов"
+        ]
+      }
+    },
     "lobby": {"featured": false, "wide": false, "art_class": "mississippi-stud-art", "symbol": "MS", "kicker": "Poker room", "description": "Three-street poker: ante, bet 1x–3x or fold before each community card, with ledger-backed settlement.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],

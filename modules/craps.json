@@ -1,6 +1,6 @@
 {
   "module": "craps",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": ["casino/games/craps/", "web/games/craps.js", "web/i18n/en-US/games/craps.json", "web/i18n/ru-RU/games/craps.json"],
   "requirements_prefixes": ["CRAPS"],
   "contracts": ["contracts/openapi/craps.v1.yaml"],
@@ -9,7 +9,19 @@
     "backend": {"register": "casino.games.craps.api:register"},
     "frontend": {"module": "./games/craps.js", "export": "CrapsGame", "ready_testid": "craps", "i18n_domain": "games/craps", "i18n_probe": "controls.roll"},
     "tests": {"long_driver": "tests.game_drivers.craps:play"},
-    "translations": {"ru-RU": {"label": "Крэпс", "kicker": "Игра за столом", "description": "Крэпс со ставками Pass Line и Don't Pass, серверными бросками костей и расчётом через журнал игровых жетонов.", "tags": ["Стол", "Кости", "Стратегия", "Журнал жетонов"]}},
+    "translations": {
+      "ru-RU": {
+        "label": "Крэпс",
+        "kicker": "Игра за столом",
+        "description": "Крэпс со ставками на линию пасс и против линии пасс, серверными бросками костей и расчётом через журнал игровых жетонов.",
+        "tags": [
+          "Стол",
+          "Кости",
+          "Стратегия",
+          "Журнал жетонов"
+        ]
+      }
+    },
     "lobby": {"featured": false, "wide": false, "art_class": "craps-art", "symbol": "2D6", "kicker": "Table game", "description": "Pass Line and Don't Pass point play with server-authoritative dice and ledger-backed settlement.", "tags": ["Table", "Dice", "Strategy", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],

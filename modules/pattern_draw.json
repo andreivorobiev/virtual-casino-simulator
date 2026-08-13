@@ -1,6 +1,6 @@
 {
   "module": "pattern_draw",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "paths": ["casino/games/pattern_draw/", "web/games/pattern_draw.js", "web/i18n/en-US/games/pattern_draw.json", "web/i18n/ru-RU/games/pattern_draw.json"],
   "requirements_prefixes": ["PATTERN"],
   "contracts": ["contracts/openapi/pattern_draw.v1.yaml"],
@@ -9,7 +9,18 @@
     "backend": {"register": "casino.games.pattern_draw.api:register"},
     "frontend": {"module": "./games/pattern_draw.js", "export": "PatternDrawGame", "ready_testid": "pattern-draw", "i18n_domain": "games/pattern_draw", "i18n_probe": "action.draw"},
     "tests": {"long_driver": "tests.game_drivers.pattern_draw:play"},
-    "translations": {"ru-RU": {"label": "Розыгрыш узора", "kicker": "Аркада", "description": "Сетка 3 на 3 со случайными ячейками: ставка на линию, крест или полную сетку с джекпотом ×480, серверным результатом и расчётом через журнал жетонов."}},
+    "translations": {
+      "ru-RU": {
+        "label": "Розыгрыш узора",
+        "kicker": "Аркада",
+        "description": "Сетка 3 на 3 со случайными ячейками: ставка на линию, крест или полную сетку с джекпотом ×480, серверным результатом и расчётом через журнал жетонов.",
+        "tags": [
+          "Аркада",
+          "Быстрая игра",
+          "Журнал жетонов"
+        ]
+      }
+    },
     "lobby": {"featured": false, "wide": false, "art_class": "pattern-draw-art", "symbol": "&#9638;", "kicker": "Pattern draw", "description": "A three-by-three grid lights at random; bet on any line, the cross, or the full grid for a x480 jackpot, with server-authoritative draws and ledger-backed settlement.", "tags": ["Arcade", "Quick play", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],

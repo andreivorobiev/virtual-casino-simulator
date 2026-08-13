@@ -2795,8 +2795,8 @@
         "scripts/validate_game_catalog.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.2.4",
-      "notes": "English remains the canonical source locale; Russian resources must match keys and placeholders. BR-I18N-ROUTES-001 verifies concurrent lazy-domain loading and scans every game route in both locales for player-visible key, placeholder, encoding, and invalid-value leaks. BR-CATALOG-I18N-RU-001 verifies localized catalog copy, category labels, ARIA names, keyboard focus, and focused desktop/mobile evidence."
+      "changed_in": "issue-699-russian-catalog",
+      "notes": "English remains the canonical source locale; Russian resources must match keys and placeholders. BR-I18N-ROUTES-001 verifies concurrent lazy-domain loading and scans every game route in both locales for player-visible key, placeholder, encoding, and invalid-value leaks. BR-CATALOG-I18N-RU-001 verifies exact rendered labels, kickers, descriptions, and ordered tags for every game, localized controls and category labels, ARIA names, keyboard focus, and evidence at all four governed lobby viewports."
     },
     {
       "id": "I18N-002",
@@ -9614,6 +9614,28 @@
       "notes": "Raw server messages remain diagnostic data and are never reflected into player copy."
     },
     {
+      "id": "I18N-012",
+      "module": "Application",
+      "description": "Every installed game descriptor owns complete ordered ru-RU lobby-card labels, kickers, descriptions, and tags; the Russian catalog never falls back to English or mixed-Latin card copy, and catalog validation fails closed on missing, blank, count-drifted, or untranslated fields.",
+      "status": "PASS",
+      "api_tests": [
+        "GAME-CATALOG-RU-001"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-I18N-RU-001"
+      ],
+      "implementation_files": [
+        "modules/*.json",
+        "scripts/validate_game_catalog.py",
+        "tests/games/test_game_rule_schema.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-699-russian-catalog",
+      "changed_in": "issue-699-russian-catalog",
+      "notes": "The current catalog has no Latin-script proper-name exception. A future exception requires a descriptor-specific reviewed allowlist and must not permit generic English tags or descriptions."
+    },
+    {
       "id": "AUTO-015",
       "module": "Autoplay",
       "description": "Autoplay retains speed and requested count across game rerenders, reconciles an existing authoritative session before creating another, records every server tick, phase-safely retries temporary API rate limits without replaying a completed game action, and discards the resumable server id only after finish-stop succeeds.",
@@ -11012,6 +11034,27 @@
       "introduced_in": "issue-698-wallet-corruption",
       "changed_in": "issue-698-wallet-corruption",
       "notes": "Every wallet, player, filesystem path, and database row in the focused tests is synthetic and isolated. The suite opens no listener or external connection and performs no production recovery, database mutation, or provider operation."
+    },
+    {
+      "id": "TEST-178",
+      "module": "Tests",
+      "description": "Catalog-derived static and browser evidence proves all 46 installed games have exact ru-RU field and ordered-tag parity, zero fallback to English or mixed-Latin card strings, seeded untranslated-label and tag drift rejection, exact rendered-card equality, horizontal containment, and governed evidence across both locales and all four required lobby viewports.",
+      "status": "PASS",
+      "api_tests": [
+        "GAME-CATALOG-RU-001"
+      ],
+      "browser_tests": [
+        "BR-CATALOG-I18N-RU-001"
+      ],
+      "implementation_files": [
+        "scripts/validate_game_catalog.py",
+        "tests/games/test_game_rule_schema.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-699-russian-catalog",
+      "changed_in": "issue-699-russian-catalog",
+      "notes": "The focused validator and unit suite are listener-free; hosted Browser evidence remains the acceptance source for rendered card copy and responsive containment."
     },
     {
       "id": "TEST-175",

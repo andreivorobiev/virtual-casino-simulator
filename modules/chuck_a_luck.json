@@ -1,6 +1,6 @@
 {
   "module": "chuck_a_luck",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "paths": ["casino/games/chuck_a_luck/", "web/games/chuck_a_luck.js", "web/i18n/en-US/games/chuck_a_luck.json", "web/i18n/ru-RU/games/chuck_a_luck.json"],
   "requirements_prefixes": ["CHUCK"],
   "contracts": ["contracts/openapi/chuck_a_luck.v1.yaml"],
@@ -9,7 +9,18 @@
     "backend": {"register": "casino.games.chuck_a_luck.api:register"},
     "frontend": {"module": "./games/chuck_a_luck.js", "export": "ChuckALuckGame", "ready_testid": "chuck-a-luck", "i18n_domain": "games/chuck_a_luck", "i18n_probe": "action.roll"},
     "tests": {"long_driver": "tests.game_drivers.chuck_a_luck:play"},
-    "translations": {"ru-RU": {"label": "Чак-а-лак", "kicker": "Кости", "description": "Три кости со ставками на грани от одного до шести, серверным результатом и расчётом через журнал жетонов."}},
+    "translations": {
+      "ru-RU": {
+        "label": "Чак-а-лак",
+        "kicker": "Кости",
+        "description": "Три кости со ставками на грани от одного до шести, серверным результатом и расчётом через журнал жетонов.",
+        "tags": [
+          "Кости",
+          "Быстрая игра",
+          "Журнал жетонов"
+        ]
+      }
+    },
     "lobby": {"featured": false, "wide": false, "art_class": "chuck-a-luck-art", "symbol": "3D6", "kicker": "Dice table", "description": "Three dice with one-through-six face wagers, server-authoritative results, and ledger-backed settlement.", "tags": ["Dice", "Quick play", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],

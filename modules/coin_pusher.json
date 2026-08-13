@@ -1,6 +1,6 @@
 {
   "module": "coin_pusher",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "paths": ["casino/games/coin_pusher/", "web/games/coin_pusher.js", "web/i18n/en-US/games/coin_pusher.json", "web/i18n/ru-RU/games/coin_pusher.json"],
   "requirements_prefixes": ["COINP"],
   "contracts": ["contracts/openapi/coin_pusher.v1.yaml"],
@@ -9,7 +9,18 @@
     "backend": {"register": "casino.games.coin_pusher.api:register"},
     "frontend": {"module": "./games/coin_pusher.js", "export": "CoinPusherGame", "ready_testid": "coin-pusher", "i18n_domain": "games/coin_pusher", "i18n_probe": "action.drop"},
     "tests": {"long_driver": "tests.game_drivers.coin_pusher:play"},
-    "translations": {"ru-RU": {"label": "Монетный толкатель", "kicker": "Аркада", "description": "Уроните монету на полку: если стопка перевалит за край, монеты каскадом падают с выплатой до ×16, серверным результатом и расчётом через журнал жетонов."}},
+    "translations": {
+      "ru-RU": {
+        "label": "Монетный толкатель",
+        "kicker": "Аркада",
+        "description": "Уроните монету на полку: если стопка перевалит за край, монеты каскадом падают с выплатой до ×16, серверным результатом и расчётом через журнал жетонов.",
+        "tags": [
+          "Аркада",
+          "Быстрая игра",
+          "Журнал жетонов"
+        ]
+      }
+    },
     "lobby": {"featured": false, "wide": false, "art_class": "coin-pusher-art", "symbol": "&#128176;", "kicker": "Coin pusher", "description": "Drop a coin onto the shelf; when the pile tips over the edge, coins cascade off for a payout up to x16, with server-authoritative drops and ledger-backed settlement.", "tags": ["Arcade", "Quick play", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],
