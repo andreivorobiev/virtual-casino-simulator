@@ -1,6 +1,6 @@
 {
   "module": "plinko",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": ["casino/games/plinko/", "web/games/plinko.js", "web/i18n/en-US/games/plinko.json", "web/i18n/ru-RU/games/plinko.json"],
   "requirements_prefixes": ["PLINKO"],
   "contracts": ["contracts/openapi/plinko.v1.yaml"],
@@ -9,7 +9,19 @@
     "backend": {"register": "casino.games.plinko.api:register"},
     "frontend": {"module": "./games/plinko.js", "export": "PlinkoGame", "ready_testid": "plinko", "i18n_domain": "games/plinko", "i18n_probe": "controls.drop"},
     "tests": {"long_driver": "tests.game_drivers.plinko:play"},
-    "translations": {"ru-RU": {"label": "Плинко", "kicker": "Доска со штифтами", "description": "Запустите шайбу по зафиксированному сервером пути и получите результат по открытой таблице множителей с расчётом через журнал игровых жетонов.", "tags": ["Аркада", "Множители", "Быстрая игра", "Журнал жетонов"]}},
+    "translations": {
+      "ru-RU": {
+        "label": "Плинко",
+        "kicker": "Доска со штифтами",
+        "description": "Запустите шайбу по зафиксированному сервером пути и получите результат по открытой таблице множителей с расчётом через журнал игровых жетонов.",
+        "tags": [
+          "Аркада",
+          "Множители",
+          "Мгновенная игра",
+          "Журнал жетонов"
+        ]
+      }
+    },
     "lobby": {"featured": false, "wide": false, "art_class": "plinko-art", "symbol": "PL", "kicker": "Pegboard drop", "description": "Drop a puck through a committed peg path and settle through transparent play-token multipliers.", "tags": ["Arcade", "Multipliers", "Instant play", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],

@@ -89,7 +89,7 @@ assert.match(source, /@media\(prefers-reduced-motion:reduce\)/);
 // Verify independent module identity and the branded compatible patch revision.
 assert.equal(descriptor.module, 'jacks_or_better_video_poker');
 // Require the game module to carry the settlement-interface patch revision.
-assert.equal(descriptor.version, '1.1.2');
+assert.equal(descriptor.version, '1.1.3');
 // Preserve the #77 sequencing document's reserved catalog slot.
 assert.equal(descriptor.game.sort_order, 170);
 // Require the canonical reloadable route derived from the game id.

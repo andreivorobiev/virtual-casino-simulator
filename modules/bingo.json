@@ -1,6 +1,6 @@
 {
   "module": "bingo",
-  "version": "9.3.6",
+  "version": "9.3.7",
   "paths": [
     "casino/games/bingo/",
     "web/games/bingo.js"
@@ -21,7 +21,18 @@
     "backend": {"register": "casino.games.bingo.api:register"},
     "frontend": {"module": "./games/bingo.js", "export": "BingoGame", "ready_testid": "premium-bingo", "i18n_domain": "games/bingo", "i18n_probe": "drawer.callsText"},
     "tests": {"long_driver": "tests.game_drivers.bingo:play"},
-    "translations": {"ru-RU": {"label": "Бинго", "kicker": "Карты", "description": "Американское бинго на 75 шаров с комбинациями, картами ботов, историей вызовов и подсветкой выигрыша."}},
+    "translations": {
+      "ru-RU": {
+        "label": "Бинго",
+        "kicker": "Карты",
+        "description": "Американское бинго на 75 шаров с комбинациями, картами ботов, историей вызовов и подсветкой выигрыша.",
+        "tags": [
+          "Боты",
+          "Автоигра",
+          "Статистика"
+        ]
+      }
+    },
     "lobby": {"featured": false, "wide": false, "art_class": "bingo-art", "symbol": "&#9638;", "kicker": "Cards", "description": "75-ball American Bingo with patterns, bot cards, call history, and winning pattern highlights.", "tags": ["Bots", "Autoplay", "Stats"]}
   },
   "depends_on": [

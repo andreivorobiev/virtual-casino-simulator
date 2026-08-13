@@ -26,6 +26,45 @@ from casino.router import Router
 CATALOG_COPY_KEYS = {"catalog.allGames", "catalog.categoriesAria", "catalog.controlsAria", "catalog.empty", "catalog.galleryAria", "catalog.capacity", "catalog.searchLabel", "catalog.searchPlaceholder"}
 # Load installed shell dictionaries so catalog identifiers can never leak as player-facing labels.
 SHELL_RESOURCES = {locale: json.loads((ROOT / "web" / "i18n" / locale / "shell.json").read_text(encoding="utf-8")) for locale in ("en-US", "ru-RU")}
+# Detect Latin letters that would expose untranslated card copy in the Russian catalog.
+LATIN_LETTER_RE = re.compile(r"[A-Za-z]")
+# Require at least one Cyrillic letter in every player-facing Russian card field and tag.
+CYRILLIC_LETTER_RE = re.compile(r"[А-Яа-яЁё]")
+
+
+# Validate the complete Russian player-facing card projection for one catalog game.
+def validate_russian_catalog_copy(game, errors):
+    game_id = game.get("id", "<missing>")  # Preserve stable descriptor context in every diagnostic.
+    translations = game.get("translations")  # Read the locale map without inventing a fallback.
+    russian = translations.get("ru-RU") if isinstance(translations, dict) else None  # Select only the required Russian payload.
+    if not isinstance(russian, dict):  # Reject a missing or structurally invalid Russian card translation.
+        errors.append(f"catalog game {game_id} is missing ru-RU card translations")  # Name the exact descriptor gap.
+        return  # Stop before reading fields from a non-object value.
+    for field in ("label", "kicker", "description"):  # Validate every visible non-tag card string.
+        value = russian.get(field)  # Read the exact localized value without falling back to English.
+        if not isinstance(value, str) or not value.strip():  # Reject absent, non-string, or blank copy.
+            errors.append(f"catalog game {game_id} ru-RU {field} is missing or blank")  # Report the exact field.
+        elif LATIN_LETTER_RE.search(value):  # Reject untranslated Latin words; the current catalog has no approved exceptions.
+            errors.append(f"catalog game {game_id} ru-RU {field} contains untranslated Latin letters")  # Keep diagnostics secret-free.
+        elif not CYRILLIC_LETTER_RE.search(value):  # Reject numeric or punctuation-only substitutes.
+            errors.append(f"catalog game {game_id} ru-RU {field} contains no Cyrillic copy")  # Require real localized language.
+    english_tags = game.get("lobby", {}).get("tags")  # Read the canonical card-tag shape from the English descriptor.
+    russian_tags = russian.get("tags")  # Read the locale-owned tag projection used by the browser.
+    if not isinstance(english_tags, list) or not english_tags:  # Keep the source vocabulary structurally governed.
+        errors.append(f"catalog game {game_id} lobby tags are missing or invalid")  # Report an unusable source tag list.
+        return  # Stop because tag parity cannot be evaluated without the source list.
+    if not isinstance(russian_tags, list) or len(russian_tags) != len(english_tags):  # Require one localized tag per source tag.
+        errors.append(f"catalog game {game_id} ru-RU tags must match the {len(english_tags)} lobby tags")  # Report expected cardinality.
+        return  # Stop before iterating an invalid localized list.
+    for index, (english, localized) in enumerate(zip(english_tags, russian_tags)):  # Compare ordered tags used by search and rendering.
+        if not isinstance(localized, str) or not localized.strip():  # Reject blank or non-string localized tags.
+            errors.append(f"catalog game {game_id} ru-RU tag {index} is missing or blank")  # Identify the exact array member.
+        elif localized.casefold() == str(english).casefold():  # Reject unchanged English fallback even when it contains no uppercase letters.
+            errors.append(f"catalog game {game_id} ru-RU tag {index} is untranslated")  # Report stable positional context.
+        elif LATIN_LETTER_RE.search(localized):  # Reject partial English leakage inside a translated tag.
+            errors.append(f"catalog game {game_id} ru-RU tag {index} contains untranslated Latin letters")  # Keep content out of diagnostics.
+        elif not CYRILLIC_LETTER_RE.search(localized):  # Reject punctuation-only placeholders.
+            errors.append(f"catalog game {game_id} ru-RU tag {index} contains no Cyrillic copy")  # Require meaningful Russian text.
 
 
 # Resolve a module-and-callable reference and report focused errors.
@@ -130,6 +169,7 @@ def main():
         errors.append("game catalog target must support at least 20 games")  # Report target regression.
     for game in GAMES:  # Validate every module-owned game without a central allowlist.
         game_id = game["id"]  # Cache the id for concise diagnostics.
+        validate_russian_catalog_copy(game, errors)  # Require complete Russian lobby-card copy before inspecting integrations.
         test_package = game_tests_root / game_id  # Resolve the optional per-game Python test package.
         python_test_files = tuple(test_package.glob("test_*.py")) if test_package.is_dir() else ()  # Discover only direct unittest modules used by the CI command.
         if python_test_files and not (test_package / "__init__.py").is_file():  # Reject a package that unittest discovery would silently skip.

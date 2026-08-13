@@ -5390,6 +5390,26 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('shell-locale-select').select_option('ru-RU')
                         # Wait for the catalog controls to rerender from the Russian shell resource.
                         page.wait_for_function("() => document.querySelector('[data-testid=\"catalog-search\"]')?.placeholder === 'Поиск по игре, функции или категории'")
+                        # Build exact expected Russian card copy from the same installed descriptors used by production startup.
+                        expected_cards={game['id']:game['translations']['ru-RU'] for game in casino_config.GAMES}
+                        # Require every installed game card to render its exact localized label, kicker, description, and ordered tags.
+                        for game_id,expected in expected_cards.items():
+                            # Read only player-facing copy while excluding the Latin art symbol and localized Play action.
+                            actual=page.evaluate("""gameId => { const card=document.querySelector(`[data-testid=\"card-${gameId}\"]`); const heading=card.querySelector('.game-heading').cloneNode(true); heading.querySelector('.game-symbol')?.remove(); return {label:heading.textContent.trim(),kicker:card.querySelector('.game-kicker').textContent.replace(/^★\\s*/, '').trim(),description:card.querySelector('.game-card-content > p').textContent.trim(),tags:[...card.querySelectorAll('.tag')].map(node=>node.textContent.trim())}; }""",game_id)
+                            # Compare the complete card projection so runtime fallback to any English descriptor field fails.
+                            assert actual=={field:expected[field] for field in ('label','kicker','description','tags')},{'game':game_id,'expected':expected,'actual':actual}
+                            # Reject Latin leakage in localized copy; the current Russian catalog needs no proper-name exception.
+                            assert not re.search(r'[A-Za-z]', ' '.join([actual['label'],actual['kicker'],actual['description'],*actual['tags']])),{'game':game_id,'actual':actual}
+                        # Capture the complete localized catalog at every governed viewport before applying filters.
+                        for viewport_id,width,height in (('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)):
+                            # Resize to the exact visual-matrix viewport and let responsive card layout settle.
+                            page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(80)
+                            # Require the complete Russian gallery to remain horizontally contained.
+                            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                            # Record source-bound evidence for the named localization-complete state.
+                            game_evidence(f'after-pass-shell-lobby-russian-catalog-complete-{viewport_id}.png','shell_lobby',['russian_catalog_complete'],'ru-RU',viewport_id)
+                        # Restore the primary desktop viewport before exercising catalog filters.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(80)
                         # Verify the search label and placeholder both use shell i18n instead of English literals.
                         assert page.locator('label[for="catalog-search"]').text_content()=='Поиск игр' and page.get_by_test_id('catalog-search').get_attribute('placeholder')=='Поиск по игре, функции или категории'
                         # Define every catalog identifier and its installed Russian display label.
@@ -5451,7 +5471,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Wait for English catalog controls before the next browser case starts.
                         page.wait_for_function("() => document.querySelector('[data-testid=\"catalog-search\"]')?.placeholder === 'Search by game, feature, or category'")
                     # Execute Russian copy, category-label, containment, and keyboard-focus acceptance coverage.
-                    run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001','UX-012','TEST-072'],catalog_ru_acceptance)
+                    run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001','I18N-012','UX-012','TEST-072','TEST-178'],catalog_ru_acceptance)
                     # Capture the polished desktop lobby and shared topbar for review evidence.
                     shot('after-pass-shell-lobby-desktop.png')
                     # Define the complete lobby-scroll acceptance matrix requested by issue #318.

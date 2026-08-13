@@ -1,6 +1,6 @@
 {
   "module": "casino_holdem",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": ["casino/games/casino_holdem/", "web/games/casino_holdem.js", "web/i18n/en-US/games/casino_holdem.json", "web/i18n/ru-RU/games/casino_holdem.json"],
   "requirements_prefixes": ["CH"],
   "contracts": ["contracts/openapi/casino_holdem.v1.yaml"],
@@ -9,7 +9,18 @@
     "backend": {"register": "casino.games.casino_holdem.api:register"},
     "frontend": {"module": "./games/casino_holdem.js", "export": "CasinoHoldemGame", "ready_testid": "casino-holdem", "i18n_domain": "games/casino_holdem", "i18n_probe": "controls.deal"},
     "tests": {"long_driver": "tests.game_drivers.casino_holdem:play"},
-    "translations": {"ru-RU": {"label": "Казино Холдем", "kicker": "Покерный стол", "description": "Анте, флоп, решение колл или пас и вскрытие против квалифицирующегося дилера.", "tags": ["Карты", "Покер", "Журнал жетонов"]}},
+    "translations": {
+      "ru-RU": {
+        "label": "Казино Холдем",
+        "kicker": "Покерный стол",
+        "description": "Анте, флоп, решение колл или пас и вскрытие против квалифицирующегося дилера.",
+        "tags": [
+          "Карты",
+          "Покер",
+          "Журнал жетонов"
+        ]
+      }
+    },
     "lobby": {"featured": false, "wide": false, "art_class": "casino-holdem-art", "symbol": "CH", "kicker": "Community poker", "description": "Ante, decide after the flop, then settle a dealer-qualified community-card showdown through the play-token ledger.", "tags": ["Cards", "Poker", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],

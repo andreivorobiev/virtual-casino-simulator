@@ -4,6 +4,8 @@
 
 # Import standard unit-test support for focused descriptor fixtures.
 import unittest
+# Copy catalog fixtures so localization failures never mutate the imported runtime registry.
+import copy
 # Import source inspection so retired per-game rule schemas stay absent.
 import inspect
 
@@ -22,11 +24,65 @@ from casino.games.blackjack import api as blackjack_api
 # Import the central router for listener-free runtime coercion and error-precedence checks.
 from casino.router import Router
 # Import catalog helpers that discover real route registration without binding a listener.
-from scripts.validate_game_catalog import resolve_callable, validate_settings_schema
+from scripts.validate_game_catalog import resolve_callable, validate_russian_catalog_copy, validate_settings_schema
 
 
 # Prove settings routes, safety flags, defaults, and public projection remain descriptor-driven.
 class GameRuleSchemaTests(unittest.TestCase):
+    # Prove every shipped game owns complete Russian lobby-card copy with ordered tag parity.
+    def test_russian_catalog_copy_is_complete(self):
+        # Collect every descriptor defect in deterministic catalog order.
+        errors = []
+        # Exercise all 46 production descriptors rather than a hand-maintained subset.
+        for game in GAMES:
+            # Validate the exact projection consumed by web/app.js.
+            validate_russian_catalog_copy(game, errors)
+        # Require zero missing fields, tags, Latin leakage, or placeholder copy.
+        self.assertEqual(errors, [])
+
+    # Prove an untranslated Russian label cannot pass through the catalog validator.
+    def test_russian_catalog_copy_rejects_untranslated_label(self):
+        # Clone one real descriptor so every unrelated structural field remains production-shaped.
+        game = copy.deepcopy(GAMES[0])
+        # Seed the exact regression class from issue #699 without modifying the global catalog.
+        game["translations"]["ru-RU"]["label"] = game["label"]
+        # Collect the fixed descriptor diagnostic.
+        errors = []
+        # Run the same helper called by scripts/validate_game_catalog.py.
+        validate_russian_catalog_copy(game, errors)
+        # Require the failure to name Latin leakage without reflecting the player-facing string.
+        self.assertEqual(errors, [f"catalog game {game['id']} ru-RU label contains untranslated Latin letters"])
+
+    # Prove tag omission, count drift, and partial English leakage all fail closed.
+    def test_russian_catalog_copy_rejects_tag_drift(self):
+        # Clone one production descriptor for isolated adversarial mutations.
+        baseline = copy.deepcopy(GAMES[0])
+        # Enumerate missing, truncated, and mixed-language tag payloads.
+        cases = (
+            # Reject absence instead of falling back to the English lobby tags.
+            (None, "tags must match"),
+            # Reject count drift so search and rendered order remain symmetric.
+            (baseline["translations"]["ru-RU"]["tags"][:-1], "tags must match"),
+            # Reject one English word embedded in an otherwise complete localized list.
+            (["Cards", *baseline["translations"]["ru-RU"]["tags"][1:]], "contains untranslated Latin letters"),
+        )
+        # Exercise every independent failure class through the production helper.
+        for tags, diagnostic in cases:
+            # Keep each mutation independently attributable.
+            with self.subTest(tags=tags):
+                # Clone the untouched baseline before applying the adversarial payload.
+                game = copy.deepcopy(baseline)
+                # Replace only the localized tags under test.
+                game["translations"]["ru-RU"]["tags"] = tags
+                # Collect focused diagnostics without invoking any listener.
+                errors = []
+                # Validate the exact corrupted descriptor.
+                validate_russian_catalog_copy(game, errors)
+                # Require one actionable failure from the intended boundary.
+                self.assertEqual(len(errors), 1)
+                # Require the stable diagnostic class without depending on translated content.
+                self.assertIn(diagnostic, errors[0])
+
     # Prove internal schema lookup and deterministic field declaration use the canonical catalog.
     def test_internal_schema_lookup_and_declared_fields(self):
         # Resolve the Blackjack schema through the new behavior-neutral catalog reader.

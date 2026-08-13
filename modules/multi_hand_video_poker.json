@@ -1,6 +1,6 @@
 {
   "module": "multi_hand_video_poker",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "paths": [
     "casino/games/multi_hand_video_poker/",
     "web/games/multi_hand_video_poker.js",
@@ -42,7 +42,13 @@
       "ru-RU": {
         "label": "Мультиручный видеопокер",
         "kicker": "Автомат",
-        "description": "Видеопокер «Валеты или старше» на 3, 5 или 10 рук с общей исходной рукой."
+        "description": "Видеопокер «Валеты или старше» на 3, 5 или 10 рук с общей исходной рукой.",
+        "tags": [
+          "Карты",
+          "Стратегия",
+          "Журнал жетонов",
+          "Несколько рук"
+        ]
       }
     },
     "lobby": {

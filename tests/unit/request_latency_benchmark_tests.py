@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus the fail-closed wallet pair to total exactly 960 permanent rows.
-        self.assertEqual(len(requirements), 960)
+        # Require the accepted aggregates plus the Russian catalog pair to total exactly 962 permanent rows.
+        self.assertEqual(len(requirements), 962)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1403,6 +1403,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-174": "Tests",  # Bind provider parity and migration evidence without reusing TEST-173.
             "STORAGE-014": "Storage",  # Bind corrupt wallet refusal and forensic preservation to storage.
             "TEST-177": "Tests",  # Bind provider-parity wallet corruption recovery evidence.
+            "I18N-012": "Application",  # Bind complete Russian lobby-card copy to the catalog.
+            "TEST-178": "Tests",  # Bind static and rendered Russian catalog evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
@@ -1581,33 +1583,33 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.3")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the Tests patch for immutable v0.9.5.76 release qualification.
-        self.assertEqual(tests_module["version"], "1.85.1")
-        # Require the Docs patch for immutable v0.9.5.76 release governance.
-        self.assertEqual(docs_module["version"], "1.81.1")
+        # Require the Tests minor for complete Russian catalog regression evidence.
+        self.assertEqual(tests_module["version"], "1.86.0")
+        # Require the Docs minor for the catalog localization requirement and governance.
+        self.assertEqual(docs_module["version"], "1.82.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the Contracts patch for the immutable v0.9.5.76 rollback record.
         self.assertEqual(contracts_module["version"], "1.61.3")
-        # Require the Tooling minor that adds source and long-suite economics workflow gates.
-        self.assertEqual(tooling_module["version"], "1.32.0")
+        # Require the Tooling minor that adds fail-closed Russian catalog validation.
+        self.assertEqual(tooling_module["version"], "1.33.0")
         # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
         self.assertEqual((mobile_module["version"], mobile_module["package_version"]), ("1.0.0", "0.2.0"))
-        # Require the compatible Baccarat patch for central settings enforcement.
-        self.assertEqual(baccarat_module["version"], "9.1.15")
-        # Require the exact compatible Bingo settlement-interface patch.
-        self.assertEqual(bingo_module["version"], "9.3.6")
-        # Require the exact compatible Keno settlement-interface patch.
-        self.assertEqual(keno_module["version"], "9.3.6")
-        # Require the compatible Roulette minor for selectable governed motion profiles.
-        self.assertEqual(roulette_module["version"], "9.7.1")
-        # Require the compatible Slots minor for selectable governed reel profiles.
-        self.assertEqual(slots_module["version"], "9.5.0")
-        # Require the compatible Application patch for v0.9.5.76 packaging.
-        self.assertEqual(application_module["version"], "9.66.0")
-        # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
-        self.assertEqual(blackjack_module["version"], "9.1.10")
+        # Require the compatible Baccarat patch for its localized lobby tags and copy.
+        self.assertEqual(baccarat_module["version"], "9.1.16")
+        # Require the compatible Bingo patch for its localized lobby tags.
+        self.assertEqual(bingo_module["version"], "9.3.7")
+        # Require the compatible Keno patch for its localized lobby tags.
+        self.assertEqual(keno_module["version"], "9.3.7")
+        # Require the compatible Roulette patch for its localized lobby tags.
+        self.assertEqual(roulette_module["version"], "9.7.2")
+        # Require the compatible Slots patch for localized tags and Russian description copy.
+        self.assertEqual(slots_module["version"], "9.5.1")
+        # Require the compatible Application minor for complete catalog localization governance.
+        self.assertEqual(application_module["version"], "9.67.0")
+        # Require Blackjack to carry its localized lobby tags after central settings enforcement.
+        self.assertEqual(blackjack_module["version"], "9.1.11")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
         self.assertEqual(autoplay_module["version"], "1.1.6")
-        # Require the Deuces patch that removes its final million-row proof scan.
-        self.assertEqual(deuces_module["version"], "1.1.3")
+        # Require the Deuces patch for its normalized Russian lobby tags.
+        self.assertEqual(deuces_module["version"], "1.1.4")
