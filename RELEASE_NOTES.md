@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.76 Release Notes
+
+## Complete catalog economics audit
+
+- Packages accepted catalog economics PR #691 and records completed issue #456 while release-owned application advances to `9.64.3`.
+- Adds one executable registry covering all 46 catalog games, 74 governed wager selectors, source-bound engines and settlement adapters, and exact payout or return-to-player expectations.
+- Proves 45 house-side games stay within their governed probability and tolerance contracts and records Fan-Tan's exact intentional fairness under its existing requirement boundary.
+- Retains the previously accepted million-spin Slots evidence and exact 230-class Keno artifact as deeper deterministic checks instead of replacing them with shallow simulations.
+- Runs the complete registry in the long-suite release gate while keeping pull-request source validation fast, deterministic, and fail closed against source drift.
+- Adds permanent `TEST-175`; the governed total is exactly 956 requirements.
+- Records the exact canonical package inventory as 762 regular files: v0.9.5.75 inventory 761 plus this v0.9.5.76 compatibility record. The new economics registry and its executor remain repository test evidence outside the archive.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.43.0`, tooling `1.32.0`, Players `9.1.2`, Ledger `9.1.2`, Mobile `1.0.0`, every game revision, and every paytable remain exact protected-main values.
+- Retains exact immutable terminal-green v0.9.5.75 as the application-only schema-2 rollback predecessor; database rollback is prohibited, production remains schema 2, and no migration, grant, API, route, provider, public-policy, game-math, paytable, wager-acceptance, or settlement change is authorized. Issues #168, #488, #578, #683, #688, #689, and #690 remain open.
+
 # Virtual Casino Simulator v0.9.5.75 Release Notes
 
 ## Inert game-action lifecycle bridge
