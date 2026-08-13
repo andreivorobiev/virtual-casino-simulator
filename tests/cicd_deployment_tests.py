@@ -243,10 +243,12 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertIn("if: always()", workflow_text)
         # Require the exact branch-protection aggregate job identifier once.
         self.assertEqual(workflow_text.splitlines().count("  long_suite_100:"), 1)
-        # Require the aggregate to depend on the complete matrix result.
-        self.assertIn("needs: long_suite_100_shard", workflow_text)
-        # Ensure the aggregate executes for failed, cancelled, or skipped dependencies.
-        self.assertIn('run: test "${{ needs.long_suite_100_shard.result }}" = "success"', workflow_text)
+        # Require the aggregate to depend on both the scope decision and complete matrix result.
+        self.assertIn("- long_suite_scope", workflow_text)
+        self.assertIn("- long_suite_100_shard", workflow_text)
+        # Ensure the aggregate accepts only a successful matrix or an explicitly verified skipped matrix.
+        self.assertIn('test "${{ needs.long_suite_100_shard.result }}" = "success"', workflow_text)
+        self.assertIn('test "${{ needs.long_suite_100_shard.result }}" = "skipped"', workflow_text)
         # Read runner cleanup behavior without opening its loopback server.
         runner_text = self.workflow_text(LONG_SUITE_RUNNER)
         # Preserve JSON evidence outside disposable copies before their removal.

@@ -11238,6 +11238,44 @@
       "notes": "The focused test reads tracked source and formats a synthetic state only; it opens no listener, browser, database, provider, credential, or production connection."
     },
     {
+      "id": "TOOL-017",
+      "module": "Tooling",
+      "description": "Ordinary pull requests classify Long Suite 100 scope fail closed, skip all four workers only for an explicitly documentation-only diff while preserving the exact required aggregate context, and build unpublished release candidates from exact-head sibling required-context evidence without repeating their validators. Manual, protected-main, and release-event candidates retain the complete canonical validation sequence.",
+      "status": "PASS",
+      "api_tests": [
+        "CI-COMPUTE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        ".github/workflows/long-suite-100.yml",
+        ".github/workflows/release.yml",
+        "scripts/long_suite_scope.py",
+        "scripts/make_release.py",
+        "tests/ci_compute_tests.py"
+      ],
+      "introduced_in": "issue-710-ci-compute-redundancy",
+      "changed_in": "issue-710-ci-compute-redundancy",
+      "notes": "Changed-file API failure, empty output, malformed decisions, unknown paths, and non-PR events all run the full matrix. The PR evidence mode is rejected outside GitHub pull-request Actions and cannot carry a tag, manual version, or rollback manifest."
+    },
+    {
+      "id": "TEST-183",
+      "module": "Tests",
+      "description": "Listener-free tests prove the documentation-only classifier, behavior-bearing fail-closed paths, exact long_suite_100 gate identity, successful-or-explicit-skip dependency contract, one PR-only optimized release command, full manual and release commands, and rejection of local optimized-mode use before subprocess execution.",
+      "status": "PASS",
+      "api_tests": [
+        "CI-COMPUTE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/ci_compute_tests.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-710-ci-compute-redundancy",
+      "changed_in": "issue-710-ci-compute-redundancy",
+      "notes": "The suite reads workflow and source text and exercises pure argument guards only; it opens no listener, browser, GitHub, database, provider, credential, or production connection."
+    },
+    {
       "id": "TEST-175",
       "module": "Tests",
       "description": "A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.",

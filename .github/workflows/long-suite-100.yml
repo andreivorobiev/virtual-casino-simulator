@@ -9,9 +9,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Classify the pull-request diff so documentation-only changes keep the required gate without using four workers. (issue #710)
+  long_suite_scope:
+    name: long_suite_100_scope
+    runs-on: ubuntu-latest
+    outputs:
+      decision: ${{ steps.scope.outputs.decision }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve long-suite scope
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [ "${EVENT_NAME}" != "pull_request" ]; then
+            decision=RUN
+          else
+            changed="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" --jq '.[].filename' || true)"
+            if [ -z "${changed}" ]; then
+              decision=RUN
+            else
+              decision="$(printf '%s\n' "${changed}" | python scripts/long_suite_scope.py 2>/dev/null || echo RUN)"
+            fi
+          fi
+          case "${decision}" in RUN|SKIP) ;; *) decision=RUN ;; esac
+          echo "decision=${decision}" >> "${GITHUB_OUTPUT}"
+          echo "Long Suite 100 scope decision: ${decision}"
+
   # Split the mandatory suite across parallel isolated workers exactly like the soak lane.
   long_suite_100_shard:
     name: long_suite_100_shard_${{ matrix.shard }}
+    needs: long_suite_scope
+    if: ${{ needs.long_suite_scope.outputs.decision == 'RUN' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -63,10 +97,20 @@ jobs:
 
   # Keep reporting the exact `long_suite_100` context required by branch protection.
   long_suite_100:
-    needs: long_suite_100_shard
+    needs:
+      - long_suite_scope
+      - long_suite_100_shard
     if: always()
     runs-on: ubuntu-latest
     steps:
-      # Fail unless every shard succeeded so the required check can never pass vacuously.
-      - name: Require every shard to succeed
-        run: test "${{ needs.long_suite_100_shard.result }}" = "success"
+      # Accept only a successful full shard matrix or an explicit documentation-only skip decision.
+      - name: Require exact run or skip outcome
+        shell: bash
+        run: |
+          test "${{ needs.long_suite_scope.result }}" = "success"
+          if [ "${{ needs.long_suite_scope.outputs.decision }}" = "RUN" ]; then
+            test "${{ needs.long_suite_100_shard.result }}" = "success"
+          else
+            test "${{ needs.long_suite_scope.outputs.decision }}" = "SKIP"
+            test "${{ needs.long_suite_100_shard.result }}" = "skipped"
+          fi
