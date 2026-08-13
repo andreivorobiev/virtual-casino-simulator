@@ -1699,6 +1699,125 @@ label {
   background: rgba(0, 0, 0, .72);
 }
 
+/* Keep the optional session control compact while retaining the required touch target in every game. (WELL-001) */
+.wellness-open {
+  min-height: 44px;
+  padding: 0 12px;
+  border-color: rgba(57, 211, 83, .48);
+  color: var(--text);
+  background: rgba(57, 211, 83, .08);
+  white-space: nowrap;
+}
+
+/* Use one native top-layer surface for manual settings and due reminders across all routes. */
+.wellness-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(57, 211, 83, .58);
+  border-radius: 22px;
+  color: var(--text);
+  background: linear-gradient(155deg, #101b1a, #0a0712);
+  box-shadow: 0 28px 100px rgba(0, 0, 0, .72);
+}
+
+/* Preserve visual context behind a reminder without animation or blur. */
+.wellness-dialog::backdrop {
+  background: rgba(0, 0, 0, .72);
+}
+
+/* Let the reminder form scroll independently on short mobile viewports. */
+.wellness-form {
+  display: grid;
+  gap: 14px;
+  max-height: calc(100vh - 34px);
+  padding: 22px;
+  overflow-y: auto;
+}
+
+/* Keep the heading and native close control aligned at every locale width. */
+.wellness-heading {
+  display: flex;
+  gap: 18px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+/* Remove default heading margins so the modal rhythm remains stable. */
+.wellness-heading :is(h2, p),
+.wellness-summary :is(h3, p) {
+  margin: 0;
+}
+
+/* Give the elapsed fact clear hierarchy without countdown or urgency styling. */
+.wellness-elapsed {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(57, 211, 83, .34);
+  border-radius: 12px;
+  color: #dcffe2;
+  background: rgba(57, 211, 83, .07);
+  font-weight: 800;
+}
+
+/* Present opt-in fields as one readable settings group. */
+.wellness-settings {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .025);
+}
+
+/* Keep the numeric cadence field paired with its label and help text. */
+.wellness-settings > label:not(.check-row) {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(96px, 140px);
+  gap: 12px;
+  align-items: center;
+  font-weight: 800;
+}
+
+/* Separate neutral totals from editable preferences without evaluative color. */
+.wellness-summary {
+  display: grid;
+  gap: 9px;
+  padding: 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, .18);
+}
+
+/* Keep the four summary facts scan-friendly for screen magnification. */
+.wellness-summary ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+/* Reserve status height so slow summaries and writes do not shift modal actions. */
+.wellness-message,
+.wellness-suggestion {
+  min-height: 24px;
+  margin: 0;
+}
+
+/* Keep pause and durable stop equally reachable without presenting either as a primary reward action. */
+.wellness-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Preserve the governed minimum touch target inside the modal. */
+.wellness-actions button,
+.wellness-settings button {
+  min-height: 44px;
+}
+
 /* Let the form own scrolling so the dialog frame and actions remain stable on short viewports. */
 .report-form {
   display: grid;
@@ -1824,6 +1943,28 @@ label {
 
 /* Collapse the reporting composition without horizontal overflow at the governed phone viewport. */
 @media (max-width: 640px) {
+  /* Let the wellness surface use the full narrow viewport without horizontal scrolling. */
+  .wellness-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  /* Tighten modal padding while retaining readable field spacing. */
+  .wellness-form {
+    max-height: calc(100vh - 18px);
+    padding: 16px;
+  }
+
+  /* Stack the cadence input below its translated label at the phone breakpoint. */
+  .wellness-settings > label:not(.check-row) {
+    grid-template-columns: 1fr;
+  }
+
+  /* Fill the available mobile field width without relying on intrinsic number-input sizing. */
+  .wellness-settings input[type="number"] {
+    width: 100%;
+  }
+
   .report-problem-fab {
     right: 12px;
     bottom: 64px;
@@ -3448,8 +3589,8 @@ h3 {
 
   .top-actions {
     display: grid;
-    /* Reserve one track for wallet, top-up, locale, account methods, and logout so tablet chrome never wraps. */
-    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+    /* Reserve one track for wallet, top-up, locale, wellness, account methods, and logout so tablet chrome never wraps. */
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto auto;
     justify-content: stretch;
   }
 
@@ -3633,12 +3774,12 @@ h3 {
   }
 
   .top-actions {
-    grid-template-columns: minmax(0, 1fr) 46px 46px 46px;
+    grid-template-columns: minmax(0, 1fr) 46px 46px 46px 46px;
   }
 
-  /* Remove the hidden top-up track and give the localized End-trial action an intrinsic column. (issue #317) */
+  /* Remove hidden top-up/account tracks while retaining wellness and the localized End-trial action. (issue #317) */
   .guest-trial-active .top-actions {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) 46px auto;
   }
 
   .wallet-pill {
@@ -3651,18 +3792,34 @@ h3 {
   }
 
   .account-menu {
-    grid-column: 3;
-    grid-row: 1;
-  }
-
-  #logout-btn {
     grid-column: 4;
     grid-row: 1;
   }
 
-  /* Place the guest action in the second live track so it cannot spill beyond the mobile viewport. */
-  .guest-trial-active #logout-btn {
+  /* Place the short localized wellness entry beside other persistent utility controls. */
+  .wellness-open {
+    grid-column: 3;
+    grid-row: 1;
+    width: 46px;
+    padding: 0 3px;
+    font-size: 10px;
+    line-height: 1.05;
+    white-space: normal;
+  }
+
+  #logout-btn {
+    grid-column: 5;
+    grid-row: 1;
+  }
+
+  /* Keep wellness and the guest action in the two live utility tracks. */
+  .guest-trial-active .wellness-open {
     grid-column: 2;
+  }
+
+  /* Place the guest action in the final live track so it cannot spill beyond the mobile viewport. */
+  .guest-trial-active #logout-btn {
+    grid-column: 3;
   }
 
   .shell-locale {

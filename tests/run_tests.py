@@ -95,7 +95,7 @@ BROWSER_CASE_AFFINITY_GROUPS={
     # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
     'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
     # Keep Bingo, Blackjack, Baccarat, feedback, Admin, audio, and i18n state on shard three.
-    'bingo_admin':('BR-BINGO-PURCHASE-001','BR-BINGO-001','BR-BJ-NATURAL-PAYOUT-001','BR-BJ-001','BR-BJ-I18N-001','BR-BJ-INSURANCE-NET-001','BR-BAC-COPY-001','BR-BAC-FRESH-SHOE-001','BR-BAC-MUTATION-001','BR-BAC-001','BR-I18N-ROUTES-001','BR-FEEDBACK-001','BR-ADMIN-NAV-AUTH-001','BR-ADMIN-001','BR-ADMIN-DIAGNOSTICS-001','BR-ADMIN-ECONOMICS-001','BR-ADMIN-SESSION-POLICY-001','BR-ADMIN-LEDGER-LABELS-001','BR-ADMIN-FEEDBACK-001','BR-ADMIN-OAUTH-001','BR-ADMIN-MAIL-001','BR-INVITE-001','BR-OPS-001','BR-ADMIN-PRACTICE-OPPONENT-001','BR-ADMIN-USERS-001','BR-ADMIN-GUEST-001','BR-AUDIO-001','BR-I18N-FOUNDATION-001','BR-I18N-ADMIN-001'),
+    'bingo_admin':('BR-BINGO-PURCHASE-001','BR-BINGO-001','BR-BJ-NATURAL-PAYOUT-001','BR-BJ-001','BR-BJ-I18N-001','BR-BJ-INSURANCE-NET-001','BR-BAC-COPY-001','BR-BAC-FRESH-SHOE-001','BR-BAC-MUTATION-001','BR-BAC-001','BR-I18N-ROUTES-001','BR-WELLNESS-001','BR-FEEDBACK-001','BR-ADMIN-NAV-AUTH-001','BR-ADMIN-001','BR-ADMIN-DIAGNOSTICS-001','BR-ADMIN-ECONOMICS-001','BR-ADMIN-SESSION-POLICY-001','BR-ADMIN-LEDGER-LABELS-001','BR-ADMIN-FEEDBACK-001','BR-ADMIN-OAUTH-001','BR-ADMIN-MAIL-001','BR-INVITE-001','BR-OPS-001','BR-ADMIN-PRACTICE-OPPONENT-001','BR-ADMIN-USERS-001','BR-ADMIN-GUEST-001','BR-AUDIO-001','BR-I18N-FOUNDATION-001','BR-I18N-ADMIN-001'),
 }
 # Set SESSION_TOKEN to the value needed for the next operation.
 SESSION_TOKEN=None
@@ -1696,7 +1696,9 @@ def run_api_tests():
         if not result.wasSuccessful():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('session wellness foundation suite failed')
-    # Record the listener-free opt-in, session-bound, reward-free, and EN/RU neutrality proof.
+        # Execute the dependency-free production controller lifecycle proof through Node.
+        run_game_frontend_node_test(Path('tests/wellness_browser_contract.test.mjs'),'session wellness browser controller suite failed')
+    # Record the listener-free API plus deterministic timer, reload, visibility, focus, pause, stop, and locale proof.
     run_case('API-WELLNESS-001',['WELL-001','WELL-002','TEST-105'],run_wellness_tests)
     # Execute the curated server-only What's New eligibility proof without opening a listener.
     def run_whats_new_tests():
@@ -9909,6 +9911,72 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
                     # Execute the release-blocking i18n audit as one requirement-mapped browser case.
                     run_case('BR-I18N-ROUTES-001',['I18N-001','I18N-002'],all_game_route_i18n)
+                    # Define every-game wellness controls, focus, locale, responsive, reduced-motion, pause, and stop acceptance. (issue #167)
+                    def session_wellness_browser():
+                        # Hold one authoritative mocked settings record so browser writes remain deterministic and non-durable.
+                        wellness_state={'enabled':True,'break_reminder_enabled':True,'reminder_interval_minutes':10,'revision':4,'persisted':True}
+                        # Count exact settings writes so session-local pause cannot masquerade as a durable API mutation.
+                        wellness_patches=[]
+                        # Fulfill settings reads and writes with the standard API envelope and optimistic revision.
+                        def wellness_settings_route(route):
+                            # Return the current record for the authenticated controller startup read.
+                            if route.request.method=='GET': route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'wellness':wellness_state}})); return
+                            # Parse only the production controller's allowlisted settings body.
+                            payload=route.request.post_data_json
+                            # Retain the bounded write for pause-versus-stop evidence.
+                            wellness_patches.append(dict(payload))
+                            # Advance the fake authoritative record exactly once.
+                            wellness_state.update({key:value for key,value in payload.items() if key in {'enabled','break_reminder_enabled','reminder_interval_minutes'}}); wellness_state['revision']+=1
+                            # Return the updated exact settings projection.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'wellness':wellness_state}}))
+                        # Fulfill the neutral current-session summary without using caller-authored identity or time.
+                        def wellness_summary_route(route):
+                            # Return fixed play-token-only facts through the production response shape.
+                            route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'movements':2,'staked':10.0,'returned':4.0,'net':-6.0,'since':'2026-08-13T12:00:00.000Z','play_tokens_only':True}}))
+                        # Install page-local routes so no test preference survives this case.
+                        page.route('**/api/v2/me/wellness',wellness_settings_route); page.route('**/api/v2/me/wellness/summary',wellness_summary_route)
+                        # Reload the authenticated shell so the production controller adopts the controlled opt-in state.
+                        page.reload(wait_until='networkidle'); page.get_by_test_id('wellness-open').wait_for(state='visible',timeout=5000)
+                        # Require the persistent control on a real game route rather than only the lobby.
+                        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000); assert page.get_by_test_id('wellness-open').is_visible()
+                        # Exercise every governed wellness locale and viewport under reduced motion.
+                        viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}; page.emulate_media(reduced_motion='reduce')
+                        # Iterate the complete two-locale matrix without persisting the temporary locale choice.
+                        for locale in ('en-US','ru-RU'):
+                            # Change locale through the visible shell control and wait for active resource ownership.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                            # Exercise every required layout cell with the same persistent game route.
+                            for viewport_id,viewport in viewports.items():
+                                # Apply the exact governed dimensions before opening the native modal.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                                # Open from the visible every-game control and require stable heading focus.
+                                page.get_by_test_id('wellness-open').focus(); page.get_by_test_id('wellness-open').click(); page.get_by_test_id('wellness-dialog').wait_for(state='visible'); page.wait_for_function("() => document.activeElement?.id === 'wellness-title'")
+                                # Require translated text, neutral facts, complete summary, and horizontal containment.
+                                assert 'wellness.' not in page.get_by_test_id('wellness-dialog').inner_text() and page.get_by_test_id('wellness-dismiss').get_attribute('aria-label')==page.get_by_test_id('wellness-dismiss').inner_text() and page.get_by_test_id('wellness-summary').locator('li').count()==4 and page.evaluate("() => { const dialog=document.querySelector('[data-testid=wellness-dialog]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && dialog.scrollWidth <= dialog.clientWidth + 1; }")
+                                # Capture opt-in, neutral-summary, keyboard, and reduced-motion acceptance in this exact cell.
+                                game_evidence(f'after-pass-session-wellness-{locale}-{viewport_id}.png','session_wellness',['opted_in','summary','keyboard_focus','reduced_motion','every_game_control'],locale,viewport_id)
+                                # Close with Escape so the native dialog must restore the exact invoking control.
+                                page.keyboard.press('Escape'); page.get_by_test_id('wellness-dialog').wait_for(state='hidden'); page.wait_for_function("() => document.activeElement?.dataset?.testid === 'wellness-open'")
+                        # Restore desktop English for behavioral pause and stop checks.
+                        page.set_viewport_size(viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('wellness-open').click(); page.get_by_test_id('wellness-dialog').wait_for(state='visible')
+                        # Pause only the current login session and require no durable settings request.
+                        page.get_by_test_id('wellness-pause').click(); page.wait_for_function("() => document.querySelector('[data-testid=wellness-message]')?.textContent.includes('paused')"); assert wellness_patches==[]
+                        # Reload and require session-local pause to survive for the same server session.
+                        page.get_by_test_id('wellness-dismiss').click(); page.reload(wait_until='networkidle'); page.get_by_test_id('wellness-open').click(); page.get_by_test_id('wellness-dialog').wait_for(state='visible'); assert page.get_by_test_id('wellness-pause').inner_text()=='Resume reminders'
+                        # Resume locally and require no settings write before the durable stop action.
+                        page.get_by_test_id('wellness-pause').click(); assert wellness_patches==[]
+                        # Turn reminders off durably and wait for the exact authoritative UI state.
+                        page.get_by_test_id('wellness-stop').click(); page.wait_for_function("() => document.querySelector('[data-testid=wellness-message]')?.textContent === 'Reminders are turned off.'")
+                        # Require one disabling PATCH, no reward UI, and disabled pause/stop controls.
+                        assert len(wellness_patches)==1 and wellness_patches[0]=={'enabled':False,'revision':4} and page.get_by_test_id('wellness-pause').is_disabled() and page.get_by_test_id('wellness-stop').is_disabled() and 'reward' not in page.get_by_test_id('wellness-dialog').inner_text().lower()
+                        # Capture the explicit stopped state separately from the opt-in visual matrix.
+                        game_evidence('after-pass-session-wellness-stopped-en-US-desktop_primary.png','session_wellness',['stopped','summary','every_game_control'],'en-US','desktop_primary')
+                        # Prove session storage contains only bounded timing state and no player or monetary summary data.
+                        local_records=page.evaluate("() => Object.fromEntries(Object.entries(sessionStorage).filter(([key]) => key.startsWith('casino.wellness.v1.')))"); assert local_records and all(set(json.loads(value))<= {'lastSlot','paused','intervalMinutes'} for value in local_records.values())
+                        # Close and remove only this case's deterministic route seams.
+                        page.get_by_test_id('wellness-dismiss').click(); page.unroute('**/api/v2/me/wellness/summary'); page.unroute('**/api/v2/me/wellness')
+                    # Execute the permanent hosted browser case under the existing wellness requirements.
+                    run_case('BR-WELLNESS-001',['WELL-001','WELL-002','TEST-105'],session_wellness_browser)
                     # Preserve the stable internal reference created by the player flow for later Admin acceptance.
                     feedback_report_reference={'value':''}
                     # Define registered-user submission, bilingual layout, image normalization, and retry acceptance. (issue #349)

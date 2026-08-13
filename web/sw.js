@@ -23,6 +23,7 @@ const SHELL_ASSETS = Object.freeze([
   '/core/brand.js',
   '/core/celebrate.js',
   '/core/feedback.js',
+  '/core/wellness.js',
   '/core/i18n.js',
   '/core/pwa.js',
   '/core/ui.js',

@@ -1580,9 +1580,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
         # Require the Tests patch for immutable v0.9.5.76 release qualification.
-        self.assertEqual(tests_module["version"], "1.83.0")
+        self.assertEqual(tests_module["version"], "1.84.0")
         # Require the Docs patch for immutable v0.9.5.76 release governance.
-        self.assertEqual(docs_module["version"], "1.79.1")
+        self.assertEqual(docs_module["version"], "1.80.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the Contracts patch for the immutable v0.9.5.76 rollback record.
@@ -1602,7 +1602,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the compatible Slots minor for selectable governed reel profiles.
         self.assertEqual(slots_module["version"], "9.5.0")
         # Require the compatible Application patch for v0.9.5.76 packaging.
-        self.assertEqual(application_module["version"], "9.64.4")
+        self.assertEqual(application_module["version"], "9.65.0")
         # Require Blackjack to carry central settings enforcement and deck-aware rebuild repair.
         self.assertEqual(blackjack_module["version"], "9.1.10")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.

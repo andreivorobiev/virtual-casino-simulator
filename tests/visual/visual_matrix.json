@@ -458,6 +458,37 @@
       ]
     },
     {
+      "id": "session_wellness",
+      "route": "/games/roulette",
+      "selector": "[data-testid='wellness-open'], [data-testid='wellness-dialog']",
+      "states": [
+        "opted_in",
+        "summary",
+        "keyboard_focus",
+        "reduced_motion",
+        "every_game_control",
+        "stopped"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
       "id": "feedback_report",
       "route": "/",
       "selector": "[data-testid='feedback-dialog']",

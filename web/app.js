@@ -16,6 +16,8 @@ import { createWalletCelebration, createWalletCelebrationLifecycle } from './cor
 import { loadVoiceSettings, setPersonalSoundEnabled } from './core/voice.js';
 // Import the registered-user problem-report dialog without adding feedback code to the shared shell.
 import { bindFeedbackDialog, localizeFeedback, syncFeedbackReporter } from './core/feedback.js';
+// Import the persistent every-game wellness controller for opt-in session reminders. (WELL-001, WELL-002)
+import { createWellnessController } from './core/wellness.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -60,6 +62,8 @@ let lobbySearch = '';
 let lobbyCategory = 'all';
 // Read one fixed provider-completion marker and immediately remove it from browser history.
 const oauthCompletion = readOAuthCompletion();
+// Own one document-lifetime wellness controller while authenticated sessions replace its timer generation.
+const wellnessController = createWellnessController({ apiClient: api, documentRef: document, windowRef: window, translate: (key, values) => t(key, values, 'shell'), formatTokens: tokens });
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
@@ -301,6 +305,8 @@ function clearAuthenticatedShellState(options = {}) {
   clearTimeout(sessionWarningTimer);
   // Clear the handle so a later session can schedule independently.
   sessionWarningTimer = null;
+  // Dispose reminders before clearing identity so late API responses cannot reopen authenticated UI.
+  wellnessController.dispose();
   // Dispose the session-owned celebration before a game or logged-out surface can remount.
   walletCelebrationLifecycle.unmount('session-cleared');
   // Stop observing game-only rails before the authenticated route outlet is replaced.
@@ -1056,6 +1062,8 @@ async function enterAuthenticated(session) {
   document.body.classList.remove('auth-locked');
   // Update the persistent wallet, logout, and locale controls without celebrating initial load.
   const initialBalance = updateCurrentUserShell();
+  // Start optional reload-stable wellness reminders from this exact server session.
+  await wellnessController.start(currentSession);
   // Schedule the server-authored warning only after the complete authenticated shell is visible.
   scheduleSessionWarning();
   // Bind one controller to the persistent wallet nodes and this exact authenticated session.
@@ -1633,7 +1641,7 @@ async function init() {
   // Re-measure containment when the viewport itself changes size. (UX-026)
   window.addEventListener('resize', scheduleLayoutAudit);
   // Repaint persistent shell text when the locale changes.
-  onLocaleChange(() => { localizeFeedback(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
+  onLocaleChange(() => { localizeFeedback(); wellnessController.localize(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
   // Restore game routes through browser Back and Forward without remounting stale history entries.
   window.addEventListener('popstate', () => { if (renderPublicAuthRoute()) return; if (currentSession && !currentSession.terms?.required) { document.body.classList.remove('auth-locked'); void navigate(routeFromLocation(), { history: 'none' }); } else renderLoginGate(); });
   // Read the add-token button from the wallet popover.
