@@ -1583,14 +1583,14 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.3")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the Tests minor for complete Russian catalog regression evidence.
-        self.assertEqual(tests_module["version"], "1.87.0")
-        # Require the Docs minor for the catalog localization requirement and governance.
-        self.assertEqual(docs_module["version"], "1.83.0")
+        # Require the Tests patch for immutable v0.9.5.77 release qualification.
+        self.assertEqual(tests_module["version"], "1.87.1")
+        # Require the Docs patch for immutable v0.9.5.77 release governance.
+        self.assertEqual(docs_module["version"], "1.83.1")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
-        # Require the Contracts patch for the immutable v0.9.5.76 rollback record.
-        self.assertEqual(contracts_module["version"], "1.61.3")
+        # Require the Contracts patch for the immutable v0.9.5.77 rollback record.
+        self.assertEqual(contracts_module["version"], "1.61.4")
         # Require the Tooling minor that adds fail-closed Russian catalog validation.
         self.assertEqual(tooling_module["version"], "1.34.0")
         # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
@@ -1605,8 +1605,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.7.2")
         # Require the compatible Slots patch for localized tags and Russian description copy.
         self.assertEqual(slots_module["version"], "9.5.1")
-        # Require the compatible Application minor for complete catalog localization governance.
-        self.assertEqual(application_module["version"], "9.67.0")
+        # Require the compatible Application patch for immutable v0.9.5.77 packaging.
+        self.assertEqual(application_module["version"], "9.67.1")
         # Require Blackjack to carry its localized lobby tags after central settings enforcement.
         self.assertEqual(blackjack_module["version"], "9.1.11")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
