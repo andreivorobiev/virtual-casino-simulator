@@ -7412,59 +7412,73 @@
     {
       "id": "WELL-001",
       "module": "Core",
-      "description": "The server-only session-wellness preference foundation is explicitly opt-in and off by default, persists only for authenticated non-guest subjects, accepts only elapsed-reminder, suggested-stopping-point, cadence, and optimistic-revision fields, rejects an entire payload carrying unknown or privilege fields, bounds cadence from 10 through 240 minutes so it cannot become countdown pressure or silently never arrive, and rejects stale concurrent updates. Disposable guest trials receive explicit non-persisted responses and create no durable wellness record. Acknowledging a reminder grants no token, streak, bonus, or reward and creates no ledger movement.",
+      "description": "Session wellness remains explicitly opt-in and off by default, persists only for authenticated non-guest subjects, and bounds cadence from 10 through 240 minutes. One persistent every-game control schedules from the server-owned login timestamp rather than page-load time, records only the last presented cadence slot and session-local pause flag so reloads do not duplicate reminders, defers hidden-tab presentation until visible, cancels every pending timer on logout or session replacement, restores invoking focus after its native dialog closes, and keeps pause session-local while Turn reminders off is one explicit durable preference write. Dismissing, pausing, resuming, saving, or stopping grants no token, streak, bonus, or reward and creates no ledger movement.",
       "status": "PASS",
       "api_tests": [
         "API-WELLNESS-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-WELLNESS-001"
+      ],
       "implementation_files": [
         "casino/core/wellness.py",
         "casino/app.py",
         "contracts/openapi/user-settings.v2.yaml",
+        "web/core/wellness.js",
+        "web/app.js",
+        "web/index.html",
+        "web/styles.css",
         "tests/wellness_tests.py"
       ],
       "introduced_in": "issue-167-session-wellness",
       "changed_in": "issue-167-session-wellness",
-      "notes": "Allocated for the server-only foundation in GitHub issue #167. Timer rendering, every-game controls, reload timing, keyboard and screen-reader behavior, reduced-motion behavior, responsive browser evidence, and owner/counsel public-copy review remain open."
+      "notes": "The every-game browser control and native dialog complete GitHub issue #167 without pausing gameplay, adding urgency, rewarding dismissal, or changing frozen v1. Session storage contains only the opaque login-time-derived key plus bounded presentation state; settings and neutral summaries remain server-authoritative."
     },
     {
       "id": "WELL-002",
       "module": "Core",
-      "description": "The additive authenticated wellness summary derives its player and active-session start boundary exclusively from server context, reads only a bounded authoritative committed-ledger window, re-filters provider rows to the session player, and reports plain movement, staked, returned, and arithmetic net play-token totals without a verdict, advice, loss-chasing language, or value implication. All drafted wellness copy ships in EN and RU with identical placeholders and is scanned against prohibited deposit, purchase, cash-value, prize, redemption, reward, streak, urgency, and loss-chasing framing.",
+      "description": "The additive authenticated wellness summary derives its player and active-session start boundary exclusively from server context, reads only a bounded authoritative committed-ledger window, re-filters provider rows to the session player, and reports plain movement, staked, returned, and arithmetic net play-token totals without a verdict, advice, loss-chasing language, or value implication. The persistent dialog renders that neutral summary and optional stopping-point suggestion in EN and RU at every governed viewport, remains contained under reduced motion, and keeps its complete keyboard and screen-reader structure independent of game rerenders. All wellness copy has identical placeholders and is scanned against prohibited deposit, purchase, cash-value, prize, redemption, reward, streak, urgency, and loss-chasing framing.",
       "status": "PASS",
       "api_tests": [
         "API-WELLNESS-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-WELLNESS-001"
+      ],
       "implementation_files": [
         "casino/core/wellness.py",
         "casino/app.py",
         "contracts/openapi/user-settings.v2.yaml",
         "web/i18n/en-US/shell.json",
         "web/i18n/ru-RU/shell.json",
+        "web/core/wellness.js",
+        "web/index.html",
         "tests/wellness_tests.py"
       ],
       "introduced_in": "issue-167-session-wellness",
       "changed_in": "issue-167-session-wellness",
-      "notes": "Allocated for the server-only foundation in GitHub issue #167. The summary does not expose a caller-authored time boundary, and the broader issue remains open for browser-visible controls and public-audience review."
+      "notes": "The summary does not expose a caller-authored time boundary or retain totals in browser storage. Visual evidence is mapped to the session_wellness surface in EN and RU across desktop-primary, desktop-compact, tablet, and mobile cells."
     },
     {
       "id": "TEST-105",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies opt-in defaults, durable registered-user configuration, disposable guest non-persistence, cadence floor and ceiling with strict type rejection, whole-payload unknown-field rejection, optimistic stale-write conflicts, reward-free acknowledgement with an unchanged ledger, neutral active-session totals with no verdict, populated-neighbour privacy, malformed-document recovery, subjectless fail-closed behavior, prohibited-framing scanning across every drafted wellness string, complete EN/RU placeholder parity, server-owned session-bound route behavior, additive v2 contract shape, and exact contract digest pinning.",
+      "description": "Listener-free Python and dependency-free Node evidence verifies opt-in defaults, durable registered-user configuration, disposable guest non-persistence, cadence bounds, optimistic conflicts, reward-free acknowledgement, neutral self-only totals, malformed-state recovery, prohibited-framing scans, EN/RU placeholder parity, exact additive-v2 contract pinning, absolute server-session cadence, hidden-tab deferral, same-session reload deduplication, focus restoration, locale rerendering, session-local pause, durable stop, and teardown cancellation. Hosted Browser evidence exercises the real persistent control on a game route, native dialog focus and Escape restoration, neutral summary, pause/reload/resume/stop behavior, reduced motion, no horizontal overflow, and complete EN/RU by four-viewport visual evidence.",
       "status": "PASS",
       "api_tests": [
         "API-WELLNESS-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-WELLNESS-001"
+      ],
       "implementation_files": [
         "tests/wellness_tests.py",
+        "tests/wellness_browser_contract.test.mjs",
+        "tests/visual/visual_matrix.json",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-167-session-wellness",
       "changed_in": "issue-167-session-wellness",
-      "notes": "Allocated after TEST-104 became permanent on current main. Every focused test uses an isolated temporary provider; no listener, browser, credential, repository runtime file, provider network, or live system is touched."
+      "notes": "Allocated after TEST-104 became permanent on current main. Provider tests stay isolated, the Node clock and DOM are deterministic, and BR-WELLNESS-001 uses only a loopback server plus page-local wellness route fixtures that create no durable preference or external contact."
     },
     {
       "id": "TOUR-001",

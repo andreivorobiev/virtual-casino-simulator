@@ -22,7 +22,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 EXPECTED_SHELL_ASSETS = {
     "/index.html", "/styles.css", "/app.js", "/brands/tiltseven.js", "/manifest.webmanifest", "/assets/favicon.svg",
     "/assets/pwa-icon-192.png", "/assets/pwa-icon-512.png", "/assets/pwa-maskable-192.png", "/assets/pwa-maskable-512.png",
-    "/core/api.js", "/core/brand.js", "/core/celebrate.js", "/core/feedback.js", "/core/i18n.js", "/core/pwa.js", "/core/ui.js", "/core/voice.js",
+    "/core/api.js", "/core/brand.js", "/core/celebrate.js", "/core/feedback.js", "/core/wellness.js", "/core/i18n.js", "/core/pwa.js", "/core/ui.js", "/core/voice.js",
     "/i18n/en-US/feedback.json", "/i18n/en-US/shell.json", "/i18n/ru-RU/feedback.json", "/i18n/ru-RU/shell.json",
 }
 # Name every governed lifecycle state required by the narrowed visual matrix.
@@ -181,6 +181,21 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertNotIn("{ self.skipWaiting(); return; }", worker)
         # Require the exact low-cardinality version response.
         self.assertIn("{ type: 'PWA_VERSION', version: APP_VERSION }", worker)
+
+    # Require client registration to observe an update that starts before listener wiring completes. (PWA-003)
+    def test_client_closes_existing_installation_observer_race(self):
+        # Read the production PWA controller as the executable lifecycle contract.
+        client = (ROOT / "web" / "core" / "pwa.js").read_text(encoding="utf-8")
+        # Require one shared observer to accept an already captured installing worker.
+        self.assertIn("function observeInstallingWorker(installing)", client)
+        # Require immediate state inspection in addition to future state-change observation.
+        self.assertIn("installing.addEventListener('statechange', revealWhenInstalled);", client)
+        # Require the immediate inspection to occur after listener attachment so no later transition is lost.
+        self.assertLess(client.index("installing.addEventListener('statechange', revealWhenInstalled);"), client.index("revealWhenInstalled();"))
+        # Require registration to inspect an installation that predates the updatefound listener callback.
+        self.assertIn("observeInstallingWorker(registration.installing);", client)
+        # Require a final waiting-slot read after listener wiring closes the installation-to-waiting edge.
+        self.assertGreater(client.rindex("if (registration.waiting) { updateWaiting = true; renderPwaState('update'); }"), client.index("registration.addEventListener('updatefound'"))
 
     # Require browser acceptance to serialize activation before a controlled reload and controller proof.
     def test_browser_acceptance_serializes_worker_readiness(self):

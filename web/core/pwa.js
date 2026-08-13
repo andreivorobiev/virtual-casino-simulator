@@ -14,6 +14,7 @@ const SERVER_CONTROL_SELECTOR = [
   '[data-testid="invitation-redemption"] button', '[data-testid="invitation-redemption"] input', '[data-testid="invitation-redemption"] select',
   '.game-screen button', '.game-screen input', '.game-screen select', '.game-screen textarea',
   '.wallet-menu button', '.wallet-menu input', '#feedback-dialog button', '#feedback-dialog input', '#feedback-dialog select', '#feedback-dialog textarea',
+  '#wellness-dialog button', '#wellness-dialog input',
 ].join(',');
 // Enumerate display-only lifecycle states accepted by the bounded shell status renderer.
 const DISPLAY_STATES = new Set(['cold-start', 'warm-start', 'offline', 'reconnecting', 'online', 'route-restored', 'update', 'update-failed', 'stale-client', 'expired-session', 'reconnect-failed']);
@@ -285,6 +286,25 @@ function requestControllerVersion() {
   if (controller) controller.postMessage({ type: 'GET_VERSION' });
 }
 
+// Observe one installation whether it began before or after registration listener wiring. (PWA-003)
+function observeInstallingWorker(installing) {
+  // Stop when the registration has no installation in progress.
+  if (!installing) return;
+  // Present the player-controlled update boundary once this worker is installed beside an existing controller.
+  const revealWhenInstalled = () => {
+    // Ignore transitional and terminal states that do not represent a waiting update.
+    if (installing.state !== 'installed' || !navigator.serviceWorker.controller) return;
+    // Retain the waiting state across connectivity rerenders.
+    updateWaiting = true;
+    // Present the non-coercive update action.
+    renderPwaState('update');
+  };
+  // Observe future state changes for a worker that is still installing.
+  installing.addEventListener('statechange', revealWhenInstalled);
+  // Inspect the current state immediately because installation may have completed before listener wiring.
+  revealWhenInstalled();
+}
+
 // Register the service worker and wire update/version handling after first paint.
 async function registerWorker() {
   // Start protected registration so unsupported hosting never blocks normal browser use.
@@ -295,21 +315,13 @@ async function registerWorker() {
     if (registration.waiting) { updateWaiting = true; renderPwaState('update'); }
     // Watch one new installation without forcing activation.
     registration.addEventListener('updatefound', () => {
-      // Capture the installing worker for stable state-change checks.
-      const installing = registration.installing;
-      // Stop when the browser did not expose an installing worker.
-      if (!installing) return;
-      // Observe completion so the user controls the update boundary.
-      installing.addEventListener('statechange', () => {
-        // Treat an installed worker beside an existing controller as a ready update.
-        if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-          // Retain the waiting state across connectivity rerenders.
-          updateWaiting = true;
-          // Present the non-coercive update action.
-          renderPwaState('update');
-        }
-      });
+      // Observe the newly exposed worker through the shared race-safe state boundary.
+      observeInstallingWorker(registration.installing);
     });
+    // Observe an installation that started before register() resolved or updatefound wiring completed.
+    observeInstallingWorker(registration.installing);
+    // Recheck the waiting slot after listener wiring so no installation-to-waiting edge is missed.
+    if (registration.waiting) { updateWaiting = true; renderPwaState('update'); }
     // Ask the active controller to prove its canonical version.
     requestControllerVersion();
   // Keep the normal browser application usable and expose update failure without raw diagnostics.
