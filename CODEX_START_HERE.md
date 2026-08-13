@@ -233,6 +233,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/AGENTS.md`](docs/AGENTS.md) — AGENTS.md - docs module
 - [`docs/api_contract_freeze.md`](docs/api_contract_freeze.md) — API contract freeze policy
 - [`docs/card_poker_primitives.md`](docs/card_poker_primitives.md) — Card and poker primitives
+- [`docs/ci_compute.md`](docs/ci_compute.md) — Pull-request compute routing
 - [`docs/claude_codex_work_division.md`](docs/claude_codex_work_division.md) — Claude and Codex work-division proposal
 - [`docs/codex_parallel_workflow.md`](docs/codex_parallel_workflow.md) — Parallel agent workflow
 - [`docs/commenting_policy.md`](docs/commenting_policy.md) — Commenting policy
