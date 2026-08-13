@@ -11173,6 +11173,7 @@
       ],
       "browser_tests": [],
       "implementation_files": [
+        "casino/admin.py",
         "tests/dead_artifact_tests.py",
         "tests/run_tests.py",
         "docs/requirements/requirements-spine.json"
@@ -11191,6 +11192,7 @@
       ],
       "browser_tests": [],
       "implementation_files": [
+        "casino/admin.py",
         "tests/dead_artifact_tests.py",
         "tests/run_tests.py"
       ],

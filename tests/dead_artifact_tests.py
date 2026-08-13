@@ -38,10 +38,14 @@ class DeadArtifactTests(unittest.TestCase):
         self.assertFalse((ROOT / "docs" / "requirements.json").exists())
         # Preserve the assembled canonical aggregate used by validation and tooling.
         self.assertTrue((ROOT / "docs" / "requirements" / "requirements.json").is_file())
+        # Require the production Admin endpoint loader to use that same canonical aggregate.
+        admin_source = (ROOT / "casino" / "admin.py").read_text(encoding="utf-8")
+        # Reject a hidden runtime dependency on the deleted top-level snapshot.
+        self.assertIn('REQ_PATH = DOCS_DIR / "requirements" / "requirements.json"', admin_source)
         # Search tracked text sources for a stale pointer without reading generated compatibility output.
         stale_references = []
         # Inspect the human-owned requirement source and task notes where stale pointers previously lived.
-        for path in (ROOT / "docs" / "requirements" / "requirements-spine.json", ROOT / "codex" / "tasks" / "auth-mysql-token-requirements-contracts.md"):
+        for path in (ROOT / "docs" / "requirements" / "requirements-spine.json", ROOT / "codex" / "tasks" / "auth-mysql-token-requirements-contracts.md", ROOT / "casino" / "admin.py"):
             # Record the exact relative path when obsolete inventory ownership returns.
             if "docs/requirements.json" in path.read_text(encoding="utf-8"):
                 stale_references.append(path.relative_to(ROOT).as_posix())

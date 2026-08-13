@@ -1585,8 +1585,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(ledger_module["version"], "9.1.2")
         # Require the exact compatible Players patch for explicit row insertion.
         self.assertEqual(players_module["version"], "9.1.3")
-        # Require the exact compatible Admin minor for provider operational controls.
-        self.assertEqual(admin_module["version"], "1.18.0")
+        # Require the compatible Admin patch that serves the canonical requirement aggregate.
+        self.assertEqual(admin_module["version"], "1.18.1")
         # Require the Tests minor for dead-artifact regression evidence.
         self.assertEqual(tests_module["version"], "1.89.0")
         # Require the Docs minor for canonical-inventory and motion-history governance.

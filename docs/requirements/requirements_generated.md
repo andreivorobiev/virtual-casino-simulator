@@ -14,7 +14,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.18.0
+- admin: 1.18.1
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.2
