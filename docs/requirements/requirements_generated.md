@@ -7,10 +7,10 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.66.0
-- core: 9.43.0
+- core: 9.43.1
 - mobile: 1.0.0
 - ledger: 9.1.2
-- players: 9.1.2
+- players: 9.1.3
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.2
 - pai_gow_poker: 1.1.2
 - teen_patti: 1.1.2
-- tests: 1.85.0
-- docs: 1.81.0
+- tests: 1.85.1
+- docs: 1.81.1
 - contracts: 1.61.3
 - tooling: 1.32.0
 - commenting_policy: 2.0.0
@@ -646,6 +646,8 @@ Historical source baseline: 9.1.0
 - **TEST-174** (Tests) - PASS: Provider-neutral, JSON, transactional MySQL-model, migration, disposable-MySQL, storage, recovery, release, and CI evidence proves resolver-first and executor-first convergence, finite pending lock waits, exact replay and changed-input conflict, planner at most once, no late execution after uncommitted, crash recovery at every JSON projection boundary, exact wallet/state/ledger/receipt convergence, schema-three receipt byte preservation during schema-four epoch-one backfill, runtime append-only grants, clean schema-two/three compatibility, exact clean-schema-four lifecycle eligibility, and held application. Reset evidence proves action-versus-reset orderings, claim-zero/planner-zero resetting gaps, same-session capacity-one bootstrap, fresh same-key execution in a new epoch, old immutable history retention without cross-epoch replay, exact JSON rollback, durable MySQL reset failure and later recovery, nonblocking concurrent reset refusal, and no route, game, API, log, or deployment activation.
 - **UX-028** (Application) - PASS: The logged-out browser entry presents one guest-first decision hierarchy: a concise legal line, policy-authorized guest primary action, one shared terms acknowledgement and polite status owner, secondary password sign-in, compact locale preference, invite-only disclosure when signup is held, and only provider or signup actions that are currently actionable. The settled default gate renders no disabled interactive controls, keeps complete guest lifecycle wording behind a real button-owned disclosure, maps guest capacity and rate boundaries to localized product copy, and fits brand, legal, guest, terms, and sign-in decisions without document scrolling at 375 by 812 CSS pixels.
 - **TEST-176** (Tests) - PASS: Browser evidence exercises the policy-aware logged-out hierarchy in English and Russian across every governed viewport plus the issue-specific 375 by 812 mobile boundary. It proves default signup and provider omission, zero disabled controls, actionable signup and provider inclusion, one live status owner, identical shared terms copy and checkbox focus for guest and password entry, unchanged lifecycle disclosure wording, reduced-motion stability, touch targets, horizontal containment, short-desktop fit, and mobile no-scroll containment.
+- **STORAGE-014** (Storage) - PASS: Money-bearing player storage fails closed across JSON and MySQL instead of substituting funded defaults or coercing corrupt balances. Only a genuinely absent JSON wallet document may select reviewed bootstrap defaults; malformed encoding or JSON, duplicate keys or wallet identities, invalid player collections, and non-finite, negative, sub-cent, coerced, or out-of-range balances stop reads, bootstrap, updates, action snapshots, and ledger settlements through one value-free operator-recovery boundary. JSON preserves the authoritative corrupt bytes and one exact content-addressed forensic copy without automatic repair or replacement.
+- **TEST-177** (Tests) - PASS: Listener-free JSON and MySQL-model evidence proves absent-file bootstrap compatibility, syntax and structural corruption refusal, fixed secret-free diagnostics, exact content-addressed forensic preservation, idempotent repeated refusal, zero default-factory reach, zero balance, ledger, and action-journal mutation, public player-service propagation, blocked legacy and exactly-once settlements, blocked bootstrap, explicit verified-byte restoration, one correct post-recovery debit, provider-parity error normalization, and mandatory connection cleanup.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.

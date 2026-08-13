@@ -145,6 +145,49 @@ def _validated_strict_document(value: Any, validator: Callable[[Any], bool] | No
     return value
 
 
+# Validate the provider-neutral wallet document before any balance is exposed or mutated. (STORAGE-014)
+def _validated_players_document(value: Any) -> dict:
+    # Require the durable top-level object and player collection without fallback normalization.
+    if type(value) is not dict or type(value.get("players")) is not list:
+        # Refuse malformed money state through one value-free recovery boundary.
+        raise ConflictError("Wallet storage requires operator recovery")
+    # Track durable player identities so ambiguous duplicate wallets cannot be selected.
+    player_ids = set()
+    # Validate every stored wallet row before returning any part of the document.
+    for player in value["players"]:
+        # Require the mapping shape used by both storage providers.
+        if type(player) is not dict:
+            # Preserve malformed state for operator-led recovery.
+            raise ConflictError("Wallet storage requires operator recovery")
+        # Accept only one non-empty string identity per durable wallet.
+        player_id = player.get("player_id")
+        # Reject absent, non-string, blank, or duplicate wallet identities.
+        if type(player_id) is not str or not player_id.strip() or player_id in player_ids:
+            # Keep the invalid document unavailable instead of guessing an owner.
+            raise ConflictError("Wallet storage requires operator recovery")
+        # Reserve the identity before validating its money value.
+        player_ids.add(player_id)
+        # Read the stored balance without accepting booleans or string coercion.
+        balance = player.get("balance")
+        # Support JSON integers/floats and MySQL Decimal values only.
+        if type(balance) not in {int, float, Decimal}:
+            # Refuse a value whose money meaning depends on coercion.
+            raise ConflictError("Wallet storage requires operator recovery")
+        try:
+            # Convert through decimal text so two-decimal persisted values remain exact.
+            scaled = Decimal(str(balance)) * 100
+        # Collapse malformed or unbounded numeric conversions into the fixed boundary.
+        except Exception:
+            # Return no stored value, path, or parser detail.
+            raise ConflictError("Wallet storage requires operator recovery") from None
+        # Require a finite, nonnegative, exact-cent balance inside the signed ledger range.
+        if not scaled.is_finite() or scaled != scaled.to_integral_value() or not 0 <= scaled <= 9_000_000_000_000_000_000:
+            # Preserve impossible wallet money for explicit recovery.
+            raise ConflictError("Wallet storage requires operator recovery")
+    # Return the unchanged validated document to the provider caller.
+    return value
+
+
 # Define the StorageProvider interface used by core modules.
 class StorageProvider:
     # Store a human-readable provider name for diagnostics and tests.
@@ -880,6 +923,72 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 shutil.copy2(path, backup)
                 # Return the caller default after backing up the corrupt file.
                 return default() if callable(default) else default
+
+    # Preserve one exact corrupt wallet payload under a stable content-derived forensic name. (STORAGE-014)
+    def _preserve_corrupt_players(self, encoded: bytes) -> None:
+        # Derive a non-secret identity that prevents repeated reads from multiplying backups.
+        digest = hashlib.sha256(encoded).hexdigest()
+        # Keep the forensic copy adjacent to the established players document.
+        backup = self.players_path().with_name(f"players.json.corrupt-{digest}")
+        try:
+            # Create the content-addressed artifact only once without overwriting evidence.
+            with backup.open("xb") as handle:
+                # Write the exact corrupt bytes without decoding or normalization.
+                handle.write(encoded)
+                # Flush language buffers before asking the operating system for durability.
+                handle.flush()
+                # Persist the forensic bytes before reporting the recovery boundary.
+                os.fsync(handle.fileno())
+        # Accept a repeated observation only when the existing artifact is byte-identical.
+        except FileExistsError:
+            try:
+                # Verify the content-addressed artifact instead of trusting its name alone.
+                matches = backup.read_bytes() == encoded
+            # Collapse forensic read failures without exposing a filesystem path.
+            except OSError:
+                # Fail closed when existing evidence cannot be verified.
+                raise ConflictError("Wallet storage requires operator recovery") from None
+            # Reject a mismatched pre-existing artifact as an operator-recovery condition.
+            if not matches:
+                # Preserve both source and ambiguous evidence without replacement.
+                raise ConflictError("Wallet storage requires operator recovery")
+        # Collapse forensic creation failures into the same value-free boundary.
+        except OSError:
+            # Leave the original players document untouched for operator inspection.
+            raise ConflictError("Wallet storage requires operator recovery") from None
+
+    # Read the money-bearing players document without ever substituting defaults for corruption. (STORAGE-014)
+    def _read_players_document(self, default_factory: Callable[[], dict]) -> dict:
+        # Ensure the local data root exists before the missing-file compatibility check.
+        self.ensure_ready()
+        # Resolve the authoritative wallet path exactly once.
+        path = self.players_path()
+        try:
+            # Read the exact bytes so only true absence can select reviewed bootstrap defaults.
+            encoded = path.read_bytes()
+        # Preserve first-run bootstrap behavior only for a genuinely absent document.
+        except FileNotFoundError:
+            # Validate defaults through the same provider-neutral money boundary.
+            return _validated_players_document(default_factory())
+        # Treat every other filesystem failure as unavailable money state.
+        except OSError:
+            # Refuse without leaking the path or platform error.
+            raise ConflictError("Wallet storage requires operator recovery") from None
+        try:
+            # Decode UTF-8 JSON with duplicate-key and non-finite-number rejection.
+            state = json.loads(
+                encoded.decode("utf-8"),
+                object_pairs_hook=self._unique_json_object,
+                parse_constant=lambda value: (_ for _ in ()).throw(ValueError("non-finite number")),
+            )
+            # Validate every durable wallet before making the document observable.
+            return _validated_players_document(state)
+        # Classify malformed bytes and structural money corruption identically.
+        except (UnicodeError, ValueError, RecursionError, ConflictError):
+            # Preserve one exact forensic copy without changing the authoritative source.
+            self._preserve_corrupt_players(encoded)
+            # Return no replacement, partial wallet, or parser detail.
+            raise ConflictError("Wallet storage requires operator recovery") from None
 
     # Write JSON to a local path atomically.
     def _write_json(self, path: Path, data: Any) -> None:
@@ -2017,14 +2126,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
 
     # Read the players document strictly for an action-owned wallet snapshot.
     def _read_game_action_players(self) -> dict:
-        # Strictly decode players without the legacy corruption fallback.
-        state = self._read_game_action_json(self.players_path(), lambda: {"schema_version": SCHEMA_VERSION, "players": []})
-        # Require the public player document object and exact player array.
-        if type(state) is not dict or type(state.get("players")) is not list:
-            # Preserve malformed wallet bytes for operator recovery.
-            raise ConflictError("Game action wallet state requires operator recovery")
-        # Return the validated outer shape for bounded declared-wallet lookup.
-        return state
+        # Reuse the forensic wallet reader so every action sees the same fail-closed state.
+        return self._load_players_document(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
 
     # Capture one immutable snapshot after durable-key lookup and recovery.
     def _capture_game_action_snapshot(self, resources: GameActionResources) -> GameActionSnapshot:
@@ -2681,14 +2784,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
 
     # Load players without acquiring another operating-system wallet lock.
     def _load_players_document(self, default_factory: Callable[[], dict]) -> dict:
-        # Read the players document or build defaults when absent.
-        state = self._read_json(self.players_path(), default_factory)
-        # Replace invalid payloads with the default player document.
-        if not isinstance(state, dict) or "players" not in state:
-            # Rebuild defaults when the stored shape is unusable.
-            state = default_factory()
-        # Return the player document expected by existing callers.
-        return state
+        # Read the wallet document strictly so corruption never selects bootstrap defaults.
+        return self._read_players_document(default_factory)
 
     # Save players without acquiring another gate or invoking recovery.
     def _save_players_document(self, state: dict) -> None:
@@ -2891,7 +2988,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             # Treat the ledger row as proof that this action was fully projected.
             return
         # Load the current player document without invoking another process lock.
-        state = self._read_json(self.players_path(), lambda: {"schema_version": SCHEMA_VERSION, "players": []})
+        state = self._load_players_document(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
         # Find the wallet owned by the committed action.
         player = next((row for row in state.get("players", []) if row.get("player_id") == event["player_id"]), None)
         # Fail closed when recovery cannot locate the committed wallet.
@@ -4466,10 +4563,15 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
             cursor = connection.cursor(dictionary=True)
             # Read players in stable order for deterministic API responses.
             cursor.execute("SELECT player_id, display_name, player_type, balance, created_at, updated_at, status FROM casino_players ORDER BY player_id")
-            # Convert database rows into the JSON-compatible state document.
-            players = [self._player_from_row(row) for row in cursor.fetchall()]
-            # Return the document shape expected by existing callers.
-            return {"schema_version": SCHEMA_VERSION, "players": players}
+            try:
+                # Convert database rows into the JSON-compatible state document.
+                players = [self._player_from_row(row) for row in cursor.fetchall()]
+                # Validate the same complete money shape required from JSON storage.
+                return _validated_players_document({"schema_version": SCHEMA_VERSION, "players": players})
+            # Normalize corrupt row values without reflecting driver or stored details.
+            except (TypeError, ValueError, OverflowError, ConflictError):
+                # Preserve database state and require operator-led repair.
+                raise ConflictError("Wallet storage requires operator recovery") from None
         # Always close the connection after loading players.
         finally:
             # Close the MySQL connection for this operation.

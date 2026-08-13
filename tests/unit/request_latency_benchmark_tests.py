@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus the issue #456 catalog economics gate to total exactly 956 permanent rows.
-        self.assertEqual(len(requirements), 958)
+        # Require the accepted aggregates plus the fail-closed wallet pair to total exactly 960 permanent rows.
+        self.assertEqual(len(requirements), 960)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1401,6 +1401,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "STORAGE-013": "Storage",  # Bind immutable action lifecycle claims to storage.
             "MYSQL-009": "MySQL",  # Bind schema-four claim and receipt ownership.
             "TEST-174": "Tests",  # Bind provider parity and migration evidence without reusing TEST-173.
+            "STORAGE-014": "Storage",  # Bind corrupt wallet refusal and forensic preservation to storage.
+            "TEST-177": "Tests",  # Bind provider-parity wallet corruption recovery evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
@@ -1572,17 +1574,17 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the Deuces descriptor after removing its final game-owned history scan.
         deuces_module = json.loads((ROOT / "modules" / "deuces_wild_video_poker.json").read_text(encoding="utf-8"))
         # Require the compatible Core minor for the provider-neutral lifecycle bridge.
-        self.assertEqual(core_module["version"], "9.43.0")
+        self.assertEqual(core_module["version"], "9.43.1")
         # Require the compatible Ledger patch for the public read-only point seam.
         self.assertEqual(ledger_module["version"], "9.1.2")
         # Require the exact compatible Players patch for explicit row insertion.
-        self.assertEqual(players_module["version"], "9.1.2")
+        self.assertEqual(players_module["version"], "9.1.3")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
         # Require the Tests patch for immutable v0.9.5.76 release qualification.
-        self.assertEqual(tests_module["version"], "1.85.0")
+        self.assertEqual(tests_module["version"], "1.85.1")
         # Require the Docs patch for immutable v0.9.5.76 release governance.
-        self.assertEqual(docs_module["version"], "1.81.0")
+        self.assertEqual(docs_module["version"], "1.81.1")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the Contracts patch for the immutable v0.9.5.76 rollback record.
