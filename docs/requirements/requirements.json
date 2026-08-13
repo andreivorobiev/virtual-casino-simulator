@@ -1443,7 +1443,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1458,7 +1458,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1475,7 +1475,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1492,7 +1492,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1507,7 +1507,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1524,7 +1524,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1539,7 +1539,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1554,7 +1554,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1586,7 +1586,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1601,7 +1601,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1616,7 +1616,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1631,7 +1631,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1646,7 +1646,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -1661,7 +1661,7 @@
       "implementation_files": [
         "docs/requirements_validation_v9_1.pdf",
         "docs/requirements_validation_v9_1.md",
-        "docs/requirements.json",
+        "docs/requirements/requirements.json",
         "RELEASE_NOTES.md"
       ],
       "notes": ""
@@ -11162,6 +11162,41 @@
       "introduced_in": "issue-723-rollout-link-enforcement",
       "changed_in": "issue-723-rollout-link-enforcement",
       "notes": "The deterministic suite uses an in-memory GitHub client model and opens no listener or network connection. Hosted acceptance additionally runs the default-branch issue workflow against repository issue metadata."
+    },
+    {
+      "id": "TOOL-016",
+      "module": "Tooling",
+      "description": "Repository governance exposes one canonical generated requirements aggregate, contains no success-exiting placeholder PR-scope checker, and keeps reviewed production-unused JavaScript names outside public module export surfaces.",
+      "status": "PASS",
+      "api_tests": [
+        "GOV-DEAD-ARTIFACTS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/dead_artifact_tests.py",
+        "tests/run_tests.py",
+        "docs/requirements/requirements-spine.json"
+      ],
+      "introduced_in": "issue-711-dead-artifact-cleanup",
+      "changed_in": "issue-711-dead-artifact-cleanup",
+      "notes": "The gate names only the audited compatibility surfaces; it does not infer that an unexported internal helper is dead or weaken any changed-file, requirement, contract, or CI policy."
+    },
+    {
+      "id": "TEST-181",
+      "module": "Tests",
+      "description": "Dependency-free evidence proves the obsolete top-level requirements snapshot and inert scope placeholder are absent, the canonical aggregate remains available, every historical pointer names the canonical aggregate, and each issue-711 JavaScript symbol remains absent from named export declarations.",
+      "status": "PASS",
+      "api_tests": [
+        "GOV-DEAD-ARTIFACTS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/dead_artifact_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-711-dead-artifact-cleanup",
+      "changed_in": "issue-711-dead-artifact-cleanup",
+      "notes": "The suite reads tracked repository text only and opens no listener, browser, database, provider, credential, or production connection."
     },
     {
       "id": "TEST-175",

@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus rollout-link governance to total exactly 967 permanent rows.
-        self.assertEqual(len(requirements), 967)
+        # Require the accepted aggregates plus dead-artifact cleanup governance to total exactly 969 permanent rows.
+        self.assertEqual(len(requirements), 969)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1407,6 +1407,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-178": "Tests",  # Bind static and rendered Russian catalog evidence.
             "TOOL-014": "Tooling",  # Bind completed-issue rollout linkage enforcement.
             "TEST-179": "Tests",  # Bind deterministic rollout-link evidence and workflow scope.
+            "TOOL-016": "Tooling",  # Bind canonical-inventory and dead-export cleanup governance.
+            "TEST-181": "Tests",  # Bind deterministic dead-artifact absence evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
@@ -1585,16 +1587,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.3")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the Tests minor for completed-issue rollout-link regression evidence.
-        self.assertEqual(tests_module["version"], "1.88.0")
-        # Require the Docs minor for completed-issue traceability governance.
-        self.assertEqual(docs_module["version"], "1.84.0")
+        # Require the Tests minor for dead-artifact regression evidence.
+        self.assertEqual(tests_module["version"], "1.89.0")
+        # Require the Docs minor for canonical-inventory and motion-history governance.
+        self.assertEqual(docs_module["version"], "1.85.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the Contracts patch for the immutable v0.9.5.77 rollback record.
         self.assertEqual(contracts_module["version"], "1.61.4")
-        # Require the Tooling minor that adds completed-issue rollout-link enforcement.
-        self.assertEqual(tooling_module["version"], "1.35.0")
+        # Require the Tooling minor that retires misleading repository artifacts and exports.
+        self.assertEqual(tooling_module["version"], "1.36.0")
         # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
         self.assertEqual((mobile_module["version"], mobile_module["package_version"]), ("1.0.0", "0.2.0"))
         # Require the compatible Baccarat patch for its localized lobby tags and copy.
@@ -1607,8 +1609,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(roulette_module["version"], "9.7.2")
         # Require the compatible Slots patch for localized tags and Russian description copy.
         self.assertEqual(slots_module["version"], "9.5.1")
-        # Require the compatible Application patch for immutable v0.9.5.77 packaging.
-        self.assertEqual(application_module["version"], "9.67.1")
+        # Require the compatible Application patch for unused shared-export retirement.
+        self.assertEqual(application_module["version"], "9.67.2")
         # Require Blackjack to carry its localized lobby tags after central settings enforcement.
         self.assertEqual(blackjack_module["version"], "9.1.11")
         # Require Autoplay to carry phase-safe shared-rate-limit recovery.
