@@ -45,6 +45,7 @@ GitHub is the source of truth after this payload is pushed. Work must happen thr
 6. Update module versions when module source changes.
 7. Update docs/release notes for formal releases.
 8. Run required validations before finalizing.
+9. Close an issue as completed only when a merged pull request is linked through a GitHub cross-reference or an explicit `Rolled out with #NNN` issue comment. Not-planned closures require a recorded decision rationale and are exempt from the merged-PR link.
 
 ## Module-boundary rules
 

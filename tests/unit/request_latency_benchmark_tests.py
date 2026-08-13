@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus the pull-delivery trio to total exactly 965 permanent rows.
-        self.assertEqual(len(requirements), 965)
+        # Require the accepted aggregates plus rollout-link governance to total exactly 967 permanent rows.
+        self.assertEqual(len(requirements), 967)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1405,6 +1405,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-177": "Tests",  # Bind provider-parity wallet corruption recovery evidence.
             "I18N-012": "Application",  # Bind complete Russian lobby-card copy to the catalog.
             "TEST-178": "Tests",  # Bind static and rendered Russian catalog evidence.
+            "TOOL-014": "Tooling",  # Bind completed-issue rollout linkage enforcement.
+            "TEST-179": "Tests",  # Bind deterministic rollout-link evidence and workflow scope.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
@@ -1583,16 +1585,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.3")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the Tests patch for immutable v0.9.5.77 release qualification.
-        self.assertEqual(tests_module["version"], "1.87.1")
-        # Require the Docs patch for immutable v0.9.5.77 release governance.
-        self.assertEqual(docs_module["version"], "1.83.1")
+        # Require the Tests minor for completed-issue rollout-link regression evidence.
+        self.assertEqual(tests_module["version"], "1.88.0")
+        # Require the Docs minor for completed-issue traceability governance.
+        self.assertEqual(docs_module["version"], "1.84.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the Contracts patch for the immutable v0.9.5.77 rollback record.
         self.assertEqual(contracts_module["version"], "1.61.4")
-        # Require the Tooling minor that adds fail-closed Russian catalog validation.
-        self.assertEqual(tooling_module["version"], "1.34.0")
+        # Require the Tooling minor that adds completed-issue rollout-link enforcement.
+        self.assertEqual(tooling_module["version"], "1.35.0")
         # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
         self.assertEqual((mobile_module["version"], mobile_module["package_version"]), ("1.0.0", "0.2.0"))
         # Require the compatible Baccarat patch for its localized lobby tags and copy.

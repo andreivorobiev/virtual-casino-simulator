@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.87.1
-- docs: 1.83.1
+- tests: 1.88.0
+- docs: 1.84.0
 - contracts: 1.61.4
-- tooling: 1.34.0
+- tooling: 1.35.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.5
 - poker_dice: 1.1.3
@@ -653,6 +653,8 @@ Historical source baseline: 9.1.0
 - **OPS-007** (Operations) - PASS: Production delivery is a host-owned pull state machine: a root systemd timer queries the newest stable immutable GitHub Release at a bounded cadence, never downgrades, alarms when a newer release remains undelivered for more than three intervals, preserves the exact prior application selector and provenance fragment for rollback, and reports success only after public liveness plus authenticated readiness identify the exact expected version and full source SHA.
 - **TOOL-015** (Tooling) - PASS: The packaged release contains a root-owned pull poller plus systemd service and timer templates. The poller accepts only a canonical stable GitHub Release, downloads the exact three hosted assets, verifies the two-record checksum file, manifest artifact and source provenance, complete package policy, monitor pairing and exact clean schema two before selector mutation, switches the application atomically, updates its stable executable only after successful health, and performs application-only rollback without migration, grant, provider, or database-rollback authority.
 - **TEST-180** (Tests) - PASS: Listener-free release-delivery evidence executes numeric compare and no-downgrade decisions, exact stable-release metadata inspection, canonical checksum and source-provenance verification, corrupt-asset rejection before the full verifier, and fail-closed hostile metadata cases. Static order proofs require immutable and schema-two gates before production mutation, application-only rollback and a rollback-drill path, five-minute persistent scheduling, three-interval lag detection, and complete retirement of runner SSH credentials and commands.
+- **TOOL-014** (Tooling) - PASS: Every issue closed as completed must retain verifiable rollout evidence through a merged pull request in this repository, using either GitHub's native pull-request cross-reference or an explicit `Rolled out with #NNN` issue marker. The default-branch workflow labels missing evidence, posts one idempotent repair instruction, clears the label after valid evidence appears, never reopens issues, and exempts explicit not-planned dispositions.
+- **TEST-179** (Tests) - PASS: Listener-free tests prove explicit rollout-marker parsing, native pull-request cross-reference filtering, repository-local merged status, rejection of unmerged and foreign candidates, idempotent label and comment repair, concurrent first-use label creation, not-planned and open-issue exemptions, and the workflow's issue-metadata-only permission and trigger boundary.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
