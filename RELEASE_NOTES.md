@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.77 Release Notes
+
+## Pull-based production release delivery
+
+- Packages the repository-side pull-poller implementation from PR #736, closes release prerequisite #735, and leaves parent issue #732 open for the owner-run production-host installation and evidence.
+- Replaces the unreachable push-to-host SSH upload and activation job with a packaged host agent plus systemd service and five-minute timer templates while retaining immutable GitHub release publication and exact required status-context names.
+- Verifies the latest stable release, exact three-asset set, checksums, source provenance, package inventory, release manifest, clean schema-two compatibility, public health, authenticated readiness, and same-version source conflicts before adoption.
+- Stages releases inside `/opt/casino/releases`, switches the selector and `release.env` atomically, restarts through the existing service boundary, and rolls back to the exact prior application when any activation or verification step fails.
+- Adds durable poll, activation, and lag alarms; the edge monitor exposes poller lag without clearing stronger failure state, and a rollback-drill command validates both candidate and restored predecessor before the timer is enabled.
+- Keeps the host-install step owner-controlled through the exact runbook; this release performs no production connection, host mutation, migration, grant change, database rollback, provider activation, route activation, public signup, or live OAuth change.
+- Adds permanent `OPS-007`, `TOOL-015`, and `TEST-180`; the governed total is exactly 965 requirements.
+- Records the exact canonical package inventory as 767 regular files: current source selection 766 plus this v0.9.5.77 compatibility record; the poller and both systemd templates are packaged.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.43.1`, tooling `1.34.0`, Players `9.1.3`, Ledger `9.1.2`, every game revision, and all game mathematics remain exact.
+- Retains exact immutable v0.9.5.76 as the application-only schema-two rollback predecessor; database rollback is prohibited and the migration catalog remains minimum 2, expected 4, and apply held. Issues #168, #435, #488, #683, and #732 remain open.
+
 # Virtual Casino Simulator v0.9.5.76 Release Notes
 
 ## Complete catalog economics audit

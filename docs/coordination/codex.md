@@ -1,28 +1,28 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-13T04:07:58Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-13T22:00:00Z.
 
 ## Current branch / active Codex work
 
-- Protected main is exact complete catalog economics merge `6fa9dee239231aabcba61d730e2f6a102c63f2ff`, following terminal-green v0.9.5.75 source `4ae61219fbceb1a75a0829fa3611f3cc1525256b`.
-- Isolated branch `codex/release-v0.9.5.76` prepares the repository-standard release packet from exact protected main.
-- Normal PR #691 closed issue #456 after complete 46-game economics qualification; the remaining queue continues after terminal v0.9.5.76 deployment.
+- PR #736 supplies the repository-side pull-poller delivery prerequisite for #732; its exact merge source is rebound before publication.
+- Isolated branch `codex/release-v0.9.5.77` prepares the repository-standard release packet from the accepted poller source.
+- Release ticket #735 owns immutable v0.9.5.77 publication; parent #732 remains open for the owner-run host install and evidence.
 
 ## Accepted scope and requirements
 
-- PR #691 adds one executable economics registry for every one of the 46 catalog games and 74 wager selectors, with source-bound engines and settlement adapters plus deeper Slots and Keno artifacts.
-- The accepted evidence proves governed house-side or intentional-fairness boundaries without changing any game engine, paytable, API, wager acceptance, settlement, or wallet behavior.
-- Requirements total exactly 956 after permanent `TEST-175`; no release requirement identifier is allocated.
+- PR #736 packages one production-host pull poller plus systemd service and timer templates, durable alarms, immutable release verification, and an owner-run install and rollback-drill runbook.
+- GitHub Actions retain immutable publication but no longer attempt the unreachable inbound SSH upload and activation leg; required status-context names remain exact.
+- Requirements total exactly 965 after permanent `OPS-007`, `TOOL-015`, and `TEST-180`; no release requirement identifier is allocated.
 
 ## Version and contract allocation
 
-- Release versions advance only to package `0.9.5.76`, application `9.64.3`, contracts `1.61.3`, tests `1.81.1`, and docs `1.78.1`; tooling remains content-owned `1.32.0`.
-- Core remains content-owned `9.43.0`, Mobile remains `1.0.0` with package `0.2.0`, Players remains `9.1.2`, Ledger remains `9.1.2`, and every game revision remains exact protected-main values.
-- The compatibility record retains exact terminal-green v0.9.5.75 source `4ae61219fbceb1a75a0829fa3611f3cc1525256b`, archive SHA-256 `b571bb4c35ed67313ec68d521160f23a11697d18e039773fe871832aad54d842`, and manifest SHA-256 `b284ddba39adf9abdd096d94daede3a776b9da6fd8d917e29d86dd0df5e6d867`.
+- Release versions advance only to package `0.9.5.77`, application `9.67.1`, contracts `1.61.4`, tests `1.87.1`, and docs `1.83.1`; tooling remains content-owned `1.34.0`.
+- Core remains content-owned `9.43.1`, Mobile remains `1.0.0` with package `0.2.0`, Players remains `9.1.3`, Ledger remains `9.1.2`, and every game revision remains exact accepted values.
+- The compatibility record retains exact immutable v0.9.5.76 source `f37c4f78627bcbc6407f33c61d5b01a6181a3314`, archive SHA-256 `51dfc3d97d2690431a350a3e44fde5250cd66ce5af5e9456d4cf4f2d01ca77cd`, and manifest SHA-256 `fb1cf1bf7f1c516abed4bb1a76379a0f88bcb46f61c4ec1ee65ca635a2b3b884`.
 
 ## Rollback, validation, and handback
 
 - Rollback remains application-only at exact schema 2; database rollback is prohibited outside `TOOL-003`. The migration catalog remains minimum 2 / expected 4 / apply held, while production remains exact schema 2.
-- The canonical deployable inventory is exactly 762 regular files: terminal v0.9.5.75 inventory 761 plus this compatibility record; the economics registry remains repository-only test evidence.
+- The canonical deployable inventory is exactly 767 regular files: accepted source selection 766 plus this compatibility record; the poller and both systemd templates are packaged.
 - Local validation is browser-free; fresh hosted all-nine evidence remains mandatory before normal merge and immutable publication.
-- No live mail, OAuth, or provider traffic, provider-console change, public-signup activation, public-policy activation, public launch, database migration, grant mutation, runtime topology change, game behavior, settlement semantics, paytable, route or API adoption, or wagering-economics change is claimed.
+- No host installation, live mail, OAuth, provider traffic, provider-console change, public-signup activation, public-policy activation, public launch, database migration, grant mutation, game behavior, settlement semantics, paytable, route or API adoption, or wagering-economics change is claimed by the release packet.

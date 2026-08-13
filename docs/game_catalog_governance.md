@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.77 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages pull-based production release delivery without changing any game descriptor, route, outcome, wallet action, API, or economics.
+
 The v0.9.5.76 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages the complete source-bound economics registry and long-suite qualification for all 46 games and 74 wager selectors without changing any engine, probability, payout, return-to-player target, wallet path, or API.
 
 The v0.9.5.75 release line retains the exact 46-game catalog, paytables, and settlement behavior. It packages an inert provider-neutral game-action lifecycle bridge without connecting any game descriptor, route, action, wallet path, or API to that bridge.
