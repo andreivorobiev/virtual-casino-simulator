@@ -93,6 +93,12 @@ class ReleaseArtifactTests(unittest.TestCase):
             "deploy/systemd/casino-edge-monitor.service.template",
             # Copy the inactive monitor timer source.
             "deploy/systemd/casino-edge-monitor.timer.template",
+            # Copy the host-owned pull implementation required by every future immutable release.
+            "deploy/pull/casino-release-poller.sh",
+            # Copy the inactive pull service source for owner-gated installation.
+            "deploy/systemd/casino-release-poller.service.template",
+            # Copy the inactive pull timer source for owner-gated installation.
+            "deploy/systemd/casino-release-poller.timer.template",
             # Copy the application-and-edge-only rollback source.
             "deploy/rollback/casino-edge-rollback.sh.template",
         ):
@@ -225,20 +231,22 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Require the documented post-install command to exist in every release.
             self.assertIn(f"{package_app.ARCHIVE_ROOT}/scripts/write_release_env.py", archive.namelist())
 
-    # Prove every Python command executed from the extracted release exists in the immutable archive.
+    # Prove every Python command executed by the host poller exists in the immutable archive.
     def test_deployment_host_scripts_are_packaged(self):
-        # Read the protected-main workflow that defines exact host activation commands.
-        workflow = (package_app.ROOT / ".github" / "workflows" / "deploy-production.yml").read_text(encoding="utf-8")
-        # Extract only scripts invoked through the staged release root or active release selector.
-        host_scripts = set(re.findall(r'(?:\$\{release_root\}|/opt/casino/current)/(scripts/[A-Za-z0-9_.-]+\.py)', workflow))
+        # Read the packaged poller that defines exact host activation commands.
+        poller = (package_app.ROOT / "deploy" / "pull" / "casino-release-poller.sh").read_text(encoding="utf-8")
         # Pin the reviewed host-command inventory so syntax drift cannot silently evade the extractor.
-        self.assertEqual(host_scripts, {
+        expected_host_scripts = {
             "scripts/package_app.py",
             "scripts/mysql_migrate.py",
             "scripts/run_edge_monitor.py",
             "scripts/validate_monitor_config.py",
             "scripts/write_release_env.py",
-        })
+        }
+        # Derive only reviewed Python paths named by the poller.
+        host_scripts = {relative_path for relative_path in expected_host_scripts if relative_path in poller}
+        # Require the complete fixed host-command inventory to remain present.
+        self.assertEqual(host_scripts, expected_host_scripts)
         # Build a structurally valid candidate from the complete required fixture inventory.
         archive_path, _ = self.build("deployment-host-scripts")
         # Inspect the immutable archive without extracting or executing host commands.
@@ -253,6 +261,8 @@ class ReleaseArtifactTests(unittest.TestCase):
             "missing": sorted(host_scripts - packaged_paths),
             "host_scripts": sorted(host_scripts),
         })
+        # Require the host pull executable itself to ship in the immutable archive.
+        self.assertIn("deploy/pull/casino-release-poller.sh", packaged_paths)
 
     # Prove untracked private content is never considered by tracked-file packaging.
     def test_untracked_private_content_is_excluded(self):

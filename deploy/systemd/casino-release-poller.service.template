@@ -1,0 +1,24 @@
+[Unit]
+# Run only after the public network and current production services are available.
+Description=Pull and activate the newest verified Casino Simulator GitHub Release
+After=network-online.target casino.service nginx.service
+Wants=network-online.target
+
+[Service]
+# Use a root-owned oneshot because only this unit may atomically switch the application release.
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=-/etc/casino/release-poller.env
+EnvironmentFile=/etc/casino/edge-monitor.env
+ExecStart=/usr/local/libexec/casino-release-poller poll
+TimeoutStartSec=15min
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/opt/casino/releases /opt/casino/current /etc/casino /var/lib/casino/release-poller /run/lock /usr/local/libexec
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=casino-release-poller

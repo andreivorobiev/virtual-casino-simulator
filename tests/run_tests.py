@@ -58,6 +58,8 @@ from tests import recovery_tests
 from tests import edge_gate_tests
 # Import the focused deployment build-provenance suite.
 from tests import release_env_tests
+# Import the listener-free host-poller proof for protected-main delivery ownership.
+from tests import release_poller_tests
 # Import listener-free compatibility-owned predecessor tests for protected publication.
 from tests import release_predecessor_tests
 # Import listener-free monitor bearer/digest validation and repair tests.
@@ -1545,6 +1547,18 @@ def run_api_tests():
             raise AssertionError('production CI/CD workflow suite failed')
     # Record immutable publication, hosted assets, SSH boundaries, and rollback behavior.
     run_case('DEPLOY-CICD-001',['TOOL-008','TOOL-011','TEST-133'],run_cicd_deployment_tests)
+    # Execute the listener-free pull-poller comparison, verification, and activation-order proofs.
+    def run_release_poller_tests():
+        # Load only the focused host-poller contract class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(release_poller_tests.ReleasePollerTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any pull-delivery assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('release poller suite failed')
+    # Record listener-free compare/verify/decide, rollback ordering, lag, and workflow ownership evidence.
+    run_case('DEPLOY-PULL-001',['OPS-007','TOOL-015','TEST-180'],run_release_poller_tests)
     # Execute listener-free ordinary-workflow cancellation and sharded qualification policy proofs.
     def run_ci_qualification_tests():
         # Load only the focused acceleration policy class.

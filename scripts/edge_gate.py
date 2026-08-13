@@ -180,7 +180,7 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Read and validate the inactive read-only monitor service template.
     monitor_service = _read_template(root, expected_templates["monitor_service"])
     # Require least privilege, external secret loading, bounded execution, and the observe-only command.
-    _validate_template(monitor_service, ("Type=oneshot", "User=casino-monitor", "EnvironmentFile=/etc/casino/edge-monitor.env", "edge_gate.py observe", "TimeoutStartSec=20s", "NoNewPrivileges=true"), ("edge_gate.py validate --activate", "ExecStart=nginx", "ExecStart=certbot"))
+    _validate_template(monitor_service, ("Type=oneshot", "User=casino-monitor", "EnvironmentFile=/etc/casino/edge-monitor.env", "EnvironmentFile=-/etc/casino/release-poller.env", "edge_gate.py observe", "ExecStartPost=+/usr/local/libexec/casino-release-poller check-lag", "TimeoutStartSec=40s", "ReadWritePaths=/var/lib/casino/release-poller", "NoNewPrivileges=true"), ("edge_gate.py validate --activate", "ExecStart=nginx", "ExecStart=certbot"))
     # Read and validate the inactive periodic schedule template.
     monitor_timer = _read_template(root, expected_templates["monitor_timer"])
     # Require a bounded five-minute timer and no command-bearing timer directives.
