@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus three issue #683 lifecycle requirements to total exactly 955 permanent rows.
-        self.assertEqual(len(requirements), 955)
+        # Require the accepted aggregates plus the issue #456 catalog economics gate to total exactly 956 permanent rows.
+        self.assertEqual(len(requirements), 956)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1401,6 +1401,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "STORAGE-013": "Storage",  # Bind immutable action lifecycle claims to storage.
             "MYSQL-009": "MySQL",  # Bind schema-four claim and receipt ownership.
             "TEST-174": "Tests",  # Bind provider parity and migration evidence without reusing TEST-173.
+            "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
             "AUTO-015": "Autoplay",  # Bind lifecycle reconciliation to the control plane.
@@ -1578,16 +1579,16 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         self.assertEqual(players_module["version"], "9.1.2")
         # Require the exact compatible Admin minor for provider operational controls.
         self.assertEqual(admin_module["version"], "1.18.0")
-        # Require the tests patch for immutable v0.9.5.75 release qualification.
-        self.assertEqual(tests_module["version"], "1.80.1")
-        # Require the docs patch for immutable v0.9.5.75 release governance.
-        self.assertEqual(docs_module["version"], "1.77.1")
+        # Require the compatible Tests minor that adds the issue #456 economics registry.
+        self.assertEqual(tests_module["version"], "1.81.0")
+        # Require the compatible Docs minor that governs the catalog economics registry.
+        self.assertEqual(docs_module["version"], "1.78.0")
         # Require the exact compatible Audio patch for explicit personal sound opt-in.
         self.assertEqual(audio_module["version"], "9.1.3")
         # Require the contracts patch for the immutable v0.9.5.75 rollback record.
         self.assertEqual(contracts_module["version"], "1.61.2")
-        # Require the tooling minor for the new immutable migration descriptor.
-        self.assertEqual(tooling_module["version"], "1.31.0")
+        # Require the Tooling minor that adds source and long-suite economics workflow gates.
+        self.assertEqual(tooling_module["version"], "1.32.0")
         # Keep governed mobile-module identity distinct from its installable 0.2.0 package version.
         self.assertEqual((mobile_module["version"], mobile_module["package_version"]), ("1.0.0", "0.2.0"))
         # Require the compatible Baccarat patch for central settings enforcement.

@@ -62,6 +62,8 @@ from tests import release_predecessor_tests
 from tests import monitor_config_tests
 # Import inert production workflow policy tests for exact-head deployment.
 from tests import cicd_deployment_tests
+# Import the catalog-derived economics registry for listener-free API-suite governance. (TEST-175)
+from tests import game_economics_registry_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
 from tests import nonfinite_money_tests
 # Import exact-source 50,000-cycle harness proofs for TEST-092.
@@ -3218,6 +3220,8 @@ def run_api_tests():
             assert resolve_authenticated_player({'user':{'role':'admin'}},{'player_id':'human'},{})=='human'
         # Execute the catalog, driver, route-metadata, and shared resolver acceptance gate.
         run_case('API-CATALOG-001',['CORE-021','SESSION-005','TEST-042'],catalog_foundation)
+        # Validate exact 46-game economics ownership and production-source bindings without repeating the long simulation lane.
+        run_case('ECONOMICS-REGISTRY-001',['TEST-175'],lambda: game_economics_registry_tests.validate_registry(game_economics_registry_tests.read_json(game_economics_registry_tests.REGISTRY_PATH)))
 
         run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
         # Record collision-free Phase 0 registry, catalog-discovery, and translation-readiness evidence.
