@@ -1,6 +1,6 @@
 {
   "artifact": "guest-trials-restricted-preview",
-  "version": 3,
+  "version": 4,
   "stage": "restricted-preview",
   "public_launch_authorized": false,
   "principal": {
@@ -8,7 +8,7 @@
     "admin": false,
     "credentials": false,
     "recovery": false,
-    "registered_account_conversion": false
+    "registered_account_conversion": true
   },
   "entry": {
     "terms_version": "private-beta-1",
@@ -40,6 +40,17 @@
     "deposit_allowed": false,
     "transfer_allowed": false,
     "recovery_allowed": false
+  },
+  "conversion": {
+    "self_service": true,
+    "admin_assisted": true,
+    "admin_authority": "current-active-admin-or-platform-owner",
+    "admin_identity": "analytics_id-or-internal-guest-id",
+    "explicit_confirmation_required": true,
+    "current_terms_acceptance_required": true,
+    "idempotency_required": true,
+    "player_wallet_ledger_preserved": true,
+    "credentials_logged": false
   },
   "admin_telemetry": {
     "admin_only": true,

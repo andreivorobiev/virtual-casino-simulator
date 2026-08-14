@@ -6,15 +6,15 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.69.0
-- core: 9.45.0
+- application: 9.70.0
+- core: 9.46.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.19.1
+- admin: 1.20.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.2
@@ -51,9 +51,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.99.0
-- docs: 1.95.0
-- contracts: 1.61.5
+- tests: 1.100.0
+- docs: 1.96.0
+- contracts: 1.62.0
 - tooling: 1.40.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.6
@@ -679,6 +679,8 @@ Historical source baseline: 9.1.0
 - **TEST-191** (Tests) - PASS: A dependency-free two-process rendezvous loads the same stale Keno player document, concurrently commits or finalizes one deterministic pending draw and one sibling marker through production atomic state helpers, and proves the final provider document retains every update with one exact terminal draw. Focused replay evidence accepts only the exact already-finalized round and rejects divergent pending state.
 - **TEST-192** (Tests) - PASS: A dependency-free two-process rendezvous loads the same stale Baccarat player document, concurrently commits or finalizes one deterministic coup and one sibling marker through production atomic state helpers, and proves one shoe segment, exact terminal history, open-bet removal, and every sibling update survive. Focused concurrent route evidence requires one winning response, one established stale-request conflict, and exactly one money and history settlement.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
+- **ADMIN-035** (Admin) - PASS: A current active Admin or platform owner can explicitly convert one active Guest Trial through an additive v2 Admin route and localized Guest Trials confirm flow. The operator selects the already-visible de-identified analytics identity, supplies the requested durable account content, accepts the current terms representation, and confirms the support action. The route resolves current actor authority and the exact guest server-side, reuses the self-service idempotent conversion core, preserves the same player, wallet, ledger, and history without movement or duplication, refuses missing, non-guest, expired, unconfirmed, malformed, or conflicting requests, reuses one form-owned operation key after a lost response, clears transient credentials from the browser, and records actor, guest, account, player, replay disposition, and timestamp through the application audit boundary.
+- **TEST-193** (Tests) - PASS: Listener-free and authenticated API evidence proves Admin-assisted Guest Trial conversion preserves one exact player wallet and unchanged ledger rows, returns the self-service result shape, emits actor-target-time audit evidence, replays one stable account after a lost response, rejects a non-Admin actor, non-guest target, expired trial, missing confirmation, and unsupported request fields, and leaves self-service conversion unchanged. Browser evidence in both installed locales and all four governed Admin viewports selects a visible analytics row, submits explicit confirmation, forces one failed response before a successful retry with the same form-owned idempotency key, clears transient password and confirmation controls, preserves de-identified tables, enforces the 42 CSS-pixel action floor, and captures the named assisted-conversion state without real target credentials.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

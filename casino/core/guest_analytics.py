@@ -29,7 +29,7 @@ TOUCH_MIN_SECONDS = 60
 # Enumerate the only event categories persisted from guest activity.
 ALLOWED_EVENTS = frozenset({"activity", "lobby_reached", "game_open", "game_action", "game_error", "account_cta_viewed", "account_cta_selected"})
 # Enumerate lifecycle reasons safe for Admin reporting.
-ALLOWED_END_REASONS = frozenset({"ended", "expired", "inactive", "browser_closed", "revoked"})
+ALLOWED_END_REASONS = frozenset({"ended", "expired", "inactive", "browser_closed", "revoked", "converted"})
 # Enumerate locale values accepted into analytics dimensions.
 ALLOWED_LOCALES = frozenset({"en-US", "ru-RU"})
 # Enumerate coarse device values that cannot fingerprint a browser.
