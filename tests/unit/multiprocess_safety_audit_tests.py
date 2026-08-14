@@ -64,7 +64,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 3, "provider_atomic_player_document": 1},  # Pin current counts.
+            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 2, "provider_atomic_player_document": 2},  # Pin current counts.
         )
         # Resolve the sole incremental migration row without treating mixed persistence as compatible.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -88,15 +88,17 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(keno["state_model"], "provider_atomic_player_document")
         # Keep Keno fail closed for a second worker because state and money still use separate boundaries.
         self.assertEqual(keno["multiworker_status"], "blocked")
-        # Resolve the Baccarat coup-publication slice without concealing its remaining direct wager writes.
+        # Resolve Baccarat after coup, bet, refund, and settings transitions retire every direct publication.
         baccarat = next(row for row in games if row["game_id"] == "baccarat")
-        # Require the legacy Baccarat document load while bet management remains outside this slice.
+        # Require the authoritative Baccarat read used for responses and interruption recovery.
         self.assertGreater(baccarat["load_call_sites"], 0)
-        # Preserve the direct bet-add and bet-remove debt for later parent-issue slices.
-        self.assertGreater(baccarat["save_call_sites"], 0)
-        # Bind pending-coup commit and finalization to reachable provider-atomic call sites.
+        # Require every reachable Baccarat publication to avoid direct whole-document saves.
+        self.assertEqual(baccarat["save_call_sites"], 0)
+        # Bind coup, bet, refund, and settings transitions to reachable provider-atomic call sites.
         self.assertGreater(baccarat["atomic_update_call_sites"], 0)
-        # Keep Baccarat fail closed for a second worker until every direct mutation is retired.
+        # Name the completed state-publication migration without claiming money atomicity.
+        self.assertEqual(baccarat["state_model"], "provider_atomic_player_document")
+        # Keep Baccarat fail closed for a second worker because state and money remain separate boundaries.
         self.assertEqual(baccarat["multiworker_status"], "blocked")
         # Resolve the Blackjack round-publication slice without concealing direct settings debt.
         blackjack = next(row for row in games if row["game_id"] == "blackjack")

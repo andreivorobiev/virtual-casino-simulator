@@ -439,8 +439,28 @@
         "tests/legacy_settlement_tests.py"
       ],
       "introduced_in": "issue-756-baccarat-atomic-coup-state",
-      "changed_in": "issue-756-baccarat-atomic-coup-state",
-      "notes": "Bet placement and cancellation remain explicit direct-write debt under parent issue #704. This slice changes no cards, shoe rules, payout math, ledger identity, route, response envelope, public contract, or player-visible behavior."
+      "changed_in": "issue-769-baccarat-atomic-wagers",
+      "notes": "Pending wager settlement now blocks coup commitment until the exact debit or refund reconciles. This requirement and BAC-028 change no cards, shoe rules, payout math, ledger identity, route, response envelope, public contract, or player-visible behavior."
+    },
+    {
+      "id": "BAC-028",
+      "module": "Baccarat",
+      "description": "Baccarat atomically prepares bet placement, refund, and settings transitions against the latest provider-owned player document. Each money-affecting mutation publishes an immutable private marker before settlement, applies or replays the established ledger identity exactly once, rolls back only when authoritative receipt lookup proves no movement committed, and clears only its exact marker while preserving sibling state. Settings refuse every open, prepared, or committed wager boundary.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-ATOMIC-001",
+        "API-LEGACY-SETTLE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/api.py",
+        "casino/games/baccarat/tests/test_atomic_state.py",
+        "tests/legacy_settlement_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py"
+      ],
+      "introduced_in": "issue-769-baccarat-atomic-wagers",
+      "changed_in": "issue-769-baccarat-atomic-wagers",
+      "notes": "The public v1 routes, envelopes, validation, payout math, and ledger action identities remain unchanged. State publication is provider-atomic, but multiworker activation stays blocked because player state and money still commit through separate provider boundaries."
     }
   ]
 }

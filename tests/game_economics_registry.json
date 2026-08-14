@@ -57,7 +57,7 @@
       "requirement_id": "BAC-001",
       "engine_path": "casino/games/baccarat/engine.py",
       "settlement_path": "casino/games/baccarat/api.py",
-      "production_sha256": "c99c70bc6b65796a191941717e4a3aa14674104db99b53e5ecc9d59c26f8679b",
+      "production_sha256": "e1fa017a694b4c51327dc1771075f306cbc1b0f70c972face5c6f20a40920031",
       "proof_tests": ["tests.legacy_settlement_tests:LegacySettlementTests.test_baccarat_poisoned_rules_settle_at_house_defaults"],
       "rationale": "Banker remains the best published wager and retains a positive commission edge under the exact production drawing and settlement rules."
     },

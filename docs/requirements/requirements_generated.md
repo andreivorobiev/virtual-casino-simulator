@@ -20,7 +20,7 @@ Historical source baseline: 9.1.0
 - roulette: 9.7.2
 - slots: 9.5.1
 - blackjack: 9.1.12
-- baccarat: 9.2.0
+- baccarat: 9.2.1
 - keno: 9.4.1
 - bingo: 9.3.7
 - multi_hand_video_poker: 1.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.5
-- docs: 1.96.5
+- tests: 1.100.6
+- docs: 1.96.6
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -688,6 +688,7 @@ Historical source baseline: 9.1.0
 - **GUEST-007** (Core) - PASS: Every successful Guest Trial conversion path closes the server-issued de-identified analytics row exactly once as converted after durable account and player ownership commits. The terminal row records the authoritative preserved ending balance without authentication, credential, player, session, or account identity data; exact replay preserves its first terminal fields, while analytics failure cannot reverse or fail the committed conversion and a later replay retries only the projection.
 - **TEST-195** (Tests) - PASS: Focused self-service evidence proves converted reason, exact ending balance, de-identified storage, one stable terminal event, Admin active-row exclusion, exact replay, pre-commit inactivity, and post-commit analytics-failure recovery without wallet or ledger effects. The Admin-assisted suite proves its shared terminal projection stays byte-stable, and real Browser evidence submits the visible self-service form before verifying the terminal analytics row is no longer an active-action source.
 - **TEST-197** (Tests) - PASS: Real two-process Keno evidence races prepared ticket purchase and refund settlements against sibling player-game updates, then proves exact ticket identity, one debit and one refund, restored wallet value, preserved sibling state, and zero pending-marker residue. A second real two-process race proves one same-ticket refund winner, one fail-closed contender, and one credit. Deterministic failure evidence proves action-owned rollback preserves unrelated state, while the static multiprocess inventory recognizes atomic-only player-state publication without authorizing a second worker.
+- **TEST-198** (Tests) - PASS: Real two-process Baccarat evidence races prepared bet placement and refund settlements against sibling player-game updates, then proves exact bet identity, one debit and one refund, restored wallet value, preserved sibling state, and zero pending-marker residue. A second real two-process race proves one same-bet refund winner, one fail-closed contender, and one credit. Deterministic failure evidence proves action-owned rollback preserves unrelated state, settings use the latest provider document, and the static multiprocess inventory recognizes atomic-only player-state publication without authorizing a second worker.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -912,6 +913,7 @@ Historical source baseline: 9.1.0
 - **BAC-025** (Baccarat) - PASS: Baccarat's fresh shoe panel shows the configured full shoe capacity before the lazily built shoe receives its first deal.
 - **BAC-026** (Baccarat) - PASS: Baccarat preserves one stable visible Deal action and deterministically returns to wager-ready state through 2,000 consecutive settled browser UI coups without a replaced target, timeout, retry, duplicate action, or stranded round.
 - **BAC-027** (Baccarat) - PASS: Baccarat commits each pending coup, consumed shoe position, and terminal coup history against the latest provider-owned player document so racing stale requests reuse one exact committed coup without losing sibling state or repeating settlement side effects.
+- **BAC-028** (Baccarat) - PASS: Baccarat atomically prepares bet placement, refund, and settings transitions against the latest provider-owned player document. Each money-affecting mutation publishes an immutable private marker before settlement, applies or replays the established ledger identity exactly once, rolls back only when authoritative receipt lookup proves no movement committed, and clears only its exact marker while preserving sibling state. Settings refuse every open, prepared, or committed wager boundary.
 - **MHVP-001** (Multi-Hand Video Poker) - PASS: Multi-Hand Video Poker deals one common Jacks-or-Better hand and completes 3, 5, or 10 independent result hands from shared hold positions.
 - **MHVP-002** (Multi-Hand Video Poker) - PASS: Authenticated sessions own isolated reload-safe Multi-Hand Video Poker state, hold selections, recent rounds, and canonical route restoration.
 - **MHVP-003** (Multi-Hand Video Poker) - PASS: Each Multi-Hand Video Poker round uses one aggregate ledger wager debit and at most one aggregate payout credit with idempotent retry recovery.
