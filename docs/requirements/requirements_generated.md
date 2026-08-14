@@ -7,14 +7,14 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.69.0
-- core: 9.43.1
+- core: 9.44.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.19.0
+- admin: 1.19.1
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.94.0
-- docs: 1.90.0
+- tests: 1.95.0
+- docs: 1.91.0
 - contracts: 1.61.5
 - tooling: 1.39.0
 - commenting_policy: 2.0.0
@@ -669,6 +669,8 @@ Historical source baseline: 9.1.0
 - **TEST-186** (Tests) - PASS: Executable browser-free evidence proves hostile ordinary values are escaped, explicit reviewed fragments compose, nested fragment arrays introduce no commas, the legacy adapter does not double escape, the card renderer has no second encoder, and the innerHTML baseline accepts reductions while rejecting increases, new files, and all Admin debt. Browser evidence spot-checks the migrated Admin dashboard and module table for unchanged topology and escaped hostile text.
 - **I18N-014** (Application) - PASS: Player-shell trust copy, route recovery, startup errors, autoplay completion, and the named Admin player, bot, managed-user, autoplay, and requirements surfaces resolve their visible labels from installed locale resources. Game translation adapters accept only a resource key and optional interpolation parameters, so missing-copy behavior is owned by the shared installed-locale fallback chain instead of duplicated inline English literals.
 - **TEST-187** (Tests) - PASS: Executable localization governance lexically rejects a third inline fallback argument from every game tx() call, requires exact English and Russian game-key parity, rejects the named retired shell and Admin literals, and requires independently translated shared-resource keys. Browser evidence verifies the localized shell trust rail and exact Russian Admin table headers through the existing production renderers.
+- **LEDGER-035** (Core) - PASS: Ending a Guest Trial with a positive fake-token balance commits exactly one GUEST_TRIAL_END debit through the storage-enforced ledger identity derived from the immutable trial id. Teardown confirms the authoritative wallet is zero and changes only non-money player presentation fields; it never overwrites balance directly. The lifecycle movement is excluded from player-facing game economics.
+- **TEST-188** (Tests) - PASS: Listener-free production-service evidence ends one funded Guest Trial twice and proves exactly one terminal debit, the exact before and after balances, a trial-derived action identity, reconstruction from the starting grant plus durable ledger rows to zero, irreversible identity and session teardown, and byte-equivalent Admin game-economics output.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.

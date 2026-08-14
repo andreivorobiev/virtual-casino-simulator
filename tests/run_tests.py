@@ -1438,6 +1438,18 @@ def run_api_tests():
         if not result.wasSuccessful(): raise AssertionError('non-finite money boundary unit suite failed')
     # Record the listener-free finite validation and persistence proof.
     run_case('MONEY-NONFINITE-UNIT-001',['CORE-025','LEDGER-027','MHVP-006','TEST-055'],run_nonfinite_money_unit_tests)
+    # Execute exact Guest Trial terminal-ledger evidence without opening a listener.
+    def run_guest_teardown_ledger_tests():
+        # Import the focused money-lifecycle suite only for its permanent gate.
+        from tests import guest_teardown_ledger_tests
+        # Load the exact replay, reconstruction, and economics-isolation test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(guest_teardown_ledger_tests.GuestTeardownLedgerTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the mapped gate when any wallet-lifecycle assertion failed.
+        if not result.wasSuccessful(): raise AssertionError('Guest Trial terminal-ledger suite failed')
+    # Record exactly-once terminal debit, replay, reconstruction, and Admin isolation.
+    run_case('API-GUEST-TEARDOWN-LEDGER-001',['LEDGER-035','TEST-188'],run_guest_teardown_ledger_tests)
     # Build one reusable subprocess host so bundle suites that redirect data directories at import can never pollute this process or the shared API server environment. (issues #403, #405, #411, #412)
     def run_unit_module(module_name, failure_message):
         # Execute the focused suite with a fresh interpreter exactly like the security probe host.
@@ -1480,6 +1492,8 @@ def run_api_tests():
     run_case('UI-ROULETTE-I18N-DIAGNOSTICS-001',['I18N-013','TEST-182'],lambda: run_unit_module('tests.roulette_i18n_diagnostics_tests','Roulette i18n diagnostics suite failed'))
     # Prove shared shell/Admin copy and every game tx adapter use locale resources as their single source. (I18N-014, TEST-187)
     run_case('UI-I18N-SINGLE-SOURCE-001',['I18N-014','TEST-187'],lambda: run_unit_module('tests.i18n_single_source_tests','Single-source i18n suite failed'))
+    # Prove Roulette and Three Card Poker await semantic Browser state instead of fixed timing. (issue #750)
+    run_case('UI-BROWSER-WAIT-001',['TEST-053','TCP-005'],lambda: run_unit_module('tests.browser_wait_governance_tests','Browser wait governance suite failed'))
     # Prove docs-only long-suite filtering and exact-head sibling-gate release evidence without weakening contexts. (issue #710)
     run_case('CI-COMPUTE-001',['TOOL-017','TEST-183'],lambda: run_unit_module('tests.ci_compute_tests','CI compute optimization suite failed'))
     # Enforce generic descriptor equality and exact-base monotonic revisions without shared pin literals. (issue #707)
@@ -7061,10 +7075,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     def localized_evidence(prefix,states):
                         # Iterate through English and Russian game resources.
                         for locale in ('en-US','ru-RU'):
+                            # Resolve the exact locale-owned heading before requesting the asynchronous switch.
+                            expected_title='Three Card Poker' if locale=='en-US' else 'Трёхкарточный покер'
                             # Switch locale without discarding the active route or private state.
-                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            page.get_by_test_id('shell-locale-select').select_option(locale)
+                            # Wait for installed game resources to repaint instead of assuming a fixed network duration.
+                            page.wait_for_function("(expected) => document.querySelector('.tcp-header h1')?.textContent === expected",arg=expected_title,timeout=5000)
                             # Require the localized title instead of a key or fallback.
-                            assert page.locator('.tcp-header h1').inner_text()==('Three Card Poker' if locale=='en-US' else 'Трёхкарточный покер')
+                            assert page.locator('.tcp-header h1').inner_text()==expected_title
                             # Capture every registered matrix dimension after checking containment.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact governed viewport.
@@ -8240,12 +8258,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         for key in click_keys:
                             # Build the stable selector for this hit target.
                             selector=f'[data-cell-key="{key}"]'
-                            # Capture the exact wager POST triggered by activating this cell.
-                            with page.expect_request(lambda request: request.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
+                            # Capture the exact completed wager POST triggered by activating this cell.
+                            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=5000) as response_info:
                                 # Activate the cell through Playwright's real actionability-checked pointer path. (issue #348)
                                 page.get_by_test_id('roulette-table').locator(selector).click()
+                            # Require authoritative wager completion before another bet or clear can overtake it.
+                            assert response_info.value.ok, f'{key}: Roulette wager request failed'
                             # Read the posted bet body for identity verification.
-                            body=request_info.value.post_data_json
+                            body=response_info.value.request.post_data_json
                             # Require the posted bet type to match the clicked cell's canonical type.
                             assert body['bet_type']==identity[key]['type'], f"{key}: posted {body['bet_type']} != {identity[key]['type']}"
                             # Require the posted covered numbers to match the clicked cell's canonical set.
@@ -8253,11 +8273,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Settle the board rerender before activating the next hit target.
                             page.wait_for_timeout(25)
                         # Capture the exact "2nd 12" wager the issue reported as mismatched.
-                        with page.expect_request(lambda request: request.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as second_dozen_info:
+                        with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=5000) as second_dozen_info:
                             # Activate the reported second-dozen hit target through the real pointer path.
                             page.locator('[data-cell-key="dozen:2"]').click()
+                        # Require the authoritative second-dozen response before reading or clearing its wager.
+                        assert second_dozen_info.value.ok, '2nd 12 wager request failed'
                         # Read the second-dozen wager body.
-                        second_dozen=second_dozen_info.value.post_data_json
+                        second_dozen=second_dozen_info.value.request.post_data_json
                         # Require "2nd 12" to post the dozen covering exactly 13 through 24.
                         assert second_dozen['bet_type']=='dozen' and {str(number) for number in second_dozen['covered_numbers']}=={str(number) for number in range(13,25)}, '2nd 12 did not post the 13-24 dozen'
                         # Refund every audit wager so the board returns to its pre-audit betting state.
@@ -8306,12 +8328,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             for key in zero_identity:
                                 # Build the stable selector that survives each wager-owned rerender.
                                 selector=f'[data-cell-key="{key}"]'
-                                # Capture the exact wager request emitted by the real pointer activation.
-                                with page.expect_request(lambda request: request.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as zero_request:
+                                # Capture the exact completed wager request emitted by the real pointer activation.
+                                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=5000) as zero_response:
                                     # Exercise Playwright visibility, stability, hit testing, and pointer dispatch together.
                                     page.locator(selector).click()
+                                # Require authoritative completion before the next target or mode clear can overtake it.
+                                assert zero_response.value.ok, f'{wheel_mode} {key}: Roulette wager request failed'
                                 # Read the mode-specific wager body without relying on localized labels.
-                                body=zero_request.value.post_data_json
+                                body=zero_response.value.request.post_data_json
                                 # Require the backend bet type to match the exact target identity.
                                 assert body['bet_type']==zero_identity[key]['type'], f"{wheel_mode} {key}: posted wrong bet type"
                                 # Require the backend covered pockets to match the exact target identity.

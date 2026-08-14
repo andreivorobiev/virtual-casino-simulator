@@ -634,7 +634,7 @@ def game_states():
 
 
 # Ledger transaction fragments owned by funded opponents or account seeding, excluded from player economics. (ADMIN-030)
-_NON_PLAYER_LEDGER_FRAGMENTS = ("OPPONENT", "FUNDING", "FUND_ACCOUNT")
+_NON_PLAYER_LEDGER_FRAGMENTS = ("OPPONENT", "FUNDING", "FUND_ACCOUNT", "GUEST_TRIAL_END")
 # Bound one economics read independently from caller-supplied values.
 _ECONOMICS_MAX_WINDOW = 100_000
 # Bound one detail payload so recent evidence cannot expand without governance.
