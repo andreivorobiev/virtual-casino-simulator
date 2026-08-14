@@ -31,8 +31,8 @@ let landedPocket = null;
 // Retain the last committed stake so one click can repeat the same drop.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/pachinko') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Choose a compact CSS class for a pocket by how richly it pays.
 function pocketClass(multiplier) {
@@ -89,7 +89,7 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="pk-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route with the ball parked at the top centre.
-  root.innerHTML = `<section class="pachinko" data-testid="pachinko"><div class="pk-stage"><div class="pk-board" data-testid="pachinko-board">${pins()}<div class="pk-ball" data-testid="pachinko-ball" style="top:2%;left:50%;"></div></div><div class="pk-pockets">${pockets}</div><p class="pk-result" data-testid="pachinko-result" role="status">${resultText || safe(tx('result.idle', null, 'Set a stake and drop the ball.'))}</p></div><div class="pk-panel"><div class="pk-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="pk-chips">${chips}</div></div><button class="pk-drop" data-testid="pachinko-drop" type="button" ${dropBusy ? 'disabled' : ''}>${safe(dropBusy ? tx('action.dropping', null, 'Dropping…') : tx('action.drop', null, 'Drop the ball'))}</button><button class="pk-repeat" data-testid="pachinko-repeat" type="button" ${dropBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="pachinko" data-testid="pachinko"><div class="pk-stage"><div class="pk-board" data-testid="pachinko-board">${pins()}<div class="pk-ball" data-testid="pachinko-ball" style="top:2%;left:50%;"></div></div><div class="pk-pockets">${pockets}</div><p class="pk-result" data-testid="pachinko-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="pk-panel"><div class="pk-card"><h3>${safe(tx('stake.title'))}</h3><div class="pk-chips">${chips}</div></div><button class="pk-drop" data-testid="pachinko-drop" type="button" ${dropBusy ? 'disabled' : ''}>${safe(dropBusy ? tx('action.dropping') : tx('action.drop'))}</button><button class="pk-repeat" data-testid="pachinko-repeat" type="button" ${dropBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the chip buttons.
   root.querySelectorAll('[data-chip]').forEach(btn => { btn.onclick = () => { stake = Number(btn.dataset.chip); render(); }; });
   // Wire the drop action.
@@ -134,7 +134,7 @@ async function load() {
     if (restored?.wager?.stake) lastBet = { stake: restored.wager.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Pachinko.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -167,7 +167,7 @@ async function drop() {
     // Read the settled net for the result line.
     const net = round.net;
     // Compose the localized result copy from authoritative values only.
-    const text = `${safe(tx('result.landed', { mult: round.detail.multiplier }, round.detail.multiplier + 'x'))} <span class="net">${net > 0 ? '+' + net : net}</span>`;
+    const text = `${safe(tx('result.landed', { mult: round.detail.multiplier }))} <span class="net">${net > 0 ? '+' + net : net}</span>`;
     // Release the guard before the final repaint.
     dropBusy = false;
     // Repaint with the landed pocket highlighted and the result.
@@ -176,7 +176,7 @@ async function drop() {
     // Release the guard and report a bounded error.
     dropBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.drop', null, 'Drop could not be completed.'), 'error');
+    toast(err?.message || tx('error.drop'), 'error');
     // Repaint the unlocked controls.
     render();
   }

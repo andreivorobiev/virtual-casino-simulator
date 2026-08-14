@@ -32,8 +32,8 @@ let shownReveal = null;
 // Retain the last committed picks and stake so one click can repeat the same reveal.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/lucky_grid') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -84,13 +84,13 @@ function render(resultText) {
   // Build the nine cells, marking picks, prizes, and matches.
   const cells = Array.from({ length: CELLS }, (unused, cell) => `<button class="lg-cell ${cellClass(cell)}" data-cell="${cell}" type="button" aria-pressed="${picks.includes(cell)}">${shownReveal && (shownReveal.prizes.includes(cell)) ? '&#9733;' : ''}</button>`).join('');
   // Build the payout rows.
-  const pays = [[3, 25], [2, 3]].map(([m, mult]) => `<div><span>${safe(tx('pay.matches', { count: m }, m + ' matches'))}</span><span>${mult}x</span></div>`).join('');
+  const pays = [[3, 25], [2, 3]].map(([m, mult]) => `<div><span>${safe(tx('pay.matches', { count: m }))}</span><span>${mult}x</span></div>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="lg-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Report the picks-remaining hint.
-  const hint = tx('pick.remaining', { count: PICKS - picks.length }, `Pick ${PICKS - picks.length} more`);
+  const hint = tx('pick.remaining', { count: PICKS - picks.length });
   // Paint the whole route.
-  root.innerHTML = `<section class="lucky" data-testid="lucky-grid"><div class="lg-stage"><div class="lg-grid" data-testid="lucky-grid-board">${cells}</div><p class="lg-result" data-testid="lucky-grid-result" role="status">${resultText || safe(picks.length < PICKS ? hint : tx('result.ready', null, 'Reveal the prizes.'))}</p></div><div class="lg-panel"><div class="lg-card"><h3>${safe(tx('pay.title', null, 'Payouts'))}</h3><div class="lg-pays">${pays}</div></div><div class="lg-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="lg-chips">${chips}</div></div><button class="lg-go" data-testid="lucky-grid-go" type="button" ${revealBusy || picks.length !== PICKS ? 'disabled' : ''}>${safe(revealBusy ? tx('action.revealing', null, 'Revealing…') : tx('action.reveal', null, 'Reveal prizes'))}</button><button class="lg-repeat" data-testid="lucky-grid-repeat" type="button" ${revealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="lucky" data-testid="lucky-grid"><div class="lg-stage"><div class="lg-grid" data-testid="lucky-grid-board">${cells}</div><p class="lg-result" data-testid="lucky-grid-result" role="status">${resultText || safe(picks.length < PICKS ? hint : tx('result.ready'))}</p></div><div class="lg-panel"><div class="lg-card"><h3>${safe(tx('pay.title'))}</h3><div class="lg-pays">${pays}</div></div><div class="lg-card"><h3>${safe(tx('stake.title'))}</h3><div class="lg-chips">${chips}</div></div><button class="lg-go" data-testid="lucky-grid-go" type="button" ${revealBusy || picks.length !== PICKS ? 'disabled' : ''}>${safe(revealBusy ? tx('action.revealing') : tx('action.reveal'))}</button><button class="lg-repeat" data-testid="lucky-grid-repeat" type="button" ${revealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the cell pick buttons.
   root.querySelectorAll('[data-cell]').forEach(btn => { btn.onclick = () => { if (!revealBusy) togglePick(Number(btn.dataset.cell)); }; });
   // Wire the chip buttons.
@@ -117,7 +117,7 @@ async function load() {
     if (rounds.length && rounds[0]?.public?.wager) lastBet = { picks: [...rounds[0].public.wager.picks], stake: rounds[0].public.wager.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Lucky Grid.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -152,8 +152,8 @@ async function reveal() {
     const win = round.total_return > 0;
     // Compose the localized result copy from the authoritative match count and net.
     const text = win
-      ? `${safe(tx('result.win', { count: round.detail.match_count }, round.detail.match_count + ' matches'))} <span class="net">+${round.total_return - round.wager_total}</span>`
-      : `${safe(tx('result.lose', { count: round.detail.match_count }, round.detail.match_count + ' matches'))} <span class="net">${round.net}</span>`;
+      ? `${safe(tx('result.win', { count: round.detail.match_count }))} <span class="net">+${round.total_return - round.wager_total}</span>`
+      : `${safe(tx('result.lose', { count: round.detail.match_count }))} <span class="net">${round.net}</span>`;
     // Release the guard before the final repaint.
     revealBusy = false;
     // Repaint with the revealed grid and result.
@@ -162,7 +162,7 @@ async function reveal() {
     // Release the guard and report a bounded error.
     revealBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.reveal', null, 'Reveal could not be completed.'), 'error');
+    toast(err?.message || tx('error.reveal'), 'error');
     // Repaint the unlocked controls.
     render();
   }

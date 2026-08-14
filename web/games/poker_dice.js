@@ -31,8 +31,8 @@ let shownFaces = ['9', '9', '9', '9', '9'];
 // Retain the last committed stake so one click can repeat the same wager.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/poker_dice') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -61,13 +61,13 @@ function render(resultText) {
   // Build the five dice faces, tumbling while a roll is resolving.
   const dice = shownFaces.map(face => `<div class="pd-die${rollBusy ? ' rolling' : ''}" data-testid="poker-dice-die">${safe(face)}</div>`).join('');
   // Build the honest paytable rows from the mirrored backend table.
-  const pays = PAYTABLE.map(([hand, mult]) => `<div class="pd-payrow"><span>${safe(tx('hand.' + hand, null, hand))}</span><span>${mult}x</span></div>`).join('');
+  const pays = PAYTABLE.map(([hand, mult]) => `<div class="pd-payrow"><span>${safe(tx('hand.' + hand))}</span><span>${mult}x</span></div>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="pd-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Enable the one-click repeat only when a prior stake exists and no roll is resolving.
   const repeatDisabled = rollBusy || !lastBet;
   // Paint the whole route.
-  root.innerHTML = `<section class="poker-dice" data-testid="poker-dice"><div class="pd-stage"><div class="pd-dice">${dice}</div><p class="pd-result" data-testid="poker-dice-result" role="status">${resultText || safe(tx('result.idle', null, 'Set a stake and roll the dice.'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('paytable.title', null, 'Paytable'))}</h3><div class="pd-paytable">${pays}</div></div><div class="pd-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-roll" data-testid="poker-dice-roll" type="button" ${rollBusy ? 'disabled' : ''}>${safe(rollBusy ? tx('action.rolling', null, 'Rolling…') : tx('action.roll', null, 'Roll the dice'))}</button><button class="pd-repeat" data-testid="poker-dice-repeat" type="button" ${repeatDisabled ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="poker-dice" data-testid="poker-dice"><div class="pd-stage"><div class="pd-dice">${dice}</div><p class="pd-result" data-testid="poker-dice-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('paytable.title'))}</h3><div class="pd-paytable">${pays}</div></div><div class="pd-card"><h3>${safe(tx('stake.title'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-roll" data-testid="poker-dice-roll" type="button" ${rollBusy ? 'disabled' : ''}>${safe(rollBusy ? tx('action.rolling') : tx('action.roll'))}</button><button class="pd-repeat" data-testid="poker-dice-repeat" type="button" ${repeatDisabled ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the chip buttons.
   root.querySelectorAll('[data-chip]').forEach(btn => { btn.onclick = () => { stake = Number(btn.dataset.chip); render(); }; });
   // Wire the roll action.
@@ -92,7 +92,7 @@ async function load() {
     if (recovered?.wager_total) lastBet = { stake: Number(recovered.wager_total) };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Poker Dice.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -122,11 +122,11 @@ async function roll() {
     // Read whether the round paid.
     const win = round.total_return > 0;
     // Compose the localized result copy from authoritative values only.
-    const handName = tx('hand.' + round.detail.hand, null, round.detail.hand);
+    const handName = tx('hand.' + round.detail.hand);
     // Build the result line naming the hand and the net.
     const text = win
-      ? `${safe(tx('result.win', { hand: handName }, handName + '!'))} <span class="net">+${round.total_return - round.wager_total}</span>`
-      : `${safe(tx('result.lose', null, 'No paying hand.'))} <span class="net">${round.net}</span>`;
+      ? `${safe(tx('result.win', { hand: handName }))} <span class="net">+${round.total_return - round.wager_total}</span>`
+      : `${safe(tx('result.lose'))} <span class="net">${round.net}</span>`;
     // Release the guard before the final repaint.
     rollBusy = false;
     // Remember the settled stake so the next roll can repeat it with one click.
@@ -137,7 +137,7 @@ async function roll() {
     // Release the guard and report a bounded error.
     rollBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.roll', null, 'Roll could not be completed.'), 'error');
+    toast(err?.message || tx('error.roll'), 'error');
     // Repaint the unlocked controls.
     render();
   }

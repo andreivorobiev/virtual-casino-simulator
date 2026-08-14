@@ -1,6 +1,6 @@
 {
   "module": "coin_pusher",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "paths": ["casino/games/coin_pusher/", "web/games/coin_pusher.js", "web/i18n/en-US/games/coin_pusher.json", "web/i18n/ru-RU/games/coin_pusher.json"],
   "requirements_prefixes": ["COINP"],
   "contracts": ["contracts/openapi/coin_pusher.v1.yaml"],

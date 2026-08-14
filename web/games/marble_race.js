@@ -33,11 +33,11 @@ let shownOrder = null;
 // Retain the last settled bet so one click can repeat the same marble and stake.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/marble_race') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Read the localized display name for a marble index.
-const marbleName = index => tx('marble.' + MARBLES[index], null, MARBLES[index]);
+const marbleName = index => tx('marble.' + MARBLES[index]);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -70,13 +70,13 @@ function render(resultText) {
   // Build one lane per marble in marble-index order, highlighting the winner.
   const lanes = MARBLES.map((color, index) => `<div class="mr-lane ${shownOrder && shownOrder[0] === index ? 'win' : ''}"><span class="mr-marble" style="background:${FILLS[color]};"></span><span class="mr-name">${safe(marbleName(index))}</span><span class="mr-place">${placeOf[index] ? '#' + placeOf[index] : ''}</span></div>`).join('');
   // Build the two bet-market buttons with honest payout hints.
-  const bets = [['win', '5.7x'], ['podium', '1.9x']].map(([bet, mult]) => `<button class="mr-bet" data-bet="${bet}" type="button" aria-pressed="${selectedBet === bet}"><span>${safe(tx('bet.' + bet, null, bet))}</span><small>${mult}</small></button>`).join('');
+  const bets = [['win', '5.7x'], ['podium', '1.9x']].map(([bet, mult]) => `<button class="mr-bet" data-bet="${bet}" type="button" aria-pressed="${selectedBet === bet}"><span>${safe(tx('bet.' + bet))}</span><small>${mult}</small></button>`).join('');
   // Build the six marble pick buttons.
   const picks = MARBLES.map((color, index) => `<button class="mr-pick" data-marble="${index}" type="button" aria-pressed="${selectedMarble === index}"><span class="dot" style="background:${FILLS[color]};"></span>${safe(marbleName(index))}</button>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="mr-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="marble" data-testid="marble-race"><div class="mr-stage"><div class="mr-track" data-testid="marble-race-track">${lanes}</div><p class="mr-result" data-testid="marble-race-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a marble and race.'))}</p></div><div class="mr-panel"><div class="mr-card"><h3>${safe(tx('bet.title', null, 'Market'))}</h3><div class="mr-bets">${bets}</div></div><div class="mr-card"><h3>${safe(tx('pick.title', null, 'Your marble'))}</h3><div class="mr-picks">${picks}</div></div><div class="mr-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="mr-chips">${chips}</div></div><button class="mr-go" data-testid="marble-race-go" type="button" ${raceBusy ? 'disabled' : ''}>${safe(raceBusy ? tx('action.racing', null, 'Racing…') : tx('action.race', null, 'Start the race'))}</button><button class="mr-repeat" data-testid="marble-race-repeat" type="button" ${raceBusy || !lastBet ? 'disabled' : ''}>${safe(tx('action.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="marble" data-testid="marble-race"><div class="mr-stage"><div class="mr-track" data-testid="marble-race-track">${lanes}</div><p class="mr-result" data-testid="marble-race-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="mr-panel"><div class="mr-card"><h3>${safe(tx('bet.title'))}</h3><div class="mr-bets">${bets}</div></div><div class="mr-card"><h3>${safe(tx('pick.title'))}</h3><div class="mr-picks">${picks}</div></div><div class="mr-card"><h3>${safe(tx('stake.title'))}</h3><div class="mr-chips">${chips}</div></div><button class="mr-go" data-testid="marble-race-go" type="button" ${raceBusy ? 'disabled' : ''}>${safe(raceBusy ? tx('action.racing') : tx('action.race'))}</button><button class="mr-repeat" data-testid="marble-race-repeat" type="button" ${raceBusy || !lastBet ? 'disabled' : ''}>${safe(tx('action.repeat'))}</button></div></section>`;
   // Wire the bet-market buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = btn.dataset.bet; render(); }; });
   // Wire the marble pick buttons.
@@ -105,7 +105,7 @@ async function load() {
     if (restored) lastBet = { bet: restored.bet, marble: restored.marble, stake: restored.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Marble Race.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -151,7 +151,7 @@ async function race() {
     // Read whether the bet won.
     const win = round.total_return > 0;
     // Compose the localized result copy naming the winning marble and the net.
-    const text = `${safe(tx('result.finish', { winner: marbleName(round.detail.winner) }, marbleName(round.detail.winner) + ' wins'))} <span class="net">${win ? '+' + (round.total_return - round.wager_total) : round.net}</span>`;
+    const text = `${safe(tx('result.finish', { winner: marbleName(round.detail.winner) }))} <span class="net">${win ? '+' + (round.total_return - round.wager_total) : round.net}</span>`;
     // Release the guard before the final repaint.
     raceBusy = false;
     // Repaint with the finishing order and result.
@@ -160,7 +160,7 @@ async function race() {
     // Release the guard and report a bounded error.
     raceBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.race', null, 'Race could not be completed.'), 'error');
+    toast(err?.message || tx('error.race'), 'error');
     // Repaint the unlocked controls.
     render();
   }

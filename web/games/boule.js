@@ -34,8 +34,8 @@ let shownNumber = null;
 // Retain the last settled bet config so one click can re-place and re-spin it.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/boule') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Compare the active selection against a candidate bet for pressed state.
 function isSelected(bet, number) {
@@ -74,13 +74,13 @@ function render(resultText) {
   // Build the nine straight-number cells, marking the house number.
   const numbers = NUMBERS.map(n => `<button class="bl-num${n === HOUSE_NUMBER ? ' house' : ''}" data-number="${n}" type="button" aria-pressed="${isSelected('number', n)}">${n}</button>`).join('');
   // Build the four even-money bet buttons with honest coverage and payout hints.
-  const bets = ['low', 'high', 'odd', 'even'].map(name => `<button class="bl-bet" data-bet="${name}" type="button" aria-pressed="${isSelected(name)}"><span>${safe(tx('bet.' + name, null, name))}</span><small>${EVEN_MONEY[name].join(' ')} &middot; 2x</small></button>`).join('');
+  const bets = ['low', 'high', 'odd', 'even'].map(name => `<button class="bl-bet" data-bet="${name}" type="button" aria-pressed="${isSelected(name)}"><span>${safe(tx('bet.' + name))}</span><small>${EVEN_MONEY[name].join(' ')} &middot; 2x</small></button>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="bl-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Enable the one-click repeat only when a prior settled bet exists and no spin is running.
   const repeatDisabled = spinBusy || !lastBet;
   // Paint the whole route.
-  root.innerHTML = `<section class="boule" data-testid="boule"><div class="bl-stage"><div class="bl-drum${spinBusy ? ' rolling' : ''}" data-testid="boule-drum">${drum}</div><div class="bl-numbers">${numbers}</div><p class="bl-result" data-testid="boule-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a bet and spin.'))}</p></div><div class="bl-panel"><div class="bl-card"><h3>${safe(tx('bet.title', null, 'Even-money bets'))}</h3><div class="bl-bets">${bets}</div></div><div class="bl-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="bl-chips">${chips}</div></div><button class="bl-spin" data-testid="boule-spin" type="button" ${spinBusy ? 'disabled' : ''}>${safe(spinBusy ? tx('action.spinning', null, 'Spinning…') : tx('action.spin', null, 'Spin the boule'))}</button><button type="button" class="bl-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="boule" data-testid="boule"><div class="bl-stage"><div class="bl-drum${spinBusy ? ' rolling' : ''}" data-testid="boule-drum">${drum}</div><div class="bl-numbers">${numbers}</div><p class="bl-result" data-testid="boule-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="bl-panel"><div class="bl-card"><h3>${safe(tx('bet.title'))}</h3><div class="bl-bets">${bets}</div></div><div class="bl-card"><h3>${safe(tx('stake.title'))}</h3><div class="bl-chips">${chips}</div></div><button class="bl-spin" data-testid="boule-spin" type="button" ${spinBusy ? 'disabled' : ''}>${safe(spinBusy ? tx('action.spinning') : tx('action.spin'))}</button><button type="button" class="bl-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the even-money bet buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = { bet: btn.dataset.bet }; render(); }; });
   // Wire the straight-number cells.
@@ -121,7 +121,7 @@ async function load() {
     if (recovered) lastBet = { ...recovered };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Boule.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -154,8 +154,8 @@ async function spin() {
     const win = round.total_return > 0;
     // Compose the localized result copy from authoritative values only.
     const text = win
-      ? `${safe(tx('result.win', { number: shownNumber }, 'Number ' + shownNumber + ' wins'))} <span class="net">+${round.total_return - round.wager_total}</span>`
-      : `${safe(tx('result.lose', { number: shownNumber }, 'Number ' + shownNumber))} <span class="net">${round.net}</span>`;
+      ? `${safe(tx('result.win', { number: shownNumber }))} <span class="net">+${round.total_return - round.wager_total}</span>`
+      : `${safe(tx('result.lose', { number: shownNumber }))} <span class="net">${round.net}</span>`;
     // Release the guard before the final repaint.
     spinBusy = false;
     // Repaint with the drawn number and result.
@@ -164,7 +164,7 @@ async function spin() {
     // Release the guard and report a bounded error.
     spinBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.spin', null, 'Spin could not be completed.'), 'error');
+    toast(err?.message || tx('error.spin'), 'error');
     // Repaint the unlocked controls.
     render();
   }
