@@ -143,6 +143,14 @@ committed **inside** the wager's ledger row, so a retry after a lost response re
 outcome instead of redrawing it, and settlement uses storage-atomic `debit_once`/`credit_once` keyed
 by a durable action id.
 
+The canonical durable wallet unit is an integer cent. Compatible JSON and API projections remain
+numeric dollars, while MySQL uses `DECIMAL(18,2)`; both providers derive those shapes through the
+same `Decimal` `ROUND_HALF_EVEN` cents boundary. Every wallet writer must quantize before
+publication, and ordinary reads fail closed on any stored sub-cent residue. The explicit
+`scripts/normalize_wallet_balances.py` operator command is the only residue-repair seam: `check` is
+read-only, while `apply` emits a deterministic ledger-visible audit row before the JSON wallet
+replacement or atomically beside the MySQL row update. No game or request path invokes that seam.
+
 > **Settlement boundary.** Issue #430 converges all 46 registered games, including the six original
 > games, on `casino.core.settlement.GameSettlementGateway`. Production game modules cannot import or
 > call ledger mutation functions directly. The gateway preserves each frozen v1 API and existing

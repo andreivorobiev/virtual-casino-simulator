@@ -23,8 +23,8 @@ from casino.core import storage
 from casino.core.validation import require_amount
 # Import the independent game-local wager boundary under test.
 from casino.games.multi_hand_video_poker.engine import require_wager_per_hand
-# Import the standard validation error shape expected by every rejected value.
-from casino.errors import ValidationError
+# Import the standard validation and corrupt-wallet error shapes expected by rejected values.
+from casino.errors import ConflictError, ValidationError
 
 
 # Raise from strict JSON parsing if a non-standard numeric constant reaches disk.
@@ -112,9 +112,9 @@ class NonfiniteMoneyTests(unittest.TestCase):
             corrupt_state = copy.deepcopy(valid_state)
             # Inject the value that previously serialized as invalid JSON.
             corrupt_state["players"][0]["balance"] = float("nan")
-            # Require strict serialization to reject before atomic replacement.
-            with self.assertRaises(ValueError):
-                # Attempt the lower-level JSON writer as a final defense layer.
+            # Require the cents-aware player publisher to reject before atomic replacement.
+            with self.assertRaises(ConflictError):
+                # Attempt the guarded JSON wallet writer as the final durable defense layer.
                 provider._save_players_document(corrupt_state)
             # Require the original finite document to remain byte-for-byte unchanged.
             self.assertEqual(original_bytes, provider.players_path().read_bytes())

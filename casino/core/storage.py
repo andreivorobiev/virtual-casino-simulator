@@ -14,8 +14,8 @@ import hashlib
 from contextlib import contextmanager
 # Import required dependency so this module can use structured configuration values.
 from dataclasses import dataclass
-# Import required dependency so decimal balances from MySQL can be normalized.
-from decimal import Decimal
+# Import required dependency so decimal balances use one explicit cents rule.
+from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN
 # Import required dependency so provider payloads can be serialized consistently.
 import json
 # Import required dependency so environment configuration can select the provider.
@@ -68,6 +68,10 @@ _MYSQL_RESET_REGISTRY_LOCK = threading.RLock()
 _MYSQL_RESET_TARGETS: set[tuple[str, int, str]] = set()
 # Version the provider-private durable action files independently from public storage.
 _GAME_ACTION_STORAGE_VERSION = 1
+# Store the canonical fake-money quantum shared by migration and ordinary writes. (LEDGER-036)
+_MONEY_QUANTUM = Decimal("0.01")
+# Bound fake-money values to the signed-cent range already enforced by game actions.
+_MAX_MONEY = Decimal("90000000000000000")
 # Version epoch-scoped lifecycle registries without rewriting legacy epoch-one bytes.
 _GAME_ACTION_EPOCH_STORAGE_VERSION = 2
 # Bound reset epochs to the signed BIGINT range shared by JSON and MySQL providers.
@@ -145,6 +149,83 @@ def _validated_strict_document(value: Any, validator: Callable[[Any], bool] | No
     return value
 
 
+# Decode one numeric money value without silently accepting strings or booleans. (LEDGER-036)
+def _money_decimal(value: Any) -> Decimal:
+    # Accept only the numeric shapes already supported by JSON and MySQL providers.
+    if type(value) not in {int, float, Decimal}:
+        # Refuse values whose meaning depends on implicit coercion.
+        raise ValidationError("Money value must be a finite number")
+    try:
+        # Convert through decimal text so persisted cents retain their intended value.
+        decoded = Decimal(str(value))
+    # Collapse malformed or unbounded conversions into one public validation boundary.
+    except (InvalidOperation, ValueError, OverflowError):
+        # Return no source value in the error message.
+        raise ValidationError("Money value must be a finite number") from None
+    # Reject infinity, NaN, or values outside the existing signed-cent range.
+    if not decoded.is_finite() or abs(decoded) > _MAX_MONEY:
+        # Preserve the same value-free validation diagnostic.
+        raise ValidationError("Money value must be a finite number")
+    # Return the exact decimal supplied by the caller or provider.
+    return decoded
+
+
+# Quantize one signed money value to the canonical integer-cent boundary. (LEDGER-036)
+def _quantized_money_decimal(value: Any) -> Decimal:
+    # Decode the finite bounded value before applying the documented rounding rule.
+    decoded = _money_decimal(value)
+    try:
+        # Use deterministic half-even cents so every provider publishes the same result.
+        return decoded.quantize(_MONEY_QUANTUM, rounding=ROUND_HALF_EVEN)
+    # Normalize decimal-context failures to the same bounded validation error.
+    except InvalidOperation:
+        # Avoid returning the rejected value or provider representation.
+        raise ValidationError("Money value must be a finite number") from None
+
+
+# Convert one signed money value into the existing JSON/API float shape at exact cents. (LEDGER-036)
+def _quantized_money(value: Any) -> float:
+    # Convert only after Decimal quantization so binary float residue cannot select a stored cent.
+    return float(_quantized_money_decimal(value))
+
+
+# Validate the wallet document shape used only by the explicit residue-normalization tool. (STORAGE-015)
+def _normalizable_players_document(value: Any) -> dict:
+    # Require the same durable top-level object and player collection as ordinary reads.
+    if type(value) is not dict or type(value.get("players")) is not list:
+        # Preserve structurally corrupt money state for operator recovery.
+        raise ConflictError("Wallet storage requires operator recovery")
+    # Track identities so the tool never guesses between duplicate wallets.
+    player_ids = set()
+    # Validate every row while deliberately allowing only finite sub-cent numeric residue.
+    for player in value["players"]:
+        # Require the provider-neutral player mapping shape.
+        if type(player) is not dict:
+            # Refuse malformed rows without publishing a partial repair.
+            raise ConflictError("Wallet storage requires operator recovery")
+        # Read and validate the unique durable wallet identity.
+        player_id = player.get("player_id")
+        # Reject absent, blank, non-string, or duplicate identifiers.
+        if type(player_id) is not str or not player_id.strip() or player_id in player_ids:
+            # Keep the complete source unchanged for explicit operator recovery.
+            raise ConflictError("Wallet storage requires operator recovery")
+        # Reserve the validated identity before inspecting its money value.
+        player_ids.add(player_id)
+        try:
+            # Decode the exact stored number without rounding it yet.
+            balance = _money_decimal(player.get("balance"))
+        # Normalize public validation failures to the provider-owned recovery boundary.
+        except ValidationError:
+            # Preserve malformed money state rather than guessing a repair.
+            raise ConflictError("Wallet storage requires operator recovery") from None
+        # Reject negative wallets even when their only defect is fractional residue.
+        if balance < 0:
+            # Keep insolvent state unavailable for manual accounting review.
+            raise ConflictError("Wallet storage requires operator recovery")
+    # Return the unchanged document for an explicit scan or normalization pass.
+    return value
+
+
 # Validate the provider-neutral wallet document before any balance is exposed or mutated. (STORAGE-014)
 def _validated_players_document(value: Any) -> dict:
     # Require the durable top-level object and player collection without fallback normalization.
@@ -174,10 +255,10 @@ def _validated_players_document(value: Any) -> dict:
             # Refuse a value whose money meaning depends on coercion.
             raise ConflictError("Wallet storage requires operator recovery")
         try:
-            # Convert through decimal text so two-decimal persisted values remain exact.
-            scaled = Decimal(str(balance)) * 100
+            # Convert through the canonical money decoder before exact-cent validation.
+            scaled = _money_decimal(balance) * 100
         # Collapse malformed or unbounded numeric conversions into the fixed boundary.
-        except Exception:
+        except ValidationError:
             # Return no stored value, path, or parser detail.
             raise ConflictError("Wallet storage requires operator recovery") from None
         # Require a finite, nonnegative, exact-cent balance inside the signed ledger range.
@@ -224,6 +305,11 @@ class StorageProvider:
     # Load the player document shape used by the existing players API.
     def load_players(self, default_factory: Callable[[], dict]) -> dict:
         # Raise because concrete providers must map their own storage rows.
+        raise NotImplementedError
+
+    # Scan or normalize durable wallet balances through one provider-owned boundary. (STORAGE-015)
+    def normalize_wallet_balances(self, *, apply: bool = False) -> dict:
+        # Raise because concrete providers must preserve their own locking and audit semantics.
         raise NotImplementedError
 
     # Insert one new player through a row-scoped, lock-correct provider boundary.
@@ -988,6 +1074,32 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             # Preserve one exact forensic copy without changing the authoritative source.
             self._preserve_corrupt_players(encoded)
             # Return no replacement, partial wallet, or parser detail.
+            raise ConflictError("Wallet storage requires operator recovery") from None
+
+    # Read only structurally valid wallet bytes while allowing explicit sub-cent repair. (STORAGE-015)
+    def _read_normalizable_players_document(self) -> dict:
+        # Require an existing authoritative wallet document for the one-time operator pass.
+        try:
+            # Read the exact source bytes without selecting bootstrap defaults.
+            encoded = self.players_path().read_bytes()
+        # Treat a genuinely absent wallet collection as a clean empty first-run store.
+        except FileNotFoundError:
+            # Return the compatible empty document without creating any file.
+            return {"schema_version": SCHEMA_VERSION, "players": []}
+        # Classify every other unreadable wallet as an operator-recovery condition.
+        except OSError:
+            # Avoid creating money state from the normalization command.
+            raise ConflictError("Wallet storage requires operator recovery") from None
+        try:
+            # Decode strict JSON while retaining finite sub-cent numeric values for repair.
+            state = json.loads(encoded.decode("utf-8"), object_pairs_hook=self._unique_json_object, parse_constant=lambda value: (_ for _ in ()).throw(ValueError("non-finite number")))
+            # Accept only the exact wallet structure and finite nonnegative money values.
+            return _normalizable_players_document(state)
+        # Preserve every non-residue defect through the existing forensic boundary.
+        except (UnicodeError, ValueError, RecursionError, ConflictError):
+            # Retain one content-addressed copy of the unmodified source bytes.
+            self._preserve_corrupt_players(encoded)
+            # Refuse a partial or guessed normalization.
             raise ConflictError("Wallet storage requires operator recovery") from None
 
     # Write JSON to a local path atomically.
@@ -2793,6 +2905,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         saved_state = dict(state)
         # Preserve the current schema version on every saved player document.
         saved_state["schema_version"] = SCHEMA_VERSION
+        # Refuse any internal writer that attempts to publish non-cent wallet state.
+        _validated_players_document(saved_state)
         # Write the normalized player document to disk.
         self._write_json(self.players_path(), saved_state)
 
@@ -2806,6 +2920,64 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                 self._recover_all_json_actions_locked()
                 # Return the compatible player document after recovery.
                 return self._load_players_document(default_factory)
+
+    # Scan or repair JSON wallet residue under the complete money-state gate. (STORAGE-015, LEDGER-036)
+    def normalize_wallet_balances(self, *, apply: bool = False) -> dict:
+        # Reject operator mutation attempted from inside a game-action planner.
+        self._reject_planner_mutation()
+        # Serialize the scan with every provider-local operation.
+        with self.lock:
+            # Serialize the pass with reset, wallet, ledger, and game-action writers across processes.
+            with self._ledger_process_lock():
+                # Converge any earlier durable money action before inspecting its wallet projection.
+                self._recover_all_json_actions_locked()
+                # Read the structurally strict document through the residue-aware operator boundary.
+                state = self._read_normalizable_players_document()
+                # Collect exact stored and normalized values without mutating the source yet.
+                residues = []
+                # Visit every wallet exactly once while the global gate remains held.
+                for player in state["players"]:
+                    # Decode the exact stored decimal value already accepted by the strict reader.
+                    stored = _money_decimal(player["balance"])
+                    # Derive the canonical cent value using the documented provider-neutral rule.
+                    normalized = _quantized_money_decimal(stored)
+                    # Record only values that contain genuine sub-cent residue.
+                    if stored != normalized:
+                        # Retain the row and exact decimal pair for an optional apply pass.
+                        residues.append((player, stored, normalized))
+                # Return the read-only scan result without writing players or ledger rows.
+                if not apply:
+                    # Publish bounded counts only, never player identities or stored values.
+                    return {"provider": self.name, "checked": len(state["players"]), "residue_count": len(residues), "normalized_count": 0, "clean": not residues, "applied": False}
+                # Refresh the append-only ledger identity cache before deterministic replay checks.
+                self._ledger_rows()
+                # Publish every required audit row before changing the compatible wallet document.
+                for player, stored, normalized in residues:
+                    # Build the deterministic ledger-visible operator adjustment.
+                    event = _wallet_normalization_event(player["player_id"], stored, normalized)
+                    # Reuse an earlier row when a prior process appended it before a stopped player write.
+                    existing = self._ledger_cache_by_id.get(event["ledger_id"])
+                    # Append only a previously unseen normalization identity.
+                    if existing is None:
+                        # Write the complete append-only evidence while the process gate is held.
+                        self._append_jsonl(self.ledger_path(), event)
+                        # Refresh the cache so later rows in this batch see the durable append.
+                        self._ledger_rows()
+                    else:
+                        # Require the earlier deterministic row to describe this exact residue.
+                        _validate_wallet_normalization_replay(existing, event)
+                    # Replace the durable wallet value only after its audit evidence exists.
+                    player["balance"] = _quantized_money(normalized)
+                    # Record the operator pass as the latest wallet update.
+                    player["updated_at"] = utc_now()
+                # Publish the complete normalized player document once after all audit rows are durable.
+                if residues:
+                    # Use the existing atomic JSON replacement boundary.
+                    self._save_players_document(state)
+                # Prove the resulting in-memory document satisfies the ordinary exact-cent reader.
+                _validated_players_document(state)
+                # Return bounded completion evidence for the operator command.
+                return {"provider": self.name, "checked": len(state["players"]), "residue_count": len(residues), "normalized_count": len(residues), "clean": True, "applied": True}
 
     # Insert one player through the deterministic provider-owned identity boundary.
     def insert_player(self, player: dict) -> dict:
@@ -2834,8 +3006,10 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                     if player.get("player_id") in identifiers:
                         # Continue to the remaining default rows.
                         continue
-                    # Append a detached row while the cross-process wallet gate remains held.
-                    current["players"].append(dict(player))
+                    # Detach and cents-normalize the missing wallet before publication.
+                    inserted = {**player, "balance": _quantized_money(player.get("balance", 0))}
+                    # Append the validated row while the cross-process wallet gate remains held.
+                    current["players"].append(inserted)
                     # Reserve the identifier against duplicates inside the same supplied batch.
                     identifiers.add(player.get("player_id"))
                     # Record that the normalized document must be published once.
@@ -2863,8 +3037,8 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                     if player["player_id"] == player_id:
                         # Let the caller mutate the player copy in place.
                         updater(player)
-                        # Normalize balances to two decimal places.
-                        player["balance"] = round(float(player.get("balance", 0)), 2)
+                        # Quantize every direct wallet update through the canonical cents boundary.
+                        player["balance"] = _quantized_money(player.get("balance", 0))
                         # Stamp the update time for downstream admin views.
                         player["updated_at"] = utc_now()
                         # Persist the modified player document.
@@ -2896,12 +3070,14 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                             raise ConflictError("Player provisioning identity conflicts with existing state")
                         # Return the already provisioned player without resetting balance or timestamps.
                         return existing
-                # Append a detached copy so caller mutation cannot alter persisted state after return.
-                state["players"].append(dict(player))
+                # Detach and cents-normalize the new wallet before publication.
+                inserted = {**player, "balance": _quantized_money(player.get("balance", 0))}
+                # Append the validated copy so caller mutation cannot alter persisted state after return.
+                state["players"].append(inserted)
                 # Persist the complete deterministic player document while the process lock remains held.
                 self._save_players_document(state)
                 # Return the newly committed compatible row.
-                return dict(player)
+                return dict(inserted)
 
     # Return the empty committed-action registry shape used by fresh JSON stores.
     def _empty_action_registry(self) -> dict:
@@ -2996,17 +3172,17 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             # Preserve the journal for operator recovery instead of discarding money state.
             raise ConflictError("Committed ledger action references a missing player", {"ledger_id": event["ledger_id"], "player_id": event["player_id"]})
         # Normalize the currently projected fake-money balance.
-        current_balance = round(float(player.get("balance", 0)), 2)
+        current_balance = _quantized_money(player.get("balance", 0))
         # Apply the committed balance transition when projection stopped before players.json.
-        if current_balance == round(float(event["balance_before"]), 2):
+        if current_balance == _quantized_money(event["balance_before"]):
             # Move the wallet to the committed post-transaction balance exactly once.
-            player["balance"] = round(float(event["balance_after"]), 2)
+            player["balance"] = _quantized_money(event["balance_after"])
             # Stamp recovery as a player update for downstream admin views.
             player["updated_at"] = utc_now()
             # Persist the recovered wallet state before appending the missing ledger row.
             self._save_players_document(state)
         # Accept a balance that already reached the committed after-state before a lost response.
-        elif current_balance != round(float(event["balance_after"]), 2):
+        elif current_balance != _quantized_money(event["balance_after"]):
             # Reject divergent state because guessing could duplicate or erase later money actions.
             raise ConflictError("Committed ledger action cannot be recovered from divergent wallet state", {"ledger_id": event["ledger_id"], "balance": current_balance})
         # Append the original committed event after the wallet transition is durable.
@@ -3376,11 +3552,11 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
             # Raise the same player lookup error shape used by players.get_player.
             raise NotFoundError(f"Player {player_id} was not found")
         # Capture the balance before the proposed mutation.
-        before = round(float(player.get("balance", 0)), 2)
+        before = _quantized_money(player.get("balance", 0))
         # Compute the balance after the proposed mutation.
-        after = round(before + amount, 2)
+        after = _quantized_money(Decimal(str(before)) + Decimal(str(amount)))
         # Reject transactions that would overdraw the fake-money wallet.
-        if after < -1e-9:
+        if after < 0:
             # Raise the existing insufficient-funds error with ledger details.
             raise InsufficientFundsError(details={"player_id": player_id, "balance": before, "amount": amount, "transaction_type": transaction_type})
         # Store the new balance on the player row.
@@ -3401,7 +3577,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         # Reject wallet mutation attempted from inside a planner.
         self._reject_planner_mutation()
         # Normalize the transaction amount to the app's fake-money precision.
-        amount = round(float(amount), 2)
+        amount = _quantized_money(amount)
         # Reject zero-value ledger rows before touching player state.
         if amount == 0:
             # Raise a validation error consistent with the previous ledger module.
@@ -3420,7 +3596,7 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
         # Reject wallet mutation attempted from inside a planner.
         self._reject_planner_mutation()
         # Normalize the transaction amount to the app's fake-money precision.
-        amount = round(float(amount), 2)
+        amount = _quantized_money(amount)
         # Reject zero-value ledger rows before touching durable action state.
         if amount == 0:
             # Raise the standard ledger validation error.
@@ -3460,11 +3636,11 @@ class JsonStorageProvider(StorageProvider, GameActionExecutor):
                     # Raise the standard player lookup error.
                     raise NotFoundError(f"Player {player_id} was not found")
                 # Capture the balance before the proposed mutation.
-                before = round(float(player.get("balance", 0)), 2)
+                before = _quantized_money(player.get("balance", 0))
                 # Compute the balance after the proposed mutation.
-                after = round(before + amount, 2)
+                after = _quantized_money(Decimal(str(before)) + Decimal(str(amount)))
                 # Reject actions that would overdraw the fake-money wallet.
-                if after < -1e-9:
+                if after < 0:
                     # Raise the standard insufficient-funds error before committing the identity.
                     raise InsufficientFundsError(details={"player_id": player_id, "balance": before, "amount": amount, "transaction_type": transaction_type})
                 # Build the immutable event returned by every later replay.
@@ -4569,12 +4745,94 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
                 # Validate the same complete money shape required from JSON storage.
                 return _validated_players_document({"schema_version": SCHEMA_VERSION, "players": players})
             # Normalize corrupt row values without reflecting driver or stored details.
-            except (TypeError, ValueError, OverflowError, ConflictError):
+            except (TypeError, ValueError, OverflowError, ValidationError, ConflictError):
                 # Preserve database state and require operator-led repair.
                 raise ConflictError("Wallet storage requires operator recovery") from None
         # Always close the connection after loading players.
         finally:
             # Close the MySQL connection for this operation.
+            connection.close()
+
+    # Scan or repair MySQL wallet residue in one row-locked transaction. (STORAGE-015, LEDGER-036)
+    def normalize_wallet_balances(self, *, apply: bool = False) -> dict:
+        # Reject operator mutation attempted from inside a game-action planner.
+        self._reject_planner_mutation()
+        # Require the ordinary compatible schema before opening the operator transaction.
+        self.ensure_ready()
+        # Borrow one connection for the complete scan or repair.
+        connection = self.connect()
+        # Protect rollback and lease cleanup for every result.
+        try:
+            # Start one transaction so every inspected wallet remains stable through commit.
+            connection.start_transaction()
+            # Open a dictionary cursor for explicit wallet and ledger projections.
+            cursor = connection.cursor(dictionary=True)
+            # Lock all wallet rows in deterministic identity order.
+            cursor.execute("SELECT player_id, balance FROM casino_players ORDER BY player_id FOR UPDATE")
+            # Materialize the bounded result set while the row locks remain held.
+            rows = cursor.fetchall()
+            # Collect exact residue pairs without mutating any row yet.
+            residues = []
+            # Visit every durable wallet exactly once.
+            for row in rows:
+                try:
+                    # Decode the exact provider value without accepting coercion.
+                    stored = _money_decimal(row["balance"])
+                    # Derive the canonical cent value using the shared rounding rule.
+                    normalized = _quantized_money_decimal(stored)
+                # Normalize malformed database money to the fixed recovery boundary.
+                except ValidationError:
+                    # Keep every row unchanged for operator inspection.
+                    raise ConflictError("Wallet storage requires operator recovery") from None
+                # Refuse insolvent wallets instead of disguising them as rounding residue.
+                if stored < 0:
+                    # Preserve the complete transaction for explicit accounting recovery.
+                    raise ConflictError("Wallet storage requires operator recovery")
+                # Retain only rows whose source has genuine sub-cent residue.
+                if stored != normalized:
+                    # Store the exact row identity and decimal pair for the optional apply path.
+                    residues.append((row["player_id"], stored, normalized))
+            # End a read-only scan without publishing any row or audit mutation.
+            if not apply:
+                # Release all row locks before returning bounded counts.
+                connection.rollback()
+                # Return no wallet identities or source values.
+                return {"provider": self.name, "checked": len(rows), "residue_count": len(residues), "normalized_count": 0, "clean": not residues, "applied": False}
+            # Publish each normalization row and wallet update inside this same transaction.
+            for player_id, stored, normalized in residues:
+                # Build the deterministic provider-neutral audit event.
+                event = _wallet_normalization_event(player_id, stored, normalized)
+                # Read a possible earlier compatible row by deterministic ledger identity.
+                cursor.execute("SELECT ledger_id, ts, player_id, game, round_id, transaction_type, amount, balance_before, balance_after, action_scope, action_key, action_fingerprint, details_json FROM casino_ledger WHERE ledger_id = %s", (event["ledger_id"],))
+                # Resolve an interrupted or repeated operator invocation.
+                existing_row = cursor.fetchone()
+                # Insert the immutable audit row when this exact repair was not recorded earlier.
+                if existing_row is None:
+                    # Persist the zero-cent visible adjustment plus exact residue details.
+                    cursor.execute(
+                        "INSERT INTO casino_ledger (ledger_id, ts, player_id, game, round_id, transaction_type, amount, balance_before, balance_after, action_scope, action_key, action_fingerprint, details_json) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",  # Append one deterministic operator audit row.
+                        (event["ledger_id"], event["ts"], event["player_id"], event["game"], event["round_id"], event["transaction_type"], Decimal("0.00"), normalized, normalized, event["action_scope"], event["action_key"], event["action_fingerprint"], json.dumps(event["details"], sort_keys=True, separators=(",", ":"))),  # Bind only cents-safe columns and exact residue metadata.
+                    )
+                else:
+                    # Convert the relational row to the complete provider-neutral replay shape.
+                    existing = {**_ledger_from_row(existing_row), "action_scope": existing_row["action_scope"], "action_key": existing_row["action_key"], "action_fingerprint": existing_row["action_fingerprint"]}
+                    # Reject any deterministic-identity collision before changing the wallet.
+                    _validate_wallet_normalization_replay(existing, event)
+                # Publish the exact cent value on the already locked wallet row.
+                cursor.execute("UPDATE casino_players SET balance = %s, updated_at = %s WHERE player_id = %s", (normalized, utc_now(), player_id))
+            # Commit all audit rows and wallet changes atomically.
+            connection.commit()
+            # Return bounded completion evidence after the durable commit.
+            return {"provider": self.name, "checked": len(rows), "residue_count": len(residues), "normalized_count": len(residues), "clean": True, "applied": True}
+        # Roll back every malformed row, collision, or provider failure.
+        except Exception:
+            # Preserve the complete pre-call relational state.
+            connection.rollback()
+            # Re-raise the original bounded error.
+            raise
+        # Always release the provider connection after commit or rollback.
+        finally:
+            # Return or discard the connection through the existing pool boundary.
             connection.close()
 
     # Insert one player through the deterministic provider-owned identity boundary.
@@ -4603,7 +4861,7 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
                 # Insert one normalized player only when its durable identifier is absent.
                 cursor.execute(
                     "INSERT IGNORE INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Keep existing wallet and lifecycle state unchanged on a repeated seed.
-                    (player["player_id"], player["display_name"], player.get("type", "human"), round(float(player.get("balance", 0)), 2), player.get("created_at", utc_now()), player.get("updated_at", utc_now()), player.get("status", "active")),  # Bind only the candidate insert fields.
+                    (player["player_id"], player["display_name"], player.get("type", "human"), _quantized_money_decimal(player.get("balance", 0)), player.get("created_at", utc_now()), player.get("updated_at", utc_now()), player.get("status", "active")),  # Bind only cents-normalized candidate fields.
                 )
             # Commit all missing-player inserts as one unit.
             connection.commit()
@@ -4646,8 +4904,8 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
             player = self._player_from_row(row)
             # Let the caller mutate the public player shape.
             updater(player)
-            # Normalize the updated player row.
-            player["balance"] = round(float(player.get("balance", 0)), 2)
+            # Quantize the updated wallet through the provider-neutral cents boundary.
+            player["balance"] = _quantized_money(player.get("balance", 0))
             # Stamp the player update time.
             player["updated_at"] = utc_now()
             # Persist the updated fields.
@@ -4687,7 +4945,7 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
             # Insert the deterministic player once without overwriting any existing wallet state.
             cursor.execute(
                 "INSERT IGNORE INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Preserve existing rows on an idempotent replay.
-                (player["player_id"], player["display_name"], player.get("type", "human"), round(float(player.get("balance", 0)), 2), player["created_at"], player["updated_at"], player.get("status", "active")),  # Bind only normalized deterministic fields.
+                (player["player_id"], player["display_name"], player.get("type", "human"), _quantized_money_decimal(player.get("balance", 0)), player["created_at"], player["updated_at"], player.get("status", "active")),  # Bind only cents-normalized deterministic fields.
             )
             # Lock and read the resulting row before validating compatibility.
             cursor.execute("SELECT player_id, display_name, player_type, balance, created_at, updated_at, status FROM casino_players WHERE player_id = %s FOR UPDATE", (player["player_id"],))
@@ -4723,7 +4981,7 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
         # Reject wallet and ledger mutation attempted from inside a planner.
         self._reject_planner_mutation()
         # Normalize the transaction amount to the app's fake-money precision.
-        amount = round(float(amount), 2)
+        amount = _quantized_money(amount)
         # Reject zero-value ledger rows before touching player state.
         if amount == 0:
             # Raise a validation error consistent with the previous ledger module.
@@ -4751,9 +5009,9 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
             # Capture the balance before the proposed mutation.
             before = _money(row["balance"])
             # Compute the balance after the proposed mutation.
-            after = round(before + amount, 2)
+            after = _quantized_money(Decimal(str(before)) + Decimal(str(amount)))
             # Reject transactions that would overdraw the fake-money wallet.
-            if after < -1e-9:
+            if after < 0:
                 # Roll back before surfacing insufficient funds.
                 connection.rollback()
                 # Raise the existing insufficient-funds error with ledger details.
@@ -4787,7 +5045,7 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
         # Reject exactly-once ledger mutation attempted from inside a planner.
         self._reject_planner_mutation()
         # Normalize the transaction amount to the app's fake-money precision.
-        amount = round(float(amount), 2)
+        amount = _quantized_money(amount)
         # Reject zero-value ledger rows before opening a database transaction.
         if amount == 0:
             # Raise the standard ledger validation error.
@@ -4840,9 +5098,9 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
             # Capture the wallet balance before the new action.
             before = _money(player_row["balance"])
             # Compute the wallet balance after the new action.
-            after = round(before + amount, 2)
+            after = _quantized_money(Decimal(str(before)) + Decimal(str(amount)))
             # Reject actions that would overdraw the fake-money wallet.
-            if after < -1e-9:
+            if after < 0:
                 # Roll back before surfacing insufficient funds.
                 connection.rollback()
                 # Raise the standard insufficient-funds error with transaction context.
@@ -5105,14 +5363,10 @@ class MySQLStorageProvider(StorageProvider, GameActionExecutor):
             connection.close()
 
 
-# Convert decimal database values into two-decimal floats for API compatibility.
+# Convert provider money values into cents-quantized floats for API compatibility. (LEDGER-036)
 def _money(value: Any) -> float:
-    # Convert Decimals through string form to avoid binary surprises.
-    if isinstance(value, Decimal):
-        # Return the rounded float equivalent of the decimal amount.
-        return round(float(value), 2)
-    # Return the rounded float equivalent of regular numeric values.
-    return round(float(value), 2)
+    # Reuse the one provider-neutral Decimal quantizer for database and JSON shapes.
+    return _quantized_money(value)
 
 
 # Normalize and validate the caller-owned action key used for storage uniqueness.
@@ -5142,7 +5396,7 @@ def _action_fingerprint(amount: float, transaction_type: str, game: str | None, 
     # Build the canonical semantic payload without storage-owned metadata.
     semantic_payload = {
         # Include the signed fake-money amount in the conflict contract.
-        "amount": round(float(amount), 2),
+        "amount": _quantized_money(amount),
         # Include the transaction type so debit and payout meanings cannot collide.
         "transaction_type": transaction_type,
         # Include the game namespace selected for the action identity.
@@ -5196,6 +5450,36 @@ def _decode_json(value: Any) -> Any:
         return {}
     # Decode string or bytes JSON payloads.
     return json.loads(value)
+
+
+# Build one deterministic ledger-visible audit row for a sub-cent wallet repair. (LEDGER-036)
+def _wallet_normalization_event(player_id: str, stored: Decimal, normalized: Decimal) -> dict:
+    # Encode the exact repair semantics without relying on binary floating-point text.
+    semantic = {"player_id": player_id, "stored_balance": str(stored), "normalized_balance": str(normalized), "residue": str(normalized - stored), "rounding": "ROUND_HALF_EVEN", "canonical_unit": "integer_cents"}
+    # Derive one stable identity so an interrupted JSON repair can resume without a duplicate row.
+    fingerprint = hashlib.sha256(json.dumps(semantic, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    # Build the existing public ledger shape using cents-safe visible money columns.
+    event = _ledger_event(player_id, 0.0, "WALLET_CENTS_NORMALIZATION", _quantized_money(normalized), _quantized_money(normalized), None, f"wallet-cents:{fingerprint[:32]}", semantic)
+    # Replace the random ordinary identity with the deterministic repair identity.
+    event["ledger_id"] = f"led_wallet_cents_{fingerprint[:40]}"
+    # Bind the row to the existing provider action-index columns when MySQL persists it.
+    event["action_scope"] = "core"
+    # Store the bounded deterministic repair key used by the unique ledger index.
+    event["action_key"] = f"wallet-cents:{fingerprint}"
+    # Store the semantic digest for exact replay and forensic comparison.
+    event["action_fingerprint"] = fingerprint
+    # Return the complete append-only audit row.
+    return event
+
+
+# Require an earlier deterministic normalization row to match the exact repair semantics. (LEDGER-036)
+def _validate_wallet_normalization_replay(existing: dict, expected: dict) -> None:
+    # Compare every semantic and money field while permitting the original timestamp to differ.
+    fields = ("ledger_id", "player_id", "game", "round_id", "transaction_type", "amount", "balance_before", "balance_after", "action_scope", "action_key", "action_fingerprint", "details")
+    # Reject a collided identity rather than skipping a required audit row.
+    if any(existing.get(field) != expected.get(field) for field in fields):
+        # Preserve both sources for operator-led reconciliation.
+        raise ConflictError("Wallet normalization audit requires operator recovery")
 
 
 # Build a normalized ledger event in the public response shape.

@@ -71,6 +71,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             "migrations/mysql/0004_game_action_claims.json": migration_four,
             "migrations/mysql/catalog.json": migration_catalog.replace("0002_upgrade.json", "0002_action_identity.json"),
             "scripts/mysql_migrate.py": "# Fixture deployment-only migration runner.\n",
+            "scripts/normalize_wallet_balances.py": "# Fixture explicit wallet normalization runner.\n",
             "scripts/recovery.py": "# Fixture encrypted recovery runner.\n",
             "scripts/package_app.py": "# Fixture extracted-release verifier.\n",
             "scripts/validate_monitor_config.py": "# Fixture secret-safe monitor validator.\n",
@@ -230,6 +231,15 @@ class ReleaseArtifactTests(unittest.TestCase):
         with zipfile.ZipFile(archive_path, "r") as archive:
             # Require the documented post-install command to exist in every release.
             self.assertIn(f"{package_app.ARCHIVE_ROOT}/scripts/write_release_env.py", archive.namelist())
+
+    # Prove the explicit residue check/apply operator survives immutable packaging. (TOOL-019)
+    def test_wallet_normalization_operator_is_packaged(self):
+        # Build a structurally valid candidate from the complete required fixture inventory.
+        archive_path, _ = self.build("wallet-normalization-operator")
+        # Open the immutable candidate without extracting or executing operator commands.
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            # Require the documented operator entry point in every deployable archive.
+            self.assertIn(f"{package_app.ARCHIVE_ROOT}/scripts/normalize_wallet_balances.py", archive.namelist())
 
     # Prove every Python command executed by the host poller exists in the immutable archive.
     def test_deployment_host_scripts_are_packaged(self):

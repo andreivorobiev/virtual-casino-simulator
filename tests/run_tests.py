@@ -42,6 +42,8 @@ from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, Val
 from tests import storage_tests
 # Import the focused fail-closed wallet-corruption evidence module.
 from tests import wallet_corruption_tests
+# Import provider-parity cents normalization proof for the storage profile. (TEST-190)
+from tests import wallet_cents_normalization_tests
 # Import descriptor-governed request and persisted-state rule evidence for SEC-014.
 from tests.games import test_game_rule_schema
 # Import the durable enrollment-policy suite so the central runner owns its evidence. (AUTH-013)
@@ -604,6 +606,14 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
         result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
         # Fail the mapped case whenever any recovery assertion fails.
         if not result.wasSuccessful(): raise AssertionError('wallet corruption suite failed')
+    # Define one listener-free runner for provider-neutral cents normalization.
+    def run_wallet_cents_normalization_tests():
+        # Load the complete JSON, MySQL, command, and write-path proof class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(wallet_cents_normalization_tests.WalletCentsNormalizationTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the mapped case whenever any normalization assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('wallet cents normalization suite failed')
     # Define one listener-free runner for the STORAGE-011 JSON game-action boundary.
     def run_json_game_action_provider_tests():
         # Import the provider-specific suite only when the storage profile executes.
@@ -664,6 +674,8 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','AUDIO-010','TEST-030'],storage_tests.run_json_provider_parity)
     # Prove corrupt wallet state cannot seed defaults or reach a settlement on either provider.
     run_case('STORAGE-WALLET-CORRUPTION-001',['STORAGE-014','TEST-177'],run_wallet_corruption_tests)
+    # Prove explicit residue repair, audit evidence, and cents-only writes on both providers.
+    run_case('STORAGE-WALLET-CENTS-001',['STORAGE-015','LEDGER-036','TOOL-019','TEST-190'],run_wallet_cents_normalization_tests)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','LEDGER-033','LEDGER-034','STORAGE-005','STORAGE-006','TEST-043','TEST-164','TEST-169'],storage_tests.run_json_action_idempotency)
     # Execute provider-owned journal recovery, contention, reset, and fail-closed proof. (#430)

@@ -385,8 +385,12 @@ class MySQLMigrationTests(unittest.TestCase):
                 "migrations/mysql/catalog.json",
             }.issubset(package_app.REQUIRED_FILES)
         )
-        # Read the tracked source inventory and add the new checkpoint file before commit.
-        repository_paths = [*package_app.tracked_paths(package_app.ROOT), "migrations/mysql/0004_game_action_claims.json"]
+        # Read tracked sources and add the two current-branch files that are not committed yet.
+        repository_paths = [
+            *package_app.tracked_paths(package_app.ROOT),
+            "migrations/mysql/0004_game_action_claims.json",
+            "scripts/normalize_wallet_balances.py",
+        ]
         # Select the exact package inventory through the production allowlist.
         selected = package_app.select_release_files(package_app.ROOT, repository_paths)
         # Require the schema-four descriptor to be physically packaged.

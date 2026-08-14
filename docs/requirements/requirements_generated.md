@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.69.0
-- core: 9.44.0
+- core: 9.45.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.96.0
-- docs: 1.92.0
+- tests: 1.97.0
+- docs: 1.93.0
 - contracts: 1.61.5
-- tooling: 1.39.0
+- tooling: 1.40.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.6
 - poker_dice: 1.1.4
@@ -672,6 +672,10 @@ Historical source baseline: 9.1.0
 - **LEDGER-035** (Core) - PASS: Ending a Guest Trial with a positive fake-token balance commits exactly one GUEST_TRIAL_END debit through the storage-enforced ledger identity derived from the immutable trial id. Teardown confirms the authoritative wallet is zero and changes only non-money player presentation fields; it never overwrites balance directly. The lifecycle movement is excluded from player-facing game economics.
 - **TEST-188** (Tests) - PASS: Listener-free production-service evidence ends one funded Guest Trial twice and proves exactly one terminal debit, the exact before and after balances, a trial-derived action identity, reconstruction from the starting grant plus durable ledger rows to zero, irreversible identity and session teardown, and byte-equivalent Admin game-economics output.
 - **TEST-189** (Tests) - PASS: A dependency-free two-process rendezvous loads the same stale Casino War player document, concurrently publishes one committed ledger marker and one terminal phase transition through the production JSON state repository, and proves the final provider document retains both updates.
+- **STORAGE-015** (Core) - PASS: JSON and MySQL storage providers expose one explicit operator-owned wallet residue scan and normalization boundary. Read-only scans never mutate state; apply validates the complete wallet collection, quantizes only finite nonnegative numeric residue, serializes with every money writer, and fails closed on malformed structure, identity ambiguity, coerced or non-finite values, negative balances, range violations, or audit collisions.
+- **LEDGER-036** (Core) - PASS: The canonical durable wallet unit is an integer cent. Every JSON and MySQL player and ledger writer derives compatible numeric dollars through one Decimal ROUND_HALF_EVEN quantizer, exact-cent validation guards every JSON players publication, and each repaired residue produces one deterministic WALLET_CENTS_NORMALIZATION audit row with exact source, result, residue, rule, and canonical-unit details.
+- **TOOL-019** (Tooling) - PASS: The wallet cents operator command requires an explicit check or apply mode, selects only the configured storage provider, emits bounded sorted JSON counts with no wallet identities or values, returns nonzero while a read-only scan finds residue, and rescans an apply result to zero before reporting success.
+- **TEST-190** (Tests) - PASS: Listener-free provider-parity evidence seeds a 1e-9 wallet residue, proves check mode is byte-read-only and nonzero, applies exactly one deterministic audit row, verifies zero remaining residue and cents-bridge acceptance, proves stopped JSON publication resumes without another row, exercises JSON update, ensure, and bootstrap writers, and models MySQL row locking plus atomic audit, wallet, rollback, commit, and lease cleanup.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
