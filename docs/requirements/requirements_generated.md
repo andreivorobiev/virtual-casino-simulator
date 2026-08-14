@@ -21,7 +21,7 @@ Historical source baseline: 9.1.0
 - slots: 9.5.1
 - blackjack: 9.1.12
 - baccarat: 9.2.0
-- keno: 9.4.0
+- keno: 9.4.1
 - bingo: 9.3.7
 - multi_hand_video_poker: 1.1.2
 - casino_war: 1.2.0
@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.4
-- docs: 1.96.4
+- tests: 1.100.5
+- docs: 1.96.5
 - contracts: 1.62.0
-- tooling: 1.40.0
+- tooling: 1.40.1
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.6
 - poker_dice: 1.1.4
@@ -687,6 +687,7 @@ Historical source baseline: 9.1.0
 - **TEST-194** (Tests) - PASS: Deterministic conversion-versus-teardown rendezvous evidence proves both users-document lock orders: a conversion winner preserves the exact adopted player, balance, ledger, history, account session, conversion marker, and analytics classification under repeated stale teardown, while a teardown winner rejects account adoption and converges on one terminal movement. Failure recovery resumes a durable ending claim with its first reason, and the disposable MySQL integration exercises the same converted-owner refusal through production provider documents.
 - **GUEST-007** (Core) - PASS: Every successful Guest Trial conversion path closes the server-issued de-identified analytics row exactly once as converted after durable account and player ownership commits. The terminal row records the authoritative preserved ending balance without authentication, credential, player, session, or account identity data; exact replay preserves its first terminal fields, while analytics failure cannot reverse or fail the committed conversion and a later replay retries only the projection.
 - **TEST-195** (Tests) - PASS: Focused self-service evidence proves converted reason, exact ending balance, de-identified storage, one stable terminal event, Admin active-row exclusion, exact replay, pre-commit inactivity, and post-commit analytics-failure recovery without wallet or ledger effects. The Admin-assisted suite proves its shared terminal projection stays byte-stable, and real Browser evidence submits the visible self-service form before verifying the terminal analytics row is no longer an active-action source.
+- **TEST-197** (Tests) - PASS: Real two-process Keno evidence races prepared ticket purchase and refund settlements against sibling player-game updates, then proves exact ticket identity, one debit and one refund, restored wallet value, preserved sibling state, and zero pending-marker residue. A second real two-process race proves one same-ticket refund winner, one fail-closed contender, and one credit. Deterministic failure evidence proves action-owned rollback preserves unrelated state, while the static multiprocess inventory recognizes atomic-only player-state publication without authorizing a second worker.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -822,7 +823,8 @@ Historical source baseline: 9.1.0
 - **KENO-025** (Keno) - PASS: All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.
 - **KENO-026** (Keno) - PASS: The Keno drawn-ball result rail stays bounded to its column and scrolls horizontally rather than clipping. The rail declares min-width:0 and max-width:100% so it cannot expand to its content width inside the fixed stage, and it enables horizontal-scroll overflow so all twenty drawn balls remain reachable; each ball keeps a fixed size so it stays legible while scrolling. Without these the rightmost drawn numbers were clipped off the page by an ancestor overflow boundary.
 - **KENO-027** (Keno) - PASS: Keno uses one server-authoritative, strictly increasing paytable for every legal one-through-twenty-spot ticket, with every positive award at least one times the ticket, strictly increasing full-catch jackpots, exact ideal hypergeometric returns in the approved house-side band except the disclosed one-spot cent-rounding exception, and realized production float-plus-hundredth rounding strictly below one for every frozen-v1 amount from 0.01 through 1,000,000. The state API, current ledger and history equations, browser controls, exact jackpot copy, route restoration, repeat, autoplay, and localized player disclosure all consume the same rules without changing the frozen v1 request, route, envelope, or payout law.
-- **KENO-028** (Keno) - PASS: Keno commits a pending draw and publishes its exact terminal draw state through provider-atomic player-document mutations. Concurrent sibling state updates survive both boundaries, terminal replay is idempotent only for the exact committed round, and a divergent pending draw fails closed rather than replacing or inventing state. Ticket add and remove paths remain explicitly blocked for later issue #704 slices.
+- **KENO-028** (Keno) - PASS: Keno commits a pending draw and publishes its exact terminal draw state through provider-atomic player-document mutations. Concurrent sibling state updates survive both boundaries, terminal replay is idempotent only for the exact committed round, and a divergent pending draw fails closed rather than replacing or inventing state.
+- **KENO-029** (Keno) - PASS: Keno ticket purchase and refund serialize their exact state transition with every sibling player-game mutation. Each prepared ticket action durably binds its ticket identity, action identity, movement kind, amount, and refund position before the existing ledger settlement runs; completion removes only the matching marker, terminal settlement replay remains exactly once, and a definitely uncommitted settlement rolls back only the action-owned ticket change while preserving concurrent sibling state.
 - **BINGO-001** (Bingo) - PASS: Bingo uses 75-ball American rules.
 - **BINGO-002** (Bingo) - PASS: Bingo card has B column 1-15.
 - **BINGO-003** (Bingo) - PASS: Bingo card has I column 16-30.

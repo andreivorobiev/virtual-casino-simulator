@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require accepted atomic-state, conversion, teardown, analytics, and Blackjack slices to total exactly 1002 permanent rows.
-        self.assertEqual(len(requirements), 1002)
+        # Require accepted atomic-state, conversion, teardown, analytics, Blackjack, and Keno-ticket slices to total exactly 1004 permanent rows.
+        self.assertEqual(len(requirements), 1004)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1431,6 +1431,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-190": "Tests",  # Bind JSON and MySQL normalization and rollback evidence.
             "KENO-028": "Keno",  # Bind Keno pending-draw commit and finalization to atomic player state.
             "TEST-191": "Tests",  # Bind the real two-process Keno stale-state rendezvous evidence.
+            "KENO-029": "Keno",  # Bind Keno ticket purchase and refund to atomic player state.
+            "TEST-197": "Tests",  # Bind ticket settlement, rollback, and sibling-state evidence.
             "BAC-027": "Baccarat",  # Bind Baccarat pending-coup commit and finalization to atomic player state.
             "TEST-192": "Tests",  # Bind the real two-process Baccarat stale-state rendezvous evidence.
             "BJ-033": "Blackjack",  # Bind Blackjack round preparation, transitions, rollback, and finalization to atomic player state.

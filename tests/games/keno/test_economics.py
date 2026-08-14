@@ -164,20 +164,14 @@ class KenoEconomicsTests(TestCase):
         self.state = engine.default_state()
         # Patch production state loading to return the test-owned current state.
         self.load_patch = mock.patch.object(keno_api, "load_player_game_state", side_effect=lambda *_args: self.state)
-        # Patch production state saves while retaining mutation of the same in-memory object.
-        self.save_patch = mock.patch.object(keno_api, "save_player_game_state")
         # Patch provider-atomic Keno publication while executing each real production mutator against isolated state.
         self.atomic_patch = mock.patch.object(keno_api, "update_player_game_state", side_effect=self._update_state)
         # Activate the state seams before route registration.
         self.load_patch.start()
-        # Activate the save observer for exact call-count assertions.
-        self.saved_state = self.save_patch.start()
         # Activate the provider-atomic observer so route tests cover commitment and finalization mutators.
         self.atomic_updates = self.atomic_patch.start()
         # Register cleanup before any assertion can interrupt the test.
         self.addCleanup(self.load_patch.stop)
-        # Register save-patch cleanup before any assertion can interrupt the test.
-        self.addCleanup(self.save_patch.stop)
         # Register atomic-patch cleanup before any assertion can interrupt the test.
         self.addCleanup(self.atomic_patch.stop)
         # Register provider cleanup so later suites return to normal provider selection.
@@ -226,8 +220,6 @@ class KenoEconomicsTests(TestCase):
         storage.get_storage_provider().bootstrap_players(player_document)
         # Reset current game state to the compatible empty shape.
         self.state = engine.default_state()
-        # Reset save-call accounting for the next route scenario.
-        self.saved_state.reset_mock()
         # Reset atomic-publication accounting for the next route scenario.
         self.atomic_updates.reset_mock()
 
@@ -450,10 +442,8 @@ class KenoEconomicsTests(TestCase):
                 self.assertEqual(players.get_player("human")["balance"], round(starting_balance - float(scenario["amount"]) + payout, 2))
                 # Require finite public result fields at representative and maximum scale.
                 self.assertTrue(all(math.isfinite(float(result[key])) for key in ("multiplier", "payout")))
-                # Require one direct ticket save while later #704 slices retain that explicit debt.
-                self.assertEqual(self.saved_state.call_count, 1)
-                # Require one atomic entropy commitment and one atomic terminal publication. (KENO-028)
-                self.assertEqual(self.atomic_updates.call_count, 2)
+                # Require prepared purchase, debit completion, draw commitment, and terminal publication to use provider-atomic state. (KENO-028, KENO-029)
+                self.assertEqual(self.atomic_updates.call_count, 4)
                 # Require existing response state, player, players, and paytable keys after mutation.
                 self.assertTrue({"draw", "settlements", "bot_tickets", "state", "player", "players", "paytable"}.issubset(response))
 
