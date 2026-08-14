@@ -82,6 +82,14 @@ jobs:
             git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
             git show "${{ github.event.pull_request.base.sha }}:modules/module-manifest.json" > "$RUNNER_TEMP/module-manifest-base.json"
             python scripts/validate_versions.py --baseline-manifest "$RUNNER_TEMP/module-manifest-base.json"
+            # Bind innerHTML debt to the same immutable event-base SHA after the first reviewed baseline lands. (SEC-017)
+            if git cat-file -e "${{ github.event.pull_request.base.sha }}:tests/inner_html_template_baseline.json"; then
+              git show "${{ github.event.pull_request.base.sha }}:tests/inner_html_template_baseline.json" > "$RUNNER_TEMP/inner-html-template-base.json"
+              python scripts/validate_inner_html_templates.py --previous-baseline "$RUNNER_TEMP/inner-html-template-base.json"
+            else
+              # Permit only this first exact source-matched baseline introduction; every successor uses immutable comparison.
+              python scripts/validate_inner_html_templates.py
+            fi
           else
             python scripts/validate_versions.py
           fi

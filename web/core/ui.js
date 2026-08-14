@@ -426,10 +426,41 @@ export function renderCommittedWagerBalance(event){
 }
 // Export this symbol so callers can keep using the compatible add-money endpoint for token top-ups.
 export async function addFakeMoney(amount){ const d=await post(`/api/v1/players/${encodeURIComponent(currentPlayerId())}/add-money`,withCurrentPlayer({amount})); await refreshBalance(); return d; }
-// Export this symbol so other modules can use it through the public module boundary.
-export function cardHtml(card){ if(!card)return''; if(card==='??') return '<div class="playing-card back">?</div>'; if(typeof card==='string'){ const suit=card.slice(-1), rank=card.slice(0,-1), red=suit==='\u2665'||suit==='\u2666'; return `<div class="playing-card ${red?'red':''}">${rank}<br>${suit}</div>`;} const red=card.suit==='\u2665'||card.suit==='\u2666'; return `<div class="playing-card ${red?'red':''}">${card.rank}<br>${card.suit}</div>`; }
-// Export this symbol so other modules can use it through the public module boundary.
+// Brand reviewed markup fragments without exposing the marker outside this module. (CORE-033)
+const RAW_HTML = Symbol('casino.raw-html');
+// Convert one value to the only HTML-escaping representation used by browser renderers. (CORE-033)
 export function safe(s){ return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+// Mark a deliberately prebuilt fragment so the tagged template can distinguish it from ordinary text. (CORE-033)
+export function raw(value){
+  // Preserve an existing reviewed wrapper so nested render helpers do not create divergent identities.
+  if(value?.[RAW_HTML]===true) return value;
+  // Capture the exact fragment once before publishing its string-coercion boundary.
+  const markup=String(value ?? '');
+  // Freeze the opaque wrapper so callers cannot replace trusted bytes after review.
+  return Object.freeze({[RAW_HTML]:true,toString:()=>markup});
+}
+// Render one interpolation recursively so arrays of reviewed fragments compose without comma insertion. (CORE-033)
+function htmlValue(value){
+  // Flatten renderer arrays while preserving each item's independent trust classification.
+  if(Array.isArray(value)) return value.map(htmlValue).join('');
+  // Pass only explicitly reviewed fragments through without a second escaping pass.
+  if(value?.[RAW_HTML]===true) return String(value);
+  // Escape every ordinary interpolation by default, including future unreviewed server text.
+  return safe(value);
+}
+// Build one HTML fragment whose interpolations are escaped unless explicitly wrapped by raw(). (CORE-033)
+export function html(strings,...values){
+  // Start from the first immutable template segment supplied by the JavaScript parser.
+  let markup=strings[0];
+  // Append each escaped value and following immutable segment in source order.
+  values.forEach((value,index)=>{ markup+=htmlValue(value)+strings[index+1]; });
+  // Return a reviewed fragment so nested tagged templates compose without re-escaping markup.
+  return raw(markup);
+}
+// Preserve legacy safe() call sites during staged tagged-template migrations without duplicating escape logic. (CORE-033)
+export function escaped(value){ return raw(safe(value)); }
+// Export this symbol so other modules can use it through the public module boundary.
+export function cardHtml(card){ if(!card)return''; if(card==='??') return '<div class="playing-card back">?</div>'; if(typeof card==='string'){ const suit=card.slice(-1), rank=card.slice(0,-1), red=suit==='\u2665'||suit==='\u2666'; return `<div class="playing-card ${red?'red':''}">${safe(rank)}<br>${safe(suit)}</div>`;} const red=card.suit==='\u2665'||card.suit==='\u2666'; return `<div class="playing-card ${red?'red':''}">${safe(card.rank)}<br>${safe(card.suit)}</div>`; }
 // Export this symbol so later game workers can reuse the approved premium tag markup.
 export function renderPremiumTag(label){ return `<span class="tag">${safe(label)}</span>`; }
 // Export this symbol so later game workers can reuse compact shell rail metrics.

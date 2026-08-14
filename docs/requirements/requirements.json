@@ -11347,6 +11347,69 @@
       "notes": "Browser cases use only real authenticated v1 game actions and response-owned wallet values; they do not stub game results or mutate game, API schema, paytable, settlement, or player-facing source. The generated server-authority compatibility inventory now points to the five focused suites, while the per-game source moves preserve every existing test body and economics proof selector."
     },
     {
+      "id": "CORE-033",
+      "module": "Application",
+      "description": "Shared browser markup uses one escape-by-default tagged-template boundary. Every ordinary interpolation is HTML-escaped, arrays of reviewed fragments compose without separators, explicit raw markup requires the opaque raw() wrapper, and the staged escaped-text adapter delegates to the same canonical entity encoder.",
+      "status": "PASS",
+      "api_tests": [
+        "GOV-INNER-HTML-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-001"
+      ],
+      "implementation_files": [
+        "web/core/ui.js",
+        "web/core/cards.js",
+        "web/admin.js"
+      ],
+      "introduced_in": "issue-708-escape-by-default-html",
+      "changed_in": "issue-708-escape-by-default-html",
+      "notes": "The helper brands reviewed fragments with a module-private Symbol; callers cannot opt ordinary values out of escaping by supplying a public object property."
+    },
+    {
+      "id": "SEC-017",
+      "module": "Core",
+      "description": "Every Admin innerHTML and insertAdjacentHTML payload is built by the shared escape-by-default tagged template. Client- or server-controlled values are escaped unless source review explicitly wraps a prebuilt fragment, and the remaining repository innerHTML debt may only decrease from its checked-in per-file baseline.",
+      "status": "PASS",
+      "api_tests": [
+        "GOV-INNER-HTML-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-001"
+      ],
+      "implementation_files": [
+        "web/admin.js",
+        "web/core/ui.js",
+        "scripts/validate_inner_html_templates.py",
+        "tests/inner_html_template_baseline.json"
+      ],
+      "introduced_in": "issue-708-escape-by-default-html",
+      "changed_in": "issue-708-escape-by-default-html",
+      "notes": "The validator rejects new files or per-file assignment increases and independently refuses any untagged Admin assignment even if a baseline edit attempts to permit it."
+    },
+    {
+      "id": "TEST-186",
+      "module": "Tests",
+      "description": "Executable browser-free evidence proves hostile ordinary values are escaped, explicit reviewed fragments compose, nested fragment arrays introduce no commas, the legacy adapter does not double escape, the card renderer has no second encoder, and the innerHTML baseline accepts reductions while rejecting increases, new files, and all Admin debt. Browser evidence spot-checks the migrated Admin dashboard and module table for unchanged topology and escaped hostile text.",
+      "status": "PASS",
+      "api_tests": [
+        "GOV-INNER-HTML-001",
+        "FRONTEND-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-001"
+      ],
+      "implementation_files": [
+        "tests/frontend_safety.mjs",
+        "tests/inner_html_template_tests.py",
+        "tests/inner_html_template_baseline.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-708-escape-by-default-html",
+      "changed_in": "issue-708-escape-by-default-html",
+      "notes": "Listener-free cases use exact production helper bytes and disposable source trees; the mapped Browser case uses the existing authenticated Admin session and performs no new production mutation."
+    },
+    {
       "id": "TEST-175",
       "module": "Tests",
       "description": "A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.",
