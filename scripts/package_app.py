@@ -53,6 +53,8 @@ ALLOWED_FILES = {
     "pyproject.toml",
     "run.py",
     "scripts/mysql_migrate.py",
+    # Package the explicit wallet residue scan and audited normalization command.
+    "scripts/normalize_wallet_balances.py",
     "scripts/recovery.py",
     "scripts/edge_gate.py",
     # Package the exact extracted-release verifier invoked by production activation.
@@ -106,6 +108,8 @@ REQUIRED_FILES = {
     "migrations/mysql/0004_game_action_claims.json",
     "migrations/mysql/catalog.json",
     "scripts/mysql_migrate.py",
+    # Require the wallet normalization operator boundary in every immutable release.
+    "scripts/normalize_wallet_balances.py",
     "scripts/recovery.py",
     "scripts/edge_gate.py",
     # Require the verifier because activation executes it from the extracted release.

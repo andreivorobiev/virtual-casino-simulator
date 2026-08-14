@@ -15,6 +15,20 @@ Requirement `STORAGE-014` makes the fake-money wallet document a fail-closed bou
 
 The JSON provider preserves the authoritative corrupt file byte-for-byte and creates one adjacent content-addressed `players.json.corrupt-<sha256>` forensic copy. Repeated reads of identical bytes reuse that exact artifact; the application never repairs, deletes, or replaces either copy automatically. Operators must stop mutation traffic, retain both files, verify the artifact digest, recover `players.json` from an independently verified backup or audited reconstruction, and validate its complete player identities and exact-cent balances offline before atomically restoring it. After restoration, run storage readiness plus focused wallet and ledger checks before reopening traffic. If a verified source is unavailable, or MySQL returns the same recovery diagnostic, keep the service held and use the separately governed backup/restore or provider-repair process; never delete the corrupt document to trigger default wallets.
 
+Requirement `STORAGE-015` adds one narrower pre-activation path for a document whose structure,
+identities, numeric types, range, and nonnegative balances are all valid and whose sole defect is
+finite sub-cent residue. With mutation traffic stopped, run
+`python scripts/normalize_wallet_balances.py check`; status `1` means the explicit pass is required,
+while structural or money corruption still fails through the boundary above. Run
+`python scripts/normalize_wallet_balances.py apply` once to quantize with Decimal
+`ROUND_HALF_EVEN`, emit one deterministic `WALLET_CENTS_NORMALIZATION` audit row per affected
+wallet, and rescan to zero residue. The command reports counts only, never player identities or
+balances. Re-run `check`, the storage suite, and the game-action cents bridge before reopening
+traffic. MySQL performs audit insertion and wallet update in one transaction; JSON writes the
+idempotent audit evidence before its atomic players-file replacement so a stopped pass can safely
+resume. This command does not repair malformed, duplicate, negative, non-finite, coerced, or
+out-of-range state and never substitutes bootstrap defaults.
+
 ## Provider evidence interface
 
 Provider status is accepted only as an externally produced, sanitized, signed `casino-provider-backup-evidence-v1` object. Its exact allowlist is `schema`, `completed`, `completed_at`, `verified_at`, `cost_included`, and `evidence_hmac_sha256`. Completion and inclusion in the already approved VM cost must both be true, completion and verification must be ordered, and both must be no more than 24 hours old. Provider, account, instance, backup, address, and object identifiers are prohibited.
