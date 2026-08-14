@@ -1500,6 +1500,8 @@ def run_api_tests():
     run_case('GOV-MODULE-VERSIONS-001',['TOOL-018','TEST-184'],lambda: run_unit_module('tests.module_version_governance_tests','module version governance suite failed'))
     # Bind the five newest games to dedicated Browser cases, per-game suites, duration packing, and affected-game selection. (issue #712)
     run_case('GOV-NEWEST-GAME-BROWSER-COVERAGE-001',['TEST-185'],lambda: run_unit_module('tests.newest_game_browser_coverage_tests','newest-game Browser coverage suite failed'))
+    # Execute the real two-process Casino War state-publication race under its permanent slice requirements. (issue #704)
+    run_case('API-CW-ATOMIC-001',['CW-006','TEST-189'],lambda: run_unit_module('casino.games.casino_war.tests.test_api.CasinoWarApiTests.test_atomic_reconciliation_preserves_concurrent_process_updates','Casino War atomic reconciliation race failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)

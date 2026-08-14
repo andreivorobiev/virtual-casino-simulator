@@ -53,19 +53,29 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(len(games), audit.EXPECTED_GAME_COUNT)
         # Reject duplicate or omitted game identities.
         self.assertEqual(len({row["game_id"] for row in games}), audit.EXPECTED_GAME_COUNT)
-        # Pin the exact two current persistence families.
+        # Pin the exact current persistence families, including the explicit Casino War migration slice.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
-            {"player_document_load_save", "shared_simple_game_load_save"},  # Pin accepted families.
+            {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths"},  # Pin accepted families.
         )
         # Pin the exact current family cardinalities without averaging away one game.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
-                for model in {"player_document_load_save", "shared_simple_game_load_save"}  # Cover both models.
+                for model in {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths"}  # Cover all models.
             },
-            {"player_document_load_save": 35, "shared_simple_game_load_save": 11},  # Pin current counts.
+            {"player_document_load_save": 34, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 1},  # Pin current counts.
         )
+        # Resolve the sole incremental migration row without treating mixed persistence as compatible.
+        casino_war = next(row for row in games if row["game_id"] == "casino_war")
+        # Require live direct and atomic call sites until the remaining #704 Casino War slices retire the mixed model.
+        self.assertGreater(casino_war["load_call_sites"], 0)
+        # Preserve explicit direct-save debt while preparation and rollback still use whole-document publication.
+        self.assertGreater(casino_war["save_call_sites"], 0)
+        # Bind the new reconciliation path to at least one reachable provider-atomic call site.
+        self.assertGreater(casino_war["atomic_update_call_sites"], 0)
+        # Keep the production second-worker decision fail closed throughout the migration series.
+        self.assertEqual(casino_war["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))
         # Refuse second-worker authorization for every game.

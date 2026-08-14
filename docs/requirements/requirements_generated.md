@@ -24,7 +24,7 @@ Historical source baseline: 9.1.0
 - keno: 9.3.7
 - bingo: 9.3.7
 - multi_hand_video_poker: 1.1.2
-- casino_war: 1.1.2
+- casino_war: 1.2.0
 - big_six_wheel: 1.1.4
 - red_dog: 1.1.2
 - dragon_tiger: 1.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.95.0
-- docs: 1.91.0
+- tests: 1.96.0
+- docs: 1.92.0
 - contracts: 1.61.5
 - tooling: 1.39.0
 - commenting_policy: 2.0.0
@@ -671,6 +671,7 @@ Historical source baseline: 9.1.0
 - **TEST-187** (Tests) - PASS: Executable localization governance lexically rejects a third inline fallback argument from every game tx() call, requires exact English and Russian game-key parity, rejects the named retired shell and Admin literals, and requires independently translated shared-resource keys. Browser evidence verifies the localized shell trust rail and exact Russian Admin table headers through the existing production renderers.
 - **LEDGER-035** (Core) - PASS: Ending a Guest Trial with a positive fake-token balance commits exactly one GUEST_TRIAL_END debit through the storage-enforced ledger identity derived from the immutable trial id. Teardown confirms the authoritative wallet is zero and changes only non-money player presentation fields; it never overwrites balance directly. The lifecycle movement is excluded from player-facing game economics.
 - **TEST-188** (Tests) - PASS: Listener-free production-service evidence ends one funded Guest Trial twice and proves exactly one terminal debit, the exact before and after balances, a trial-derived action identity, reconstruction from the starting grant plus durable ledger rows to zero, irreversible identity and session teardown, and byte-equivalent Admin game-economics output.
+- **TEST-189** (Tests) - PASS: A dependency-free two-process rendezvous loads the same stale Casino War player document, concurrently publishes one committed ledger marker and one terminal phase transition through the production JSON state repository, and proves the final provider document retains both updates.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
@@ -903,6 +904,7 @@ Historical source baseline: 9.1.0
 - **CW-003** (Casino War) - PASS: Casino War ante, optional war wager, surrender return, and settlement movements use the shared ledger exactly once under stable action identifiers.
 - **CW-004** (Application) - PASS: The Casino War surface provides complete English and Russian copy and remains usable without overflow across required desktop, tablet, and mobile viewports.
 - **CW-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Casino War with requirement, module, version, and visual evidence traceability.
+- **CW-006** (Casino War) - PASS: Casino War records committed ledger-intent markers and the terminal settled phase through the shared provider-owned atomic player game-state helper, so competing server processes preserve both transitions instead of publishing stale complete documents.
 - **BIG-SIX-001** (Big Six Wheel) - PASS: Big Six Wheel exposes the approved 54-segment profile, seven wager targets, deterministic result seam, and documented net payout table through its engine and browser surface.
 - **BIG-SIX-002** (Big Six Wheel) - PASS: Authenticated sessions own isolated reload-safe Big Six Wheel state, recent settlements, and canonical route restoration.
 - **BIG-SIX-003** (Big Six Wheel) - PASS: Each Big Six spin uses one aggregate ledger wager debit and at most one settlement credit with request-fingerprint conflict detection and exactly-once retry recovery.

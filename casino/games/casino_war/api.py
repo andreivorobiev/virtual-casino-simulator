@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Session-compatible Casino War API adapter with replay-safe ledger settlement.
 
-Requirements: CORE-009, CORE-011, LEDGER-005, LEDGER-006, LEDGER-007,
-LEDGER-023, SESSION-003, SESSION-004, and planned SESSION-005 from #81.
+Requirements: CORE-009, CORE-011, CW-006, LEDGER-005, LEDGER-006,
+LEDGER-007, LEDGER-023, SESSION-003, SESSION-004, and planned SESSION-005 from #81.
 """
 
 # Import deep-copy support so failed prepared decisions can restore prior state.
@@ -18,7 +18,7 @@ from casino.core import players
 # Import the one canonical game-money boundary.
 from casino.core.settlement import GameSettlementGateway
 # Import player-scoped state persistence for reload-safe rounds.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+from casino.core.state_store import load_player_game_state, save_player_game_state, update_player_game_state
 # Import canonical player validation for direct-router and pre-#110 compatibility.
 from casino.core.validation import require_player_id
 # Import consistent public validation errors.
@@ -46,6 +46,11 @@ class StateRepository:
         # Delegate atomic file replacement or provider persistence to the shared store.
         save_player_game_state(GAME_ID, player_id, state)
 
+    # Apply one state transition while the selected provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate latest-state loading, rollback, and publication to the shared atomic helper.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
+
 
 # Construct the shared settlement gateway while retaining the controller seam name.
 def LedgerAdapter():
@@ -66,14 +71,22 @@ class CasinoWarController:
 
     # Save one committed ledger event marker into player state.
     def _mark_committed(self, player_id: str, state: dict, intent: dict, event: dict) -> None:
-        # Record only stable audit identifiers and not balance snapshots in game state.
-        state.setdefault("ledger_actions", {})[intent["action_id"]] = {
-            "ledger_id": event.get("ledger_id"),  # Link to the append-only ledger event.
-            "transaction_type": intent["transaction_type"],  # Preserve movement type.
-            "round_id": intent["round_id"],  # Preserve round association.
-        }
-        # Persist after every movement so later actions cannot overtake it.
-        self.repository.save(player_id, state)
+        # Define a merge-only transition so a sibling process cannot lose another committed marker.
+        def record(current: dict) -> dict:
+            # Record only stable audit identifiers and not balance snapshots in game state.
+            current.setdefault("ledger_actions", {})[intent["action_id"]] = {
+                "ledger_id": event.get("ledger_id"),  # Link to the append-only ledger event.
+                "transaction_type": intent["transaction_type"],  # Preserve movement type.
+                "round_id": intent["round_id"],  # Preserve round association.
+            }
+            # Return the complete latest state for provider-owned publication.
+            return current
+        # Persist the marker against the latest document under the cross-process boundary.
+        committed = self.repository.update(player_id, record)
+        # Remove the caller's stale top-level entries before copying the committed document.
+        state.clear()
+        # Refresh the caller's working snapshot without retaining a provider-owned object.
+        state.update(committed)
 
     # Apply all prepared ledger intents exactly once in their stored order.
     def _reconcile_round(self, player_id: str, state: dict, round_item: dict) -> dict:
@@ -93,10 +106,24 @@ class CasinoWarController:
             self._mark_committed(player_id, state, intent, event)
         # Mark a terminal result settled only after all required movements are recorded.
         if round_item.get("phase") == "ledger_pending":
-            # Transition the public phase after successful ordered reconciliation.
-            round_item["phase"] = "settled"
-            # Persist the terminal phase for reload safety.
-            self.repository.save(player_id, state)
+            # Capture the stable round identity before refreshing the caller's working snapshot.
+            round_id = round_item["round_id"]
+            # Define a latest-document terminal transition that preserves sibling state updates.
+            def settle(current: dict) -> dict:
+                # Resolve the same prepared round from the provider-owned latest state.
+                current_round = engine.get_round(current, round_id)
+                # Transition the public phase after successful ordered reconciliation.
+                current_round["phase"] = "settled"
+                # Return the complete latest state for provider-owned publication.
+                return current
+            # Persist the terminal phase under the cross-process state boundary.
+            settled = self.repository.update(player_id, settle)
+            # Remove stale top-level entries before copying the terminal provider result.
+            state.clear()
+            # Refresh the caller snapshot so its response sees every concurrent preserved field.
+            state.update(settled)
+            # Resolve the refreshed terminal round for the return value.
+            round_item = engine.get_round(state, round_id)
         # Return the reconciled round.
         return round_item
 
@@ -145,7 +172,7 @@ class CasinoWarController:
                 # Resolve the originally created round.
                 round_item = engine.get_round(state, previous["round_id"])
                 # Recover any movement interrupted between ledger and state persistence.
-                self._reconcile_round(player_id, state, round_item)
+                round_item = self._reconcile_round(player_id, state, round_item)
                 # Return the same logical round and current wallet state.
                 return self._payload(player_id, state, round_item)
             # Preserve state so an ordinary insufficient-funds failure can leave no phantom round.
@@ -159,7 +186,7 @@ class CasinoWarController:
             # Reconcile the prepared ante and any immediate settlement.
             try:
                 # Apply every required movement in engine order.
-                self._reconcile_round(player_id, state, round_item)
+                round_item = self._reconcile_round(player_id, state, round_item)
             # Restore clean state only when the first ledger movement never committed.
             except Exception:
                 # Read the first stable ante action for failure classification.
@@ -190,7 +217,7 @@ class CasinoWarController:
                 # Resolve the originally transitioned round.
                 round_item = engine.get_round(state, round_id)
                 # Recover any interrupted ledger movement.
-                self._reconcile_round(player_id, state, round_item)
+                round_item = self._reconcile_round(player_id, state, round_item)
                 # Return the same logical decision result.
                 return self._payload(player_id, state, round_item)
             # Preserve the tie-decision state in case the first new movement is rejected.
@@ -216,7 +243,7 @@ class CasinoWarController:
             # Reconcile the prepared movement sequence.
             try:
                 # Apply the war debit before settlement or the surrender credit once.
-                self._reconcile_round(player_id, state, round_item)
+                round_item = self._reconcile_round(player_id, state, round_item)
             # Restore the tie decision only when no new movement committed.
             except Exception:
                 # Check the append-only ledger in case state saving was interrupted.
