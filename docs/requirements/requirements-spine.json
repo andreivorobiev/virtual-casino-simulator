@@ -10330,8 +10330,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "top-half-portfolio-v61",
-      "changed_in": "issue-758-blackjack-atomic-state",
-      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Casino War and Blackjack are explicitly classified as mixed atomic/direct while their settings-only publications remain direct, and stay blocked until later #704 slices retire every direct state publication."
+      "changed_in": "issue-767-keno-atomic-tickets",
+      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Keno is classified as provider-atomic for player-state publication after retiring its final direct saves, but remains blocked because game state and money are still committed through separate provider boundaries. Casino War, Baccarat, and Blackjack retain explicit mixed-path debt for later #704 slices."
     },
     {
       "id": "TEST-161",
@@ -11666,8 +11666,8 @@
         "docs/game_catalog_governance.md"
       ],
       "introduced_in": "issue-456-catalog-economics-registry",
-      "changed_in": "issue-756-baccarat-atomic-coup-state",
-      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, and Baccarat #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged."
+      "changed_in": "issue-767-keno-atomic-tickets",
+      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, Baccarat, and Blackjack #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged."
     },
     {
       "id": "ADMIN-035",
@@ -11817,6 +11817,30 @@
       "introduced_in": "issue-761-self-conversion-analytics",
       "changed_in": "issue-761-self-conversion-analytics",
       "notes": "The Browser case uses the real guest admission and self-service conversion routes in one isolated context, then reads only the de-identified server projection and active summary. No contract, endpoint, public result, credential, or wallet behavior changes."
+    },
+    {
+      "id": "TEST-197",
+      "module": "Tests",
+      "description": "Real two-process Keno evidence races prepared ticket purchase and refund settlements against sibling player-game updates, then proves exact ticket identity, one debit and one refund, restored wallet value, preserved sibling state, and zero pending-marker residue. A second real two-process race proves one same-ticket refund winner, one fail-closed contender, and one credit. Deterministic failure evidence proves action-owned rollback preserves unrelated state, while the static multiprocess inventory recognizes atomic-only player-state publication without authorizing a second worker.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-ATOMIC-001",
+        "API-LEGACY-SETTLE-002"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/tests/test_atomic_state.py",
+        "tests/games/keno/test_economics.py",
+        "tests/roulette_keno_settlement_tests.py",
+        "tests/game_economics_registry.json",
+        "scripts/audit_multiprocess_safety.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-767-keno-atomic-tickets",
+      "changed_in": "issue-767-keno-atomic-tickets",
+      "notes": "The subprocess fixture uses the real JSON provider, atomic player-state helper, Keno engine, and settlement adapter. Failure fixtures patch only the settlement boundary and require authoritative receipt absence before compensating the prepared state."
     }
   ]
 }

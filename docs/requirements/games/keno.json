@@ -473,7 +473,7 @@
     {
       "id": "KENO-028",
       "module": "Keno",
-      "description": "Keno commits a pending draw and publishes its exact terminal draw state through provider-atomic player-document mutations. Concurrent sibling state updates survive both boundaries, terminal replay is idempotent only for the exact committed round, and a divergent pending draw fails closed rather than replacing or inventing state. Ticket add and remove paths remain explicitly blocked for later issue #704 slices.",
+      "description": "Keno commits a pending draw and publishes its exact terminal draw state through provider-atomic player-document mutations. Concurrent sibling state updates survive both boundaries, terminal replay is idempotent only for the exact committed round, and a divergent pending draw fails closed rather than replacing or inventing state.",
       "status": "PASS",
       "api_tests": [
         "API-KENO-ATOMIC-001"
@@ -487,8 +487,28 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-754-keno-atomic-draw-state",
-      "changed_in": "issue-754-keno-atomic-draw-state",
-      "notes": "The bounded slice preserves the frozen v1 route, request, envelope, draw entropy, paytable, and settlement law. The catalog-wide process-safety inventory remains blocked because direct ticket mutations are deliberately outside this child issue."
+      "changed_in": "issue-767-keno-atomic-tickets",
+      "notes": "The draw boundaries preserve the frozen v1 route, request, envelope, draw entropy, paytable, and settlement law. Issue #767 moved the formerly deferred ticket mutations under the same player-document serialization boundary without changing draw behavior."
+    },
+    {
+      "id": "KENO-029",
+      "module": "Keno",
+      "description": "Keno ticket purchase and refund serialize their exact state transition with every sibling player-game mutation. Each prepared ticket action durably binds its ticket identity, action identity, movement kind, amount, and refund position before the existing ledger settlement runs; completion removes only the matching marker, terminal settlement replay remains exactly once, and a definitely uncommitted settlement rolls back only the action-owned ticket change while preserving concurrent sibling state.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/api.py",
+        "casino/games/keno/tests/test_atomic_state.py",
+        "tests/games/keno/test_economics.py",
+        "tests/roulette_keno_settlement_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-767-keno-atomic-tickets",
+      "changed_in": "issue-767-keno-atomic-tickets",
+      "notes": "The bounded slice preserves the frozen v1 routes, request bodies, response envelopes, ticket validation, ticket identifiers, movement identifiers, ledger details, payout law, and browser behavior. It adds no contract schema and performs no direct wallet mutation."
     }
   ]
 }

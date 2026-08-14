@@ -56,15 +56,15 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         # Pin the exact current persistence families, including the Casino War, Keno, Baccarat, and Blackjack slices.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
-            {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths"},  # Pin accepted families.
+            {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths", "provider_atomic_player_document"},  # Pin accepted families.
         )
         # Pin the exact current family cardinalities without averaging away one game.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
-                for model in {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths"}  # Cover all models.
+                for model in {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 4},  # Pin current counts.
+            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 3, "provider_atomic_player_document": 1},  # Pin current counts.
         )
         # Resolve the sole incremental migration row without treating mixed persistence as compatible.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -76,15 +76,17 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertGreater(casino_war["atomic_update_call_sites"], 0)
         # Keep the production second-worker decision fail closed throughout the migration series.
         self.assertEqual(casino_war["multiworker_status"], "blocked")
-        # Resolve the Keno draw-publication slice without concealing its remaining direct ticket writes.
+        # Resolve Keno after draw and ticket transitions retire every direct state publication.
         keno = next(row for row in games if row["game_id"] == "keno")
-        # Require the legacy Keno document load while ticket management remains outside this slice.
+        # Require the authoritative Keno read used for response and interruption recovery.
         self.assertGreater(keno["load_call_sites"], 0)
-        # Preserve the direct ticket-add and ticket-remove debt for later parent-issue slices.
-        self.assertGreater(keno["save_call_sites"], 0)
-        # Bind pending-draw commit and finalization to reachable provider-atomic call sites.
+        # Require every reachable Keno publication to avoid direct whole-document saves.
+        self.assertEqual(keno["save_call_sites"], 0)
+        # Bind draw, ticket purchase, and refund transitions to provider-atomic call sites.
         self.assertGreater(keno["atomic_update_call_sites"], 0)
-        # Keep Keno fail closed for a second worker until every direct mutation is retired.
+        # Name Keno's completed state-publication migration without claiming money atomicity.
+        self.assertEqual(keno["state_model"], "provider_atomic_player_document")
+        # Keep Keno fail closed for a second worker because state and money still use separate boundaries.
         self.assertEqual(keno["multiworker_status"], "blocked")
         # Resolve the Baccarat coup-publication slice without concealing its remaining direct wager writes.
         baccarat = next(row for row in games if row["game_id"] == "baccarat")
@@ -456,6 +458,22 @@ def dead_helper():
         self.assertEqual(rows[0]["state_model"], "player_document_load_save")
         # Prove only registration and its called live handler are reachable.
         self.assertEqual(rows[0]["reachable_definitions"], 2)
+        # Parse one complete provider-atomic player-document path with no direct save.
+        atomic_only = parsed_module(
+            "casino/games/fixture/api.py",  # Assign the same portable game identity.
+            """
+def register():
+    state = load_player_game_state("fixture", "player")
+    update_player_game_state("fixture", "player", mutate)
+""",
+        )
+        # Classify atomic-only publication without requiring a stale whole-document save.
+        atomic_rows = audit._game_inventory(
+            [{"game_id": "fixture", "backend": "casino.games.fixture.api"}],  # Define governed fixture.
+            [atomic_only],  # Supply its provider-atomic source.
+        )
+        # Require precise atomic classification while retaining the conservative worker blocker.
+        self.assertEqual((atomic_rows[0]["state_model"], atomic_rows[0]["save_call_sites"], atomic_rows[0]["multiworker_status"]), ("provider_atomic_player_document", 0, "blocked"))
         # Parse a marker-only fixture whose persistence call exists only in an uncalled helper.
         dead_only = parsed_module(
             "casino/games/fixture/api.py",  # Assign the same portable game identity.

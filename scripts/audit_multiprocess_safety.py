@@ -1320,22 +1320,26 @@ def _game_inventory(games: list[dict], modules: list[dict]) -> list[dict]:
         simple_game_calls = sum(call["name"] == "SimpleWagerGame" for call in calls)
         # Preserve import evidence because construction may sit behind a factory.
         simple_game_imported = "SimpleWagerGame" in reachable_names
-        # Detect the current load/save family.
-        uses_player_documents = player_loads > 0 or player_saves > 0
+        # Detect player-document ownership through reads, direct saves, or provider-atomic updates.
+        uses_player_documents = player_loads > 0 or player_saves > 0 or atomic_updates > 0
         # Detect the current shared simple-game family.
         uses_simple_game = simple_game_calls > 0 or simple_game_imported
-        # Reject one-sided direct document paths.
-        if uses_player_documents and (player_loads == 0 or player_saves == 0):
-            # Fail closed on incomplete persistence semantics.
+        # Reject player-document paths that cannot read current state or publish any mutation.
+        if uses_player_documents and (player_loads == 0 or (player_saves == 0 and atomic_updates == 0)):
+            # Fail closed on incomplete direct or provider-atomic persistence semantics.
             raise MultiprocessSafetyAuditError("game inventory unavailable")
         # Require exactly one deployed persistence family.
         if uses_player_documents == uses_simple_game:
             # Fail closed on absent or overlapping models.
             raise MultiprocessSafetyAuditError("game inventory unavailable")
-        # Name the semantic persistence model.
+        # Name direct, provider-atomic, or shared-simple persistence precisely.
         state_model = "player_document_load_save" if uses_player_documents else "shared_simple_game_load_save"
+        # Expose a fully provider-atomic player-document path after every direct save is retired.
+        if uses_player_documents and atomic_updates and player_saves == 0:
+            # Distinguish state serialization from broader state-plus-money worker safety.
+            state_model = "provider_atomic_player_document"
         # Expose mixed provider-atomic and direct paths without treating them as compatible.
-        if atomic_updates and uses_player_documents:
+        elif atomic_updates and uses_player_documents:
             # Name the mixed path explicitly.
             state_model = "mixed_atomic_and_direct_player_document_paths"
         # Return one conservative game blocker.

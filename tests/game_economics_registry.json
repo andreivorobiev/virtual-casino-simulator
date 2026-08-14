@@ -71,7 +71,7 @@
       "requirement_id": "KENO-001",
       "engine_path": "casino/games/keno/engine.py",
       "settlement_path": "casino/games/keno/api.py",
-      "production_sha256": "38488acd3d7a62ffabc761be76e29a56e5e3b304db5b547517fcebc537e5e67a",
+        "production_sha256": "9fe390ed59d0bd7223dae6d565e8be7c8cc8a56386a42de63ad7cab78dace571",
       "proof_tests": ["tests.games.keno.test_economics:KenoEconomicsTests.test_exact_probability_space_paytable_shape_and_ideal_rtp", "tests.games.keno.test_economics:KenoEconomicsTests.test_every_outcome_class_matches_real_engine_and_rng_restores"],
       "evidence_artifact": "logs/test-runs/keno-economics-exact.json",
       "rationale": "Every legal spot count, catch class, and production rounding domain is proven exactly below even return."
