@@ -30,8 +30,8 @@ let shownCards = null;
 // Retain the last settled rank and stake so one click can repeat the same bet.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/faro') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -65,7 +65,7 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="fr-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="faro" data-testid="faro"><div class="fr-stage"><div class="fr-cards"><div class="fr-slot"><span>${safe(tx('card.banker', null, 'Banker'))}</span><div class="fr-card${dealBusy ? ' dealing' : ''}" data-testid="faro-banker">${safe(banker)}</div></div><div class="fr-slot"><span>${safe(tx('card.player', null, 'Player'))}</span><div class="fr-card${dealBusy ? ' dealing' : ''}" data-testid="faro-player">${safe(player)}</div></div></div><div class="fr-ranks">${ranks}</div><p class="fr-result" data-testid="faro-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a rank and deal.'))}</p></div><div class="fr-panel"><div class="fr-card-box"><h3>${safe(tx('odds.title', null, 'How it settles'))}</h3><div class="fr-odds"><div><span>${safe(tx('odds.win', null, 'Player card matches'))}</span><span>2x</span></div><div><span>${safe(tx('odds.push', null, 'Neither matches'))}</span><span>1x</span></div><div><span>${safe(tx('odds.split', null, 'Both match (split)'))}</span><span>0.5x</span></div><div><span>${safe(tx('odds.lose', null, 'Banker card matches'))}</span><span>0x</span></div></div></div><div class="fr-card-box"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="fr-chips">${chips}</div></div><button class="fr-deal" data-testid="faro-deal" type="button" ${dealBusy ? 'disabled' : ''}>${safe(dealBusy ? tx('action.dealing', null, 'Dealing…') : tx('action.deal', null, 'Deal the cards'))}</button><button class="fr-repeat" data-testid="faro-repeat" type="button" ${dealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="faro" data-testid="faro"><div class="fr-stage"><div class="fr-cards"><div class="fr-slot"><span>${safe(tx('card.banker'))}</span><div class="fr-card${dealBusy ? ' dealing' : ''}" data-testid="faro-banker">${safe(banker)}</div></div><div class="fr-slot"><span>${safe(tx('card.player'))}</span><div class="fr-card${dealBusy ? ' dealing' : ''}" data-testid="faro-player">${safe(player)}</div></div></div><div class="fr-ranks">${ranks}</div><p class="fr-result" data-testid="faro-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="fr-panel"><div class="fr-card-box"><h3>${safe(tx('odds.title'))}</h3><div class="fr-odds"><div><span>${safe(tx('odds.win'))}</span><span>2x</span></div><div><span>${safe(tx('odds.push'))}</span><span>1x</span></div><div><span>${safe(tx('odds.split'))}</span><span>0.5x</span></div><div><span>${safe(tx('odds.lose'))}</span><span>0x</span></div></div></div><div class="fr-card-box"><h3>${safe(tx('stake.title'))}</h3><div class="fr-chips">${chips}</div></div><button class="fr-deal" data-testid="faro-deal" type="button" ${dealBusy ? 'disabled' : ''}>${safe(dealBusy ? tx('action.dealing') : tx('action.deal'))}</button><button class="fr-repeat" data-testid="faro-repeat" type="button" ${dealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the rank cells.
   root.querySelectorAll('[data-rank]').forEach(btn => { btn.onclick = () => { selectedRank = Number(btn.dataset.rank); render(); }; });
   // Wire the chip buttons.
@@ -92,7 +92,7 @@ async function load() {
     if (restored) lastBet = { rank: restored.rank, stake: restored.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Faro.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -124,7 +124,7 @@ async function deal() {
     // Read the settled net for the result line.
     const net = round.net;
     // Compose the localized result copy from the authoritative outcome and net.
-    const text = `${safe(tx('outcome.' + round.outcome, null, round.outcome))} <span class="net">${net > 0 ? '+' + net : net}</span>`;
+    const text = `${safe(tx('outcome.' + round.outcome))} <span class="net">${net > 0 ? '+' + net : net}</span>`;
     // Release the guard before the final repaint.
     dealBusy = false;
     // Repaint with the dealt cards and result.
@@ -133,7 +133,7 @@ async function deal() {
     // Release the guard and report a bounded error.
     dealBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.deal', null, 'Deal could not be completed.'), 'error');
+    toast(err?.message || tx('error.deal'), 'error');
     // Repaint the unlocked controls.
     render();
   }

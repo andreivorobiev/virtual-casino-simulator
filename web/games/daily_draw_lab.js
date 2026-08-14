@@ -32,8 +32,8 @@ let shownDraw = null;
 // Retain the last committed picks and stake so one click can repeat the same draw.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/daily_draw_lab') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -82,7 +82,7 @@ function paytableRows() {
   // Read the paytable for the current pick count, or an empty prompt before any mark.
   const table = { 1: [[1, 5.5]], 2: [[2, 15], [1, 2]], 3: [[3, 100], [2, 8], [1, 0.5]], 4: [[4, 600], [3, 40], [2, 4]], 5: [[5, 10000], [4, 200], [3, 18], [2, 2]] }[picks.length] || [];
   // Build one row per paying hit count.
-  return table.map(([hits, mult]) => `<div><span>${safe(tx('pay.hits', { count: hits }, hits + ' hits'))}</span><span>${mult}x</span></div>`).join('') || `<div>${safe(tx('pay.empty', null, 'Mark numbers to see payouts.'))}</div>`;
+  return table.map(([hits, mult]) => `<div><span>${safe(tx('pay.hits', { count: hits }))}</span><span>${mult}x</span></div>`).join('') || `<div>${safe(tx('pay.empty'))}</div>`;
 }
 
 // Render the complete Daily Draw Lab route into the outlet.
@@ -94,9 +94,9 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="dd-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Report the mark hint.
-  const hint = tx('pick.hint', { count: picks.length }, `Marked ${picks.length}/5`);
+  const hint = tx('pick.hint', { count: picks.length });
   // Paint the whole route.
-  root.innerHTML = `<section class="daily" data-testid="daily-draw-lab"><div class="dd-stage"><div class="dd-board" data-testid="daily-draw-lab-board">${nums}</div><p class="dd-result" data-testid="daily-draw-lab-result" role="status">${resultText || safe(hint)}</p></div><div class="dd-panel"><div class="dd-card"><h3>${safe(tx('pay.title', null, 'Payouts'))}</h3><div class="dd-pays">${paytableRows()}</div></div><div class="dd-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="dd-chips">${chips}</div></div><button class="dd-go" data-testid="daily-draw-lab-go" type="button" ${drawBusy || picks.length < 1 ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing', null, 'Drawing…') : tx('action.draw', null, 'Run the draw'))}</button><button class="dd-repeat" data-testid="daily-draw-lab-repeat" type="button" ${drawBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="daily" data-testid="daily-draw-lab"><div class="dd-stage"><div class="dd-board" data-testid="daily-draw-lab-board">${nums}</div><p class="dd-result" data-testid="daily-draw-lab-result" role="status">${resultText || safe(hint)}</p></div><div class="dd-panel"><div class="dd-card"><h3>${safe(tx('pay.title'))}</h3><div class="dd-pays">${paytableRows()}</div></div><div class="dd-card"><h3>${safe(tx('stake.title'))}</h3><div class="dd-chips">${chips}</div></div><button class="dd-go" data-testid="daily-draw-lab-go" type="button" ${drawBusy || picks.length < 1 ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing') : tx('action.draw'))}</button><button class="dd-repeat" data-testid="daily-draw-lab-repeat" type="button" ${drawBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the number mark buttons.
   root.querySelectorAll('[data-number]').forEach(btn => { btn.onclick = () => { if (!drawBusy) toggleMark(Number(btn.dataset.number)); }; });
   // Wire the chip buttons.
@@ -123,7 +123,7 @@ async function load() {
     if (rounds.length && rounds[0]?.public?.wager) lastBet = { picks: [...rounds[0].public.wager.picks], stake: rounds[0].public.wager.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Daily Draw Lab.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -160,8 +160,8 @@ async function run() {
     const netText = round.net >= 0 ? '+' + round.net : String(round.net);
     // Compose the localized result copy from the authoritative hit count and signed net.
     const text = netPositive
-      ? `${safe(tx('result.win', { count: round.detail.hit_count }, round.detail.hit_count + ' hits'))} <span class="net">${netText}</span>`
-      : `${safe(tx('result.lose', { count: round.detail.hit_count }, round.detail.hit_count + ' hits'))} <span class="net">${netText}</span>`;
+      ? `${safe(tx('result.win', { count: round.detail.hit_count }))} <span class="net">${netText}</span>`
+      : `${safe(tx('result.lose', { count: round.detail.hit_count }))} <span class="net">${netText}</span>`;
     // Release the guard before the final repaint.
     drawBusy = false;
     // Repaint with the drawn board and result.
@@ -170,7 +170,7 @@ async function run() {
     // Release the guard and report a bounded error.
     drawBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.draw', null, 'Draw could not be completed.'), 'error');
+    toast(err?.message || tx('error.draw'), 'error');
     // Repaint the unlocked controls.
     render();
   }

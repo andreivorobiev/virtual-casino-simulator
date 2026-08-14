@@ -68,7 +68,7 @@ const oauthCompletion = readOAuthCompletion();
 const wellnessController = createWellnessController({ apiClient: api, documentRef: document, windowRef: window, translate: (key, values) => t(key, values, 'shell'), formatTokens: tokens });
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
-window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
+window.addEventListener('casino-toast', event => toast(event.detail?.message || t('autoplay.stopped', {}, 'shell')));
 // Keep the shell's private session cache synchronized when game helpers refresh current-user state.
 window.addEventListener('casino-current-user', event => {
   // Normalize the exact current-user payload published by the shared wallet helper.
@@ -1415,7 +1415,7 @@ function lobbyHtml(state = latestState) {
   // Render one accessible category control per discovered category plus the all-games view.
   const categoryButtons = ['all', ...categories].map(category => `<button type="button" class="catalog-category${lobbyCategory === category ? ' active' : ''}" data-catalog-category="${safe(category)}" aria-pressed="${lobbyCategory === category}">${safe(categoryLabel(category))}</button>`).join('');
   // Render the premium trust rail with play-token, bot, autoplay, and ledger cues.
-  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All play tokens'), trustItemHtml('LIVE', t('status.online', { count: onlinePlayerCount }, 'shell'), t('lobby.presenceDetail', {}, 'shell')), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
+  const trustRail = [trustItemHtml('SIM', t('lobby.trust.localTitle', {}, 'shell'), t('lobby.trust.localDetail', {}, 'shell')), trustItemHtml('LIVE', t('status.online', { count: onlinePlayerCount }, 'shell'), t('lobby.presenceDetail', {}, 'shell')), trustItemHtml('AUTO', t('lobby.trust.autoplayTitle', {}, 'shell'), t('lobby.trust.autoplayDetail', {}, 'shell')), trustItemHtml('LED', t('lobby.trust.ledgerTitle', {}, 'shell'), t('lobby.trust.ledgerDetail', { count: gameCount }, 'shell'))].join('');
   // Return the complete lobby markup as one route payload.
   return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">${safe(t('lobby.chooseTable', {}, 'shell'))}</p><h1 class="hero-title">${safe(activeBrand.venue)}</h1><div class="hero-rule"><span>${safe(activeBrand.mark)}</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="catalog-region" data-testid="catalog-region" aria-label="${safe(t('catalog.controlsAria', {}, 'shell'))}"><section class="catalog-controls" data-testid="catalog-controls"><label class="catalog-search-label" for="catalog-search">${safe(t('catalog.searchLabel', {}, 'shell'))}</label><input id="catalog-search" data-testid="catalog-search" type="search" value="${safe(lobbySearch)}" placeholder="${safe(t('catalog.searchPlaceholder', {}, 'shell'))}"><div class="catalog-categories" data-testid="catalog-categories" aria-label="${safe(t('catalog.categoriesAria', {}, 'shell'))}">${categoryButtons}</div><p class="catalog-capacity" data-testid="catalog-capacity">${safe(t('catalog.capacity', { current: gameCount }, 'shell'))}</p></section><section class="game-gallery" data-testid="game-gallery" aria-label="${safe(t('catalog.galleryAria', {}, 'shell'))}">${cards}</section></section></section>`;
 }
@@ -1648,7 +1648,7 @@ export async function navigate(route, options = {}) {
     // Keep the route outlet in game-screen mode so the error panel has premium shell padding.
     view.className = 'screen game-screen';
     // Render a friendly error state with a lobby recovery action.
-    view.innerHTML = `<div class="panel loading-panel"><h2>Could not load ${safe(routeLabel(targetRoute))}</h2><p class="status">${safe(err.message)}</p><button data-route="lobby">Back to lobby</button></div>`;
+    view.innerHTML = `<div class="panel loading-panel"><h2>${safe(t('route.loadFailed', { route: routeLabel(targetRoute) }, 'shell'))}</h2><p class="status">${safe(err.message)}</p><button data-route="lobby">${safe(t('route.backToLobby', {}, 'shell'))}</button></div>`;
     // Wire the fallback button without relying on the top navigation.
     view.querySelector('[data-route="lobby"]')?.addEventListener('click', () => navigate('lobby'));
   }
@@ -1775,7 +1775,7 @@ async function init() {
   // Handle initial state failures with a visible toast and client log.
   } catch (err) {
     // Show the startup error in the shell toast.
-    toast(`Could not load state: ${err.message}`);
+    toast(t('startup.loadFailed', { message: err.message }, 'shell'));
     // Attempt bounded Admin telemetry without replacing the original authority failure.
     try { await logClient('initial_state_error', { message: err.message }); } catch (_) { /* Preserve the original startup failure. */ }
     // Reject readiness so native bootstrap cannot mark a failed current-user refresh green.

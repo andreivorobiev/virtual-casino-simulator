@@ -30,8 +30,8 @@ let shownDeal = null;
 // Retain the last settled bet target and stake so one click can repeat the same coup.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/trente_et_quarante') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -66,15 +66,15 @@ function render(resultText) {
   // Read the settled winner so the winning row can be highlighted.
   const winner = shownDeal ? shownDeal.winner : null;
   // Build the Noir and Rouge rows with their totals and cards.
-  const noir = `<div class="teq-row noir ${winner === 'noir' ? 'win' : ''}"><div class="teq-row-head"><span>${safe(tx('row.noir', null, 'Noir'))}</span><span class="total">${shownDeal ? shownDeal.noir_total : '—'}</span></div><div class="teq-cards">${rowCards(shownDeal && shownDeal.noir)}</div></div>`;
+  const noir = `<div class="teq-row noir ${winner === 'noir' ? 'win' : ''}"><div class="teq-row-head"><span>${safe(tx('row.noir'))}</span><span class="total">${shownDeal ? shownDeal.noir_total : '—'}</span></div><div class="teq-cards">${rowCards(shownDeal && shownDeal.noir)}</div></div>`;
   // Build the Rouge row similarly.
-  const rouge = `<div class="teq-row rouge ${winner === 'rouge' ? 'win' : ''}"><div class="teq-row-head"><span>${safe(tx('row.rouge', null, 'Rouge'))}</span><span class="total">${shownDeal ? shownDeal.rouge_total : '—'}</span></div><div class="teq-cards">${rowCards(shownDeal && shownDeal.rouge)}</div></div>`;
+  const rouge = `<div class="teq-row rouge ${winner === 'rouge' ? 'win' : ''}"><div class="teq-row-head"><span>${safe(tx('row.rouge'))}</span><span class="total">${shownDeal ? shownDeal.rouge_total : '—'}</span></div><div class="teq-cards">${rowCards(shownDeal && shownDeal.rouge)}</div></div>`;
   // Build the four bet buttons with localized labels and hints.
-  const bets = BETS.map(bet => `<button class="teq-bet" data-bet="${bet}" type="button" aria-pressed="${selectedBet === bet}"><span>${safe(tx('bet.' + bet, null, bet))}</span><small>${safe(tx('bet.' + bet + '.hint', null, ''))}</small></button>`).join('');
+  const bets = BETS.map(bet => `<button class="teq-bet" data-bet="${bet}" type="button" aria-pressed="${selectedBet === bet}"><span>${safe(tx('bet.' + bet))}</span><small>${safe(tx('bet.' + bet + '.hint'))}</small></button>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="teq-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="teq" data-testid="trente-et-quarante"><div class="teq-stage">${noir}${rouge}<p class="teq-result" data-testid="teq-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a bet and deal.'))}</p></div><div class="teq-panel"><div class="teq-card-box"><h3>${safe(tx('bet.title', null, 'Your bet'))}</h3><div class="teq-bets">${bets}</div></div><div class="teq-card-box"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="teq-chips">${chips}</div></div><button class="teq-deal" data-testid="teq-deal" type="button" ${dealBusy ? 'disabled' : ''}>${safe(dealBusy ? tx('action.dealing', null, 'Dealing…') : tx('action.deal', null, 'Deal the coup'))}</button><button class="teq-repeat" data-testid="teq-repeat" data-action="repeat" type="button" ${dealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="teq" data-testid="trente-et-quarante"><div class="teq-stage">${noir}${rouge}<p class="teq-result" data-testid="teq-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="teq-panel"><div class="teq-card-box"><h3>${safe(tx('bet.title'))}</h3><div class="teq-bets">${bets}</div></div><div class="teq-card-box"><h3>${safe(tx('stake.title'))}</h3><div class="teq-chips">${chips}</div></div><button class="teq-deal" data-testid="teq-deal" type="button" ${dealBusy ? 'disabled' : ''}>${safe(dealBusy ? tx('action.dealing') : tx('action.deal'))}</button><button class="teq-repeat" data-testid="teq-repeat" data-action="repeat" type="button" ${dealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the bet buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = btn.dataset.bet; render(); }; });
   // Wire the chip buttons.
@@ -113,7 +113,7 @@ async function load() {
     if (recent && recent.length && recent[0].public && recent[0].public.wager) lastBet = { bet: recent[0].public.wager.bet, stake: recent[0].public.wager.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Trente et Quarante.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -145,7 +145,7 @@ async function deal() {
     // Read the settled net for the result line.
     const net = round.net;
     // Compose the localized result copy from the authoritative outcome and net.
-    const text = `${safe(tx('outcome.' + round.outcome, null, round.outcome))} <span class="net">${net > 0 ? '+' + net : net}</span>`;
+    const text = `${safe(tx('outcome.' + round.outcome))} <span class="net">${net > 0 ? '+' + net : net}</span>`;
     // Release the guard before the final repaint.
     dealBusy = false;
     // Repaint with the dealt rows and result.
@@ -154,7 +154,7 @@ async function deal() {
     // Release the guard and report a bounded error.
     dealBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.deal', null, 'Deal could not be completed.'), 'error');
+    toast(err?.message || tx('error.deal'), 'error');
     // Repaint the unlocked controls.
     render();
   }

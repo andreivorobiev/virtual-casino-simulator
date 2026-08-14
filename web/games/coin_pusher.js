@@ -31,8 +31,8 @@ let shownDrop = null;
 // Retain the last committed stake so one click can drop again at the same stake.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/coin_pusher') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -67,11 +67,11 @@ function render(resultText) {
   // Build the cascading coin markup for a winning drop.
   const cascade = coins > 0 ? Array.from({ length: coins }, () => '<div class="cp-coin drop"></div>').join('') : '';
   // Build the paytable rows.
-  const pays = CASCADES.map(([count, mult]) => `<div><span>${safe(tx('pay.coins', { count }, count + ' coins'))}</span><span>${mult}x</span></div>`).join('');
+  const pays = CASCADES.map(([count, mult]) => `<div><span>${safe(tx('pay.coins', { count }))}</span><span>${mult}x</span></div>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="cp-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="coinp" data-testid="coin-pusher"><div class="cp-stage"><div class="cp-machine"><div class="cp-tray" data-testid="coin-pusher-tray"><div class="cp-fill" style="height:${fillPct}%;"></div><div class="cp-coins">${cascade}</div></div><div class="cp-edge"></div><div class="cp-meter"><span>${safe(tx('meter.shelf', null, 'Shelf'))}</span><span>${filled}/${THRESHOLD}</span></div></div><p class="cp-result" data-testid="coin-pusher-result" role="status">${resultText || safe(tx('result.idle', null, 'Set a stake and drop a coin.'))}</p></div><div class="cp-panel"><div class="cp-card"><h3>${safe(tx('pay.title', null, 'Cascade payouts'))}</h3><div class="cp-pays">${pays}</div></div><div class="cp-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="cp-chips">${chips}</div></div><button class="cp-drop" data-testid="coin-pusher-drop" type="button" ${dropBusy ? 'disabled' : ''}>${safe(dropBusy ? tx('action.dropping', null, 'Dropping…') : tx('action.drop', null, 'Drop a coin'))}</button><button class="cp-repeat" data-testid="coin-pusher-repeat" type="button" ${(dropBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="coinp" data-testid="coin-pusher"><div class="cp-stage"><div class="cp-machine"><div class="cp-tray" data-testid="coin-pusher-tray"><div class="cp-fill" style="height:${fillPct}%;"></div><div class="cp-coins">${cascade}</div></div><div class="cp-edge"></div><div class="cp-meter"><span>${safe(tx('meter.shelf'))}</span><span>${filled}/${THRESHOLD}</span></div></div><p class="cp-result" data-testid="coin-pusher-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="cp-panel"><div class="cp-card"><h3>${safe(tx('pay.title'))}</h3><div class="cp-pays">${pays}</div></div><div class="cp-card"><h3>${safe(tx('stake.title'))}</h3><div class="cp-chips">${chips}</div></div><button class="cp-drop" data-testid="coin-pusher-drop" type="button" ${dropBusy ? 'disabled' : ''}>${safe(dropBusy ? tx('action.dropping') : tx('action.drop'))}</button><button class="cp-repeat" data-testid="coin-pusher-repeat" type="button" ${(dropBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the chip buttons.
   root.querySelectorAll('[data-chip]').forEach(btn => { btn.onclick = () => { stake = Number(btn.dataset.chip); render(); }; });
   // Wire the drop action.
@@ -96,7 +96,7 @@ async function load() {
     if (restored) lastBet = { stake: restored };
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Coin Pusher.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -131,8 +131,8 @@ async function drop() {
     const net = round.net;
     // Compose the localized result copy from authoritative values only.
     const text = round.detail.coins > 0
-      ? `${safe(tx('result.cascade', { coins: round.detail.coins }, round.detail.coins + ' coins fell'))} <span class="net">+${net > 0 ? net : round.total_return - round.wager_total}</span>`
-      : `${safe(tx('result.hold', null, 'Nothing tipped over.'))} <span class="net">${net}</span>`;
+      ? `${safe(tx('result.cascade', { coins: round.detail.coins }))} <span class="net">+${net > 0 ? net : round.total_return - round.wager_total}</span>`
+      : `${safe(tx('result.hold'))} <span class="net">${net}</span>`;
     // Release the guard before the final repaint.
     dropBusy = false;
     // Repaint with the settled shelf and result.
@@ -141,7 +141,7 @@ async function drop() {
     // Release the guard and report a bounded error.
     dropBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.drop', null, 'Drop could not be completed.'), 'error');
+    toast(err?.message || tx('error.drop'), 'error');
     // Repaint the unlocked controls.
     render();
   }

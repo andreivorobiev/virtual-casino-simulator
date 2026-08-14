@@ -1,6 +1,6 @@
 {
   "module": "daily_draw_lab",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "paths": [
     "casino/games/daily_draw_lab/",
     "web/games/daily_draw_lab.js",

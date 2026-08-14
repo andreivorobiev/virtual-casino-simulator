@@ -1478,6 +1478,8 @@ def run_api_tests():
     run_case('GOV-DEAD-ARTIFACTS-001',['TOOL-016','TEST-181'],lambda: run_unit_module('tests.dead_artifact_tests','dead artifact cleanup suite failed'))
     # Preserve actionable locale, domain, and missing-key evidence at both cumulative Roulette audits. (issue #702)
     run_case('UI-ROULETTE-I18N-DIAGNOSTICS-001',['I18N-013','TEST-182'],lambda: run_unit_module('tests.roulette_i18n_diagnostics_tests','Roulette i18n diagnostics suite failed'))
+    # Prove shared shell/Admin copy and every game tx adapter use locale resources as their single source. (I18N-014, TEST-187)
+    run_case('UI-I18N-SINGLE-SOURCE-001',['I18N-014','TEST-187'],lambda: run_unit_module('tests.i18n_single_source_tests','Single-source i18n suite failed'))
     # Prove docs-only long-suite filtering and exact-head sibling-gate release evidence without weakening contexts. (issue #710)
     run_case('CI-COMPUTE-001',['TOOL-017','TEST-183'],lambda: run_unit_module('tests.ci_compute_tests','CI compute optimization suite failed'))
     # Enforce generic descriptor equality and exact-base monotonic revisions without shared pin literals. (issue #707)
@@ -5386,6 +5388,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert play_labels and all(play in label for label in play_labels) and all('catalog.play' not in label and 'lobby.chooseTable' not in label for label in play_labels)
                             # Require the hero eyebrow to render the localized phrase rather than a hardcoded or key string.
                             assert page.locator('.lobby-hero .eyebrow').inner_text().strip()==eyebrow
+                            # Resolve the exact resource-owned trust titles and details for the three previously hardcoded tiles.
+                            expected_trust=[(lobby_shell_copy[loc]['lobby.trust.localTitle'],lobby_shell_copy[loc]['lobby.trust.localDetail']),(lobby_shell_copy[loc]['lobby.trust.autoplayTitle'],lobby_shell_copy[loc]['lobby.trust.autoplayDetail']),(lobby_shell_copy[loc]['lobby.trust.ledgerTitle'],lobby_shell_copy[loc]['lobby.trust.ledgerDetail'].replace('{count}',str(len(casino_config.GAMES))))]
+                            # Read the local, autoplay, and ledger tiles while intentionally skipping the dynamic live-presence tile.
+                            trust_tiles=[page.locator('.trust-item').nth(index) for index in (0,2,3)]
+                            # Require every named trust tile to match its active-locale resource values exactly.
+                            assert [(tile.locator('strong').inner_text().strip(),tile.locator('strong + span').inner_text().strip()) for tile in trust_tiles]==expected_trust
                             # Capture governed after-pass evidence at the required desktop and mobile viewports and prove the cards stay reachable and unclipped.
                             for viewport_id,width,height in (('desktop_primary',1920,1080),('mobile',390,844)):
                                 # Resize to the exact governed dimensions for this evidence capture.
@@ -5406,7 +5414,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
                         # Confirm the English lobby copy is restored for downstream browser cases.
                         assert_lobby_localized('en-US')
-                    run_case('BR-LOBBY-001',['CORE-005','CORE-006','CORE-016','UX-008','UX-023','I18N-004','TEST-069','UX-012','TEST-072'],premium_lobby)
+                    run_case('BR-LOBBY-001',['CORE-005','CORE-006','CORE-016','UX-008','UX-023','I18N-004','I18N-014','TEST-069','TEST-187','UX-012','TEST-072'],premium_lobby)
                     # Define catalog_navigation to cover search and category facets from module metadata.
                     def catalog_navigation():
                         # Filter by a game label through the visible search control.
@@ -11543,6 +11551,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     run_case('BR-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],localization_foundation_browser)
                     # Define the admin_i18n function used by this module.
                     def admin_i18n():
+                        # Load canonical Russian Admin copy for exact table-header assertions.
+                        admin_copy=read_i18n_json(ROOT/'web'/'i18n'/'ru-RU'/'admin.json')
                         # Open the new Language/Locale tab.
                         page.get_by_test_id('admin-tab-language').click()
                         # Wait for the language select to render.
@@ -11571,6 +11581,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_text("Тренировочные соперники Texas Hold'em",exact=True).wait_for(timeout=5000)
                         # Require dynamic controller activity to use Russian rather than English fallback copy.
                         assert 'Fund Account' not in page.get_by_test_id('practice-opponent-admin').inner_text() and 'Пополнение счёта' in page.get_by_test_id('practice-opponent-admin').inner_text()
+                        # Require the players table to use the exact Russian resource-owned headers.
+                        assert page.locator('#adminView table').first.locator('th').all_inner_texts()==[admin_copy[key] for key in ('players.id','players.name','players.type','players.balance')]
+                        # Open Users and wait for the account-only managed-user table.
+                        page.get_by_test_id('admin-tab-users').click(); page.get_by_test_id('admin-users-managed-table').wait_for(timeout=5000)
+                        # Require every managed-user header to match the Russian dictionary exactly.
+                        assert page.get_by_test_id('admin-users-managed-table').locator('th').all_inner_texts()==[admin_copy[key] for key in ('users.email','users.name','users.accessControls','users.tokenBalance','users.tokenState','users.terms','users.language','users.format','users.actions')]
+                        # Open Autoplay and wait for its resource-owned heading to replace the prior Users view.
+                        page.get_by_test_id('admin-tab-autoplay').click(); page.locator('#adminView h3',has_text=admin_copy['autoplay.sessions']).wait_for(timeout=5000)
+                        # Require every autoplay header to match the Russian dictionary exactly.
+                        assert page.locator('#adminView table').first.locator('th').all_inner_texts()==[admin_copy[key] for key in ('autoplay.id','autoplay.game','autoplay.player','autoplay.status','autoplay.speed','autoplay.completed','autoplay.limit','autoplay.updated')]
+                        # Open Requirements and wait for its localized heading to replace the prior Autoplay view.
+                        page.get_by_test_id('admin-tab-requirements').click(); page.locator('#adminView h3',has_text=admin_copy['nav.requirements']).wait_for(timeout=5000)
+                        # Require every requirements header to match the Russian dictionary exactly.
+                        assert page.locator('#adminView table').first.locator('th').all_inner_texts()==[admin_copy[key] for key in ('requirements.id','requirements.module','requirements.description','requirements.status','requirements.tests')]
+                        # Return to Players & Bots before capturing the affected Admin visual evidence.
+                        page.get_by_test_id('admin-tab-players').click(); page.get_by_test_id('practice-opponent-admin').wait_for(timeout=5000)
                         # Capture Russian evidence for the affected Admin matrix row.
                         page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(250)
                         # Scroll the localized affected card into view before reading its evidence bounds.
@@ -11581,7 +11607,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                         # Clear the test preference so later manual sessions start from defaults.
                         page.evaluate("localStorage.removeItem('casino.locale.settings.v1')")
-                    run_case('BR-I18N-ADMIN-001',['I18N-001','I18N-003'],admin_i18n)
+                    run_case('BR-I18N-ADMIN-001',['I18N-001','I18N-003','I18N-014','TEST-187'],admin_i18n)
                 # Preserve exact case accounting when the active shard does not own Admin state.
                 else:
                     # Advance every contiguous Bingo, Blackjack, Baccarat, feedback, and Admin case.

@@ -30,8 +30,8 @@ let shownGrid = null;
 // Retain the last committed pattern and stake so one click can repeat the same draw.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/pattern_draw') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -60,11 +60,11 @@ function render(resultText) {
   // Build the nine grid cells, lighting the ones the committed grid turned on.
   const cells = Array.from({ length: 9 }, (unused, index) => `<div class="pd-cell ${shownGrid && shownGrid[index] ? 'on' : ''}" data-testid="pattern-draw-cell-${index}"></div>`).join('');
   // Build the three pattern bet buttons with honest multipliers.
-  const bets = BETS.map(([bet, mult]) => `<button class="pd-bet" data-bet="${bet}" type="button" aria-pressed="${selectedBet === bet}"><span>${safe(tx('bet.' + bet, null, bet))}</span><small>${mult}x</small></button>`).join('');
+  const bets = BETS.map(([bet, mult]) => `<button class="pd-bet" data-bet="${bet}" type="button" aria-pressed="${selectedBet === bet}"><span>${safe(tx('bet.' + bet))}</span><small>${mult}x</small></button>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="pd-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="pattern" data-testid="pattern-draw"><div class="pd-stage"><div class="pd-grid" data-testid="pattern-draw-grid">${cells}</div><p class="pd-result" data-testid="pattern-draw-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a pattern and draw.'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('bet.title', null, 'Pattern'))}</h3><div class="pd-bets">${bets}</div></div><div class="pd-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-draw" data-testid="pattern-draw-draw" type="button" ${drawBusy ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing', null, 'Drawing…') : tx('action.draw', null, 'Draw the grid'))}</button><button class="pd-repeat" data-testid="pattern-draw-repeat" type="button" ${(drawBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="pattern" data-testid="pattern-draw"><div class="pd-stage"><div class="pd-grid" data-testid="pattern-draw-grid">${cells}</div><p class="pd-result" data-testid="pattern-draw-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('bet.title'))}</h3><div class="pd-bets">${bets}</div></div><div class="pd-card"><h3>${safe(tx('stake.title'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-draw" data-testid="pattern-draw-draw" type="button" ${drawBusy ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing') : tx('action.draw'))}</button><button class="pd-repeat" data-testid="pattern-draw-repeat" type="button" ${(drawBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the pattern bet buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = btn.dataset.bet; render(); }; });
   // Wire the chip buttons.
@@ -91,7 +91,7 @@ async function load() {
     lastBet = restored ? { bet: restored.detail.bet, stake: restored.wager_total } : null;
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Pattern Draw.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -126,8 +126,8 @@ async function draw() {
     const win = round.total_return > 0;
     // Compose the localized result copy from the authoritative outcome and net.
     const text = win
-      ? `${safe(tx('result.hit', { bet: tx('bet.' + round.detail.bet, null, round.detail.bet) }, 'Pattern hit'))} <span class="net">+${round.total_return - round.wager_total}</span>`
-      : `${safe(tx('result.miss', null, 'No pattern.'))} <span class="net">${round.net}</span>`;
+      ? `${safe(tx('result.hit', { bet: tx('bet.' + round.detail.bet) }))} <span class="net">+${round.total_return - round.wager_total}</span>`
+      : `${safe(tx('result.miss'))} <span class="net">${round.net}</span>`;
     // Release the guard before the final repaint.
     drawBusy = false;
     // Repaint with the drawn grid and result.
@@ -136,7 +136,7 @@ async function draw() {
     // Release the guard and report a bounded error.
     drawBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.draw', null, 'Draw could not be completed.'), 'error');
+    toast(err?.message || tx('error.draw'), 'error');
     // Repaint the unlocked controls.
     render();
   }

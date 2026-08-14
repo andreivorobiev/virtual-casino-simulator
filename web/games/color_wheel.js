@@ -36,8 +36,8 @@ let wheelAngle = 0;
 // Retain the last committed colour and stake so one click can repeat the same spin.
 let lastBet = null;
 
-// Translate one game-domain key with an optional fallback.
-const tx = (key, params, fallback) => t(key, params || {}, 'games/color_wheel') || fallback || key;
+// Translate one game-domain key through the shared installed-locale fallback chain.
+const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Install compact game-owned styles without modifying the shared stylesheet.
 function ensureStyles() {
@@ -92,12 +92,12 @@ function render(resultText) {
     // Read the payout multiplier for the hint.
     const mult = { red: 2, black: 2, green: 6, gold: 16 }[color];
     // Return one pressable bet button.
-    return `<button class="cw-bet ${color}" data-color="${color}" type="button" aria-pressed="${selectedColor === color}"><span>${safe(tx('bet.' + color, null, color))}</span><small>${count}/20 · ${mult}x</small></button>`;
+    return `<button class="cw-bet ${color}" data-color="${color}" type="button" aria-pressed="${selectedColor === color}"><span>${safe(tx('bet.' + color))}</span><small>${count}/20 · ${mult}x</small></button>`;
   }).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="cw-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="color-wheel" data-testid="color-wheel"><div class="cw-stage"><div class="cw-wheel-wrap"><div class="cw-pointer"></div><div class="cw-wheel" data-testid="color-wheel-disc" style="background:${wheelGradient()};transform:rotate(${wheelAngle}deg);"></div><div class="cw-hub"></div></div><p class="cw-result" data-testid="color-wheel-result" role="status">${resultText || safe(tx('result.idle', null, 'Choose a colour and spin.'))}</p></div><div class="cw-panel"><div class="cw-card"><h3>${safe(tx('bet.title', null, 'Your colour'))}</h3><div class="cw-bets">${bets}</div></div><div class="cw-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="cw-chips">${chips}</div></div><button class="cw-spin" data-testid="color-wheel-spin" type="button" ${spinBusy ? 'disabled' : ''}>${safe(spinBusy ? tx('action.spinning', null, 'Spinning…') : tx('action.spin', null, 'Spin the wheel'))}</button><button class="cw-repeat" data-testid="color-wheel-repeat" type="button" ${(spinBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
+  root.innerHTML = `<section class="color-wheel" data-testid="color-wheel"><div class="cw-stage"><div class="cw-wheel-wrap"><div class="cw-pointer"></div><div class="cw-wheel" data-testid="color-wheel-disc" style="background:${wheelGradient()};transform:rotate(${wheelAngle}deg);"></div><div class="cw-hub"></div></div><p class="cw-result" data-testid="color-wheel-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="cw-panel"><div class="cw-card"><h3>${safe(tx('bet.title'))}</h3><div class="cw-bets">${bets}</div></div><div class="cw-card"><h3>${safe(tx('stake.title'))}</h3><div class="cw-chips">${chips}</div></div><button class="cw-spin" data-testid="color-wheel-spin" type="button" ${spinBusy ? 'disabled' : ''}>${safe(spinBusy ? tx('action.spinning') : tx('action.spin'))}</button><button class="cw-repeat" data-testid="color-wheel-repeat" type="button" ${(spinBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the bet colour buttons.
   root.querySelectorAll('[data-color]').forEach(btn => { btn.onclick = () => { selectedColor = btn.dataset.color; render(); }; });
   // Wire the chip buttons.
@@ -124,7 +124,7 @@ async function load() {
     lastBet = latest?.wager ? { color: latest.wager.color, stake: latest.wager.stake } : null;
   } catch (err) {
     // Surface a load failure without breaking the shell.
-    toast(tx('error.load', null, 'Could not load Color Wheel.'), 'error');
+    toast(tx('error.load'), 'error');
   }
   // Render the initial frame regardless so controls are usable.
   render();
@@ -172,7 +172,7 @@ async function spin() {
     // Build the localized result copy from authoritative values only.
     const win = round.total_return > 0;
     // Compose the result line with the landed colour and the net.
-    const text = `${safe(tx('result.landed', { color: tx('bet.' + round.detail.color, null, round.detail.color) }, 'Landed on ' + round.detail.color))} <span class="net">${win ? '+' + (round.total_return - round.wager_total) : round.net}</span>`;
+    const text = `${safe(tx('result.landed', { color: tx('bet.' + round.detail.color) }))} <span class="net">${win ? '+' + (round.total_return - round.wager_total) : round.net}</span>`;
     // Announce the result via voice-neutral status copy.
     spinBusy = false;
     // Repaint with the result.
@@ -181,7 +181,7 @@ async function spin() {
     // Release the guard and report a bounded error.
     spinBusy = false;
     // Surface the failure without leaking internal detail.
-    toast(err?.message || tx('error.spin', null, 'Spin could not be completed.'), 'error');
+    toast(err?.message || tx('error.spin'), 'error');
     // Repaint the unlocked controls.
     render();
   }
