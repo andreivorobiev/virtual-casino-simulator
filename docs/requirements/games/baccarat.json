@@ -423,6 +423,24 @@
       "introduced_in": "issue-265-baccarat-sustained-qualification",
       "changed_in": "issue-265-baccarat-sustained-qualification",
       "notes": "The exact-source profile uses one disposable loopback runtime, one synthetic account, one browser context, exactly 2,000 rounds, and one attempt per round; any control disappearance, wager-ready timeout, browser diagnostic, isolation failure, or cleanup failure keeps the result red."
+    },
+    {
+      "id": "BAC-027",
+      "module": "Baccarat",
+      "description": "Baccarat commits each pending coup, consumed shoe position, and terminal coup history against the latest provider-owned player document so racing stale requests reuse one exact committed coup without losing sibling state or repeating settlement side effects.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/api.py",
+        "casino/games/baccarat/tests/test_atomic_state.py",
+        "tests/legacy_settlement_tests.py"
+      ],
+      "introduced_in": "issue-756-baccarat-atomic-coup-state",
+      "changed_in": "issue-756-baccarat-atomic-coup-state",
+      "notes": "Bet placement and cancellation remain explicit direct-write debt under parent issue #704. This slice changes no cards, shoe rules, payout math, ledger identity, route, response envelope, public contract, or player-visible behavior."
     }
   ]
 }

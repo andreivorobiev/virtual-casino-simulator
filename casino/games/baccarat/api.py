@@ -1,7 +1,7 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
 # Baccarat API actions, validation, persistence, and exactly-once settlement orchestration.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+from casino.core.state_store import load_player_game_state, save_player_game_state, update_player_game_state
 from casino.core.validation import require_amount, require_player_id
 # Import the descriptor allowlist so the handler cannot drift from central router coercion.
 from casino.core.game_rules import declared_fields
@@ -21,6 +21,64 @@ SETTLEMENT = GameSettlementGateway(GAME_ID, "bet_id")
 def request_player_id(body, query) -> str:
     # Return the explicit player id while preserving the legacy human default.
     return require_player_id({"player_id": body.get("player_id") or query.get("player_id") or "human"})
+
+# Commit one pending coup and its consumed shoe against the latest provider-owned document. (BAC-027)
+def commit_pending_coup(player_id: str, state: dict) -> tuple[dict, bool]:
+    # Capture the exact coup selected inside the atomic state transition.
+    selected = {}
+    # Define a latest-document transition that never deals behind an existing commitment.
+    def commit(current: dict) -> dict:
+        # Reuse cards, bets, and shoe position already committed by a racing or interrupted request.
+        coup = current.get("pending_coup")
+        # Record whether this caller owns the fresh commitment or observed another request's winner.
+        created = coup is None
+        # Deal only while the provider owns the latest document and no coup is pending.
+        if coup is None:
+            # Deal and price every latest open bet while consuming the authoritative shoe once.
+            coup = engine.commit_coup(current)
+            # Publish the commitment before any settlement side effect can begin.
+            current["pending_coup"] = coup
+        # Retain the exact committed coup for the current response path.
+        selected["coup"] = coup
+        # Retain ownership so a stale concurrent request preserves the established conflict envelope.
+        selected["created"] = created
+        # Return the complete latest document for provider-owned publication.
+        return current
+    # Apply the commitment through the JSON/MySQL atomic document boundary.
+    committed = update_player_game_state(GAME_ID, player_id, commit, engine.default_state)
+    # Replace the caller's stale top-level view with the authoritative committed state.
+    state.clear()
+    # Copy every provider-published field into the existing caller-owned object.
+    state.update(committed)
+    # Return the exact coup and fresh-commit ownership selected under the provider boundary.
+    return selected["coup"], selected["created"]
+
+# Finalize one committed coup against the latest provider-owned state document. (BAC-027)
+def finalize_committed_coup_state(player_id: str, state: dict, coup: dict) -> None:
+    # Define an idempotent terminal transition for the complete committed coup.
+    def finalize(current: dict) -> dict:
+        # Read the commitment currently owned by the latest document.
+        pending = current.get("pending_coup")
+        # Finalize only when the expected coup is still pending.
+        if pending is not None:
+            # Refuse to clear or publish a different racing commitment.
+            if pending != coup:
+                # Preserve both sources for operator-led conflict recovery.
+                raise ConflictError("Baccarat committed coup state requires operator recovery")
+            # Apply the established terminal history and bet mutations once.
+            engine.finalize_coup(current, pending)
+        # Accept a replay only when the complete coup is already terminal.
+        elif not any(item == coup for item in current.get("last_coups", []) if isinstance(item, dict)):
+            # Reject missing, aliased, or unrelated state instead of inventing finalization.
+            raise ConflictError("Baccarat committed coup state requires operator recovery")
+        # Return the complete latest document for provider-owned publication.
+        return current
+    # Apply terminal publication through the JSON/MySQL atomic document boundary.
+    finalized = update_player_game_state(GAME_ID, player_id, finalize, engine.default_state)
+    # Remove stale top-level entries from the caller's pre-settlement snapshot.
+    state.clear()
+    # Refresh the caller so response state includes every preserved sibling update.
+    state.update(finalized)
 
 # Settle one committed coup exactly once, finalize its terminal state, and persist the finalized round. (issues #430, #555)
 def settle_committed_coup(player_id: str, state: dict, coup: dict):
@@ -43,10 +101,8 @@ def settle_committed_coup(player_id: str, state: dict, coup: dict):
             bal = players.get_player(b["player_id"])["balance"]
             append_history(GAME_ID, coup["round_id"], b["player_id"], b["type"], b["label"], b["amount"], res["outcome"], res["credit"], bal, coup)
         settlements.append({"bet": b, "settlement": res, "ledger": credit})
-    # Apply the terminal coup mutations exactly once and release the settlement commitment.
-    engine.finalize_coup(state, coup)
-    # Persist the finalized round so the committed settlement can never run twice.
-    save_player_game_state(GAME_ID, player_id, state)
+    # Publish the terminal coup against the latest state and release the exact commitment once.
+    finalize_committed_coup_state(player_id, state, coup)
     # Return the settlement evidence for the deal response.
     return settlements
 
@@ -144,10 +200,12 @@ def register(router):
         coup = state.get("pending_coup")
         # Branch when no settlement is pending so the dealt cards and consumed shoe commit durably before any credit.
         if not coup:
-            # Deal and price the coup without mutating terminal state.
-            coup = engine.commit_coup(state)
-            # Persist the committed cards and shoe position atomically before the first settlement side effect.
-            state["pending_coup"] = coup; save_player_game_state(GAME_ID, player_id, state)
+            # Commit fresh cards and the consumed shoe against provider-owned latest state.
+            coup, created = commit_pending_coup(player_id, state)
+            # Preserve the established concurrent-request conflict after adopting the winning exact commitment.
+            if not created:
+                # Let a later recovery request resume the committed coup without dealing or settling twice here.
+                raise ConflictError("Baccarat coup was committed by another request")
         # Settle every committed bet exactly once and finalize the round.
         settlements = settle_committed_coup(player_id, state, coup)
         # Set logger.info("baccarat_coup_dealt", round_id to the value needed for the next operation.

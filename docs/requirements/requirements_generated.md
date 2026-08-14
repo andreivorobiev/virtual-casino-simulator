@@ -20,7 +20,7 @@ Historical source baseline: 9.1.0
 - roulette: 9.7.2
 - slots: 9.5.1
 - blackjack: 9.1.11
-- baccarat: 9.1.16
+- baccarat: 9.2.0
 - keno: 9.4.0
 - bingo: 9.3.7
 - multi_hand_video_poker: 1.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.98.0
-- docs: 1.94.0
+- tests: 1.99.0
+- docs: 1.95.0
 - contracts: 1.61.5
 - tooling: 1.40.0
 - commenting_policy: 2.0.0
@@ -677,6 +677,7 @@ Historical source baseline: 9.1.0
 - **TOOL-019** (Tooling) - PASS: The wallet cents operator command requires an explicit check or apply mode, selects only the configured storage provider, emits bounded sorted JSON counts with no wallet identities or values, returns nonzero while a read-only scan finds residue, and rescans an apply result to zero before reporting success.
 - **TEST-190** (Tests) - PASS: Listener-free provider-parity evidence seeds a 1e-9 wallet residue, proves check mode is byte-read-only and nonzero, applies exactly one deterministic audit row, verifies zero remaining residue and cents-bridge acceptance, proves stopped JSON publication resumes without another row, exercises JSON update, ensure, and bootstrap writers, and models MySQL row locking plus atomic audit, wallet, rollback, commit, and lease cleanup.
 - **TEST-191** (Tests) - PASS: A dependency-free two-process rendezvous loads the same stale Keno player document, concurrently commits or finalizes one deterministic pending draw and one sibling marker through production atomic state helpers, and proves the final provider document retains every update with one exact terminal draw. Focused replay evidence accepts only the exact already-finalized round and rejects divergent pending state.
+- **TEST-192** (Tests) - PASS: A dependency-free two-process rendezvous loads the same stale Baccarat player document, concurrently commits or finalizes one deterministic coup and one sibling marker through production atomic state helpers, and proves one shoe segment, exact terminal history, open-bet removal, and every sibling update survive. Focused concurrent route evidence requires one winning response, one established stale-request conflict, and exactly one money and history settlement.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
@@ -899,6 +900,7 @@ Historical source baseline: 9.1.0
 - **BAC-024** (Baccarat) - PASS: Baccarat writes history rows.
 - **BAC-025** (Baccarat) - PASS: Baccarat's fresh shoe panel shows the configured full shoe capacity before the lazily built shoe receives its first deal.
 - **BAC-026** (Baccarat) - PASS: Baccarat preserves one stable visible Deal action and deterministically returns to wager-ready state through 2,000 consecutive settled browser UI coups without a replaced target, timeout, retry, duplicate action, or stranded round.
+- **BAC-027** (Baccarat) - PASS: Baccarat commits each pending coup, consumed shoe position, and terminal coup history against the latest provider-owned player document so racing stale requests reuse one exact committed coup without losing sibling state or repeating settlement side effects.
 - **MHVP-001** (Multi-Hand Video Poker) - PASS: Multi-Hand Video Poker deals one common Jacks-or-Better hand and completes 3, 5, or 10 independent result hands from shared hold positions.
 - **MHVP-002** (Multi-Hand Video Poker) - PASS: Authenticated sessions own isolated reload-safe Multi-Hand Video Poker state, hold selections, recent rounds, and canonical route restoration.
 - **MHVP-003** (Multi-Hand Video Poker) - PASS: Each Multi-Hand Video Poker round uses one aggregate ledger wager debit and at most one aggregate payout credit with idempotent retry recovery.
