@@ -303,9 +303,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Extract permanent literal IDs in deterministic source order.
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Require the current exact suite inventory after adding real multi-tab PWA update acceptance.
-        # Bind the complete inventory after the five newest games gain dedicated acceptance ownership. (TEST-185)
-        self.assertEqual(len(case_ids), 122)
+        # Bind the complete inventory after adding real self-service conversion analytics acceptance. (TEST-195)
+        self.assertEqual(len(case_ids), 123)
         # Import the listener-free runner module so the test uses its exact reviewed packer.
         from tests import run_tests as browser_runner_module
         # Compute the same deterministic six-runner partition used by the workflow.
@@ -322,9 +321,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
-        # Pin the exact accepted current-profile distribution across six runners.
-        # Bind deterministic load totals after packing the five new dedicated cases from the regenerated profile. (TEST-185)
-        self.assertEqual(shard_loads, (218, 216, 216, 216, 216, 217))
+        # Bind deterministic load totals after packing self-service analytics with its guest affinity group. (TEST-195)
+        self.assertEqual(shard_loads, (218, 218, 218, 216, 217, 216))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 2)
         # Require exact union and nonduplication across all declared owners.

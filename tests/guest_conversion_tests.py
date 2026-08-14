@@ -4,6 +4,8 @@
 
 # Import a bounded thread pool for deterministic concurrent wallet-ownership proof.
 from concurrent.futures import ThreadPoolExecutor
+# Import JSON serialization for exact privacy assertions over de-identified analytics rows.
+import json
 # Import a barrier so both account claims reach the atomic identity transaction together.
 import threading
 # Import the standard unittest framework used by the repository's focused suites.
@@ -15,8 +17,8 @@ from unittest.mock import patch
 from casino.core import auth
 # Import the authoritative ledger for wallet-preservation fixtures.
 from casino.core import ledger
-# Import the guest-conversion service under test.
-from casino.core import guest_conversion
+# Import the conversion and de-identified lifecycle services under test.
+from casino.core import guest_analytics, guest_conversion
 # Import the player boundary for balance assertions.
 from casino.core import players
 # Import the standard bounded application errors every rejection uses.
@@ -58,6 +60,17 @@ class GuestConversionTests(unittest.TestCase):
         # Return the payload.
         return base
 
+    # Read the exact de-identified lifecycle row created with this guest.
+    def _trial(self) -> dict:
+        # Resolve through the production Admin-detail projection rather than inspecting raw storage.
+        trial = guest_analytics.detail(self.guest["guest_analytics_id"])
+        # Fail clearly when a lifecycle row disappeared instead of weakening later assertions.
+        if trial is None:
+            # Surface one fixture-only failure without identity or credential content.
+            raise AssertionError("guest analytics row disappeared")
+        # Return the detached analytics-only row.
+        return trial
+
     # Require a successful conversion to preserve the exact guest wallet.
     def test_conversion_preserves_the_wallet(self) -> None:
         # Commit a distinguishable movement so the guest wallet is not its default value.
@@ -73,6 +86,29 @@ class GuestConversionTests(unittest.TestCase):
         # Require the new account to own the very same player as the guest.
         account = auth.find_user_by_email(f"converted.{self.unique}@example.test")
         self.assertEqual(account["player_id"], self.guest["player_id"])
+
+    # Require self-service conversion to close one de-identified Admin analytics row. (GUEST-007, TEST-195)
+    def test_self_service_conversion_closes_analytics_without_identity_data(self) -> None:
+        # Commit a distinguishable legitimate movement before the account adopts this wallet.
+        ledger.debit(self.guest["player_id"], 375, "GUEST_PLAY", game="roulette")
+        # Convert through the ordinary authenticated self-service authority.
+        result = guest_conversion.convert(self.guest, **self._payload())
+        # Read the terminal analytics-only projection after identity ownership commits.
+        trial = self._trial()
+        # Require exact terminal reason, ending balance, milestone, and one lifecycle event.
+        self.assertEqual((trial["end_reason"], trial["ending_balance"], trial["milestones"]["trial_terminal"], len([event for event in trial["events"] if event.get("event") == "trial_terminal"])), ("converted", result["balance"], True, 1))
+        # Serialize only the de-identified row for an exact forbidden-content scan.
+        serialized = json.dumps(trial, sort_keys=True)
+        # Require no mailbox, password, account id, player id, or guest user id in analytics storage.
+        self.assertNotIn(result["email"], serialized)
+        # Bind every server identity and credential marker independently for clear failures.
+        for forbidden in (self.guest["user_id"], self.guest["player_id"], "ConvertPassw0rd!23", "password_hash", "session_id"):
+            # Reject any raw identity or credential content from the product analytics row.
+            self.assertNotIn(forbidden, serialized)
+        # Require the converted row to disappear from the Admin active-trial action source.
+        active_ids = {row["analytics_id"] for row in guest_analytics.summary(status="active")["recent"]}
+        # Prove Admin cannot offer active-trial actions for the terminal row.
+        self.assertNotIn(self.guest["guest_analytics_id"], active_ids)
 
     # Require the new account to be a real password login, not a guest.
     def test_converted_account_can_authenticate(self) -> None:
@@ -107,6 +143,53 @@ class GuestConversionTests(unittest.TestCase):
         # Require exactly one account to own the guest's player.
         owners = [u for u in auth.load_users().get("users", []) if u.get("player_id") == self.guest["player_id"] and not auth.is_guest(u)]
         self.assertEqual(len(owners), 1)
+        # Capture the complete terminal analytics row after the first completed conversion.
+        terminal_trial = self._trial()
+        # Replay once more with the canonical terminal guest to prove analytics fields stay byte-stable.
+        third = guest_conversion.convert(self._reload_guest(), **self._payload())
+        # Require the public replay marker and exact original terminal analytics projection.
+        self.assertTrue(third["replayed"])
+        # Prove record_ended never duplicates or restamps the terminal row.
+        self.assertEqual(self._trial(), terminal_trial)
+
+    # Require pre-commit failure to leave analytics active and committed conversion to recover its projection.
+    def test_analytics_failure_is_deferred_and_exact_replay_converges(self) -> None:
+        # Fail before identity completion and require no terminal analytics side effect.
+        with patch.object(guest_conversion, "_complete_conversion", side_effect=RuntimeError("identity commit unavailable")):
+            # Attempt one otherwise-valid first conversion.
+            with self.assertRaisesRegex(RuntimeError, "identity commit unavailable"):
+                # Submit the exact production request up to the failed commit boundary.
+                guest_conversion.convert(self.guest, **self._payload())
+        # Require the analytics row to remain active before any durable conversion marker exists.
+        self.assertIsNone(self._trial().get("ended_at"))
+        # Remove the account created before the synthetic completion failure by resetting this case's identities.
+        auth.save_users({"schema_version": 1, "users": [self.guest], "reservations": []})
+        # Preserve the exact wallet and ledger projections before the successful conversion attempt.
+        player_before = dict(players.get_player(self.guest["player_id"]))
+        # Capture authoritative money history so telemetry failure cannot add an effect.
+        ledger_before = ledger.read_recent(self.guest["player_id"], 100)
+        # Fail only the de-identified analytics close after identity conversion commits.
+        with patch.object(guest_conversion.guest_analytics, "record_ended", side_effect=RuntimeError("analytics unavailable")):
+            # Require conversion success even though its recoverable projection is temporarily unavailable.
+            first = guest_conversion.convert(self.guest, **self._payload())
+        # Require the durable guest marker and account owner despite the telemetry failure.
+        terminal_guest = self._reload_guest()
+        # Bind committed identity and still-active analytics before recovery.
+        self.assertEqual((first["status"], terminal_guest["status"], self._trial().get("ended_at")), ("converted", "converted", None))
+        # Run the bounded Admin-read recovery without invoking identity conversion again.
+        with patch.object(guest_conversion, "_complete_conversion", side_effect=AssertionError("conversion repeated during analytics recovery")):
+            # Require one committed marker to converge through analytics-only reconciliation.
+            self.assertEqual(guest_conversion.reconcile_conversion_analytics(), 1)
+        # Capture the recovered terminal row before exercising ordinary exact replay.
+        recovered_trial = self._trial()
+        # Require analytics-only recovery to publish the expected reason and preserved balance.
+        self.assertEqual((recovered_trial["end_reason"], recovered_trial["ending_balance"]), ("converted", first["balance"]))
+        # Replay the already-converted service request after recovery.
+        second = guest_conversion.convert(terminal_guest, **self._payload())
+        # Require the public replay marker without changing recovered terminal analytics fields.
+        self.assertEqual((second["replayed"], self._trial()), (True, recovered_trial))
+        # Prove wallet and ledger stayed exact across both the deferred close and recovery replay.
+        self.assertEqual((players.get_player(self.guest["player_id"]), ledger.read_recent(self.guest["player_id"], 100)), (player_before, ledger_before))
 
     # Require completed conversion replay to reject a different caller operation identity.
     def test_completed_conversion_rejects_conflicting_idempotency_key(self) -> None:

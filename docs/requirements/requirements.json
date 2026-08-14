@@ -11754,6 +11754,49 @@
       "notes": "The JSON fixture uses real auth, conversion, player, ledger, history, analytics, autoplay, and session services. The MySQL live gate injects the production provider, converts one provider-backed guest, and requires two stale teardown replays to leave all adopted-account projections exact."
     },
     {
+      "id": "GUEST-007",
+      "module": "Core",
+      "description": "Every successful Guest Trial conversion path closes the server-issued de-identified analytics row exactly once as converted after durable account and player ownership commits. The terminal row records the authoritative preserved ending balance without authentication, credential, player, session, or account identity data; exact replay preserves its first terminal fields, while analytics failure cannot reverse or fail the committed conversion and a later replay retries only the projection.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONVERT-001",
+        "API-ADMIN-GUEST-CONVERT-001"
+      ],
+      "browser_tests": [
+        "BR-GUEST-CONVERT-ANALYTICS-001"
+      ],
+      "implementation_files": [
+        "casino/core/guest_conversion.py",
+        "casino/core/guest_analytics.py",
+        "casino/admin.py"
+      ],
+      "introduced_in": "issue-761-self-conversion-analytics",
+      "changed_in": "issue-761-self-conversion-analytics",
+      "notes": "The shared conversion result helper runs only after the identity transaction commits and is used by first completion, interrupted-account recovery, concurrent-owner recovery, terminal replay, and Admin-assisted conversion. Analytics exceptions are sanitized and deferred; Admin Guest Trials reads retry only the validated converted-marker projection and never repeat wallet or identity mutation."
+    },
+    {
+      "id": "TEST-195",
+      "module": "Tests",
+      "description": "Focused self-service evidence proves converted reason, exact ending balance, de-identified storage, one stable terminal event, Admin active-row exclusion, exact replay, pre-commit inactivity, and post-commit analytics-failure recovery without wallet or ledger effects. The Admin-assisted suite proves its shared terminal projection stays byte-stable, and real Browser evidence submits the visible self-service form before verifying the terminal analytics row is no longer an active-action source.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONVERT-001",
+        "API-ADMIN-GUEST-CONVERT-001"
+      ],
+      "browser_tests": [
+        "BR-GUEST-CONVERT-ANALYTICS-001"
+      ],
+      "implementation_files": [
+        "tests/guest_conversion_tests.py",
+        "tests/admin_guest_conversion_tests.py",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-761-self-conversion-analytics",
+      "changed_in": "issue-761-self-conversion-analytics",
+      "notes": "The Browser case uses the real guest admission and self-service conversion routes in one isolated context, then reads only the de-identified server projection and active summary. No contract, endpoint, public result, credential, or wallet behavior changes."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",

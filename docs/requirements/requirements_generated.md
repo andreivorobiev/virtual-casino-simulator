@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.0
-- core: 9.46.1
+- core: 9.46.2
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.1
-- docs: 1.96.1
+- tests: 1.100.2
+- docs: 1.96.2
 - contracts: 1.62.0
 - tooling: 1.40.0
 - commenting_policy: 2.0.0
@@ -684,6 +684,8 @@ Historical source baseline: 9.1.0
 - **AUTH-020** (Core) - PASS: Guest Trial teardown re-resolves and atomically claims the canonical disposable identity before any session, wallet, player, ledger, autoplay, or analytics mutation. The shared users-document transaction serializes account adoption against the active-to-ending claim: an account owner or converted marker makes every stale teardown a stable no-op, while an ending claim prevents a later account from adopting that player and remains recoverable after interruption.
 - **LEDGER-037** (Core) - PASS: A Guest Trial terminal debit is eligible only after the canonical identity transaction proves the same guest still owns the disposable player and durably claims teardown. An account that already adopted the player cannot receive GUEST_TRIAL_END, session revocation, ended-player presentation, or ordinary teardown analytics; an interrupted eligible claim resumes the same exactly-once action identity until wallet, player, analytics, and terminal identity converge.
 - **TEST-194** (Tests) - PASS: Deterministic conversion-versus-teardown rendezvous evidence proves both users-document lock orders: a conversion winner preserves the exact adopted player, balance, ledger, history, account session, conversion marker, and analytics classification under repeated stale teardown, while a teardown winner rejects account adoption and converges on one terminal movement. Failure recovery resumes a durable ending claim with its first reason, and the disposable MySQL integration exercises the same converted-owner refusal through production provider documents.
+- **GUEST-007** (Core) - PASS: Every successful Guest Trial conversion path closes the server-issued de-identified analytics row exactly once as converted after durable account and player ownership commits. The terminal row records the authoritative preserved ending balance without authentication, credential, player, session, or account identity data; exact replay preserves its first terminal fields, while analytics failure cannot reverse or fail the committed conversion and a later replay retries only the projection.
+- **TEST-195** (Tests) - PASS: Focused self-service evidence proves converted reason, exact ending balance, de-identified storage, one stable terminal event, Admin active-row exclusion, exact replay, pre-commit inactivity, and post-commit analytics-failure recovery without wallet or ledger effects. The Admin-assisted suite proves its shared terminal projection stays byte-stable, and real Browser evidence submits the visible self-service form before verifying the terminal analytics row is no longer an active-action source.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

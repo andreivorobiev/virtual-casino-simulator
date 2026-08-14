@@ -97,7 +97,7 @@ BROWSER_CASE_AFFINITY_GROUPS={
     # Keep the real backend login and service-worker lifecycle in one isolated context.
     'auth_backend_pwa':('BR-AUTH-BACKEND-001','BR-PWA-001','BR-PWA-UPDATE-001'),
     # Keep the disposable guest lifecycle and closed-session refresh proof together.
-    'guest_lifecycle':('BR-GUEST-TRIAL-001','BR-GUEST-REFRESH-001'),
+    'guest_lifecycle':('BR-GUEST-TRIAL-001','BR-GUEST-REFRESH-001','BR-GUEST-CONVERT-ANALYTICS-001'),
     # Keep login, terms, wallet, shell, catalog, and responsive lobby state on shard zero.
     'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-OAUTH-SIGNUP-001','BR-VERIFIED-EMAIL-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
     # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
@@ -1842,8 +1842,8 @@ def run_api_tests():
         if not result.wasSuccessful():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('guest conversion suite failed')
-    # Record the listener-free explicit, idempotent, wallet-preserving conversion proof.
-    run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','CONVERT-003','TEST-111','TEST-158'],run_guest_conversion_tests)
+    # Record explicit, wallet-preserving conversion plus idempotent analytics convergence.
+    run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','CONVERT-003','GUEST-007','TEST-111','TEST-158','TEST-195'],run_guest_conversion_tests)
     # Execute the Admin-assisted conversion service and route contract proof. (#701)
     def run_admin_guest_conversion_tests():
         # Import the focused suite lazily after shared test storage is ready.
@@ -1854,8 +1854,8 @@ def run_api_tests():
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
         # Fail the named mapped case on any wallet, audit, lifecycle, or authorization regression.
         if not result.wasSuccessful(): raise AssertionError('Admin-assisted guest conversion suite failed')
-    # Map explicit support confirmation, idempotency, wallet preservation, audit, and refusal evidence.
-    run_case('API-ADMIN-GUEST-CONVERT-001',['ADMIN-035','TEST-193'],run_admin_guest_conversion_tests)
+    # Map explicit support confirmation plus the unchanged shared analytics convergence behavior.
+    run_case('API-ADMIN-GUEST-CONVERT-001',['ADMIN-035','GUEST-007','TEST-193','TEST-195'],run_admin_guest_conversion_tests)
     # Execute the product account-spine proof without opening a listener.
     def run_account_spine_tests():
         # Load only the focused product account-spine class.
@@ -4237,10 +4237,56 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 guest_close_results.append(replacement_page.get_by_test_id('login-gate').is_visible())
                 # Destroy the replacement context and its now-revoked cookie.
                 replacement_context.close()
+            # Default self-service conversion evidence to true for shards outside the guest affinity group.
+            guest_conversion_analytics_result=True
+            # Execute one real self-service conversion in a browser while the owning shard has the API server. (GUEST-007, TEST-195)
+            if browser_shard_owns_group('guest_lifecycle'):
+                # Create one isolated desktop context for the terminal conversion handoff.
+                conversion_context=browser.new_context(viewport=guest_viewports['desktop_primary'],reduced_motion='reduce')
+                # Open the account-free entry surface for the real self-service request.
+                conversion_page=conversion_context.new_page()
+                # Keep the converted account fixture contained even if a browser assertion fails.
+                try:
+                    # Enter one disposable trial through the visible consent and guest controls.
+                    conversion_page.goto(base,wait_until='networkidle'); conversion_page.get_by_test_id('login-terms-check').check()
+                    # Observe the real guest creation before opening its personal settings.
+                    with conversion_page.expect_response(lambda response: response.url.endswith('/api/v2/auth/guest') and response.request.method=='POST'):
+                        # Start the browser-owned guest trial.
+                        conversion_page.get_by_test_id('guest-trial-button').click()
+                    # Wait for the authenticated shell and open the self-service conversion form.
+                    conversion_page.get_by_test_id('lobby').wait_for(timeout=5000); conversion_page.get_by_test_id('nav-settings').click(); conversion_page.get_by_test_id('guest-conversion').wait_for(timeout=5000)
+                    # Use one deterministic fixture mailbox that is unique inside the disposable Browser data root.
+                    conversion_email='browser-self-conversion-analytics@example.test'
+                    # Fill only the ordinary account fields accepted by the visible conversion form.
+                    conversion_page.locator('#conversion-email').fill(conversion_email); conversion_page.locator('#conversion-display-name').fill('Browser Converted Player'); conversion_page.locator('#conversion-password').fill('BrowserConvertPassw0rd!23'); conversion_page.locator('#conversion-terms').check()
+                    # Observe the real conversion response before the shell clears its disposable credential.
+                    with conversion_page.expect_response(lambda response: response.url.endswith('/api/v2/me/convert-guest') and response.request.method=='POST') as conversion_response_info:
+                        # Submit through the browser-visible self-service action.
+                        conversion_page.get_by_test_id('guest-conversion-submit').click()
+                    # Require the explicit sign-in handoff after successful account adoption.
+                    conversion_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                    # Decode only the standard public result envelope for status and ending-balance proof.
+                    conversion_payload=conversion_response_info.value.json()
+                    # Resolve the durable account from its normalized public mailbox.
+                    conversion_account=auth_core.find_user_by_email(conversion_email)
+                    # Resolve the terminal guest only through its durable conversion link.
+                    conversion_guest=next(row for row in auth_core.load_users().get('users',[]) if row.get('converted_to_user_id')==conversion_account['user_id'])
+                    # Read the de-identified Admin projection after browser conversion committed.
+                    conversion_trial=guest_analytics.detail(conversion_guest['guest_analytics_id'])
+                    # Read active rows through the same filtered summary consumed by Guest Trials actions.
+                    conversion_active_ids={row['analytics_id'] for row in guest_analytics.summary(status='active',recent_limit=100)['recent']}
+                    # Bind browser completion, exact ending balance, one terminal event, and removal from active actions.
+                    guest_conversion_analytics_result=conversion_payload['ok'] is True and conversion_payload['data']['status']=='converted' and conversion_trial['end_reason']=='converted' and conversion_trial['ending_balance']==conversion_payload['data']['balance'] and len([event for event in conversion_trial['events'] if event.get('event')=='trial_terminal'])==1 and conversion_guest['guest_analytics_id'] not in conversion_active_ids
+                # Always destroy cookies, sessionStorage, and transient form content together.
+                finally:
+                    # Close the complete isolated conversion context.
+                    conversion_context.close()
             # Record the full locale, viewport, consent, lifecycle, authorization, refresh, and browser-close matrix.
             run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','GUEST-006','UX-028','USER-008','USER-009','CONVERT-003','TEST-081','TEST-158','TEST-176'],lambda: guest_policy_disabled_result and len(guest_results)==8 and all(result['created'] and result['role']=='guest' and result['balance']==10000.0 and result['conversion_visible'] and result['marker']=='true' and result['top_up_hidden'] and result['expiry_notice'] and result['game_entered'] and result['admin_code']=='FORBIDDEN' and result['ended'] and result['contained'] for result in guest_results) and all(guest_close_results))
             # Record the separately named same-context refresh and browser-context loss acceptance.
             run_case('BR-GUEST-REFRESH-001',['GUEST-002','TEST-081'],lambda: len(guest_results)==8 and all(result['ended'] for result in guest_results) and all(guest_close_results))
+            # Record the real self-service conversion and de-identified Admin lifecycle convergence.
+            run_case('BR-GUEST-CONVERT-ANALYTICS-001',['GUEST-007','TEST-195'],lambda: guest_conversion_analytics_result)
             # Refresh the direct API harness Admin session after the browser login added a concurrent session (issue #226).
             login_default_user(base)
             # Set page to the value needed for the next operation.
