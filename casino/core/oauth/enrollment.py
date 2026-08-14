@@ -212,6 +212,10 @@ class SocialEnrollmentService:
         prior = self._find(subject_digest)
         # Read the exact provider-subject identity authority.
         existing_link = self.links.find_by_subject(identity.provider, identity.subject)
+        # Re-read allocation authority when a concurrent callback linked after our stale first read.
+        if existing_link is not None and prior is None:
+            # Recover only the provider-owned pending record published before the winning link.
+            prior = self._find(subject_digest)
         # Reject a link that was created outside this social-enrollment allocation.
         if existing_link is not None and (prior is None or existing_link.user_id != prior["user_id"]):
             # Require the existing canonical owner to authenticate and use explicit linking/sign-in.

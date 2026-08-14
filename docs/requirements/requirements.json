@@ -10621,8 +10621,8 @@
         "tests/oauth/test_enrollment.py"
       ],
       "introduced_in": "issue-335-social-signup",
-      "changed_in": "issue-335-social-signup",
-      "notes": "Provider-created accounts have no local-password recovery and therefore cannot unlink their sole provider authority. Revoked or deleted completed links require a separately authenticated recovery path rather than signup resurrection."
+      "changed_in": "issue-757-oauth-same-subject-idempotency",
+      "notes": "A callback that loaded absence before a competing callback published the pending record and identity link re-reads provider-owned enrollment authority and replays the winning canonical account; an unrelated pre-existing link still creates no enrollment or wallet. Provider-created accounts have no local-password recovery and therefore cannot unlink their sole provider authority."
     },
     {
       "id": "TEST-168",
@@ -10646,8 +10646,8 @@
         "scripts/validate_contracts.py"
       ],
       "introduced_in": "issue-335-social-signup",
-      "changed_in": "issue-335-social-signup",
-      "notes": "All provider identities and credentials are synthetic; no live provider, browser callback, public enablement, or external account mutation is part of this requirement."
+      "changed_in": "issue-757-oauth-same-subject-idempotency",
+      "notes": "A deterministic thread rendezvous holds one callback after its stale absence read until the winning callback commits allocation, link, activation, and completion, then proves exact canonical replay and one durable resource set. The separate unrelated-link case remains fail closed. All identities and credentials are synthetic; no live provider or external mutation is involved."
     },
     {
       "id": "LEDGER-034",

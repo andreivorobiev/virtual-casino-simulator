@@ -141,6 +141,86 @@ class SocialEnrollmentTests(unittest.TestCase):
         # Require exactly one durable provider-subject link.
         self.assertEqual(len(self.storage.read_document("auth/oauth_identity_links", lambda: {"links": []})["links"]), 1)
 
+    # Force the losing callback to retain a stale pre-allocation read until the winner links.
+    def test_stale_preflight_replays_concurrent_winning_link(self):
+        # Build one shared service over the real transactional pending and link documents.
+        service = self.service()
+        # Preserve the unpatched lookup for the winner and the loser's authoritative re-read.
+        original_find = service._find
+        # Signal when the losing callback has captured the exact stale absence.
+        stale_read = threading.Event()
+        # Hold the loser until the winning callback has completed every durable boundary.
+        winner_done = threading.Event()
+        # Count only the named losing callback's pending-record reads.
+        loser_reads = {"count": 0}
+        # Retain the losing callback result for exact recovery assertions.
+        loser_results = []
+        # Retain any losing callback error without hiding its thread context.
+        loser_errors = []
+
+        # Interpose only the first losing lookup to force the reported stale schedule.
+        def rendezvous_find(subject_digest):
+            # Leave the winner and the loser's later recovery lookup authoritative.
+            if threading.current_thread().name != "stale-social-callback" or loser_reads["count"] > 0:
+                # Delegate directly to the provider-backed service lookup.
+                return original_find(subject_digest)
+            # Record the one intentionally stale preflight lookup.
+            loser_reads["count"] += 1
+            # Read absence before allowing the winning callback to allocate.
+            prior = original_find(subject_digest)
+            # Require the fixture to begin without a hidden enrollment record.
+            self.assertIsNone(prior)
+            # Release the main thread to run the winning callback.
+            stale_read.set()
+            # Fail boundedly rather than letting a broken rendezvous hang CI.
+            if not winner_done.wait(timeout=10):
+                # Surface a deterministic test failure from the losing worker.
+                raise AssertionError("winning social callback did not finish")
+            # Return the captured stale absence so production must reconcile the new link.
+            return prior
+
+        # Run the exact callback that intentionally owns the stale first read.
+        def losing_callback():
+            # Preserve success or failure for the parent thread's complete assertions.
+            try:
+                # Provision the same provider subject after the winner completes.
+                loser_results.append(service.provision(self.identity(), "private-beta-1", "en-US"))
+            # Retain unexpected production errors without dropping worker evidence.
+            except Exception as error:
+                # Append only the exception object inside the isolated test process.
+                loser_errors.append(error)
+
+        # Patch canonical operations while preserving the real enrollment and link stores.
+        with patch.object(service, "_find", side_effect=rendezvous_find), patch("casino.core.oauth.enrollment.auth.provision_social_user", side_effect=self.provision), patch("casino.core.oauth.enrollment.auth.activate_social_user", side_effect=self.activate):
+            # Start the callback that will pause after its stale read.
+            loser = threading.Thread(target=losing_callback, name="stale-social-callback")
+            # Begin the deterministic stale-read schedule.
+            loser.start()
+            # Require the stale absence before running the winning callback.
+            self.assertTrue(stale_read.wait(timeout=10))
+            # Always release the losing callback even if the winner fails unexpectedly.
+            try:
+                # Commit one winning allocation, identity link, wallet binding, and activation.
+                winner = service.provision(self.identity(), "private-beta-1", "en-US")
+            # Release the held worker on success or failure for bounded cleanup.
+            finally:
+                # Publish the terminal winner boundary to the waiting callback.
+                winner_done.set()
+            # Join the sole worker before reading shared results.
+            loser.join(timeout=10)
+        # Require the deterministic worker to terminate without an orphan thread.
+        self.assertFalse(loser.is_alive())
+        # Require both callbacks to converge without the historical conflict.
+        self.assertEqual(loser_errors, [])
+        # Resolve the exact recovered losing result.
+        recovered = loser_results[0]
+        # Require one winner and one replay of the same canonical account and wallet.
+        self.assertEqual((winner.created, recovered.created, winner.user["user_id"], winner.user["player_id"]), (True, False, recovered.user["user_id"], recovered.user["player_id"]))
+        # Require one pending allocation and one provider-subject identity link.
+        self.assertEqual((len(self.storage.read_document("auth/oauth_social_enrollments", lambda: {"enrollments": []})["enrollments"]), len(self.storage.read_document("auth/oauth_identity_links", lambda: {"links": []})["links"])), (1, 1))
+        # Require canonical provisioning and activation to retain one stable resource pair.
+        self.assertEqual((len(self.users), len({(row[2], row[3]) for row in self.provisioned})), (1, 1))
+
     # Prove a post-link activation failure is resumable with the same deterministic resources.
     def test_activation_failure_resumes_without_duplicates(self):
         # Count activation attempts inside the isolated seam.
@@ -197,6 +277,10 @@ class SocialEnrollmentTests(unittest.TestCase):
         with self.assertRaises(ConflictError):
             # Attempt no pending allocation or canonical user creation.
             service.provision(self.identity(), "private-beta-1", "en-US")
+        # Require the unrelated canonical link to create no social-enrollment allocation.
+        self.assertEqual(self.storage.read_document("auth/oauth_social_enrollments", lambda: {"enrollments": []})["enrollments"], [])
+        # Require no user or wallet provisioning behind the preserved conflict.
+        self.assertEqual((self.users, self.provisioned), ({}, []))
 
     # Prove a verified provider email owned by a local account requires explicit authenticated linking.
     def test_existing_local_email_requires_explicit_link_without_account_selection(self):
