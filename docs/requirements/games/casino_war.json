@@ -108,6 +108,23 @@
       "introduced_in": "game-expansion-casino-war",
       "changed_in": "game-expansion-casino-war",
       "notes": "The descriptor uses sort order 80 and the normalized tests.game_drivers.casino_war:play driver reference reserved by issue #77."
+    },
+    {
+      "id": "CW-006",
+      "module": "Casino War",
+      "description": "Casino War records committed ledger-intent markers and the terminal settled phase through the shared provider-owned atomic player game-state helper, so competing server processes preserve both transitions instead of publishing stale complete documents.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CW-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/casino_war/api.py",
+        "casino/games/casino_war/tests/test_api.py"
+      ],
+      "introduced_in": "issue-704-casino-war-atomic-reconciliation",
+      "changed_in": "issue-704-casino-war-atomic-reconciliation",
+      "notes": "This first #704 slice migrates money-adjacent reconciliation publications without changing the v1 route or response envelope. Prepared round and decision creation remain for later mechanical slices under the still-open parent ticket."
     }
   ]
 }
