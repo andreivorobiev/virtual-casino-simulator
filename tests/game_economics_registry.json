@@ -43,7 +43,7 @@
       "requirement_id": "BJ-001",
       "engine_path": "casino/games/blackjack/engine.py",
       "settlement_path": "casino/games/blackjack/api.py",
-      "production_sha256": "fb368550600c302b0ddad90f8351885f5141b736a937d83957077aa3728d8aea",
+      "production_sha256": "77e0be63c5cd07124c1f153417ee638d6b83d1613bfdfc2c8bde76541ce23b93",
       "proof_tests": ["tests.legacy_settlement_tests:LegacySettlementTests.test_blackjack_poisoned_rules_settle_at_house_defaults"],
       "rationale": "The accepted six-deck stand-soft-17 table and three-to-two natural schedule are source-pinned to the prior best-strategy audit and its production settlement checks."
     },

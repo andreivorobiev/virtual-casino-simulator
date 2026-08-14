@@ -1540,6 +1540,8 @@ def run_api_tests():
     run_case('API-KENO-ATOMIC-001',['KENO-028','TEST-191'],lambda: run_unit_module('casino.games.keno.tests.test_atomic_state','Keno atomic draw-state suite failed'))
     # Execute the real two-process Baccarat pending-coup commit and finalization races under the next #704 slice. (issue #756)
     run_case('API-BAC-ATOMIC-001',['BAC-027','TEST-192'],lambda: run_unit_module('casino.games.baccarat.tests.test_atomic_state','Baccarat atomic coup-state suite failed'))
+    # Execute real two-process Blackjack round and same-hand races under the next #704 slice. (issue #758)
+    run_case('API-BJ-ATOMIC-001',['BJ-033','TEST-196'],lambda: run_unit_module('casino.games.blackjack.tests.test_atomic_state','Blackjack atomic round-state suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)

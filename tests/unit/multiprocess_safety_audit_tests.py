@@ -53,7 +53,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(len(games), audit.EXPECTED_GAME_COUNT)
         # Reject duplicate or omitted game identities.
         self.assertEqual(len({row["game_id"] for row in games}), audit.EXPECTED_GAME_COUNT)
-        # Pin the exact current persistence families, including the Casino War, Keno, and Baccarat migration slices.
+        # Pin the exact current persistence families, including the Casino War, Keno, Baccarat, and Blackjack slices.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths"},  # Pin accepted families.
@@ -64,7 +64,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths"}  # Cover all models.
             },
-            {"player_document_load_save": 32, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 3},  # Pin current counts.
+            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 4},  # Pin current counts.
         )
         # Resolve the sole incremental migration row without treating mixed persistence as compatible.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -96,6 +96,16 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertGreater(baccarat["atomic_update_call_sites"], 0)
         # Keep Baccarat fail closed for a second worker until every direct mutation is retired.
         self.assertEqual(baccarat["multiworker_status"], "blocked")
+        # Resolve the Blackjack round-publication slice without concealing direct settings debt.
+        blackjack = next(row for row in games if row["game_id"] == "blackjack")
+        # Require the read path used for response, recovery, and settings compatibility.
+        self.assertGreater(blackjack["load_call_sites"], 0)
+        # Preserve the direct settings save as explicit later parent-issue debt.
+        self.assertGreater(blackjack["save_call_sites"], 0)
+        # Bind in-scope round preparation, transition, rollback, and finalization to atomic updates.
+        self.assertGreater(blackjack["atomic_update_call_sites"], 0)
+        # Keep production second-worker activation blocked until the direct settings path is retired.
+        self.assertEqual(blackjack["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))
         # Refuse second-worker authorization for every game.

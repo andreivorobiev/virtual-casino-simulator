@@ -10330,8 +10330,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "top-half-portfolio-v61",
-      "changed_in": "issue-704-casino-war-atomic-reconciliation",
-      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. The first Casino War slice is explicitly classified as mixed atomic/direct and remains blocked until later #704 slices retire every direct state publication."
+      "changed_in": "issue-758-blackjack-atomic-state",
+      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Casino War and Blackjack are explicitly classified as mixed atomic/direct while their settings-only publications remain direct, and stay blocked until later #704 slices retire every direct state publication."
     },
     {
       "id": "TEST-161",
@@ -11625,6 +11625,28 @@
       "introduced_in": "issue-756-baccarat-atomic-coup-state",
       "changed_in": "issue-756-baccarat-atomic-coup-state",
       "notes": "Both fresh interpreters bind CASINO_DATA_DIR to one disposable JSON provider root and synchronize after reading one stale baseline. Exact finalization replay accepts only the complete terminal coup and divergent pending or aliased round state fails closed."
+    },
+    {
+      "id": "TEST-196",
+      "module": "Tests",
+      "description": "Dependency-free fresh-process rendezvous evidence loads the same stale Blackjack player document and proves a legal hit preserves an unrelated sibling update, while two same-round hits serialize into the exact two-card sequence without wager or settlement drift. Legacy settlement coverage proves one terminal round, one wallet credit, one history row, recovery replay, and an established conflict for the losing stale stand request; the multiprocess inventory remains fail closed for remaining direct debt.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-ATOMIC-001",
+        "API-LEGACY-SETTLE-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/tests/test_atomic_state.py",
+        "tests/legacy_settlement_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-758-blackjack-atomic-state",
+      "changed_in": "issue-758-blackjack-atomic-state",
+      "notes": "Both child interpreters bind one disposable JSON provider root and synchronize only after stale loads. The economics registry rebinds the changed settlement adapter bytes without changing the accepted Blackjack probability or payout proof."
     },
     {
       "id": "TEST-175",
@@ -15076,6 +15098,23 @@
       "introduced_in": "issue-260-blackjack-insurance-net",
       "changed_in": "issue-260-blackjack-insurance-net",
       "notes": "Synthetic browser evidence renders a settled dealer-blackjack insurance round whose Net row would be wrong if insurance stake and payout were excluded."
+    },
+    {
+      "id": "BJ-033",
+      "module": "Blackjack",
+      "description": "Blackjack round creation, card actions, wager-bearing double, split, and insurance preparation, surrender, even money, rollback, and terminal settlement publication mutate the provider-owned latest player document through update_player_game_state. Prepared wallet actions persist exact before-and-after card, shoe, round, and movement identities; unrelated sibling fields survive; divergent recovery fails closed; public v1 routes, envelopes, cards, rules, wager identities, payout math, history shape, and browser behavior remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-ATOMIC-001",
+        "API-LEGACY-SETTLE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/api.py"
+      ],
+      "introduced_in": "issue-758-blackjack-atomic-state",
+      "changed_in": "issue-758-blackjack-atomic-state",
+      "notes": "The direct settings publication remains explicit parent-issue #704 debt, so the multiprocess inventory classifies Blackjack as mixed atomic/direct and keeps production second-worker activation blocked. No contract, paytable, public copy, or route changes in this slice."
     },
     {
       "id": "BAC-001",

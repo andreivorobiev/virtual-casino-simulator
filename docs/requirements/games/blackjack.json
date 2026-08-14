@@ -491,6 +491,23 @@
       "introduced_in": "issue-260-blackjack-insurance-net",
       "changed_in": "issue-260-blackjack-insurance-net",
       "notes": "Synthetic browser evidence renders a settled dealer-blackjack insurance round whose Net row would be wrong if insurance stake and payout were excluded."
+    },
+    {
+      "id": "BJ-033",
+      "module": "Blackjack",
+      "description": "Blackjack round creation, card actions, wager-bearing double, split, and insurance preparation, surrender, even money, rollback, and terminal settlement publication mutate the provider-owned latest player document through update_player_game_state. Prepared wallet actions persist exact before-and-after card, shoe, round, and movement identities; unrelated sibling fields survive; divergent recovery fails closed; public v1 routes, envelopes, cards, rules, wager identities, payout math, history shape, and browser behavior remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-ATOMIC-001",
+        "API-LEGACY-SETTLE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/api.py"
+      ],
+      "introduced_in": "issue-758-blackjack-atomic-state",
+      "changed_in": "issue-758-blackjack-atomic-state",
+      "notes": "The direct settings publication remains explicit parent-issue #704 debt, so the multiprocess inventory classifies Blackjack as mixed atomic/direct and keeps production second-worker activation blocked. No contract, paytable, public copy, or route changes in this slice."
     }
   ]
 }

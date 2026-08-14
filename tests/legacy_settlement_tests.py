@@ -159,8 +159,20 @@ class LegacySettlementTests(unittest.TestCase):
             with ThreadPoolExecutor(max_workers=2) as pool:
                 # Submit the same stand request twice against the one fixed round.
                 futures = [pool.submit(handler, {"player_id": "human"}, {}, "bj_fixed_round") for _ in range(2)]
-                # Collect both responses because neither racer may fail here.
-                results = [future.result(timeout=30) for future in futures]
+                # Collect the serialized winner while retaining the expected stale-request conflict.
+                results = []
+                # Count only the established round-phase conflict from the losing stale action.
+                conflicts = []
+                # Resolve both overlapping requests without masking an unexpected exception.
+                for future in futures:
+                    # Read one terminal response when this worker wins the provider lock.
+                    try:
+                        # Retain the complete winning payload for terminal assertions.
+                        results.append(future.result(timeout=30))
+                    # Accept only the existing conflict envelope after the other worker settles first.
+                    except ConflictError as exc:
+                        # Preserve the fixed error text without reflecting state or player identity.
+                        conflicts.append(str(exc))
         # Read every settlement credit row committed by the race.
         rows = self.settlement_rows("BLACKJACK_SETTLEMENT_CREDIT")
         # Require exactly one committed settlement credit despite two settling requests.
@@ -169,8 +181,10 @@ class LegacySettlementTests(unittest.TestCase):
         self.assertEqual(20.0, rows[0]["amount"])
         # Require exactly one balance delta over the 5000 starting wallet.
         self.assertEqual(5020.0, players.get_player("human")["balance"])
-        # Require the committing request to report the event and the replaying request to report none.
-        self.assertEqual({0, 1}, {len(result["credits"]) for result in results})
+        # Require one provider-serialized winner and one stale-request conflict.
+        self.assertEqual((1, ["Round is not in player turn"]), (len(results), conflicts))
+        # Require the winning request to report the sole newly committed event.
+        self.assertEqual([1], [len(result["credits"]) for result in results])
         # Iterate both responses for terminal-state evidence.
         for result in results:
             # Require each racer to observe the settled round.
