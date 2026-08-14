@@ -469,6 +469,26 @@
       "introduced_in": "issue-472-keno-paytable-controller",
       "changed_in": "issue-472-keno-paytable-controller",
       "notes": "The owner retained the frozen one-cent minimum and production round(float(amount) * multiplier, 2) behavior. Pick one is the explicit ideal-return exception at 3.49x/87.25 percent so its one-cent realized return is 75 percent rather than 100 percent. Exact Fraction proof covers all 230 outcome classes; production-expression enumeration covers 0.01 through 0.99 and a one-sided IEEE-754 error bound covers every accepted amount at least one play token."
+    },
+    {
+      "id": "KENO-028",
+      "module": "Keno",
+      "description": "Keno commits a pending draw and publishes its exact terminal draw state through provider-atomic player-document mutations. Concurrent sibling state updates survive both boundaries, terminal replay is idempotent only for the exact committed round, and a divergent pending draw fails closed rather than replacing or inventing state. Ticket add and remove paths remain explicitly blocked for later issue #704 slices.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/api.py",
+        "casino/games/keno/tests/test_atomic_state.py",
+        "tests/games/keno/test_economics.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-754-keno-atomic-draw-state",
+      "changed_in": "issue-754-keno-atomic-draw-state",
+      "notes": "The bounded slice preserves the frozen v1 route, request, envelope, draw entropy, paytable, and settlement law. The catalog-wide process-safety inventory remains blocked because direct ticket mutations are deliberately outside this child issue."
     }
   ]
 }

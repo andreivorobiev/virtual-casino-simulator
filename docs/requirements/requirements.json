@@ -11589,6 +11589,25 @@
       "notes": "The JSON fixture uses a disposable data root, the MySQL model opens no connector, and both restore all process-global provider seams. Existing corruption, storage, lifecycle, and request-path suites remain mandatory."
     },
     {
+      "id": "TEST-191",
+      "module": "Tests",
+      "description": "A dependency-free two-process rendezvous loads the same stale Keno player document, concurrently commits or finalizes one deterministic pending draw and one sibling marker through production atomic state helpers, and proves the final provider document retains every update with one exact terminal draw. Focused replay evidence accepts only the exact already-finalized round and rejects divergent pending state.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/tests/test_atomic_state.py",
+        "tests/games/keno/test_economics.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-754-keno-atomic-draw-state",
+      "changed_in": "issue-754-keno-atomic-draw-state",
+      "notes": "Both fresh interpreters bind CASINO_DATA_DIR to one disposable JSON provider root and synchronize after reading one stale baseline. The focused route fixture executes the same atomic mutators in isolated memory so frozen-envelope economics coverage remains production-faithful without starting a listener or changing game math."
+    },
+    {
       "id": "TEST-175",
       "module": "Tests",
       "description": "A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.",
@@ -11606,8 +11625,8 @@
         "docs/game_catalog_governance.md"
       ],
       "introduced_in": "issue-456-catalog-economics-registry",
-      "changed_in": "issue-704-casino-war-atomic-reconciliation",
-      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The first #704 slice requalifies Casino War after state-publication-only settlement-adapter changes, with its engine, payout proofs, and classification unchanged."
+      "changed_in": "issue-754-keno-atomic-draw-state",
+      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The first #704 slice requalified Casino War and the Keno child #754 requalifies only provider-atomic pending and terminal state publication; both engines, payout proofs, and classifications remain unchanged."
     },
     {
       "id": "ROU-001",
@@ -13927,6 +13946,26 @@
       "introduced_in": "issue-472-keno-paytable-controller",
       "changed_in": "issue-472-keno-paytable-controller",
       "notes": "The owner retained the frozen one-cent minimum and production round(float(amount) * multiplier, 2) behavior. Pick one is the explicit ideal-return exception at 3.49x/87.25 percent so its one-cent realized return is 75 percent rather than 100 percent. Exact Fraction proof covers all 230 outcome classes; production-expression enumeration covers 0.01 through 0.99 and a one-sided IEEE-754 error bound covers every accepted amount at least one play token."
+    },
+    {
+      "id": "KENO-028",
+      "module": "Keno",
+      "description": "Keno commits a pending draw and publishes its exact terminal draw state through provider-atomic player-document mutations. Concurrent sibling state updates survive both boundaries, terminal replay is idempotent only for the exact committed round, and a divergent pending draw fails closed rather than replacing or inventing state. Ticket add and remove paths remain explicitly blocked for later issue #704 slices.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/keno/api.py",
+        "casino/games/keno/tests/test_atomic_state.py",
+        "tests/games/keno/test_economics.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-754-keno-atomic-draw-state",
+      "changed_in": "issue-754-keno-atomic-draw-state",
+      "notes": "The bounded slice preserves the frozen v1 route, request, envelope, draw entropy, paytable, and settlement law. The catalog-wide process-safety inventory remains blocked because direct ticket mutations are deliberately outside this child issue."
     },
     {
       "id": "BINGO-001",

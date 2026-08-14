@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require accepted aggregates plus Casino War and wallet-cents allocations to total exactly 989 permanent rows.
-        self.assertEqual(len(requirements), 989)
+        # Require accepted aggregates plus Casino War, wallet-cents, and Keno atomic-state allocations to total exactly 991 permanent rows.
+        self.assertEqual(len(requirements), 991)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1429,6 +1429,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "LEDGER-036": "Core",  # Bind every durable wallet writer to canonical integer cents.
             "TOOL-019": "Tooling",  # Bind the packaged check/apply operator command.
             "TEST-190": "Tests",  # Bind JSON and MySQL normalization and rollback evidence.
+            "KENO-028": "Keno",  # Bind Keno pending-draw commit and finalization to atomic player state.
+            "TEST-191": "Tests",  # Bind the real two-process Keno stale-state rendezvous evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
