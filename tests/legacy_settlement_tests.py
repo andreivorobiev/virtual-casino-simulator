@@ -233,18 +233,22 @@ class LegacySettlementTests(unittest.TestCase):
             with ThreadPoolExecutor(max_workers=2) as pool:
                 # Submit the same deal request twice against the one open bet.
                 futures = [pool.submit(handler, {"player_id": "human"}, {}) for _ in range(2)]
-                # Resolve each racer while tolerating the loser's fail-closed conflict.
+                # Resolve each racer while tolerating the stale loser's established fail-closed conflict.
                 for future in futures:
-                    # Start protected result collection so the expected conflict is evidence rather than failure.
+                    # Start protected collection so the expected stale conflict is evidence rather than failure.
                     try:
-                        # Record one successful deal response.
+                        # Record the winning request's exact committed coup response.
                         outcomes.append(("ok", future.result(timeout=30)))
-                    # Capture the loser's fail-closed changed-identity conflict.
+                    # Capture the loser after it adopts rather than replaces the winning commitment.
                     except ConflictError:
-                        # Record the fail-closed outcome without a duplicate credit.
+                        # Record the fail-closed outcome without another settlement attempt.
                         outcomes.append(("conflict", None))
-        # Require exactly one winning deal and one fail-closed conflict.
+        # Require exactly one winning deal and one fail-closed stale request.
         self.assertEqual(["conflict", "ok"], sorted(kind for kind, _ in outcomes))
+        # Resolve the sole successful response for exact shoe and history assertions.
+        successful = next(response for kind, response in outcomes if kind == "ok")
+        # Require the natural coup to consume exactly one four-card shoe segment across the race.
+        self.assertEqual(20, successful["state"]["shoe_count"])
         # Read the settlement rows committed for the placed bet identity.
         rows = [row for row in self.settlement_rows("BACCARAT_SETTLEMENT_CREDIT") if (row.get("details") or {}).get("bet_id") == bet_id]
         # Require exactly one committed credit for the single placed bet.
@@ -253,6 +257,12 @@ class LegacySettlementTests(unittest.TestCase):
         self.assertEqual(20.0, rows[0]["amount"])
         # Require exactly one balance delta over the post-wager wallet.
         self.assertEqual(5010.0, players.get_player("human")["balance"])
+        # Require terminal history to publish the single committed coup exactly once.
+        saved = state_store.load_player_game_state("baccarat", "human", baccarat_engine.default_state)
+        # Bind the sole terminal row to both callers' exact shared round identity.
+        self.assertEqual([item["round_id"] for item in saved["last_coups"]], [successful["coup"]["round_id"]])
+        # Require no transient commitment or settled bet to survive the terminal replay.
+        self.assertEqual((saved.get("pending_coup"), saved["open_bets"]), (None, []))
 
     # Test 4a: poisoned persisted blackjack rules must settle and reshuffle at clamped house defaults. (issue #404 read-side)
     def test_blackjack_poisoned_rules_settle_at_house_defaults(self):
@@ -351,24 +361,14 @@ class LegacySettlementTests(unittest.TestCase):
         # Require injected shuffles to reorder without adding or dropping any card.
         self.assertEqual(sorted(blackjack_engine.make_shoe(1)), sorted(blackjack_engine.make_shoe(1, rng=random.Random(7))))
 
-    # Wrap the production baccarat state saver so exactly the finalize-phase save crashes once. (issue #555)
+    # Replace the production Baccarat terminal publisher so finalization crashes after credits commit. (issues #555, #756)
     def baccarat_finalize_crash(self):
-        # Keep the production saver so passthrough calls stay real.
-        real_save = baccarat_api.save_player_game_state
-        # Count saves so only the second save of the interrupted deal request fails.
-        calls = {"count": 0}
-        # Define the injected saver used during the interrupted request.
-        def crashing_save(game_id, player_id, state):
-            # Advance the per-request save counter.
-            calls["count"] += 1
-            # Crash exactly on the finalize save so the commitment survives with credits already applied.
-            if calls["count"] == 2:
-                # Raise the injected interruption the test asserts on.
-                raise RuntimeError("injected finalize crash")
-            # Delegate every other save to the production helper.
-            return real_save(game_id, player_id, state)
-        # Return the counting saver for a patch.object new= injection.
-        return crashing_save
+        # Define the injected terminal publisher used after settlement movements finish.
+        def crashing_finalize(player_id, state, coup):
+            # Preserve the durably committed coup and consumed shoe before terminal publication.
+            raise RuntimeError("injected finalize crash")
+        # Return the exact new atomic publication seam for patch.object new= injection.
+        return crashing_finalize
 
     # Seed the deterministic winning shoe used by the commitment-replay proofs.
     def seed_winning_shoe(self):
@@ -388,7 +388,7 @@ class LegacySettlementTests(unittest.TestCase):
         # Install the deterministic winning shoe under the placed bet.
         self.seed_winning_shoe()
         # Run the interrupted deal with the finalize-phase save crashing after credits commit.
-        with patch.object(baccarat_api, "save_player_game_state", new=self.baccarat_finalize_crash()):
+        with patch.object(baccarat_api, "finalize_committed_coup_state", new=self.baccarat_finalize_crash()):
             # Require the injected finalize crash to surface to the caller.
             with self.assertRaises(RuntimeError):
                 # Attempt the deal whose settlement is interrupted after crediting.
@@ -431,7 +431,7 @@ class LegacySettlementTests(unittest.TestCase):
         # Install the deterministic winning shoe under the placed bet.
         self.seed_winning_shoe()
         # Run the interrupted deal with the finalize-phase save crashing after credits commit.
-        with patch.object(baccarat_api, "save_player_game_state", new=self.baccarat_finalize_crash()):
+        with patch.object(baccarat_api, "finalize_committed_coup_state", new=self.baccarat_finalize_crash()):
             # Require the injected finalize crash to surface to the caller.
             with self.assertRaises(RuntimeError):
                 # Attempt the deal whose settlement is interrupted after crediting.

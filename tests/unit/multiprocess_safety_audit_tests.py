@@ -53,7 +53,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(len(games), audit.EXPECTED_GAME_COUNT)
         # Reject duplicate or omitted game identities.
         self.assertEqual(len({row["game_id"] for row in games}), audit.EXPECTED_GAME_COUNT)
-        # Pin the exact current persistence families, including the explicit Casino War and Keno migration slices.
+        # Pin the exact current persistence families, including the Casino War, Keno, and Baccarat migration slices.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths"},  # Pin accepted families.
@@ -64,7 +64,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths"}  # Cover all models.
             },
-            {"player_document_load_save": 33, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 2},  # Pin current counts.
+            {"player_document_load_save": 32, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 3},  # Pin current counts.
         )
         # Resolve the sole incremental migration row without treating mixed persistence as compatible.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -86,6 +86,16 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertGreater(keno["atomic_update_call_sites"], 0)
         # Keep Keno fail closed for a second worker until every direct mutation is retired.
         self.assertEqual(keno["multiworker_status"], "blocked")
+        # Resolve the Baccarat coup-publication slice without concealing its remaining direct wager writes.
+        baccarat = next(row for row in games if row["game_id"] == "baccarat")
+        # Require the legacy Baccarat document load while bet management remains outside this slice.
+        self.assertGreater(baccarat["load_call_sites"], 0)
+        # Preserve the direct bet-add and bet-remove debt for later parent-issue slices.
+        self.assertGreater(baccarat["save_call_sites"], 0)
+        # Bind pending-coup commit and finalization to reachable provider-atomic call sites.
+        self.assertGreater(baccarat["atomic_update_call_sites"], 0)
+        # Keep Baccarat fail closed for a second worker until every direct mutation is retired.
+        self.assertEqual(baccarat["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))
         # Refuse second-worker authorization for every game.

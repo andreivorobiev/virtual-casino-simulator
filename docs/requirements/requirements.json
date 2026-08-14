@@ -11608,6 +11608,25 @@
       "notes": "Both fresh interpreters bind CASINO_DATA_DIR to one disposable JSON provider root and synchronize after reading one stale baseline. The focused route fixture executes the same atomic mutators in isolated memory so frozen-envelope economics coverage remains production-faithful without starting a listener or changing game math."
     },
     {
+      "id": "TEST-192",
+      "module": "Tests",
+      "description": "A dependency-free two-process rendezvous loads the same stale Baccarat player document, concurrently commits or finalizes one deterministic coup and one sibling marker through production atomic state helpers, and proves one shoe segment, exact terminal history, open-bet removal, and every sibling update survive. Focused concurrent route evidence requires one winning response, one established stale-request conflict, and exactly one money and history settlement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/tests/test_atomic_state.py",
+        "tests/legacy_settlement_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-756-baccarat-atomic-coup-state",
+      "changed_in": "issue-756-baccarat-atomic-coup-state",
+      "notes": "Both fresh interpreters bind CASINO_DATA_DIR to one disposable JSON provider root and synchronize after reading one stale baseline. Exact finalization replay accepts only the complete terminal coup and divergent pending or aliased round state fails closed."
+    },
+    {
       "id": "TEST-175",
       "module": "Tests",
       "description": "A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.",
@@ -11625,8 +11644,8 @@
         "docs/game_catalog_governance.md"
       ],
       "introduced_in": "issue-456-catalog-economics-registry",
-      "changed_in": "issue-754-keno-atomic-draw-state",
-      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The first #704 slice requalified Casino War and the Keno child #754 requalifies only provider-atomic pending and terminal state publication; both engines, payout proofs, and classifications remain unchanged."
+      "changed_in": "issue-756-baccarat-atomic-coup-state",
+      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, and Baccarat #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged."
     },
     {
       "id": "ROU-001",
@@ -15328,6 +15347,24 @@
       "introduced_in": "issue-265-baccarat-sustained-qualification",
       "changed_in": "issue-265-baccarat-sustained-qualification",
       "notes": "The exact-source profile uses one disposable loopback runtime, one synthetic account, one browser context, exactly 2,000 rounds, and one attempt per round; any control disappearance, wager-ready timeout, browser diagnostic, isolation failure, or cleanup failure keeps the result red."
+    },
+    {
+      "id": "BAC-027",
+      "module": "Baccarat",
+      "description": "Baccarat commits each pending coup, consumed shoe position, and terminal coup history against the latest provider-owned player document so racing stale requests reuse one exact committed coup without losing sibling state or repeating settlement side effects.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/api.py",
+        "casino/games/baccarat/tests/test_atomic_state.py",
+        "tests/legacy_settlement_tests.py"
+      ],
+      "introduced_in": "issue-756-baccarat-atomic-coup-state",
+      "changed_in": "issue-756-baccarat-atomic-coup-state",
+      "notes": "Bet placement and cancellation remain explicit direct-write debt under parent issue #704. This slice changes no cards, shoe rules, payout math, ledger identity, route, response envelope, public contract, or player-visible behavior."
     },
     {
       "id": "MHVP-001",
