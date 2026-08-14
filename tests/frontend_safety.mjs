@@ -13,6 +13,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const apiSource = await readFile(path.join(root, 'web', 'core', 'api.js'), 'utf8');
 // Read the shared feedback helper that owns toast palette semantics.
 const uiSource = await readFile(path.join(root, 'web', 'core', 'ui.js'), 'utf8');
+// Read the shared card renderer so duplicate escaping implementations cannot return. (CORE-033)
+const cardsSource = await readFile(path.join(root, 'web', 'core', 'cards.js'), 'utf8');
 // Read the persistent shell markup that owns live-region semantics.
 const indexSource = await readFile(path.join(root, 'web', 'index.html'), 'utf8');
 // Read shared styles that own the Slots reduced-motion channel.
@@ -87,6 +89,26 @@ const executableUiSource = uiSource
   .concat('\nexport { toastIsSuccess };\n');
 // Import the transformed exact implementation without executing unrelated UI functions.
 const uiModule = await import(`data:text/javascript;base64,${Buffer.from(executableUiSource).toString('base64')}`);
+// Exercise ordinary hostile text through the escape-by-default tagged template boundary. (CORE-033)
+assert.equal(String(uiModule.html`<p data-value="${'\"><img src=x onerror=alert(1)>'}">${'<script>&'}</p>`), '<p data-value="&quot;&gt;&lt;img src=x onerror=alert(1)&gt;">&lt;script&gt;&amp;</p>');
+// Require nested fragment arrays to flatten without commas while independently escaping their text. (CORE-033)
+assert.equal(String(uiModule.html`<ul>${[uiModule.html`<li>${'A&B'}</li>`, uiModule.html`<li>${'<two>'}</li>`]}</ul>`), '<ul><li>A&amp;B</li><li>&lt;two&gt;</li></ul>');
+// Require reviewed nested attribute fragments to preserve markup while escaping their value. (CORE-033)
+assert.equal(String(uiModule.html`<div${uiModule.html` data-testid="${'row'}"`}></div>`), '<div data-testid="row"></div>');
+// Require the explicit raw escape hatch to preserve only caller-reviewed markup. (CORE-033)
+assert.equal(String(uiModule.html`<div>${uiModule.raw('<strong data-safe="1">Reviewed</strong>')}</div>`), '<div><strong data-safe="1">Reviewed</strong></div>');
+// Require the migration adapter to reuse the canonical escape implementation without double escaping. (CORE-033)
+assert.equal(String(uiModule.html`<p>${uiModule.escaped('<Admin>')}</p>`), '<p>&lt;Admin&gt;</p>');
+// Require the legacy card helper to escape caller-owned rank text through the same implementation. (CORE-033)
+assert.match(uiModule.cardHtml({ rank: '<img>', suit: '♥' }), /&lt;img&gt;/);
+// Require the dedicated card renderer to import the canonical helper instead of defining a competing encoder. (CORE-033)
+assert.match(cardsSource, /import \{ safe \} from '\.\/ui\.js';/);
+// Reject any return of the retired card-local escape implementation. (CORE-033)
+assert.doesNotMatch(cardsSource, /function escapeHtml\(/);
+// Require the formatter selector to compose its reviewed option fragments through the tagged template. (CORE-033)
+assert.match(adminSource, /return html`\$\{browser\}\$\{formatters\.map\(locale => option\(/);
+// Reject string coercion that would make the outer template escape every generated option as text. (CORE-033)
+assert.doesNotMatch(adminSource, /return browser \+ formatters\.map\(/);
 // Build the persistent toast outlet used by every palette assertion.
 const toastOutlet = { textContent: '', style: {}, hidden: true };
 // Route only the shared toast identity to the focused outlet.

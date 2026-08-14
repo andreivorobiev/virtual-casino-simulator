@@ -2140,6 +2140,20 @@ def run_api_tests():
             raise AssertionError('frontend safety suite failed')
     # Record invitation-log, toast, motion, Roulette, mobile, runtime, and autoplay rate-limit recovery proof.
     run_case('FRONTEND-SAFETY-001',['SEC-013','SEC-015','UX-021','UX-027','CORE-028','ROU-043','TEENP-002','MOTION-010','AUTO-015','AUDIO-010','ADMIN-032','TEST-136','TEST-153','TEST-155','TEST-156'],run_frontend_safety_tests)
+    # Execute the escape-by-default helper and monotonic innerHTML baseline proof without opening a listener. (TEST-186)
+    def run_inner_html_template_tests():
+        # Import the focused governance suite only when its mapped case runs.
+        from tests import inner_html_template_tests
+        # Load exactly the helper, scanner, reduction, and fail-closed regression cases.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(inner_html_template_tests.InnerHtmlTemplateTests)
+        # Execute the focused suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named case when any production helper or baseline assertion failed.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the central failure label stable.
+            raise AssertionError('innerHTML template governance suite failed')
+    # Record the canonical escape boundary, Admin migration, and monotonic remainder gate. (CORE-033, SEC-017, TEST-186)
+    run_case('GOV-INNER-HTML-001',['CORE-033','SEC-017','TEST-186'],run_inner_html_template_tests)
     # Execute the complete listener-free catalog repeat-bet contract without opening a listener.
     def run_repeat_bet_tests():
         # Import the focused repeat-bet suite only when its mapped case runs.
@@ -10318,6 +10332,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     run_case('BR-ADMIN-NAV-AUTH-001',['ADMIN-001','AUTH-005','AUTH-008','TEST-060'],admin_navigation_authorization)
                     # Define the Admin dashboard version check mapped to its existing browser requirement coverage.
                     def admin_dashboard_browser():
+                        # Exercise the production tagged template in the real browser module graph with hostile ordinary text. (CORE-033, SEC-017)
+                        escaped_probe=page.evaluate("""async () => { const { html }=await import('/core/ui.js'); return String(html`<p>${'<img src=x onerror=alert(1)>&'}</p>`); }""")
+                        # Require escape-by-default output before inspecting the migrated Admin views.
+                        assert escaped_probe=='<p>&lt;img src=x onerror=alert(1)&gt;&amp;</p>'
                         # Require the existing Admin navigation to remain available after dashboard load.
                         assert page.get_by_test_id('admin-tab-audio').is_visible()
                         # Require the authenticated Operations tab to remain in the Admin navigation.
@@ -10334,12 +10352,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         module_table=page.locator('#adminView table').first
                         # Require one header plus every canonical module row.
                         assert module_table.locator('tr').count()==len(EXPECTED_MODULE_ROWS)+1
+                        # Reject object coercion and array separators so the migrated table remains byte-shape compatible. (TEST-186)
+                        assert page.locator('#adminView').evaluate("node => !node.innerHTML.includes('[object Object]') && !node.innerHTML.includes('</tr>,<tr>')")
                         # Compare each browser-visible module row with canonical manifest values.
                         for expected in EXPECTED_MODULE_ROWS:
                             # Require exactly one row containing both the module name and its canonical revision.
                             assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                     # Execute the mapped Admin dashboard and packaged-release browser regression.
-                    run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                    run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','CORE-033','SEC-017','TEST-023','TEST-186'],admin_dashboard_browser)
                     # Define responsive diagnostics coverage for nested state, history, tests, and their empty states. (ADMIN-029, TEST-145)
                     def admin_diagnostics_browser():
                         # Store the exact governed Admin visual matrix.

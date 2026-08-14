@@ -3,6 +3,9 @@
 // Provide isolated accessible card markup for future card and poker games.
 // Requirements: CARD-002.
 
+// Import the shared escape implementation so card markup cannot drift from the application boundary. (CORE-033)
+import { safe } from './ui.js';
+
 // Define stable rank labels for screen-reader descriptions.
 const RANK_LABELS = { A: 'Ace', K: 'King', Q: 'Queen', J: 'Jack', '10': '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4', '3': '3', '2': '2' };
 // Define canonical suit metadata without relying on icon fonts.
@@ -14,12 +17,6 @@ const SUITS = {
 };
 // Map accepted suit spellings to compact canonical suit codes.
 const SUIT_ALIASES = { C: 'C', CLUBS: 'C', '♣': 'C', D: 'D', DIAMONDS: 'D', '♦': 'D', H: 'H', HEARTS: 'H', '♥': 'H', S: 'S', SPADES: 'S', '♠': 'S' };
-
-// Escape text before placing caller-owned values into generated markup.
-function escapeHtml(value) {
-  // Replace every HTML-sensitive character with its entity representation.
-  return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
-}
 
 // Normalize compact strings and object payloads into one renderer shape.
 export function normalizeCard(card) {
@@ -62,7 +59,7 @@ export function renderCard(card, options = {}) {
   // Build stable classes for suit color and optional selected state.
   const classes = `playing-card playing-card--${normalized.color}${selected ? ' playing-card--selected' : ''}${extraClass ? ` ${extraClass}` : ''}`;
   // Render visible rank and suit as decorative text under one accessible label.
-  return `<span class="${classes}" role="img" aria-label="${escapeHtml(normalized.label)}"${selected ? ' aria-current="true"' : ''}><span class="playing-card__rank" aria-hidden="true">${escapeHtml(normalized.rank)}</span><span class="playing-card__suit" aria-hidden="true">${escapeHtml(normalized.symbol)}</span></span>`;
+  return `<span class="${classes}" role="img" aria-label="${safe(normalized.label)}"${selected ? ' aria-current="true"' : ''}><span class="playing-card__rank" aria-hidden="true">${safe(normalized.rank)}</span><span class="playing-card__suit" aria-hidden="true">${safe(normalized.symbol)}</span></span>`;
 }
 
 // Report the user's reduced-motion preference without requiring a browser global.

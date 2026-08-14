@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.67.3
+- application: 9.68.0
 - core: 9.43.1
 - mobile: 1.0.0
 - ledger: 9.1.2
@@ -14,7 +14,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.18.1
+- admin: 1.18.2
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.2
@@ -54,7 +54,7 @@ Historical source baseline: 9.1.0
 - tests: 1.93.0
 - docs: 1.89.0
 - contracts: 1.61.5
-- tooling: 1.38.0
+- tooling: 1.39.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.5
 - poker_dice: 1.1.3
@@ -664,6 +664,9 @@ Historical source baseline: 9.1.0
 - **TOOL-018** (Tooling) - PASS: Independent module revisions are validated generically from the aggregate and every module descriptor, and pull-request CI rejects any semantic downgrade or removal against the immutable event-base manifest. The sanctioned bump helper updates only the selected descriptor and its aggregate entry; conflict-prone per-module version literals are prohibited from the request-latency oracle.
 - **TEST-184** (Tests) - PASS: Listener-free evidence proves the sanctioned helper produces an aligned monotonic bump without shared test-pin edits, downgrades and removals fail against an exact baseline, new modules remain additive, CI fetches the immutable pull-request base SHA, and the former request-latency module-version literals remain absent.
 - **TEST-185** (Tests) - PASS: Four Card Poker, Pachinko, Daily Draw Lab, Faro, and Trente et Quarante each own one dedicated Playwright acceptance case that loads the catalog route, commits a real wager and settlement, binds the rendered wallet to the authoritative response, reloads without another mutation, and recovers the server-owned terminal or repeat state. Their suites live under tests/games/<id>, affected-game selection maps one-game changes to the matching case, the reviewed duration profile includes all five cases, and shard-union verification remains exact.
+- **CORE-033** (Application) - PASS: Shared browser markup uses one escape-by-default tagged-template boundary. Every ordinary interpolation is HTML-escaped, arrays of reviewed fragments compose without separators, explicit raw markup requires the opaque raw() wrapper, and the staged escaped-text adapter delegates to the same canonical entity encoder.
+- **SEC-017** (Core) - PASS: Every Admin innerHTML and insertAdjacentHTML payload is built by the shared escape-by-default tagged template. Client- or server-controlled values are escaped unless source review explicitly wraps a prebuilt fragment, and the remaining repository innerHTML debt may only decrease from its checked-in per-file baseline.
+- **TEST-186** (Tests) - PASS: Executable browser-free evidence proves hostile ordinary values are escaped, explicit reviewed fragments compose, nested fragment arrays introduce no commas, the legacy adapter does not double escape, the card renderer has no second encoder, and the innerHTML baseline accepts reductions while rejecting increases, new files, and all Admin debt. Browser evidence spot-checks the migrated Admin dashboard and module table for unchanged topology and escaped hostile text.
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
