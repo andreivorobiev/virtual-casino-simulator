@@ -1214,7 +1214,7 @@ def run_mysql_live_provider_path():
     # Import the data root used to derive stable provider document keys.
     from casino.config import DATA_DIR
     # Import core services whose JSON-shaped state must no longer create hybrid files.
-    from casino.core import auth, autoplay, feedback, invitations, ledger, mail, one_time_tokens, pending_enrollment, players, state_store, storage
+    from casino.core import auth, autoplay, feedback, guest_analytics, guest_conversion, invitations, ledger, mail, one_time_tokens, pending_enrollment, players, state_store, storage
     # Import the generic token rejection used by the superseded-bearer assertion.
     from casino.errors import ValidationError
     # Import OAuth persistence only inside the explicitly requested disposable MySQL gate.
@@ -1270,6 +1270,54 @@ def run_mysql_live_provider_path():
         os.environ["CASINO_STORAGE_PROVIDER"] = "mysql"
         # Start protected live evidence so the workflow selector is always restored.
         try:
+            # Create one real provider-backed guest wallet for stale-teardown ownership parity. (AUTH-020, LEDGER-037, TEST-194)
+            mysql_guest_player = players.create_player("MySQL stale teardown guest", "guest", config.GUEST_STARTING_BALANCE)
+            # Create the de-identified lifecycle row through the production analytics boundary.
+            mysql_guest_analytics = guest_analytics.record_started("en-US", "desktop", config.GUEST_STARTING_BALANCE)
+            # Build the canonical disposable identity shape consumed by conversion and teardown.
+            mysql_guest = {"user_id": "guest_mysql_stale_teardown", "email": None, "username": None, "display_name": "Guest trial", "role": "guest", "roles": ["guest"], "status": "active", "player_id": mysql_guest_player["player_id"], "password_hash": "", "terms_required": False, "terms_accepted_at": "2026-01-01T00:00:00.000Z", "terms_accepted_version": config.GUEST_TERMS_VERSION, "terms_acceptance_source": "guest_entry", "locale": "en-US", "language": "en-US", "created_at": "2026-01-01T00:00:00.000Z", "updated_at": "2026-01-01T00:00:00.000Z", "identity_provider": "guest", "guest": True, "guest_expires_at": "2036-01-01T00:00:00.000Z", "guest_analytics_id": mysql_guest_analytics}
+
+            # Append the synthetic guest through the provider-owned users transaction.
+            def add_mysql_guest(state):
+                # Require the canonical document shape before adding live integration state.
+                assert isinstance(state, dict) and isinstance(state.get("users"), list)
+                # Append exactly one disposable owner of the newly created wallet.
+                state["users"].append(mysql_guest)
+                # Return the complete provider document for commit.
+                return state
+
+            # Persist the guest under the same MySQL row lock used by production admission.
+            auth.update_json(auth.USERS_PATH, add_mysql_guest, auth.default_users)
+            # Create one disposable session so successful conversion exercises canonical revocation.
+            auth.create_session(mysql_guest, "mysql-stale-teardown-guest")
+            # Commit a distinguishable legitimate movement before conversion adopts the wallet.
+            ledger.debit(mysql_guest["player_id"], 125, "MYSQL_GUEST_PLAY", "roulette", "mysql_guest_play_round", {"proof": "stale_teardown"})
+            # Convert through the exact production service and provider-owned users document transaction.
+            mysql_conversion = guest_conversion.convert(mysql_guest, "mysql-stale-teardown@example.test", "MySQLStaleTeardownPassw0rd!23", "MySQL Stale Teardown", terms_version="v1", accepted=True, locale="en-US", idempotency_key="mysql-stale-teardown-conversion-0001")
+            # Resolve the durable account that adopted the guest wallet.
+            mysql_account = auth.find_user_by_email("mysql-stale-teardown@example.test")
+            # Create one durable account session after conversion that stale guest teardown must preserve.
+            auth.create_session(mysql_account, "mysql-stale-teardown-account")
+            # Capture exact provider-backed wallet, ledger, history, and session state after conversion.
+            mysql_player_before = dict(players.get_player(mysql_guest["player_id"]))
+            # Capture the complete bounded ledger tail for exact no-movement proof.
+            mysql_ledger_before = ledger.read_recent(mysql_guest["player_id"], 100)
+            # Capture the provider's complete bounded history projection.
+            mysql_history_before = provider.recent_history(limit=100)
+            # Capture every canonical session after the account session is durable.
+            mysql_sessions_before = auth.load_sessions()
+            # Submit the exact stale pre-conversion principal through production teardown twice.
+            auth.end_guest_trial(dict(mysql_guest), "ended")
+            # Replay with a different terminal reason to prove stable converted refusal.
+            auth.end_guest_trial(dict(mysql_guest), "expired")
+            # Require every adopted-wallet and account-session projection to remain exact.
+            assert (players.get_player(mysql_guest["player_id"]), ledger.read_recent(mysql_guest["player_id"], 100), provider.recent_history(limit=100), auth.load_sessions()) == (mysql_player_before, mysql_ledger_before, mysql_history_before, mysql_sessions_before)
+            # Require one converted guest marker, one account owner, and zero terminal teardown rows.
+            mysql_terminal_guest = auth.find_user_by_id(mysql_guest["user_id"])
+            # Select non-guest owners from the canonical provider-backed identity document.
+            mysql_owners = [row for row in auth.load_users()["users"] if row.get("player_id") == mysql_guest["player_id"] and not auth.is_guest(row)]
+            # Bind provider parity for identity, wallet, and exactly-zero stale money movement.
+            assert mysql_terminal_guest["status"] == "converted" and len(mysql_owners) == 1 and mysql_owners[0]["user_id"] == mysql_account["user_id"] and mysql_conversion["balance"] == mysql_player_before["balance"] and not any(row.get("transaction_type") == "GUEST_TRIAL_END" for row in mysql_ledger_before)
             # Build the inert token service over the canonical provider-routed authentication document.
             token_service = one_time_tokens.TokenService(store_path=DATA_DIR / "auth" / "one_time_tokens.json", digest_key=MYSQL_TOKEN_TEST_KEY, audit_sink=lambda level, event, fields: None)
             # Issue one ephemeral bearer for the cross-process exactly-once race.
