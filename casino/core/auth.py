@@ -220,6 +220,12 @@ def create_user(email: str, password: str, display_name: str, role: str = "playe
         if any(stored.get("player_id") == bound_player["player_id"] and not is_guest(stored) for stored in state.get("users", [])):
             # Preserve exactly one durable account owner for every wallet and ledger identity.
             raise ConflictError("player is already bound to an account")
+        # Resolve a disposable owner inside the same identity transaction used by conversion and teardown.
+        guest_owner = next((stored for stored in state.get("users", []) if stored.get("player_id") == bound_player["player_id"] and is_guest(stored)), None)
+        # Refuse account adoption after teardown has claimed the wallet or conversion already completed.
+        if guest_owner is not None and (guest_owner.get("status") != "active" or guest_owner.get("converted_to_user_id")):
+            # Preserve the first terminal lifecycle winner without creating a second wallet owner.
+            raise ConflictError("guest player is unavailable for account conversion")
         # Append the new canonical identity exactly once.
         state["users"].append(user)
         # Return the complete identity document for atomic persistence.
@@ -693,46 +699,150 @@ def create_guest(client: str = "", accepted: bool = False, terms_version: str = 
     # Return the guest principal and its session to the endpoint layer.
     return {"user": user, "session": session, "browser_nonce": browser_nonce}
 
-# Irreversibly end a guest trial so no cookie can restore its wallet, game state, history, or identity. (issue #317)
+# Claim one canonical guest for teardown before touching its sessions, wallet, player, or analytics. (AUTH-020, LEDGER-037)
+def _claim_guest_teardown(user: dict, reason: str) -> dict | None:
+    # Bind the caller only to its immutable server-issued identity and wallet references.
+    expected_user_id = str((user or {}).get("user_id") or "")
+    # Bind the wallet separately so a stale or malformed identity cannot select another player.
+    expected_player_id = str((user or {}).get("player_id") or "")
+    # Refuse an incomplete stale principal without reading or mutating any wallet.
+    if not expected_user_id or not expected_player_id:
+        # Return the same stable no-op used for a non-guest or converted principal.
+        return None
+    # Normalize arbitrary caller text before persisting the recoverable teardown reason.
+    safe_reason = reason if reason in guest_analytics.ALLOWED_END_REASONS else "ended"
+    # Capture only the canonical identity selected inside the provider-owned transaction.
+    claimed = {"user": None}
+
+    # Serialize conversion ownership and terminal teardown through the shared users document.
+    def claim(state: dict) -> dict:
+        # Reject malformed identity storage rather than re-seeding or rewriting recoverable evidence.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Surface one fixed operator boundary without publishing identity or wallet data.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Resolve the exact durable principal instead of trusting the caller's stale dictionary.
+        canonical = next((stored for stored in state["users"] if stored.get("user_id") == expected_user_id), None)
+        # Return unchanged when the durable identity vanished, changed class, or changed wallet binding.
+        if canonical is None or not is_guest(canonical) or str(canonical.get("player_id") or "") != expected_player_id:
+            # Leave every account, session, wallet, and analytics row untouched.
+            return state
+        # Detect any durable account that already adopted the same player before teardown won the lock.
+        account_owner = next((stored for stored in state["users"] if stored.get("player_id") == expected_player_id and not is_guest(stored)), None)
+        # Refuse converted, account-owned, or already-terminal guests before any money-side effect.
+        if canonical.get("status") in {"converted", "ended"} or canonical.get("converted_to_user_id") or account_owner is not None:
+            # Make every stale post-conversion call a byte-stable no-op.
+            return state
+        # Refuse unreviewed lifecycle states while permitting an interrupted teardown to resume.
+        if canonical.get("status") not in {"active", "ending"}:
+            # Preserve the unknown state for operator recovery.
+            return state
+        # Claim a newly active guest before another account can adopt its player.
+        if canonical.get("status") == "active":
+            # Publish the recoverable internal state that blocks account creation on this player.
+            canonical["status"] = "ending"
+            # Preserve the first terminal reason across every crash or retry.
+            canonical["guest_teardown_reason"] = safe_reason
+            # Retain the first claim time for bounded operator diagnostics.
+            canonical["guest_teardown_started_at"] = utc_now()
+            # Refresh the canonical lifecycle timestamp with the claim.
+            canonical["updated_at"] = canonical["guest_teardown_started_at"]
+        # Normalize a legacy or malformed retry reason without replacing a valid first reason.
+        canonical["guest_teardown_reason"] = canonical.get("guest_teardown_reason") if canonical.get("guest_teardown_reason") in guest_analytics.ALLOWED_END_REASONS else safe_reason
+        # Publish a detached canonical snapshot only after every ownership check passed.
+        claimed["user"] = dict(canonical)
+        # Return the complete identity document for atomic persistence.
+        return state
+
+    # Persist the claim with strict JSON corruption handling and the MySQL row-lock equivalent.
+    update_json_strict(USERS_PATH, claim, default_users, "Authentication user storage requires operator recovery")
+    # Return the canonical resumable guest or the stable no-op result.
+    return claimed["user"]
+
+
+# Finalize one successfully converged teardown without allowing a converted owner behind it. (AUTH-020, LEDGER-037)
+def _finalize_guest_teardown(user: dict) -> None:
+    # Capture the exact claimed identifiers used by the preceding money and analytics operations.
+    expected_user_id = str(user.get("user_id") or "")
+    # Keep the terminal wallet binding immutable through final identity publication.
+    expected_player_id = str(user.get("player_id") or "")
+
+    # Publish ended only while the same claimed guest remains the sole owner of the player.
+    def finalize(state: dict) -> dict:
+        # Reject malformed identity storage without replacing recoverable evidence.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Surface one fixed operator boundary without identity or wallet detail.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Resolve the exact canonical guest selected by the prior claim.
+        canonical = next((stored for stored in state["users"] if stored.get("user_id") == expected_user_id), None)
+        # Require the same disposable principal and wallet binding at final publication.
+        if canonical is None or not is_guest(canonical) or str(canonical.get("player_id") or "") != expected_player_id:
+            # Preserve every durable side effect for explicit operator recovery.
+            raise ConflictError("Guest wallet teardown requires operator recovery")
+        # Accept an exact already-terminal replay without changing its first terminal metadata.
+        if canonical.get("status") == "ended":
+            # Return the unchanged document after the idempotent terminal replay.
+            return state
+        # Reject any state that no longer represents the exact claimed teardown.
+        if canonical.get("status") != "ending" or canonical.get("converted_to_user_id"):
+            # Refuse to publish a false terminal result over a competing lifecycle.
+            raise ConflictError("Guest wallet teardown requires operator recovery")
+        # Reject finalization if any durable account somehow appeared on the claimed player.
+        if any(stored.get("player_id") == expected_player_id and not is_guest(stored) for stored in state["users"]):
+            # Preserve the adopted account and its wallet for operator recovery.
+            raise ConflictError("Guest wallet teardown requires operator recovery")
+        # Publish the terminal guest identity only after money, player, and analytics convergence.
+        canonical["status"] = "ended"
+        # Stamp the durable completion time separately from the initial claim.
+        canonical["guest_teardown_completed_at"] = utc_now()
+        # Refresh the canonical lifecycle timestamp with final publication.
+        canonical["updated_at"] = canonical["guest_teardown_completed_at"]
+        # Return the complete identity document for atomic persistence.
+        return state
+
+    # Finalize through the same strict provider-owned identity boundary used by the claim.
+    update_json_strict(USERS_PATH, finalize, default_users, "Authentication user storage requires operator recovery")
+
+
+# Irreversibly end a canonical guest trial so no cookie can restore its wallet, game state, history, or identity. (AUTH-020, LEDGER-037)
 def end_guest_trial(user: dict, reason: str = "ended") -> None:
     # Ignore any non-guest caller so a registered identity can never be revoked here.
     if not is_guest(user):
         # Return without action for non-guest principals.
         return
+    # Claim and re-resolve the durable guest before any session, wallet, player, or analytics operation.
+    canonical = _claim_guest_teardown(user, reason)
+    # Stop on converted, account-owned, terminal, missing, or otherwise ineligible canonical state.
+    if canonical is None:
+        # Make stale post-conversion and repeated terminal calls stable no-ops.
+        return
     # Capture the terminal fake-token balance before revocation for de-identified product aggregates.
     try:
         # Read only the guest-bound wallet selected by the authenticated server identity.
-        ending_balance = players.get_player(user.get("player_id"))["balance"]
+        ending_balance = players.get_player(canonical["player_id"])["balance"]
     # Preserve teardown even if a previously corrupted guest wallet is unavailable.
     except Exception:
         # Omit the optional aggregate rather than weakening credential revocation.
         ending_balance = None
-    # Remove every session belonging to the guest so the browser cookie stops resolving immediately.
-    def revoke_sessions(state: dict) -> dict:
-        # Drop the guest's sessions entirely, leaving no resumable credential.
-        state["sessions"] = [stored for stored in state.get("sessions", []) if stored.get("user_id") != user["user_id"]]
-        # Return the mutated session document for atomic persistence.
+    # Remove every session belonging to the claimed guest so stale cookies stop resolving immediately.
+    def remove_guest_sessions(state: dict) -> dict:
+        # Reject malformed session storage without replacing recoverable credential evidence.
+        if not isinstance(state, dict) or not isinstance(state.get("sessions"), list):
+            # Surface one fixed operator boundary without exposing any credential or identity.
+            raise RuntimeError("Session storage requires operator recovery")
+        # Delete only the disposable identity's rows so no browser credential can resume it.
+        state["sessions"] = [stored for stored in state["sessions"] if stored.get("user_id") != canonical["user_id"]]
+        # Stamp the canonical schema version after the bounded deletion.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the complete sessions document for atomic persistence.
         return state
-    update_json(SESSIONS_PATH, revoke_sessions, default_sessions)
-    # Disable the guest identity so any stale token fails closed even before pruning.
-    def disable_user(state: dict) -> dict:
-        # Mark the guest identity ended without reusing it for any future authentication.
-        for stored in state.get("users", []):
-            # Match the guest identity by id.
-            if stored.get("user_id") == user["user_id"]:
-                # End the identity so its token can never resolve again.
-                stored["status"] = "ended"
-                # Stamp the update time for analytics and audit.
-                stored["updated_at"] = utc_now()
-        # Return the mutated user document for atomic persistence.
-        return state
-    update_json(USERS_PATH, disable_user, default_users)
+    # Apply the deletion through strict JSON handling and the provider's document transaction.
+    update_json_strict(SESSIONS_PATH, remove_guest_sessions, default_sessions, "Session storage requires operator recovery")
     # Import the control-plane helper lazily so auth initialization remains cycle-free.
     from casino.core import autoplay
     # Stop every active guest-owned autoplay registration before revoking its wallet.
-    autoplay.stop_for_player(user["player_id"])
+    autoplay.stop_for_player(canonical["player_id"])
     # Bind the terminal money movement to the immutable server-issued trial identity.
-    trial_identity = str(user.get("guest_analytics_id") or user.get("user_id") or "")
+    trial_identity = str(canonical.get("guest_analytics_id") or canonical.get("user_id") or "")
     # Refuse an identity-less money mutation because it could not be replayed safely.
     if not trial_identity:
         # Surface one fixed operator boundary without echoing identity or wallet data.
@@ -740,17 +850,19 @@ def end_guest_trial(user: dict, reason: str = "ended") -> None:
     # Burn a positive residual wallet exactly once through the shared ledger boundary.
     if ending_balance is not None and ending_balance > 0:
         # Use the same action key on every retry so the provider cannot double-debit the trial.
-        ledger.debit_once(user["player_id"], ending_balance, "GUEST_TRIAL_END", f"guest-trial-end:{trial_identity}", round_id=trial_identity, details={"reason": "trial_terminal"})
+        ledger.debit_once(canonical["player_id"], ending_balance, "GUEST_TRIAL_END", f"guest-trial-end:{trial_identity}", round_id=trial_identity, details={"reason": "trial_terminal"})
     # Re-read the authoritative wallet after the exactly-once movement.
-    terminal_player = players.get_player(user["player_id"])
+    terminal_player = players.get_player(canonical["player_id"])
     # Fail closed instead of hiding a concurrent or incomplete money movement with a direct overwrite.
     if terminal_player.get("balance") != 0.0:
         # Preserve the ledger and wallet evidence for an operator rather than inventing terminal state.
         raise ConflictError("Guest wallet teardown requires operator recovery")
     # Revoke only non-money presentation fields after the ledger proves the wallet is empty.
-    players.update_player(user["player_id"], lambda player: player.update({"status": "ended", "display_name": "Ended guest trial", "updated_at": utc_now()}))
+    players.update_player(canonical["player_id"], lambda player: player.update({"status": "ended", "display_name": "Ended guest trial", "updated_at": utc_now()}))
     # Close the de-identified trial summary with its bounded end reason for the Admin funnel. (issue #317)
-    guest_analytics.record_ended(user.get("guest_analytics_id"), reason, ending_balance=ending_balance)
+    guest_analytics.record_ended(canonical.get("guest_analytics_id"), canonical.get("guest_teardown_reason") or reason, ending_balance=ending_balance)
+    # Publish the terminal identity only after every money, player, and analytics side effect converged.
+    _finalize_guest_teardown(canonical)
 
 # Consume one guest game-action allowance before a state-changing route executes. (issue #317)
 def consume_guest_action(session: dict, user: dict) -> int:
@@ -816,13 +928,23 @@ def expire_overdue_guests() -> int:
     for session in sessions:
         # Keep the newest timestamp when an identity somehow owns more than one active session.
         last_activity[session.get("user_id")] = max(last_activity.get(session.get("user_id"), ""), str(session.get("updated_at") or session.get("created_at") or ""))
-    # Collect active guests past either the absolute lifetime or inactivity boundary.
+    # Collect active overdue guests plus interrupted claimed teardowns that must resume.
     overdue = []
     # Evaluate each disposable identity independently so registered accounts remain untouched.
     for user in state.get("users", []):
-        # Skip every non-active or non-guest identity before parsing guest-only timestamps.
-        if not is_guest(user) or user.get("status") != "active":
-            # Continue to the next stored identity.
+        # Skip every non-guest identity before interpreting disposable lifecycle state.
+        if not is_guest(user):
+            # Continue without exposing or mutating a durable account.
+            continue
+        # Resume any prior teardown claim before evaluating new expiry boundaries.
+        if user.get("status") == "ending":
+            # Preserve the first bounded reason committed with the claim.
+            overdue.append((user, user.get("guest_teardown_reason") or "ended"))
+            # Continue because a claimed teardown no longer needs expiry calculation.
+            continue
+        # Skip every other non-active lifecycle state.
+        if user.get("status") != "active":
+            # Preserve converted, ended, and unknown identities exactly.
             continue
         # Detect the configured absolute lifetime boundary.
         absolute_expired = bool(user.get("guest_expires_at")) and parse_time(user["guest_expires_at"]) <= now
@@ -833,11 +955,11 @@ def expire_overdue_guests() -> int:
         # Queue either time-bounded outcome for the standard irreversible teardown.
         if absolute_expired or inactive:
             # Retain only the user object needed by the teardown, never a session token.
-            overdue.append(user)
+            overdue.append((user, "expired"))
     # End each overdue guest through the standard no-recovery teardown with the expired reason.
-    for user in overdue:
-        # Revoke the guest's sessions and identity, closing its analytics summary as expired.
-        end_guest_trial(user, "expired")
+    for user, teardown_reason in overdue:
+        # Revoke or resume the guest using the first durable bounded teardown reason.
+        end_guest_trial(user, teardown_reason)
     # Return the count so the Admin endpoint can report the sweep without identifiers.
     return len(overdue)
 

@@ -11479,8 +11479,8 @@
         "casino/admin.py"
       ],
       "introduced_in": "issue-705-guest-trial-ledger-teardown",
-      "changed_in": "issue-705-guest-trial-ledger-teardown",
-      "notes": "The terminal action key and round id use the server-issued de-identified trial identity. An absent identity or nonzero post-debit wallet fails closed for operator recovery rather than inventing terminal money state."
+      "changed_in": "issue-760-stale-guest-teardown",
+      "notes": "The terminal action key and round id use the server-issued de-identified trial identity. The canonical active-to-ending claim now precedes eligibility, while an absent identity, account-owned player, or nonzero post-debit wallet fails closed without inventing terminal money state."
     },
     {
       "id": "TEST-188",
@@ -11496,8 +11496,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-705-guest-trial-ledger-teardown",
-      "changed_in": "issue-705-guest-trial-ledger-teardown",
-      "notes": "The isolated JSON-provider fixture uses the public auth, player, ledger, analytics, autoplay, and Admin services and restores every process-global test seam after each outcome."
+      "changed_in": "issue-760-stale-guest-teardown",
+      "notes": "The isolated JSON-provider fixture uses the public auth, conversion, player, ledger, history, analytics, autoplay, and session services, adds both ownership-race orders and interrupted-claim recovery, and restores every process-global test seam after each outcome."
     },
     {
       "id": "TEST-189",
@@ -11697,6 +11697,61 @@
       "introduced_in": "issue-701-admin-assisted-guest-conversion",
       "changed_in": "issue-701-admin-assisted-guest-conversion",
       "notes": "The browser route is fulfilled with the exact result envelope after payload inspection; the authenticated API case separately executes the production conversion route and authoritative persistence boundaries."
+    },
+    {
+      "id": "AUTH-020",
+      "module": "Core",
+      "description": "Guest Trial teardown re-resolves and atomically claims the canonical disposable identity before any session, wallet, player, ledger, autoplay, or analytics mutation. The shared users-document transaction serializes account adoption against the active-to-ending claim: an account owner or converted marker makes every stale teardown a stable no-op, while an ending claim prevents a later account from adopting that player and remains recoverable after interruption.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-TEARDOWN-LEDGER-001",
+        "API-CONVERT-001",
+        "API-ADMIN-GUEST-CONVERT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/auth.py"
+      ],
+      "introduced_in": "issue-760-stale-guest-teardown",
+      "changed_in": "issue-760-stale-guest-teardown",
+      "notes": "Strict JSON decoding preserves corrupt identity evidence, MySQL uses the existing document row lock, the first bounded teardown reason survives retries, and converted, ended, missing, drifted, or account-owned identities return without touching adopted account state."
+    },
+    {
+      "id": "LEDGER-037",
+      "module": "Core",
+      "description": "A Guest Trial terminal debit is eligible only after the canonical identity transaction proves the same guest still owns the disposable player and durably claims teardown. An account that already adopted the player cannot receive GUEST_TRIAL_END, session revocation, ended-player presentation, or ordinary teardown analytics; an interrupted eligible claim resumes the same exactly-once action identity until wallet, player, analytics, and terminal identity converge.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-TEARDOWN-LEDGER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/auth.py"
+      ],
+      "introduced_in": "issue-760-stale-guest-teardown",
+      "changed_in": "issue-760-stale-guest-teardown",
+      "notes": "The immutable trial-derived ledger key still provides replay safety. Wallet-zero verification remains authoritative, direct balance overwrite remains prohibited, and the expiry sweep resumes durable ending claims after process failure."
+    },
+    {
+      "id": "TEST-194",
+      "module": "Tests",
+      "description": "Deterministic conversion-versus-teardown rendezvous evidence proves both users-document lock orders: a conversion winner preserves the exact adopted player, balance, ledger, history, account session, conversion marker, and analytics classification under repeated stale teardown, while a teardown winner rejects account adoption and converges on one terminal movement. Failure recovery resumes a durable ending claim with its first reason, and the disposable MySQL integration exercises the same converted-owner refusal through production provider documents.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-TEARDOWN-LEDGER-001",
+        "API-CONVERT-001",
+        "API-ADMIN-GUEST-CONVERT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/guest_teardown_ledger_tests.py",
+        "tests/storage_tests.py",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-760-stale-guest-teardown",
+      "changed_in": "issue-760-stale-guest-teardown",
+      "notes": "The JSON fixture uses real auth, conversion, player, ledger, history, analytics, autoplay, and session services. The MySQL live gate injects the production provider, converts one provider-backed guest, and requires two stale teardown replays to leave all adopted-account projections exact."
     },
     {
       "id": "ROU-001",

@@ -1482,8 +1482,8 @@ def run_api_tests():
         result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
         # Fail the mapped gate when any wallet-lifecycle assertion failed.
         if not result.wasSuccessful(): raise AssertionError('Guest Trial terminal-ledger suite failed')
-    # Record exactly-once terminal debit, replay, reconstruction, and Admin isolation.
-    run_case('API-GUEST-TEARDOWN-LEDGER-001',['LEDGER-035','TEST-188'],run_guest_teardown_ledger_tests)
+    # Record exactly-once terminal debit, conversion-safe ownership, provider parity, replay, and reconstruction.
+    run_case('API-GUEST-TEARDOWN-LEDGER-001',['LEDGER-035','AUTH-020','LEDGER-037','TEST-188','TEST-194'],run_guest_teardown_ledger_tests)
     # Build one reusable subprocess host so bundle suites that redirect data directories at import can never pollute this process or the shared API server environment. (issues #403, #405, #411, #412)
     def run_unit_module(module_name, failure_message):
         # Execute the focused suite with a fresh interpreter exactly like the security probe host.

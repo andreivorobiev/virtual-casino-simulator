@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require accepted atomic-state slices plus Admin-assisted conversion to total exactly 995 permanent rows.
-        self.assertEqual(len(requirements), 995)
+        # Require accepted atomic-state, conversion, and stale-teardown slices to total exactly 998 permanent rows.
+        self.assertEqual(len(requirements), 998)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1490,6 +1490,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "USER-010": "Application",  # Bind the bilingual pending-verification browser lifecycle.
             "TEST-171": "Tests",  # Bind exactly-once funding and recovery evidence.
             "TEST-193": "Tests",  # Bind Admin conversion wallet, audit, refusal, API, and Browser evidence.
+            "AUTH-020": "Core",  # Bind canonical guest teardown ownership to the shared identity transaction.
+            "LEDGER-037": "Core",  # Bind terminal debit eligibility to the durable guest claim.
+            "TEST-194": "Tests",  # Bind both race orders, recovery, and provider-parity evidence.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():

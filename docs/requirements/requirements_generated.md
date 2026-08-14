@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.0
-- core: 9.46.0
+- core: 9.46.1
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.0
-- docs: 1.96.0
+- tests: 1.100.1
+- docs: 1.96.1
 - contracts: 1.62.0
 - tooling: 1.40.0
 - commenting_policy: 2.0.0
@@ -681,6 +681,9 @@ Historical source baseline: 9.1.0
 - **TEST-175** (Tests) - PASS: A catalog-derived economics registry covers every registered game exactly once and fails closed on catalog additions, removals, renames, duplicates, stale production engine or settlement bytes, absent executable proofs, copied non-production models, player-positive bounds, or ungoverned fairness. Each entry records total-return units, classification, strict bound, method and sampling budget, permanent product requirement, source binding, proof selectors, and rationale. Mandatory Long Suite evidence executes every registered production-backed proof, incorporates the separately retained Slots and Keno deep artifacts, and emits one bounded source-bound aggregate artifact.
 - **ADMIN-035** (Admin) - PASS: A current active Admin or platform owner can explicitly convert one active Guest Trial through an additive v2 Admin route and localized Guest Trials confirm flow. The operator selects the already-visible de-identified analytics identity, supplies the requested durable account content, accepts the current terms representation, and confirms the support action. The route resolves current actor authority and the exact guest server-side, reuses the self-service idempotent conversion core, preserves the same player, wallet, ledger, and history without movement or duplication, refuses missing, non-guest, expired, unconfirmed, malformed, or conflicting requests, reuses one form-owned operation key after a lost response, clears transient credentials from the browser, and records actor, guest, account, player, replay disposition, and timestamp through the application audit boundary.
 - **TEST-193** (Tests) - PASS: Listener-free and authenticated API evidence proves Admin-assisted Guest Trial conversion preserves one exact player wallet and unchanged ledger rows, returns the self-service result shape, emits actor-target-time audit evidence, replays one stable account after a lost response, rejects a non-Admin actor, non-guest target, expired trial, missing confirmation, and unsupported request fields, and leaves self-service conversion unchanged. Browser evidence in both installed locales and all four governed Admin viewports selects a visible analytics row, submits explicit confirmation, forces one failed response before a successful retry with the same form-owned idempotency key, clears transient password and confirmation controls, preserves de-identified tables, enforces the 42 CSS-pixel action floor, and captures the named assisted-conversion state without real target credentials.
+- **AUTH-020** (Core) - PASS: Guest Trial teardown re-resolves and atomically claims the canonical disposable identity before any session, wallet, player, ledger, autoplay, or analytics mutation. The shared users-document transaction serializes account adoption against the active-to-ending claim: an account owner or converted marker makes every stale teardown a stable no-op, while an ending claim prevents a later account from adopting that player and remains recoverable after interruption.
+- **LEDGER-037** (Core) - PASS: A Guest Trial terminal debit is eligible only after the canonical identity transaction proves the same guest still owns the disposable player and durably claims teardown. An account that already adopted the player cannot receive GUEST_TRIAL_END, session revocation, ended-player presentation, or ordinary teardown analytics; an interrupted eligible claim resumes the same exactly-once action identity until wallet, player, analytics, and terminal identity converge.
+- **TEST-194** (Tests) - PASS: Deterministic conversion-versus-teardown rendezvous evidence proves both users-document lock orders: a conversion winner preserves the exact adopted player, balance, ledger, history, account session, conversion marker, and analytics classification under repeated stale teardown, while a teardown winner rejects account adoption and converges on one terminal movement. Failure recovery resumes a durable ending claim with its first reason, and the disposable MySQL integration exercises the same converted-owner refusal through production provider documents.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
