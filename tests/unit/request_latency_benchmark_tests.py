@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require accepted atomic-state, conversion, teardown, analytics, and wager slices to total exactly 1006 permanent rows.
-        self.assertEqual(len(requirements), 1006)
+        # Require accepted atomic-state, conversion, teardown, analytics, and wager slices to total exactly 1008 permanent rows.
+        self.assertEqual(len(requirements), 1008)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1425,6 +1425,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-188": "Tests",  # Bind replay, reconstruction, and economics-isolation evidence.
             "CW-006": "Casino War",  # Bind committed-marker and terminal-phase publication to the atomic state helper.
             "TEST-189": "Tests",  # Bind the real two-process Casino War stale-state rendezvous evidence.
+            "CW-007": "Casino War",  # Bind round and decision preparation plus bounded rollback to atomic state.
+            "TEST-199": "Tests",  # Bind two-process preparation, contention, rollback, and lost-response evidence.
             "STORAGE-015": "Core",  # Bind explicit provider-owned wallet residue normalization.
             "LEDGER-036": "Core",  # Bind every durable wallet writer to canonical integer cents.
             "TOOL-019": "Tooling",  # Bind the packaged check/apply operator command.

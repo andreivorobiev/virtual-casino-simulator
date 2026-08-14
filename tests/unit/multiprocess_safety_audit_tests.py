@@ -53,7 +53,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(len(games), audit.EXPECTED_GAME_COUNT)
         # Reject duplicate or omitted game identities.
         self.assertEqual(len({row["game_id"] for row in games}), audit.EXPECTED_GAME_COUNT)
-        # Pin the exact current persistence families, including the Casino War, Keno, Baccarat, and Blackjack slices.
+        # Pin the exact current persistence families after Casino War joins Keno and Baccarat as atomic-only state publication.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths", "provider_atomic_player_document"},  # Pin accepted families.
@@ -64,17 +64,19 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 2, "provider_atomic_player_document": 2},  # Pin current counts.
+            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 1, "provider_atomic_player_document": 3},  # Pin current counts.
         )
-        # Resolve the sole incremental migration row without treating mixed persistence as compatible.
+        # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
-        # Require live direct and atomic call sites until the remaining #704 Casino War slices retire the mixed model.
+        # Require the authoritative Casino War read used for response and interruption recovery.
         self.assertGreater(casino_war["load_call_sites"], 0)
-        # Preserve explicit direct-save debt while preparation and rollback still use whole-document publication.
-        self.assertGreater(casino_war["save_call_sites"], 0)
-        # Bind the new reconciliation path to at least one reachable provider-atomic call site.
+        # Require every reachable Casino War publication to avoid direct whole-document saves.
+        self.assertEqual(casino_war["save_call_sites"], 0)
+        # Bind preparation, rollback, reconciliation, and terminal state to atomic updates.
         self.assertGreater(casino_war["atomic_update_call_sites"], 0)
-        # Keep the production second-worker decision fail closed throughout the migration series.
+        # Name completed state publication without claiming state-and-money atomicity.
+        self.assertEqual(casino_war["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked because state and money remain separate boundaries.
         self.assertEqual(casino_war["multiworker_status"], "blocked")
         # Resolve Keno after draw and ticket transitions retire every direct state publication.
         keno = next(row for row in games if row["game_id"] == "keno")
