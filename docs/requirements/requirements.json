@@ -10330,8 +10330,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "top-half-portfolio-v61",
-      "changed_in": "issue-767-keno-atomic-tickets",
-      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Keno is classified as provider-atomic for player-state publication after retiring its final direct saves, but remains blocked because game state and money are still committed through separate provider boundaries. Casino War, Baccarat, and Blackjack retain explicit mixed-path debt for later #704 slices."
+      "changed_in": "issue-769-baccarat-atomic-wagers",
+      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Keno and Baccarat are classified as provider-atomic for player-state publication after retiring their final direct saves, but remain blocked because game state and money are still committed through separate provider boundaries. Casino War and Blackjack retain explicit mixed-path debt for later #704 slices."
     },
     {
       "id": "TEST-161",
@@ -11666,7 +11666,7 @@
         "docs/game_catalog_governance.md"
       ],
       "introduced_in": "issue-456-catalog-economics-registry",
-      "changed_in": "issue-767-keno-atomic-tickets",
+      "changed_in": "issue-769-baccarat-atomic-wagers",
       "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, Baccarat, and Blackjack #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged."
     },
     {
@@ -11841,6 +11841,29 @@
       "introduced_in": "issue-767-keno-atomic-tickets",
       "changed_in": "issue-767-keno-atomic-tickets",
       "notes": "The subprocess fixture uses the real JSON provider, atomic player-state helper, Keno engine, and settlement adapter. Failure fixtures patch only the settlement boundary and require authoritative receipt absence before compensating the prepared state."
+    },
+    {
+      "id": "TEST-198",
+      "module": "Tests",
+      "description": "Real two-process Baccarat evidence races prepared bet placement and refund settlements against sibling player-game updates, then proves exact bet identity, one debit and one refund, restored wallet value, preserved sibling state, and zero pending-marker residue. A second real two-process race proves one same-bet refund winner, one fail-closed contender, and one credit. Deterministic failure evidence proves action-owned rollback preserves unrelated state, settings use the latest provider document, and the static multiprocess inventory recognizes atomic-only player-state publication without authorizing a second worker.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-ATOMIC-001",
+        "API-LEGACY-SETTLE-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/tests/test_atomic_state.py",
+        "tests/legacy_settlement_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-769-baccarat-atomic-wagers",
+      "changed_in": "issue-769-baccarat-atomic-wagers",
+      "notes": "The subprocess fixture uses the real JSON provider, atomic player-state helper, Baccarat engine, and settlement adapter. Failure fixtures patch only the settlement boundary and require authoritative receipt absence before compensating the prepared state."
     },
     {
       "id": "ROU-001",
@@ -15595,8 +15618,28 @@
         "tests/legacy_settlement_tests.py"
       ],
       "introduced_in": "issue-756-baccarat-atomic-coup-state",
-      "changed_in": "issue-756-baccarat-atomic-coup-state",
-      "notes": "Bet placement and cancellation remain explicit direct-write debt under parent issue #704. This slice changes no cards, shoe rules, payout math, ledger identity, route, response envelope, public contract, or player-visible behavior."
+      "changed_in": "issue-769-baccarat-atomic-wagers",
+      "notes": "Pending wager settlement now blocks coup commitment until the exact debit or refund reconciles. This requirement and BAC-028 change no cards, shoe rules, payout math, ledger identity, route, response envelope, public contract, or player-visible behavior."
+    },
+    {
+      "id": "BAC-028",
+      "module": "Baccarat",
+      "description": "Baccarat atomically prepares bet placement, refund, and settings transitions against the latest provider-owned player document. Each money-affecting mutation publishes an immutable private marker before settlement, applies or replays the established ledger identity exactly once, rolls back only when authoritative receipt lookup proves no movement committed, and clears only its exact marker while preserving sibling state. Settings refuse every open, prepared, or committed wager boundary.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BAC-ATOMIC-001",
+        "API-LEGACY-SETTLE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/baccarat/api.py",
+        "casino/games/baccarat/tests/test_atomic_state.py",
+        "tests/legacy_settlement_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py"
+      ],
+      "introduced_in": "issue-769-baccarat-atomic-wagers",
+      "changed_in": "issue-769-baccarat-atomic-wagers",
+      "notes": "The public v1 routes, envelopes, validation, payout math, and ledger action identities remain unchanged. State publication is provider-atomic, but multiworker activation stays blocked because player state and money still commit through separate provider boundaries."
     },
     {
       "id": "MHVP-001",
