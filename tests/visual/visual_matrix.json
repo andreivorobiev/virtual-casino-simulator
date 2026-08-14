@@ -918,6 +918,7 @@
         "guest_trials_fake_tokens",
         "guest_trials_games",
         "guest_trials_filters",
+        "guest_trials_assisted_conversion",
         "guest_trials_detail",
         "guest_trials_timeline",
         "guest_trials_cleanup_status",

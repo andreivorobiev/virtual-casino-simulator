@@ -11646,6 +11646,57 @@
       "introduced_in": "issue-456-catalog-economics-registry",
       "changed_in": "issue-756-baccarat-atomic-coup-state",
       "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, and Baccarat #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged."
+    },
+    {
+      "id": "ADMIN-035",
+      "module": "Admin",
+      "description": "A current active Admin or platform owner can explicitly convert one active Guest Trial through an additive v2 Admin route and localized Guest Trials confirm flow. The operator selects the already-visible de-identified analytics identity, supplies the requested durable account content, accepts the current terms representation, and confirms the support action. The route resolves current actor authority and the exact guest server-side, reuses the self-service idempotent conversion core, preserves the same player, wallet, ledger, and history without movement or duplication, refuses missing, non-guest, expired, unconfirmed, malformed, or conflicting requests, reuses one form-owned operation key after a lost response, clears transient credentials from the browser, and records actor, guest, account, player, replay disposition, and timestamp through the application audit boundary.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-GUEST-CONVERT-001",
+        "API-GUEST-CONTRACT-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "casino/core/guest_conversion.py",
+        "casino/core/guest_analytics.py",
+        "casino/admin.py",
+        "web/admin.js",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json",
+        "contracts/openapi/guest-trials.v2.yaml",
+        "contracts/compatibility/guest-trials-restricted-preview.json",
+        "tests/admin_guest_conversion_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-701-admin-assisted-guest-conversion",
+      "changed_in": "issue-701-admin-assisted-guest-conversion",
+      "notes": "This completes the Admin-assisted half of the owner decision recorded on #378 without enabling unrestricted signup, changing frozen v1, exposing raw guest auth identifiers in telemetry, or changing the existing self-service route."
+    },
+    {
+      "id": "TEST-193",
+      "module": "Tests",
+      "description": "Listener-free and authenticated API evidence proves Admin-assisted Guest Trial conversion preserves one exact player wallet and unchanged ledger rows, returns the self-service result shape, emits actor-target-time audit evidence, replays one stable account after a lost response, rejects a non-Admin actor, non-guest target, expired trial, missing confirmation, and unsupported request fields, and leaves self-service conversion unchanged. Browser evidence in both installed locales and all four governed Admin viewports selects a visible analytics row, submits explicit confirmation, forces one failed response before a successful retry with the same form-owned idempotency key, clears transient password and confirmation controls, preserves de-identified tables, enforces the 42 CSS-pixel action floor, and captures the named assisted-conversion state without real target credentials.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-GUEST-CONVERT-001",
+        "API-GUEST-LIFECYCLE-001",
+        "API-GUEST-CONTRACT-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "tests/admin_guest_conversion_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-701-admin-assisted-guest-conversion",
+      "changed_in": "issue-701-admin-assisted-guest-conversion",
+      "notes": "The browser route is fulfilled with the exact result envelope after payload inspection; the authenticated API case separately executes the production conversion route and authoritative persistence boundaries."
     }
   ]
 }

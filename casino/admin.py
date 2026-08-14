@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSION, PASSWORD_RESET_ENABLED
 from casino.module_versions import list_module_revisions
-from casino.core import admin_roles, auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, oauth_controls, session_settings, rate_settings, guest_settings, mail
+from casino.core import admin_roles, auth, players, ledger, history, logger, autoplay, feedback, settings, enrollment_policy, oauth_controls, session_settings, rate_settings, guest_conversion, guest_settings, mail
 # Import secret-safe provider diagnostics without constructing a provider adapter or network transport.
 from casino.core.oauth.api import provider_diagnostic_payload
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
@@ -263,6 +263,38 @@ def _current_platform_owner(actor: dict | None) -> dict:
     auth.require_platform_owner(current or {})
     # Return the current actor for transaction-scoped validation and audit attribution.
     return current
+
+
+# Resolve an authenticated Admin against current canonical state before assisted guest conversion.
+def _current_admin(actor: dict | None) -> dict:
+    # Read only the opaque actor id from request context.
+    actor_id = str((actor or {}).get("user_id") or "")
+    # Reject absent or synthetic identities before any guest or account lookup.
+    if not actor_id:
+        # Return the standard role failure without exposing identity state.
+        raise ForbiddenError("Admin role is required")
+    # Resolve current durable authority so a stale session payload cannot retain Admin power.
+    current = auth.find_user_by_id(actor_id)
+    # Require the canonical active Admin or inherited platform-owner role.
+    auth.require_admin(current or {})
+    # Return the current actor for audit attribution.
+    return current
+
+
+# Validate the exact Admin-assisted Guest Trial conversion request shape.
+def _admin_guest_conversion_request(body) -> dict:
+    # Require one JSON object before any identity or account validation.
+    if not isinstance(body, dict):
+        # Reject arrays and scalars through the standard validation envelope.
+        raise ValidationError("Admin-assisted guest conversion request must be an object")
+    # Enumerate every supported field so future request content cannot be accepted implicitly.
+    required = {"guest_identity", "email", "password", "display_name", "terms_version", "accepted", "confirm", "idempotency_key"}
+    # Require the complete exact request with no credential-adjacent extension fields.
+    if set(body) != required:
+        # Return one value-free shape diagnostic.
+        raise ValidationError("Admin-assisted guest conversion request fields are invalid")
+    # Return a detached copy for explicit keyword forwarding.
+    return dict(body)
 
 
 # Extract one sparse proposal or exact rollback document from an owner Admin request. (AUTH-014)
@@ -1034,6 +1066,17 @@ def register(router):
         _current_platform_owner(context.get("user"))
         # Commit the exact reviewed switch and return the fixed grant for immediate UI readback.
         return {"settings": guest_settings.save_guest_settings(body)}
+
+    # Attach the Admin-assisted conversion route beside its Guest Trials ownership surface. (ADMIN-035)
+    @router.post(r"/api/v2/admin/guest-trials/convert")
+    # Convert one explicitly confirmed active guest through the self-service authority.
+    def admin_guest_trial_convert_v2(body, query, context):
+        # Resolve current canonical Admin authority before reading any guest identity.
+        actor = _current_admin(context.get("user"))
+        # Require the exact additive-v2 request contract before any account side effect.
+        request = _admin_guest_conversion_request(body)
+        # Reuse the idempotent wallet-preserving conversion service and its exact result shape.
+        return guest_conversion.convert_for_admin(actor, request["guest_identity"], request["email"], request["password"], request["display_name"], terms_version=request["terms_version"], accepted=request["accepted"], confirm=request["confirm"], idempotency_key=request["idempotency_key"])
 
     # Attach the v2 recent-session list as an explicit contract surface.
     @router.get(r"/api/v2/admin/guest-trials/sessions")

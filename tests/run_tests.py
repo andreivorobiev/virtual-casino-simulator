@@ -30,6 +30,8 @@ from casino.core import auth as auth_core
 from casino.core import autoplay as autoplay_core
 # Import the de-identified guest telemetry service for listener-free privacy and retention tests.
 from casino.core import guest_analytics
+# Import the authoritative ledger for assisted-conversion continuity evidence.
+from casino.core import ledger
 # Import configuration helpers so startup hardening can be tested without launching a public listener.
 from casino import config as casino_config
 # Import the shared resolver so session precedence is tested independently of individual game APIs.
@@ -1258,14 +1260,14 @@ def validate_guest_contracts():
     guest_contract=json.loads((ROOT/'contracts'/'compatibility'/'guest-trials-restricted-preview.json').read_text(encoding='utf-8'))
     # Prove public creation and both authenticated lifecycle routes are explicitly published.
     assert all(route in auth_contract for route in ('/auth/guest:','/auth/guest/end:','/auth/guest/depart:','GuestBrowserNonce'))
-    # Prove the complete Admin summary/list/detail/settings/cleanup route family is published under v2.
-    assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/settings:','/admin/guest-trials/cleanup:'))
-    # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
-    assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
+    # Prove the complete Admin summary/list/detail/settings/conversion/cleanup route family is published under v2.
+    assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/settings:','/admin/guest-trials/convert:','/admin/guest-trials/cleanup:'))
+    # Prove the full filters, journey, fake-token, action/error/latency, conversion, and bounded timeline schemas are published.
+    assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','AssistedConversionRequest','confirm:','player_preserved','maxItems: 80'))
     # Preserve the exact anonymous allowlist including private redemption, disabled enrollment, and reviewed provider-latched OAuth routes. (OAUTH-007)
     assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/signup/resend','/api/v2/auth/signup/verify','/api/v2/auth/signup/cancel','/api/v2/auth/password-reset/initiate','/api/v2/auth/password-reset/resend','/api/v2/auth/password-reset/complete','/api/v2/auth/oauth/providers','/api/v2/auth/csrf','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
     # Prove launch stays held, the fixed grant and owner admission control are exact, and retention/forbidden fields remain exact.
-    assert guest_contract['public_launch_authorized'] is False and guest_contract['entry']['starting_play_tokens']==10000 and guest_contract['entry']['admission_change_requires_restart'] is False and guest_contract['entry']['admission_pause_ends_existing_trials'] is False and guest_contract['wallet']['starting_play_tokens_fixed']==10000 and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['admission_write_authority']=='current-active-platform-owner' and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
+    assert guest_contract['public_launch_authorized'] is False and guest_contract['entry']['starting_play_tokens']==10000 and guest_contract['entry']['admission_change_requires_restart'] is False and guest_contract['entry']['admission_pause_ends_existing_trials'] is False and guest_contract['wallet']['starting_play_tokens_fixed']==10000 and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['conversion']['self_service'] is True and guest_contract['conversion']['admin_assisted'] is True and guest_contract['conversion']['explicit_confirmation_required'] is True and guest_contract['conversion']['player_wallet_ledger_preserved'] is True and guest_contract['admin_telemetry']['admission_write_authority']=='current-active-platform-owner' and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
     digests=json.loads((ROOT/'contracts'/'compatibility'/'contract-digests.json').read_text(encoding='utf-8'))
     # Verify both changed v2 contracts match their frozen exact bytes.
@@ -1289,6 +1291,8 @@ def validate_guest_admin_api(base):
     token,nonce=guest['session']['token'],guest['browser_nonce']
     # Build the required guest-only browser proof header.
     guest_headers={'X-Guest-Browser-Nonce':nonce}
+    # Track whether the guest became a durable account so teardown never touches its preserved wallet.
+    guest_converted=False
     # Start protected assertions so the guest is always irreversibly ended.
     try:
         # Prove the guest can read its bound current-user state through the shared protected adapter.
@@ -1393,10 +1397,28 @@ def validate_guest_admin_api(base):
         cleanup=api(base,'/api/v2/admin/guest-trials/cleanup','POST',{})['cleanup']
         # Require identifier-free completion fields.
         assert cleanup['raw_removed']>=0 and cleanup['aggregate_removed']>=0 and cleanup['completed_at']
+        # Capture the exact guest wallet and ledger before assisted conversion.
+        conversion_balance=auth_core.current_user_payload(guest['session'],guest['user'])['player']['token_balance']; conversion_ledger=ledger.read_recent(guest['user']['player_id'],100)
+        # Submit one explicitly confirmed Admin-assisted conversion using only the visible analytics id.
+        assisted_request={'guest_identity':analytics_id,'email':'api-assisted-guest@example.test','password':'ApiAssistedPassw0rd!23','display_name':'API Assisted Guest','terms_version':'private-beta-1','accepted':True,'confirm':True,'idempotency_key':'api-admin-assisted-conversion-key'}
+        # Execute the additive v2 route through the authenticated Admin session.
+        converted=api(base,'/api/v2/admin/guest-trials/convert','POST',assisted_request)
+        # Mark the fixture converted before any later assertion can trigger teardown.
+        guest_converted=True
+        # Resolve the durable account to prove exact player adoption and no ledger movement.
+        converted_account=auth_core.find_user_by_email('api-assisted-guest@example.test')
+        # Require the self-service result shape, exact balance, exact player, and unchanged ledger rows.
+        assert set(converted)=={'status','replayed','email','display_name','balance','player_preserved'} and converted['status']=='converted' and converted['player_preserved'] is True and converted['balance']==conversion_balance and converted_account['player_id']==guest['user']['player_id'] and ledger.read_recent(guest['user']['player_id'],100)==conversion_ledger
+        # Require the de-identified lifecycle row to become terminal without exposing its account or player owner.
+        assert guest_analytics.detail(analytics_id)['end_reason']=='converted'
+        # Replay the exact operation to prove the route never creates a second account or wallet.
+        replayed=api(base,'/api/v2/admin/guest-trials/convert','POST',assisted_request)
+        # Require one stable replay result and one durable account owner for the original player.
+        assert replayed['replayed'] is True and replayed['email']==converted['email'] and len([user for user in auth_core.load_users().get('users',[]) if user.get('player_id')==guest['user']['player_id'] and not auth_core.is_guest(user)])==1
     # End the disposable test guest even when an Admin assertion fails.
     finally:
-        # Use canonical teardown rather than deleting shared runtime files.
-        auth_core.end_guest_trial(guest['user'],'revoked')
+        # Use canonical teardown only while the fixture remains a disposable active guest.
+        if not guest_converted: auth_core.end_guest_trial(guest['user'],'revoked')
     # Prove the ended bearer and browser proof cannot resume the trial.
     ended=api(base,'/api/v2/me',ok=False,auth_token=token,extra_headers=guest_headers)
     # Require a terminal authentication or inactive-identity error envelope.
@@ -1822,6 +1844,18 @@ def run_api_tests():
             raise AssertionError('guest conversion suite failed')
     # Record the listener-free explicit, idempotent, wallet-preserving conversion proof.
     run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','CONVERT-003','TEST-111','TEST-158'],run_guest_conversion_tests)
+    # Execute the Admin-assisted conversion service and route contract proof. (#701)
+    def run_admin_guest_conversion_tests():
+        # Import the focused suite lazily after shared test storage is ready.
+        from tests import admin_guest_conversion_tests
+        # Load only the Admin-assisted conversion class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(admin_guest_conversion_tests.AdminGuestConversionTests)
+        # Execute the focused suite through the standard listener-free runner.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named mapped case on any wallet, audit, lifecycle, or authorization regression.
+        if not result.wasSuccessful(): raise AssertionError('Admin-assisted guest conversion suite failed')
+    # Map explicit support confirmation, idempotency, wallet preservation, audit, and refusal evidence.
+    run_case('API-ADMIN-GUEST-CONVERT-001',['ADMIN-035','TEST-193'],run_admin_guest_conversion_tests)
     # Execute the product account-spine proof without opening a listener.
     def run_account_spine_tests():
         # Load only the focused product account-spine class.
@@ -11468,6 +11502,32 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 guest_row_text=guest_first_row.inner_text()
                                 # Require no email or raw auth/player/session identifier pattern.
                                 assert 'gtrial_' in guest_row_text and '@' not in guest_row_text and 'player_' not in guest_row_text.lower() and 'session_' not in guest_row_text.lower() and 'user_' not in guest_row_text.lower()
+                                # Capture the Admin-assisted conversion request without mutating the seeded browser fixture.
+                                assisted_requests=[]
+                                # Bound diagnostics produced by the intentional first-attempt service failure.
+                                assisted_console_index=len(console_errors); assisted_http_index=len(http_errors); assisted_page_index=len(page_errors)
+                                # Fail the first response and fulfill the retry so the browser proves one caller-stable operation identity.
+                                page.route('**/api/v2/admin/guest-trials/convert',lambda route: (assisted_requests.append(route.request.post_data_json),route.fulfill(status=503,content_type='application/json',body=json.dumps({'ok':False,'error':{'code':'SERVICE_UNAVAILABLE','message':'temporary failure'}})) if len(assisted_requests)==1 else route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'status':'converted','replayed':True,'email':f'assisted-{locale}@example.test','display_name':'Assisted Browser Guest','balance':10000,'player_preserved':True}}))))
+                                # Select this active analytics row through its visible conversion shortcut.
+                                guest_first_row.locator('.guest-convert-button').click(); assert page.get_by_test_id('admin-guest-conversion-identity').input_value().startswith('gtrial_')
+                                # Fill only transient target-account content into the explicit support form.
+                                page.get_by_test_id('admin-guest-conversion-email').fill(f'assisted-{locale}@example.test'); page.get_by_test_id('admin-guest-conversion-display-name').fill('Assisted Browser Guest'); page.get_by_test_id('admin-guest-conversion-password').fill('BrowserAssistedPassw0rd!23')
+                                # Require literal confirmation before submitting the first bounded conversion request.
+                                page.get_by_test_id('admin-guest-conversion-confirm').check(); page.get_by_test_id('admin-guest-conversion-submit').click(); page.wait_for_function("() => !document.querySelector('[data-testid=\"admin-guest-conversion-submit\"]')?.disabled && document.querySelector('[data-testid=\"admin-guest-conversion-password\"]')?.value === '' && !document.querySelector('[data-testid=\"admin-guest-conversion-confirm\"]')?.checked",timeout=5000)
+                                # Re-enter only the cleared credential and confirmation before retrying the exact form operation.
+                                page.get_by_test_id('admin-guest-conversion-password').fill('BrowserAssistedPassw0rd!23'); page.get_by_test_id('admin-guest-conversion-confirm').check(); page.get_by_test_id('admin-guest-conversion-submit').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"admin-guest-conversion-password\"]')?.value === '' && !document.querySelector('[data-testid=\"admin-guest-conversion-confirm\"]')?.checked",timeout=5000)
+                                # Stop intercepting after the exact single request has caused the normal Guest Trials rerender.
+                                page.unroute('**/api/v2/admin/guest-trials/convert')
+                                # Isolate only the diagnostics emitted by the controlled failed first attempt.
+                                assisted_console=console_errors[assisted_console_index:]; assisted_http=http_errors[assisted_http_index:]; assisted_page=page_errors[assisted_page_index:]
+                                # Require one expected browser resource diagnostic and one matching HTTP rejection with no JavaScript error.
+                                assert assisted_page==[] and len(assisted_console)==1 and all('Failed to load resource' in value for value in assisted_console) and len(assisted_http)==1 and assisted_http[0].startswith('503 ') and assisted_http[0].endswith('/api/v2/admin/guest-trials/convert')
+                                # Remove only the verified controlled failure so every unexpected later diagnostic still fails the suite.
+                                del console_errors[assisted_console_index:]; del http_errors[assisted_http_index:]
+                                # Require analytics-only targeting, explicit confirmations, one stable retry key, and cleared credential controls after success.
+                                assert len(assisted_requests)==2 and assisted_requests[0]['guest_identity'].startswith('gtrial_') and all(request['confirm'] is True and request['accepted'] is True for request in assisted_requests) and len(assisted_requests[0]['idempotency_key'])>=16 and assisted_requests[0]['idempotency_key']==assisted_requests[1]['idempotency_key'] and page.get_by_test_id('admin-guest-conversion-password').input_value()=='' and not page.get_by_test_id('admin-guest-conversion-confirm').is_checked()
+                                # Re-resolve the first filtered row after the conversion-success rerender.
+                                guest_first_row=page.get_by_test_id('admin-guest-row').first; guest_first_row.wait_for(timeout=5000)
                                 # Open the analytics-only detail through the keyboard-focusable action.
                                 guest_first_row.locator('.guest-detail-button').focus(); guest_first_row.locator('.guest-detail-button').press('Enter'); page.wait_for_function("() => document.querySelector('[data-testid=\"admin-guest-detail\"] dd')?.textContent.includes('gtrial_')")
                                 # Require the allowlisted server event timeline to render without a raw session replay.
@@ -11492,13 +11552,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Require page containment plus intentional horizontal containment on table regions.
                                     contained=page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1 && [...document.querySelectorAll('[data-testid=\"admin-guest-funnel\"], [data-testid=\"admin-guest-games\"], [data-testid=\"admin-guest-game-detail\"], [data-testid=\"admin-guest-recent\"]')].every(region => region.scrollWidth >= region.clientWidth)")
                                     # Require every filter, clickable checkbox row, and action to meet the approved 42 CSS-pixel floor.
-                                    targets=page.locator('[data-testid="admin-guest-filters"] select, [data-testid="admin-guest-filters"] button, [data-testid="admin-guest-policy"] label.check-row, [data-testid="admin-guest-policy"] button, .guest-detail-button')
+                                    targets=page.locator('[data-testid="admin-guest-filters"] select, [data-testid="admin-guest-filters"] button, [data-testid="admin-guest-policy"] label.check-row, [data-testid="admin-guest-policy"] button, [data-testid="admin-guest-conversion"] input:not([type="checkbox"]), [data-testid="admin-guest-conversion"] label.check-row, [data-testid="admin-guest-conversion"] button, .guest-detail-button, .guest-convert-button')
                                     # Inspect all rendered Guest Trials interactive controls.
                                     target_floor=all((targets.nth(index).bounding_box() or {}).get('height',0)>=41.5 for index in range(targets.count()))
                                     # Focus the table region for visible keyboard evidence.
                                     page.get_by_test_id('admin-guest-recent').focus()
                                     # Capture exact-head EN/RU responsive funnel, games, filters, detail, cleanup, and keyboard evidence.
-                                    game_evidence(f'after-pass-admin-guest-trials-{locale}-{viewport_id}.png','admin',['guest_trials_funnel','guest_trials_nine_stage_funnel','guest_trials_metrics','guest_trials_fake_tokens','guest_trials_games','guest_trials_filters','guest_trials_detail','guest_trials_timeline','guest_trials_cleanup_status','guest_trials_keyboard_scroll'],locale,viewport_id)
+                                    game_evidence(f'after-pass-admin-guest-trials-{locale}-{viewport_id}.png','admin',['guest_trials_funnel','guest_trials_nine_stage_funnel','guest_trials_metrics','guest_trials_fake_tokens','guest_trials_games','guest_trials_filters','guest_trials_assisted_conversion','guest_trials_detail','guest_trials_timeline','guest_trials_cleanup_status','guest_trials_keyboard_scroll'],locale,viewport_id)
                                     # Record explicit reduced-motion and 200 percent zoom acceptance once per locale at the primary desktop viewport.
                                     if viewport_id=='desktop_primary':
                                         # Emulate the operating-system reduced-motion preference on the populated Admin surface.
@@ -11524,7 +11584,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Restore the exact pre-test de-identified telemetry document after every success or failure.
                             write_json(guest_analytics.TRIALS_PATH,original_analytics)
                     # Execute the de-identified Guest Trials Admin regression.
-                    run_case('BR-ADMIN-GUEST-001',['GUEST-001','GUEST-003','GUEST-004','GUEST-005','TEST-081'],admin_guest_trials_browser)
+                    run_case('BR-ADMIN-GUEST-001',['GUEST-001','GUEST-003','GUEST-004','GUEST-005','ADMIN-035','TEST-081','TEST-193'],admin_guest_trials_browser)
                     page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
                     run_case('BR-AUDIO-001',['AUDIO-002','AUDIO-005'],lambda: page.get_by_test_id('admin-preview-voice').is_visible())
                     # Define the Phase 0 registry, formatter, fallback, discovery, and visual evidence gate.

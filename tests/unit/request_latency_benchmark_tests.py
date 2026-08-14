@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require accepted aggregates plus Casino War, wallet-cents, Keno, and Baccarat atomic-state allocations to total exactly 993 permanent rows.
-        self.assertEqual(len(requirements), 993)
+        # Require accepted atomic-state slices plus Admin-assisted conversion to total exactly 995 permanent rows.
+        self.assertEqual(len(requirements), 995)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1455,6 +1455,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "AUDIO-010": "Audio",  # Bind silent defaults and explicit owner overrides to Audio.
             "ADMIN-033": "Admin",  # Bind ordinary-Admin delegation to the dedicated owner workspace.
             "ADMIN-034": "Admin",  # Bind session policy completion to the responsive Admin surface.
+            "ADMIN-035": "Admin",  # Bind explicitly confirmed Admin-assisted guest conversion.
             "AUTH-015": "Core",  # Bind enrollment readiness and fail-closed live enablement.
             "AUTH-016": "Core",  # Bind the read-only launch readiness aggregate.
             "OAUTH-011": "Core",  # Bind provider readiness to secret-safe diagnostics.
@@ -1488,6 +1489,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "AUTH-018": "Core",  # Bind account-free verified-email activation to the identity boundary.
             "USER-010": "Application",  # Bind the bilingual pending-verification browser lifecycle.
             "TEST-171": "Tests",  # Bind exactly-once funding and recovery evidence.
+            "TEST-193": "Tests",  # Bind Admin conversion wallet, audit, refusal, API, and Browser evidence.
         }
         # Prove every aggregate identifier is present exactly once and cannot collide silently.
         for requirement_id, module in aggregate_allocations.items():

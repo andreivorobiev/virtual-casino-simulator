@@ -3253,6 +3253,17 @@ h3 {
   align-items: end;
 }
 
+/* Bound assisted-conversion columns before the phone layout stacks the form. */
+[data-testid="admin-guest-conversion"] .grid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Let every assisted-conversion field shrink inside its responsive grid column. */
+[data-testid="admin-guest-conversion"] :is(input:not([type="checkbox"]), button) {
+  width: 100%;
+  min-width: 0;
+}
+
 .guest-filter-grid label {
   display: grid;
   gap: 6px;
@@ -3260,7 +3271,8 @@ h3 {
 
 .guest-filter-grid select,
 .guest-filter-grid button,
-.guest-detail-button {
+.guest-detail-button,
+.guest-convert-button {
   min-height: 42px;
 }
 
@@ -3715,6 +3727,11 @@ h3 {
   /* Stack managed-account fields so native controls never widen the governed phone viewport. */
   [data-testid="admin-user-create"] .grid3 {
     grid-template-columns: 1fr;
+  }
+
+  /* Stack assisted-conversion fields before native inputs can widen the phone viewport. */
+  [data-testid="admin-guest-conversion"] .grid3 {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   /* Stack the complete account-lifecycle group inside the bounded mobile scroll owner. */

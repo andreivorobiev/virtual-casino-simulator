@@ -19,6 +19,8 @@ import hashlib
 
 # Import the canonical identity, session, and player boundary.
 from casino.core import auth
+# Import de-identified lifecycle closure for successful assisted conversion.
+from casino.core import guest_analytics
 # Import the player wallet boundary so the preserved balance can be reported.
 from casino.core import players
 # Import the privacy-safe application audit facade.
@@ -141,6 +143,54 @@ def _idempotency_hash(value: str) -> str:
         raise ValidationError("Guest conversion idempotency key is invalid", {"reason": "invalid_idempotency_key"})
     # Return a one-way fingerprint suitable for durable replay comparison.
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+# Resolve one support-provided guest identity without publishing account, wallet, or session identifiers.
+def _guest_for_admin(identity: str) -> dict:
+    # Normalize the exact guest or de-identified analytics identity supplied by the operator.
+    target = str(identity or "").strip()
+    # Reject missing, oversized, or non-token identities before reading canonical account state.
+    if not target or len(target) > 191 or any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for character in target):
+        # Return one fixed diagnostic without echoing the operator input.
+        raise ValidationError("Guest conversion identity is invalid", {"reason": "invalid_guest_identity"})
+    # Read the canonical identity document once after overdue guests have been expired.
+    for user in auth.load_users().get("users", []):
+        # Match either the internal guest id or its Admin-visible de-identified analytics id.
+        if target in {str(user.get("user_id") or ""), str(user.get("guest_analytics_id") or "")}:
+            # Preserve completed exact replay by allowing the self-service core to validate its terminal marker.
+            if auth.is_guest(user) and user.get("converted_to_user_id"):
+                # Return the terminal guest only for the bounded replay decision.
+                return user
+            # Apply the same active-guest boundary used by self-service conversion.
+            return _require_active_guest(user)
+    # Keep missing identities enumeration-safe and distinct from malformed request syntax.
+    raise ValidationError("Conversion requires an active guest trial", {"reason": "guest_unavailable"})
+
+
+# Convert one active guest on an authenticated Admin's explicit support instruction.
+def convert_for_admin(actor, guest_identity: str, email: str, password: str, display_name: str, *, terms_version: str = "", accepted: bool = False, confirm: bool = False, idempotency_key: str = "") -> dict:
+    # Require current Admin authority even when a listener-free caller invokes this service directly.
+    auth.require_admin(actor or {})
+    # Require a literal confirmation so support conversion can never be implicit or inferred from truthy text.
+    if confirm is not True:
+        # Fail before resolving a guest identity or validating target-account content.
+        raise ValidationError("Admin-assisted conversion requires explicit confirmation", {"reason": "confirmation_required"})
+    # End every overdue guest before resolving the target so an expired trial cannot be converted by support.
+    auth.expire_overdue_guests()
+    # Resolve the exact active guest from the support identity.
+    guest = _guest_for_admin(guest_identity)
+    # Reuse the complete self-service conversion authority and the guest's canonical locale.
+    result = convert(guest, email, password, display_name, terms_version=terms_version, accepted=accepted, locale=str(guest.get("locale") or "en-US"), idempotency_key=idempotency_key)
+    # Close only the de-identified Admin telemetry row; the preserved wallet remains owned by the new account.
+    guest_analytics.record_ended(str(guest.get("guest_analytics_id") or ""), "converted", ending_balance=result["balance"])
+    # Resolve the committed account only after conversion so audit target identity is authoritative.
+    account = auth.find_user_by_email(result["email"])
+    # Capture one explicit audit instant in addition to the logger's canonical event timestamp.
+    audited_at = utc_now()
+    # Record actor, guest, account, player, replay, and time without credentials or raw idempotency material.
+    _audit("admin_guest_conversion_replayed" if result["replayed"] else "admin_guest_conversion_completed", actor_user_id=str((actor or {}).get("user_id") or ""), target_guest_user_id=str(guest.get("user_id") or ""), target_user_id=str((account or {}).get("user_id") or ""), target_player_id=str(guest.get("player_id") or ""), at=audited_at, replayed=bool(result["replayed"]), assisted=True)
+    # Return the exact self-service result shape without adding Admin-only audit fields.
+    return result
 
 
 # Convert an authenticated guest trial into a durable full first-party account.

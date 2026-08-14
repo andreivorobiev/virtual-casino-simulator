@@ -195,6 +195,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  # Assisted conversion accepts one visible analytics identity and preserves the guest-owned player in place.
+  /admin/guest-trials/convert:
+    post:
+      summary: Convert one active guest into its requested durable account after explicit operator confirmation.
+      operationId: guest_trials_v2_convert
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistedConversionRequest'
+      responses:
+        '200':
+          description: The exact self-service conversion result with the existing player and wallet preserved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistedConversionEnvelope'
+        '400':
+          description: The request, guest lifecycle, account content, confirmation, or idempotency key is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Standard error envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: The authenticated user is not a current active Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: The target mailbox, guest wallet owner, or completed operation conflicts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   # Cleanup is idempotent and uses fixed server retention; callers cannot choose paths or cutoffs.
   /admin/guest-trials/cleanup:
     post:
@@ -342,7 +386,7 @@ components:
           $ref: '#/components/schemas/LatencyBucket'
         reason:
           type: string
-          enum: [ended, expired, inactive, browser_closed, revoked]
+          enum: [ended, expired, inactive, browser_closed, revoked, converted]
     GameCounters:
       type: object
       additionalProperties: false
@@ -404,7 +448,7 @@ components:
           nullable: true
         end_reason:
           type: string
-          enum: [ended, expired, inactive, browser_closed, revoked]
+          enum: [ended, expired, inactive, browser_closed, revoked, converted]
           nullable: true
         duration_seconds:
           type: integer
@@ -702,6 +746,73 @@ components:
           properties:
             settings:
               $ref: '#/components/schemas/GuestTrialSettings'
+    AssistedConversionRequest:
+      type: object
+      additionalProperties: false
+      required: [guest_identity, email, password, display_name, terms_version, accepted, confirm, idempotency_key]
+      properties:
+        guest_identity:
+          type: string
+          pattern: '^(?:guest|gtrial)_[A-Za-z0-9_-]+$'
+          maxLength: 191
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+          writeOnly: true
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        terms_version:
+          type: string
+          minLength: 1
+          maxLength: 64
+        accepted:
+          type: boolean
+          enum: [true]
+        confirm:
+          type: boolean
+          enum: [true]
+        idempotency_key:
+          type: string
+          minLength: 16
+          maxLength: 100
+          pattern: '^[A-Za-z0-9_-]+$'
+    AssistedConversionResult:
+      type: object
+      additionalProperties: false
+      required: [status, replayed, email, display_name, balance, player_preserved]
+      properties:
+        status:
+          type: string
+          enum: [converted]
+        replayed:
+          type: boolean
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        balance:
+          type: number
+          minimum: 0
+        player_preserved:
+          type: boolean
+          enum: [true]
+    AssistedConversionEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/AssistedConversionResult'
     CleanupEnvelope:
       type: object
       required: [ok, data]
