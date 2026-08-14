@@ -12,7 +12,8 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from http.cookies import SimpleCookie
 from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_CREATE_WINDOW_SECONDS, GUEST_CREATES_PER_IP, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_MAX_ACTIONS, GUEST_MAX_ACTIVE, GUEST_STARTING_BALANCE, GUEST_TERMS_VERSION, SCHEMA_VERSION
-from casino.core import players
+# Import wallet and ledger services so Guest Trial teardown records its terminal movement.
+from casino.core import ledger, players
 # Import the de-identified guest-trial telemetry recorder for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import the provider-backed admission switch so owner changes apply without restart. (GUEST-001)
@@ -730,8 +731,24 @@ def end_guest_trial(user: dict, reason: str = "ended") -> None:
     from casino.core import autoplay
     # Stop every active guest-owned autoplay registration before revoking its wallet.
     autoplay.stop_for_player(user["player_id"])
-    # Irreversibly revoke the disposable wallet pointer and remaining play-token balance.
-    players.update_player(user["player_id"], lambda player: player.update({"status": "ended", "balance": 0.0, "display_name": "Ended guest trial", "updated_at": utc_now()}))
+    # Bind the terminal money movement to the immutable server-issued trial identity.
+    trial_identity = str(user.get("guest_analytics_id") or user.get("user_id") or "")
+    # Refuse an identity-less money mutation because it could not be replayed safely.
+    if not trial_identity:
+        # Surface one fixed operator boundary without echoing identity or wallet data.
+        raise ConflictError("Guest wallet teardown requires operator recovery")
+    # Burn a positive residual wallet exactly once through the shared ledger boundary.
+    if ending_balance is not None and ending_balance > 0:
+        # Use the same action key on every retry so the provider cannot double-debit the trial.
+        ledger.debit_once(user["player_id"], ending_balance, "GUEST_TRIAL_END", f"guest-trial-end:{trial_identity}", round_id=trial_identity, details={"reason": "trial_terminal"})
+    # Re-read the authoritative wallet after the exactly-once movement.
+    terminal_player = players.get_player(user["player_id"])
+    # Fail closed instead of hiding a concurrent or incomplete money movement with a direct overwrite.
+    if terminal_player.get("balance") != 0.0:
+        # Preserve the ledger and wallet evidence for an operator rather than inventing terminal state.
+        raise ConflictError("Guest wallet teardown requires operator recovery")
+    # Revoke only non-money presentation fields after the ledger proves the wallet is empty.
+    players.update_player(user["player_id"], lambda player: player.update({"status": "ended", "display_name": "Ended guest trial", "updated_at": utc_now()}))
     # Close the de-identified trial summary with its bounded end reason for the Admin funnel. (issue #317)
     guest_analytics.record_ended(user.get("guest_analytics_id"), reason, ending_balance=ending_balance)
 

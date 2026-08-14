@@ -102,12 +102,13 @@
         "modules/module-manifest.json",
         "contracts/compatibility/module-api-matrix.json",
         "tests/game_drivers/three_card_poker.py",
+        "tests/browser_wait_governance_tests.py",
         "tests/visual/visual_matrix.json",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-three-card-poker",
-      "changed_in": "game-expansion-three-card-poker",
-      "notes": "The descriptor uses sort order 190 and the normalized tests.game_drivers.three_card_poker:play driver reference released by issue #77."
+      "changed_in": "issue-750-browser-semantic-waits",
+      "notes": "The descriptor uses sort order 190 and the normalized tests.game_drivers.three_card_poker:play driver reference released by issue #77. Browser locale evidence waits for the exact installed-resource title instead of assuming a fixed resource-load duration."
     }
   ]
 }

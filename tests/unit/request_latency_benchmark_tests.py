@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the accepted aggregates plus single-source localization governance to total exactly 981 permanent rows.
-        self.assertEqual(len(requirements), 981)
+        # Require the accepted aggregates plus Guest Trial terminal-ledger governance to total exactly 983 permanent rows.
+        self.assertEqual(len(requirements), 983)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1421,6 +1421,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-186": "Tests",  # Bind hostile-value, composition, baseline, and Browser evidence.
             "I18N-014": "Application",  # Bind resource-owned shared copy and installed-locale game fallbacks.
             "TEST-187": "Tests",  # Bind complete adapter, resource-parity, and rendered localization evidence.
+            "LEDGER-035": "Core",  # Bind Guest Trial wallet teardown to one terminal ledger movement.
+            "TEST-188": "Tests",  # Bind replay, reconstruction, and economics-isolation evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

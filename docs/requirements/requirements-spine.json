@@ -5117,12 +5117,13 @@
         "BR-ROU-HITMAP-001"
       ],
       "implementation_files": [
+        "tests/browser_wait_governance_tests.py",
         "tests/run_tests.py",
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-348-roulette-zero-zone",
-      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles."
+      "changed_in": "issue-750-browser-semantic-waits",
+      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles. Issue #750 requires each audit wager response to complete before the refund so late UI adoption cannot overtake clear."
     },
     {
       "id": "DOC-017",
@@ -11463,6 +11464,40 @@
       "introduced_in": "issue-709-single-source-i18n-fallbacks",
       "changed_in": "issue-709-single-source-i18n-fallbacks",
       "notes": "The listener-free gate scans the complete game adapter catalog and exact checked-in dictionaries; Playwright uses authenticated existing shell and Admin cases with no new money mutation."
+    },
+    {
+      "id": "LEDGER-035",
+      "module": "Core",
+      "description": "Ending a Guest Trial with a positive fake-token balance commits exactly one GUEST_TRIAL_END debit through the storage-enforced ledger identity derived from the immutable trial id. Teardown confirms the authoritative wallet is zero and changes only non-money player presentation fields; it never overwrites balance directly. The lifecycle movement is excluded from player-facing game economics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-TEARDOWN-LEDGER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/auth.py",
+        "casino/admin.py"
+      ],
+      "introduced_in": "issue-705-guest-trial-ledger-teardown",
+      "changed_in": "issue-705-guest-trial-ledger-teardown",
+      "notes": "The terminal action key and round id use the server-issued de-identified trial identity. An absent identity or nonzero post-debit wallet fails closed for operator recovery rather than inventing terminal money state."
+    },
+    {
+      "id": "TEST-188",
+      "module": "Tests",
+      "description": "Listener-free production-service evidence ends one funded Guest Trial twice and proves exactly one terminal debit, the exact before and after balances, a trial-derived action identity, reconstruction from the starting grant plus durable ledger rows to zero, irreversible identity and session teardown, and byte-equivalent Admin game-economics output.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-TEARDOWN-LEDGER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/guest_teardown_ledger_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-705-guest-trial-ledger-teardown",
+      "changed_in": "issue-705-guest-trial-ledger-teardown",
+      "notes": "The isolated JSON-provider fixture uses the public auth, player, ledger, analytics, autoplay, and Admin services and restores every process-global test seam after each outcome."
     },
     {
       "id": "TEST-175",
