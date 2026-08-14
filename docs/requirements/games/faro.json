@@ -40,7 +40,7 @@
       "implementation_files": [
         "casino/games/faro/api.py",
         "casino/core/simple_game.py",
-        "tests/faro_tests.py",
+        "tests/games/faro/test_api.py",
         "tests/game_drivers/faro.py"
       ],
       "introduced_in": "issue-146-faro",

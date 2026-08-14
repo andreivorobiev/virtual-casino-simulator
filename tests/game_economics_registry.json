@@ -538,7 +538,7 @@
       "engine_path": "casino/games/faro/engine.py",
       "settlement_path": "casino/games/faro/api.py",
       "production_sha256": "93b8a7b7399890056b3b0185d06558a6271ffb2585202a9f1414bbe17c06f258",
-      "proof_tests": ["tests.faro_tests:FaroTests.test_house_edge_is_positive"],
+      "proof_tests": ["tests.games.faro.test_api:FaroTests.test_house_edge_is_positive"],
       "rationale": "The exact split frequency and half-loss rule create the game's small positive edge through production settlement."
     },
     {
@@ -552,7 +552,7 @@
       "engine_path": "casino/games/trente_et_quarante/engine.py",
       "settlement_path": "casino/games/trente_et_quarante/api.py",
       "production_sha256": "43f10c7c82b13ed50170f61d5e1645304ef65ab61a85f4683b7f7a3ea52241aa",
-      "proof_tests": ["tests.trente_et_quarante_tests:TrenteEtQuaranteTests.test_house_edge_is_positive"],
+      "proof_tests": ["tests.games.trente_et_quarante.test_api:TrenteEtQuaranteTests.test_house_edge_is_positive"],
       "rationale": "The production refait-at-thirty-one half-loss is exercised over the deterministic row simulation and keeps every wager house-side."
     },
     {
@@ -566,7 +566,7 @@
       "engine_path": "casino/games/pachinko/engine.py",
       "settlement_path": "casino/games/pachinko/api.py",
       "production_sha256": "c048a4fc69d684d244b23c30529e96ae6c1f8b979f0f5737118c90483b997cef",
-      "proof_tests": ["tests.pachinko_tests:PachinkoTests.test_house_edge_is_positive"],
+      "proof_tests": ["tests.games.pachinko.test_api:PachinkoTests.test_house_edge_is_positive"],
       "rationale": "Every production pocket and multiplier is weighted exactly, including the jackpot and push pockets."
     },
     {
@@ -636,7 +636,7 @@
       "engine_path": "casino/games/daily_draw_lab/engine.py",
       "settlement_path": "casino/games/daily_draw_lab/api.py",
       "production_sha256": "50ad16e2fc4ff91ffb16d8ae7a128c35d32751ad512615285afeef18cbad2d1d",
-      "proof_tests": ["tests.daily_draw_lab_tests:DailyDrawLabTests.test_house_edge_is_positive"],
+      "proof_tests": ["tests.games.daily_draw_lab.test_api:DailyDrawLabTests.test_house_edge_is_positive"],
       "rationale": "Every legal pick count and match tier is weighted against the production draw and returned-credit table."
     },
     {
@@ -650,7 +650,7 @@
       "engine_path": "casino/games/four_card_poker/engine.py",
       "settlement_path": "casino/games/four_card_poker/service.py",
       "production_sha256": "2edd25566c29c46c84af7db56f675c5dc5816576fdaf9b0c3a8201298ca9bf2a",
-      "proof_tests": ["tests.four_card_poker_tests:FourCardPokerTests.test_house_edge_is_positive"],
+      "proof_tests": ["tests.games.four_card_poker.test_api:FourCardPokerTests.test_house_edge_is_positive"],
       "rationale": "The production dealer edge, tie rule, ante bonus, and Aces-Up side wager remain house-side under the deterministic policy audit."
     }
   ]

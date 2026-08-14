@@ -40,7 +40,7 @@
       "implementation_files": [
         "casino/games/trente_et_quarante/api.py",
         "casino/core/simple_game.py",
-        "tests/trente_et_quarante_tests.py",
+        "tests/games/trente_et_quarante/test_api.py",
         "tests/game_drivers/trente_et_quarante.py"
       ],
       "introduced_in": "issue-147-trente-et-quarante",
