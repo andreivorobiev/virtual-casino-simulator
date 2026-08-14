@@ -10330,8 +10330,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "top-half-portfolio-v61",
-      "changed_in": "issue-769-baccarat-atomic-wagers",
-      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Keno and Baccarat are classified as provider-atomic for player-state publication after retiring their final direct saves, but remain blocked because game state and money are still committed through separate provider boundaries. Casino War and Blackjack retain explicit mixed-path debt for later #704 slices."
+      "changed_in": "issue-771-casino-war-atomic-preparation",
+      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Casino War, Keno, and Baccarat are classified as provider-atomic for player-state publication after retiring their final direct saves, but remain blocked because game state and money are still committed through separate provider boundaries. Blackjack retains explicit mixed-path settings debt for a later #704 slice."
     },
     {
       "id": "TEST-161",
@@ -11666,8 +11666,8 @@
         "docs/game_catalog_governance.md"
       ],
       "introduced_in": "issue-456-catalog-economics-registry",
-      "changed_in": "issue-769-baccarat-atomic-wagers",
-      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, Baccarat, and Blackjack #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged."
+      "changed_in": "issue-771-casino-war-atomic-preparation",
+      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, Baccarat, and Blackjack #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged. Issue #771 rebinds Casino War's settlement adapter after retiring direct preparation saves without changing game math."
     },
     {
       "id": "ADMIN-035",
@@ -11864,6 +11864,27 @@
       "introduced_in": "issue-769-baccarat-atomic-wagers",
       "changed_in": "issue-769-baccarat-atomic-wagers",
       "notes": "The subprocess fixture uses the real JSON provider, atomic player-state helper, Baccarat engine, and settlement adapter. Failure fixtures patch only the settlement boundary and require authoritative receipt absence before compensating the prepared state."
+    },
+    {
+      "id": "TEST-199",
+      "module": "Tests",
+      "description": "Real two-process Casino War evidence races initial-round and war-decision preparation against sibling player-game updates and same-action contenders, proving one prepared transition, exact request and round identity, one card-consumption sequence, and preserved sibling state. Deterministic ledger failures prove action-owned rollback restores exact cards, requests, rounds, and pruned bounded history only after authoritative first-action absence, while a committed lost response remains durable and recovers without a duplicate debit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CW-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/casino_war/tests/test_api.py",
+        "tests/game_economics_registry.json",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-771-casino-war-atomic-preparation",
+      "changed_in": "issue-771-casino-war-atomic-preparation",
+      "notes": "The subprocess fixture uses the real JSON provider and atomic player-state helper. Failure fixtures patch only the settlement boundary, publish one unrelated sibling field, and require authoritative receipt absence before bounded compensation. The audit recognizes atomic-only Casino War state publication without authorizing a second worker because state and money remain separate transactions."
     },
     {
       "id": "ROU-001",
@@ -15882,8 +15903,26 @@
         "casino/games/casino_war/tests/test_api.py"
       ],
       "introduced_in": "issue-704-casino-war-atomic-reconciliation",
-      "changed_in": "issue-704-casino-war-atomic-reconciliation",
-      "notes": "This first #704 slice migrates money-adjacent reconciliation publications without changing the v1 route or response envelope. Prepared round and decision creation remain for later mechanical slices under the still-open parent ticket."
+      "changed_in": "issue-771-casino-war-atomic-preparation",
+      "notes": "The first #704 slice migrated money-adjacent reconciliation publications; issue #771 retains those atomic markers and terminal transitions while retiring the remaining direct preparation and rollback saves. The v1 route and response envelope remain unchanged."
+    },
+    {
+      "id": "CW-007",
+      "module": "Casino War",
+      "description": "Casino War prepares initial rounds and tie decisions through the shared provider-owned atomic player game-state helper, detects duplicate action identifiers inside the same cross-process boundary, and compensates only an exact action-owned preparation after authoritative ledger absence while preserving sibling state and bounded history.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CW-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/casino_war/api.py",
+        "casino/games/casino_war/tests/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py"
+      ],
+      "introduced_in": "issue-771-casino-war-atomic-preparation",
+      "changed_in": "issue-771-casino-war-atomic-preparation",
+      "notes": "Real JSON-provider process races prove preparation preserves sibling updates and same-action contenders consume one round or decision. Deterministic failures restore exact action-owned cards, requests, rounds, and pruned history only when the first new ledger action is absent; a committed lost response remains prepared for exactly-once recovery. State and money still use separate provider boundaries, so a second production worker remains blocked under parent issue #704."
     },
     {
       "id": "BIG-SIX-001",

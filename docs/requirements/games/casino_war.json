@@ -123,8 +123,26 @@
         "casino/games/casino_war/tests/test_api.py"
       ],
       "introduced_in": "issue-704-casino-war-atomic-reconciliation",
-      "changed_in": "issue-704-casino-war-atomic-reconciliation",
-      "notes": "This first #704 slice migrates money-adjacent reconciliation publications without changing the v1 route or response envelope. Prepared round and decision creation remain for later mechanical slices under the still-open parent ticket."
+      "changed_in": "issue-771-casino-war-atomic-preparation",
+      "notes": "The first #704 slice migrated money-adjacent reconciliation publications; issue #771 retains those atomic markers and terminal transitions while retiring the remaining direct preparation and rollback saves. The v1 route and response envelope remain unchanged."
+    },
+    {
+      "id": "CW-007",
+      "module": "Casino War",
+      "description": "Casino War prepares initial rounds and tie decisions through the shared provider-owned atomic player game-state helper, detects duplicate action identifiers inside the same cross-process boundary, and compensates only an exact action-owned preparation after authoritative ledger absence while preserving sibling state and bounded history.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CW-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/casino_war/api.py",
+        "casino/games/casino_war/tests/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py"
+      ],
+      "introduced_in": "issue-771-casino-war-atomic-preparation",
+      "changed_in": "issue-771-casino-war-atomic-preparation",
+      "notes": "Real JSON-provider process races prove preparation preserves sibling updates and same-action contenders consume one round or decision. Deterministic failures restore exact action-owned cards, requests, rounds, and pruned history only when the first new ledger action is absent; a committed lost response remains prepared for exactly-once recovery. State and money still use separate provider boundaries, so a second production worker remains blocked under parent issue #704."
     }
   ]
 }

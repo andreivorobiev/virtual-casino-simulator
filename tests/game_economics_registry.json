@@ -114,7 +114,7 @@
       "requirement_id": "CW-001",
       "engine_path": "casino/games/casino_war/engine.py",
       "settlement_path": "casino/games/casino_war/api.py",
-      "production_sha256": "a9a1aff0387681562626afef029baf6ada454bdd9e3dc878f7257ec9b69e9058",
+      "production_sha256": "2b9babb8cf9078f1742e5660a0f0ddb4bf3b63457aa81ee98cd4266c45dd4f89",
       "proof_tests": ["casino.games.casino_war.tests.test_engine:CasinoWarEngineTests.test_initial_player_win_emits_ordered_ledger_intents", "casino.games.casino_war.tests.test_engine:CasinoWarEngineTests.test_surrender_after_tie_returns_half_ante", "casino.games.casino_war.tests.test_engine:CasinoWarEngineTests.test_war_burns_three_and_second_tie_favors_player"],
       "rationale": "The complete published decision tree is source-pinned and its best tie decision remains house-side under the production payout schedule."
     },

@@ -24,7 +24,7 @@ Historical source baseline: 9.1.0
 - keno: 9.4.1
 - bingo: 9.3.7
 - multi_hand_video_poker: 1.1.2
-- casino_war: 1.2.0
+- casino_war: 1.2.1
 - big_six_wheel: 1.1.4
 - red_dog: 1.1.2
 - dragon_tiger: 1.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.6
-- docs: 1.96.6
+- tests: 1.100.7
+- docs: 1.96.7
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -689,6 +689,7 @@ Historical source baseline: 9.1.0
 - **TEST-195** (Tests) - PASS: Focused self-service evidence proves converted reason, exact ending balance, de-identified storage, one stable terminal event, Admin active-row exclusion, exact replay, pre-commit inactivity, and post-commit analytics-failure recovery without wallet or ledger effects. The Admin-assisted suite proves its shared terminal projection stays byte-stable, and real Browser evidence submits the visible self-service form before verifying the terminal analytics row is no longer an active-action source.
 - **TEST-197** (Tests) - PASS: Real two-process Keno evidence races prepared ticket purchase and refund settlements against sibling player-game updates, then proves exact ticket identity, one debit and one refund, restored wallet value, preserved sibling state, and zero pending-marker residue. A second real two-process race proves one same-ticket refund winner, one fail-closed contender, and one credit. Deterministic failure evidence proves action-owned rollback preserves unrelated state, while the static multiprocess inventory recognizes atomic-only player-state publication without authorizing a second worker.
 - **TEST-198** (Tests) - PASS: Real two-process Baccarat evidence races prepared bet placement and refund settlements against sibling player-game updates, then proves exact bet identity, one debit and one refund, restored wallet value, preserved sibling state, and zero pending-marker residue. A second real two-process race proves one same-bet refund winner, one fail-closed contender, and one credit. Deterministic failure evidence proves action-owned rollback preserves unrelated state, settings use the latest provider document, and the static multiprocess inventory recognizes atomic-only player-state publication without authorizing a second worker.
+- **TEST-199** (Tests) - PASS: Real two-process Casino War evidence races initial-round and war-decision preparation against sibling player-game updates and same-action contenders, proving one prepared transition, exact request and round identity, one card-consumption sequence, and preserved sibling state. Deterministic ledger failures prove action-owned rollback restores exact cards, requests, rounds, and pruned bounded history only after authoritative first-action absence, while a committed lost response remains durable and recovers without a duplicate debit.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -926,6 +927,7 @@ Historical source baseline: 9.1.0
 - **CW-004** (Application) - PASS: The Casino War surface provides complete English and Russian copy and remains usable without overflow across required desktop, tablet, and mobile viewports.
 - **CW-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Casino War with requirement, module, version, and visual evidence traceability.
 - **CW-006** (Casino War) - PASS: Casino War records committed ledger-intent markers and the terminal settled phase through the shared provider-owned atomic player game-state helper, so competing server processes preserve both transitions instead of publishing stale complete documents.
+- **CW-007** (Casino War) - PASS: Casino War prepares initial rounds and tie decisions through the shared provider-owned atomic player game-state helper, detects duplicate action identifiers inside the same cross-process boundary, and compensates only an exact action-owned preparation after authoritative ledger absence while preserving sibling state and bounded history.
 - **BIG-SIX-001** (Big Six Wheel) - PASS: Big Six Wheel exposes the approved 54-segment profile, seven wager targets, deterministic result seam, and documented net payout table through its engine and browser surface.
 - **BIG-SIX-002** (Big Six Wheel) - PASS: Authenticated sessions own isolated reload-safe Big Six Wheel state, recent settlements, and canonical route restoration.
 - **BIG-SIX-003** (Big Six Wheel) - PASS: Each Big Six spin uses one aggregate ledger wager debit and at most one settlement credit with request-fingerprint conflict detection and exactly-once retry recovery.
