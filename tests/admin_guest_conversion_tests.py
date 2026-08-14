@@ -102,6 +102,8 @@ class AdminGuestConversionTests(unittest.TestCase):
     def test_admin_conversion_is_idempotent(self) -> None:
         # Complete the first Admin-assisted conversion.
         first = self._convert()
+        # Capture the shared self-service analytics projection after the first assisted completion.
+        analytics_before = guest_analytics.detail(self.guest["guest_analytics_id"])
         # Replay the exact same operation against the same analytics identity.
         second = self._convert()
         # Require the replay marker and stable result content.
@@ -110,6 +112,8 @@ class AdminGuestConversionTests(unittest.TestCase):
         owners = [user for user in auth.load_users().get("users", []) if user.get("player_id") == self.guest["player_id"] and not auth.is_guest(user)]
         # Require one durable account owner after both requests.
         self.assertEqual(len(owners), 1)
+        # Require the Admin wrapper to preserve the shared analytics helper's exact terminal fields.
+        self.assertEqual(guest_analytics.detail(self.guest["guest_analytics_id"]), analytics_before)
 
     # Prove confirmation, actor authority, and exact request shape fail before mutation.
     def test_confirmation_authority_and_shape_fail_closed(self) -> None:

@@ -19,7 +19,7 @@ import hashlib
 
 # Import the canonical identity, session, and player boundary.
 from casino.core import auth
-# Import de-identified lifecycle closure for successful assisted conversion.
+# Import de-identified lifecycle closure for every successful conversion path.
 from casino.core import guest_analytics
 # Import the player wallet boundary so the preserved balance can be reported.
 from casino.core import players
@@ -133,6 +133,80 @@ def _result(account: dict, *, replayed: bool) -> dict:
     return {"status": "converted", "replayed": replayed, "email": account["email"], "display_name": account["display_name"], "balance": wallet["balance"], "player_preserved": True}
 
 
+# Close de-identified conversion telemetry after durable identity ownership commits. (GUEST-007)
+def _close_conversion_analytics(guest: dict, result: dict) -> bool:
+    # Read only the server-issued analytics reference from the canonical guest principal.
+    analytics_id = str((guest or {}).get("guest_analytics_id") or "")
+    # Skip legacy guests without analytics rather than affecting their completed conversion.
+    if not analytics_id:
+        # Preserve the committed account and wallet as the authoritative outcome.
+        return False
+    # Keep de-identified product telemetry outside the identity and money commit boundary.
+    try:
+        # Close the one analytics row idempotently with the exact preserved ending balance.
+        guest_analytics.record_ended(analytics_id, "converted", ending_balance=result["balance"])
+        # Confirm the analytics service accepted or idempotently replayed the projection.
+        return True
+    # Defer an unavailable analytics projection without converting success into an account failure.
+    except Exception:
+        # Best-effort logging must also remain unable to affect the committed conversion result.
+        try:
+            # Record only the bounded event class, never exception, identity, path, or credential content.
+            logger.warning("guest_conversion_analytics_deferred", analytics_id_present=True)
+        # Ignore a secondary audit sink failure because exact replay retries analytics closure.
+        except Exception:
+            # Intentionally preserve the already-committed identity and wallet outcome.
+            pass
+        # Report the deferred projection only to the internal recovery loop.
+        return False
+
+
+# Publish one conversion result and converge its recoverable analytics projection. (GUEST-007)
+def _final_result(guest: dict, account: dict, *, replayed: bool) -> dict:
+    # Read the authoritative adopted wallet before recording its de-identified terminal aggregate.
+    result = _result(account, replayed=replayed)
+    # Attempt analytics closure after durable conversion, including every exact replay path.
+    _close_conversion_analytics(guest, result)
+    # Return the unchanged public conversion result regardless of telemetry availability.
+    return result
+
+
+# Reconcile committed conversion markers into analytics without repeating identity or wallet work. (GUEST-007)
+def reconcile_conversion_analytics() -> int:
+    # Read one canonical identity snapshot so guest and account ownership are compared consistently.
+    users = auth.load_users().get("users", [])
+    # Index only durable non-guest accounts by their server-issued identity.
+    accounts = {str(user.get("user_id") or ""): user for user in users if not auth.is_guest(user)}
+    # Count rows already terminal or successfully converged for bounded internal evidence.
+    reconciled = 0
+    # Inspect only disposable identities carrying a committed conversion marker.
+    for guest in users:
+        # Skip active, ended, malformed, and non-guest identities before reading account state.
+        if not auth.is_guest(guest) or guest.get("status") != "converted" or not guest.get("converted_to_user_id"):
+            # Continue without creating or changing any identity or wallet record.
+            continue
+        # Resolve the exact durable account named by the terminal guest marker.
+        account = accounts.get(str(guest.get("converted_to_user_id") or ""))
+        # Require both identities to retain the same adopted player before analytics convergence.
+        if account is None or str(account.get("player_id") or "") != str(guest.get("player_id") or ""):
+            # Preserve inconsistent ownership for operator recovery rather than guessing a balance.
+            continue
+        # Read only the current authoritative wallet aggregate outside identity mutation.
+        try:
+            # Capture the exact adopted account balance for terminal de-identified reporting.
+            balance = players.get_player(account["player_id"])["balance"]
+        # Skip an unavailable wallet without affecting Admin reads or conversion ownership.
+        except Exception:
+            # A later Admin read or explicit replay can retry the projection safely.
+            continue
+        # Retry only the idempotent analytics projection; this helper never invokes conversion.
+        if _close_conversion_analytics(guest, {"balance": balance}):
+            # Count only an accepted or idempotently replayed analytics projection.
+            reconciled += 1
+    # Return a non-public count useful to deterministic recovery tests.
+    return reconciled
+
+
 # Validate one caller-stable conversion idempotency key without retaining its raw value.
 def _idempotency_hash(value: str) -> str:
     # Normalize the caller-supplied key before applying contract bounds.
@@ -181,8 +255,6 @@ def convert_for_admin(actor, guest_identity: str, email: str, password: str, dis
     guest = _guest_for_admin(guest_identity)
     # Reuse the complete self-service conversion authority and the guest's canonical locale.
     result = convert(guest, email, password, display_name, terms_version=terms_version, accepted=accepted, locale=str(guest.get("locale") or "en-US"), idempotency_key=idempotency_key)
-    # Close only the de-identified Admin telemetry row; the preserved wallet remains owned by the new account.
-    guest_analytics.record_ended(str(guest.get("guest_analytics_id") or ""), "converted", ending_balance=result["balance"])
     # Resolve the committed account only after conversion so audit target identity is authoritative.
     account = auth.find_user_by_email(result["email"])
     # Capture one explicit audit instant in addition to the logger's canonical event timestamp.
@@ -212,7 +284,7 @@ def convert(guest, email: str, password: str, display_name: str, *, terms_versio
         # Revoke any surviving disposable session again so exact replay stays fail-closed.
         auth.revoke_sessions_for_user(str(guest.get("user_id") or ""))
         # Return the byte-stable account result without changing conversion identity state.
-        return _result(prior, replayed=True)
+        return _final_result(guest, prior, replayed=True)
     # Require the caller to be an active guest before any validation that could leak account state.
     _require_active_guest(guest)
     # Read the guest's durable player binding once; conversion preserves it exactly.
@@ -254,7 +326,7 @@ def convert(guest, email: str, password: str, display_name: str, *, terms_versio
         # Record the recovered completion for operators.
         _audit("guest_conversion_recovered", account_user_id=existing_account["user_id"], player_id=player_id)
         # Return the stable replay result.
-        return _result(existing_account, replayed=True)
+        return _final_result(guest, existing_account, replayed=True)
     # Create the full local account adopting the guest's existing player so the wallet and ledger persist.
     try:
         # Create the full local account while atomically preserving one durable owner per player.
@@ -274,7 +346,7 @@ def convert(guest, email: str, password: str, display_name: str, *, terms_versio
         # Record the concurrent recovery without exposing supplied credentials or keys.
         _audit("guest_conversion_concurrent_replay", account_user_id=account["user_id"], player_id=player_id)
         # Return the converged account as an idempotent replay.
-        return _result(account, replayed=True)
+        return _final_result(guest, account, replayed=True)
     # Capture the completion time once for consistent terminal markers.
     when = utc_now()
     # Atomically record accepted terms and the terminal guest marker in the shared identity document.
@@ -284,4 +356,4 @@ def convert(guest, email: str, password: str, display_name: str, *, terms_versio
     # Record the successful conversion with only bounded provenance fields.
     _audit("guest_conversion_completed", guest_user_id=guest["user_id"], account_user_id=account["user_id"], player_id=player_id)
     # Return the completed conversion result.
-    return _result(account, replayed=False)
+    return _final_result(guest, account, replayed=False)

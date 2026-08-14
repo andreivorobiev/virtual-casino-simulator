@@ -1046,6 +1046,8 @@ def register(router):
     def admin_guest_trials_v2(body, query):
         # End inactive or absolute-expiry principals before reporting active counts.
         auth.expire_overdue_guests()
+        # Reconcile any committed self-service conversion whose analytics write was interrupted. (GUEST-007)
+        guest_conversion.reconcile_conversion_analytics()
         # Apply only validated low-cardinality and bounded-time filters inside the analytics service.
         summary = guest_analytics.summary(**_guest_filters(query))
         # Return the contract-owned summary without auth, player, session, or network identifiers.
@@ -1082,6 +1084,8 @@ def register(router):
     @router.get(r"/api/v2/admin/guest-trials/sessions")
     # Publish only retained de-identified analytics rows for Admin drill-down. (issue #317)
     def admin_guest_trial_sessions_v2(body, query):
+        # Converge committed conversion markers before exposing the recent active-action source. (GUEST-007)
+        guest_conversion.reconcile_conversion_analytics()
         # Reuse the same filtered summary so retention and lifecycle cleanup cannot diverge.
         summary = guest_analytics.summary(**_guest_filters(query))
         # Return rows plus active filters without exposing credential-backed state.
@@ -1091,6 +1095,8 @@ def register(router):
     @router.get(r"/api/v2/admin/guest-trials/sessions/(?P<analytics_id>gtrial_[A-Za-z0-9_-]+)")
     # Return one retained de-identified Guest Trials detail row. (issue #317)
     def admin_guest_trial_detail_v2(body, query, analytics_id):
+        # Retry interrupted post-commit conversion telemetry before selecting the requested row. (GUEST-007)
+        guest_conversion.reconcile_conversion_analytics()
         # Read the analytics-only row after the router has enforced Admin authorization.
         trial = guest_analytics.detail(analytics_id)
         # Return the standard not-found envelope when retention removed the row.
