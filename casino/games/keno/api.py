@@ -1,12 +1,14 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
 # Keno API actions, ticket persistence, draw execution, and settlement orchestration.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+from casino.core.state_store import load_player_game_state, save_player_game_state, update_player_game_state
 from casino.core.validation import require_amount, require_player_id
 from casino.core import players
 # Import the one canonical game-money boundary.
 from casino.core.settlement import GameSettlementGateway
 from casino.core.history import append_history
+# Import the fail-closed conflict boundary for divergent committed draw state.
+from casino.errors import ConflictError
 from casino.games.keno import engine
 
 # Set GAME_ID to the value needed for the next operation.
@@ -29,6 +31,60 @@ def payload(player_id: str, state=None):
     visible_players = [p for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
     return {"game":GAME_ID, "state":public, "player": players.get_player(player_id), "players": visible_players, "paytable": engine.PAYTABLE}
 
+# Commit one pending draw against the latest provider-owned state document. (KENO-028)
+def commit_pending_draw(player_id: str, state: dict) -> dict:
+    # Capture the exact draw selected inside the atomic state transition.
+    selected = {}
+    # Define a latest-document transition that never samples behind an existing commitment.
+    def commit(current: dict) -> dict:
+        # Reuse entropy already committed by a racing or interrupted request.
+        draw = current.get("pending_draw")
+        # Sample only while the provider owns the latest document and no draw is pending.
+        if draw is None:
+            # Price every latest open ticket against one fresh draw.
+            draw = engine.commit_draw(current)
+            # Publish the commitment before any settlement side effect can begin.
+            current["pending_draw"] = draw
+        # Retain the exact committed draw for the current response path.
+        selected["draw"] = draw
+        # Return the complete latest document for provider-owned publication.
+        return current
+    # Apply the commitment through the JSON/MySQL atomic document boundary.
+    committed = update_player_game_state(GAME_ID, player_id, commit, engine.default_state)
+    # Replace the caller's stale top-level view with the authoritative committed state.
+    state.clear()
+    # Copy every provider-published field into the existing caller-owned object.
+    state.update(committed)
+    # Return the exact draw selected under the provider boundary.
+    return selected["draw"]
+
+# Finalize one committed draw against the latest provider-owned state document. (KENO-028)
+def finalize_committed_draw_state(player_id: str, state: dict, draw: dict) -> None:
+    # Define an idempotent terminal transition for the exact committed round.
+    def finalize(current: dict) -> dict:
+        # Read the commitment currently owned by the latest document.
+        pending = current.get("pending_draw")
+        # Finalize only when the expected draw is still pending.
+        if pending is not None:
+            # Refuse to clear or publish a different racing commitment.
+            if pending != draw:
+                # Preserve both sources for operator-led conflict recovery.
+                raise ConflictError("Keno committed draw state requires operator recovery")
+            # Apply the established terminal history and ticket mutations once.
+            engine.finalize_draw(current, pending)
+        # Accept a replay only when the same round is already terminal.
+        elif not any(item == draw for item in current.get("last_draws", []) if isinstance(item, dict)):
+            # Reject missing or unrelated state instead of inventing finalization.
+            raise ConflictError("Keno committed draw state requires operator recovery")
+        # Return the complete latest document for provider-owned publication.
+        return current
+    # Apply terminal publication through the JSON/MySQL atomic document boundary.
+    finalized = update_player_game_state(GAME_ID, player_id, finalize, engine.default_state)
+    # Remove stale top-level entries from the caller's pre-settlement snapshot.
+    state.clear()
+    # Refresh the caller so response state includes every preserved sibling update.
+    state.update(finalized)
+
 # Settle one committed draw exactly once, finalize its terminal state, and persist the finalized round. (issues #430, #555)
 def settle_committed_draw(player_id: str, state: dict, d: dict):
     # Collect per-ticket settlement evidence for the draw response.
@@ -44,10 +100,8 @@ def settle_committed_draw(player_id: str, state: dict, d: dict):
         # Branch so history rows append only for first-time payouts and replays cannot duplicate them. (issue #403)
         if not replayed: append_history(GAME_ID,d["round_id"],t["player_id"],"ticket",f"{len(t['spots'])} spots",t["amount"],"win" if r["payout"] else "loss",r["payout"],bal,{"drawn":d["drawn"],"spots":t["spots"],"catches":r["catches"]})
         settlements.append({"result":r,"ledger":credit,"replayed":replayed})
-    # Apply the terminal draw mutations exactly once and release the settlement commitment.
-    engine.finalize_draw(state, d)
-    # Persist the finalized round so the committed settlement can never run twice.
-    save_player_game_state(GAME_ID, player_id, state)
+    # Publish the terminal draw against the latest state and release the exact commitment once.
+    finalize_committed_draw_state(player_id, state, d)
     # Return the settlement evidence for the draw response.
     return settlements
 
@@ -109,10 +163,8 @@ def register(router):
         d=state.get("pending_draw")
         # Branch when no settlement is pending so fresh entropy commits durably before any credit.
         if not d:
-            # Sample and price the round without mutating terminal state.
-            d=engine.commit_draw(state)
-            # Persist the committed entropy atomically before the first settlement side effect.
-            state["pending_draw"]=d; save_player_game_state(GAME_ID, player_id, state)
+            # Commit fresh entropy against the provider-owned latest state before settlement.
+            d=commit_pending_draw(player_id, state)
         # Settle every committed result exactly once and finalize the round.
         settlements=settle_committed_draw(player_id, state, d)
         # Return the same draw envelope this round has always published.

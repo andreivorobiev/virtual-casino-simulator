@@ -344,24 +344,14 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         # Require the catalog to classify dozen bets as outside-layout bets.
         self.assertEqual(dozen["layout_kind"], "outside")
 
-    # Wrap the production keno state saver so exactly the finalize-phase save crashes once. (issue #555)
+    # Replace the production Keno terminal publisher so finalization crashes after credits commit. (issues #555, #754)
     def _keno_finalize_crash(self):
-        # Keep the production saver so passthrough calls stay real.
-        real_save = keno_api.save_player_game_state
-        # Count saves so only the second save of the interrupted draw request fails.
-        calls = {"count": 0}
-        # Define the injected saver used during the interrupted request.
-        def crashing_save(game_id, player_id, state):
-            # Advance the per-request save counter.
-            calls["count"] += 1
-            # Crash exactly on the finalize save so the commitment survives with credits already applied.
-            if calls["count"] == 2:
-                # Raise the injected interruption the test asserts on.
-                raise RuntimeError("injected finalize crash")
-            # Delegate every other save to the production helper.
-            return real_save(game_id, player_id, state)
-        # Return the counting saver for a mock.patch.object new= injection.
-        return crashing_save
+        # Define the injected terminal publisher used after settlement movements finish.
+        def crashing_finalize(player_id, state, draw):
+            # Preserve the durably committed draw while modeling process loss before terminal publication.
+            raise RuntimeError("injected finalize crash")
+        # Return the exact new atomic publication seam for mock.patch.object new= injection.
+        return crashing_finalize
 
     # Prove an interrupted keno settlement resumes from its committed entropy instead of redrawing. (issues #430, #555)
     def test_keno_crash_after_commitment_replays_identical_draw(self):
@@ -374,7 +364,7 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         # Require the purchase debit to carry its storage-atomic placement identity.
         self.assertEqual(len(self._action_rows(f"{ticket_id}:wager")), 1)
         # Run the interrupted draw with the finalize-phase save crashing after credits commit.
-        with mock.patch.object(keno_api, "save_player_game_state", new=self._keno_finalize_crash()):
+        with mock.patch.object(keno_api, "finalize_committed_draw_state", new=self._keno_finalize_crash()):
             # Script the committed draw so the replay assertion below can pin its numbers.
             with mock.patch.object(keno_engine, "_SYSTEM_RANDOM", _ScriptedBalls(list(range(1, 21)))):
                 # Require the injected finalize crash to surface to the caller.
@@ -413,7 +403,7 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         # Store the durable ticket identity minted at purchase.
         ticket_id = purchase["ticket"]["ticket_id"]
         # Run the interrupted draw with the finalize-phase save crashing after credits commit.
-        with mock.patch.object(keno_api, "save_player_game_state", new=self._keno_finalize_crash()):
+        with mock.patch.object(keno_api, "finalize_committed_draw_state", new=self._keno_finalize_crash()):
             # Script the committed draw deterministically.
             with mock.patch.object(keno_engine, "_SYSTEM_RANDOM", _ScriptedBalls(list(range(1, 21)))):
                 # Require the injected finalize crash to surface to the caller.
