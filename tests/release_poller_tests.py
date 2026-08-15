@@ -16,6 +16,8 @@ import shutil
 import subprocess
 # Import the active Python executable for the poller's embedded verification helpers.
 import sys
+# Import source indentation cleanup for executable Bash harnesses.
+import textwrap
 # Import disposable directories so no test writes repository or production state.
 import tempfile
 # Import unittest for dependency-free focused execution.
@@ -94,6 +96,158 @@ class ReleasePollerTests(unittest.TestCase):
             text=True,
             timeout=30,
         )
+
+    # Source the production poller into one disposable Bash harness without invoking its CLI.
+    def run_sourced_poller(self, script: str, *, environment: dict | None = None, check: bool = True):
+        # Persist the caller's listener-free harness under the disposable test root.
+        harness = self.root / "poller-harness.sh"
+        # Normalize indentation while retaining exact LF shell syntax.
+        harness.write_text(textwrap.dedent(script), encoding="utf-8", newline="\n")
+        # Select the supplied isolated environment or the ordinary safe default.
+        selected_environment = environment or self.environment
+        # Execute the harness through the same Bash runtime as the production script tests.
+        return subprocess.run(
+            [self.bash, bash_path(harness)],
+            cwd=ROOT,
+            env=selected_environment,
+            check=check,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+    # Exercise the deployment state machine with every external side effect replaced by a disposable seam.
+    def run_deployment_scenario(self, scenario: str, *, run_poll_after_drill: bool = False):
+        # Create one isolated scenario root so sibling cases cannot satisfy cleanup assertions.
+        scenario_root = self.root / scenario
+        # Create the production-shaped release and state directories under the disposable root.
+        releases_root = scenario_root / "releases"
+        # Create the release collection before the poller requests its owned work directory.
+        releases_root.mkdir(parents=True)
+        # Retain one unrelated sentinel that cleanup must never remove.
+        sentinel = releases_root / "operator-owned-sentinel"
+        # Write fixed sentinel bytes for exact post-failure preservation proof.
+        sentinel.write_text("preserve\n", encoding="utf-8", newline="\n")
+        # Create the exact predecessor release root selected before every scenario.
+        predecessor_root = releases_root / ("d" * 40)
+        # Materialize the predecessor directory for fail-closed existence checks.
+        predecessor_root.mkdir()
+        # Create one private state root for alarm and selector fixtures.
+        state_root = scenario_root / "state"
+        # Materialize the poller state directory.
+        state_root.mkdir()
+        # Bind the synthetic current selector through one test-owned text record.
+        selector_record = state_root / "current-root"
+        # Store POSIX spelling because the sourced Bash harness reads the record.
+        selector_record.write_text(bash_path(predecessor_root) + "\n", encoding="utf-8", newline="\n")
+        # Seed one prior release fragment so rollback must restore exact bytes.
+        release_env = scenario_root / "release.env"
+        # Preserve one recognizable predecessor fragment.
+        release_env.write_text("CASINO_BUILD_SHA=" + ("d" * 40) + "\n", encoding="utf-8", newline="\n")
+        # Seed an alarm that only a successful complete operation may clear.
+        alarm_file = state_root / "alarm"
+        # Use the canonical bounded alarm shape.
+        alarm_file.write_text("status=alarm\nreason=prior_failure\n", encoding="utf-8", newline="\n")
+        # Capture selector, observation, schema, and service actions without touching the host.
+        trace = state_root / "trace"
+        # Bind one disposable stable-poller path for the final successful install.
+        stable_poller = scenario_root / "stable-poller"
+        # Bind one disposable lock file for the real exclusive-descriptor path.
+        lock_file = scenario_root / "poller.lock"
+        # Build a sourceable harness whose high-level dependencies are deterministic fakes.
+        harness = r'''
+            export CASINO_RELEASES_ROOT="__RELEASES_ROOT__"
+            export CASINO_INSTALL_ROOT="__SCENARIO_ROOT__"
+            export CASINO_CURRENT_LINK="__SCENARIO_ROOT__/current"
+            export CASINO_RELEASE_ENV="__RELEASE_ENV__"
+            export CASINO_RELEASE_POLLER_STATE_ROOT="__STATE_ROOT__"
+            export CASINO_RELEASE_POLLER_ALARM_FILE="__ALARM_FILE__"
+            export CASINO_RELEASE_POLLER_STABLE_PATH="__STABLE_POLLER__"
+            export CASINO_RELEASE_POLLER_LOCK_FILE="__LOCK_FILE__"
+            export CASINO_PYTHON="__PYTHON__"
+            source "__POLLER__"
+            log() { printf '%s\n' "$1" >> "__TRACE__"; }
+            require_runtime() { :; }
+            id() { printf '0\n'; }
+            flock() { :; }
+            systemctl() { printf 'systemctl:%s\n' "$*" >> "__TRACE__"; }
+            install() {
+              local arguments=("$@")
+              if test "${arguments[0]}" = "-d"; then
+                local directory_index=$((${#arguments[@]} - 1))
+                command mkdir -p "${arguments[$directory_index]}"
+                return 0
+              fi
+              local source_index=$((${#arguments[@]} - 2))
+              local destination_index=$((${#arguments[@]} - 1))
+              command cp "${arguments[$source_index]}" "${arguments[$destination_index]}"
+            }
+            query_release() {
+              : > "$1"
+              printf 'v0.9.5.79\t%s\t0\thttps://github.com/checksums\thttps://github.com/manifest\thttps://github.com/archive\n' "__CANDIDATE_COMMIT__"
+            }
+            download_release() {
+              command mkdir -p "$2"
+              command touch "$2/checksums.txt" "$2/release-manifest.json" "$2/virtual_casino_simulator_package.zip"
+            }
+            verify_assets() { :; }
+            unzip() {
+              local destination="$4/virtual_casino_simulator"
+              command mkdir -p "${destination}/deploy/pull"
+              command cp "__POLLER__" "${destination}/deploy/pull/casino-release-poller.sh"
+            }
+            validate_monitor_configuration() { :; }
+            write_release_environment() { printf 'CASINO_BUILD_SHA=%s\n' "__CANDIDATE_COMMIT__" > "$3"; }
+            compare_release_roots() { :; }
+            check_schema_two() { printf 'schema:%s\n' "$1" >> "__TRACE__"; }
+            current_release_root() { command cat "__SELECTOR_RECORD__"; }
+            activate_release() {
+              printf '%s\n' "$1" > "__SELECTOR_RECORD__"
+              printf 'selector:%s\n' "$1" >> "__TRACE__"
+            }
+            installed_version() { printf '0.9.5.78\n'; }
+            installed_commit() { printf '%s\n' "__PREDECESSOR_COMMIT__"; }
+            observe_release() {
+              printf 'observe:%s:%s\n' "$1" "$2" >> "__TRACE__"
+              if test "__SCENARIO__" = "candidate-failure" && test "$1" = "0.9.5.79"; then
+                return 1
+              fi
+              if test "__SCENARIO__" = "predecessor-failure" && test "$1" = "0.9.5.78"; then
+                return 1
+              fi
+              return 0
+            }
+            deploy_latest rollback-drill
+            __OPTIONAL_POLL__
+        '''
+        # Bind every exact path and identity without invoking shell interpolation in Python.
+        replacements = {
+            "__RELEASES_ROOT__": bash_path(releases_root),
+            "__SCENARIO_ROOT__": bash_path(scenario_root),
+            "__RELEASE_ENV__": bash_path(release_env),
+            "__STATE_ROOT__": bash_path(state_root),
+            "__ALARM_FILE__": bash_path(alarm_file),
+            "__STABLE_POLLER__": bash_path(stable_poller),
+            "__LOCK_FILE__": bash_path(lock_file),
+            "__PYTHON__": bash_path(sys.executable),
+            "__POLLER__": bash_path(POLLER),
+            "__TRACE__": bash_path(trace),
+            "__CANDIDATE_COMMIT__": "c" * 40,
+            "__SELECTOR_RECORD__": bash_path(selector_record),
+            "__PREDECESSOR_COMMIT__": "d" * 40,
+            "__SCENARIO__": scenario,
+            "__OPTIONAL_POLL__": "deploy_latest deploy" if run_poll_after_drill else ":",
+        }
+        # Replace only fixed test-owned markers.
+        for marker, value in replacements.items():
+            # Bind one marker exactly once or fail while authoring the test.
+            self.assertIn(marker, harness)
+            # Replace every intentional use of the marker with its fixed value.
+            harness = harness.replace(marker, value)
+        # Execute without automatic failure conversion so fail-closed receipts remain inspectable.
+        result = self.run_sourced_poller(harness, check=False)
+        # Return the exact disposable evidence paths with the process result.
+        return result, releases_root, predecessor_root, selector_record, alarm_file, sentinel, stable_poller, trace
 
     # Build one canonical stable release API object with the exact required assets.
     def release_payload(self):
@@ -232,6 +386,136 @@ class ReleasePollerTests(unittest.TestCase):
         # Prove the full verifier and every later activation seam remain untouched.
         self.assertFalse(marker.exists())
 
+    # Prove the documented direct rollback drill resolves monitor identity without service-owned environment injection.
+    def test_direct_identity_probe_reads_only_the_root_managed_monitor_file(self):
+        # Bind one non-secret synthetic bearer that is long enough for the production policy.
+        authorization = "Bearer " + ("unit-test-monitor-token-" * 2)
+        # Write both allowlisted settings to the disposable root-managed-file fixture.
+        monitor_env = self.root / "edge-monitor.env"
+        # Use one fake HTTPS origin so no production request can occur.
+        monitor_env.write_text(f"CASINO_EDGE_MONITOR_AUTHORIZATION={authorization}\nCASINO_PUBLIC_ORIGIN=https://fixture.invalid\n", encoding="utf-8", newline="\n")
+        # Install a Python startup shim that replaces urllib before the embedded probe imports it.
+        site_root = self.root / "python-site"
+        # Create the isolated import root.
+        site_root.mkdir()
+        # Bind deterministic health and readiness responses without opening a listener.
+        (site_root / "sitecustomize.py").write_text(
+            "# Import JSON for deterministic standard-envelope bytes.\n"
+            "import json\n"
+            "# Import environment access for exact expected identity assertions.\n"
+            "import os\n"
+            "# Import urllib so its request seam can be replaced before the poller block imports it.\n"
+            "import urllib.request\n"
+            "# Provide one context-managed in-memory HTTP response.\n"
+            "class Response:\n"
+            "    # Retain exact response bytes.\n"
+            "    def __init__(self, payload):\n"
+            "        self.payload = payload\n"
+            "    # Enter without allocating a network resource.\n"
+            "    def __enter__(self):\n"
+            "        return self\n"
+            "    # Exit without suppressing failures.\n"
+            "    def __exit__(self, *args):\n"
+            "        return False\n"
+            "    # Return the complete bounded payload.\n"
+            "    def read(self, size):\n"
+            "        return self.payload\n"
+            "# Return exact public or authenticated envelopes and reject a missing bearer.\n"
+            "def fake_urlopen(request, timeout=0):\n"
+            "    # Require the fixture origin parsed from the monitor file.\n"
+            "    if not request.full_url.startswith('https://fixture.invalid/'):\n"
+            "        raise RuntimeError('unexpected origin')\n"
+            "    # Build authenticated readiness only after exact header validation.\n"
+            "    if request.full_url.endswith('/readyz'):\n"
+            "        if request.get_header('Authorization') != os.environ['EXPECTED_AUTHORIZATION']:\n"
+            "            raise RuntimeError('authorization missing')\n"
+            "        payload = {'ok': True, 'data': {'ready': True, 'build': {'app_version': '0.9.5.79', 'sha': 'e' * 40}}}\n"
+            "    else:\n"
+            "        payload = {'ok': True, 'data': {'status': 'live'}}\n"
+            "    # Encode the standard envelope exactly once.\n"
+            "    return Response(json.dumps(payload).encode('utf-8'))\n"
+            "# Replace only the request opener inside this child interpreter.\n"
+            "urllib.request.urlopen = fake_urlopen\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        # Start from the safe test environment without injected monitor settings.
+        environment = dict(self.environment)
+        # Remove service-owned authorization so the file fallback is mandatory.
+        environment.pop("CASINO_EDGE_MONITOR_AUTHORIZATION", None)
+        # Remove service-owned origin so its allowlisted file fallback is also exercised.
+        environment.pop("CASINO_PUBLIC_ORIGIN", None)
+        # Load only the listener-free urllib fixture before embedded imports.
+        environment["PYTHONPATH"] = bash_path(site_root)
+        # Keep the expected value in the child-only test fixture without printing it.
+        environment["EXPECTED_AUTHORIZATION"] = authorization
+        # Bind the root-managed monitor file through the poller's reviewed override.
+        environment["CASINO_EDGE_MONITOR_ENV"] = bash_path(monitor_env)
+        # Source the script and invoke only its exact live-identity function.
+        script = f'source "{bash_path(POLLER)}"\nverify_live_identity 0.9.5.79 {"e" * 40}\n'
+        # Require the direct-command path to succeed without systemd EnvironmentFile injection.
+        result = self.run_sourced_poller(script, environment=environment)
+        # Require secret-free success output.
+        self.assertNotIn(authorization, result.stdout + result.stderr)
+        # Duplicate the protected row to prove ambiguous files fail closed.
+        monitor_env.write_text(f"CASINO_EDGE_MONITOR_AUTHORIZATION={authorization}\nCASINO_EDGE_MONITOR_AUTHORIZATION={authorization}\n", encoding="utf-8", newline="\n")
+        # Capture the expected nonzero outcome without reflecting the value.
+        hostile = self.run_sourced_poller(script, environment=environment, check=False)
+        # Require the duplicate protected assignment to fail before a request.
+        self.assertNotEqual(hostile.returncode, 0)
+        # Prove even the failure output never includes the bearer.
+        self.assertNotIn(authorization, hostile.stdout + hostile.stderr)
+
+    # Prove both readiness failure positions restore the predecessor and complete durable cleanup.
+    def test_readiness_failures_restore_predecessor_remove_owned_work_and_alarm(self):
+        # Exercise candidate failure and rollback-observation failure independently.
+        for scenario in ("candidate-failure", "predecessor-failure"):
+            # Run the full disposable rollback-drill state machine.
+            result, releases_root, predecessor_root, selector_record, alarm_file, sentinel, _stable, trace = self.run_deployment_scenario(scenario)
+            # Require a nonzero fail-closed result for either readiness boundary.
+            self.assertNotEqual(result.returncode, 0, scenario)
+            # Reject the production regression that masked the durable alarm.
+            self.assertNotIn("unbound variable", result.stdout + result.stderr, scenario)
+            # Require the exact predecessor selector after rollback.
+            self.assertEqual(selector_record.read_text(encoding="utf-8").strip(), bash_path(predecessor_root), scenario)
+            # Require one durable generic poll failure without secret or path data.
+            self.assertEqual(alarm_file.read_text(encoding="utf-8"), "status=alarm\nreason=poll_failed\n", scenario)
+            # Require every exact owned work directory to be gone.
+            self.assertEqual(list(releases_root.glob(".poller.*")), [], scenario)
+            # Prove cleanup preserved an unrelated direct child.
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n", scenario)
+            # Require the candidate selector to have been attempted before the predecessor restore.
+            trace_rows = trace.read_text(encoding="utf-8").splitlines()
+            # Bind both exact release identities in the selector trace.
+            self.assertIn("selector:" + bash_path(releases_root / ("c" * 40)), trace_rows, scenario)
+            # Require the final selector event to restore the predecessor.
+            self.assertEqual([row for row in trace_rows if row.startswith("selector:")][-1], "selector:" + bash_path(predecessor_root), scenario)
+
+    # Prove a successful direct drill followed by the scheduled poll clears alarms only after convergence.
+    def test_rollback_drill_then_poll_converges_without_changing_timer_contract(self):
+        # Execute one complete drill and one complete poll in the same disposable host model.
+        result, releases_root, _predecessor_root, selector_record, alarm_file, sentinel, stable_poller, trace = self.run_deployment_scenario("success", run_poll_after_drill=True)
+        # Require both complete operations to succeed.
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        # Require the final selector to identify the exact candidate release root.
+        self.assertEqual(selector_record.read_text(encoding="utf-8").strip(), bash_path(releases_root / ("c" * 40)))
+        # Require the previously seeded alarm to be absent only after successful convergence.
+        self.assertFalse(alarm_file.exists())
+        # Require the verified candidate to install the next stable poller bytes.
+        self.assertEqual(stable_poller.read_bytes(), POLLER.read_bytes())
+        # Require no owned work directory residue after either operation.
+        self.assertEqual(list(releases_root.glob(".poller.*")), [])
+        # Preserve the unrelated direct child across both cleanup operations.
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n")
+        # Read deterministic phase evidence.
+        trace_rows = trace.read_text(encoding="utf-8").splitlines()
+        # Require candidate, predecessor, then final candidate observation ordering.
+        observations = [row for row in trace_rows if row.startswith("observe:")]
+        # Bind both candidate observations around one predecessor rollback observation.
+        self.assertEqual([row.split(":", 2)[1] for row in observations], ["0.9.5.79", "0.9.5.78", "0.9.5.79"])
+        # Keep the checked-in timer cadence exact after the state-machine repair.
+        self.assertIn("OnUnitActiveSec=5min", POLLER_TIMER.read_text(encoding="utf-8"))
+
     # Prove workflow and host templates retain exact publication/pull ownership boundaries.
     def test_workflow_and_units_assign_delivery_to_the_host_poller(self):
         # Read the workflow as inert text.
@@ -268,19 +552,23 @@ class ReleasePollerTests(unittest.TestCase):
         # Locate the first exact checksum/provenance verification.
         verification = text.index('verify_assets "${work_root}" "${latest_tag}" "${latest_commit}"')
         # Locate the preflight failure alarm that covers checksum and provenance rejection.
-        alarm_trap = text.index("trap cleanup_deployment EXIT")
+        alarm_trap = text.index('trap "${cleanup_command}" EXIT')
         # Locate the candidate schema-two compatibility proof.
         schema_check = text.index('check_schema_two "${candidate_root}"')
         # Locate the first production-owned release fragment write.
         environment_install = text.index('install -m 0640 -o root -g root "${work_root}/release.env" "${RELEASE_ENV}"')
         # Locate the atomic selector switch independently.
-        selector_switch = text.index('mv -Tf "${CURRENT_LINK}.next" "${CURRENT_LINK}"', environment_install)
+        selector_switch = text.index('activate_release "${release_root}"', environment_install)
         # Prove both immutable-byte and schema gates precede every production mutation.
         self.assertLess(verification, environment_install)
         # Prove the poll-failure alarm is armed before corrupt bytes reach verification.
         self.assertLess(alarm_trap, verification)
         # Require the armed cleanup path to persist a bounded poll-failure alarm.
         self.assertIn('write_alarm "poll_failed"', text)
+        # Require the EXIT path to own an immutable root argument outside function-local lifetime.
+        self.assertIn("cleanup_deployment()", text)
+        # Require the cleanup implementation to be defined before the deployment function rather than inside it.
+        self.assertLess(text.index("cleanup_deployment()"), text.index("deploy_latest()"))
         # Prove schema compatibility is established before release.env mutation.
         self.assertLess(schema_check, environment_install)
         # Prove release.env is staged before the current selector moves.
