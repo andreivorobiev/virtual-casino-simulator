@@ -83,7 +83,7 @@ from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
 from tests.progress import ProgressReporter
 # Import state-driven Bingo reload validation so Browser acceptance never relies on a fixed locator race. (issue #785)
-from tests.browser_readiness import require_bingo_terminal_auto_payload, require_bingo_terminal_reload_payload, wait_for_bingo_terminal_render
+from tests.browser_readiness import prepare_admin_feedback_draft, require_bingo_terminal_auto_payload, require_bingo_terminal_reload_payload, save_admin_feedback_triage, wait_for_bingo_terminal_render
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
 # Track the browser-suite reporter only while named browser cases are executing.
@@ -10806,12 +10806,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
                         # Locate exactly the report created by the authenticated player flow.
                         report_button=page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']); assert report_button.count()==1
+                        # Capture the exact report identity used to bind every manual-draft response.
+                        feedback_report_id=report_button.get_attribute('data-feedback-id'); assert isinstance(feedback_report_id,str) and feedback_report_id.startswith('report_')
                         # Open canonical detail and require one normalized Admin-only screenshot.
                         report_button.click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); assert page.locator('.feedback-evidence img').count()==1
-                        # Apply controlled P1 triage and bounded internal notes through the idempotent patch route.
-                        page.locator('#feedback-detail-priority').select_option('P1'); page.locator('#feedback-detail-status').select_option('triaged'); page.locator('#feedback-admin-notes').fill('Confirmed by exact-head browser acceptance.'); page.locator('#feedback-github-url').fill('https://github.com/andreivorobiev/virtual-casino-simulator/issues/349'); page.locator('#feedback-save').click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
+                        # Apply controlled P1 triage, bounded notes, and a link that canonically commits linked status.
+                        page.locator('#feedback-detail-priority').select_option('P1'); page.locator('#feedback-detail-status').select_option('triaged'); page.locator('#feedback-admin-notes').fill('Confirmed by exact-head browser acceptance.'); page.locator('#feedback-github-url').fill('https://github.com/andreivorobiev/virtual-casino-simulator/issues/349'); save_admin_feedback_triage(page,feedback_report_id,'P1','linked')
                         # Prepare the manual-only reporter-free draft without an external publication control.
-                        page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                        prepare_admin_feedback_draft(page,feedback_report_id)
                         # Require governed labels, privacy-safe content, and no automatic GitHub route or popup button.
                         draft_text=page.locator('#feedback-github-draft').inner_text(); assert 'P1' in draft_text and '@' not in draft_text and 'password' not in draft_text.lower() and page.locator('#feedback-open-github').count()==0
                         # Exercise both installed Admin locales at every governed viewport.
@@ -10835,7 +10837,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Capture the true linked triage and evidence-detail state.
                                 game_evidence(f'after-pass-admin-feedback-detail-{locale}-{viewport_id}.png','admin',['feedback_detail','feedback_triaged','feedback_manual_linked','feedback_export'],locale,viewport_id)
                                 # Prepare the server-sanitized manual-only draft in this locale and viewport.
-                                page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                                prepare_admin_feedback_draft(page,feedback_report_id)
                                 # Capture the manual draft with no external publication action.
                                 game_evidence(f'after-pass-admin-feedback-manual-draft-{locale}-{viewport_id}.png','admin',['feedback_manual_draft'],locale,viewport_id)
                                 # Return to the exact filtered inbox for the next viewport.
@@ -10843,7 +10845,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Restore one detail and capture triage/manual-draft states at primary desktop.
                         page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
                         # Reopen the selected report from the filtered list.
-                        page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                        page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); prepare_admin_feedback_draft(page,feedback_report_id)
                         # Download the metadata-only export through the real additive v2 route.
                         with page.expect_download():
                             # Activate the explicit Admin export control.

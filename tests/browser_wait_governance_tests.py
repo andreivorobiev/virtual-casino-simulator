@@ -8,7 +8,7 @@ from pathlib import Path
 import unittest
 
 # Import the state-driven Bingo boundaries used by the real Browser runner.
-from tests.browser_readiness import require_bingo_terminal_auto_payload, require_bingo_terminal_reload_payload, wait_for_bingo_terminal_render
+from tests.browser_readiness import prepare_admin_feedback_draft, require_admin_feedback_draft_payload, require_admin_feedback_save_payload, require_bingo_terminal_auto_payload, require_bingo_terminal_reload_payload, save_admin_feedback_triage, wait_for_bingo_terminal_render
 
 
 # Resolve the exact checkout independently of the caller's working directory.
@@ -32,6 +32,12 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
         data = {"state": state, **({"session": session} if include_session else {})}
         # Return the standard successful response envelope.
         return {"ok": True, "data": data}
+
+    # Build one server-sanitized manual-only Admin feedback draft payload.
+    @staticmethod
+    def admin_feedback_payload(*, report_id="report_ready", publication_enabled=False):
+        # Return the exact standard envelope exposed by the v2 Admin draft route.
+        return {"ok": True, "data": {"draft": {"title": "[Bug] Draft readiness", "body": "Manual review body", "labels": ["P1", "bug"], "source_report_id": report_id, "publication_mode": "manual_only", "publication_enabled": publication_enabled}}}
 
     # Require every Roulette audit wager to complete before a later clear can overtake it.
     def test_roulette_hit_target_waits_for_wager_responses(self) -> None:
@@ -140,6 +146,291 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "session identity mismatch"):
             # Validate a well-formed but stale different-session response.
             require_bingo_terminal_reload_payload(self.bingo_payload(include_session=False, session_id="bingo-stale"), "bingo-ready")
+
+    # Require every Admin feedback draft interaction to observe the exact authoritative POST.
+    def test_admin_feedback_draft_uses_state_driven_readiness(self) -> None:
+        # Slice only the named Admin feedback Browser function.
+        feedback_source = RUNNER_SOURCE.partition("def admin_feedback_browser():")[2].partition("run_case('BR-ADMIN-FEEDBACK-001'")[0]
+        # Preserve the permanent case id and its exact existing requirement mapping.
+        self.assertEqual(RUNNER_SOURCE.count("run_case('BR-ADMIN-FEEDBACK-001',['ADMIN-025','I18N-005','UX-019','TEST-094']"), 1)
+        # Require all three source call sites to use the response-backed helper.
+        self.assertEqual(feedback_source.count("prepare_admin_feedback_draft(page,feedback_report_id)"), 3)
+        # Require the preceding save to wait for its authoritative response and a replacement route generation.
+        self.assertEqual(feedback_source.count("save_admin_feedback_triage(page,feedback_report_id,'P1','linked')"), 1)
+        # Require the report identity to come from the exact opened list row.
+        self.assertIn("feedback_report_id=report_button.get_attribute('data-feedback-id')", feedback_source)
+        # Reject every former single-locator readiness assumption from this case.
+        self.assertNotIn("page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)", feedback_source)
+
+    # Prove the save boundary rejects the already-visible detail until its replacement renders.
+    def test_admin_feedback_save_waits_for_replacement_generation(self) -> None:
+        # Model deterministic monotonic time across the response and rerender boundary.
+        class Clock:
+            # Start from a stable zero point.
+            value = 0.0
+
+            # Return the current fake monotonic value.
+            def __call__(self):
+                # Avoid consulting wall-clock time in the focused test.
+                return self.value
+
+        # Model the request metadata consumed by the exact response predicate.
+        class Request:
+            # Publish the documented mutation method.
+            method = "PATCH"
+
+        # Model the authoritative updated-report response.
+        class Response:
+            # Bind request metadata used by the predicate.
+            request = Request()
+            # Bind the exact governed endpoint.
+            url = "http://127.0.0.1/api/v2/admin/feedback/reports/report_ready"
+
+            # Return one canonical committed triage payload.
+            @staticmethod
+            def json():
+                # Publish only the response fields required by the save boundary.
+                return {"ok": True, "data": {"report": {"report_id": "report_ready", "priority": "P1", "status": "linked"}}}
+
+        # Model response completion while leaving the old detail generation mounted.
+        class ResponseContext:
+            # Retain the response and shared clock.
+            def __init__(self, clock):
+                # Publish the response through Playwright's value interface.
+                self.value = Response()
+                # Bind the deterministic response clock.
+                self.clock = clock
+
+            # Enter the response boundary before the click.
+            def __enter__(self):
+                # Return this context for parity with Playwright.
+                return self
+
+            # Complete the response before the delayed detail fetch replaces the DOM.
+            def __exit__(self, _kind, _error, _traceback):
+                # Consume part of the single total readiness budget.
+                self.clock.value += 0.2
+
+        # Model the already-mounted detail element marked by the helper.
+        class DetailLocator:
+            # Retain the owning fake page.
+            def __init__(self, page):
+                # Bind route-generation state to the locator.
+                self.page = page
+
+            # Apply the helper's private generation marker.
+            def evaluate(self, _source, marker):
+                # Mark only the old detail generation.
+                self.page.old_marker = marker
+
+        # Model the real Admin save control.
+        class SaveLocator:
+            # Retain click accounting.
+            clicks = 0
+
+            # Dispatch one synthetic save click.
+            def click(self):
+                # Prove the production save control is activated exactly once.
+                self.clicks += 1
+
+        # Model an old visible detail followed by one replacement generation.
+        class Page:
+            # Bind deterministic state used by every helper seam.
+            def __init__(self, clock):
+                # Retain the shared clock.
+                self.clock = clock
+                # Retain the response timeout for total-budget proof.
+                self.response_timeout = None
+                # Retain the old-generation marker assigned by the helper.
+                self.old_marker = None
+                # Keep the old generation mounted through the first semantic observation.
+                self.replaced = False
+                # Retain one shared save control.
+                self.control = SaveLocator()
+                # Retain bounded semantic yields.
+                self.waits = []
+
+            # Resolve only the governed feedback detail test id.
+            def get_by_test_id(self, test_id):
+                # Reject unexpected locator drift in the helper.
+                assert test_id == "admin-feedback-detail"
+                # Return the marker-capable old generation.
+                return DetailLocator(self)
+
+            # Enter the exact PATCH response boundary.
+            def expect_response(self, predicate, timeout):
+                # Retain the original total response budget.
+                self.response_timeout = timeout
+                # Require the synthetic authoritative response to match the production predicate.
+                assert predicate(Response())
+                # Return the delayed response context.
+                return ResponseContext(self.clock)
+
+            # Resolve only the production save control.
+            def locator(self, selector):
+                # Reject unexpected selector drift in the helper.
+                assert selector == "#feedback-save"
+                # Return the shared save control.
+                return self.control
+
+            # Return the current route generation and committed control state.
+            def evaluate(self, _source, expected):
+                # Require the semantic observation to stay bound to the exact old marker.
+                assert expected["marker"] == self.old_marker
+                # Publish exact controls while distinguishing old versus replacement ownership.
+                return {"visible": True, "replaced": self.replaced, "priority": "P1", "status": "linked"}
+
+            # Advance to the response-driven replacement after one bounded poll.
+            def wait_for_timeout(self, milliseconds):
+                # Retain exact polling behavior.
+                self.waits.append(milliseconds)
+                # Advance the fake clock without sleeping.
+                self.clock.value += milliseconds / 1000
+                # Replace the old detail generation after yielding once.
+                self.replaced = True
+
+        # Build the fake page and deterministic clock.
+        clock = Clock(); page = Page(clock)
+        # Exercise the complete save-response-plus-replacement helper under one second.
+        result = save_admin_feedback_triage(page, "report_ready", "P1", "linked", timeout_seconds=1, clock=clock)
+        # Require one click, the original response budget, one poll, and replacement ownership.
+        self.assertEqual((page.control.clicks, page.response_timeout, page.waits, result["replaced"]), (1, 1000, [50], True))
+
+    # Prove delayed response generation and delayed rendering share one bounded deadline.
+    def test_admin_feedback_draft_waits_for_response_and_complete_render(self) -> None:
+        # Model deterministic monotonic time advanced by response and render delays.
+        class Clock:
+            # Start from a stable zero point.
+            value = 0.0
+
+            # Return the current fake monotonic value.
+            def __call__(self):
+                # Avoid consulting wall-clock time in the focused test.
+                return self.value
+
+        # Model the request metadata consumed by the exact response predicate.
+        class Request:
+            # Publish the documented mutation method.
+            method = "POST"
+
+        # Model the standard response object returned by Playwright.
+        class Response:
+            # Bind request metadata used by the predicate.
+            request = Request()
+            # Bind the exact governed endpoint.
+            url = "http://127.0.0.1/api/v2/admin/feedback/reports/report_ready/github-draft"
+
+            # Return one authoritative server payload.
+            @staticmethod
+            def json():
+                # Reuse the focused fixture through its enclosing test instance.
+                return BrowserWaitGovernanceTests.admin_feedback_payload()
+
+        # Model the response context that waits for generation after the click.
+        class ResponseContext:
+            # Retain the response and fake clock.
+            def __init__(self, clock):
+                # Publish the response through Playwright's value interface.
+                self.value = Response()
+                # Bind the clock advanced when response generation completes.
+                self.clock = clock
+
+            # Enter the response boundary before the click.
+            def __enter__(self):
+                # Return this context for parity with Playwright.
+                return self
+
+            # Complete the response after a deterministic generation delay.
+            def __exit__(self, _kind, _error, _traceback):
+                # Consume part of the single total readiness budget.
+                self.clock.value += 0.2
+
+        # Model the manual-draft button clicked by the helper.
+        class Locator:
+            # Retain click accounting.
+            clicks = 0
+
+            # Dispatch one synthetic click.
+            def click(self):
+                # Prove the production control is activated exactly once.
+                self.clicks += 1
+
+        # Model incomplete and complete DOM projections after the response.
+        class Page:
+            # Bind deterministic state used by every helper seam.
+            def __init__(self, clock):
+                # Retain the shared clock.
+                self.clock = clock
+                # Retain the exact response timeout for budget assertions.
+                self.response_timeout = None
+                # Retain one shared manual-draft control.
+                self.control = Locator()
+                # Queue an incomplete surface followed by the exact server-backed render.
+                self.snapshots = [{"visible": True, "title": "[Bug] Draft readiness", "body": None, "copyVisible": False, "externalCount": 0}, {"visible": True, "title": "[Bug] Draft readiness", "body": "Manual review body", "copyVisible": True, "externalCount": 0}]
+                # Retain bounded semantic yields.
+                self.waits = []
+
+            # Enter an exact response boundary and prove its predicate matches.
+            def expect_response(self, predicate, timeout):
+                # Retain the original total response budget.
+                self.response_timeout = timeout
+                # Require the synthetic authoritative response to match the production predicate.
+                assert predicate(Response())
+                # Return the delayed response context.
+                return ResponseContext(self.clock)
+
+            # Resolve only the production manual-draft control.
+            def locator(self, selector):
+                # Reject unexpected selector drift in the helper.
+                assert selector == "#feedback-draft"
+                # Return the shared control.
+                return self.control
+
+            # Return the next semantic DOM snapshot.
+            def evaluate(self, _source):
+                # Preserve the complete snapshot after readiness.
+                return self.snapshots.pop(0) if len(self.snapshots) > 1 else self.snapshots[0]
+
+            # Advance deterministic time for one bounded render poll.
+            def wait_for_timeout(self, milliseconds):
+                # Retain exact polling behavior.
+                self.waits.append(milliseconds)
+                # Advance the fake clock without sleeping.
+                self.clock.value += milliseconds / 1000
+
+        # Build the fake page and deterministic clock.
+        clock = Clock(); page = Page(clock)
+        # Exercise the complete response-plus-render helper under one second.
+        result = prepare_admin_feedback_draft(page, "report_ready", timeout_seconds=1, clock=clock)
+        # Require one click, the original response budget, one semantic poll, and exact accepted body.
+        self.assertEqual((page.control.clicks, page.response_timeout, page.waits, result["body"]), (1, 1000, [50], "Manual review body"))
+
+    # Require malformed, failed, or publication-enabled responses to fail closed.
+    def test_admin_feedback_draft_payload_fails_closed(self) -> None:
+        # Reject an unsuccessful standard envelope with a stable response-bound diagnostic.
+        with self.assertRaisesRegex(AssertionError, "not a successful standard envelope"):
+            # Supply the documented failed-envelope shape.
+            require_admin_feedback_draft_payload({"ok": False, "error": {"message": "failed"}}, "report_ready")
+        # Reject a response for a different report identity.
+        with self.assertRaisesRegex(AssertionError, "report identity mismatch"):
+            # Bind otherwise valid draft content to a stale report.
+            require_admin_feedback_draft_payload(self.admin_feedback_payload(report_id="report_stale"), "report_ready")
+        # Reject any server response that enables external publication.
+        with self.assertRaisesRegex(AssertionError, "manual-only publication"):
+            # Flip only the prohibited publication capability.
+            require_admin_feedback_draft_payload(self.admin_feedback_payload(publication_enabled=True), "report_ready")
+        # Reject missing review content before DOM polling.
+        with self.assertRaisesRegex(AssertionError, "title or body was missing"):
+            # Remove only the authoritative response body.
+            payload = self.admin_feedback_payload(); payload["data"]["draft"]["body"] = ""
+            # Validate the incomplete server response.
+            require_admin_feedback_draft_payload(payload, "report_ready")
+        # Reject a stale or partially committed triage response before draft preparation.
+        with self.assertRaisesRegex(AssertionError, "triage mismatch"):
+            # Build one canonical save envelope with the old priority.
+            save_payload = {"ok": True, "data": {"report": {"report_id": "report_ready", "priority": "P2", "status": "linked"}}}
+            # Require the exact P1 transition requested by the Browser case.
+            require_admin_feedback_save_payload(save_payload, "report_ready", "P1", "linked")
 
 
 # Support direct focused execution during local and hosted diagnosis.
