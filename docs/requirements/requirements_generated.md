@@ -17,7 +17,7 @@ Historical source baseline: 9.1.0
 - admin: 1.20.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.7.2
+- roulette: 9.7.3
 - slots: 9.5.1
 - blackjack: 9.1.13
 - baccarat: 9.2.1
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.9
-- docs: 1.96.9
+- tests: 1.100.10
+- docs: 1.96.10
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -692,6 +692,7 @@ Historical source baseline: 9.1.0
 - **TEST-199** (Tests) - PASS: Real two-process Casino War evidence races initial-round and war-decision preparation against sibling player-game updates and same-action contenders, proving one prepared transition, exact request and round identity, one card-consumption sequence, and preserved sibling state. Deterministic ledger failures prove action-owned rollback restores exact cards, requests, rounds, and pruned bounded history only after authoritative first-action absence, while a committed lost response remains durable and recovers without a duplicate debit.
 - **TEST-200** (Tests) - PASS: Real fresh-process Blackjack evidence loads one stale provider document per worker and proves table settings preserve unrelated sibling state, disjoint declared settings merge without lost updates, and a provider-latest active round defeats a stale settings request without changing any existing rule or sibling field. The frozen v1 API proves the established response envelope and centrally coerced value, while static inventory evidence requires zero direct Blackjack saves and retains the state-and-money multiworker blocker.
 - **TEST-201** (Tests) - PASS: Real fresh-process Multi-Hand Video Poker evidence races hold publication against unrelated sibling state, proves provider-ordered hold-then-draw consumes the latest selection, and proves draw-then-hold refuses stale round resurrection. Deterministic failure evidence preserves sibling state during action-owned pre-debit rollback, retains a committed round after a lost debit response, and recovers exactly one aggregate debit, while static inventory requires zero direct game-state saves.
+- **TEST-202** (Tests) - PASS: Real fresh-process Roulette evidence races wager preparation and committed spin/finalization against unrelated sibling updates, proves provider-ordered settings cannot erase an already committed wager, and verifies one exact debit. Deterministic failure schedules preserve sibling state during action-owned pre-ledger rollback, retain committed bets and removals after lost debit/refund responses, replay one exact committed settlement without resampling or duplicate history, restore clear-all order, and require zero reachable direct Roulette state saves.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -764,6 +765,7 @@ Historical source baseline: 9.1.0
 - **ROU-070** (Roulette) - PASS: The legacy Roulette rotor and ball counter-rotate through whole-turn animation endpoints so releasing their animation cannot introduce an end-of-spin angular pop, and the browser runtime suppresses rotor, ball, settle, and orbit decoration when reduced motion is requested without changing the authoritative result.
 - **ROU-071** (Roulette) - PASS: Persisted open bets carry the catalog layout kind so outside-bet chips render on their outside cells, with a type-based client fallback for bets persisted before the field existed.
 - **ROU-072** (Roulette) - PASS: Roulette preserves the frozen linear 3.6-second, twenty-one-stop rotor and ball compatibility curves while bounded honest-landing wrappers carry the authoritative result into a physically coherent pocket presentation, true reduced motion suppresses both curves and every wrapper transition, and route-owned action identity makes API, landing, wallet, sound, bot, refund, teardown, and remount continuation exactly once and stale-safe.
+- **ROU-073** (Roulette) - PASS: Roulette settings, wager placement, call-bet and rebet groups, bounded pre-ledger rollback, open-bet refunds, committed wheel entropy, en-prison carry publication, and terminal result history update the provider-owned latest player document through atomic callbacks. Immutable ledger debits, refunds, credits, and history effects remain outside retryable state callbacks and recover through existing per-bet action identities without replacing sibling state or duplicating a wallet movement or result.
 - **SLOT-001** (Slots) - PASS: Slots uses five reels.
 - **SLOT-002** (Slots) - PASS: Slots uses three visible rows.
 - **SLOT-003** (Slots) - PASS: Slots uses reel-strip stop positions.

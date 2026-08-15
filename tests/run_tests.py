@@ -1544,6 +1544,8 @@ def run_api_tests():
     run_case('API-BJ-ATOMIC-001',['BJ-033','BJ-034','TEST-196','TEST-200'],lambda: run_unit_module('casino.games.blackjack.tests.test_atomic_state','Blackjack atomic state suite failed'))
     # Execute real two-process Multi-Hand Video Poker state and hold/draw ordering races. (issue #775)
     run_case('API-MHVP-ATOMIC-001',['MHVP-007','TEST-201'],lambda: run_unit_module('tests.games.multi_hand_video_poker.test_atomic_state','Multi-Hand Video Poker atomic state suite failed'))
+    # Execute real two-process Roulette wager, settings, spin, rollback, and lost-response evidence. (issue #777)
+    run_case('API-ROU-ATOMIC-001',['ROU-073','TEST-202'],lambda: run_unit_module('tests.games.roulette.test_atomic_state','Roulette atomic state suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)

@@ -1224,6 +1224,30 @@
       "introduced_in": "issue-527-roulette-slots-presentation",
       "changed_in": "issue-527-roulette-slots-presentation",
       "notes": "Listener-free tests dispose the real route-owned timer scope through actual Roulette mount, unmount, and remount cycles at API, landing, and delayed-wallet boundaries. Hosted exact-head Browser evidence executes normal and reduced public spins in English and Russian at all four governed viewports. This bounded presentation slice does not claim the planned ROU-063 through ROU-068 Authentic/Quick pacing or video-adoption gates, and issues #168, #169, and #74 remain open."
+    },
+    {
+      "id": "ROU-073",
+      "module": "Roulette",
+      "description": "Roulette settings, wager placement, call-bet and rebet groups, bounded pre-ledger rollback, open-bet refunds, committed wheel entropy, en-prison carry publication, and terminal result history update the provider-owned latest player document through atomic callbacks. Immutable ledger debits, refunds, credits, and history effects remain outside retryable state callbacks and recover through existing per-bet action identities without replacing sibling state or duplicating a wallet movement or result.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001",
+        "API-ROU-ATOMIC-001",
+        "API-LEGACY-SETTLE-002",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/roulette/api.py",
+        "tests/games/roulette/test_atomic_state.py",
+        "tests/roulette_keno_settlement_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-777-roulette-atomic-state",
+      "changed_in": "issue-777-roulette-atomic-state",
+      "notes": "The frozen v1 routes, response keys, game math, wheel entropy, and established action keys remain unchanged. Private action and spin commitments are removed from public state. Roulette remains blocked for production multiworker activation because state, ledger, and history are not committed by one cross-process provider transaction."
     }
   ]
 }
