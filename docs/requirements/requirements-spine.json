@@ -12200,6 +12200,28 @@
       "introduced_in": "issue-803-big-six-wheel-atomic-state",
       "changed_in": "issue-803-big-six-wheel-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Big Six Wheel service. Existing session isolation, replay, recovery, economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-214",
+      "module": "Tests",
+      "description": "Real stale-load Crown and Anchor workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, and private baselines never persist while existing replay and ledger behavior remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CAA-001",
+        "API-CAA-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/crown_and_anchor/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-805-crown-and-anchor-atomic-state",
+      "changed_in": "issue-805-crown-and-anchor-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Crown and Anchor service. Existing session isolation, replay, economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }

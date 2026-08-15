@@ -12202,6 +12202,28 @@
       "notes": "Fresh workers use the real JSON provider and exact Big Six Wheel service. Existing session isolation, replay, recovery, economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-214",
+      "module": "Tests",
+      "description": "Real stale-load Crown and Anchor workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, and private baselines never persist while existing replay and ledger behavior remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CAA-001",
+        "API-CAA-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/crown_and_anchor/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-805-crown-and-anchor-atomic-state",
+      "changed_in": "issue-805-crown-and-anchor-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Crown and Anchor service. Existing session isolation, replay, economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -17847,6 +17869,27 @@
       "introduced_in": "game-expansion-crown-and-anchor",
       "changed_in": "issue-227-crown-stage-completeness",
       "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical; formal evidence rejects incomplete Crown and Anchor theater even when no enabled control is clipped."
+    },
+    {
+      "id": "CAA-006",
+      "module": "Crown and Anchor",
+      "description": "Every Crown and Anchor settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CAA-001",
+        "API-CAA-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/crown_and_anchor/service.py",
+        "tests/games/crown_and_anchor/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-805-crown-and-anchor-atomic-state",
+      "changed_in": "issue-805-crown-and-anchor-atomic-state",
+      "notes": "The frozen v1 envelope, six-symbol paytable, entropy seam, and deterministic ledger action keys remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     },
     {
       "id": "OU7-001",

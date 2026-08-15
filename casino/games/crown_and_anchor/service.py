@@ -2,14 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 """Ledger-only, retry-safe orchestration for Crown and Anchor rounds."""
 
+# Import deep-copy support for detached optimistic state snapshots.
+import copy
 # Import cryptographic randomness for production dice rolls.
 import secrets
 # Import shared clock helper for stable settled timestamps.
 from casino.core.clock import utc_now
 # Import the one approved play-token settlement compatibility boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistence helpers without changing shared storage code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict and validation errors for retry enforcement.
 from casino.errors import ConflictError, ValidationError
 # Import pure rules and state helpers from this game package only.
@@ -19,6 +21,10 @@ from casino.games.crown_and_anchor.rules import GAME_ID, symbol_catalog
 
 # Bound caller-supplied idempotency identities before persistence.
 MAX_CLIENT_REQUEST_ID_LENGTH = 128
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_crown_and_anchor_atomic_baseline"
+# Name every state field owned by Crown and Anchor transitions.
+_GAME_STATE_KEYS = ("recent_rounds",)
 
 
 # Construct the shared settlement gateway while retaining the historical test seam name.
@@ -27,20 +33,78 @@ def CoreLedgerGateway(**kwargs):
     return GameSettlementGateway(GAME_ID, "idempotency_key", **kwargs)
 
 
+# Expose the provider-atomic writer behind an injectable test seam.
+def update_state(game_id: str, player_id: str, mutator, factory):
+    # Delegate to the shared cross-process read-modify-write boundary.
+    return update_player_game_state(game_id, player_id, mutator, factory)
+
+
 # Coordinate player state, dice entropy, and exactly-once ledger movement.
 class CrownAndAnchorService:
     # Capture injectable seams so focused tests avoid filesystem and ambient randomness.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, roll_die=None, clock=None):
+    def __init__(self, *, ledger_gateway=None, state_loader=None, state_updater=None, roll_die=None, clock=None):
         # Use the game-local ledger adapter unless a focused test supplies a fake.
         self.ledger_gateway = ledger_gateway or CoreLedgerGateway()
         # Use player-scoped storage compatible with the authenticated route resolver.
         self.state_loader = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Use player-scoped persistence without mutating shared state modules.
-        self.state_saver = state_saver or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
+        # Publish state through the provider-current callback boundary by default.
+        self.state_updater = state_updater or update_state
         # Use cryptographic one-based dice unless a focused test supplies deterministic rolls.
         self.roll_die = roll_die or (lambda: secrets.randbelow(6) + 1)
         # Use the shared UTC clock unless a focused test pins timestamps.
         self.clock = clock or utc_now
+
+    # Load one player document and capture its exact game-owned baseline.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected player-scoped persistence boundary.
+        state = self.state_loader(player_id)
+        # Retain only the values this service may replace during the operation.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting private operation metadata.
+        return state
+
+    # Capture detached values for every Crown and Anchor-owned state field.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Normalize current and predecessor documents to one complete shape.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Publish one player document through provider-current compare-and-replace.
+    def _save(self, player_id: str, state: dict) -> None:
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked detached-document write before entering storage.
+        if not isinstance(expected, dict):
+            # Keep stale or fabricated state outside provider bytes.
+            raise ConflictError("Crown and Anchor state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Crown and Anchor-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach current owned values from unrelated provider metadata.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose owned baseline lost a concurrent race.
+            if observed != expected:
+                # Require recovery from the authoritative winner.
+                raise ConflictError("Crown and Anchor state changed during this action; reload and retry")
+            # Replace only fields governed by this game service.
+            for key in _GAME_STATE_KEYS:
+                # Publish detached JSON-compatible values without sibling loss.
+                current[key] = copy.deepcopy(desired[key])
+            # Return the complete provider document for atomic persistence.
+            return current
+
+        # Commit the transition through the provider's cross-process boundary.
+        authoritative = self.state_updater(GAME_ID, player_id, publish, engine.default_state)
+        # Advance the operation baseline to the exact committed owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Validate a required client action identity used for safe retries.
     def _client_request_id(self, value) -> str:
@@ -56,7 +120,7 @@ class CrownAndAnchorService:
     # Return current isolated state and immutable rules metadata.
     def state(self, player_id: str) -> dict:
         # Load only the authenticated player's game document.
-        state = self.state_loader(player_id)
+        state = self._load(player_id)
         # Return game-owned state without exposing another player's history.
         return {"game": GAME_ID, "symbols": symbol_catalog(), "paytable": {str(key): value for key, value in engine.NET_ODDS_BY_HITS.items()}, "recent_rounds": list(state.get("recent_rounds", []))}
 
@@ -73,7 +137,7 @@ class CrownAndAnchorService:
         # Compute a semantic request fingerprint that detects conflicting retries.
         request_fingerprint = engine.wager_fingerprint(wagers)
         # Load state owned only by the authenticated player.
-        state = self.state_loader(player_id)
+        state = self._load(player_id)
         # Resolve a settled retry from bounded state first.
         existing_round = engine.find_round(state, client_request_id)
         # Branch when the client repeats an already-settled request.
@@ -115,6 +179,6 @@ class CrownAndAnchorService:
         # Record the round only after all required ledger actions have committed.
         engine.record_round(state, round_row)
         # Persist reload-safe state; ledger keys allow safe reconstruction if this write fails.
-        self.state_saver(player_id, state)
+        self._save(player_id, state)
         # Return ledger evidence without exposing unrelated player history.
         return {"round": round_row, "replayed": debit_replayed or credit_replayed, "ledger": {"wager": debit_event, "settlement": credit_event}}
