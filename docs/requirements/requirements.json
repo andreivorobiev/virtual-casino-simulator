@@ -10330,8 +10330,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "top-half-portfolio-v61",
-      "changed_in": "issue-771-casino-war-atomic-preparation",
-      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Casino War, Keno, and Baccarat are classified as provider-atomic for player-state publication after retiring their final direct saves, but remain blocked because game state and money are still committed through separate provider boundaries. Blackjack retains explicit mixed-path settings debt for a later #704 slice."
+      "changed_in": "issue-773-blackjack-atomic-settings",
+      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Casino War, Keno, Baccarat, and Blackjack are classified as provider-atomic for player-state publication after retiring their final direct saves, but remain blocked because game state and money are still committed through separate provider boundaries."
     },
     {
       "id": "TEST-161",
@@ -11629,7 +11629,7 @@
     {
       "id": "TEST-196",
       "module": "Tests",
-      "description": "Dependency-free fresh-process rendezvous evidence loads the same stale Blackjack player document and proves a legal hit preserves an unrelated sibling update, while two same-round hits serialize into the exact two-card sequence without wager or settlement drift. Legacy settlement coverage proves one terminal round, one wallet credit, one history row, recovery replay, and an established conflict for the losing stale stand request; the multiprocess inventory remains fail closed for remaining direct debt.",
+      "description": "Dependency-free fresh-process rendezvous evidence loads the same stale Blackjack player document and proves a legal hit preserves an unrelated sibling update, while two same-round hits serialize into the exact two-card sequence without wager or settlement drift. Legacy settlement coverage proves one terminal round, one wallet credit, one history row, recovery replay, and an established conflict for the losing stale stand request; provider-atomic state publication remains fail closed for separate state-and-money boundaries.",
       "status": "PASS",
       "api_tests": [
         "API-BJ-ATOMIC-001",
@@ -11645,8 +11645,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-758-blackjack-atomic-state",
-      "changed_in": "issue-758-blackjack-atomic-state",
-      "notes": "Both child interpreters bind one disposable JSON provider root and synchronize only after stale loads. The economics registry rebinds the changed settlement adapter bytes without changing the accepted Blackjack probability or payout proof."
+      "changed_in": "issue-773-blackjack-atomic-settings",
+      "notes": "Child interpreters bind one disposable JSON provider root and synchronize only after stale loads. Issue #773 removes the final direct settings save; TEST-200 owns its settings races while this evidence retains exact round serialization."
     },
     {
       "id": "TEST-175",
@@ -11666,8 +11666,8 @@
         "docs/game_catalog_governance.md"
       ],
       "introduced_in": "issue-456-catalog-economics-registry",
-      "changed_in": "issue-771-casino-war-atomic-preparation",
-      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, Baccarat, and Blackjack #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged. Issue #771 rebinds Casino War's settlement adapter after retiring direct preparation saves without changing game math."
+      "changed_in": "issue-773-blackjack-atomic-settings",
+      "notes": "The gate changes no game engine, paytable, route, contract, player surface, wallet movement, or Admin economics API. Fan-Tan is intentionally fair only under the explicit issue #256 decision; every other current catalog entry is house-side. Engine or settlement source changes require explicit registry requalification rather than an automatic digest refresh. The Casino War, Keno, Baccarat, and Blackjack #704 slices requalify only provider-atomic state publication; their engines, payout proofs, and classifications remain unchanged. Issue #773 rebinds Blackjack's settlement adapter after retiring direct settings saves without changing game math."
     },
     {
       "id": "ADMIN-035",
@@ -11885,6 +11885,28 @@
       "introduced_in": "issue-771-casino-war-atomic-preparation",
       "changed_in": "issue-771-casino-war-atomic-preparation",
       "notes": "The subprocess fixture uses the real JSON provider and atomic player-state helper. Failure fixtures patch only the settlement boundary, publish one unrelated sibling field, and require authoritative receipt absence before bounded compensation. The audit recognizes atomic-only Casino War state publication without authorizing a second worker because state and money remain separate transactions."
+    },
+    {
+      "id": "TEST-200",
+      "module": "Tests",
+      "description": "Real fresh-process Blackjack evidence loads one stale provider document per worker and proves table settings preserve unrelated sibling state, disjoint declared settings merge without lost updates, and a provider-latest active round defeats a stale settings request without changing any existing rule or sibling field. The frozen v1 API proves the established response envelope and centrally coerced value, while static inventory evidence requires zero direct Blackjack saves and retains the state-and-money multiworker blocker.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001",
+        "API-BJ-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/tests/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-773-blackjack-atomic-settings",
+      "changed_in": "issue-773-blackjack-atomic-settings",
+      "notes": "The ordered active-round test releases both stale loaders together, waits for provider publication, then executes the losing settings callback. Blackjack remains blocked for production multiworker activation because state and ledger movement are not one cross-process transaction."
     },
     {
       "id": "ROU-001",
@@ -15201,8 +15223,26 @@
         "casino/games/blackjack/api.py"
       ],
       "introduced_in": "issue-758-blackjack-atomic-state",
-      "changed_in": "issue-758-blackjack-atomic-state",
-      "notes": "The direct settings publication remains explicit parent-issue #704 debt, so the multiprocess inventory classifies Blackjack as mixed atomic/direct and keeps production second-worker activation blocked. No contract, paytable, public copy, or route changes in this slice."
+      "changed_in": "issue-773-blackjack-atomic-settings",
+      "notes": "Issue #773 complements these round transitions by retiring the direct settings publication. Blackjack remains blocked for production second-worker activation because game state and money still commit through separate provider boundaries. No contract, paytable, public copy, or route changes."
+    },
+    {
+      "id": "BJ-034",
+      "module": "Blackjack",
+      "description": "Blackjack table settings publish only centrally declared and coerced fields through update_player_game_state against the provider-owned latest player document. The atomic callback rechecks active rounds, preserves omitted rules and unrelated sibling state, refreshes the frozen v1 response from the committed document, and eliminates the final reachable direct Blackjack game-state save without changing routes, envelopes, cards, payouts, or browser behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001",
+        "API-BJ-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/api.py"
+      ],
+      "introduced_in": "issue-773-blackjack-atomic-settings",
+      "changed_in": "issue-773-blackjack-atomic-settings",
+      "notes": "Real fresh-process evidence covers settings versus sibling state, disjoint settings, and an ordered provider-latest active-round conflict. Provider-atomic state publication does not authorize a second production worker because ledger and state remain separate transactions."
     },
     {
       "id": "BAC-001",

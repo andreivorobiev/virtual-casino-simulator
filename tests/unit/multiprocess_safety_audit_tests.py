@@ -53,18 +53,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(len(games), audit.EXPECTED_GAME_COUNT)
         # Reject duplicate or omitted game identities.
         self.assertEqual(len({row["game_id"] for row in games}), audit.EXPECTED_GAME_COUNT)
-        # Pin the exact current persistence families after Casino War joins Keno and Baccarat as atomic-only state publication.
+        # Pin the exact current persistence families after Blackjack retires the final mixed direct-save path.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
-            {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths", "provider_atomic_player_document"},  # Pin accepted families.
+            {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
         # Pin the exact current family cardinalities without averaging away one game.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
-                for model in {"player_document_load_save", "shared_simple_game_load_save", "mixed_atomic_and_direct_player_document_paths", "provider_atomic_player_document"}  # Cover all models.
+                for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "mixed_atomic_and_direct_player_document_paths": 1, "provider_atomic_player_document": 3},  # Pin current counts.
+            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 4},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -102,15 +102,17 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(baccarat["state_model"], "provider_atomic_player_document")
         # Keep Baccarat fail closed for a second worker because state and money remain separate boundaries.
         self.assertEqual(baccarat["multiworker_status"], "blocked")
-        # Resolve the Blackjack round-publication slice without concealing direct settings debt.
+        # Resolve Blackjack after settings retire its final direct state publication.
         blackjack = next(row for row in games if row["game_id"] == "blackjack")
         # Require the read path used for response, recovery, and settings compatibility.
         self.assertGreater(blackjack["load_call_sites"], 0)
-        # Preserve the direct settings save as explicit later parent-issue debt.
-        self.assertGreater(blackjack["save_call_sites"], 0)
-        # Bind in-scope round preparation, transition, rollback, and finalization to atomic updates.
+        # Require every reachable Blackjack publication to avoid direct whole-document saves.
+        self.assertEqual(blackjack["save_call_sites"], 0)
+        # Bind rounds, recovery, finalization, and settings to provider-atomic updates.
         self.assertGreater(blackjack["atomic_update_call_sites"], 0)
-        # Keep production second-worker activation blocked until the direct settings path is retired.
+        # Name completed state serialization without claiming state-and-money atomicity.
+        self.assertEqual(blackjack["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked because state and money remain separate boundaries.
         self.assertEqual(blackjack["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))

@@ -4,7 +4,7 @@
 # Import deep-copy support for exact prepared-action rollback and settlement comparison.
 import copy
 
-from casino.core.state_store import load_player_game_state, save_player_game_state, update_player_game_state
+from casino.core.state_store import load_player_game_state, update_player_game_state
 from casino.core.validation import require_amount, require_player_id
 # Import the descriptor allowlist so the handler cannot drift from central router coercion.
 from casino.core.game_rules import clamp_state_rules, declared_fields
@@ -327,6 +327,29 @@ def has_active_round(state):
     return any(r.get("status") in ("player_turn","settled_pending_credit") for r in state.get("rounds",{}).values())
 
 
+# Apply descriptor-owned settings to the provider-owned latest document. (BJ-034)
+def update_table_settings(player_id: str, state: dict, body: dict, fields) -> None:
+    # Define one latest-document settings transition that cannot cross an active round.
+    def apply(current: dict) -> dict:
+        # Re-check the authoritative provider document instead of trusting the caller snapshot.
+        if has_active_round(current):
+            # Preserve exact current rounds, rules, shoe, and sibling state on conflict.
+            raise ConflictError("Finish active blackjack rounds before changing table rules")
+        # Resolve descriptor-owned defaults only while the provider owns publication.
+        rules = current.setdefault("rules", engine.default_state()["rules"])
+        # Copy only centrally coerced descriptor fields so this helper owns no parallel schema.
+        for field in fields:
+            # Preserve omitted rules while applying each validated caller update.
+            if field in body:
+                # Store the canonical router value for subsequent engine consumption.
+                rules[field] = body[field]
+        # Return the complete latest document for atomic provider publication.
+        return current
+
+    # Publish settings atomically and refresh the caller for the established response shape.
+    _refresh_state(state, update_player_game_state(GAME_ID, player_id, apply, engine.default_state))
+
+
 # Load authoritative state and finish only actions already durably prepared. (BJ-033)
 def load_mutation_state(player_id: str) -> dict:
     # Load through the established player-scoped compatibility boundary.
@@ -359,18 +382,9 @@ def register(router):
         player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
         state = load_mutation_state(player_id)
-        if has_active_round(state):
-            # Raise an error so invalid input or state is reported explicitly.
-            raise ConflictError("Finish active blackjack rounds before changing table rules")
-        # Set rules to the value needed for the next operation.
-        rules = state.setdefault("rules", engine.default_state()["rules"])
-        # Copy only centrally coerced descriptor fields so this handler owns no parallel rule schema. (SEC-014)
-        for field in declared_fields(GAME_ID):
-            # Preserve omitted rules while applying each validated caller update.
-            if field in body:
-                # Store the canonical router value for subsequent engine consumption.
-                rules[field] = body[field]
-        save_player_game_state(GAME_ID, player_id, state)
+        # Apply only centrally coerced fields against the provider-owned latest document. (BJ-034, SEC-014)
+        update_table_settings(player_id, state, body, declared_fields(GAME_ID))
+        # Preserve the frozen v1 response shape from the authoritative committed document.
         return state_payload(player_id, state)
 
     # Attach this decorator so the following function is registered with the framework.
