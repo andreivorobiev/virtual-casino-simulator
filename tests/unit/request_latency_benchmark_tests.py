@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require accepted atomic-state, conversion, teardown, analytics, wager, and settings slices to total exactly 1014 permanent rows.
-        self.assertEqual(len(requirements), 1014)
+        # Require accepted atomic-state, conversion, teardown, analytics, wager, and settings slices to total exactly 1016 permanent rows.
+        self.assertEqual(len(requirements), 1016)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1447,6 +1447,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-201": "Tests",  # Bind real sibling and hold/draw process ordering evidence.
             "ROU-073": "Roulette",  # Bind every Roulette state publication to provider-current callbacks.
             "TEST-202": "Tests",  # Bind real Roulette ordering, rollback, and recovery evidence.
+            "BINGO-028": "Bingo",  # Bind every Bingo action-state publication to provider-current callbacks.
+            "TEST-203": "Tests",  # Bind real Bingo ordering, rollback, and recovery evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

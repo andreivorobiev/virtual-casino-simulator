@@ -1,10 +1,15 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-# Bingo API actions, card purchases, session persistence, and settlement orchestration.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+"""Bingo API actions, atomic state publication, and settlement recovery."""
+
+# Import detached-copy support for provider-owned recovery markers and public payloads.
+import copy
+
+# Import atomic player-state publication beside the established read helper.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 from casino.core.validation import require_amount, require_player_id
 from casino.core import players, logger
-# Import the shared id factory so pre-session purchases have stable settlement identities.
+# Import the shared id factory so every prepared action has a stable recovery identity.
 from casino.core.ids import new_id
 # Import the one canonical game-money boundary.
 from casino.core.settlement import GameSettlementGateway
@@ -12,193 +17,811 @@ from casino.core.history import append_history
 from casino.games.bingo import engine
 # Import bot capability profiles so every session seats funded competitor cards. (issue #405)
 from casino.bots import profiles
+from casino.errors import ConflictError, ValidationError
 
-# Set GAME_ID to the value needed for the next operation.
-GAME_ID="bingo"
+# Bind the registered game namespace used by state, ledger, and history records.
+GAME_ID = "bingo"
 # Bind every Bingo movement to one storage-atomic settlement adapter.
 SETTLEMENT = GameSettlementGateway(GAME_ID, "card_id")
-# Seat at most three competitor cards per session so the human card must genuinely race to win. (issue #405)
+# Seat at most three competitor cards per session so the human card genuinely races to win. (issue #405)
 MAX_BOT_CARDS = 3
 # Always present exactly this many competitor cards so the house edge cannot be thinned by disabling bots. (issue #452)
 COMPETITOR_CARDS = 3
-# Own the synthetic house spoiler identity that fills unfunded competitor seats without a wallet or a payout. (issue #452)
+# Own the synthetic house spoiler identity that fills unfunded competitor seats without a wallet or payout. (issue #452)
 HOUSE_COMPETITOR_ID = "bingo_house"
+# Reserve one private action slot so money and history work never runs under the provider document lock. (BINGO-028)
+PENDING_ACTION_KEY = "_bingo_pending_action"
 
-# Define the fund_bot_players function used by this module.
+
+# Replace a stale caller snapshot with the complete provider-authoritative document. (BINGO-028)
+def _refresh_state(state: dict, authoritative: dict) -> None:
+    # Remove stale top-level fields before copying provider-owned state.
+    state.clear()
+    # Preserve caller object identity for established response construction.
+    state.update(authoritative)
+
+
+# Return a detached v1 state without exposing private recovery metadata. (BINGO-028)
+def _public_state(state: dict) -> dict:
+    # Deep-copy because private marker snapshots contain nested cards and sessions.
+    public = copy.deepcopy(state)
+    # Remove the one private action owner while preserving every established public field.
+    public.pop(PENDING_ACTION_KEY, None)
+    # Return the frozen public state shape.
+    return public
+
+
+# Locate an active or archived session by its durable identity. (BINGO-028)
+def _find_session(state: dict, session_id: str) -> dict | None:
+    # Prefer the active slot when the requested session is still in progress.
+    active = state.get("active_session")
+    # Return the active session only when its identity matches exactly.
+    if isinstance(active, dict) and active.get("session_id") == session_id:
+        # Preserve the provider-owned nested object for callback-local mutation.
+        return active
+    # Search newest archived sessions first because identifiers are immutable and unique.
+    for session in reversed(state.get("last_sessions", [])):
+        # Return only a structured session with the exact identity.
+        if isinstance(session, dict) and session.get("session_id") == session_id:
+            # Preserve the provider-owned archived object.
+            return session
+    # Report absence without inventing a session or outcome.
+    return None
+
+
+# Build one canonical signed movement without changing established Bingo ledger vocabulary. (BINGO-028)
+def _movement(*, player_id: str, signed_amount: float, transaction_type: str, round_id: str, action_key: str, request_fingerprint: str, details: dict) -> dict:
+    # Return exact immutable dimensions used for apply, recovery, and validation.
+    return {"player_id": player_id, "signed_amount": signed_amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": copy.deepcopy(details)}
+
+
+# Apply once or recover a compatible committed row after a lost provider response. (BINGO-028)
+def _apply_movement(movement: dict) -> tuple[dict, bool]:
+    # Attempt the one authorized storage-atomic money mutation.
+    try:
+        # Preserve the gateway's event and replay marker response.
+        return SETTLEMENT.apply_once(**movement)
+    # Reconcile any transport/provider failure without issuing a mutation retry.
+    except Exception:
+        # Read only the exact player/game/action proof selected by the prepared marker.
+        event = SETTLEMENT.find(movement["player_id"], movement["action_key"], round_id=movement["round_id"], transaction_type=movement["transaction_type"], request_fingerprint=movement["request_fingerprint"])
+        # Preserve the original failure when no immutable movement committed.
+        if event is None:
+            # Re-raise the active exception with its original traceback.
+            raise
+        # Reject a coincidentally named row whose immutable dimensions diverge.
+        SETTLEMENT.validate_existing(event, transaction_type=movement["transaction_type"], round_id=movement["round_id"], signed_amount=movement["signed_amount"], request_fingerprint=movement["request_fingerprint"])
+        # Classify the recovered committed movement as a replay for response compatibility.
+        return event, True
+
+
+# Build the established human purchase debit from one prepared marker. (BINGO-028)
+def _human_purchase_movement(marker: dict) -> dict:
+    # Reuse the pre-session purchase identity and exact historical fingerprint.
+    return _movement(player_id=marker["player_id"], signed_amount=-marker["amount"], transaction_type="BINGO_CARD_PURCHASED", round_id=marker["purchase_id"], action_key=f"{marker['purchase_id']}:human:wager", request_fingerprint=f"{marker['purchase_id']}:{marker['player_id']}:{marker['pattern']}:{marker['amount']}", details={"pattern": marker["pattern"]})
+
+
+# Build one funded bot purchase debit from the stable pre-session identity. (BINGO-028)
+def _bot_purchase_movement(marker: dict, bot: dict, stake: float) -> dict:
+    # Preserve the existing bot transaction type, action key, and audit dimensions.
+    return _movement(player_id=bot["player_id"], signed_amount=-stake, transaction_type="BOT_BINGO_CARD_PURCHASED", round_id=marker["purchase_id"], action_key=f"{marker['purchase_id']}:bot:{bot['player_id']}:wager", request_fingerprint=f"{marker['purchase_id']}:{bot['player_id']}:{marker['pattern']}:{stake}", details={"bot_id": bot.get("bot_id"), "strategy_id": bot.get("strategy_id"), "pattern": marker["pattern"]})
+
+
+# Build the existing purchase-failure refund for one already-funded wallet. (BINGO-028)
+def _purchase_refund_movement(marker: dict, funded: dict) -> dict:
+    # Distinguish the human and bot refund vocabulary without changing ledger semantics.
+    is_human = funded["player_id"] == marker["player_id"]
+    # Select the exact historical transaction meaning.
+    transaction_type = "BINGO_CARD_REFUND_AFTER_ERROR" if is_human else "BOT_BINGO_CARD_REFUND_AFTER_ERROR"
+    # Preserve the established stable action key for each wallet.
+    action_key = f"{marker['purchase_id']}:human:refund" if is_human else f"{marker['purchase_id']}:bot:{funded['player_id']}:refund"
+    # Preserve the exact request fingerprint used before atomic publication.
+    fingerprint = f"{marker['purchase_id']}:{funded['player_id']}:{marker['pattern']}:{funded['amount']}:refund"
+    # Retain bot identity only for bot refunds.
+    details = {"pattern": marker["pattern"]}
+    # Add the old bot audit field without leaking it onto the human row.
+    if not is_human:
+        # Preserve the funded bot identity from the selected seat.
+        details["bot_id"] = funded.get("bot_id")
+    # Return the exact positive refund movement.
+    return _movement(player_id=funded["player_id"], signed_amount=funded["amount"], transaction_type=transaction_type, round_id=marker["purchase_id"], action_key=action_key, request_fingerprint=fingerprint, details=details)
+
+
+# Build the existing per-card reset refund movement. (BINGO-028)
+def _card_refund_movement(session: dict, card: dict) -> dict:
+    # Preserve the durable card/session identity and historical refund vocabulary.
+    return _movement(player_id=card["player_id"], signed_amount=card["amount"], transaction_type="BINGO_CARD_REFUND", round_id=session["session_id"], action_key=f"{card['card_id']}:refund", request_fingerprint=f"{card['card_id']}:{session['session_id']}:{card['amount']}:refund", details={"card_id": card["card_id"]})
+
+
+# Build the existing winning-card payout movement. (BINGO-028)
+def _card_payout_movement(session: dict, card: dict) -> dict:
+    # Preserve the exact session/card settlement identity and pattern audit field.
+    return _movement(player_id=card["player_id"], signed_amount=card["payout"], transaction_type="BINGO_PAYOUT_CREDIT", round_id=session["session_id"], action_key=f"{card['card_id']}:settlement", request_fingerprint=f"{card['card_id']}:{session['session_id']}:{card['payout']}", details={"pattern": session["pattern"], "card_id": card["card_id"]})
+
+
+# Preserve the established direct settlement helper for engine/economics callers. (BINGO-028)
+def settle_if_done(session: dict | None) -> list[dict]:
+    # Preserve the historical empty credit response for missing or non-winning sessions.
+    credits = []
+    # Settle each real winning card under its stable card/session identity.
+    if session and session.get("status") == "won":
+        # Inspect every card because one terminal call can complete multiple cards.
+        for card in session.get("cards", []):
+            # Skip non-winners, synthetic house cards, and already-published credits.
+            if card.get("status") != "won" or card.get("source") == "house" or card.get("credited"):
+                # Preserve the established no-credit behavior for this card.
+                continue
+            # Commit or recover the exact payout when the card has a positive award.
+            event, replayed = _apply_movement(_card_payout_movement(session, card)) if card.get("payout") else (None, False)
+            # Append history and expose only a newly committed credit.
+            if not replayed:
+                # Read the wallet balance after the payout commits.
+                balance = players.get_player(card["player_id"])["balance"]
+                # Preserve the established winning-card history projection.
+                append_history(GAME_ID, session["session_id"], card["player_id"], "card", session["pattern"], card["amount"], "win", card["payout"], balance, {"called": session["called"], "card": card["card"], "winning_coords": card.get("winning_coords", [])})
+                # Return the new immutable payout event to the direct caller.
+                credits.append(event)
+            # Mark the detached session card after committed or replayed evidence exists.
+            card["credited"] = True
+    # Preserve the bounded no-win history path for direct engine callers.
+    elif session and session.get("status") == "no_win" and not session.get("loss_recorded"):
+        # Append the established session-level zero-payout history row.
+        append_history(GAME_ID, session["session_id"], session["player_id"], "session", session["pattern"], session["amount"], "no_win", 0, players.get_player(session["player_id"])["balance"], {"called": session.get("called", []), "max_calls": session.get("max_calls")})
+        # Prevent a repeated direct invocation from appending a second row.
+        session["loss_recorded"] = True
+    # Return only newly committed payouts.
+    return credits
+
+
+# Fund real bot seats while reconciling lost responses under stable action identities. (BINGO-028)
 def fund_bot_players(player_id, amount, pattern, purchase_id):
+    # Reconstruct the immutable purchase marker used by movement builders.
+    marker = {"player_id": player_id, "amount": amount, "pattern": pattern, "purchase_id": purchase_id}
     # Collect only bots whose card purchase actually debited a bot wallet. (issue #405)
-    funded=[]
-    # Iterate through the eligible bingo bots, bounded to the per-session seat limit.
+    funded = []
+    # Iterate through the eligible Bingo bots, bounded to the per-session seat limit.
     for bot in profiles.eligible_bots(GAME_ID)[:MAX_BOT_CARDS]:
         # Never seat the requesting player's own wallet as its competitor.
         if bot.get("player_id") == player_id:
             # Skip the colliding identity.
             continue
-        # Price the bot card from its configured bingo stake, falling back to the human card price.
+        # Price the bot card from configured stake, falling back to the human card price.
         stake = round(float(bot.get("stake") or amount), 2)
-        # Start protected funding so an unfundable bot shrinks the field instead of failing the purchase.
+        # Start protected funding so an unfundable bot shrinks the real-bot field.
         try:
-            # Debit the BOT wallet with the same event type the bot controller uses for mid-session joins.
-            ev, _replayed = SETTLEMENT.apply_once(player_id=bot["player_id"], signed_amount=-stake, transaction_type="BOT_BINGO_CARD_PURCHASED", round_id=purchase_id, action_key=f"{purchase_id}:bot:{bot['player_id']}:wager", request_fingerprint=f"{purchase_id}:{bot['player_id']}:{pattern}:{stake}", details={"bot_id": bot.get("bot_id"), "strategy_id": bot.get("strategy_id"), "pattern": pattern})
-        # Handle the expected failure path for the protected logic.
+            # Commit or recover the exact funded bot movement without a second mutation.
+            event, _replayed = _apply_movement(_bot_purchase_movement(marker, bot, stake))
+        # Keep the existing behavior that an unfundable bot receives no card.
         except Exception as exc:
-            # Fail closed: a wallet that cannot pay gets no card, so no uncharged card can ever win a payout. (issue #405)
+            # Emit the established value-bounded skip warning.
             logger.warning("bingo_bot_card_skipped", bot_id=bot.get("bot_id"), message=str(exc))
-            # Continue seating the remaining fundable bots.
+            # Continue seating remaining fundable bots.
             continue
-        # Record the funded competitor in the shape engine.start_session consumes for bot cards.
-        funded.append({"player_id": bot["player_id"], "amount": stake, "bot_id": bot.get("bot_id"), "ledger_id": ev.get("ledger_id")})
+        # Record the funded competitor shape consumed by engine.start_session.
+        funded.append({"player_id": bot["player_id"], "amount": stake, "bot_id": bot.get("bot_id"), "ledger_id": event.get("ledger_id")})
     # Return the funded competitor list to the card purchase flow.
     return funded
 
-# Seat a fixed competitor field so the paytable's house edge holds regardless of the admin bot roster. (issue #452)
+
+# Seat a fixed competitor field so the paytable edge is independent of the bot roster. (issue #452)
 def seat_competitors(player_id, amount, pattern, purchase_id):
-    # Fund real bot competitor cards first so genuine bot wallets carry real stakes and can win real payouts. (issue #405)
+    # Fund real bot competitor cards first so genuine bot wallets carry real stakes. (issue #405)
     seats = fund_bot_players(player_id, amount, pattern, purchase_id)
-    # Fill every remaining competitor seat with a synthetic house spoiler card so the field is always full. (issue #452)
-    for _ in range(max(0, COMPETITOR_CARDS - len(seats))):
-        # A house card races the human at the human's stake for display parity but is never funded and never paid. (issue #452)
+    # Fill every remaining seat with an unfunded, never-paid synthetic house spoiler. (issue #452)
+    for _index in range(max(0, COMPETITOR_CARDS - len(seats))):
+        # Preserve display parity with the human stake without touching a wallet.
         seats.append({"player_id": HOUSE_COMPETITOR_ID, "amount": amount, "source": "house"})
-    # Return the always-full competitor field to the card purchase flow.
+    # Return the always-full competitor field.
     return seats
 
-# Define the request_player_id function used by this module.
+
+# Resolve the authenticated player while preserving the legacy human default.
 def request_player_id(body, query) -> str:
-    # Return the explicit player id while preserving the legacy human default.
+    # Validate the explicit or legacy identity through the shared boundary.
     return require_player_id({"player_id": body.get("player_id") or query.get("player_id") or "human"})
 
-# Define the payload function used by this module.
+
+# Build the frozen Bingo state response without private recovery markers. (BINGO-028)
 def payload(player_id: str, state=None):
-    # Set state to the value needed for the next operation.
+    # Read provider-authoritative state only when the caller did not supply it.
     state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
-    # Set visible_players to the value needed for private game payloads.
-    visible_players = [p for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
-    return {"game":GAME_ID,"state":state,"player":players.get_player(player_id),"players":visible_players}
+    # Limit the visible player set to the requester and bots as before.
+    visible_players = [player for player in players.list_players() if player["player_id"] == player_id or player.get("type") == "bot"]
+    # Preserve every established response field and nested public shape.
+    return {"game": GAME_ID, "state": _public_state(state), "player": players.get_player(player_id), "players": visible_players}
 
 
-# Define the settle_if_done function used by this module.
-def settle_if_done(sess):
-    # Set credits to the value needed for the next operation.
-    credits=[]
-    if sess and sess.get("status") == "won":
-        for card in sess.get("cards", []):
-            # Credit only a real winning card; synthetic house spoilers end sessions but are never paid. (issue #452)
-            if card.get("status") == "won" and card.get("source") != "house" and not card.get("credited"):
-                # Commit or replay the payout under the durable session-card identity. (issue #403)
-                credit,replayed=SETTLEMENT.apply_once(player_id=card["player_id"], signed_amount=card["payout"], transaction_type="BINGO_PAYOUT_CREDIT", round_id=sess["session_id"], action_key=f"{card['card_id']}:settlement", request_fingerprint=f"{card['card_id']}:{sess['session_id']}:{card['payout']}", details={"pattern":sess["pattern"], "card_id": card["card_id"]}) if card["payout"] else (None, False)
-                # Append history and expose a new credit only for the storage-committing call. (issue #403)
-                if not replayed:
-                    # Read the post-commit wallet balance for the first outcome row.
-                    bal=players.get_player(card["player_id"])["balance"]
-                    # Append the immutable winning-card history once.
-                    append_history(GAME_ID, sess["session_id"], card["player_id"], "card", sess["pattern"], card["amount"], "win", card["payout"], bal, {"called":sess["called"], "card":card["card"], "winning_coords": card.get("winning_coords", [])})
-                    # Expose the newly committed credit to the caller.
-                    credits.append(credit)
-                # Set card["credited"] to the value needed for the next operation.
-                card["credited"] = True
-    # Record the capped zero-payout loss exactly once so bounded sessions leave an audit trail. (issue #405)
-    elif sess and sess.get("status") == "no_win" and not sess.get("loss_recorded"):
-        # Append one session-level history row mirroring the refund/abandon idiom, with zero payout.
-        append_history(GAME_ID, sess["session_id"], sess["player_id"], "session", sess["pattern"], sess["amount"], "no_win", 0, players.get_player(sess["player_id"])["balance"], {"called": sess.get("called", []), "max_calls": sess.get("max_calls")})
-        # Guard against duplicate audit rows if settlement is re-entered with the archived session.
-        sess["loss_recorded"] = True
-    return credits
+# Reserve one purchase before any wallet movement can race another state action. (BINGO-028)
+def prepare_purchase(player_id: str, state: dict, amount: float, pattern: str) -> dict:
+    # Reject unknown patterns before reserving state or debiting any wallet.
+    if pattern not in {"line", "four_corners", "postage_stamp", "blackout"}:
+        # Preserve the existing public validation diagnostic.
+        raise ValidationError("Unknown Bingo pattern")
+    # Allocate the stable pre-session identity once for debit and recovery.
+    purchase_id = new_id("bingo-purchase")
+    # Capture the exact marker selected by the provider callback.
+    selected = {}
+
+    # Reserve one action against the latest complete player document.
+    def prepare(current: dict) -> dict:
+        # Reject overlap with purchase, call settlement, or reset recovery.
+        if current.get(PENDING_ACTION_KEY) is not None:
+            # Preserve the recoverable earlier action for explicit completion.
+            raise ConflictError("Bingo state requires action recovery")
+        # Reject a second active card before touching the wallet.
+        if isinstance(current.get("active_session"), dict) and current["active_session"].get("status") == "active":
+            # Preserve the existing active-session conflict behavior.
+            raise ConflictError("A Bingo session is already active")
+        # Build the immutable private purchase marker.
+        marker = {"kind": "purchase", "status": "prepared", "purchase_id": purchase_id, "player_id": player_id, "amount": amount, "pattern": pattern}
+        # Publish only the marker; session entropy remains unallocated until funding succeeds.
+        current[PENDING_ACTION_KEY] = marker
+        # Return detached evidence to the caller after provider commit.
+        selected.update(copy.deepcopy(marker))
+        # Publish the complete current document atomically.
+        return current
+
+    # Commit the reservation under JSON/MySQL provider serialization.
+    authoritative = update_player_game_state(GAME_ID, player_id, prepare, engine.default_state)
+    # Replace the caller's stale snapshot for established response code.
+    _refresh_state(state, authoritative)
+    # Return the exact committed private marker.
+    return selected
 
 
-# Define the register function used by this module.
-def register(router):
-    # Attach this decorator so the following function is registered with the framework.
-    @router.get(r"/api/v1/games/bingo/state")
-    # Define the state function used by this module.
-    def state(body, query): return payload(request_player_id(body, query))
+# Publish the funded session while retaining a committed marker for lost-response recovery. (BINGO-028)
+def commit_purchase(player_id: str, state: dict, marker: dict, bot_players: list[dict]) -> dict:
+    # Capture the exact provider-owned session selected or replayed by the callback.
+    selected = {}
 
-    # Attach this decorator so the following function is registered with the framework.
-    @router.post(r"/api/v1/games/bingo/cards")
-    # Define the card function used by this module.
-    def card(body, query):
-        # Set player_id to the value needed for the next operation.
-        player_id=request_player_id(body, query); amount=require_amount(body.get("amount")); pattern=body.get("pattern","line")
-        # Set state to the value needed for the next operation.
-        state=load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Allocate one purchase identity before the session exists so every refund is correlated.
-        purchase_id = new_id("bingo-purchase")
-        # Commit the human card stake through the shared settlement boundary.
-        SETTLEMENT.apply_once(player_id=player_id, signed_amount=-amount, transaction_type="BINGO_CARD_PURCHASED", round_id=purchase_id, action_key=f"{purchase_id}:human:wager", request_fingerprint=f"{purchase_id}:{player_id}:{pattern}:{amount}", details={"pattern":pattern})
-        # Track funded competitors outside the protected block so the failure path can refund them.
-        bot_players=[]
-        # Start protected logic so failures can be handled safely.
-        try:
-            # Seat a guaranteed full competitor field: funded bots plus synthetic house spoilers. (issue #405, #452)
-            bot_players=seat_competitors(player_id, amount, pattern, purchase_id)
-            # Seat the competitors so the human card must beat a full field to be paid. (issue #405)
-            sess=engine.start_session(state, player_id, amount, pattern, bot_players=bot_players)
-        # Handle the expected failure path for the protected logic.
-        except Exception:
-            SETTLEMENT.apply_once(player_id=player_id, signed_amount=amount, transaction_type="BINGO_CARD_REFUND_AFTER_ERROR", round_id=purchase_id, action_key=f"{purchase_id}:human:refund", request_fingerprint=f"{purchase_id}:{player_id}:{pattern}:{amount}:refund", details={"pattern":pattern})
-            for bp in bot_players:
-                # Never refund a synthetic house seat: it was never debited from any wallet. (issue #452)
-                if bp.get("source") == "house":
-                    # Skip the unfunded spoiler seat.
-                    continue
-                # Return each already-debited bot stake so a failed start never strands bot funds. (issue #405)
-                SETTLEMENT.apply_once(player_id=bp["player_id"], signed_amount=bp["amount"], transaction_type="BOT_BINGO_CARD_REFUND_AFTER_ERROR", round_id=purchase_id, action_key=f"{purchase_id}:bot:{bp['player_id']}:refund", request_fingerprint=f"{purchase_id}:{bp['player_id']}:{pattern}:{bp['amount']}:refund", details={"pattern":pattern, "bot_id": bp.get("bot_id")})
+    # Commit cards and session against the provider-current document.
+    def commit(current: dict) -> dict:
+        # Read the one private action owner.
+        pending = current.get(PENDING_ACTION_KEY)
+        # Refuse another action or a changed purchase identity.
+        if not isinstance(pending, dict) or pending.get("kind") != "purchase" or pending.get("purchase_id") != marker.get("purchase_id"):
+            # Fail closed instead of adopting another purchase.
+            raise ConflictError("Bingo purchase recovery identity changed")
+        # Reuse an already-committed session when the provider response was lost.
+        if pending.get("status") == "committed":
+            # Locate the session owned by the exact purchase marker.
+            session = _find_session(current, pending.get("session_id"))
+            # Reject corrupt committed state without inventing cards.
+            if session is None:
+                # Require operator-visible recovery rather than a second debit/session.
+                raise ConflictError("Bingo committed purchase session is unavailable")
+        else:
+            # Allocate and publish the complete session only after every retained seat is funded.
+            session = engine.start_session(current, player_id, marker["amount"], marker["pattern"], bot_players=copy.deepcopy(bot_players))
+            # Bind the terminal recovery marker to the exact created session.
+            pending["status"] = "committed"
+            # Preserve the session identity for response-loss reconciliation.
+            pending["session_id"] = session["session_id"]
+        # Return detached session evidence after provider publication.
+        selected.update(copy.deepcopy(session))
+        # Publish the complete state atomically.
+        return current
+
+    # Serialize the complete funded-session transition.
+    authoritative = update_player_game_state(GAME_ID, player_id, commit, engine.default_state)
+    # Replace stale caller state with the provider result.
+    _refresh_state(state, authoritative)
+    # Return the exact committed session.
+    return selected
+
+
+# Clear only the exact committed purchase marker after the session is durable. (BINGO-028)
+def finalize_purchase(player_id: str, state: dict, marker: dict) -> dict:
+    # Capture the provider-current session returned after marker release.
+    selected = {}
+
+    # Remove private recovery ownership without touching sibling fields.
+    def finalize(current: dict) -> dict:
+        # Read the marker that may already have been cleared by a sibling recovery.
+        pending = current.get(PENDING_ACTION_KEY)
+        # Remove only the exact committed purchase marker.
+        if isinstance(pending, dict) and pending.get("kind") == "purchase" and pending.get("purchase_id") == marker.get("purchase_id"):
+            # Reject premature finalization before the session commit exists.
+            if pending.get("status") != "committed":
+                # Keep the prepared action recoverable.
+                raise ConflictError("Bingo purchase is not committed")
+            # Locate exact session before clearing its recovery identity.
+            session = _find_session(current, pending.get("session_id"))
+            # Refuse a corrupt committed marker.
+            if session is None:
+                # Leave the marker intact for operator recovery.
+                raise ConflictError("Bingo committed purchase session is unavailable")
+            # Retain detached response evidence.
+            selected.update(copy.deepcopy(session))
+            # Release only this action slot.
+            current.pop(PENDING_ACTION_KEY, None)
+        else:
+            # Recover an already-finalized exact session by the identity retained by the caller.
+            session = _find_session(current, marker.get("session_id")) if marker.get("session_id") else None
+            # Retain it only when a sibling already completed this action.
+            if session is not None:
+                # Return the same authoritative session without further mutation.
+                selected.update(copy.deepcopy(session))
+        # Publish or replay the complete document.
+        return current
+
+    # Serialize marker release with every sibling state mutation.
+    authoritative = update_player_game_state(GAME_ID, player_id, finalize, engine.default_state)
+    # Refresh the caller snapshot.
+    _refresh_state(state, authoritative)
+    # Return the exact committed session.
+    return selected
+
+
+# Roll back only a definitively uncommitted purchase reservation. (BINGO-028)
+def rollback_purchase(player_id: str, state: dict, marker: dict) -> None:
+    # Remove the exact prepared marker without reverting sibling state.
+    def rollback(current: dict) -> dict:
+        # Read provider-current private ownership.
+        pending = current.get(PENDING_ACTION_KEY)
+        # Clear only the matching marker that never published a session.
+        if isinstance(pending, dict) and pending.get("kind") == "purchase" and pending.get("purchase_id") == marker.get("purchase_id") and pending.get("status") == "prepared":
+            # Release the state action for a safe explicit retry.
+            current.pop(PENDING_ACTION_KEY, None)
+        # Preserve every sibling field and committed marker.
+        return current
+
+    # Publish the bounded rollback through the provider boundary.
+    authoritative = update_player_game_state(GAME_ID, player_id, rollback, engine.default_state)
+    # Refresh the caller snapshot after rollback.
+    _refresh_state(state, authoritative)
+
+
+# Debit, fund, commit, and finalize one prepared purchase with exact recovery. (BINGO-028)
+def settle_purchase(player_id: str, state: dict, marker: dict) -> dict:
+    # Track only wallets whose exact debit has committed and may require compensation.
+    funded = []
+    # Start the one no-retry money/state workflow.
+    try:
+        # Commit or recover the human stake under the prepared purchase identity.
+        _human_event, _human_replayed = _apply_movement(_human_purchase_movement(marker))
+        # Record the human wallet for bounded failure compensation.
+        funded.append({"player_id": player_id, "amount": marker["amount"]})
+        # Fund each eligible real bot through its own immutable action identity.
+        bot_players = seat_competitors(player_id, marker["amount"], marker["pattern"], marker["purchase_id"])
+        # Retain only actually funded bot seats for failure compensation.
+        funded.extend({"player_id": seat["player_id"], "amount": seat["amount"], "bot_id": seat.get("bot_id")} for seat in bot_players if seat.get("source") != "house")
+        # Publish all cards/session state in one provider-atomic transition.
+        session = commit_purchase(player_id, state, marker, bot_players)
+        # Carry the committed session identity into finalization and response-loss recovery.
+        marker = {**marker, "status": "committed", "session_id": session["session_id"]}
+        # Release the private marker only after the session is authoritative.
+        return finalize_purchase(player_id, state, marker)
+    # Compensate only when no committed session can be recovered.
+    except Exception:
+        # Read current state without issuing another money mutation.
+        current = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Inspect the exact action marker for a lost provider response.
+        pending = current.get(PENDING_ACTION_KEY)
+        # Recover a committed session instead of refunding valid stakes.
+        if isinstance(pending, dict) and pending.get("kind") == "purchase" and pending.get("purchase_id") == marker.get("purchase_id") and pending.get("status") == "committed":
+            # Rebind the caller to provider-current committed identity.
+            _refresh_state(state, current)
+            # Finalize without issuing another debit or session mutation.
+            return finalize_purchase(player_id, state, pending)
+        # Refund only debits known to have committed in this invocation.
+        for funded_wallet in funded:
+            # Commit or recover each exact compensation once.
+            _apply_movement(_purchase_refund_movement(marker, funded_wallet))
+        # Release only this uncommitted reservation after compensation.
+        rollback_purchase(player_id, state, marker)
+        # Preserve the original failure contract.
+        raise
+
+
+# Commit one or more balls and a private response marker in provider order. (BINGO-028)
+def commit_calls(player_id: str, state: dict, max_calls: int) -> dict:
+    # Allocate one identity before entering the provider callback.
+    action_id = new_id("bingo-call")
+    # Capture the exact committed marker for settlement and response construction.
+    selected = {}
+
+    # Mutate the latest session while the provider serializes sibling callers.
+    def commit(current: dict) -> dict:
+        # Refuse overlap with a purchase, earlier call settlement, or reset.
+        if current.get(PENDING_ACTION_KEY) is not None:
+            # Require the earlier action to settle before another ball can start.
+            raise ConflictError("Bingo state requires action recovery")
+        # Execute one call or the compatibility bounded batch against provider-current state.
+        if max_calls == 1:
+            # Preserve the historical single-call engine path and label.
+            session, number = engine.call_next(current)
+            # Normalize response construction to one exact call list.
+            calls = [number]
+        else:
+            # Preserve the existing compatibility batch behavior.
+            session, calls = engine.auto_play(current, max_calls)
+        # Publish one private response/settlement marker before leaving the atomic boundary.
+        marker = {"kind": "call", "status": "committed", "action_id": action_id, "session_id": session["session_id"], "calls": list(calls), "terminal": session.get("status") != "active", "history_claims": []}
+        # Retain the exact provider-ordered result for lost-response recovery.
+        current[PENDING_ACTION_KEY] = marker
+        # Return detached marker evidence.
+        selected.update(copy.deepcopy(marker))
+        # Publish the complete state and marker together.
+        return current
+
+    # Start the one provider mutation and reconcile a response lost after publication.
+    try:
+        # Serialize ball selection, terminal transition, and marker publication.
+        authoritative = update_player_game_state(GAME_ID, player_id, commit, engine.default_state)
+    # Recover only this exact action when the provider committed before response loss.
+    except Exception:
+        # Read the authoritative document without retrying ball selection.
+        authoritative = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Read its private committed marker.
+        pending = authoritative.get(PENDING_ACTION_KEY)
+        # Preserve the original failure if another or no action owns the state.
+        if not isinstance(pending, dict) or pending.get("kind") != "call" or pending.get("action_id") != action_id:
+            # Re-raise the active provider error.
             raise
-        save_player_game_state(GAME_ID, player_id, state); return {"session":sess, **payload(player_id, state)}
+        # Rebind selected evidence to the exact committed result.
+        selected.update(copy.deepcopy(pending))
+    # Replace stale caller state with provider-authoritative state.
+    _refresh_state(state, authoritative)
+    # Return the exact committed action marker.
+    return selected
 
-    # Attach this decorator so the following function is registered with the framework.
+
+# Atomically claim ownership of one immutable history row. (BINGO-028)
+def claim_history(player_id: str, state: dict, marker: dict, claim_id: str) -> bool:
+    # Retain whether this contender won the provider-serialized claim.
+    claimed = {"value": False}
+
+    # Add one claim only while the exact committed action marker still exists.
+    def claim(current: dict) -> dict:
+        # Read provider-current recovery ownership.
+        pending = current.get(PENDING_ACTION_KEY)
+        # Ignore an already-finalized or unrelated action.
+        if not isinstance(pending, dict) or pending.get("kind") != marker.get("kind") or pending.get("action_id") != marker.get("action_id"):
+            # Preserve current state without granting ownership.
+            return current
+        # Normalize the private claim list defensively.
+        claims = pending.setdefault("history_claims", [])
+        # Grant exactly one contender for this semantic history row.
+        if claim_id not in claims:
+            # Persist ownership before the append side effect runs.
+            claims.append(claim_id)
+            # Report the winning claim to this caller.
+            claimed["value"] = True
+        # Publish the complete marker update atomically.
+        return current
+
+    # Serialize the claim with terminal finalization and sibling settlement attempts.
+    authoritative = update_player_game_state(GAME_ID, player_id, claim, engine.default_state)
+    # Refresh caller state to the provider result.
+    _refresh_state(state, authoritative)
+    # Return whether this contender owns the append.
+    return claimed["value"]
+
+
+# Mark terminal settlement fields and release one committed call marker. (BINGO-028)
+def finalize_call(player_id: str, state: dict, marker: dict, credited_card_ids: set[str], loss_recorded: bool) -> dict:
+    # Capture the exact active or archived session after finalization.
+    selected = {}
+
+    # Publish settlement markers against the latest archived session.
+    def finalize(current: dict) -> dict:
+        # Locate the exact session even when a sibling already cleared the marker.
+        session = _find_session(current, marker["session_id"])
+        # Reject missing committed state instead of inventing a terminal response.
+        if session is None:
+            # Fail closed on a corrupt private marker.
+            raise ConflictError("Bingo committed call session is unavailable")
+        # Mark only cards whose exact payout proof committed.
+        for card in session.get("cards", []):
+            # Preserve every other card field and status.
+            if card.get("card_id") in credited_card_ids:
+                # Record terminal payout publication exactly once.
+                card["credited"] = True
+        # Publish the no-win audit marker only after one history owner appended it.
+        if loss_recorded:
+            # Preserve existing history behavior on the archived session.
+            session["loss_recorded"] = True
+        # Remove only the exact call marker when still present.
+        pending = current.get(PENDING_ACTION_KEY)
+        # Permit a sibling to have finalized first without changing state again.
+        if isinstance(pending, dict) and pending.get("kind") == "call" and pending.get("action_id") == marker.get("action_id"):
+            # Release the action slot after all terminal side effects converge.
+            current.pop(PENDING_ACTION_KEY, None)
+        # Return detached response evidence.
+        selected.update(copy.deepcopy(session))
+        # Publish the complete terminal document atomically.
+        return current
+
+    # Serialize terminal markers with sibling requests.
+    authoritative = update_player_game_state(GAME_ID, player_id, finalize, engine.default_state)
+    # Refresh caller state after final publication.
+    _refresh_state(state, authoritative)
+    # Return the authoritative session.
+    return selected
+
+
+# Settle or replay one committed call marker and publish one terminal state. (BINGO-028)
+def settle_committed_call(player_id: str, state: dict, marker: dict) -> tuple[dict, list[int], list[dict]]:
+    # Refresh before any payout decision so a stale contender sees finalized card evidence.
+    _refresh_state(state, load_player_game_state(GAME_ID, player_id, engine.default_state))
+    # Locate the exact active or archived provider-current session.
+    session = _find_session(state, marker["session_id"])
+    # Refuse a corrupt committed marker.
+    if session is None:
+        # Fail closed without a payout or fabricated response.
+        raise ConflictError("Bingo committed call session is unavailable")
+    # Preserve the historical credits response as newly committed events only.
+    credits = []
+    # Retain every card whose exact payout proof committed.
+    credited_card_ids = set()
+    # Settle only terminal winning sessions.
+    if marker.get("terminal") and session.get("status") == "won":
+        # Inspect every real winning card because one ball can complete multiple cards.
+        for card in session.get("cards", []):
+            # Skip lost/active cards, synthetic house spoilers, zero payouts, and already-final cards.
+            if card.get("status") != "won" or card.get("source") == "house" or not card.get("payout") or card.get("credited"):
+                # Preserve the existing no-credit behavior for those cards.
+                continue
+            # Commit or recover the exact payout without retrying a failed mutation.
+            event, replayed = _apply_movement(_card_payout_movement(session, card))
+            # Preserve the prior response contract: only a newly committed credit is returned.
+            if not replayed:
+                # Expose the immutable new event.
+                credits.append(event)
+            # Claim the one winning-card history row across sibling settlers.
+            if claim_history(player_id, state, marker, f"win:{card['card_id']}"):
+                # Read the post-commit wallet balance for the accepted row.
+                balance = players.get_player(card["player_id"])["balance"]
+                # Append the established complete winning-card history shape.
+                append_history(GAME_ID, session["session_id"], card["player_id"], "card", session["pattern"], card["amount"], "win", card["payout"], balance, {"called": session["called"], "card": card["card"], "winning_coords": card.get("winning_coords", [])})
+            # Publish the credited marker after immutable payout proof exists.
+            credited_card_ids.add(card["card_id"])
+    # Record a bounded no-win terminal exactly once across sibling settlers.
+    loss_recorded = bool(session.get("loss_recorded"))
+    # Claim only when this action created the terminal loss and no prior row exists.
+    if marker.get("terminal") and session.get("status") == "no_win" and not loss_recorded:
+        # Serialize ownership of the zero-money history append.
+        if claim_history(player_id, state, marker, "no-win"):
+            # Append the established session-level no-win history row.
+            append_history(GAME_ID, session["session_id"], session["player_id"], "session", session["pattern"], session["amount"], "no_win", 0, players.get_player(session["player_id"])["balance"], {"called": session.get("called", []), "max_calls": session.get("max_calls")})
+        # Mark the provider session terminal after the claim converges.
+        loss_recorded = True
+    # Release the call marker and publish terminal card/history flags.
+    finalized = finalize_call(player_id, state, marker, credited_card_ids, loss_recorded)
+    # Return the frozen route response dimensions.
+    return finalized, list(marker.get("calls", [])), credits
+
+
+# Prepare one reset against the exact provider-current active session. (BINGO-028)
+def prepare_reset(player_id: str, state: dict) -> dict | None:
+    # Allocate a private action identity for history-claim ownership.
+    action_id = new_id("bingo-reset")
+    # Retain the selected marker or explicit no-session result.
+    selected = {}
+
+    # Reserve reset ownership without clearing visible state before refunds settle.
+    def prepare(current: dict) -> dict:
+        # Refuse overlap with any earlier recoverable action.
+        if current.get(PENDING_ACTION_KEY) is not None:
+            # Preserve the earlier action for explicit completion.
+            raise ConflictError("Bingo state requires action recovery")
+        # Read the exact active session selected by this reset.
+        session = current.get("active_session")
+        # Preserve the historical no-op reset when no active session exists.
+        if not isinstance(session, dict) or session.get("status") != "active":
+            # Return without publishing a private marker.
+            return current
+        # Snapshot immutable refund/history inputs under the provider lock.
+        marker = {"kind": "reset", "status": "prepared", "action_id": action_id, "session_id": session["session_id"], "session": copy.deepcopy(session), "history_claims": []}
+        # Publish reset ownership while keeping the active session visible until settlement completes.
+        current[PENDING_ACTION_KEY] = marker
+        # Retain detached marker evidence for money work outside the lock.
+        selected.update(copy.deepcopy(marker))
+        # Publish the complete current document.
+        return current
+
+    # Serialize reset selection with every call and purchase.
+    authoritative = update_player_game_state(GAME_ID, player_id, prepare, engine.default_state)
+    # Refresh caller state to provider authority.
+    _refresh_state(state, authoritative)
+    # Return no marker for the historical empty reset.
+    return selected or None
+
+
+# Release an exact reset marker after a definitively failed refund. (BINGO-028)
+def rollback_reset(player_id: str, state: dict, marker: dict) -> None:
+    # Clear only the matching prepared reset ownership.
+    def rollback(current: dict) -> dict:
+        # Read provider-current action ownership.
+        pending = current.get(PENDING_ACTION_KEY)
+        # Release only the exact reset marker; never restore a stale whole document.
+        if isinstance(pending, dict) and pending.get("kind") == "reset" and pending.get("action_id") == marker.get("action_id"):
+            # Remove the private action slot while leaving the active session untouched.
+            current.pop(PENDING_ACTION_KEY, None)
+        # Preserve every sibling field.
+        return current
+
+    # Publish the bounded rollback atomically.
+    authoritative = update_player_game_state(GAME_ID, player_id, rollback, engine.default_state)
+    # Refresh caller state.
+    _refresh_state(state, authoritative)
+
+
+# Settle one prepared reset and atomically clear only its exact session. (BINGO-028)
+def settle_prepared_reset(player_id: str, state: dict, marker: dict) -> list[dict]:
+    # Use the immutable selected session for refund and history dimensions.
+    session = copy.deepcopy(marker["session"])
+    # Preserve the historical refund event list response.
+    refunds = []
+    # Start the no-retry reset settlement workflow.
+    try:
+        # Refund every funded card only when no ball was called.
+        if not session.get("called"):
+            # Inspect the exact selected card order.
+            for card in session.get("cards", []):
+                # Never refund an unfunded synthetic house spoiler. (issue #452)
+                if card.get("source") == "house":
+                    # Skip the non-wallet seat.
+                    continue
+                # Commit or recover the exact per-card refund once.
+                event, _replayed = _apply_movement(_card_refund_movement(session, card))
+                # Preserve the established response list shape for replay and first commit.
+                refunds.append(event)
+            # Claim the one reset history row across sibling recovery attempts.
+            if claim_history(player_id, state, marker, "refunded"):
+                # Append the unchanged refunded-session audit row.
+                append_history(GAME_ID, session["session_id"], session["player_id"], "session", session["pattern"], session["amount"], "refunded", sum(abs(row["amount"]) for row in refunds), players.get_player(session["player_id"])["balance"], {"reason": "reset_before_calls"})
+        else:
+            # Claim the one abandoned-session history row across sibling recovery attempts.
+            if claim_history(player_id, state, marker, "abandoned"):
+                # Append the unchanged abandonment history shape.
+                append_history(GAME_ID, session["session_id"], session["player_id"], "session", session["pattern"], session["amount"], "abandoned", 0, players.get_player(session["player_id"])["balance"], {"called": session.get("called", [])})
+                # Preserve the existing operations warning for abandoned sessions.
+                logger.warning("bingo_session_abandoned", session_id=session["session_id"], calls=len(session.get("called", [])))
+
+        # Clear the exact active session only after refund/history work converges.
+        def finalize(current: dict) -> dict:
+            # Read provider-current reset ownership.
+            pending = current.get(PENDING_ACTION_KEY)
+            # Permit a sibling to have finalized first.
+            if not isinstance(pending, dict) or pending.get("kind") != "reset" or pending.get("action_id") != marker.get("action_id"):
+                # Preserve the already-final state.
+                return current
+            # Reject an unexpected replacement session rather than clearing it.
+            active = current.get("active_session")
+            if isinstance(active, dict) and active.get("session_id") != marker.get("session_id"):
+                # Leave both the replacement and marker intact for operator recovery.
+                raise ConflictError("Bingo reset session changed")
+            # Clear only the selected active session.
+            current["active_session"] = None
+            # Release the exact reset action slot.
+            current.pop(PENDING_ACTION_KEY, None)
+            # Publish the complete current document.
+            return current
+
+        # Serialize terminal reset publication with all sibling state.
+        authoritative = update_player_game_state(GAME_ID, player_id, finalize, engine.default_state)
+        # Refresh caller state after reset.
+        _refresh_state(state, authoritative)
+        # Return the established refund list.
+        return refunds
+    # Preserve an actionable session when a movement definitively failed.
+    except Exception:
+        # Release only this marker; committed earlier refunds replay safely on explicit retry.
+        rollback_reset(player_id, state, marker)
+        # Preserve the original error.
+        raise
+
+
+# Complete a prior terminal call/reset or reject an in-flight purchase before a new action. (BINGO-028)
+def resume_pending_action(player_id: str, state: dict) -> None:
+    # Refresh from provider authority before classifying private recovery state.
+    authoritative = load_player_game_state(GAME_ID, player_id, engine.default_state)
+    # Replace the caller's possibly stale document.
+    _refresh_state(state, authoritative)
+    # Read the one private action owner.
+    pending = state.get(PENDING_ACTION_KEY)
+    # Return immediately when the document is actionable.
+    if not isinstance(pending, dict):
+        # Leave public state unchanged.
+        return
+    # Complete a committed call and its exactly-once settlement/history publication.
+    if pending.get("kind") == "call" and pending.get("status") == "committed":
+        # Converge the prior action without selecting another ball.
+        settle_committed_call(player_id, state, copy.deepcopy(pending))
+        # Return after exact recovery.
+        return
+    # Complete a selected reset through stable refund action identities.
+    if pending.get("kind") == "reset" and pending.get("status") == "prepared":
+        # Converge the prior reset before admitting another action.
+        settle_prepared_reset(player_id, state, copy.deepcopy(pending))
+        # Return after exact recovery.
+        return
+    # Finalize a purchase whose session already committed.
+    if pending.get("kind") == "purchase" and pending.get("status") == "committed":
+        # Release its private marker without another wallet mutation.
+        finalize_purchase(player_id, state, copy.deepcopy(pending))
+        # Return after exact recovery.
+        return
+    # Refuse an in-flight prepared purchase because no client-side request may replay its debit.
+    raise ConflictError("Bingo purchase is still in progress")
+
+
+# Register the frozen v1 Bingo routes around the provider-atomic state machine.
+def register(router):
+    # Expose the player-specific state without mutating pending recovery work.
+    @router.get(r"/api/v1/games/bingo/state")
+    def state(body, query):
+        # Preserve the established payload and legacy player selection.
+        return payload(request_player_id(body, query))
+
+    # Buy one card and publish the funded session atomically.
+    @router.post(r"/api/v1/games/bingo/cards")
+    def card(body, query):
+        # Validate identity, amount, and established default pattern.
+        player_id = request_player_id(body, query); amount = require_amount(body.get("amount")); pattern = body.get("pattern", "line")
+        # Start from an authoritative snapshot used only for response construction.
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Finish any prior recoverable terminal action before a new purchase.
+        resume_pending_action(player_id, state)
+        # Reserve one exact purchase before any wallet mutation.
+        marker = prepare_purchase(player_id, state, amount, pattern)
+        # Debit/fund/publish/finalize without a stale whole-document save.
+        session = settle_purchase(player_id, state, marker)
+        # Preserve the established response envelope.
+        return {"session": session, **payload(player_id, state)}
+
+    # Call exactly one provider-ordered ball and settle any terminal result.
     @router.post(r"/api/v1/games/bingo/call")
-    # Define the call function used by this module.
     def call(body, query):
-        # Set player_id to the value needed for the next operation.
+        # Resolve the established player identity.
         player_id = request_player_id(body, query)
-        # Set state to the value needed for the next operation.
-        state=load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Set sess,n to the value needed for the next operation.
-        sess,n=engine.call_next(state); credits=settle_if_done(sess)
-        save_player_game_state(GAME_ID, player_id, state); return {"session":sess,"called":n,"label":engine.ball_label(n),"credits":credits, **payload(player_id, state)}
+        # Load one response snapshot before recovery and mutation.
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Complete an earlier terminal action before selecting another ball.
+        resume_pending_action(player_id, state)
+        # Commit one ball and its private response marker atomically.
+        marker = commit_calls(player_id, state, 1)
+        # Settle/finalize the exact committed session without selecting again.
+        session, calls, credits = settle_committed_call(player_id, state, marker)
+        # Preserve the exact one-ball response fields.
+        return {"session": session, "called": calls[0], "label": engine.ball_label(calls[0]), "credits": credits, **payload(player_id, state)}
 
-    # Attach this decorator so the following function is registered with the framework.
+    # Preserve the compatibility bounded auto-call endpoint behind one atomic callback.
     @router.post(r"/api/v1/games/bingo/auto")
-    # Define the auto function used by this module.
     def auto(body, query):
-        # Compatibility endpoint: only calls a small number of balls now. The browser-level
-        # autoplay controller uses /call one tick at a time so Stop can be honored.
-        # Set player_id to the value needed for the next operation.
+        # Compatibility endpoint remains bounded; browser autoplay still calls /call one tick at a time.
         player_id = request_player_id(body, query)
-        # Set state to the value needed for the next operation.
-        state=load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Set sess,calls to the value needed for the next operation.
-        sess,calls=engine.auto_play(state, int(body.get("max_calls",1))); credits=settle_if_done(sess)
-        save_player_game_state(GAME_ID, player_id, state); return {"session":sess,"calls":calls,"labels":[engine.ball_label(n) for n in calls],"credits":credits, **payload(player_id, state)}
+        # Load the response snapshot and recover an earlier terminal action first.
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Prevent a stale batch from overwriting an earlier committed call/reset.
+        resume_pending_action(player_id, state)
+        # Preserve the historical integer conversion before classifying an empty batch.
+        max_calls = int(body.get("max_calls", 1))
+        # Preserve the established no-op response for zero or negative compatibility batches.
+        if max_calls <= 0:
+            # Return no session/calls/credits without publishing a marker or selecting entropy.
+            return {"session": None, "calls": [], "labels": [], "credits": [], **payload(player_id, state)}
+        # Preserve the established bounded engine batch semantics.
+        marker = commit_calls(player_id, state, max_calls)
+        # Settle/finalize only the committed provider result.
+        session, calls, credits = settle_committed_call(player_id, state, marker)
+        # Preserve exact calls, labels, credits, and payload response shape.
+        return {"session": session, "calls": calls, "labels": [engine.ball_label(number) for number in calls], "credits": credits, **payload(player_id, state)}
 
-    # Attach this decorator so the following function is registered with the framework.
+    # Reset one selected active session after exact refund or abandonment evidence.
     @router.post(r"/api/v1/games/bingo/reset")
-    # Define the reset function used by this module.
     def reset(body, query):
-        # Set player_id to the value needed for the next operation.
+        # Resolve the established player identity.
         player_id = request_player_id(body, query)
-        # Set state to the value needed for the next operation.
-        state=load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Set sess to the value needed for the next operation.
-        sess=state.get("active_session")
-        # Set refunds to the value needed for the next operation.
-        refunds=[]
-        if sess and sess.get("status") == "active":
-            if not sess.get("called"):
-                for card in sess.get("cards", []):
-                    # Never refund a synthetic house spoiler seat: it was never debited from any wallet. (issue #452)
-                    if card.get("source") == "house":
-                        # Skip the unfunded spoiler card.
-                        continue
-                    event, _replayed = SETTLEMENT.apply_once(player_id=card["player_id"], signed_amount=card["amount"], transaction_type="BINGO_CARD_REFUND", round_id=sess["session_id"], action_key=f"{card['card_id']}:refund", request_fingerprint=f"{card['card_id']}:{sess['session_id']}:{card['amount']}:refund", details={"card_id": card["card_id"]})
-                    # Preserve the historical event list response shape.
-                    refunds.append(event)
-                append_history(GAME_ID, sess["session_id"], sess["player_id"], "session", sess["pattern"], sess["amount"], "refunded", sum(abs(r["amount"]) for r in refunds), players.get_player(sess["player_id"])["balance"], {"reason":"reset_before_calls"})
-            # Handle the fallback branch when prior conditions did not match.
-            else:
-                append_history(GAME_ID, sess["session_id"], sess["player_id"], "session", sess["pattern"], sess["amount"], "abandoned", 0, players.get_player(sess["player_id"])["balance"], {"called":sess.get("called",[])})
-                # Set logger.warning("bingo_session_abandoned", session_id to the value needed for the next operation.
-                logger.warning("bingo_session_abandoned", session_id=sess["session_id"], calls=len(sess.get("called",[])))
-        # Set state["active_session"] to the value needed for the next operation.
-        state["active_session"] = None
-        save_player_game_state(GAME_ID, player_id, state); return {"refunds":refunds, **payload(player_id, state)}
+        # Load one response snapshot before recovery and reset selection.
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
+        # Converge any prior terminal action before selecting the reset target.
+        resume_pending_action(player_id, state)
+        # Reserve the exact active session under the provider lock.
+        marker = prepare_reset(player_id, state)
+        # Preserve the historical no-op reset when no active session exists.
+        refunds = [] if marker is None else settle_prepared_reset(player_id, state, marker)
+        # Preserve the frozen reset response envelope.
+        return {"refunds": refunds, **payload(player_id, state)}

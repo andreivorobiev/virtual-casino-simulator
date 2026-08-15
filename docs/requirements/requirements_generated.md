@@ -22,7 +22,7 @@ Historical source baseline: 9.1.0
 - blackjack: 9.1.13
 - baccarat: 9.2.1
 - keno: 9.4.1
-- bingo: 9.3.7
+- bingo: 9.3.8
 - multi_hand_video_poker: 1.1.3
 - casino_war: 1.2.1
 - big_six_wheel: 1.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.10
-- docs: 1.96.10
+- tests: 1.100.11
+- docs: 1.96.11
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -693,6 +693,7 @@ Historical source baseline: 9.1.0
 - **TEST-200** (Tests) - PASS: Real fresh-process Blackjack evidence loads one stale provider document per worker and proves table settings preserve unrelated sibling state, disjoint declared settings merge without lost updates, and a provider-latest active round defeats a stale settings request without changing any existing rule or sibling field. The frozen v1 API proves the established response envelope and centrally coerced value, while static inventory evidence requires zero direct Blackjack saves and retains the state-and-money multiworker blocker.
 - **TEST-201** (Tests) - PASS: Real fresh-process Multi-Hand Video Poker evidence races hold publication against unrelated sibling state, proves provider-ordered hold-then-draw consumes the latest selection, and proves draw-then-hold refuses stale round resurrection. Deterministic failure evidence preserves sibling state during action-owned pre-debit rollback, retains a committed round after a lost debit response, and recovers exactly one aggregate debit, while static inventory requires zero direct game-state saves.
 - **TEST-202** (Tests) - PASS: Real fresh-process Roulette evidence races wager preparation and committed spin/finalization against unrelated sibling updates, proves provider-ordered settings cannot erase an already committed wager, and verifies one exact debit. Deterministic failure schedules preserve sibling state during action-owned pre-ledger rollback, retain committed bets and removals after lost debit/refund responses, replay one exact committed settlement without resampling or duplicate history, restore clear-all order, and require zero reachable direct Roulette state saves.
+- **TEST-203** (Tests) - PASS: Real stale-load Bingo workers publish distinct balls in provider order without duplicate, dropped, or private marker state. Deterministic provider and settlement schedules prove purchase ownership rejects overlapping call/reset actions, action-owned rollback preserves sibling state, lost debit/refund/payout responses reconcile immutable evidence without a second wallet movement, reset clears only its selected session, terminal history is appended once, and zero reachable direct Bingo state saves remain.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -858,6 +859,7 @@ Historical source baseline: 9.1.0
 - **BINGO-025** (Bingo) - PASS: Bingo sessions seat ledger-funded bot competitor cards and bound calls per pattern, ending as no_win with no payout at the cap, so a session has a real losing outcome, calls are never unbounded, and bot wins pay bot wallets.
 - **BINGO-026** (Bingo) - PASS: Every Bingo pattern pays roughly 0.9 divided by its measured win probability at the guaranteed four-card field, giving each pattern a modest single-digit-to-low-double-digit house edge instead of the prior player-positive returns, and the competitor field is always seated at full strength with synthetic house spoiler cards that end sessions but are never credited.
 - **BINGO-027** (Bingo) - PASS: Bingo autoplay defaults to one complete bounded 75-call plan, including for disposable guests, and resetting a called session requires explicit non-refund confirmation followed by truthful refunded, abandoned, or cleared feedback.
+- **BINGO-028** (Bingo) - PASS: Bingo purchase reservation, card/session publication, ordered ball calls, terminal settlement, and reset publication mutate provider-current player state atomically. Private stable action markers reconcile committed debit, refund, and payout responses without repeating wallet movement, preserve unrelated sibling fields, and keep the frozen v1 payload free of recovery metadata.
 - **BJ-001** (Blackjack) - PASS: Blackjack deals two player cards and two dealer cards.
 - **BJ-002** (Blackjack) - PASS: Dealer hole card is hidden in public state.
 - **BJ-003** (Blackjack) - PASS: Aces can count as 1 or 11.

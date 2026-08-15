@@ -457,6 +457,28 @@
       "introduced_in": "issues-576-577-bingo-lifecycle",
       "changed_in": "issues-576-577-bingo-lifecycle",
       "notes": "The existing server refund-before-first-call and abandon-after-call economics remain authoritative."
+    },
+    {
+      "id": "BINGO-028",
+      "module": "Bingo",
+      "description": "Bingo purchase reservation, card/session publication, ordered ball calls, terminal settlement, and reset publication mutate provider-current player state atomically. Private stable action markers reconcile committed debit, refund, and payout responses without repeating wallet movement, preserve unrelated sibling fields, and keep the frozen v1 payload free of recovery metadata.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001",
+        "API-BINGO-ATOMIC-001",
+        "API-BINGO-ECONOMICS-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/bingo/api.py",
+        "tests/games/bingo/test_atomic_state.py",
+        "tests/bingo_economics_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py"
+      ],
+      "introduced_in": "issue-779-bingo-atomic-state",
+      "changed_in": "issue-779-bingo-atomic-state",
+      "notes": "The state transition is provider-atomic, but wallet and history publication remain separate exactly-once boundaries, so production second-worker activation stays blocked. No /api/v1 contract or Bingo economics changed."
     }
   ]
 }

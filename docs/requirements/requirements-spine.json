@@ -11954,6 +11954,30 @@
       "introduced_in": "issue-777-roulette-atomic-state",
       "changed_in": "issue-777-roulette-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Roulette engine. Failure fixtures patch only settlement while the provider callback preserves concurrent siblings and immutable action proof. Multiworker activation remains blocked because state, ledger, and history are separate boundaries."
+    },
+    {
+      "id": "TEST-203",
+      "module": "Tests",
+      "description": "Real stale-load Bingo workers publish distinct balls in provider order without duplicate, dropped, or private marker state. Deterministic provider and settlement schedules prove purchase ownership rejects overlapping call/reset actions, action-owned rollback preserves sibling state, lost debit/refund/payout responses reconcile immutable evidence without a second wallet movement, reset clears only its selected session, terminal history is appended once, and zero reachable direct Bingo state saves remain.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BINGO-001",
+        "API-BINGO-ATOMIC-001",
+        "API-BINGO-ECONOMICS-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/bingo/test_atomic_state.py",
+        "tests/bingo_economics_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-779-bingo-atomic-state",
+      "changed_in": "issue-779-bingo-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Bingo engine. Failure fixtures retain the frozen v1 response and ledger vocabulary while exercising no-retry recovery. Production multiworker activation remains blocked because state, ledger, and history are separate boundaries."
     }
   ]
 }
