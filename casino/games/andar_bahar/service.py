@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only orchestration for isolated Andar Bahar."""
 
+# Import deep-copy support for detached optimistic state snapshots.
+import copy
 # Import canonical JSON encoding for semantic action fingerprints.
 import json
 # Import hashing so changed retries fail even when wagers happen to match.
@@ -17,8 +19,8 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Route every player-wallet movement through the shared exactly-once settlement boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistent state without editing shared storage code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict and validation errors for route boundaries.
 from casino.errors import ConflictError, ValidationError
 # Import only this game's deterministic state and rule helpers.
@@ -28,9 +30,12 @@ from casino.games.andar_bahar import engine
 GAME_ID = engine.GAME_ID
 # Bound client retry ids to log-safe characters and a conservative length.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Scan enough local history to preserve retry recovery for the supported simulator.
 # Serialize action-id lookup and ledger writes inside the one-process server.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_andar_bahar_atomic_baseline"
+# Name every state field owned by Andar Bahar transitions.
+_GAME_STATE_KEYS = ("active_round", "recent_rounds", "action_receipts")
 
 
 # Validate one required client action identity without echoing hostile input.
@@ -57,16 +62,22 @@ def CoreLedgerGateway(**kwargs):
     return GameSettlementGateway(GAME_ID, "andar_bahar_action_id", **kwargs)
 
 
+# Expose the provider-atomic writer behind an injectable test seam.
+def update_state(game_id: str, player_id: str, mutator, factory):
+    # Delegate to the shared cross-process read-modify-write boundary.
+    return update_player_game_state(game_id, player_id, mutator, factory)
+
+
 # Coordinate player state, deterministic cards, and retry-safe ledger movements.
 class AndarBaharService:
     # Capture production dependencies while exposing deterministic focused-test seams.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, get_player=None, clock=None, seed_factory=None, fixture_factory=None):
+    def __init__(self, *, ledger_gateway=None, state_loader=None, state_updater=None, get_player=None, clock=None, seed_factory=None, fixture_factory=None):
         # Use the game-local shared-ledger adapter unless a test supplies a fake.
         self._ledger = ledger_gateway or CoreLedgerGateway()
         # Load one authenticated player's isolated state document by default.
         self._load_state = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Save one authenticated player's isolated state document by default.
-        self._save_state = state_saver or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
+        # Publish state through the provider-current callback boundary by default.
+        self._update_state = state_updater or update_state
         # Return read-only current-player information without balance mutation.
         self._get_player = get_player or players.get_player
         # Use the shared UTC clock unless a focused test pins timestamps.
@@ -76,10 +87,57 @@ class AndarBaharService:
         # Provide exact fixture rounds for focused tests without randomness.
         self._fixture_factory = fixture_factory
 
-    # Save one player document through the injected persistence boundary.
+    # Load one player document and capture its exact game-owned baseline.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected player-scoped persistence boundary.
+        state = self._load_state(player_id)
+        # Retain only the values this service may replace during the operation.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting private operation metadata.
+        return state
+
+    # Capture detached values for every Andar Bahar-owned state field.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Normalize all current and predecessor documents to one complete shape.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Publish one player document through provider-current compare-and-replace.
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate without mutating shared storage configuration.
-        self._save_state(player_id, state)
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked detached-document write before entering storage.
+        if not isinstance(expected, dict):
+            # Keep stale or fabricated state outside provider bytes.
+            raise ConflictError("Andar Bahar state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Andar Bahar-owned fields on provider-current state.
+        def publish(current: dict) -> dict:
+            # Detach current owned values from unrelated provider metadata.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose owned baseline lost a concurrent race.
+            if observed != expected:
+                # Require the caller to recover from the authoritative winner.
+                raise ConflictError("Andar Bahar state changed during this action; reload and retry")
+            # Replace only the three fields governed by this game service.
+            for key in _GAME_STATE_KEYS:
+                # Publish detached JSON-compatible values without sibling loss.
+                current[key] = copy.deepcopy(desired[key])
+            # Return the complete provider document for atomic persistence.
+            return current
+
+        # Commit the transition through the provider's cross-process boundary.
+        authoritative = self._update_state(GAME_ID, player_id, publish, engine.default_state)
+        # Advance the operation baseline to the exact committed owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Build the public state, rules, and current-player payload.
     def _payload(self, player_id: str, state: dict) -> dict:
@@ -155,7 +213,7 @@ class AndarBaharService:
         # Serialize recovery against concurrent actions for the same local process.
         with _ACTION_LOCK:
             # Load the newest player-scoped document inside the lock.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
             self._recover(player_id, state)
             # Return sanitized state and current-player information.
@@ -178,7 +236,7 @@ class AndarBaharService:
         # Serialize state preparation, debit, settlement, and marker persistence.
         with _ACTION_LOCK:
             # Load the current player's state inside the critical section.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover any interrupted prior action before enforcing idempotency.
             self._recover(player_id, state)
             # Load durable compact receipts that prevent reuse after history pruning.

@@ -341,7 +341,7 @@
       "requirement_id": "AB-001",
       "engine_path": "casino/games/andar_bahar/engine.py",
       "settlement_path": "casino/games/andar_bahar/service.py",
-      "production_sha256": "ec8f805c1b0fa62e649a7360b5f9e4f37d896459a2988e56d76d662a44cf6d35",
+      "production_sha256": "a47d379a6e6c958617baf46e7481d6f9b23b7750cab826792fe8bbd54e75cc31",
       "proof_tests": ["tests.games.andar_bahar.test_engine:AndarBaharEconomicsTests.test_exact_side_probabilities_and_rtp_are_house_positive"],
       "rationale": "Both player-selectable sides use exact production win probabilities and server-owned prices below even return."
     },
