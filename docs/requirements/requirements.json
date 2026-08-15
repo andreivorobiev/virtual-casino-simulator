@@ -12224,6 +12224,28 @@
       "notes": "Fresh workers use the real JSON provider and exact Crown and Anchor service. Existing session isolation, replay, economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-215",
+      "module": "Tests",
+      "description": "Real stale-load Fan-Tan workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and post-debit retry recovers the committed pile count without duplicate debit or credit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FAN-TAN-001",
+        "API-FAN-TAN-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/fan_tan/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-807-fan-tan-atomic-state",
+      "changed_in": "issue-807-fan-tan-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Fan-Tan service. Existing session isolation, replay, recovery, intentionally fair economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -18246,6 +18268,27 @@
       "introduced_in": "game-expansion-fan-tan",
       "changed_in": "game-expansion-fan-tan",
       "notes": "Descriptor sort order 240 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "FAN-TAN-006",
+      "module": "Fan-Tan",
+      "description": "Every Fan-Tan settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FAN-TAN-001",
+        "API-FAN-TAN-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/fan_tan/service.py",
+        "tests/games/fan_tan/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-807-fan-tan-atomic-state",
+      "changed_in": "issue-807-fan-tan-atomic-state",
+      "notes": "The frozen v1 envelope, counted-pile profile, three-to-one paytable, entropy seam, and deterministic ledger action keys remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     },
     {
       "id": "AB-001",

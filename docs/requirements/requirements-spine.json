@@ -12222,6 +12222,28 @@
       "introduced_in": "issue-805-crown-and-anchor-atomic-state",
       "changed_in": "issue-805-crown-and-anchor-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Crown and Anchor service. Existing session isolation, replay, economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-215",
+      "module": "Tests",
+      "description": "Real stale-load Fan-Tan workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and post-debit retry recovers the committed pile count without duplicate debit or credit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FAN-TAN-001",
+        "API-FAN-TAN-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/fan_tan/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-807-fan-tan-atomic-state",
+      "changed_in": "issue-807-fan-tan-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Fan-Tan service. Existing session isolation, replay, recovery, intentionally fair economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }
