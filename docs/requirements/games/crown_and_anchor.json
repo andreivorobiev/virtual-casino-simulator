@@ -112,6 +112,27 @@
       "introduced_in": "game-expansion-crown-and-anchor",
       "changed_in": "issue-227-crown-stage-completeness",
       "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical; formal evidence rejects incomplete Crown and Anchor theater even when no enabled control is clipped."
+    },
+    {
+      "id": "CAA-006",
+      "module": "Crown and Anchor",
+      "description": "Every Crown and Anchor settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CAA-001",
+        "API-CAA-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/crown_and_anchor/service.py",
+        "tests/games/crown_and_anchor/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-805-crown-and-anchor-atomic-state",
+      "changed_in": "issue-805-crown-and-anchor-atomic-state",
+      "notes": "The frozen v1 envelope, six-symbol paytable, entropy seam, and deterministic ledger action keys remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     }
   ]
 }

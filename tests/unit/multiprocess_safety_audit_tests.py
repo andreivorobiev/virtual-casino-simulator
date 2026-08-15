@@ -58,13 +58,13 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
-        # Pin the exact current family cardinalities after Big Six Wheel retires direct publication.
+        # Pin the exact current family cardinalities after Crown and Anchor retires direct publication.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 18, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 17},  # Pin current counts.
+            {"player_document_load_save": 17, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 18},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -222,6 +222,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(big_six_wheel["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while state and money remain separate boundaries.
         self.assertEqual(big_six_wheel["multiworker_status"], "blocked")
+        # Resolve Crown and Anchor after settled-history publication becomes atomic.
+        crown_and_anchor = next(row for row in games if row["game_id"] == "crown_and_anchor")
+        # Require authoritative reads for response, replay, and ledger recovery.
+        self.assertGreater(crown_and_anchor["load_call_sites"], 0)
+        # Require every reachable history publication to avoid stale whole-document saves.
+        self.assertEqual(crown_and_anchor["save_call_sites"], 0)
+        # Bind terminal journal publication to provider-current callbacks.
+        self.assertGreater(crown_and_anchor["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(crown_and_anchor["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while state and money remain separate boundaries.
+        self.assertEqual(crown_and_anchor["multiworker_status"], "blocked")
         # Resolve Keno after draw and ticket transitions retire every direct state publication.
         keno = next(row for row in games if row["game_id"] == "keno")
         # Require the authoritative Keno read used for response and interruption recovery.

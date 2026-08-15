@@ -1590,6 +1590,8 @@ def run_api_tests():
     run_case('API-OU7-ATOMIC-001',['OU7-007','TEST-212'],lambda: run_unit_module('tests.games.over_under_7.test_api','Over/Under 7 atomic state suite failed'))
     # Execute fresh-process Big Six Wheel ordering plus sibling-state preservation. (issue #803)
     run_case('API-BIG-SIX-ATOMIC-001',['BIG-SIX-007','TEST-213'],lambda: run_unit_module('tests.unit.big_six_wheel_engine_tests','Big Six Wheel atomic state suite failed'))
+    # Execute fresh-process Crown and Anchor ordering plus sibling-state preservation. (issue #805)
+    run_case('API-CAA-ATOMIC-001',['CAA-006','TEST-214'],lambda: run_unit_module('tests.games.crown_and_anchor.test_api','Crown and Anchor atomic state suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.

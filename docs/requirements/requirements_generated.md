@@ -36,7 +36,7 @@ Historical source baseline: 9.1.0
 - sic_bo: 1.1.4
 - chuck_a_luck: 1.1.3
 - craps: 1.1.3
-- crown_and_anchor: 1.1.4
+- crown_and_anchor: 1.1.5
 - over_under_7: 1.1.5
 - plinko: 1.1.2
 - fan_tan: 1.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.23
-- docs: 1.96.23
+- tests: 1.100.24
+- docs: 1.96.24
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -704,6 +704,7 @@ Historical source baseline: 9.1.0
 - **TEST-211** (Tests) - PASS: Real stale-load Andar Bahar workers race complete match-rank rounds around a separately committed sibling update, proving one provider-winning round, no stale terminal overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication and rollback schedules prove identical state is idempotent and action-owned rejected-wager cleanup preserves concurrent siblings without creating a wallet movement.
 - **TEST-212** (Tests) - PASS: Real stale-load Over/Under 7 workers race complete dice rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication and rejected-debit schedules prove identical state is idempotent, private baselines never persist, failed debits publish no round, and committed lost-state retries recover immutable ledger proof without a duplicate wallet movement.
 - **TEST-213** (Tests) - PASS: Real stale-load Big Six Wheel workers race complete ledger-backed spins around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent and private baselines never persist while existing retry and post-debit recovery schedules retain exactly-once ledger behavior.
+- **TEST-214** (Tests) - PASS: Real stale-load Crown and Anchor workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, and private baselines never persist while existing replay and ledger behavior remain unchanged.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1017,6 +1018,7 @@ Historical source baseline: 9.1.0
 - **CAA-003** (Crown and Anchor) - PASS: Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.
 - **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with all three dice and all six symbol hit-result panels painted and contained at every governed viewport.
 - **CAA-005** (Tests) - PASS: Catalog, contract, browser, long-suite, and formal TEST-092 discovery include Crown and Anchor with requirement, module, version, visual, and essential-stage traceability.
+- **CAA-006** (Crown and Anchor) - PASS: Every Crown and Anchor settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.
 - **OU7-001** (Over/Under 7) - PASS: Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.
 - **OU7-002** (Over/Under 7) - PASS: Authenticated sessions own private reload-safe plays, settled history, and canonical route restoration.
 - **OU7-003** (Over/Under 7) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under durable action identities.
