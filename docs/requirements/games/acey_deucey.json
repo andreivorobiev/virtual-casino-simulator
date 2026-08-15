@@ -114,6 +114,29 @@
       "introduced_in": "game-expansion-acey-deucey",
       "changed_in": "game-expansion-acey-deucey",
       "notes": "Descriptor sort order 260 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "AD-006",
+      "module": "Acey-Deucey",
+      "description": "Acey-Deucey publishes prepared and terminal rounds, durable action receipts, wager and payout proof markers, recovery cleanup, and rejected-wager rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale pass can overwrite or resurrect the winning round, while exact retries retain the frozen v1 behavior and exactly-once ledger recovery.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AD-001",
+        "API-AD-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/acey_deucey/service.py",
+        "tests/games/acey_deucey/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-823-acey-deucey-atomic-state",
+      "changed_in": "issue-823-acey-deucey-atomic-state",
+      "notes": "The frozen v1 contract and visible game rules remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     }
   ]
 }

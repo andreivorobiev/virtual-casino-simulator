@@ -1594,6 +1594,8 @@ def run_api_tests():
     run_case('API-CAA-ATOMIC-001',['CAA-006','TEST-214'],lambda: run_unit_module('tests.games.crown_and_anchor.test_api','Crown and Anchor atomic state suite failed'))
     # Execute fresh-process Fan-Tan ordering plus sibling-state and ledger recovery proof. (issue #807)
     run_case('API-FAN-TAN-ATOMIC-001',['FAN-TAN-006','TEST-215'],lambda: run_unit_module('tests.games.fan_tan.test_api','Fan-Tan atomic state suite failed'))
+    # Execute fresh-process Acey-Deucey ordering plus sibling-state and recovery proof. (issue #823)
+    run_case('API-AD-ATOMIC-001',['AD-006','TEST-216'],lambda: run_unit_module('tests.games.acey_deucey.test_api','Acey-Deucey atomic state suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.

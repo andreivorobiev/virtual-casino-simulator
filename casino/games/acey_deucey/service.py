@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only orchestration for Acey-Deucey."""
 
+# Import deep-copy support for detached optimistic state snapshots.
+import copy
 # Import canonical JSON encoding for semantic retry fingerprints.
 import json
 # Import hashing for compact immutable request fingerprints.
@@ -17,8 +19,8 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Import the one canonical game-money compatibility boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped game state persistence.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict, lookup, and validation errors for API boundaries.
 from casino.errors import ConflictError, NotFoundError, ValidationError
 # Import this game's pure rules and state helpers.
@@ -30,6 +32,10 @@ GAME_ID = engine.GAME_ID
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Serialize the supported local single-process action path.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_acey_deucey_atomic_baseline"
+# Name every state field owned by Acey-Deucey transitions.
+_GAME_STATE_KEYS = ("active_round", "recent_rounds", "action_receipts")
 
 
 # Validate one required client action identity.
@@ -56,16 +62,27 @@ def CoreLedgerGateway(**kwargs):
     return GameSettlementGateway(GAME_ID, "acey_deucey_action_id", **kwargs)
 
 
+# Persist player-scoped game documents through the selected storage provider.
+class StateRepository:
+    # Load one authenticated player's document.
+    def load(self, player_id: str) -> dict:
+        # Delegate JSON/MySQL selection and defaults to shared state storage.
+        return load_player_game_state(GAME_ID, player_id, engine.default_state)
+
+    # Apply one transition while the provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate latest-state loading, rollback, and publication atomically.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
+
+
 # Coordinate player state, deterministic cards, and ledger movements.
 class AceyDeuceyService:
     # Capture production dependencies while exposing deterministic seams.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, get_player=None, clock=None, seed_factory=None):
+    def __init__(self, *, repository=None, ledger_gateway=None, get_player=None, clock=None, seed_factory=None):
+        # Use shared persistent state unless a focused test supplies memory storage.
+        self.repository = repository or StateRepository()
         # Use the game-local ledger adapter unless tests inject a fake.
         self._ledger = ledger_gateway or CoreLedgerGateway()
-        # Load one authenticated player's game document.
-        self._load_state = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Save one authenticated player's game document.
-        self._save_state = state_saver or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
         # Read current player state without mutating balances.
         self._get_player = get_player or players.get_player
         # Use the shared clock unless tests pin time.
@@ -73,10 +90,57 @@ class AceyDeuceyService:
         # Derive deterministic cards only through injected tests.
         self._seed_factory = seed_factory
 
-    # Save the player-scoped state document.
+    # Capture only the fields owned by Acey-Deucey transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Detach nested rounds and receipts from later engine mutation.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its optimistic game-owned baseline.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before provider mutation.
+        state = self.repository.load(player_id)
+        # Retain the exact game-owned values expected by the next publication.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting operation metadata.
+        return state
+
+    # Publish one provider-current compare-and-replace transition.
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate to the injected persistence boundary.
-        self._save_state(player_id, state)
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Reject fabricated or stale detached documents before storage access.
+        if not isinstance(expected, dict):
+            # Keep untracked state outside provider bytes.
+            raise ConflictError("Acey-Deucey state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Acey-Deucey-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach provider-current game fields from unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept an identical publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose game-owned baseline lost a race.
+            if observed != expected:
+                # Require recovery from the authoritative winning action.
+                raise ConflictError("Acey-Deucey state changed during this action; reload and retry")
+            # Replace only the fields governed by this game service.
+            for key, value in desired.items():
+                # Publish detached values so caller mutation cannot leak later.
+                current[key] = copy.deepcopy(value)
+            # Return the complete document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process mutation boundary.
+        authoritative = self.repository.update(player_id, publish)
+        # Advance the in-memory baseline to the exact committed result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Build one public response payload.
     def _payload(self, player_id: str, state: dict) -> dict:
@@ -181,7 +245,7 @@ class AceyDeuceyService:
         # Serialize recovery with local action handling.
         with _ACTION_LOCK:
             # Load the player-scoped state document.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover any committed ledger markers.
             self._recover(player_id, state)
             # Return sanitized state and rules.
@@ -200,7 +264,7 @@ class AceyDeuceyService:
         # Serialize state preparation and receipt persistence.
         with _ACTION_LOCK:
             # Load the bound player's latest document.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover retained markers before enforcing active-round rules.
             self._recover(player_id, state)
             # Load durable action receipts.
@@ -258,7 +322,7 @@ class AceyDeuceyService:
         # Serialize reveal and wallet movements.
         with _ACTION_LOCK:
             # Load the bound player's state.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover previous ledger markers first.
             self._recover(player_id, state)
             # Resolve the round only inside this player document.
@@ -335,7 +399,7 @@ class AceyDeuceyService:
         # Serialize terminal state persistence.
         with _ACTION_LOCK:
             # Load the bound player's state.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover any retained ledger markers first.
             self._recover(player_id, state)
             # Resolve the player-owned round.

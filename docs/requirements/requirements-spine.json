@@ -12248,6 +12248,28 @@
       "introduced_in": "issue-807-fan-tan-atomic-state",
       "changed_in": "issue-807-fan-tan-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Fan-Tan service. Existing session isolation, replay, recovery, intentionally fair economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-216",
+      "module": "Tests",
+      "description": "Real stale-load Acey-Deucey workers race terminal passes around a separately committed sibling update, proving one provider-winning round, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and existing wager rejection plus lost-response recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AD-001",
+        "API-AD-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/acey_deucey/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-823-acey-deucey-atomic-state",
+      "changed_in": "issue-823-acey-deucey-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Acey-Deucey service. Existing session isolation, replay, recovery, economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }
