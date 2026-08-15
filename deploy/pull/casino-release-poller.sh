@@ -3,6 +3,9 @@
 
 set -Eeuo pipefail
 
+# Keep every direct and systemd-owned Python child from mutating immutable release roots with bytecode caches.
+export PYTHONDONTWRITEBYTECODE=1
+
 readonly REPOSITORY="${CASINO_RELEASE_REPOSITORY:-andreivorobiev/virtual-casino-simulator}"
 readonly API_ROOT="${CASINO_GITHUB_API_ROOT:-https://api.github.com}"
 readonly INSTALL_ROOT="${CASINO_INSTALL_ROOT:-/opt/casino}"

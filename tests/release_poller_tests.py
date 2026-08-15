@@ -195,10 +195,17 @@ class ReleasePollerTests(unittest.TestCase):
               local destination="$4/virtual_casino_simulator"
               command mkdir -p "${destination}/deploy/pull"
               command cp "__POLLER__" "${destination}/deploy/pull/casino-release-poller.sh"
+              printf 'VALUE = 1\n' > "${destination}/probe.py"
             }
             validate_monitor_configuration() { :; }
             write_release_environment() { printf 'CASINO_BUILD_SHA=%s\n' "__CANDIDATE_COMMIT__" > "$3"; }
-            compare_release_roots() { :; }
+            compare_release_roots() {
+              if command find "$2" -type d -name '__pycache__' -print -quit | command grep -q .; then
+                printf 'existing release root does not match the verified archive\n' >&2
+                return 1
+              fi
+              return 0
+            }
             check_schema_two() { printf 'schema:%s\n' "$1" >> "__TRACE__"; }
             current_release_root() { command cat "__SELECTOR_RECORD__"; }
             activate_release() {
@@ -209,6 +216,12 @@ class ReleasePollerTests(unittest.TestCase):
             installed_commit() { printf '%s\n' "__PREDECESSOR_COMMIT__"; }
             observe_release() {
               printf 'observe:%s:%s\n' "$1" "$2" >> "__TRACE__"
+              if test "$1" = "0.9.5.79"; then
+                if test "${PYTHONDONTWRITEBYTECODE:-}" != "1"; then
+                  command mkdir -p "$(current_release_root)/__pycache__"
+                  printf 'synthetic-bytecode\n' > "$(current_release_root)/__pycache__/probe.pyc"
+                fi
+              fi
               if test "__SCENARIO__" = "candidate-failure" && test "$1" = "0.9.5.79"; then
                 return 1
               fi
@@ -505,6 +518,10 @@ class ReleasePollerTests(unittest.TestCase):
         self.assertEqual(stable_poller.read_bytes(), POLLER.read_bytes())
         # Require no owned work directory residue after either operation.
         self.assertEqual(list(releases_root.glob(".poller.*")), [])
+        # Require both candidate observations to leave the immutable release free of interpreter caches.
+        self.assertEqual(list((releases_root / ("c" * 40)).rglob("__pycache__")), [])
+        # Require no compiled Python bytecode to escape the cache-directory assertion.
+        self.assertEqual(list((releases_root / ("c" * 40)).rglob("*.pyc")), [])
         # Preserve the unrelated direct child across both cleanup operations.
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n")
         # Read deterministic phase evidence.
@@ -532,6 +549,8 @@ class ReleasePollerTests(unittest.TestCase):
         service = POLLER_SERVICE.read_text(encoding="utf-8")
         # Bind the stable root-owned executable and required monitor environment.
         self.assertIn("ExecStart=/usr/local/libexec/casino-release-poller poll", service)
+        # Require the unit to reinforce the script's direct-command bytecode guard.
+        self.assertIn("Environment=PYTHONDONTWRITEBYTECODE=1", service)
         # Prove the unit cannot run longer than the bounded deployment window.
         self.assertIn("TimeoutStartSec=15min", service)
         # Read the exact timer cadence.
@@ -542,13 +561,50 @@ class ReleasePollerTests(unittest.TestCase):
         self.assertIn("Persistent=true", timer)
         # Read the existing edge monitor extension.
         edge_service = EDGE_SERVICE.read_text(encoding="utf-8")
+        # Keep scheduled monitor imports from mutating the selected release root.
+        self.assertIn("Environment=PYTHONDONTWRITEBYTECODE=1", edge_service)
         # Require a privileged lag check after every otherwise-green edge observation.
         self.assertIn("ExecStartPost=+/usr/local/libexec/casino-release-poller check-lag", edge_service)
+
+    # Prove immutable-root equality remains strict for unrelated extra files after bytecode writes are prevented.
+    def test_release_root_comparison_rejects_unrelated_extra_files(self):
+        # Create two initially identical release roots under the disposable fixture.
+        candidate = self.root / "candidate"
+        # Create the candidate root before writing its packaged fixture.
+        candidate.mkdir()
+        # Create the retained root independently so the comparison reads two trees.
+        retained = self.root / "retained"
+        # Materialize the retained release root.
+        retained.mkdir()
+        # Write one identical packaged file into the candidate.
+        (candidate / "module.py").write_text("VALUE = 1\n", encoding="utf-8", newline="\n")
+        # Copy the exact packaged bytes into the retained root.
+        (retained / "module.py").write_bytes((candidate / "module.py").read_bytes())
+        # Invoke the production comparison once before and once after adding an unrelated file.
+        harness = r'''
+            source "__POLLER__"
+            cd "__ROOT__"
+            compare_release_roots candidate retained
+            printf 'unexpected\n' > retained/operator-extra.txt
+            if compare_release_roots candidate retained; then
+              exit 91
+            fi
+        '''
+        # Bind only test-owned paths into the inert sourced harness.
+        harness = textwrap.dedent(harness).replace("__POLLER__", bash_path(POLLER)).replace("__ROOT__", bash_path(self.root))
+        # Require the identical comparison to pass and the unrelated extra file to fail closed.
+        result = self.run_sourced_poller(harness, check=False)
+        # Accept only the expected handled comparison failure.
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        # Bind the exact rejection instead of accepting an unrelated shell failure.
+        self.assertIn("existing release root does not match the verified archive", result.stderr)
 
     # Prove verification and schema gates precede selector mutation while rollback remains application-only.
     def test_activation_order_is_fail_closed_and_schema_two_only(self):
         # Read the pull script as inert text for exact ordering assertions.
         text = POLLER.read_text(encoding="utf-8")
+        # Require direct invocations to disable bytecode writes before any Python helper can execute.
+        self.assertLess(text.index("export PYTHONDONTWRITEBYTECODE=1"), text.index("decide_versions()"))
         # Locate the first exact checksum/provenance verification.
         verification = text.index('verify_assets "${work_root}" "${latest_tag}" "${latest_commit}"')
         # Locate the preflight failure alarm that covers checksum and provenance rejection.

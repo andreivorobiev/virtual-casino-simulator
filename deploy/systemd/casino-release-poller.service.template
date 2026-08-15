@@ -9,6 +9,8 @@ Wants=network-online.target
 Type=oneshot
 User=root
 Group=root
+# Preserve immutable release trees even when the poller imports candidate or current-release Python modules.
+Environment=PYTHONDONTWRITEBYTECODE=1
 EnvironmentFile=-/etc/casino/release-poller.env
 EnvironmentFile=/etc/casino/edge-monitor.env
 ExecStart=/usr/local/libexec/casino-release-poller poll
