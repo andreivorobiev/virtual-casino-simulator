@@ -44,7 +44,7 @@ class CasinoHoldemResourceTests(unittest.TestCase):
         # Load the canonical descriptor.
         descriptor = self.load_json(Path("modules/casino_holdem.json"))
         # Verify the descriptor uses the accepted module revision.
-        self.assertEqual("1.1.2", descriptor["version"])
+        self.assertEqual("1.1.3", descriptor["version"])
         # Verify it declares the stable game id.
         self.assertEqual("casino_holdem", descriptor["game"]["id"])
         # Verify it points at the additive OpenAPI contract.

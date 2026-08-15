@@ -44,15 +44,15 @@ Historical source baseline: 9.1.0
 - acey_deucey: 1.1.3
 - caribbean_stud: 1.1.3
 - let_it_ride: 1.1.2
-- casino_holdem: 1.1.2
+- casino_holdem: 1.1.3
 - double_bonus_video_poker: 1.1.3
 - mississippi_stud: 1.1.3
 - joker_poker: 1.1.2
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.14
-- docs: 1.96.14
+- tests: 1.100.15
+- docs: 1.96.15
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -697,6 +697,7 @@ Historical source baseline: 9.1.0
 - **TEST-204** (Tests) - PASS: Real stale-load Caribbean Stud workers race terminal decisions around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante rollback preserves concurrent siblings and that lost ante debit, call debit, and payout-credit responses recover immutable proof without a second wallet movement.
 - **TEST-205** (Tests) - PASS: Real stale-load Four Card Poker workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned opening rollback preserves concurrent siblings and that lost opening debit, play debit, and settlement-credit responses recover immutable proof without a second wallet movement.
 - **TEST-206** (Tests) - PASS: Real stale-load Three Card Poker workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no actionable-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned opening and Play rollback preserve concurrent siblings and that lost initial debit, Play debit, and payout-credit responses recover immutable proof without a second wallet movement.
+- **TEST-207** (Tests) - PASS: Real stale-load Casino Hold'em workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante and Call rollback preserve concurrent siblings and that lost ante debit, Call debit, and settlement-credit responses recover immutable proof without a second wallet movement.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1051,6 +1052,7 @@ Historical source baseline: 9.1.0
 - **CH-004** (Application) - PASS: Casino Hold'em supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CH-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Casino Hold'em with requirement, module, version, and visual traceability.
 - **CH-006** (Casino Hold'em) - PASS: The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.
+- **CH-007** (Casino Hold'em) - PASS: Casino Hold'em publishes deal preparation, action receipts, Call or Fold decisions, ledger proof, terminal archive, settlement recovery, and action-owned rollback through provider-current callbacks that replace only active round, recent rounds, and action receipts. Competing processes preserve unrelated player-state siblings and fail closed before stale decisions can overwrite or resurrect a terminal round, while lost ledger responses reconcile immutable proof without repeating a debit or credit.
 - **JP-001** (Joker Poker) - PASS: A 53-card single-hand draw profile contains exactly one wild joker, reload-safe holds, Kings-or-Better qualification, and distinct natural royal, five-of-a-kind, and wild royal paytable rows.
 - **JP-002** (Joker Poker) - PASS: Authenticated sessions own private reload-safe source hands, hold selections, durable receipts, settled history, and canonical route restoration.
 - **JP-003** (Joker Poker) - PASS: One wager debit and at most one returned-token payout credit use the shared ledger exactly once under durable deal and draw action identities.

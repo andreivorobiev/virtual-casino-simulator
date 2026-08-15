@@ -99,6 +99,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`casino/games/big_six_wheel/AGENTS.md`](casino/games/big_six_wheel/AGENTS.md) — AGENTS.md - Big Six Wheel module
 - [`casino/games/bingo/AGENTS.md`](casino/games/bingo/AGENTS.md) — AGENTS.md - bingo module
 - [`casino/games/blackjack/AGENTS.md`](casino/games/blackjack/AGENTS.md) — AGENTS.md - blackjack module
+- [`casino/games/casino_holdem/README.md`](casino/games/casino_holdem/README.md) — Casino Hold'em
 - [`casino/games/casino_war/evidence/README.md`](casino/games/casino_war/evidence/README.md) — Casino War isolated evidence
 - [`casino/games/casino_war/INTEGRATION.md`](casino/games/casino_war/INTEGRATION.md) — Casino War integration record for #77
 - [`casino/games/casino_war/README.md`](casino/games/casino_war/README.md) — Casino War isolated slice
