@@ -25,7 +25,7 @@ Historical source baseline: 9.1.0
 - bingo: 9.3.8
 - multi_hand_video_poker: 1.1.3
 - casino_war: 1.2.1
-- big_six_wheel: 1.1.4
+- big_six_wheel: 1.1.5
 - red_dog: 1.1.2
 - dragon_tiger: 1.1.2
 - hi_lo: 1.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.22
-- docs: 1.96.22
+- tests: 1.100.23
+- docs: 1.96.23
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -703,6 +703,7 @@ Historical source baseline: 9.1.0
 - **TEST-210** (Tests) - PASS: Real stale-load Craps workers race prepared line-wager rounds around a separately committed sibling update, proving one provider-winning round, no stale active-round overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication, rollback, and settlement schedules prove identical state is idempotent, action-owned wager rollback preserves concurrent siblings, and lost debit or settlement responses recover immutable proof without a second wallet movement.
 - **TEST-211** (Tests) - PASS: Real stale-load Andar Bahar workers race complete match-rank rounds around a separately committed sibling update, proving one provider-winning round, no stale terminal overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication and rollback schedules prove identical state is idempotent and action-owned rejected-wager cleanup preserves concurrent siblings without creating a wallet movement.
 - **TEST-212** (Tests) - PASS: Real stale-load Over/Under 7 workers race complete dice rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication and rejected-debit schedules prove identical state is idempotent, private baselines never persist, failed debits publish no round, and committed lost-state retries recover immutable ledger proof without a duplicate wallet movement.
+- **TEST-213** (Tests) - PASS: Real stale-load Big Six Wheel workers race complete ledger-backed spins around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent and private baselines never persist while existing retry and post-debit recovery schedules retain exactly-once ledger behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -951,6 +952,7 @@ Historical source baseline: 9.1.0
 - **BIG-SIX-004** (Application) - PASS: The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, cumulative forward wheel motion, delayed result reveal, and reduced-motion-safe timer lifecycle behavior.
 - **BIG-SIX-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Big Six Wheel with requirement, module, version, and visual evidence traceability.
 - **BIG-SIX-006** (Big Six Wheel) - PASS: Every normal Big Six spin advances cumulatively through at least six clockwise turns, keeps the authoritative outcome hidden and wager controls locked until presentation settles, and lands the fixed pointer on the server-selected segment without snap, reset, reverse, or stale lifecycle state.
+- **BIG-SIX-007** (Big Six Wheel) - PASS: Every Big Six Wheel settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.
 - **DT-001** (Dragon Tiger) - PASS: The standard-8d Dragon Tiger profile deals Dragon first from an eight-deck shoe, compares ranks ace-low without suit tie-breaks, and applies the documented main-bet returns.
 - **DT-002** (Dragon Tiger) - PASS: Authenticated sessions own isolated reload-safe Dragon Tiger shoe state, settled rounds, and canonical route restoration.
 - **DT-003** (Dragon Tiger) - PASS: Dragon Tiger wager debits and settlement credits use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
