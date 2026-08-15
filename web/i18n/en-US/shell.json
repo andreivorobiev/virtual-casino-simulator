@@ -328,6 +328,8 @@
   "whatsNew.entry.0_9_5_77.body": "This release packages a fail-closed production-host poller that verifies immutable release assets, schema compatibility, health, readiness, and rollback before application-only adoption.",
   "whatsNew.entry.0_9_5_78.title": "Atomic state and reliability",
   "whatsNew.entry.0_9_5_78.body": "This release packages accepted atomic game-state publication, wallet precision, localization, browser evidence, CI governance, and delivery reliability improvements while preserving game math and frozen APIs.",
+  "whatsNew.entry.0_9_5_79.title": "Reliable pull delivery",
+  "whatsNew.entry.0_9_5_79.body": "This release repairs direct poller authentication and fail-closed cleanup so production delivery can complete without changing games, wallets, or frozen APIs.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",

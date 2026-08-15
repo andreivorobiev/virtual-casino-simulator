@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.79 Release Notes
+
+## Poller recovery and production delivery repair
+
+- Packages the accepted #812 poller repair from PR #813 after the first immutable v0.9.5.78 production-host attempt failed closed during its direct rollback drill and restored exact v0.9.5.75 without changing schema or persistence.
+- Lets direct rollback-drill commands obtain readiness authorization from the exact root-owned monitor environment while parsing only the allowlisted authorization and public-origin keys; the poller never sources that file as shell code and never prints its token.
+- Moves deployment cleanup to a top-level, captured-root-safe trap that validates and removes only its exact owned `.poller.<nonce>` work directory before writing the durable `poll_failed` alarm on candidate or predecessor readiness failure.
+- Adds listener-free authorization evidence and a disposable high-level state-machine matrix covering candidate failure, predecessor failure, successful rollback drill, the following ordinary poll, exact release identities, alarm state, cleanup, and unchanged timer state.
+- Preserves frozen APIs, the exact 46-game catalog, game mathematics, paytables, wager acceptance, ledger behavior, and every content-owned module revision.
+- Keeps production and application-only rollback at exact MySQL schema 2 while the catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, database rollback, provider activation, public signup, live OAuth, billing, DNS, or secret mutation is authorized.
+- Adds no permanent requirement identifier; the governed total remains exactly 1040 requirements.
+- Records the exact canonical package inventory as 772 regular files: current source selection 771 plus this v0.9.5.79 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.46.3`, tooling `1.40.1`, Players `9.1.3`, Ledger `9.1.2`, and all content-owned module revisions remain exact.
+- Retains exact immutable v0.9.5.78 as the application-only schema-two rollback predecessor. Issue #814 closes through the release PR; issue #732 remains open until the production host installation, first successful pull, Browser/PWA verification, and cleanup evidence are posted.
+
 # Virtual Casino Simulator v0.9.5.78 Release Notes
 
 ## Reliability, atomic state, and production delivery wave

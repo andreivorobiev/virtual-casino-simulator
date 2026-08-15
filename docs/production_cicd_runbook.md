@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.78`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.79`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -220,6 +220,8 @@ v0.9.5.76 packages accepted complete catalog economics PR #691 and records issue
 v0.9.5.77 packages accepted repository-side pull-poller PR #736 and closes release prerequisite #735 while parent #732 remains open for owner-run installation evidence. GitHub Actions publish immutable assets only; the production host polls stable releases, verifies exact assets, provenance, inventory, schema-two compatibility, health, readiness, rollback, and alarms, then adopts the application atomically. The catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, or database rollback is authorized. Its compatibility record retains exact immutable v0.9.5.76 as the application-only predecessor.
 
 v0.9.5.78 packages the accepted post-v0.9.5.77 reliability and provider-atomic state wave and carries the same fail-closed pull-delivery boundary into the owner-authorized #732 installation. The first pull must execute the documented rollback drill, retain exact schema 2 and persistence, prove authenticated readiness at the release SHA, clear the lag alarm, and leave the timer active. Its compatibility record retains exact immutable v0.9.5.77 as the application-only predecessor; database rollback, migration application, and grant mutation remain prohibited.
+
+v0.9.5.79 supersedes v0.9.5.78 for production delivery after the first v0.9.5.78 host attempt failed closed during its direct rollback drill and restored the exact live predecessor. The replacement poller reads only the exact monitor authorization and public-origin keys from the root-owned monitor environment when a direct command lacks systemd injection, never sources the file as shell code, and removes only its validated owned work directory before writing the durable failure alarm. Its listener-free and disposable state-machine evidence covers candidate failure, predecessor failure, and a successful rollback drill followed by an ordinary poll. v0.9.5.78 is never retried; the v0.9.5.79 installation must retain exact schema 2 and persistence, prove authenticated readiness at the release SHA, clear the lag alarm, and leave the timer active. Its compatibility record retains exact immutable v0.9.5.78 as the application-only predecessor; database rollback, migration application, and grant mutation remain prohibited.
 
 ## Retired push-delivery history
 
