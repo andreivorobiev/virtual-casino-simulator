@@ -58,13 +58,13 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
-        # Pin the exact current family cardinalities without averaging away one game.
+        # Pin the exact current family cardinalities after Bingo retires direct publication.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 29, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 6},  # Pin current counts.
+            {"player_document_load_save": 28, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 7},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -90,6 +90,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(roulette["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while state and money remain separate transactions.
         self.assertEqual(roulette["multiworker_status"], "blocked")
+        # Resolve Bingo after purchase, call, settlement, and reset retire every direct publication.
+        bingo = next(row for row in games if row["game_id"] == "bingo")
+        # Require authoritative Bingo reads for response and recovery paths.
+        self.assertGreater(bingo["load_call_sites"], 0)
+        # Require every reachable Bingo publication to avoid stale whole-document saves.
+        self.assertEqual(bingo["save_call_sites"], 0)
+        # Bind purchase, call, settlement, and reset transitions to atomic updates.
+        self.assertGreater(bingo["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(bingo["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while state and money remain separate transactions.
+        self.assertEqual(bingo["multiworker_status"], "blocked")
         # Resolve Keno after draw and ticket transitions retire every direct state publication.
         keno = next(row for row in games if row["game_id"] == "keno")
         # Require the authoritative Keno read used for response and interruption recovery.

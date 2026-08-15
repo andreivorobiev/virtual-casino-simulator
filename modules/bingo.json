@@ -1,6 +1,6 @@
 {
   "module": "bingo",
-  "version": "9.3.7",
+  "version": "9.3.8",
   "paths": [
     "casino/games/bingo/",
     "web/games/bingo.js"
