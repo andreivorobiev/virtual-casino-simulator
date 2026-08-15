@@ -4,6 +4,20 @@
 
 # Import deep-copy support so fake persistence matches document boundaries.
 import copy
+# Import JSON serialization for real provider subprocess evidence.
+import json
+# Import environment selection for disposable child persistence.
+import os
+# Import filesystem paths for process rendezvous gates and state inspection.
+from pathlib import Path
+# Import child processes for fresh-interpreter race evidence.
+import subprocess
+# Import the current interpreter for exact child-runtime selection.
+import sys
+# Import disposable directories for isolated JSON provider documents.
+import tempfile
+# Import bounded polling for deterministic stale-load rendezvous.
+import time
 # Import the standard unit-test runner for dependency-free focused checks.
 import unittest
 
@@ -39,9 +53,24 @@ class FakeCasino:
         # Return persisted state or a fresh default without sharing references.
         return copy.deepcopy(self.states.get(player_id, factory()))
 
-    # Save a deep copy of one player-scoped state document.
-    def save_state(self, game_id, player_id, state):
-        # Persist state under the router-resolved player only.
+    # Apply one callback to provider-current state and publish its detached result.
+    def update_state(self, game_id, player_id, mutator, factory):
+        # Give the callback an isolated copy of the latest provider document.
+        current = copy.deepcopy(self.states.get(player_id, factory()))
+        # Apply the game transition before publishing any result.
+        updated = mutator(current)
+        # Persist a detached copy only after the callback returns successfully.
+        self.states[player_id] = copy.deepcopy(updated)
+        # Read active state or the newest private journal round for audit ordering.
+        round_state = updated.get("active_round") or (updated.get("_round_journal") or updated.get("recent_rounds") or [None])[-1]
+        # Record the persisted lifecycle markers before any later ledger operation.
+        self.timeline.append({"kind": "save", "phase": round_state.get("phase") if round_state else None, "wager_status": round_state.get("wager_status") if round_state else None, "settlement_status": round_state.get("settlement_status") if round_state else None})
+        # Return provider-authoritative state without sharing references.
+        return copy.deepcopy(updated)
+
+    # Seed a deep copy of one crash fixture before the service is rebuilt.
+    def seed_state(self, player_id, state):
+        # Persist fixture state under the router-resolved player only.
         self.states[player_id] = copy.deepcopy(state)
         # Read active state or the newest private journal round for audit ordering.
         round_state = state.get("active_round") or (state.get("_round_journal") or state.get("recent_rounds") or [None])[-1]
@@ -166,7 +195,7 @@ class CrapsApiTests(unittest.TestCase):
     # Recreate service and router while retaining fake persisted storage.
     def rebuild_router(self):
         # Inject every state, money, player, clock, id, and dice dependency.
-        self.service = api.CrapsService(load_state=self.fake.load_state, save_state=self.fake.save_state, debit=self.fake.debit, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=self.now, id_factory=self.next_id, roller=self.dice)
+        self.service = api.CrapsService(load_state=self.fake.load_state, update_state_callback=self.fake.update_state, debit=self.fake.debit, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=self.now, id_factory=self.next_id, roller=self.dice)
         # Create an isolated router without shared catalog registration.
         self.router = Router()
         # Register only Craps routes through the public package adapter.
@@ -181,6 +210,149 @@ class CrapsApiTests(unittest.TestCase):
     def events_of_type(self, transaction_type):
         # Return every event matching the requested stable type.
         return [event for event in self.fake.events if event["transaction_type"] == transaction_type]
+
+    # Confirm identical publication is idempotent and preserves provider siblings.
+    def test_atomic_publication_accepts_same_result_without_persisting_baseline(self):
+        # Load one tracked empty document through the service boundary.
+        state = self.service._load("session-player")
+        # Prepare one deterministic pending round without moving the wallet.
+        state["active_round"] = engine.create_round("session-player", "pass_line", 1, "atomic-same-start", round_id="craps_atomic_same", created_at=self.now())
+        # Publish the prepared round through provider-current comparison.
+        self.service._save("session-player", state)
+        # Add unrelated metadata after the first game-owned publication.
+        self.fake.states["session-player"]["atomic_markers"] = ["sibling"]
+        # Publish the exact same game result again from the advanced baseline.
+        self.service._save("session-player", state)
+        # Verify the sibling survives and the private comparison key never persists.
+        self.assertEqual(["sibling"], self.fake.states["session-player"]["atomic_markers"])
+        # Reject operation metadata from provider-authoritative state.
+        self.assertNotIn(api._ATOMIC_BASELINE_KEY, self.fake.states["session-player"])
+
+    # Confirm action-owned rollback preserves provider-current sibling metadata.
+    def test_failed_wager_rollback_preserves_concurrent_sibling(self):
+        # Publish one unrelated sibling during the debit boundary before failing.
+        def fail_debit(*_args, **_kwargs):
+            # Append a sibling through the same provider-current callback contract.
+            self.fake.update_state(engine.GAME_ID, "session-player", lambda current: {**current, "atomic_markers": ["concurrent"]}, engine.default_state)
+            # Fail before any fake ledger event can move the wallet.
+            raise RuntimeError("injected pre-ledger wager failure")
+
+        # Rebuild the service with the bounded failing debit seam.
+        self.service = api.CrapsService(load_state=self.fake.load_state, update_state_callback=self.fake.update_state, debit=fail_debit, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=self.now, id_factory=self.next_id, roller=self.dice)
+        # Register the replacement service on a fresh isolated router.
+        self.router = Router()
+        # Expose only the Craps routes used by the focused request.
+        api.register(self.router, service=self.service)
+        # Surface the injected pre-ledger failure after bounded rollback.
+        with self.assertRaisesRegex(RuntimeError, "pre-ledger wager failure"):
+            # Attempt one money-bearing start whose prepared round must be removed.
+            self.call("/api/v1/games/craps/rounds", {"request_id": "atomic-rollback-start", "bet_type": "pass_line", "wager": 2})
+        # Read the provider-authoritative document after rollback.
+        persisted = self.fake.states["session-player"]
+        # Verify only the action-owned round was removed and the sibling survived.
+        self.assertEqual((None, [], ["concurrent"]), (persisted["active_round"], persisted["_round_journal"], persisted["atomic_markers"]))
+        # Verify failure occurred before any append-only wallet event.
+        self.assertEqual([], self.fake.events)
+        # Verify the private optimistic baseline never entered provider bytes.
+        self.assertNotIn(api._ATOMIC_BASELINE_KEY, persisted)
+
+    # Prove stale fresh processes preserve siblings and debit only one prepared round.
+    def test_fresh_process_start_race_has_one_winner_and_zero_loser_ledger_calls(self):
+        # Own every provider and rendezvous byte inside one disposable directory.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Resolve this exact checkout for child imports.
+            repository_root = Path(__file__).resolve().parents[3]
+            # Bind provider state to the task-owned disposable root.
+            data_root = Path(temporary) / "data"
+            # Resolve the exact player-game document used by both workers.
+            state_path = data_root / "games" / engine.GAME_ID / "session-player.json"
+            # Create the state directory before seeding one empty table.
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            # Publish exact initial JSON for both child providers.
+            state_path.write_text(json.dumps(engine.default_state(), sort_keys=True), encoding="utf-8")
+            # Copy the environment before selecting the isolated JSON provider.
+            environment = os.environ.copy()
+            # Bind all child persistence to the disposable root and exact checkout.
+            environment.update({"CASINO_STORAGE_PROVIDER": "json", "CASINO_DATA_DIR": str(data_root), "CASINO_LOG_DIR": str(Path(temporary) / "logs"), "PYTHONPATH": str(repository_root)})
+            # Define one service worker whose load pauses after capturing stale state.
+            worker_source = r"""
+import sys
+import time
+from pathlib import Path
+from casino.core.state_store import load_player_game_state, update_player_game_state
+from casino.errors import ConflictError
+from casino.games.craps import api, engine
+ready = Path(sys.argv[1])
+release = Path(sys.argv[2])
+request_id = sys.argv[3]
+def load_state(game_id, player_id, factory):
+    state = load_player_game_state(game_id, player_id, factory)
+    ready.write_text('ready', encoding='utf-8')
+    deadline = time.monotonic() + 10
+    while not release.exists() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    if not release.exists():
+        raise RuntimeError('Craps race release timed out')
+    return state
+def update_state(game_id, player_id, mutator, factory):
+    return update_player_game_state(game_id, player_id, mutator, factory)
+calls = []
+def debit(player_id, amount, transaction_type, game, round_id, details):
+    calls.append(details['idempotency_key'])
+    return {'ledger_id': 'ledger-' + str(len(calls)), 'player_id': player_id, 'amount': -abs(float(amount)), 'transaction_type': transaction_type, 'game': game, 'round_id': round_id, 'details': dict(details)}
+game = api.CrapsService(load_state=load_state, update_state_callback=update_state, debit=debit, credit=lambda *_args, **_kwargs: None, read_ledger=lambda *_args, **_kwargs: [], get_player=lambda player_id: {'player_id': player_id, 'balance': 100.0}, clock=lambda: '2026-08-15T00:02:00Z', id_factory=lambda prefix: prefix + '_' + request_id, roller=lambda: [3, 4])
+try:
+    game.start_round('session-player', {'request_id': request_id, 'bet_type': 'pass_line', 'wager': 1})
+    print('PASS:' + str(len(calls)))
+except ConflictError:
+    print('CONFLICT:' + str(len(calls)))
+"""
+            # Retain both independently loaded process contenders.
+            workers = []
+            # Start one provider winner candidate and one stale loser candidate.
+            for index in range(2):
+                # Allocate task-owned readiness and release gates.
+                ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
+                # Launch without a shell so interpreter and arguments remain exact.
+                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), f"atomic-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                # Retain process and gate ownership.
+                workers.append((process, ready_path, release_path))
+            # Bound the stale-load rendezvous.
+            deadline = time.monotonic() + 10
+            # Wait until both workers have captured the same initial document.
+            while not all(ready.exists() for _process, ready, _release in workers) and time.monotonic() < deadline:
+                # Stop early if either worker failed before readiness.
+                if any(process.poll() is not None for process, _ready, _release in workers):
+                    # Leave polling for the diagnostic assertion below.
+                    break
+                # Yield briefly without starting another action.
+                time.sleep(0.01)
+            # Require both stale snapshots before publishing a concurrent sibling.
+            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            # Define one unrelated provider-atomic sibling update.
+            sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.craps import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('craps', 'session-player', add, engine.default_state)\n"
+            # Commit the sibling after both workers captured their stale baselines.
+            sibling = subprocess.run([sys.executable, "-c", sibling_source], cwd=repository_root, env=environment, capture_output=True, text=True, timeout=15)
+            # Require the sibling provider transition to complete cleanly.
+            self.assertEqual(sibling.returncode, 0, f"stdout={sibling.stdout!r} stderr={sibling.stderr!r}")
+            # Release the first worker to publish and debit the winning round.
+            workers[0][2].write_text("go", encoding="utf-8")
+            # Collect the exact winner result.
+            winner_output, winner_error = workers[0][0].communicate(timeout=20)
+            # Require one and only one debit-shaped call from the provider winner.
+            self.assertEqual((workers[0][0].returncode, winner_output.strip()), (0, "PASS:1"), winner_error)
+            # Release the stale second worker only after the winner is durable.
+            workers[1][2].write_text("go", encoding="utf-8")
+            # Collect the fail-closed stale result.
+            stale_output, stale_error = workers[1][0].communicate(timeout=15)
+            # Require conflict before the losing process attempts any ledger call.
+            self.assertEqual((workers[1][0].returncode, stale_output.strip()), (0, "CONFLICT:0"), stale_error)
+            # Read final provider-authoritative bytes directly.
+            persisted = json.loads(state_path.read_text(encoding="utf-8"))
+            # Require one winner, sibling preservation, and no stale-round overwrite.
+            self.assertEqual((persisted["active_round"]["start_request_id"], persisted["active_round"]["wager_status"], persisted["atomic_markers"]), ("atomic-process-0", "complete", ["concurrent"]))
+            # Verify the private optimistic baseline never enters persisted bytes.
+            self.assertNotIn(api._ATOMIC_BASELINE_KEY, persisted)
 
     # Confirm hostile player ids lose to the session and start retries debit once.
     def test_session_binding_start_replay_and_conflict(self):
@@ -236,7 +408,7 @@ class CrapsApiTests(unittest.TestCase):
         # Install the pending round in the player's actionable slot.
         state["active_round"] = pending_round
         # Persist pending state without creating any ledger movement.
-        self.fake.save_state(engine.GAME_ID, "session-player", state)
+        self.fake.seed_state("session-player", state)
         # Queue a natural seven that would pay only after wager recovery.
         self.dice.add((3, 4))
         # Recreate service and router to model a fresh process reading the pending file.

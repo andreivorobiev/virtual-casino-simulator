@@ -108,6 +108,29 @@
       "introduced_in": "game-expansion-craps",
       "changed_in": "game-expansion-craps",
       "notes": "Descriptor sort order 160 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "CRAPS-006",
+      "module": "Craps",
+      "description": "Craps publishes prepared rounds, authoritative rolls and point transitions, durable private history, wager and settlement proof markers, terminal archive, interruption recovery, and action-owned rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before stale starts can issue a ledger movement or overwrite a winning round, while lost ledger responses reconcile immutable proof without repeating a wager, payout, or refund.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CRAPS-001",
+        "API-CRAPS-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/craps/api.py",
+        "tests/games/craps/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-797-craps-atomic-state",
+      "changed_in": "issue-797-craps-atomic-state",
+      "notes": "The frozen v1 routes, envelopes, server-authoritative dice, line-wager rules, ledger transaction types, retry identities, and private recovery projection remain unchanged. Production multiworker activation stays blocked because player state and wallet/history movements remain separate transaction boundaries."
     }
   ]
 }

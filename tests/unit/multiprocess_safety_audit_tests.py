@@ -58,13 +58,13 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
-        # Pin the exact current family cardinalities after the practice table retires direct publication.
+        # Pin the exact current family cardinalities after Craps retires direct publication.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 22, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 13},  # Pin current counts.
+            {"player_document_load_save": 21, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 14},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -174,6 +174,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(practice_table["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while four wallets remain separate boundaries.
         self.assertEqual(practice_table["multiworker_status"], "blocked")
+        # Resolve Craps after round, roll, marker, archive, and rollback publication become atomic.
+        craps = next(row for row in games if row["game_id"] == "craps")
+        # Require authoritative reads for response, replay, and interruption recovery.
+        self.assertGreater(craps["load_call_sites"], 0)
+        # Require every reachable Craps publication to avoid stale whole-document saves.
+        self.assertEqual(craps["save_call_sites"], 0)
+        # Bind preparation, rolls, recovery markers, archive, and rollback to provider updates.
+        self.assertGreater(craps["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(craps["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while state and money remain separate boundaries.
+        self.assertEqual(craps["multiworker_status"], "blocked")
         # Resolve Keno after draw and ticket transitions retire every direct state publication.
         keno = next(row for row in games if row["game_id"] == "keno")
         # Require the authoritative Keno read used for response and interruption recovery.

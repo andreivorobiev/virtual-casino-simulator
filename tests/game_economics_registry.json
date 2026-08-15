@@ -268,7 +268,7 @@
       "requirement_id": "CRAPS-001",
       "engine_path": "casino/games/craps/engine.py",
       "settlement_path": "casino/games/craps/api.py",
-      "production_sha256": "e4c2241826533bc5738985ccb6b55d74016b1f290313af4a9631f5925d31540e",
+      "production_sha256": "09046d869048e19749ea9c0264cd9c574960cb13894f061bd3f28f02e94ef894",
       "proof_tests": ["tests.games.craps.test_engine:CrapsEngineTests.test_come_out_terminal_table", "tests.games.craps.test_engine:CrapsEngineTests.test_point_lifecycle_and_reload_fields", "tests.games.craps.test_engine:CrapsEngineTests.test_dont_pass_seven_out"],
       "rationale": "Pass and don't-pass are the best available wagers; their complete source-pinned point-state transitions retain a positive house edge."
     },
