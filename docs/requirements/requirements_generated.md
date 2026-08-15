@@ -39,7 +39,7 @@ Historical source baseline: 9.1.0
 - crown_and_anchor: 1.1.5
 - over_under_7: 1.1.5
 - plinko: 1.1.2
-- fan_tan: 1.1.4
+- fan_tan: 1.1.5
 - andar_bahar: 1.1.5
 - acey_deucey: 1.1.3
 - caribbean_stud: 1.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.24
-- docs: 1.96.24
+- tests: 1.100.25
+- docs: 1.96.25
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -705,6 +705,7 @@ Historical source baseline: 9.1.0
 - **TEST-212** (Tests) - PASS: Real stale-load Over/Under 7 workers race complete dice rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication and rejected-debit schedules prove identical state is idempotent, private baselines never persist, failed debits publish no round, and committed lost-state retries recover immutable ledger proof without a duplicate wallet movement.
 - **TEST-213** (Tests) - PASS: Real stale-load Big Six Wheel workers race complete ledger-backed spins around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent and private baselines never persist while existing retry and post-debit recovery schedules retain exactly-once ledger behavior.
 - **TEST-214** (Tests) - PASS: Real stale-load Crown and Anchor workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, and private baselines never persist while existing replay and ledger behavior remain unchanged.
+- **TEST-215** (Tests) - PASS: Real stale-load Fan-Tan workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and post-debit retry recovers the committed pile count without duplicate debit or credit.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1036,6 +1037,7 @@ Historical source baseline: 9.1.0
 - **FAN-TAN-003** (Fan-Tan) - PASS: Aggregate residue wagers and returned-token credits use the shared ledger exactly once under durable action identities.
 - **FAN-TAN-004** (Application) - PASS: Fan-Tan supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **FAN-TAN-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Fan-Tan with requirement, module, version, and visual traceability.
+- **FAN-TAN-006** (Fan-Tan) - PASS: Every Fan-Tan settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.
 - **AB-001** (Andar Bahar) - PASS: Alternating Andar/Bahar deals stop at the first matching rank and settle with exact side prices: Andar returns 1.90x and Bahar returns 2.00x.
 - **AB-002** (Andar Bahar) - PASS: Authenticated sessions own private reload-safe rounds, durable receipts, settled history, and canonical route restoration.
 - **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
