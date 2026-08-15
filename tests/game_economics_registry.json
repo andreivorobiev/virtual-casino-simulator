@@ -467,7 +467,7 @@
       "requirement_id": "PGP-001",
       "engine_path": "casino/games/pai_gow_poker/engine.py",
       "settlement_path": "casino/games/pai_gow_poker/service.py",
-      "production_sha256": "02c8007ce084ca2a2d2c558ae53143ba730ac3f816043dc97e5b35e0e8b21ae2",
+      "production_sha256": "c2229dac72e3ecd41eb8bbea06ade8f47e009e3ee75370b1b8a6fd83e6244334",
       "proof_tests": ["tests.games.pai_gow_poker.test_engine:PaiGowPokerEngineTests.test_maximize_low_exploit_edge_is_negative", "tests.games.pai_gow_poker.test_engine:PaiGowPokerEngineTests.test_settlement_outcomes"],
       "rationale": "The maximal legal low-hand exploit remains negative against the source-pinned house way and five-percent win commission."
     },

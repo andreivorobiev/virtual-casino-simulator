@@ -6,6 +6,8 @@ One ante debit prepares the deal; the set decision reveals the house-way dealer
 and settles with a single returned-token credit when a payout is owed.
 """
 
+# Import deep-copy support for provider boundaries and action-owned rollback.
+import copy
 # Import canonical JSON encoding for semantic action fingerprints.
 import json
 # Import hashing so changed retries fail even when wagers happen to match.
@@ -21,8 +23,8 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Route every player-wallet movement through the shared exactly-once settlement boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistent state without editing shared storage code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import provider-atomic player-scoped persistence through the shared storage boundary.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict, lookup, and validation errors for route boundaries.
 from casino.errors import ConflictError, NotFoundError, ValidationError
 # Import only this game's deterministic state and rule helpers.
@@ -35,6 +37,10 @@ ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local history to preserve retry recovery for the supported simulator.
 # Serialize action-id lookup and ledger writes inside the one-process server.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent game state.
+_ATOMIC_BASELINE_KEY = "_pai_gow_poker_atomic_baseline"
+# Name only the Pai Gow Poker fields one transition may replace.
+_GAME_STATE_KEYS = ("active_round", "recent_rounds", "action_receipts")
 
 
 # Validate one required client action identity without echoing hostile input.
@@ -61,16 +67,27 @@ def CoreLedgerGateway(**kwargs):
     return GameSettlementGateway(GAME_ID, "pai_gow_poker_action_id", **kwargs)
 
 
+# Persist Pai Gow Poker state through shared provider-aware helpers.
+class StateRepository:
+    # Load one authenticated player's state document.
+    def load(self, player_id: str) -> dict:
+        # Delegate provider selection and schema metadata to shared storage.
+        return load_player_game_state(GAME_ID, player_id, engine.default_state)
+
+    # Apply one transition while the selected provider owns its process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate latest-state loading, callback rollback, and publication atomically.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
+
+
 # Coordinate player state, deterministic cards, and retry-safe ledger movements.
 class PaiGowPokerService:
     # Capture production dependencies while exposing deterministic focused-test seams.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, get_player=None, clock=None, seed_factory=None, fixture_factory=None):
+    def __init__(self, *, repository=None, ledger_gateway=None, get_player=None, clock=None, seed_factory=None, fixture_factory=None):
+        # Use shared player-state persistence unless tests inject memory storage.
+        self._repository = repository or StateRepository()
         # Use the game-local shared-ledger adapter unless a test supplies a fake.
         self._ledger = ledger_gateway or CoreLedgerGateway()
-        # Load one authenticated player's isolated state document by default.
-        self._load_state = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Save one authenticated player's isolated state document by default.
-        self._save_state = state_saver or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
         # Return read-only current-player information without balance mutation.
         self._get_player = get_player or players.get_player
         # Use the shared UTC clock unless a focused test pins timestamps.
@@ -80,10 +97,64 @@ class PaiGowPokerService:
         # Provide exact fixture rounds for focused tests without randomness.
         self._fixture_factory = fixture_factory
 
-    # Save one player document through the injected persistence boundary.
+    # Capture only the game fields owned by Pai Gow Poker transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Detach active, historical, and receipt state from later mutation.
+        return {key: copy.deepcopy(state.get(key, engine.default_state()[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its provider-current baseline to this operation.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before any local engine mutation.
+        state = self._repository.load(player_id)
+        # Retain the exact owned values the next publication expects to replace.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting the private baseline field.
+        return state
+
+    # Publish one compare-and-replace transition while preserving unrelated siblings.
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate without mutating shared storage configuration.
-        self._save_state(player_id, state)
+        # Require every publication to originate from a tracked provider read or prior result.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked whole-document write before entering provider storage.
+        if not isinstance(expected, dict):
+            # Keep accidental stale saves outside persistent player state.
+            raise ConflictError("Pai Gow Poker state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only owned game fields against provider-latest state.
+        def publish(current: dict) -> dict:
+            # Capture provider-current game fields without metadata or unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result completion without overwriting provider-owned values.
+            if observed == desired:
+                # Preserve current metadata and siblings unchanged.
+                return current
+            # Reject a stale transition before it can replace another action's state.
+            if observed != expected:
+                # Require a fresh load and authoritative recovery from the winning transition.
+                raise ConflictError("Pai Gow Poker state changed during this action; reload and retry")
+            # Replace only the three fields owned by the Pai Gow Poker engine.
+            for key, value in desired.items():
+                # Publish detached values so later caller mutation cannot leak into storage.
+                current[key] = copy.deepcopy(value)
+            # Return the complete provider document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process read-modify-write boundary.
+        authoritative = self._repository.update(player_id, publish)
+        # Advance the private baseline to the exact committed game-owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+
+    # Restore a rejected action through the current operation's provider baseline.
+    def _restore(self, player_id: str, state: dict, prior_state: dict) -> None:
+        # Copy only action-owned values back into the tracked current operation.
+        for key, value in self._game_snapshot(prior_state).items():
+            # Leave provider-owned sibling fields outside the rollback scope.
+            state[key] = copy.deepcopy(value)
+        # Publish the rollback against the most recently committed operation baseline.
+        self._save(player_id, state)
 
     # Build the public state, rules, and current-player payload.
     def _payload(self, player_id: str, state: dict) -> dict:
@@ -175,7 +246,7 @@ class PaiGowPokerService:
         # Serialize recovery against concurrent actions for the same local process.
         with _ACTION_LOCK:
             # Load the newest player-scoped document inside the lock.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
             self._recover(player_id, state)
             # Return sanitized state and current-player information.
@@ -196,7 +267,7 @@ class PaiGowPokerService:
         # Serialize state preparation, debit, and marker persistence.
         with _ACTION_LOCK:
             # Load the current player's state inside the critical section.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover any interrupted prior action before enforcing active-round rules.
             self._recover(player_id, state)
             # Load durable compact receipts that prevent reuse after round-history pruning.
@@ -239,6 +310,8 @@ class PaiGowPokerService:
             if state.get("active_round") is not None:
                 # Require settlement of the active decision first.
                 raise ConflictError("Finish the active Pai Gow Poker round before dealing again")
+            # Preserve the provider-current game fields for rejected-ante rollback.
+            prior_state = copy.deepcopy(state)
             # Derive deterministic cards only through the injected test hook.
             seed = self._seed_factory(action_id) if self._seed_factory else None
             # Read an optional exact fixture for deterministic outcome tests.
@@ -261,12 +334,8 @@ class PaiGowPokerService:
             except Exception:
                 # Check the append-only ledger before removing prepared recovery state.
                 if self._ledger.find(player_id, action_id) is None:
-                    # Clear the non-debited active round.
-                    state["active_round"] = None
-                    # Release the action id because no balance movement committed.
-                    receipts.pop(action_id, None)
-                    # Persist cleanup before propagating the original error.
-                    self._save(player_id, state)
+                    # Restore only action-owned values while preserving provider siblings.
+                    self._restore(player_id, state, prior_state)
                 # Re-raise the original storage or ledger error.
                 raise
             # Return the seven player cards and committed ante evidence.
@@ -287,7 +356,7 @@ class PaiGowPokerService:
         # Serialize reveal, archive, and returned-token settlement.
         with _ACTION_LOCK:
             # Load only the authenticated player's latest document.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover or clear any interrupted action before allowing a decision.
             self._recover(player_id, state)
             # Find the target without exposing another player's round.

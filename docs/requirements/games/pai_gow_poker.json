@@ -125,6 +125,29 @@
       "introduced_in": "issue-407-pai-gow-house-way",
       "changed_in": "issue-407-pai-gow-house-way",
       "notes": "The prior objective maximized the five-card hand absolutely and was measured exploitable for about a twenty-four percent player edge; the seeded Monte Carlo evidence asserts the sign inversion directly."
+    },
+    {
+      "id": "PGP-007",
+      "module": "Pai Gow Poker",
+      "description": "Pai Gow Poker publishes deal preparation, action receipts, player sets, revealed dealer house-way cards, ledger proof, terminal archive, settlement recovery, and action-owned rollback through provider-current callbacks that replace only active round, recent rounds, and action receipts. Competing processes preserve unrelated player-state siblings and fail closed before stale sets can overwrite or resurrect a terminal hand, while lost ledger responses reconcile immutable proof without repeating a debit or credit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PGP-001",
+        "API-PGP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/pai_gow_poker/service.py",
+        "tests/games/pai_gow_poker/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-793-pai-gow-poker-atomic-state",
+      "changed_in": "issue-793-pai-gow-poker-atomic-state",
+      "notes": "The frozen v1 routes, cards, house way, paytable, dealer privacy, and ledger vocabulary remain unchanged. Production multiworker activation stays blocked because state, ledger, and history remain separate transaction boundaries."
     }
   ]
 }

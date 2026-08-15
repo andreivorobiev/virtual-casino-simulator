@@ -116,6 +116,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`casino/games/let_it_ride/INTEGRATION.md`](casino/games/let_it_ride/INTEGRATION.md) — Let It Ride Integration Record For #77
 - [`casino/games/let_it_ride/README.md`](casino/games/let_it_ride/README.md) — Let It Ride
 - [`casino/games/multi_hand_video_poker/README.md`](casino/games/multi_hand_video_poker/README.md) — Multi-Hand Video Poker
+- [`casino/games/pai_gow_poker/README.md`](casino/games/pai_gow_poker/README.md) — Pai Gow Poker
 - [`casino/games/red_dog/evidence/README.md`](casino/games/red_dog/evidence/README.md) — Issue #84 evidence record
 - [`casino/games/red_dog/INTEGRATION.md`](casino/games/red_dog/INTEGRATION.md) — Red Dog integration record for #77
 - [`casino/games/red_dog/README.md`](casino/games/red_dog/README.md) — Red Dog

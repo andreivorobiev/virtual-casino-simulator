@@ -49,10 +49,10 @@ Historical source baseline: 9.1.0
 - mississippi_stud: 1.1.3
 - joker_poker: 1.1.2
 - texas_holdem_practice_table: 1.1.3
-- pai_gow_poker: 1.1.3
+- pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.17
-- docs: 1.96.17
+- tests: 1.100.18
+- docs: 1.96.18
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -698,6 +698,7 @@ Historical source baseline: 9.1.0
 - **TEST-205** (Tests) - PASS: Real stale-load Four Card Poker workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned opening rollback preserves concurrent siblings and that lost opening debit, play debit, and settlement-credit responses recover immutable proof without a second wallet movement.
 - **TEST-206** (Tests) - PASS: Real stale-load Three Card Poker workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no actionable-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned opening and Play rollback preserve concurrent siblings and that lost initial debit, Play debit, and payout-credit responses recover immutable proof without a second wallet movement.
 - **TEST-207** (Tests) - PASS: Real stale-load Casino Hold'em workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante and Call rollback preserve concurrent siblings and that lost ante debit, Call debit, and settlement-credit responses recover immutable proof without a second wallet movement.
+- **TEST-208** (Tests) - PASS: Real stale-load Pai Gow Poker workers race terminal sets around a separately committed sibling update, proving one provider-winning set, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante rollback preserves concurrent siblings and that lost ante-debit and settlement-credit responses recover immutable proof without a second wallet movement.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1066,6 +1067,7 @@ Historical source baseline: 9.1.0
 - **PGP-004** (Application) - PASS: Pai Gow Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **PGP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Pai Gow Poker with requirement, module, version, and visual traceability.
 - **PGP-006** (Pai Gow Poker) - PASS: The dealer house way balances toward the strongest legal two-card hand with the five-card hand as tiebreak, so the mirrored maximize-low strategy nets negative for the player under the five percent commission.
+- **PGP-007** (Pai Gow Poker) - PASS: Pai Gow Poker publishes deal preparation, action receipts, player sets, revealed dealer house-way cards, ledger proof, terminal archive, settlement recovery, and action-owned rollback through provider-current callbacks that replace only active round, recent rounds, and action receipts. Competing processes preserve unrelated player-state siblings and fail closed before stale sets can overwrite or resurrect a terminal hand, while lost ledger responses reconcile immutable proof without repeating a debit or credit.
 - **PDICE-001** (Poker Dice) - PASS: Poker Dice rolls five dice whose six faces are the poker ranks nine, ten, jack, queen, king, and ace, built on the shared exactly-once settlement core. A roll debits one bounded play-token stake, draws five server-authoritative dice, evaluates the best poker category, and credits its total-return multiplier: five of a kind pays eighty times, four of a kind fifteen times, a full house five times, a straight four times, and three of a kind two times, while two pair and weaker hands lose. Every payout is house-positive because over all 7776 equally likely rolls the expected return is 0.9761, a house edge of about 2.39 percent. Non-integer, non-positive, and over-limit stakes are rejected before any wallet movement.
 - **PDICE-002** (Poker Dice) - PASS: Poker Dice inherits the shared core's exactly-once settlement: one caller-stable request id maps to one roll, a retry replays the identical committed dice and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and rolls routes and never alters the frozen shared API. The published paytable reports honest hand categories and multipliers.
 - **BOULE-001** (Boule) - PASS: Boule is the French nine-number wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake, draws one server-authoritative number from one to nine, and settles the chosen bet. The four even-money groups low, high, odd, and even each cover four numbers and pay two times the stake; five is the house number belonging to no group, so every even-money bet loses when five is drawn. A straight single-number bet covers one number and pays eight times the stake, including a straight bet on five. Both bet families return eight ninths of the stake on average, a house edge of about 11.1 percent. Unknown bet families, out-of-range numbers, and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.

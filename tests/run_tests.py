@@ -1558,6 +1558,8 @@ def run_api_tests():
     run_case('API-TCP-ATOMIC-001',['TCP-006','TEST-206'],lambda: run_unit_module('tests.games.three_card_poker.test_api','Three Card Poker atomic state suite failed'))
     # Execute fresh-process Casino Hold'em decision ordering plus rollback and lost-response recovery. (issue #788)
     run_case('API-CH-ATOMIC-001',['CH-007','TEST-207'],lambda: run_unit_module('tests.games.casino_holdem.test_api',"Casino Hold'em atomic state suite failed"))
+    # Execute fresh-process Pai Gow Poker set ordering plus rollback and lost-response recovery. (issue #793)
+    run_case('API-PGP-ATOMIC-001',['PGP-007','TEST-208'],lambda: run_unit_module('tests.games.pai_gow_poker.test_api','Pai Gow Poker atomic state suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
