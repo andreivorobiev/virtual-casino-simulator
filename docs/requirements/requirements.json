@@ -12024,6 +12024,28 @@
       "notes": "Fresh workers use the real JSON provider and exact Four Card Poker engine. Lost-response fixtures retain the accepted frozen v1 response and ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     },
     {
+      "id": "TEST-206",
+      "module": "Tests",
+      "description": "Real stale-load Three Card Poker workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no actionable-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned opening and Play rollback preserve concurrent siblings and that lost initial debit, Play debit, and payout-credit responses recover immutable proof without a second wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TCP-001",
+        "API-TCP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/three_card_poker/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-786-three-card-poker-atomic-state",
+      "changed_in": "issue-786-three-card-poker-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Three Card Poker engine. Lost-response fixtures retain the accepted frozen v1 response and ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -17333,6 +17355,29 @@
       "introduced_in": "game-expansion-three-card-poker",
       "changed_in": "issue-750-browser-semantic-waits",
       "notes": "The descriptor uses sort order 190 and the normalized tests.game_drivers.three_card_poker:play driver reference released by issue #77. Browser locale evidence waits for the exact installed-resource title instead of assuming a fixed resource-load duration."
+    },
+    {
+      "id": "TCP-006",
+      "module": "Three Card Poker",
+      "description": "Three Card Poker publishes deal preparation, request ownership, Play or Fold decisions, ledger proof, terminal settlement, and action-owned rollback through provider-current callbacks that replace only game-owned rounds, order, requests, and ledger markers. Competing processes preserve unrelated player-state siblings and fail closed before stale decisions can overwrite or resurrect a terminal round, while lost ledger responses reconcile immutable proof without repeating a debit or credit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TCP-001",
+        "API-TCP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/three_card_poker/service.py",
+        "tests/games/three_card_poker/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-786-three-card-poker-atomic-state",
+      "changed_in": "issue-786-three-card-poker-atomic-state",
+      "notes": "The frozen v1 routes, cards, ranking, paytables, dealer privacy, and ledger vocabulary remain unchanged. Production multiworker activation stays blocked because state, ledger, and history remain separate transaction boundaries."
     },
     {
       "id": "THPT-001",

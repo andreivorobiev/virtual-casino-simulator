@@ -29,7 +29,7 @@ Historical source baseline: 9.1.0
 - red_dog: 1.1.2
 - dragon_tiger: 1.1.2
 - hi_lo: 1.1.3
-- three_card_poker: 1.1.3
+- three_card_poker: 1.1.4
 - jacks_or_better_video_poker: 1.1.3
 - deuces_wild_video_poker: 1.1.4
 - scratch_cards: 1.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.13
-- docs: 1.96.13
+- tests: 1.100.14
+- docs: 1.96.14
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -696,6 +696,7 @@ Historical source baseline: 9.1.0
 - **TEST-203** (Tests) - PASS: Real stale-load Bingo workers publish distinct balls in provider order without duplicate, dropped, or private marker state. Deterministic provider and settlement schedules prove purchase ownership rejects overlapping call/reset actions, action-owned rollback preserves sibling state, lost debit/refund/payout responses reconcile immutable evidence without a second wallet movement, reset clears only its selected session, terminal history is appended once, and zero reachable direct Bingo state saves remain.
 - **TEST-204** (Tests) - PASS: Real stale-load Caribbean Stud workers race terminal decisions around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante rollback preserves concurrent siblings and that lost ante debit, call debit, and payout-credit responses recover immutable proof without a second wallet movement.
 - **TEST-205** (Tests) - PASS: Real stale-load Four Card Poker workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned opening rollback preserves concurrent siblings and that lost opening debit, play debit, and settlement-credit responses recover immutable proof without a second wallet movement.
+- **TEST-206** (Tests) - PASS: Real stale-load Three Card Poker workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no actionable-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned opening and Play rollback preserve concurrent siblings and that lost initial debit, Play debit, and payout-credit responses recover immutable proof without a second wallet movement.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -994,6 +995,7 @@ Historical source baseline: 9.1.0
 - **TCP-003** (Three Card Poker) - PASS: Ante, Pair Plus, Play, refund, and payout movements use the shared ledger exactly once under stable identifiers and immutable fingerprints.
 - **TCP-004** (Application) - PASS: The Three Card Poker surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and outcomes.
 - **TCP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Three Card Poker with requirement, module, version, and visual evidence traceability.
+- **TCP-006** (Three Card Poker) - PASS: Three Card Poker publishes deal preparation, request ownership, Play or Fold decisions, ledger proof, terminal settlement, and action-owned rollback through provider-current callbacks that replace only game-owned rounds, order, requests, and ledger markers. Competing processes preserve unrelated player-state siblings and fail closed before stale decisions can overwrite or resurrect a terminal round, while lost ledger responses reconcile immutable proof without repeating a debit or credit.
 - **THPT-001** (Texas Hold'em Practice Table) - PASS: Fixed-limit Texas Hold'em deals one authenticated human and three server-managed opponents through shared card and poker primitives with call-or-fold streets and transparent showdown settlement that rakes each pot so the table holds a house edge against best play.
 - **THPT-002** (Texas Hold'em Practice Table) - PASS: Authenticated sessions own private reload-safe hands, decisions, compact replay receipts, settled history, and canonical route restoration without exposing active opponent cards or another user's state.
 - **THPT-003** (Texas Hold'em Practice Table) - PASS: The human and all three funded opponent accounts reserve maximum exposure and receive unused escrow and pot shares only through storage-enforced ledger action identities with Admin-auditable owner context.

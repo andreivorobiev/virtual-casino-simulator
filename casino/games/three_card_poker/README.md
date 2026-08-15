@@ -25,11 +25,12 @@ The shared HTTP handler supplies the standard `ok/data` or `ok/error` envelope. 
 ## Session, persistence, and settlement invariants
 
 - The route adapter calls the shared authenticated-player resolver; body and query player IDs cannot override a bound session.
-- Player state is loaded and saved through `load_player_game_state` and `save_player_game_state`.
+- Player state is loaded through `load_player_game_state` and published through provider-current `update_player_game_state` callbacks that compare only game-owned rounds, order, request fingerprints, and ledger markers.
+- Stale processes fail closed before overwriting a winning decision, while unrelated provider siblings survive preparation, reconciliation, and rejected-action rollback.
 - The complete deal is persisted before the initial aggregate debit; the public state hides all dealer cards until the decision settles.
 - Every client identifier is bound to a normalized command fingerprint. An altered retry fails closed.
 - Ledger movement uses deterministic per-movement identifiers stored in event details. Recovery matches player, game, round, transaction type, and action identifier before issuing a debit or credit.
 - One initial debit covers Ante plus Pair Plus, one optional Play debit equals the Ante, and at most one aggregate payout credit returns all due stakes and winnings.
 - Tests may inject IDs, clocks, and shuffle seeds. Public API requests cannot choose a seed.
 
-Shared catalog registration, the aggregate manifest revision for `three_card_poker`, compatibility digests, permanent requirements `TCP-001` through `TCP-005`, and catalog-driven discovery are all complete on main.
+Shared catalog registration, the aggregate manifest revision for `three_card_poker`, compatibility digests, permanent requirements `TCP-001` through `TCP-006`, and catalog-driven discovery are all complete on main.

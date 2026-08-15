@@ -184,7 +184,7 @@
       "requirement_id": "TCP-001",
       "engine_path": "casino/games/three_card_poker/engine.py",
       "settlement_path": "casino/games/three_card_poker/service.py",
-      "production_sha256": "8e792114ea1822b2ccd5aa9173e1e62e8d7aa6a8914c59edb0214a5b23077a41",
+      "production_sha256": "2d7e047aa63025d0a9578c0093257e5812f7561d12835ab9eb5ea4f4f8663877",
       "proof_tests": ["tests.games.three_card_poker.test_engine:ThreeCardPokerEngineTests.test_play_settlement_uses_fixed_paytables", "tests.games.three_card_poker.test_engine:ThreeCardPokerEngineTests.test_main_game_settlement_paths", "tests.games.three_card_poker.test_engine:ThreeCardPokerEngineTests.test_fold_forfeits_ante_and_pair_plus"],
       "rationale": "Every optimal-policy branch uses the source-pinned production qualifier, ante bonus, and pair-plus schedule from the accepted audit."
     },
