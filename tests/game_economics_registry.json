@@ -355,7 +355,7 @@
       "requirement_id": "AD-001",
       "engine_path": "casino/games/acey_deucey/engine.py",
       "settlement_path": "casino/games/acey_deucey/service.py",
-      "production_sha256": "7a88dc6f924ae66952c61333db35a94b49f554d3986143ddadd7209aa8c00320",
+      "production_sha256": "69cf2fbf53d8f6074e1c26a8f0b8bfff8e9a014447251243db51d431ece49fec",
       "proof_tests": ["tests.games.acey_deucey.test_engine:AceyDeuceySpreadPricingTests.test_every_spread_is_house_positive", "tests.games.acey_deucey.test_engine:AceyDeuceySpreadPricingTests.test_documented_exploit_is_no_longer_profitable"],
       "rationale": "Every actionable spread is priced separately so the best visible-card choice remains strictly house-side."
     },

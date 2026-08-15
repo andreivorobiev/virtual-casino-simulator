@@ -41,7 +41,7 @@ Historical source baseline: 9.1.0
 - plinko: 1.1.2
 - fan_tan: 1.1.5
 - andar_bahar: 1.1.5
-- acey_deucey: 1.1.3
+- acey_deucey: 1.1.4
 - caribbean_stud: 1.1.3
 - let_it_ride: 1.1.2
 - casino_holdem: 1.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.32
-- docs: 1.96.32
+- tests: 1.100.33
+- docs: 1.96.33
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -706,6 +706,7 @@ Historical source baseline: 9.1.0
 - **TEST-213** (Tests) - PASS: Real stale-load Big Six Wheel workers race complete ledger-backed spins around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent and private baselines never persist while existing retry and post-debit recovery schedules retain exactly-once ledger behavior.
 - **TEST-214** (Tests) - PASS: Real stale-load Crown and Anchor workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, and private baselines never persist while existing replay and ledger behavior remain unchanged.
 - **TEST-215** (Tests) - PASS: Real stale-load Fan-Tan workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and post-debit retry recovers the committed pile count without duplicate debit or credit.
+- **TEST-216** (Tests) - PASS: Real stale-load Acey-Deucey workers race terminal passes around a separately committed sibling update, proving one provider-winning round, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and existing wager rejection plus lost-response recovery retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1049,6 +1050,7 @@ Historical source baseline: 9.1.0
 - **AD-003** (Acey-Deucey) - PASS: Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AD-004** (Application) - PASS: Acey-Deucey supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **AD-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Acey-Deucey with requirement, module, version, and visual traceability.
+- **AD-006** (Acey-Deucey) - PASS: Acey-Deucey publishes prepared and terminal rounds, durable action receipts, wager and payout proof markers, recovery cleanup, and rejected-wager rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale pass can overwrite or resurrect the winning round, while exact retries retain the frozen v1 behavior and exactly-once ledger recovery.
 - **CS-001** (Caribbean Stud) - PASS: An ante deals five player cards and one dealer upcard before a call of exactly twice the ante or fold decision, followed by ace-king dealer qualification and transparent poker settlement.
 - **CS-002** (Caribbean Stud) - PASS: Authenticated sessions own private reload-safe decision rounds, hidden dealer hole cards, durable receipts, settled history, and canonical route restoration.
 - **CS-003** (Caribbean Stud) - PASS: Ante and call debits plus returned-token settlement credits use the shared ledger exactly once under durable action identities, while folds add no token movement.

@@ -8,8 +8,18 @@ import copy
 import hashlib
 # Import JSON parsing for compatibility, matrix, and digest artifacts.
 import json
+# Import process environments for isolated provider workers.
+import os
 # Import repository-relative path resolution for tracked contract evidence.
 from pathlib import Path
+# Import child-process execution for true cross-process races.
+import subprocess
+# Import the active interpreter for exact worker parity.
+import sys
+# Import temporary directories for residue-free provider evidence.
+import tempfile
+# Import monotonic time for bounded rendezvous polling.
+import time
 # Import the standard dependency-free test runner.
 import unittest
 
@@ -42,10 +52,21 @@ class MemoryRepository:
         # Copy state so service mutations require explicit saves.
         return copy.deepcopy(self.documents.get(player_id, engine.default_state()))
 
-    # Save one detached player document.
+    # Save one detached player document for direct crash-state fixtures.
     def save(self, player_id, state):
         # Persist a deep copy to model the provider boundary.
         self.documents[player_id] = copy.deepcopy(state)
+
+    # Update one player document through a provider-current callback.
+    def update(self, player_id, mutator):
+        # Load current provider state or one fresh game default.
+        current = copy.deepcopy(self.documents.get(player_id, engine.default_state()))
+        # Apply the production-shaped callback to provider-current state.
+        updated = mutator(current)
+        # Persist a detached result to model JSON storage.
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Return a detached authoritative publication.
+        return copy.deepcopy(updated)
 
 
 # Record signed ledger events and enforce action-id replay behavior in memory.
@@ -99,7 +120,7 @@ class AceyDeuceyApiTests(unittest.TestCase):
         # Create fresh fake balances and append-only ledger events.
         self.ledger = RecordingLedger()
         # Build a deterministic service without filesystem or ambient randomness.
-        self.service = AceyDeuceyService(ledger_gateway=self.ledger, state_loader=self.repository.load, state_saver=self.repository.save, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", seed_factory=lambda action_id: f"api:{action_id}")
+        self.service = AceyDeuceyService(repository=self.repository, ledger_gateway=self.ledger, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", seed_factory=lambda action_id: f"api:{action_id}")
         # Register only game-owned routes on the shared router.
         self.router = Router()
         # Inject the focused service without global registration.
@@ -111,6 +132,221 @@ class AceyDeuceyApiTests(unittest.TestCase):
     def call(self, path, body=None, method="POST", context=None):
         # Delegate with copied context so requests remain isolated.
         return self.router.dispatch(method, path, body or {}, context=dict(context or self.context))
+
+    # Confirm identical atomic publication preserves unrelated provider siblings.
+    def test_atomic_publication_preserves_siblings_and_private_baseline(self):
+        # Load one tracked default document through the service boundary.
+        state = self.service._load("session-player")
+        # Add one deterministic receipt as the desired owned transition.
+        state["action_receipts"]["atomic-same"] = {"stage": "deal", "round_id": "round-same", "request_fingerprint": "a" * 64}
+        # Publish the tracked transition through provider-current comparison.
+        self.service._save("session-player", state)
+        # Add unrelated metadata after the first game-owned publication.
+        self.repository.documents["session-player"]["atomic_markers"] = ["sibling"]
+        # Publish the exact same desired result from the advanced baseline.
+        self.service._save("session-player", state)
+        # Read the final provider-authoritative document.
+        persisted = self.repository.documents["session-player"]
+        # Verify the sibling survives and operation metadata never persists.
+        self.assertEqual(["sibling"], persisted["atomic_markers"])
+        # Keep the optimistic snapshot outside durable player state.
+        self.assertNotIn("_acey_deucey_atomic_baseline", persisted)
+
+    # Reject fabricated detached state before entering the provider updater.
+    def test_missing_atomic_baseline_fails_before_update(self):
+        # Retain a call list that must stay empty on fail-closed input.
+        updates = []
+
+        # Expose a repository seam whose update would reveal accidental entry.
+        class RejectingRepository:
+            # Record forbidden writes without mutating any storage.
+            def update(self, player_id, mutator):
+                # Retain exact attempted arguments for the final assertion.
+                updates.append((player_id, mutator))
+
+        # Build a service whose write seam must remain untouched.
+        service = AceyDeuceyService(repository=RejectingRepository())
+        # Reject an untracked default document as a stale publication.
+        with self.assertRaises(ConflictError):
+            # Attempt publication without the required provider-read baseline.
+            service._save("session-player", engine.default_state())
+        # Prove storage was never reached.
+        self.assertEqual([], updates)
+
+    # Prove rejected-debit rollback cannot erase a provider-winning decision.
+    def test_rejected_debit_rollback_preserves_concurrent_winner(self):
+        # Extend memory storage with one deterministic provider-winner schedule.
+        class RacingRepository(MemoryRepository):
+            # Start with no documents and no provider updates.
+            def __init__(self):
+                # Initialize the ordinary detached document store.
+                super().__init__()
+                # Count atomic publications so only rollback loses the race.
+                self.update_calls = 0
+
+            # Publish normally once, then expose a concurrently committed deal.
+            def update(self, player_id, mutator):
+                # Count this provider-current publication attempt.
+                self.update_calls += 1
+                # Let the initial pending terminal state commit normally.
+                if self.update_calls == 1:
+                    # Delegate the first atomic transition unchanged.
+                    return super().update(player_id, mutator)
+                # Build the provider-winning free-deal identity.
+                winner_action = "deal-provider-winner"
+                # Derive the canonical free-deal request fingerprint.
+                winner_fingerprint = request_fingerprint({"stage": "deal"})
+                # Derive the stable provider-winning round identity.
+                winner_round_id = engine.round_id_for(player_id, winner_action)
+                # Create a different valid active decision before stale rollback enters.
+                winner_round = engine.create_round(player_id, winner_action, left_card="4H", right_card="QS", third_card="8D", round_id=winner_round_id, created_at="2026-08-15T01:00:01Z", request_fingerprint=winner_fingerprint)
+                # Persist the concurrent authoritative game-owned result first.
+                self.documents[player_id] = {"active_round": winner_round, "recent_rounds": [], "action_receipts": {winner_action: {"stage": "deal", "round_id": winner_round_id, "request_fingerprint": winner_fingerprint}}, "atomic_markers": ["provider-winner"]}
+                # Present the already-committed winner to the stale rollback callback.
+                current = copy.deepcopy(self.documents[player_id])
+                # Require the stale callback to raise instead of replacing the winner.
+                return mutator(current)
+
+        # Create the race-aware provider and an underfunded wallet gateway.
+        repository, ledger = RacingRepository(), RecordingLedger()
+        # Restrict the player below the attempted wager.
+        ledger.balances["session-player"] = 5.0
+        # Build the real service around the race-aware provider.
+        service = AceyDeuceyService(repository=repository, ledger_gateway=ledger, get_player=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]}, clock=lambda: "2026-08-15T01:00:00Z")
+        # Build one prepared decision whose debit will be rejected.
+        deal_action = "deal-rollback-race"
+        # Derive the canonical free-deal fingerprint.
+        deal_fingerprint = request_fingerprint({"stage": "deal"})
+        # Derive the stable target round id.
+        round_id = engine.round_id_for("session-player", deal_action)
+        # Create the hidden result used by the losing play operation.
+        round_state = engine.create_round("session-player", deal_action, left_card="3H", right_card="KS", third_card="8C", round_id=round_id, created_at="2026-08-15T01:00:00Z", request_fingerprint=deal_fingerprint)
+        # Seed the prepared document without exercising the race hook.
+        repository.save("session-player", {"active_round": round_state, "recent_rounds": [], "action_receipts": {deal_action: {"stage": "deal", "round_id": round_id, "request_fingerprint": deal_fingerprint}}, "atomic_markers": ["seed"]})
+        # Require stale rollback to surface an explicit provider conflict.
+        with self.assertRaises(ConflictError):
+            # Attempt an unaffordable play whose cleanup loses the state race.
+            service.play("session-player", round_id, {"action_id": "play-rollback-race", "wager": 10})
+        # Read the authoritative concurrent winner after the failed rollback.
+        persisted = repository.load("session-player")
+        # Verify the winner remains active and the stale terminal round is absent.
+        self.assertEqual(("deal-provider-winner", [], ["provider-winner"]), (persisted["active_round"]["deal_action_id"], persisted["recent_rounds"], persisted["atomic_markers"]))
+        # Verify rejected debit created no wallet movement.
+        self.assertEqual((5.0, []), (ledger.balances["session-player"], ledger.events))
+
+    # Prove stale fresh processes preserve siblings and expose one pass winner.
+    def test_fresh_process_pass_race_has_one_state_winner(self):
+        # Own every provider and rendezvous byte inside one disposable directory.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Resolve this exact checkout for child imports.
+            repository_root = Path(__file__).resolve().parents[3]
+            # Bind provider state to the task-owned disposable root.
+            data_root = Path(temporary) / "data"
+            # Resolve the exact player-game document used by both workers.
+            state_path = data_root / "games" / "acey_deucey" / "session-player.json"
+            # Create the state directory before seeding one prepared round.
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            # Bind one stable deal identity and round id for both contenders.
+            deal_action_id = "atomic-deal"
+            # Compute the same free-deal fingerprint used by production.
+            deal_fingerprint = request_fingerprint({"stage": "deal"})
+            # Derive one stable round identity from player and action.
+            round_id = engine.round_id_for("session-player", deal_action_id)
+            # Create the hidden-card decision both workers must observe.
+            round_state = engine.create_round("session-player", deal_action_id, left_card="3H", right_card="KS", third_card="8C", round_id=round_id, created_at="2026-08-15T01:00:00Z", request_fingerprint=deal_fingerprint)
+            # Build exact initial game-owned fields plus one unrelated sibling.
+            initial_state = {"active_round": round_state, "recent_rounds": [], "action_receipts": {deal_action_id: {"stage": "deal", "round_id": round_id, "request_fingerprint": deal_fingerprint}}, "atomic_markers": ["seed"]}
+            # Publish deterministic JSON for both child providers.
+            state_path.write_text(json.dumps(initial_state, sort_keys=True), encoding="utf-8")
+            # Copy the environment before selecting the isolated JSON provider.
+            environment = os.environ.copy()
+            # Bind every child to disposable state and this exact checkout.
+            environment.update({"CASINO_STORAGE_PROVIDER": "json", "CASINO_DATA_DIR": str(data_root), "CASINO_LOG_DIR": str(Path(temporary) / "logs"), "PYTHONPATH": str(repository_root)})
+            # Define one worker whose repository pauses after capturing stale state.
+            worker_source = r"""
+import sys
+import time
+from pathlib import Path
+from casino.core.state_store import load_player_game_state, update_player_game_state
+from casino.errors import ConflictError
+from casino.games.acey_deucey import engine
+from casino.games.acey_deucey.service import AceyDeuceyService
+ready = Path(sys.argv[1])
+release = Path(sys.argv[2])
+round_id = sys.argv[3]
+action_id = sys.argv[4]
+class Repository:
+    def load(self, player_id):
+        state = load_player_game_state('acey_deucey', player_id, engine.default_state)
+        ready.write_text('ready', encoding='utf-8')
+        deadline = time.monotonic() + 10
+        while not release.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        if not release.exists():
+            raise RuntimeError('release gate timeout')
+        return state
+    def update(self, player_id, mutator):
+        return update_player_game_state('acey_deucey', player_id, mutator, engine.default_state)
+class Ledger:
+    def find(self, player_id, action_id):
+        return None
+    def apply_once(self, **kwargs):
+        raise AssertionError('pass must not reach the ledger')
+game = AceyDeuceyService(repository=Repository(), ledger_gateway=Ledger(), get_player=lambda player_id: {'player_id': player_id, 'balance': 100.0}, clock=lambda: '2026-08-15T01:00:00Z')
+try:
+    game.pass_round('session-player', round_id, {'action_id': action_id})
+    print('PASS')
+except ConflictError:
+    print('CONFLICT')
+"""
+            # Retain both independently loaded process contenders.
+            workers = []
+            # Start one provider winner candidate and one stale loser candidate.
+            for index in range(2):
+                # Allocate task-owned readiness and release gates.
+                ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
+                # Launch without a shell so interpreter and arguments remain exact.
+                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), round_id, f"pass-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                # Retain process and gate ownership.
+                workers.append((process, ready_path, release_path))
+            # Bound the stale-load rendezvous.
+            deadline = time.monotonic() + 10
+            # Wait until both workers captured the same prepared document.
+            while not all(ready.exists() for _process, ready, _release in workers) and time.monotonic() < deadline:
+                # Stop early if either worker failed before readiness.
+                if any(process.poll() is not None for process, _ready, _release in workers):
+                    # Leave polling for the diagnostic assertion below.
+                    break
+                # Yield briefly without starting another action.
+                time.sleep(0.01)
+            # Require both stale snapshots before publishing a concurrent sibling.
+            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            # Define one unrelated provider-atomic sibling update.
+            sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.acey_deucey import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('acey_deucey', 'session-player', add, engine.default_state)\n"
+            # Commit the sibling after both workers captured stale baselines.
+            sibling = subprocess.run([sys.executable, "-c", sibling_source], cwd=repository_root, env=environment, capture_output=True, text=True, timeout=15)
+            # Require the sibling provider transition to complete cleanly.
+            self.assertEqual(sibling.returncode, 0, f"stdout={sibling.stdout!r} stderr={sibling.stderr!r}")
+            # Release the first worker to publish the winning pass.
+            workers[0][2].write_text("go", encoding="utf-8")
+            # Collect the exact winner result.
+            winner_output, winner_error = workers[0][0].communicate(timeout=20)
+            # Require the first process to publish one pass without ledger work.
+            self.assertEqual((workers[0][0].returncode, winner_output.strip()), (0, "PASS"), winner_error)
+            # Release the stale worker only after the winner is durable.
+            workers[1][2].write_text("go", encoding="utf-8")
+            # Collect the explicit fail-closed stale result.
+            stale_output, stale_error = workers[1][0].communicate(timeout=15)
+            # Require conflict instead of a silent stale overwrite.
+            self.assertEqual((workers[1][0].returncode, stale_output.strip()), (0, "CONFLICT"), stale_error)
+            # Read final provider-authoritative bytes directly.
+            persisted = json.loads(state_path.read_text(encoding="utf-8"))
+            # Require one terminal winner with no active-round resurrection.
+            self.assertEqual((persisted["active_round"], len(persisted["recent_rounds"]), persisted["recent_rounds"][0]["pass_action_id"]), (None, 1, "pass-process-0"))
+            # Require both unrelated sibling values to survive the game action.
+            self.assertEqual(["seed", "concurrent"], persisted["atomic_markers"])
+            # Verify private optimistic metadata never enters persistent bytes.
+            self.assertNotIn("_acey_deucey_atomic_baseline", persisted)
 
     # Prepare one active deterministic fixture round.
     def prepared_round(self, left_card, right_card, third_card, action_id="deal-fixture"):
