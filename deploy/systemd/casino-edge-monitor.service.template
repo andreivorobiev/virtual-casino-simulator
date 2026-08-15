@@ -10,6 +10,8 @@ Type=oneshot
 User=casino-monitor
 Group=casino-monitor
 WorkingDirectory=/opt/casino/current
+# Keep the scheduled observation from writing interpreter caches into the selected immutable release.
+Environment=PYTHONDONTWRITEBYTECODE=1
 EnvironmentFile=/etc/casino/edge-monitor.env
 EnvironmentFile=-/etc/casino/release-poller.env
 ExecStartPre=/usr/bin/test -L /opt/casino/current
