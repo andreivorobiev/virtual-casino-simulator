@@ -130,6 +130,27 @@
       "introduced_in": "issue-223-big-six-motion",
       "changed_in": "issue-223-big-six-motion",
       "notes": "The exact-head long gate performs 100 consecutive real UI spins at each governed viewport, covers EN/RU, resize, background/foreground lifecycle suspension, four-times CPU throttling, reduced motion, cache-safe production asset reload, scroll reachability, and paired top/stage/lower visual review."
+    },
+    {
+      "id": "BIG-SIX-007",
+      "module": "Big Six Wheel",
+      "description": "Every Big Six Wheel settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BIG-SIX-001",
+        "API-BIG-SIX-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/big_six_wheel/service.py",
+        "tests/unit/big_six_wheel_engine_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-803-big-six-wheel-atomic-state",
+      "changed_in": "issue-803-big-six-wheel-atomic-state",
+      "notes": "The frozen v1 envelope, 54-segment profile, entropy seam, and deterministic ledger action keys remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     }
   ]
 }

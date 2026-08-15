@@ -2,14 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 """Ledger-only, retry-safe orchestration for Big Six Wheel spins."""
 
+# Import deep-copy support for detached optimistic state snapshots.
+import copy
 # Import cryptographic index selection for production wheel outcomes.
 import secrets
 # Import the shared UTC clock for settled response timestamps.
 from casino.core.clock import utc_now
 # Import the one approved play-token settlement compatibility boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistence helpers without changing shared state code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import standard conflict and validation errors for request identity enforcement.
 from casino.errors import ConflictError, ValidationError
 # Import pure Big Six calculations and state helpers.
@@ -19,6 +21,10 @@ from casino.games.big_six_wheel.rules import GAME_ID, outcome_catalog
 
 # Bound caller-supplied idempotency identifiers before persistence.
 MAX_CLIENT_REQUEST_ID_LENGTH = 128
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_big_six_wheel_atomic_baseline"
+# Name every state field owned by Big Six Wheel transitions.
+_GAME_STATE_KEYS = ("recent_rounds",)
 
 
 # Construct the shared settlement gateway while retaining the historical test seam name.
@@ -27,20 +33,78 @@ def CoreLedgerGateway(**kwargs):
     return GameSettlementGateway(GAME_ID, "idempotency_key", **kwargs)
 
 
+# Expose the provider-atomic writer behind an injectable test seam.
+def update_state(game_id: str, player_id: str, mutator, factory):
+    # Delegate to the shared cross-process read-modify-write boundary.
+    return update_player_game_state(game_id, player_id, mutator, factory)
+
+
 # Coordinate player state, entropy, and exactly-once ledger actions for one spin.
 class BigSixWheelService:
     # Capture injectable seams so deterministic tests avoid filesystem and ambient entropy.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, randbelow=None, clock=None):
+    def __init__(self, *, ledger_gateway=None, state_loader=None, state_updater=None, randbelow=None, clock=None):
         # Use the game-local ledger adapter unless a focused test supplies a fake.
         self.ledger_gateway = ledger_gateway or CoreLedgerGateway()
         # Use player-scoped storage compatible with the #81 authenticated-player resolver.
         self.state_loader = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Use player-scoped persistence without mutating any shared state module.
-        self.state_saver = state_saver or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
+        # Publish state through the provider-current callback boundary by default.
+        self.state_updater = state_updater or update_state
         # Use cryptographic uniform selection unless a focused test supplies a deterministic index.
         self.randbelow = randbelow or secrets.randbelow
         # Use the shared UTC clock unless a focused test pins response time.
         self.clock = clock or utc_now
+
+    # Load one player document and capture its exact game-owned baseline.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected player-scoped persistence boundary.
+        state = self.state_loader(player_id)
+        # Retain only the values this service may replace during the operation.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting private operation metadata.
+        return state
+
+    # Capture detached values for every Big Six Wheel-owned state field.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Normalize current and predecessor documents to one complete shape.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Publish one player document through provider-current compare-and-replace.
+    def _save(self, player_id: str, state: dict) -> None:
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked detached-document write before entering storage.
+        if not isinstance(expected, dict):
+            # Keep stale or fabricated state outside provider bytes.
+            raise ConflictError("Big Six Wheel state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Big Six Wheel-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach current owned values from unrelated provider metadata.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose owned baseline lost a concurrent race.
+            if observed != expected:
+                # Require recovery from the authoritative winner.
+                raise ConflictError("Big Six Wheel state changed during this action; reload and retry")
+            # Replace only fields governed by this game service.
+            for key in _GAME_STATE_KEYS:
+                # Publish detached JSON-compatible values without sibling loss.
+                current[key] = copy.deepcopy(desired[key])
+            # Return the complete provider document for atomic persistence.
+            return current
+
+        # Commit the transition through the provider's cross-process boundary.
+        authoritative = self.state_updater(GAME_ID, player_id, publish, engine.default_state)
+        # Advance the operation baseline to the exact committed owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Validate a required client action identity used for safe network retries.
     def _client_request_id(self, value) -> str:
@@ -56,7 +120,7 @@ class BigSixWheelService:
     # Return the current isolated game state and immutable outcome metadata.
     def state(self, player_id: str) -> dict:
         # Load only the session-bound player's game document.
-        state = self.state_loader(player_id)
+        state = self._load(player_id)
         # Return game-owned state without exposing another player's balance or action history.
         return {"game": GAME_ID, "outcomes": outcome_catalog(), "recent_rounds": list(state.get("recent_rounds", []))}
 
@@ -73,7 +137,7 @@ class BigSixWheelService:
         # Compute a semantic request fingerprint that detects conflicting retries.
         request_fingerprint = engine.wager_fingerprint(wagers)
         # Load only state owned by the authenticated player resolved upstream.
-        state = self.state_loader(player_id)
+        state = self._load(player_id)
         # Resolve a settled retry from the bounded state cache first.
         existing_round = engine.find_round(state, client_request_id)
         # Branch when the client repeats a settled request.
@@ -115,6 +179,6 @@ class BigSixWheelService:
         # Record the round only after all required ledger actions have committed.
         engine.record_round(state, round_row)
         # Persist reload-safe state; ledger keys allow safe reconstruction if this write fails.
-        self.state_saver(player_id, state)
+        self._save(player_id, state)
         # Return ledger evidence without exposing unrelated player history.
         return {"round": round_row, "replayed": debit_replayed or credit_replayed, "ledger": {"wager": debit_event, "settlement": credit_event}}
