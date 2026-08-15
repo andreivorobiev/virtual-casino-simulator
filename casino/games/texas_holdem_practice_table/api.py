@@ -20,8 +20,8 @@ from casino.core.clock import utc_now
 from casino.core.settlement import GameSettlementGateway
 # Import the shared id generator for ledger-correlated hand identifiers.
 from casino.core.ids import new_id
-# Import player-scoped persistence so authenticated users never share hands.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import provider-atomic player-scoped persistence so authenticated users never share hands.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import canonical player-id validation for router-bound identities.
 from casino.core.validation import require_player_id
 # Import public conflict, funds, and validation errors for stable route responses and escrow healing (issue #411).
@@ -35,6 +35,10 @@ GAME_ID = engine.GAME_ID
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,96}$")
 # Serialize prepared state, ledger recovery, and action replay locally.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent game state.
+_ATOMIC_BASELINE_KEY = "_texas_holdem_practice_table_atomic_baseline"
+# Name only the practice-table fields one transition may replace.
+_GAME_STATE_KEYS = ("active_hand", "recent_hands", "replay_hands", "requests", "ledger_actions")
 
 
 # Persist and load player-scoped practice-table state through the shared store.
@@ -44,10 +48,10 @@ class StateRepository:
         # Delegate schema and provider behavior to the shared state abstraction.
         return load_player_game_state(GAME_ID, player_id, engine.default_state)
 
-    # Save one authenticated player's complete reload-safe state document.
-    def save(self, player_id: str, state: dict) -> None:
-        # Delegate atomic document replacement or provider persistence.
-        save_player_game_state(GAME_ID, player_id, state)
+    # Apply one transition while the selected provider owns its process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate latest-state loading, callback rollback, and publication atomically.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
 
 
 # Adapt prepared game intents to the only permitted wallet mutation service.
@@ -108,6 +112,69 @@ class TexasHoldemPracticeTableController:
         # Store an optional test-only seed factory that production leaves disabled.
         self.seed_factory = seed_factory
 
+    # Capture only the game fields owned by practice-table transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Detach active, historical, replay, request, and ledger-marker state.
+        return {key: copy.deepcopy(state.get(key, engine.default_state()[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its provider-current baseline to this operation.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before any local engine mutation.
+        state = self.repository.load(player_id)
+        # Retain the exact owned values the next publication expects to replace.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting the private baseline field.
+        return state
+
+    # Publish one compare-and-replace transition while preserving unrelated siblings.
+    def _save(self, player_id: str, state: dict) -> None:
+        # Require every publication to originate from a tracked provider read or prior result.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked whole-document write before entering provider storage.
+        if not isinstance(expected, dict):
+            # Keep accidental stale saves outside persistent player state.
+            raise ConflictError("Texas Hold'em state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only owned game fields against provider-latest state.
+        def publish(current: dict) -> dict:
+            # Capture provider-current game fields without metadata or unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result completion without overwriting provider-owned values.
+            if observed == desired:
+                # Preserve current metadata and siblings unchanged.
+                return current
+            # Reject a stale transition before it can replace another action's state.
+            if observed != expected:
+                # Require a fresh load and authoritative recovery from the winning transition.
+                raise ConflictError("Texas Hold'em state changed during this action; reload and retry")
+            # Replace only the five fields owned by the practice-table engine.
+            for key, value in desired.items():
+                # Publish detached values so later caller mutation cannot leak into storage.
+                current[key] = copy.deepcopy(value)
+            # Return the complete provider document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process read-modify-write boundary.
+        authoritative = self.repository.update(player_id, publish)
+        # Advance the private baseline to the exact committed game-owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+
+    # Restore a failed start through the current operation's provider baseline.
+    def _restore(self, player_id: str, state: dict, prior_state: dict, action_id: str, hand: dict, wager: float, compensated: int) -> None:
+        # Copy only action-owned values back into the tracked current operation.
+        for key, value in self._game_snapshot(prior_state).items():
+            # Leave provider-owned sibling fields outside the rollback scope.
+            state[key] = copy.deepcopy(value)
+        # Retire a wallet-touching identity because its escrow rows are now refunded. (issue #411)
+        if compensated:
+            # Keep the receipt so a same-id retry cannot replay refunded escrow rows as live.
+            state.setdefault("requests", {})[action_id] = {"command": "start_hand", "hand_id": hand["hand_id"], "base_wager": wager}
+        # Publish the rollback against the most recently committed operation baseline.
+        self._save(player_id, state)
+
     # Save one committed ledger marker into the human player's state document.
     def _mark_committed(self, player_id: str, state: dict, intent: dict, event: dict) -> None:
         # Store only stable audit identifiers and not balance snapshots.
@@ -117,7 +184,7 @@ class TexasHoldemPracticeTableController:
             "round_id": intent["round_id"],  # Preserve the complete hand association.
         }
         # Persist after each movement so later actions cannot overtake it.
-        self.repository.save(player_id, state)
+        self._save(player_id, state)
 
     # Apply or recover every prepared escrow/refund/payout intent exactly once.
     def _reconcile_hand(self, player_id: str, state: dict, hand: dict) -> dict:
@@ -142,7 +209,7 @@ class TexasHoldemPracticeTableController:
             # Archive the hand into bounded private and compact replay history.
             engine.archive_hand(state, hand)
             # Persist the terminal phase and active-slot cleanup together.
-            self.repository.save(player_id, state)
+            self._save(player_id, state)
         # Return the reconciled retained hand.
         return hand
 
@@ -220,7 +287,7 @@ class TexasHoldemPracticeTableController:
                     # Clear the unfunded hand from the actionable slot so the table plays again.
                     state["active_hand"] = None
                     # Persist the healed document before continuing the original request.
-                    self.repository.save(player_id, state)
+                    self._save(player_id, state)
 
     # Build the standard game data payload shared by every route.
     def _payload(self, player_id: str, state: dict, hand=None, *, replayed=False) -> dict:
@@ -261,7 +328,7 @@ class TexasHoldemPracticeTableController:
         # Serialize reload recovery against duplicate action requests.
         with _ACTION_LOCK:
             # Load the session-bound player's isolated table document.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover only movements that were already durably prepared.
             self._recover(player_id, state)
             # Return the reload-safe public state.
@@ -276,7 +343,7 @@ class TexasHoldemPracticeTableController:
             # Ensure every fixed practice opponent has a real funded wallet before reserving exposure.
             self.ledger.ensure_accounts()
             # Load the latest player-scoped state under the action lock.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover any earlier prepared movement before accepting a new command.
             self._recover(player_id, state)
             # Read an earlier command using the same client action id.
@@ -310,7 +377,7 @@ class TexasHoldemPracticeTableController:
             # Map the client command before the first ledger call for recovery.
             state["requests"][action_id] = {"command": "start_hand", "hand_id": hand["hand_id"], "base_wager": wager}
             # Persist cards, board plan, and escrow identity before wallet mutation.
-            self.repository.save(player_id, state)
+            self._save(player_id, state)
             # Reconcile the four opening escrow debits.
             try:
                 # Apply or recover the prepared debits exactly once.
@@ -319,14 +386,8 @@ class TexasHoldemPracticeTableController:
             except Exception:
                 # Credit back any escrow prefix that committed before the failing seat.
                 compensated = self._compensate_committed_escrows(hand)
-                # Restore the exact pre-request document so no phantom hand stays actionable.
-                restored = copy.deepcopy(prior_state)
-                # Retire a wallet-touching identity because its escrow rows are now refunded (issue #411).
-                if compensated:
-                    # Keep the receipt so a same-id retry fails closed instead of replaying refunded escrow rows as live.
-                    restored.setdefault("requests", {})[action_id] = {"command": "start_hand", "hand_id": hand["hand_id"], "base_wager": wager}
-                # Persist the rolled-back document with zero net wallet movement.
-                self.repository.save(player_id, restored)
+                # Restore action-owned state with zero net wallet movement and provider siblings intact.
+                self._restore(player_id, state, prior_state, action_id, hand, wager, compensated)
                 # Re-raise the original ledger or storage error.
                 raise
             # Return the new preflop hand after committed wallet reservation.
@@ -345,7 +406,7 @@ class TexasHoldemPracticeTableController:
         # Serialize state transitions and settlement recovery locally.
         with _ACTION_LOCK:
             # Load the latest session-bound player state.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover any movement prepared by an earlier request first.
             self._recover(player_id, state)
             # Read an earlier command using the same client action id.
@@ -375,7 +436,7 @@ class TexasHoldemPracticeTableController:
             # Map the command before any terminal refund or payout movement.
             state["requests"][action_id] = {"command": "act", "hand_id": hand_id, "action": normalized_action, "expected_phase": normalized_phase}
             # Persist the complete deterministic action sequence before settlement credits.
-            self.repository.save(player_id, state)
+            self._save(player_id, state)
             # Reconcile any newly prepared terminal refund and payout credits.
             self._reconcile_hand(player_id, state, hand)
             # Return the updated street or settled hand.

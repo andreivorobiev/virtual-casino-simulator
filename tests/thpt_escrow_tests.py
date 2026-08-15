@@ -45,7 +45,7 @@ class TexasHoldemEscrowExhaustionTests(unittest.TestCase):
         # Persist default players through the provider-backed players service.
         self.provider.bootstrap_players(players.default_players())
         # Reset the disposable-root state document so every test starts from an empty table.
-        api.StateRepository().save("human", engine.default_state())
+        api.StateRepository().update("human", lambda _current: engine.default_state())
         # Fund the three fixed practice seats through the production one-time funding seam.
         api.LedgerAdapter().ensure_accounts()
         # Build a deterministic production-port controller over the injected provider.
@@ -79,8 +79,10 @@ class TexasHoldemEscrowExhaustionTests(unittest.TestCase):
         state["requests"][action_id] = {"command": "start_hand", "hand_id": hand["hand_id"], "base_wager": float(wager)}
         # Keep the committed human escrow marker.
         state["ledger_actions"][escrow["action_id"]] = {"ledger_id": event.get("ledger_id"), "transaction_type": escrow["transaction_type"], "round_id": hand["hand_id"]}
-        # Persist the stranded document through the production repository.
-        api.StateRepository().save("human", state)
+        # Seed unrelated provider state that recovery must preserve.
+        state["atomic_markers"] = ["stranded"]
+        # Persist the stranded document through the production provider callback.
+        api.StateRepository().update("human", lambda _current: state)
         # Return the identities needed by heal assertions.
         return hand, escrow
 
@@ -116,6 +118,15 @@ class TexasHoldemEscrowExhaustionTests(unittest.TestCase):
             def transact(self, intent):
                 # Simulate the drained bot wallet at the exact production failure point.
                 if intent["action_id"] == failing_action_id:
+                    # Define one unrelated provider update that races the action-owned rollback.
+                    def mark(current):
+                        # Append one sibling marker outside the practice-table field set.
+                        current.setdefault("atomic_markers", []).append("concurrent")
+                        # Return the complete provider document for publication.
+                        return current
+
+                    # Commit the sibling after preparation but before the injected failure.
+                    api.StateRepository().update("human", mark)
                     # Raise the same public error the storage provider raises.
                     raise InsufficientFundsError()
                 # Delegate every other movement to the real provider-backed adapter.
@@ -143,6 +154,10 @@ class TexasHoldemEscrowExhaustionTests(unittest.TestCase):
         self.assertEqual(before, players.get_player("human")["balance"])
         # Verify no phantom hand stayed actionable.
         self.assertIsNone(controller.state("human")["state"]["active_hand"])
+        # Verify provider-current unrelated state survived compensating rollback.
+        self.assertEqual(["concurrent"], api.StateRepository().load("human")["atomic_markers"])
+        # Verify the private optimistic baseline never entered persisted state.
+        self.assertNotIn(api._ATOMIC_BASELINE_KEY, api.StateRepository().load("human"))
         # Verify the consumed identity fails closed instead of replaying refunded escrow rows as live.
         with self.assertRaises(ConflictError):
             # Retry the identical command after its escrow was compensated.
@@ -164,6 +179,8 @@ class TexasHoldemEscrowExhaustionTests(unittest.TestCase):
         self.assertEqual(1, len(self.rows("human", "TEXAS_HOLDEM_ESCROW_REFUND_CREDIT")))
         # Verify the human wallet returned to its pre-hand balance.
         self.assertEqual(5000.0, players.get_player("human")["balance"])
+        # Verify the unrelated sibling seeded beside the stranded hand survived healing.
+        self.assertEqual(["stranded"], api.StateRepository().load("human")["atomic_markers"])
         # Start a smaller hand the still-poor seat can cover with its exact five-token balance.
         started = self.controller.start_hand("human", 1, "escrow-recover-00001")
         # Verify the healed table accepted a funded hand again.

@@ -22,7 +22,7 @@ At settlement:
 - human pot shares use `TEXAS_HOLDEM_PAYOUT_CREDIT` and funded bot shares use `PRACTICE_OPPONENT_PAYOUT`;
 - every movement includes player, game, hand, transaction type, amount, component, and a storage-enforced action identity;
 - opponent events also include the bot account, controller action, fixed policy, and owning human session context for Admin audit;
-- prepared private state is saved before settlement reconciliation, and recovery reuses committed ledger evidence before issuing a movement.
+- prepared private state is published through provider-current callbacks before settlement reconciliation, and recovery reuses committed ledger evidence before issuing a movement.
 
 Every start and decision command requires an `action_id`. Identical retries return the same logical hand, including after that hand leaves the 20-item public history window; compact sanitized terminal snapshots preserve durable request receipts without retaining every full private hand. Reusing one id for another wager, hand, or action fails closed. The API never accepts a card seed; deterministic cards exist only through injected focused-test dependencies.
 
@@ -31,7 +31,9 @@ Human actions use `casino.core.settlement.GameSettlementGateway`; opponent movem
 ## Session and privacy invariants
 
 - `context.resolved_player_id` or `context.bound_player_id` takes precedence over compatibility body/query ids.
-- State is stored through `load_player_game_state` and `save_player_game_state` under the authenticated human.
+- State is read through `load_player_game_state` and published through provider-current `update_player_game_state` callbacks under the authenticated human.
+- Atomic publication compares only the active hand, private history, compact replay snapshots, request receipts, and ledger markers, so unrelated provider siblings survive preparation, recovery, compensation, and healing.
+- A stale process fails before issuing escrow movements or replacing a newer terminal hand; ledger and player state remain separate transaction boundaries, so production multiworker activation stays blocked.
 - Active opponent hole cards, player-account ids, the complete community plan, burns, remaining deck, policies, ledger intents, and owner correlation are excluded by a strict public whitelist.
 - Opponent cards appear only after fully reconciled settlement.
 
@@ -45,7 +47,7 @@ Every decision body includes the client-observed `expected_phase`; a delayed or 
 
 ## Requirement mapping
 
-- Permanent game block: `THPT-001` through `THPT-005`.
+- Permanent game block: `THPT-001` through `THPT-007`.
 - Session isolation: `SESSION-003`, `SESSION-004`, `SESSION-005`.
 - Ledger-only settlement: `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `LEDGER-026`, `STORAGE-005`, `STORAGE-006`.
 - Funded-opponent and Admin audit boundary: `BOT-009`, `BOT-010`, `BOT-011`, `ADMIN-023`.

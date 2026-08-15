@@ -48,11 +48,11 @@ Historical source baseline: 9.1.0
 - double_bonus_video_poker: 1.1.3
 - mississippi_stud: 1.1.3
 - joker_poker: 1.1.2
-- texas_holdem_practice_table: 1.1.3
+- texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.18
-- docs: 1.96.18
+- tests: 1.100.19
+- docs: 1.96.19
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -699,6 +699,7 @@ Historical source baseline: 9.1.0
 - **TEST-206** (Tests) - PASS: Real stale-load Three Card Poker workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no actionable-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned opening and Play rollback preserve concurrent siblings and that lost initial debit, Play debit, and payout-credit responses recover immutable proof without a second wallet movement.
 - **TEST-207** (Tests) - PASS: Real stale-load Casino Hold'em workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante and Call rollback preserve concurrent siblings and that lost ante debit, Call debit, and settlement-credit responses recover immutable proof without a second wallet movement.
 - **TEST-208** (Tests) - PASS: Real stale-load Pai Gow Poker workers race terminal sets around a separately committed sibling update, proving one provider-winning set, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante rollback preserves concurrent siblings and that lost ante-debit and settlement-credit responses recover immutable proof without a second wallet movement.
+- **TEST-209** (Tests) - PASS: Real stale-load Texas Hold'em Practice Table workers race complete escrow-backed terminal hands around a separately committed sibling update, proving one provider-winning hand, no active-hand resurrection, no sibling loss, and zero ledger calls from the stale loser. Deterministic recovery schedules prove action-owned compensation and stranded-hand healing preserve concurrent siblings while lost terminal-credit responses recover immutable proof without a second refund or payout.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1004,6 +1005,7 @@ Historical source baseline: 9.1.0
 - **THPT-004** (Application) - PASS: Texas Hold'em Practice Table supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play across all governed viewports.
 - **THPT-005** (Tests) - PASS: Catalog, contract, browser, restart, long-suite, funded-opponent, version, requirement, visual, and hostile-client certification evidence remains traceable for Texas Hold'em Practice Table.
 - **THPT-006** (Texas Hold'em Practice Table) - PASS: Practice-table hands pre-flight every seat's reserved solvency before any persistence or debit, compensate each committed escrow exactly once when reconciliation fails, and self-heal a stranded prepared hand on the next request, so bot-wallet exhaustion can neither brick the table nor strand player escrow.
+- **THPT-007** (Texas Hold'em Practice Table) - PASS: Texas Hold'em Practice Table publishes prepared hands, compact request receipts, replay snapshots, per-seat escrow and settlement markers, human and server-opponent actions, terminal archive, stranded-hand healing, and compensating rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before stale commands can issue wallet mutations or overwrite a terminal hand, while lost ledger responses reconcile immutable proof without repeating an escrow, refund, or payout.
 - **CAA-001** (Crown and Anchor) - PASS: Three server-authoritative symbol dice implement six coverage targets and transparent one-, two-, and three-hit net payouts.
 - **CAA-002** (Crown and Anchor) - PASS: Authenticated sessions own private reload-safe rounds, settled history, and canonical route restoration.
 - **CAA-003** (Crown and Anchor) - PASS: Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.

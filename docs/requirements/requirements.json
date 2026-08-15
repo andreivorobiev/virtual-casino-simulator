@@ -12090,6 +12090,30 @@
       "notes": "Fresh workers use the real JSON provider and exact Pai Gow Poker engine. Lost-response fixtures retain the accepted frozen v1 response and ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     },
     {
+      "id": "TEST-209",
+      "module": "Tests",
+      "description": "Real stale-load Texas Hold'em Practice Table workers race complete escrow-backed terminal hands around a separately committed sibling update, proving one provider-winning hand, no active-hand resurrection, no sibling loss, and zero ledger calls from the stale loser. Deterministic recovery schedules prove action-owned compensation and stranded-hand healing preserve concurrent siblings while lost terminal-credit responses recover immutable proof without a second refund or payout.",
+      "status": "PASS",
+      "api_tests": [
+        "API-THPT-001",
+        "API-THPT-ESCROW-001",
+        "API-THPT-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/texas_holdem_practice_table/tests/test_api.py",
+        "tests/thpt_escrow_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-795-texas-holdem-atomic-state",
+      "changed_in": "issue-795-texas-holdem-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact practice-table controller. Lost-response fixtures retain the accepted frozen v1 response and four-wallet ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -17557,6 +17581,31 @@
       "introduced_in": "issue-411-thpt-escrow",
       "changed_in": "issue-411-thpt-escrow",
       "notes": "Compensation uses the established escrow-refund vocabulary per seat and poisons the originating request receipt so an exact retry fails closed instead of replaying refunded escrow as live."
+    },
+    {
+      "id": "THPT-007",
+      "module": "Texas Hold'em Practice Table",
+      "description": "Texas Hold'em Practice Table publishes prepared hands, compact request receipts, replay snapshots, per-seat escrow and settlement markers, human and server-opponent actions, terminal archive, stranded-hand healing, and compensating rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before stale commands can issue wallet mutations or overwrite a terminal hand, while lost ledger responses reconcile immutable proof without repeating an escrow, refund, or payout.",
+      "status": "PASS",
+      "api_tests": [
+        "API-THPT-001",
+        "API-THPT-ESCROW-001",
+        "API-THPT-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/texas_holdem_practice_table/api.py",
+        "casino/games/texas_holdem_practice_table/tests/test_api.py",
+        "tests/thpt_escrow_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-795-texas-holdem-atomic-state",
+      "changed_in": "issue-795-texas-holdem-atomic-state",
+      "notes": "The frozen v1 routes, envelopes, card redaction, fixed-limit action flow, five-percent rake, four-wallet escrow vocabulary, and issue #411 compensation semantics remain unchanged. Production multiworker activation stays blocked because player state and wallet/history movements remain separate transaction boundaries."
     },
     {
       "id": "CAA-001",
