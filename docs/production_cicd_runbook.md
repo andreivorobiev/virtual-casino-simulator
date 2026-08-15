@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.77`; `0.9.6.0` remains reserved for a separately accepted product wave.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.78`; `0.9.6.0` remains reserved for a separately accepted product wave.
 
 ## What happens after a merge
 
@@ -218,6 +218,8 @@ v0.9.5.75 packages accepted inert game-action lifecycle Phase A PR #686, closes 
 v0.9.5.76 packages accepted complete catalog economics PR #691 and records issue #456 complete. The repository now validates all 46 games and 74 wager selectors through source-bound deterministic expectations, with retained deep Slots and Keno artifacts, while game engines, paytables, APIs, wager acceptance, wallet behavior, and settlements remain unchanged. The catalog remains minimum 2, expected 4, and apply held; deployment must prove exact schema 2 before and after activation while invoking no migration or grant mutation. Its compatibility record retains exact terminal-green v0.9.5.75 as the application-only predecessor; database rollback remains prohibited.
 
 v0.9.5.77 packages accepted repository-side pull-poller PR #736 and closes release prerequisite #735 while parent #732 remains open for owner-run installation evidence. GitHub Actions publish immutable assets only; the production host polls stable releases, verifies exact assets, provenance, inventory, schema-two compatibility, health, readiness, rollback, and alarms, then adopts the application atomically. The catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, or database rollback is authorized. Its compatibility record retains exact immutable v0.9.5.76 as the application-only predecessor.
+
+v0.9.5.78 packages the accepted post-v0.9.5.77 reliability and provider-atomic state wave and carries the same fail-closed pull-delivery boundary into the owner-authorized #732 installation. The first pull must execute the documented rollback drill, retain exact schema 2 and persistence, prove authenticated readiness at the release SHA, clear the lag alarm, and leave the timer active. Its compatibility record retains exact immutable v0.9.5.77 as the application-only predecessor; database rollback, migration application, and grant mutation remain prohibited.
 
 ## Retired push-delivery history
 

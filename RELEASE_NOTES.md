@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.78 Release Notes
+
+## Reliability, atomic state, and production delivery wave
+
+- Packages 40 accepted pull requests after v0.9.5.77, including issue-to-rollout enforcement, CI compute and version governance, dead-artifact removal, Roulette localization diagnostics, complete Russian catalog copy, escape-by-default templating, hardcoded-English cleanup, browser coverage for the five newest games, guest teardown and conversion evidence, wallet-cent normalization, OAuth retry idempotency, and authoritative Admin feedback readiness.
+- Moves 19 game-state families to provider-atomic publication, including the accepted Keno, Baccarat, Casino War, Blackjack, Roulette, Bingo, Caribbean Stud, Four Card Poker, Three Card Poker, Pai Gow Poker, Texas Hold'em Practice Table, Craps, Andar Bahar, Over/Under 7, Big Six Wheel, Crown and Anchor, Fan-Tan, and supporting state slices, without changing frozen v1 routes, paytables, wager acceptance, entropy seams, round identities, or ledger vocabulary.
+- Retains the exact 46-game catalog and complete governed economics registry while advancing only source-owned game/module versions already accepted on protected main.
+- Publishes the pull-based production poller, service/timer templates, rollback drill, release-lag alarm, and immutable asset verifier for the now owner-authorized one-time host installation and first pull under issues #732 and #810.
+- Keeps production and application-only rollback at exact MySQL schema 2 while the catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, database rollback, provider activation, public signup, live OAuth, billing, or DNS mutation is authorized.
+- Adds no permanent requirement identifier; the governed total remains exactly 1040 requirements.
+- Records the exact canonical package inventory as 771 regular files: current source selection 770 plus this v0.9.5.78 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.46.3`, tooling `1.40.1`, Players `9.1.3`, Ledger `9.1.2`, and all content-owned module revisions remain exact.
+- Retains exact immutable v0.9.5.77 as the application-only schema-two rollback predecessor. Issue #810 closes through the release PR; issues #168, #435, #488, #683, #704, #732, and #809 remain open until their own evidence is complete.
+
 # Virtual Casino Simulator v0.9.5.77 Release Notes
 
 ## Pull-based production release delivery
