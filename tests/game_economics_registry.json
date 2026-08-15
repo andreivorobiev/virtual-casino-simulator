@@ -369,7 +369,7 @@
       "requirement_id": "CS-001",
       "engine_path": "casino/games/caribbean_stud/engine.py",
       "settlement_path": "casino/games/caribbean_stud/service.py",
-      "production_sha256": "a93ec898bef3a04fa23cad784fd90cf883e2bb35c0ec289fb6088e3b584af5ba",
+      "production_sha256": "bda1f726481c259ba465cedcd8c3acbcee1e5b35858fb54de5041cbdd88a0da0",
       "proof_tests": ["tests.games.caribbean_stud.test_engine:CaribbeanStudEngineTests.test_dealer_not_qualified_settlement", "tests.games.caribbean_stud.test_engine:CaribbeanStudEngineTests.test_qualified_showdown_outcomes", "tests.games.caribbean_stud.test_engine:CaribbeanStudEngineTests.test_royal_flush_uses_top_call_odds"],
       "rationale": "Every player decision and dealer qualification branch is source-pinned to the production schedule used by the accepted optimal-policy audit."
     },

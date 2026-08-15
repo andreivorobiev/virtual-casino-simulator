@@ -11978,6 +11978,28 @@
       "introduced_in": "issue-779-bingo-atomic-state",
       "changed_in": "issue-779-bingo-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Bingo engine. Failure fixtures retain the frozen v1 response and ledger vocabulary while exercising no-retry recovery. Production multiworker activation remains blocked because state, ledger, and history are separate boundaries."
+    },
+    {
+      "id": "TEST-204",
+      "module": "Tests",
+      "description": "Real stale-load Caribbean Stud workers race terminal decisions around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante rollback preserves concurrent siblings and that lost ante debit, call debit, and payout-credit responses recover immutable proof without a second wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CS-001",
+        "API-CS-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/caribbean_stud/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-781-caribbean-stud-atomic-state",
+      "changed_in": "issue-781-caribbean-stud-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Caribbean Stud engine. Lost-response fixtures retain the accepted ledger vocabulary and no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     }
   ]
 }

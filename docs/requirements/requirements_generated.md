@@ -42,7 +42,7 @@ Historical source baseline: 9.1.0
 - fan_tan: 1.1.4
 - andar_bahar: 1.1.4
 - acey_deucey: 1.1.3
-- caribbean_stud: 1.1.2
+- caribbean_stud: 1.1.3
 - let_it_ride: 1.1.2
 - casino_holdem: 1.1.2
 - double_bonus_video_poker: 1.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.11
-- docs: 1.96.11
+- tests: 1.100.12
+- docs: 1.96.12
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -694,6 +694,7 @@ Historical source baseline: 9.1.0
 - **TEST-201** (Tests) - PASS: Real fresh-process Multi-Hand Video Poker evidence races hold publication against unrelated sibling state, proves provider-ordered hold-then-draw consumes the latest selection, and proves draw-then-hold refuses stale round resurrection. Deterministic failure evidence preserves sibling state during action-owned pre-debit rollback, retains a committed round after a lost debit response, and recovers exactly one aggregate debit, while static inventory requires zero direct game-state saves.
 - **TEST-202** (Tests) - PASS: Real fresh-process Roulette evidence races wager preparation and committed spin/finalization against unrelated sibling updates, proves provider-ordered settings cannot erase an already committed wager, and verifies one exact debit. Deterministic failure schedules preserve sibling state during action-owned pre-ledger rollback, retain committed bets and removals after lost debit/refund responses, replay one exact committed settlement without resampling or duplicate history, restore clear-all order, and require zero reachable direct Roulette state saves.
 - **TEST-203** (Tests) - PASS: Real stale-load Bingo workers publish distinct balls in provider order without duplicate, dropped, or private marker state. Deterministic provider and settlement schedules prove purchase ownership rejects overlapping call/reset actions, action-owned rollback preserves sibling state, lost debit/refund/payout responses reconcile immutable evidence without a second wallet movement, reset clears only its selected session, terminal history is appended once, and zero reachable direct Bingo state saves remain.
+- **TEST-204** (Tests) - PASS: Real stale-load Caribbean Stud workers race terminal decisions around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante rollback preserves concurrent siblings and that lost ante debit, call debit, and payout-credit responses recover immutable proof without a second wallet movement.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1035,6 +1036,7 @@ Historical source baseline: 9.1.0
 - **CS-004** (Application) - PASS: Caribbean Stud supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CS-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Caribbean Stud with requirement, module, version, and visual traceability.
 - **CS-006** (Caribbean Stud) - PASS: Caribbean Stud displays the server-published raise payout schedule in the return-table panel before play.
+- **CS-007** (Caribbean Stud) - PASS: Caribbean Stud deal preparation, ante proof, call or fold ownership, terminal archive publication, settlement proof, and action-owned rollback replace only provider-current game fields atomically. Competing processes preserve unrelated sibling state and fail closed before stale decisions can overwrite or resurrect a round.
 - **LIR-001** (Let It Ride) - PASS: Three equal base-wager units fund a five-card poker round with three player cards and two staged ride-or-pull decisions before community-card settlement beginning at a pair of tens.
 - **LIR-002** (Let It Ride) - PASS: Authenticated sessions own private reload-safe decision rounds, hidden community cards, durable receipts, settled history, and canonical route restoration.
 - **LIR-003** (Let It Ride) - PASS: Opening wager debits, pull refunds, and returned-token payout credits use the shared ledger exactly once under durable action identities.

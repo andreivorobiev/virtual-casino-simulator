@@ -4,8 +4,22 @@
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.
 import copy
+# Import JSON support for exact disposable provider bytes.
+import json
+# Import environment access for isolated child-provider configuration.
+import os
+# Import subprocess support for independent stale-load workers.
+import subprocess
+# Import the active interpreter selected by the repository test runner.
+import sys
+# Import task-owned temporary directories for provider bytes and gates.
+import tempfile
+# Import bounded polling for worker rendezvous.
+import time
 # Import the standard dependency-free test runner.
 import unittest
+# Import portable paths for exact checkout and worker files.
+from pathlib import Path
 
 # Import the real router to exercise authenticated player replacement.
 from casino.router import Router
@@ -34,17 +48,34 @@ class MemoryRepository:
         # Persist a deep copy to model the JSON/provider boundary.
         self.documents[player_id] = copy.deepcopy(state)
 
+    # Apply one callback to the current document like the production atomic provider seam.
+    def update(self, player_id, mutator):
+        # Give the callback a detached current value so failed writes cannot leak mutation.
+        current = copy.deepcopy(self.documents.get(player_id, engine.default_state()))
+        # Apply the complete transition inside this fake provider boundary.
+        updated = mutator(current)
+        # Persist a detached result to model JSON serialization ownership.
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Return an independent authoritative value to the service.
+        return copy.deepcopy(updated)
+
 
 # Record signed ledger events and enforce action-key replay behavior in memory.
 class RecordingLedger:
     # Seed deterministic balances for two isolated session players.
-    def __init__(self, balances=None):
+    def __init__(self, balances=None, *, lost_response_types=(), before_failure=None):
         # Store fake balances only inside this ledger adapter.
         self.balances = balances or {"session-player": 1000.0, "other-player": 1000.0}
         # Retain append-only committed event rows.
         self.events = []
         # Allow focused tests to simulate a definitive pre-commit failure.
         self.fail_next = False
+        # Select movement types whose first committed response is lost.
+        self.lost_response_types = set(lost_response_types)
+        # Retain one optional callback that publishes a concurrent sibling before failure.
+        self.before_failure = before_failure
+        # Count every apply attempt by transaction vocabulary.
+        self.apply_calls = {}
 
     # Find one committed game movement for the requested player.
     def find(self, player_id, action_key):
@@ -60,6 +91,8 @@ class RecordingLedger:
 
     # Apply or recover one signed movement exactly once.
     def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, fingerprint, details):
+        # Count every call before replay or failure handling.
+        self.apply_calls[transaction_type] = self.apply_calls.get(transaction_type, 0) + 1
         # Resolve any prior committed movement before changing the fake balance.
         existing = self.find(player_id, action_key)
         # Reuse an exact matching event.
@@ -72,6 +105,10 @@ class RecordingLedger:
         if self.fail_next:
             # Consume the one-shot failure flag.
             self.fail_next = False
+            # Publish any deterministic concurrent sibling before the service rolls back.
+            if self.before_failure is not None:
+                # Invoke the bounded test seam exactly once.
+                self.before_failure()
             # Raise a public validation-shaped insufficient-funds error.
             raise ValidationError("Insufficient fake balance")
         # Calculate the candidate balance after the signed movement.
@@ -86,6 +123,12 @@ class RecordingLedger:
         event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "caribbean_stud_action_key": action_key, "request_fingerprint": fingerprint}}
         # Append the event once.
         self.events.append(event)
+        # Simulate a provider or transport loss only after immutable proof commits.
+        if transaction_type in self.lost_response_types:
+            # Consume the one-shot lost-response stage.
+            self.lost_response_types.remove(transaction_type)
+            # Surface an unclassified transport failure so production recovery owns the next read.
+            raise RuntimeError(f"lost {transaction_type} response")
         # Return detached proof and non-replay evidence.
         return copy.deepcopy(event), False
 
@@ -249,6 +292,196 @@ class CaribbeanStudApiTests(unittest.TestCase):
         self.assertEqual("complete", reloaded["state"]["active_round"]["ante_status"])
         # Verify only one ante debit exists after recovery.
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "CARIBBEAN_STUD_ANTE_DEBIT"]))
+
+    # Confirm a definitive pre-ledger failure reverses only action-owned game fields.
+    def test_rejected_ante_rollback_preserves_concurrent_sibling(self):
+        # Create isolated storage whose unrelated sibling changes during the failed debit.
+        repository = MemoryRepository()
+
+        # Publish one sibling value after preparation but before rollback.
+        def publish_sibling():
+            # Retain evidence outside Caribbean Stud's owned state fields.
+            repository.documents["session-player"]["atomic_markers"] = ["concurrent"]
+
+        # Fail the first movement before any immutable event exists.
+        ledger = RecordingLedger(before_failure=publish_sibling)
+        # Select the definitive pre-commit failure path.
+        ledger.fail_next = True
+        # Build the exact service with deterministic cards.
+        service = CaribbeanStudService(repository=repository, ledger_gateway=ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", shoe_factory=lambda _action_id: self.shoes["deal-win"])
+        # Require the original public validation error.
+        with self.assertRaises(ValidationError):
+            # Attempt one ante-backed deal.
+            service.deal("session-player", {"action_id": "deal-rollback", "ante": 5})
+        # Read the provider-owned document after compare-and-restore.
+        persisted = repository.documents["session-player"]
+        # Require actionable game state, sibling preservation, and zero committed event.
+        self.assertEqual((persisted["active_round"], persisted["atomic_markers"], ledger.events), (None, ["concurrent"], []))
+
+    # Confirm an ante debit whose response is lost recovers without a second movement.
+    def test_lost_ante_response_recovers_once(self):
+        # Create isolated persistence and one post-commit response loss.
+        repository = MemoryRepository()
+        # Lose only the first committed ante response.
+        ledger = RecordingLedger(lost_response_types={"CARIBBEAN_STUD_ANTE_DEBIT"})
+        # Build the production service around deterministic cards.
+        service = CaribbeanStudService(repository=repository, ledger_gateway=ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", shoe_factory=lambda _action_id: self.shoes["deal-win"])
+        # Surface the injected transport loss from the first request.
+        with self.assertRaisesRegex(RuntimeError, "lost CARIBBEAN_STUD_ANTE_DEBIT response"):
+            # Issue one stable deal action.
+            service.deal("session-player", {"action_id": "deal-lost-ante", "ante": 5})
+        # Reconcile immutable proof through the normal reload endpoint.
+        recovered = service.state("session-player")
+        # Replay the exact deal after recovery.
+        replayed = service.deal("session-player", {"action_id": "deal-lost-ante", "ante": 5})
+        # Require one movement attempt, one event, complete marker, and stable replay identity.
+        self.assertEqual((ledger.apply_calls["CARIBBEAN_STUD_ANTE_DEBIT"], len(ledger.events), recovered["state"]["active_round"]["ante_status"], replayed["round"]["round_id"]), (1, 1, "complete", recovered["state"]["active_round"]["round_id"]))
+
+    # Confirm a call debit whose response is lost recovers before settlement without duplication.
+    def test_lost_call_debit_response_recovers_once(self):
+        # Create isolated persistence and one lost call-debit response.
+        repository = MemoryRepository()
+        # Commit the call debit before surfacing its transport failure.
+        ledger = RecordingLedger(lost_response_types={"CARIBBEAN_STUD_CALL_DEBIT"})
+        # Build the deterministic winning service.
+        service = CaribbeanStudService(repository=repository, ledger_gateway=ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", shoe_factory=lambda _action_id: self.shoes["deal-win"])
+        # Prepare one ante-backed decision.
+        started = service.deal("session-player", {"action_id": "deal-lost-call", "ante": 5})
+        # Surface the lost committed call response.
+        with self.assertRaisesRegex(RuntimeError, "lost CARIBBEAN_STUD_CALL_DEBIT response"):
+            # Issue the stable call action once.
+            service.call("session-player", started["round"]["round_id"], {"action_id": "call-lost-debit"})
+        # Reconcile the debit marker through normal state recovery.
+        service.state("session-player")
+        # Replay the call so only the still-unissued settlement credit runs.
+        replayed = service.call("session-player", started["round"]["round_id"], {"action_id": "call-lost-debit"})
+        # Require exactly one ante, call, and settlement attempt with terminal state.
+        self.assertEqual((ledger.apply_calls["CARIBBEAN_STUD_ANTE_DEBIT"], ledger.apply_calls["CARIBBEAN_STUD_CALL_DEBIT"], ledger.apply_calls["CARIBBEAN_STUD_SETTLEMENT_CREDIT"], replayed["round"]["settlement_status"]), (1, 1, 1, "complete"))
+
+    # Confirm a settlement credit whose response is lost recovers without a second credit.
+    def test_lost_settlement_response_recovers_once(self):
+        # Create isolated persistence and one lost positive-credit response.
+        repository = MemoryRepository()
+        # Commit the settlement credit before surfacing its transport failure.
+        ledger = RecordingLedger(lost_response_types={"CARIBBEAN_STUD_SETTLEMENT_CREDIT"})
+        # Build the deterministic winning service.
+        service = CaribbeanStudService(repository=repository, ledger_gateway=ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", shoe_factory=lambda _action_id: self.shoes["deal-win"])
+        # Prepare the decision round.
+        started = service.deal("session-player", {"action_id": "deal-lost-credit", "ante": 5})
+        # Surface the lost committed credit response.
+        with self.assertRaisesRegex(RuntimeError, "lost CARIBBEAN_STUD_SETTLEMENT_CREDIT response"):
+            # Issue the stable call and its returned-token settlement.
+            service.call("session-player", started["round"]["round_id"], {"action_id": "call-lost-credit"})
+        # Recover both exact ledger markers through a normal read.
+        recovered = service.state("session-player")
+        # Replay the terminal call without any second wallet movement.
+        replayed = service.call("session-player", started["round"]["round_id"], {"action_id": "call-lost-credit"})
+        # Require one attempt for every stage and the same recovered terminal result.
+        self.assertEqual((ledger.apply_calls["CARIBBEAN_STUD_ANTE_DEBIT"], ledger.apply_calls["CARIBBEAN_STUD_CALL_DEBIT"], ledger.apply_calls["CARIBBEAN_STUD_SETTLEMENT_CREDIT"], replayed["round"], recovered["state"]["recent_rounds"][-1]), (1, 1, 1, recovered["state"]["recent_rounds"][-1], recovered["state"]["recent_rounds"][-1]))
+
+    # Prove stale fresh processes preserve siblings and one provider-winning decision.
+    def test_fresh_process_fold_race_preserves_provider_winner(self):
+        # Own every provider and rendezvous byte inside one disposable directory.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Resolve this exact checkout for child imports.
+            repository_root = Path(__file__).resolve().parents[3]
+            # Bind provider state to the task-owned root.
+            data_root = Path(temporary) / "data"
+            # Resolve the exact player-game document used by both workers.
+            state_path = data_root / "games" / engine.GAME_ID / "session-player.json"
+            # Create the state directory before seeding one active decision.
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            # Build one deterministic decision round with committed ante proof.
+            active_round = engine.create_round("session-player", 5, "deal-process", player_hand=self.shoes["deal-fold"][:5], dealer_hand=self.shoes["deal-fold"][5:], round_id=engine.round_id_for("session-player", "deal-process"), created_at="2026-08-14T00:00:00Z", request_fingerprint=request_fingerprint({"stage": "deal", "ante": 5.0}))
+            # Mark the ante complete so both workers may race only the terminal decision.
+            active_round.update({"ante_status": "complete", "ante_ledger_id": "ledger-ante", "movement_stage": "ante_committed"})
+            # Seed an unrelated sibling field that the game transition must not own.
+            baseline = {**engine.default_state(), "active_round": active_round, "atomic_markers": ["seed"]}
+            # Publish exact initial JSON for both child providers.
+            state_path.write_text(json.dumps(baseline, sort_keys=True), encoding="utf-8")
+            # Copy the environment before selecting the isolated JSON provider.
+            environment = os.environ.copy()
+            # Bind all child persistence to the disposable root.
+            environment.update({"CASINO_STORAGE_PROVIDER": "json", "CASINO_DATA_DIR": str(data_root), "CASINO_LOG_DIR": str(Path(temporary) / "logs"), "PYTHONPATH": str(repository_root)})
+            # Define one service worker whose repository load pauses after capturing stale state.
+            worker_source = r"""
+import sys
+import time
+from pathlib import Path
+from casino.errors import ConflictError
+from casino.games.caribbean_stud.service import CaribbeanStudService, StateRepository
+base = StateRepository()
+ready = Path(sys.argv[1])
+release = Path(sys.argv[2])
+action_id = sys.argv[3]
+class RendezvousRepository:
+    def load(self, player_id):
+        state = base.load(player_id)
+        ready.write_text('ready', encoding='utf-8')
+        deadline = time.monotonic() + 10
+        while not release.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        if not release.exists():
+            raise RuntimeError('Caribbean Stud race release timed out')
+        return state
+    def update(self, player_id, mutator):
+        return base.update(player_id, mutator)
+class NoLedger:
+    def find(self, _player_id, _action_key):
+        return None
+service = CaribbeanStudService(repository=RendezvousRepository(), ledger_gateway=NoLedger(), player_reader=lambda player_id: {'player_id': player_id, 'balance': 995.0}, clock=lambda: '2026-08-14T00:01:00Z')
+try:
+    result = service.fold('session-player', 'cs_' + __import__('hashlib').sha256(b'caribbean_stud:session-player:deal-process').hexdigest()[:24], {'action_id': action_id})
+    print('PASS:' + result['round']['fold_action_id'])
+except ConflictError:
+    print('CONFLICT')
+"""
+            # Retain both independently loaded process contenders.
+            workers = []
+            # Start one winner candidate and one stale loser candidate.
+            for index in range(2):
+                # Allocate task-owned readiness and release gates.
+                ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
+                # Launch without a shell so interpreter and arguments remain exact.
+                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), f"fold-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                # Retain process and gate ownership.
+                workers.append((process, ready_path, release_path))
+            # Bound the stale-load rendezvous.
+            deadline = time.monotonic() + 10
+            # Wait until both workers have captured the same initial document.
+            while not all(ready.exists() for _process, ready, _release in workers) and time.monotonic() < deadline:
+                # Stop early if either worker failed before readiness.
+                if any(process.poll() is not None for process, _ready, _release in workers):
+                    # Leave polling for the diagnostic assertion below.
+                    break
+                # Yield briefly without starting another action.
+                time.sleep(0.01)
+            # Require both stale snapshots before publishing a concurrent sibling.
+            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            # Define one unrelated provider-atomic sibling update.
+            sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.caribbean_stud import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('caribbean_stud', 'session-player', add, engine.default_state)\n"
+            # Commit the sibling after both workers captured their stale baselines.
+            sibling = subprocess.run([sys.executable, "-c", sibling_source], cwd=repository_root, env=environment, capture_output=True, text=True, timeout=15)
+            # Require the sibling provider transition to complete cleanly.
+            self.assertEqual(sibling.returncode, 0, f"stdout={sibling.stdout!r} stderr={sibling.stderr!r}")
+            # Release the first worker to publish the winning fold.
+            workers[0][2].write_text("go", encoding="utf-8")
+            # Collect the exact winner result.
+            winner_output, winner_error = workers[0][0].communicate(timeout=15)
+            # Require the first fold to commit.
+            self.assertEqual((workers[0][0].returncode, winner_output.strip()), (0, "PASS:fold-process-0"), winner_error)
+            # Release the stale second worker only after the winner is durable.
+            workers[1][2].write_text("go", encoding="utf-8")
+            # Collect the fail-closed stale result.
+            stale_output, stale_error = workers[1][0].communicate(timeout=15)
+            # Require the second action to conflict instead of overwriting the winner.
+            self.assertEqual((workers[1][0].returncode, stale_output.strip()), (0, "CONFLICT"), stale_error)
+            # Read final provider-authoritative bytes directly.
+            persisted = json.loads(state_path.read_text(encoding="utf-8"))
+            # Resolve the sole terminal history row.
+            terminal = persisted["recent_rounds"][-1]
+            # Require the winning decision, sibling preservation, and no active-round resurrection.
+            self.assertEqual((persisted["active_round"], len(persisted["recent_rounds"]), terminal["fold_action_id"], persisted["atomic_markers"]), (None, 1, "fold-process-0", ["seed", "concurrent"]))
 
     # Confirm an ambiguous call debit fails closed instead of repeating.
     def test_ambiguous_call_attempt_requires_reconciliation(self):

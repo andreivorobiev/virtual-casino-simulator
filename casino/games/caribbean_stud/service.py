@@ -20,7 +20,7 @@ from casino.core.clock import utc_now
 # Route every player-wallet movement through the shared exactly-once settlement boundary.
 from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistent state helpers.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict, funds, lookup, and validation errors.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 # Import only this game's pure rules engine.
@@ -31,6 +31,10 @@ ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local ledger history to recover supported simulator retries.
 # Serialize state and ledger read-before-write sections in the local process.
 _ACTION_LOCK = threading.RLock()
+# Keep the optimistic comparison snapshot private to one in-memory service operation.
+_ATOMIC_BASELINE_KEY = "_caribbean_stud_atomic_baseline"
+# Name only the game-owned fields that one transition may replace.
+_GAME_STATE_KEYS = ("active_round", "recent_rounds", "action_receipts")
 
 
 # Validate one required public retry identity.
@@ -58,10 +62,10 @@ class StateRepository:
         # Delegate JSON/MySQL selection and schema metadata to shared state storage.
         return load_player_game_state(engine.GAME_ID, player_id, engine.default_state)
 
-    # Save one authenticated player's document.
-    def save(self, player_id: str, state: dict) -> None:
-        # Delegate atomic file replacement or provider storage.
-        save_player_game_state(engine.GAME_ID, player_id, state)
+    # Apply one transition while the selected provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate latest-state loading, rollback, and publication to the shared atomic helper.
+        return update_player_game_state(engine.GAME_ID, player_id, mutator, engine.default_state)
 
 
 # Construct the shared settlement gateway while retaining the historical test seam name.
@@ -85,10 +89,62 @@ class CaribbeanStudService:
         # Use production shuffle unless a test supplies deterministic ten-card shoes.
         self.shoe_factory = shoe_factory
 
-    # Save one player document through the injected persistence boundary.
+    # Capture only the fields owned by Caribbean Stud transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Detach nested round and receipt values from later engine mutation.
+        return {key: copy.deepcopy(state.get(key, engine.default_state()[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its optimistic game-owned baseline to this operation.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before entering a provider mutation.
+        state = self.repository.load(player_id)
+        # Retain the exact game-owned values that the next publication expects.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return the tracked caller snapshot without persisting the private baseline.
+        return state
+
+    # Publish one compare-and-replace transition while preserving unrelated sibling fields.
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate without mutating shared storage configuration.
-        self.repository.save(player_id, state)
+        # Require every write to originate from a tracked provider read or prior atomic result.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Fail closed if an internal caller attempts to publish an untracked document.
+        if not isinstance(expected, dict):
+            # Keep accidental direct whole-document writes outside persistent storage.
+            raise ConflictError("Caribbean Stud state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and publish only this game's owned fields against provider-latest state.
+        def publish(current: dict) -> dict:
+            # Capture current game fields without including provider metadata or siblings.
+            observed = self._game_snapshot(current)
+            # Accept an exact already-published result from a concurrent same-state transition.
+            if observed == desired:
+                # Leave provider-owned metadata and unrelated sibling fields unchanged.
+                return current
+            # Reject a stale transition before it can erase another game action.
+            if observed != expected:
+                # Require the caller to reload and reconcile the provider-winning state.
+                raise ConflictError("Caribbean Stud state changed during this action; reload and retry")
+            # Replace only the three Caribbean Stud fields owned by this transition.
+            for key, value in desired.items():
+                # Publish detached values so caller mutation cannot alter provider state later.
+                current[key] = copy.deepcopy(value)
+            # Return the complete provider document with every sibling preserved.
+            return current
+
+        # Commit through the provider's JSON/MySQL atomic read-modify-write boundary.
+        authoritative = self.repository.update(player_id, publish)
+        # Advance the private baseline to the exact committed game-owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+
+    # Restore a captured pre-action document only when the exact prepared state still owns it.
+    def _rollback(self, player_id: str, state: dict, prior_state: dict) -> None:
+        # Compare rollback against the newest state published by this action, not its old baseline.
+        prior_state[_ATOMIC_BASELINE_KEY] = copy.deepcopy(state[_ATOMIC_BASELINE_KEY])
+        # Publish only the action-owned reversal while preserving concurrent siblings.
+        self._save(player_id, prior_state)
 
     # Build the public state, rules, and current-player payload.
     def _payload(self, player_id: str, state: dict) -> dict:
@@ -298,7 +354,7 @@ class CaribbeanStudService:
         # Serialize recovery against concurrent actions for the same local process.
         with _ACTION_LOCK:
             # Load the newest player-scoped document inside the lock.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
             self._recover_all(player_id, state)
             # Return sanitized state and current-player information.
@@ -319,7 +375,7 @@ class CaribbeanStudService:
         # Serialize state preparation, debit, and marker persistence.
         with _ACTION_LOCK:
             # Load the current player's state inside the critical section.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover any interrupted prior action before enforcing active-round rules.
             self._recover_all(player_id, state)
             # Load durable compact receipts that prevent reuse after history pruning.
@@ -362,6 +418,8 @@ class CaribbeanStudService:
             round_id = engine.round_id_for(player_id, action_id)
             # Build prepared state before touching the shared ledger.
             round_state = engine.create_round(player_id, ante, action_id, player_hand=player_hand, dealer_hand=dealer_hand, round_id=round_id, created_at=self.clock(), request_fingerprint=fingerprint)
+            # Fail closed from the first durable state if another process observes the issued action.
+            round_state["movement_stage"] = "ante_attempting"
             # Preserve prior state for definitive no-movement failures.
             prior_state = copy.deepcopy(state)
             # Persist the hidden deterministic dealer hand before any balance movement.
@@ -379,7 +437,7 @@ class CaribbeanStudService:
                 # Restore prior state only when the append-only ledger has no movement.
                 if self.ledger.find(player_id, self._key(action_id, "ante")) is None:
                     # Restore pre-deal state and receipts.
-                    self._save(player_id, prior_state)
+                    self._rollback(player_id, state, prior_state)
                 # Re-raise the public funds or validation error.
                 raise
             # Return the visible round and committed ante evidence.
@@ -398,7 +456,7 @@ class CaribbeanStudService:
         # Serialize reveal, archive, call debit, and returned-token settlement.
         with _ACTION_LOCK:
             # Load the current player's state inside the critical section.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover any interrupted movements before a new decision.
             self._recover_all(player_id, state)
             # Locate the round without crossing authenticated player state.
@@ -447,6 +505,8 @@ class CaribbeanStudService:
             prior_state = copy.deepcopy(state)
             # Reveal and calculate the deterministic result without wallet mutation.
             engine.settle_call(round_state, action_id, completed_at=self.clock(), request_fingerprint=fingerprint)
+            # Bind the terminal presentation to the pending call debit before publication.
+            round_state["movement_stage"] = "call_attempting"
             # Record the durable decision identity before any call debit.
             receipts[action_id] = expected_receipt
             # Archive the complete result before issuing any ledger movement.
@@ -462,7 +522,7 @@ class CaribbeanStudService:
                 # Restore the pre-call active decision when no call debit committed.
                 if self.ledger.find(player_id, self._key(action_id, "call")) is None:
                     # Restore the active decision state.
-                    self._save(player_id, prior_state)
+                    self._rollback(player_id, state, prior_state)
                 # Re-raise the public funds or validation error.
                 raise
             # Return the revealed result and ledger proof.
@@ -481,7 +541,7 @@ class CaribbeanStudService:
         # Serialize terminal state updates.
         with _ACTION_LOCK:
             # Load the current player's state inside the critical section.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover any interrupted ante before permitting a fold.
             self._recover_all(player_id, state)
             # Locate the round without crossing authenticated player state.
