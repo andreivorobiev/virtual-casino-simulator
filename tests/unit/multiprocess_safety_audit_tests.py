@@ -58,13 +58,13 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
-        # Pin the exact current family cardinalities after Caribbean Stud retires direct publication.
+        # Pin the exact current family cardinalities after Four Card Poker retires direct publication.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 27, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 8},  # Pin current counts.
+            {"player_document_load_save": 26, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 9},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -114,6 +114,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(caribbean_stud["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while state and money remain separate transactions.
         self.assertEqual(caribbean_stud["multiworker_status"], "blocked")
+        # Resolve Four Card Poker after deal, decision, settlement, and rollback retire every direct publication.
+        four_card_poker = next(row for row in games if row["game_id"] == "four_card_poker")
+        # Require authoritative reads for response, replay, and interruption recovery.
+        self.assertGreater(four_card_poker["load_call_sites"], 0)
+        # Require every reachable Four Card Poker publication to avoid stale whole-document saves.
+        self.assertEqual(four_card_poker["save_call_sites"], 0)
+        # Bind optimistic deal, decision, settlement, and rollback publication to provider updates.
+        self.assertGreater(four_card_poker["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(four_card_poker["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while state and money remain separate transactions.
+        self.assertEqual(four_card_poker["multiworker_status"], "blocked")
         # Resolve Keno after draw and ticket transitions retire every direct state publication.
         keno = next(row for row in games if row["game_id"] == "keno")
         # Require the authoritative Keno read used for response and interruption recovery.

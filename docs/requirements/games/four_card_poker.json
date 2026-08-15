@@ -46,6 +46,29 @@
       "introduced_in": "issue-141-four-card-poker",
       "changed_in": "issue-141-four-card-poker",
       "notes": "Allocated for GitHub issue #141."
+    },
+    {
+      "id": "FOURCP-003",
+      "module": "Four Card Poker",
+      "description": "Four Card Poker publishes opening preparation, deal proof, play or fold ownership, terminal archive, settlement proof, and action-owned rollback through provider-current callbacks that replace only the game-owned active round, recent rounds, and action receipts. Competing processes preserve unrelated player-state siblings and fail closed before stale decisions can overwrite or resurrect a terminal round, while lost ledger responses reconcile immutable proof without repeating a debit or credit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FOUR-CARD-POKER-001",
+        "API-FOUR-CARD-POKER-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/four_card_poker/service.py",
+        "tests/games/four_card_poker/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-783-four-card-poker-atomic-state",
+      "changed_in": "issue-783-four-card-poker-atomic-state",
+      "notes": "The frozen v1 routes, cards, ranking, paytables, and ledger vocabulary remain unchanged. Production multiworker activation stays blocked because state, ledger, and history remain separate transaction boundaries."
     }
   ]
 }

@@ -649,7 +649,7 @@
       "requirement_id": "FOURCP-001",
       "engine_path": "casino/games/four_card_poker/engine.py",
       "settlement_path": "casino/games/four_card_poker/service.py",
-      "production_sha256": "2edd25566c29c46c84af7db56f675c5dc5816576fdaf9b0c3a8201298ca9bf2a",
+      "production_sha256": "6600caa4ad4f64f9b5b405e95cc0c5e240ec6ee9398989061a869274395c88bf",
       "proof_tests": ["tests.games.four_card_poker.test_api:FourCardPokerTests.test_house_edge_is_positive"],
       "rationale": "The production dealer edge, tie rule, ante bonus, and Aces-Up side wager remain house-side under the deterministic policy audit."
     }

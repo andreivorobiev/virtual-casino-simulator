@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only orchestration for isolated Four Card Poker (#141)."""
 
+# Import copy support for detached optimistic snapshots and provider publication.
+import copy
 # Import canonical JSON encoding for semantic action fingerprints.
 import json
 # Import hashing so changed retries fail even when wagers happen to match.
@@ -18,7 +20,7 @@ from casino.core.clock import utc_now
 # Route every player-wallet movement through the shared exactly-once settlement boundary.
 from casino.core.settlement import GameSettlementGateway
 # Import player-scoped persistent state without editing shared storage code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict, lookup, and validation errors for route boundaries.
 from casino.errors import ConflictError, NotFoundError, ValidationError
 # Import only this game's deterministic state and rule helpers.
@@ -31,6 +33,10 @@ ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local history to preserve retry recovery for the supported simulator.
 # Serialize action-id lookup and ledger writes inside the one-process server.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent game state.
+_ATOMIC_BASELINE_KEY = "_four_card_poker_atomic_baseline"
+# Name only the Four Card Poker fields one transition may replace.
+_GAME_STATE_KEYS = ("active_round", "recent_rounds", "action_receipts")
 
 
 # Validate one required client action identity without echoing hostile input.
@@ -51,6 +57,19 @@ def request_fingerprint(payload: dict) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+# Persist player-scoped Four Card Poker documents through the selected provider.
+class StateRepository:
+    # Load one authenticated player's isolated document.
+    def load(self, player_id: str) -> dict:
+        # Delegate JSON/MySQL selection and default-state repair to shared storage.
+        return load_player_game_state(GAME_ID, player_id, engine.default_state)
+
+    # Apply one transition while the selected provider owns its process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate latest-state loading, callback rollback, and publication atomically.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
+
+
 # Construct the shared settlement gateway while retaining the historical test seam name.
 def CoreLedgerGateway(**kwargs):
     # Preserve the old Four Card key beside canonical action evidence.
@@ -60,13 +79,11 @@ def CoreLedgerGateway(**kwargs):
 # Coordinate player state, deterministic cards, and retry-safe ledger movements.
 class FourCardPokerService:
     # Capture production dependencies while exposing deterministic focused-test seams.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, get_player=None, clock=None, seed_factory=None, fixture_factory=None):
+    def __init__(self, *, repository=None, ledger_gateway=None, get_player=None, clock=None, seed_factory=None, fixture_factory=None):
+        # Use provider-backed player state unless a focused test supplies memory storage.
+        self._repository = repository or StateRepository()
         # Use the game-local shared-ledger adapter unless a test supplies a fake.
         self._ledger = ledger_gateway or CoreLedgerGateway()
-        # Load one authenticated player's isolated state document by default.
-        self._load_state = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Save one authenticated player's isolated state document by default.
-        self._save_state = state_saver or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
         # Return read-only current-player information without balance mutation.
         self._get_player = get_player or players.get_player
         # Use the shared UTC clock unless a focused test pins timestamps.
@@ -76,10 +93,55 @@ class FourCardPokerService:
         # Provide exact fixture rounds for focused tests without randomness.
         self._fixture_factory = fixture_factory
 
-    # Save one player document through the injected persistence boundary.
+    # Capture only the game fields owned by Four Card Poker transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Detach nested rounds and receipts from later engine mutation.
+        return {key: copy.deepcopy(state.get(key, engine.default_state()[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its provider-current baseline to this operation.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before any local engine mutation.
+        state = self._repository.load(player_id)
+        # Retain the exact owned values the next publication expects to replace.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting the private baseline field.
+        return state
+
+    # Publish one compare-and-replace transition while preserving unrelated siblings.
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate without mutating shared storage configuration.
-        self._save_state(player_id, state)
+        # Require every publication to originate from a tracked provider read or prior result.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked whole-document write before entering provider storage.
+        if not isinstance(expected, dict):
+            # Keep accidental stale saves outside persistent player state.
+            raise ConflictError("Four Card Poker state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only owned game fields against provider-latest state.
+        def publish(current: dict) -> dict:
+            # Capture provider-current game fields without metadata or unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result completion without overwriting provider-owned values.
+            if observed == desired:
+                # Preserve current metadata and siblings unchanged.
+                return current
+            # Reject a stale transition before it can replace another action's state.
+            if observed != expected:
+                # Require a fresh load and authoritative recovery from the winning transition.
+                raise ConflictError("Four Card Poker state changed during this action; reload and retry")
+            # Replace only the three fields owned by the Four Card Poker engine.
+            for key, value in desired.items():
+                # Publish detached values so later caller mutation cannot leak into storage.
+                current[key] = copy.deepcopy(value)
+            # Return the complete provider document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process read-modify-write boundary.
+        authoritative = self._repository.update(player_id, publish)
+        # Advance the private baseline to the exact committed game-owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Build the public state, rules, and current-player payload.
     def _payload(self, player_id: str, state: dict) -> dict:
@@ -218,7 +280,7 @@ class FourCardPokerService:
         # Serialize recovery against concurrent actions for the same local process.
         with _ACTION_LOCK:
             # Load the newest player-scoped document inside the lock.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
             self._recover(player_id, state)
             # Return sanitized state and current-player information.
@@ -241,7 +303,7 @@ class FourCardPokerService:
         # Serialize state preparation, debit, and marker persistence.
         with _ACTION_LOCK:
             # Load the current player's state inside the critical section.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover any interrupted prior action before enforcing active-round rules.
             self._recover(player_id, state)
             # Load durable compact receipts that prevent reuse after round-history pruning.
@@ -334,7 +396,7 @@ class FourCardPokerService:
         # Serialize reveal, play debit, archive, and returned-token settlement.
         with _ACTION_LOCK:
             # Load only the authenticated player's latest document.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover or clear any interrupted action before allowing a decision.
             self._recover(player_id, state)
             # Find the target without exposing another player's round.
