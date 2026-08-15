@@ -11065,7 +11065,7 @@
     {
       "id": "OPS-007",
       "module": "Operations",
-      "description": "Production delivery is a host-owned pull state machine: a root systemd timer queries the newest stable immutable GitHub Release at a bounded cadence, never downgrades, alarms when a newer release remains undelivered for more than three intervals, preserves the exact prior application selector and provenance fragment for rollback, and reports success only after public liveness plus authenticated readiness identify the exact expected version and full source SHA.",
+      "description": "Production delivery is a host-owned pull state machine: a root systemd timer queries the newest stable immutable GitHub Release at a bounded cadence, never downgrades, alarms when a newer release remains undelivered for more than three intervals, preserves the exact prior application selector and provenance fragment for rollback, resolves direct-drill monitoring through a strict root-managed environment reader, and reports success only after public liveness plus authenticated readiness identify the exact expected version and full source SHA.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-PULL-001"
@@ -11081,13 +11081,13 @@
         "tests/release_poller_tests.py"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-732-release-poller",
-      "notes": "Repository acceptance is listener-free and makes no host connection. The first systemd install, one rollback drill, first pull activation, and sanitized host evidence remain an explicit owner-operated gate on issue #732; umbrella #435 stays open until that evidence is accepted."
+      "changed_in": "issue-812-poller-auth-cleanup",
+      "notes": "Repository acceptance is listener-free and makes no host connection. The direct drill reads only allowlisted authorization and origin assignments without shell evaluation or output, and every failure removes only the captured owned work directory before recording a durable poll_failed alarm. Host requalification remains separately guarded on issue #732; umbrella #435 stays open until that evidence is accepted."
     },
     {
       "id": "TOOL-015",
       "module": "Tooling",
-      "description": "The packaged release contains a root-owned pull poller plus systemd service and timer templates. The poller accepts only a canonical stable GitHub Release, downloads the exact three hosted assets, verifies the two-record checksum file, manifest artifact and source provenance, complete package policy, monitor pairing and exact clean schema two before selector mutation, switches the application atomically, updates its stable executable only after successful health, and performs application-only rollback without migration, grant, provider, or database-rollback authority.",
+      "description": "The packaged release contains a root-owned pull poller plus systemd service and timer templates. The poller accepts only a canonical stable GitHub Release, downloads the exact three hosted assets, verifies the two-record checksum file, manifest artifact and source provenance, complete package policy, monitor pairing and exact clean schema two before selector mutation, reads direct-command monitor settings through an allowlisted non-shell parser, captures cleanup ownership independently of function-local lifetime, switches the application atomically, updates its stable executable only after successful health, and performs application-only rollback without migration, grant, provider, or database-rollback authority.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-PULL-001"
@@ -11104,13 +11104,13 @@
         "docs/production_cicd_runbook.md"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-732-release-poller",
-      "notes": "Protected-main workflow publication retains its existing context and immutable-release checks but has no SSH, SCP, inbound credential, or host mutation leg. Anonymous GitHub API access is the default; an optional fine-grained token is limited to repository Contents and Metadata read access and never appears in argv or output."
+      "changed_in": "issue-812-poller-auth-cleanup",
+      "notes": "Protected-main workflow publication retains its existing context and immutable-release checks but has no SSH, SCP, inbound credential, or host mutation leg. Anonymous GitHub API access is the default; an optional fine-grained token is limited to repository Contents and Metadata read access and never appears in argv or output. Direct monitor authorization is read from the root-managed file without reflection, and cleanup rejects any path outside its exact poller-owned direct-child shape."
     },
     {
       "id": "TEST-180",
       "module": "Tests",
-      "description": "Listener-free release-delivery evidence executes numeric compare and no-downgrade decisions, exact stable-release metadata inspection, canonical checksum and source-provenance verification, corrupt-asset rejection before the full verifier, and fail-closed hostile metadata cases. Static order proofs require immutable and schema-two gates before production mutation, application-only rollback and a rollback-drill path, five-minute persistent scheduling, three-interval lag detection, and complete retirement of runner SSH credentials and commands.",
+      "description": "Listener-free release-delivery evidence executes numeric compare and no-downgrade decisions, exact stable-release metadata inspection, canonical checksum and source-provenance verification, corrupt-asset rejection before the full verifier, direct-command monitor-file loading without token output, candidate and predecessor readiness failure recovery, and a successful rollback-drill-to-poll sequence. Static order proofs require immutable and schema-two gates before production mutation, exact owned-work cleanup plus durable failure alarm, application-only rollback, five-minute persistent scheduling, three-interval lag detection, and complete retirement of runner SSH credentials and commands.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-PULL-001",
@@ -11125,8 +11125,8 @@
         ".github/workflows/deploy-production.yml"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-732-release-poller",
-      "notes": "Synthetic files and API records stay in disposable directories. The suite opens no listener, makes no GitHub or production request, invokes no service manager, and performs no release, host, database, provider, secret, DNS, or billing mutation."
+      "changed_in": "issue-812-poller-auth-cleanup",
+      "notes": "Synthetic files and API records stay in disposable directories. The suite sources the production state machine with deterministic filesystem and service seams, opens no listener, makes no GitHub or production request, invokes no real service manager, and performs no release, host, database, provider, secret, DNS, or billing mutation."
     },
     {
       "id": "TOOL-014",

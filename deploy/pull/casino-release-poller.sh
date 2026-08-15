@@ -9,6 +9,7 @@ readonly INSTALL_ROOT="${CASINO_INSTALL_ROOT:-/opt/casino}"
 readonly CURRENT_LINK="${CASINO_CURRENT_LINK:-${INSTALL_ROOT}/current}"
 readonly RELEASES_ROOT="${CASINO_RELEASES_ROOT:-${INSTALL_ROOT}/releases}"
 readonly RELEASE_ENV="${CASINO_RELEASE_ENV:-/etc/casino/release.env}"
+readonly MONITOR_ENV="${CASINO_EDGE_MONITOR_ENV:-/etc/casino/edge-monitor.env}"
 readonly POLLER_STATE_ROOT="${CASINO_RELEASE_POLLER_STATE_ROOT:-/var/lib/casino/release-poller}"
 readonly ALARM_FILE="${CASINO_RELEASE_POLLER_ALARM_FILE:-${POLLER_STATE_ROOT}/alarm}"
 readonly STABLE_POLLER="${CASINO_RELEASE_POLLER_STABLE_PATH:-/usr/local/libexec/casino-release-poller}"
@@ -45,6 +46,34 @@ clear_transient_lag_alarm() {
   if test -f "${ALARM_FILE}" && grep -Eq '^reason=(release_delivery_lag|release_query_failed)$' "${ALARM_FILE}"; then
     rm -f "${ALARM_FILE}"
   fi
+}
+
+cleanup_owned_work_root() {
+  local owned_work_root="$1"
+  local relative_root="${owned_work_root#"${RELEASES_ROOT}/"}"
+  if test "${relative_root}" = "${owned_work_root}" || [[ ! "${relative_root}" =~ ^\.poller\.[A-Za-z0-9]{8}$ ]]; then
+    fail "poll_cleanup_root_invalid"
+    return 1
+  fi
+  test -d "${owned_work_root}" && test ! -L "${owned_work_root}" || { fail "poll_cleanup_root_unsafe"; return 1; }
+  rm -rf -- "${owned_work_root}"
+}
+
+cleanup_deployment() {
+  local status="$1"
+  local owned_work_root="$2"
+  local cleanup_status=0
+  trap - EXIT
+  cleanup_owned_work_root "${owned_work_root}" || cleanup_status=$?
+  if test "${status}" -ne 0; then
+    write_alarm "poll_failed"
+  elif test "${cleanup_status}" -ne 0; then
+    write_alarm "poll_cleanup_failed"
+  fi
+  if test "${cleanup_status}" -ne 0; then
+    return "${cleanup_status}"
+  fi
+  return "${status}"
 }
 
 require_runtime() {
@@ -265,17 +294,55 @@ PY
 verify_live_identity() {
   local expected_version="$1"
   local expected_commit="$2"
-  "${PYTHON}" - "${expected_version}" "${expected_commit}" <<'PY'
+  "${PYTHON}" - "${MONITOR_ENV}" "${expected_version}" "${expected_commit}" <<'PY'
 import json
 import os
+import re
 import sys
+import urllib.parse
 import urllib.request
+from pathlib import Path
 
-expected_version, expected_commit = sys.argv[1:]
-origin = os.environ.get("CASINO_PUBLIC_ORIGIN", "https://casino.tiltseven.com").rstrip("/")
-authorization = os.environ.get("CASINO_EDGE_MONITOR_AUTHORIZATION", "")
-if not authorization.startswith("Bearer ") or len(authorization) < 16:
+# Bind only the reviewed monitor settings from the root-managed file.
+monitor_path, expected_version, expected_commit = sys.argv[1:]
+# Accept the same simple assignment shape as the canonical monitor validator.
+assignment_pattern = re.compile(r"^(?:export[ \t]+)?([A-Z][A-Z0-9_]*)=(.*)$")
+# Name the only two settings this probe may consume from the monitor file.
+allowed_names = {"CASINO_EDGE_MONITOR_AUTHORIZATION", "CASINO_PUBLIC_ORIGIN"}
+# Start with no file-owned values so duplicates fail closed.
+file_values = {}
+# Decode the root-managed file without evaluating shell syntax.
+for line in Path(monitor_path).read_text(encoding="utf-8").splitlines():
+    # Ignore blank and whole-line comment rows.
+    if not line.strip() or line.lstrip().startswith("#"):
+        continue
+    # Parse only one physical assignment row.
+    match = assignment_pattern.fullmatch(line)
+    # Reject malformed rows that target either protected setting.
+    if match is None and any(line.lstrip().startswith(name) for name in allowed_names):
+        raise SystemExit("monitor configuration is invalid")
+    # Ignore unrelated settings without interpreting their values.
+    if match is None or match.group(1) not in allowed_names:
+        continue
+    # Reject duplicate protected assignments before selecting a value.
+    if match.group(1) in file_values:
+        raise SystemExit("monitor configuration is invalid")
+    # Retain only an allowlisted value in memory.
+    file_values[match.group(1)] = match.group(2)
+# Prefer an already supplied service value and otherwise use the reviewed file.
+authorization = os.environ.get("CASINO_EDGE_MONITOR_AUTHORIZATION") or file_values.get("CASINO_EDGE_MONITOR_AUTHORIZATION", "")
+# Require the canonical strong bearer shape without reflecting its contents.
+if re.fullmatch(r"Bearer [\x21-\x7e]{32,512}", authorization) is None:
     raise SystemExit("monitor authorization is unavailable")
+# Prefer an already supplied service origin, then an allowlisted file value, then the public default.
+origin = os.environ.get("CASINO_PUBLIC_ORIGIN") or file_values.get("CASINO_PUBLIC_ORIGIN") or "https://casino.tiltseven.com"
+# Parse the origin structurally before using it for requests.
+parsed_origin = urllib.parse.urlsplit(origin)
+# Require one HTTPS authority without credentials, query, fragment, or a path prefix.
+if parsed_origin.scheme != "https" or not parsed_origin.netloc or parsed_origin.username is not None or parsed_origin.password is not None or parsed_origin.path not in ("", "/") or parsed_origin.query or parsed_origin.fragment:
+    raise SystemExit("monitor public origin is invalid")
+# Normalize only the optional trailing slash after validation.
+origin = origin.rstrip("/")
 def request(path, authenticated):
     headers = {"Accept": "application/json", "User-Agent": "casino-release-poller/1"}
     if authenticated:
@@ -298,6 +365,56 @@ if not isinstance(build, dict) or build.get("app_version") != expected_version o
 PY
 }
 
+current_release_root() {
+  readlink -f "${CURRENT_LINK}"
+}
+
+activate_release() {
+  local release_root="$1"
+  ln -sfn "${release_root}" "${CURRENT_LINK}.next"
+  mv -Tf "${CURRENT_LINK}.next" "${CURRENT_LINK}"
+  test "$(readlink -f "${CURRENT_LINK}")" = "${release_root}"
+}
+
+validate_monitor_configuration() {
+  local candidate_root="$1"
+  "${PYTHON}" "${candidate_root}/scripts/validate_monitor_config.py" check --monitor-env "${MONITOR_ENV}" --application-env /etc/casino/casino.env
+}
+
+write_release_environment() {
+  local candidate_root="$1"
+  local manifest_path="$2"
+  local destination="$3"
+  "${PYTHON}" "${candidate_root}/scripts/write_release_env.py" --manifest "${manifest_path}" --destination "${destination}"
+}
+
+compare_release_roots() {
+  local candidate_root="$1"
+  local release_root="$2"
+  "${PYTHON}" - "${candidate_root}" "${release_root}" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+def inventory(root):
+    result = {}
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            raise SystemExit("release roots may not contain symbolic links")
+        if path.is_file():
+            result[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+        elif path.is_dir():
+            result[relative + "/"] = None
+        else:
+            raise SystemExit("release roots contain unsupported entries")
+    return result
+
+if inventory(Path(sys.argv[1])) != inventory(Path(sys.argv[2])):
+    raise SystemExit("existing release root does not match the verified archive")
+PY
+}
+
 check_schema_two() {
   local root="$1"
   PYTHONPATH="${root}" "${PYTHON}" "${root}/scripts/mysql_migrate.py" bridge-check-schema2
@@ -306,7 +423,7 @@ check_schema_two() {
 observe_release() {
   local version="$1"
   local commit="$2"
-  "${PYTHON}" "${CURRENT_LINK}/scripts/run_edge_monitor.py" --monitor-env /etc/casino/edge-monitor.env --policy "${CURRENT_LINK}/deploy/edge/restricted-preview.json"
+  "${PYTHON}" "${CURRENT_LINK}/scripts/run_edge_monitor.py" --monitor-env "${MONITOR_ENV}" --policy "${CURRENT_LINK}/deploy/edge/restricted-preview.json"
   verify_live_identity "${version}" "${commit}"
 }
 
@@ -315,9 +432,7 @@ rollback_release() {
   local prior_env="$2"
   local prior_version="$3"
   local prior_commit="$4"
-  ln -sfn "${prior_release}" "${CURRENT_LINK}.next"
-  mv -Tf "${CURRENT_LINK}.next" "${CURRENT_LINK}"
-  test "$(readlink -f "${CURRENT_LINK}")" = "${prior_release}"
+  activate_release "${prior_release}"
   if test -s "${prior_env}"; then
     install -m 0640 -o root -g root "${prior_env}" "${RELEASE_ENV}"
   else
@@ -339,14 +454,9 @@ deploy_latest() {
   flock -n 9 || fail "poll_already_running"
   local work_root
   work_root="$(mktemp -d "${RELEASES_ROOT}/.poller.XXXXXXXX")"
-  cleanup_deployment() {
-    local status=$?
-    rm -rf "${work_root}"
-    if test "${status}" -ne 0; then
-      write_alarm "poll_failed"
-    fi
-  }
-  trap cleanup_deployment EXIT
+  local cleanup_command
+  printf -v cleanup_command 'cleanup_deployment "$?" %q' "${work_root}"
+  trap "${cleanup_command}" EXIT
   local prior_env="${work_root}/prior-release.env"
   local metadata="${work_root}/release.json"
   local fields
@@ -362,7 +472,7 @@ deploy_latest() {
     fail "release_identity_conflict"
   fi
   if test "${decision}" != "deploy"; then
-    rm -rf "${work_root}"
+    cleanup_owned_work_root "${work_root}"
     trap - EXIT
     clear_alarm
     log "release_poller=PASS decision=${decision} installed=v${current_version} latest=${latest_tag}"
@@ -374,40 +484,18 @@ deploy_latest() {
   local candidate_root="${work_root}/extracted/virtual_casino_simulator"
   test -d "${candidate_root}" || fail "archive_root_missing"
   CASINO_VERIFY_ROOT="${candidate_root}" verify_assets "${work_root}" "${latest_tag}" "${latest_commit}"
-  "${PYTHON}" "${candidate_root}/scripts/validate_monitor_config.py" check --monitor-env /etc/casino/edge-monitor.env --application-env /etc/casino/casino.env
+  validate_monitor_configuration "${candidate_root}"
   check_schema_two "${candidate_root}"
-  "${PYTHON}" "${candidate_root}/scripts/write_release_env.py" --manifest "${work_root}/${ASSET_MANIFEST}" --destination "${work_root}/release.env"
+  write_release_environment "${candidate_root}" "${work_root}/${ASSET_MANIFEST}" "${work_root}/release.env"
   local release_root="${RELEASES_ROOT}/${latest_commit}"
   if test -e "${release_root}"; then
     test -d "${release_root}" && test ! -L "${release_root}" || fail "release_root_unsafe"
-    "${PYTHON}" - "${candidate_root}" "${release_root}" <<'PY'
-import hashlib
-import os
-import sys
-from pathlib import Path
-
-def inventory(root):
-    result = {}
-    for path in sorted(root.rglob("*")):
-        relative = path.relative_to(root).as_posix()
-        if path.is_symlink():
-            raise SystemExit("release roots may not contain symbolic links")
-        if path.is_file():
-            result[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
-        elif path.is_dir():
-            result[relative + "/"] = None
-        else:
-            raise SystemExit("release roots contain unsupported entries")
-    return result
-
-if inventory(Path(sys.argv[1])) != inventory(Path(sys.argv[2])):
-    raise SystemExit("existing release root does not match the verified archive")
-PY
+    compare_release_roots "${candidate_root}" "${release_root}"
   else
     mv "${candidate_root}" "${release_root}"
   fi
   local prior_release
-  prior_release="$(readlink -f "${CURRENT_LINK}")"
+  prior_release="$(current_release_root)"
   test -d "${prior_release}" || fail "prior_release_missing"
   if test -f "${RELEASE_ENV}"; then
     cp -p "${RELEASE_ENV}" "${prior_env}"
@@ -425,10 +513,8 @@ PY
   }
   trap rollback_on_error ERR
   install -m 0640 -o root -g root "${work_root}/release.env" "${RELEASE_ENV}"
-  ln -sfn "${release_root}" "${CURRENT_LINK}.next"
-  mv -Tf "${CURRENT_LINK}.next" "${CURRENT_LINK}"
+  activate_release "${release_root}"
   switched=1
-  test "$(readlink -f "${CURRENT_LINK}")" = "${release_root}"
   systemctl restart casino
   systemctl reload nginx
   check_schema_two "${release_root}"
@@ -438,7 +524,7 @@ PY
     switched=0
     trap - ERR
     clear_alarm
-    rm -rf "${work_root}"
+    cleanup_owned_work_root "${work_root}"
     trap - EXIT
     log "release_poller=PASS decision=rollback_drill candidate=${latest_tag} restored=v${current_version}"
     return 0
@@ -448,7 +534,7 @@ PY
   switched=0
   trap - ERR
   clear_alarm
-  rm -rf "${work_root}"
+  cleanup_owned_work_root "${work_root}"
   trap - EXIT
   log "release_poller=PASS decision=deployed release=${latest_tag} commit=${latest_commit}"
 }
@@ -481,33 +567,39 @@ check_lag() {
   log "release_poller=PASS lag_check=${decision} installed=v${current_version} latest=${latest_tag} age_seconds=${age} threshold_seconds=${maximum_lag}"
 }
 
-case "${1:-}" in
-  decide)
-    test "$#" -eq 3 || fail "usage_decide"
-    decide_versions "$2" "$3"
-    ;;
-  inspect-release-json)
-    test "$#" -eq 2 || fail "usage_inspect_release_json"
-    parse_release_json "$2"
-    ;;
-  verify-assets)
-    test "$#" -eq 4 || fail "usage_verify_assets"
-    require_runtime
-    verify_assets "$2" "$3" "$4"
-    ;;
-  check-lag)
-    test "$#" -eq 1 || fail "usage_check_lag"
-    check_lag
-    ;;
-  poll)
-    test "$#" -eq 1 || fail "usage_poll"
-    deploy_latest "deploy"
-    ;;
-  rollback-drill)
-    test "$#" -eq 1 || fail "usage_rollback_drill"
-    deploy_latest "rollback-drill"
-    ;;
-  *)
-    fail "usage"
-    ;;
-esac
+main() {
+  case "${1:-}" in
+    decide)
+      test "$#" -eq 3 || fail "usage_decide"
+      decide_versions "$2" "$3"
+      ;;
+    inspect-release-json)
+      test "$#" -eq 2 || fail "usage_inspect_release_json"
+      parse_release_json "$2"
+      ;;
+    verify-assets)
+      test "$#" -eq 4 || fail "usage_verify_assets"
+      require_runtime
+      verify_assets "$2" "$3" "$4"
+      ;;
+    check-lag)
+      test "$#" -eq 1 || fail "usage_check_lag"
+      check_lag
+      ;;
+    poll)
+      test "$#" -eq 1 || fail "usage_poll"
+      deploy_latest "deploy"
+      ;;
+    rollback-drill)
+      test "$#" -eq 1 || fail "usage_rollback_drill"
+      deploy_latest "rollback-drill"
+      ;;
+    *)
+      fail "usage"
+      ;;
+  esac
+}
+
+if test "${BASH_SOURCE[0]}" = "$0"; then
+  main "$@"
+fi
