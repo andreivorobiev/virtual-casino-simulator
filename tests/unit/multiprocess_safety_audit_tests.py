@@ -58,13 +58,13 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
-        # Pin the exact current family cardinalities after Andar Bahar retires direct publication.
+        # Pin the exact current family cardinalities after Over/Under 7 retires direct publication.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 20, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 15},  # Pin current counts.
+            {"player_document_load_save": 19, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 16},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -198,6 +198,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(andar_bahar["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while state and money remain separate boundaries.
         self.assertEqual(andar_bahar["multiworker_status"], "blocked")
+        # Resolve Over/Under 7 after settled-history publication becomes atomic.
+        over_under_7 = next(row for row in games if row["game_id"] == "over_under_7")
+        # Require authoritative reads for response, replay, and ledger recovery.
+        self.assertGreater(over_under_7["load_call_sites"], 0)
+        # Require every reachable history publication to avoid stale whole-document saves.
+        self.assertEqual(over_under_7["save_call_sites"], 0)
+        # Bind terminal journal publication to provider-current callbacks.
+        self.assertGreater(over_under_7["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(over_under_7["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while state and money remain separate boundaries.
+        self.assertEqual(over_under_7["multiworker_status"], "blocked")
         # Resolve Keno after draw and ticket transitions retire every direct state publication.
         keno = next(row for row in games if row["game_id"] == "keno")
         # Require the authoritative Keno read used for response and interruption recovery.
