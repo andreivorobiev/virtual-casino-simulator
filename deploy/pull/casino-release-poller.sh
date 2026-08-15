@@ -542,11 +542,13 @@ deploy_latest() {
   log "release_poller=PASS decision=deployed release=${latest_tag} commit=${latest_commit}"
 }
 
-check_lag() {
+check_lag() (
+  # Isolate the lag-check cleanup trap so it cannot survive into main after work_root leaves scope.
   require_runtime
   local work_root
   work_root="$(mktemp -d)"
-  trap 'rm -rf "${work_root}"' RETURN
+  # Remove only this invocation's captured temporary directory when the isolated check exits.
+  trap 'rm -rf -- "${work_root}"' EXIT
   local fields
   fields="$(query_release "${work_root}/release.json")" || { write_alarm "release_query_failed"; return 1; }
   local latest_tag latest_commit published_epoch checksum_url manifest_url archive_url
@@ -568,7 +570,7 @@ check_lag() {
   fi
   clear_transient_lag_alarm
   log "release_poller=PASS lag_check=${decision} installed=v${current_version} latest=${latest_tag} age_seconds=${age} threshold_seconds=${maximum_lag}"
-}
+)
 
 main() {
   case "${1:-}" in

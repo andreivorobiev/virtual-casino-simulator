@@ -11083,8 +11083,8 @@
         "tests/release_poller_tests.py"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-816-poller-bytecode",
-      "notes": "Repository acceptance is listener-free and makes no host connection. The direct drill reads only allowlisted authorization and origin assignments without shell evaluation or output, every Python child inherits the bytecode-write prohibition, and every failure removes only the captured owned work directory before recording a durable poll_failed alarm. Host requalification remains separately guarded on issue #732; umbrella #435 stays open until that evidence is accepted."
+      "changed_in": "issue-820-poller-lag-cleanup",
+      "notes": "Repository acceptance is listener-free and makes no host connection. The direct drill reads only allowlisted authorization and origin assignments without shell evaluation or output, every Python child inherits the bytecode-write prohibition, lag-check cleanup is scoped to its isolated invocation, and every failure removes only the captured owned work directory before recording a durable alarm. Host requalification remains separately guarded on issue #732; umbrella #435 stays open until that evidence is accepted."
     },
     {
       "id": "TOOL-015",
@@ -11106,8 +11106,8 @@
         "docs/production_cicd_runbook.md"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-816-poller-bytecode",
-      "notes": "Protected-main workflow publication retains its existing context and immutable-release checks but has no SSH, SCP, inbound credential, or host mutation leg. Anonymous GitHub API access is the default; an optional fine-grained token is limited to repository Contents and Metadata read access and never appears in argv or output. Direct monitor authorization is read from the root-managed file without reflection, release-root comparison remains strict for missing, changed, symlinked, or unrelated extra entries, and cleanup rejects any path outside its exact poller-owned direct-child shape."
+      "changed_in": "issue-820-poller-lag-cleanup",
+      "notes": "Protected-main workflow publication retains its existing context and immutable-release checks but has no SSH, SCP, inbound credential, or host mutation leg. Anonymous GitHub API access is the default; an optional fine-grained token is limited to repository Contents and Metadata read access and never appears in argv or output. Direct monitor authorization is read from the root-managed file without reflection, release-root comparison remains strict for missing, changed, symlinked, or unrelated extra entries, and lag-check cleanup uses a subshell-local EXIT trap so no function-local path can leak into the caller."
     },
     {
       "id": "TEST-180",
@@ -11127,8 +11127,8 @@
         ".github/workflows/deploy-production.yml"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-816-poller-bytecode",
-      "notes": "Synthetic files and API records stay in disposable directories. The suite sources the production state machine with deterministic filesystem and service seams, opens no listener, makes no GitHub or production request, invokes no real service manager, and performs no release, host, database, provider, secret, DNS, or billing mutation."
+      "changed_in": "issue-820-poller-lag-cleanup",
+      "notes": "Synthetic files and API records stay in disposable directories. The suite executes lag-check through main for current, within-window, overdue, and identity-conflict outcomes, proves exact temporary cleanup and continued caller execution, opens no listener, makes no GitHub or production request, invokes no real service manager, and performs no release, host, database, provider, secret, DNS, or billing mutation."
     },
     {
       "id": "TOOL-014",
