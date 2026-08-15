@@ -126,6 +126,26 @@
       "introduced_in": "issue-253-caribbean-stud-paytable",
       "changed_in": "issue-253-caribbean-stud-paytable",
       "notes": "The UI renders the existing rules.call_odds values with localized hand labels from strongest to weakest."
+    },
+    {
+      "id": "CS-007",
+      "module": "Caribbean Stud",
+      "description": "Caribbean Stud deal preparation, ante proof, call or fold ownership, terminal archive publication, settlement proof, and action-owned rollback replace only provider-current game fields atomically. Competing processes preserve unrelated sibling state and fail closed before stale decisions can overwrite or resurrect a round.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CS-001",
+        "API-CS-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/caribbean_stud/service.py",
+        "tests/games/caribbean_stud/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py"
+      ],
+      "introduced_in": "issue-781-caribbean-stud-atomic-state",
+      "changed_in": "issue-781-caribbean-stud-atomic-state",
+      "notes": "Provider-atomic state publication does not combine wallet or history storage into one transaction, so production second-worker activation remains blocked. Frozen v1 routes, envelopes, card rules, and economics are unchanged."
     }
   ]
 }
