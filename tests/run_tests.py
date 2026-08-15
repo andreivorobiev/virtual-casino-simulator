@@ -1540,8 +1540,8 @@ def run_api_tests():
     run_case('API-KENO-ATOMIC-001',['KENO-028','KENO-029','TEST-191','TEST-197'],lambda: run_unit_module('casino.games.keno.tests.test_atomic_state','Keno atomic state suite failed'))
     # Execute real two-process Baccarat coup, wager, refund, settings, and recovery races. (issues #756, #769)
     run_case('API-BAC-ATOMIC-001',['BAC-027','BAC-028','TEST-192','TEST-198'],lambda: run_unit_module('casino.games.baccarat.tests.test_atomic_state','Baccarat atomic state suite failed'))
-    # Execute real two-process Blackjack round and same-hand races under the next #704 slice. (issue #758)
-    run_case('API-BJ-ATOMIC-001',['BJ-033','TEST-196'],lambda: run_unit_module('casino.games.blackjack.tests.test_atomic_state','Blackjack atomic round-state suite failed'))
+    # Execute real two-process Blackjack round, settings, and stale active-round races. (issues #758, #773)
+    run_case('API-BJ-ATOMIC-001',['BJ-033','BJ-034','TEST-196','TEST-200'],lambda: run_unit_module('casino.games.blackjack.tests.test_atomic_state','Blackjack atomic state suite failed'))
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
     run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
     # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
@@ -3406,6 +3406,14 @@ def run_api_tests():
         run_case('API-SLOT-001',['SLOT-001','SLOT-002','SLOT-003'],slots)
         # Define the blackjack function used by this module.
         def blackjack():
+            # Reset before proving one successful centrally coerced settings response.
+            api(base,'/api/v1/casino/reset','POST',{})
+            # Recreate the default authenticated player after the reset boundary.
+            login_default_user(base)
+            # Publish one declared setting through the frozen v1 route.
+            settings_result=api(base,'/api/v1/games/blackjack/settings','POST',{'decks':8})
+            # Require the established response envelope and canonical coerced integer.
+            assert set(settings_result)=={'game','state','player','players'} and set(settings_result['state'])=={'rules','shoe_count','rounds'} and settings_result['game']=='blackjack' and settings_result['state']['rules']['decks']==8
             # Deal until the random cards produce a round that remains active; natural
             # blackjack can auto-settle correctly, so the active-round protection test
             # must not depend on a single random hand.
@@ -3428,7 +3436,7 @@ def run_api_tests():
             api(base,'/api/v1/games/blackjack/settings','POST',{'decks':8},ok=False)
             # Set api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id to the value needed for the next operation.
             api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':'human','bet_amount':10},ok=False)
-        run_case('API-BJ-001',['BJ-010','BJ-011','BJ-020'],blackjack)
+        run_case('API-BJ-001',['BJ-010','BJ-011','BJ-020','BJ-034'],blackjack)
         # Define blackjack_insurance_phase_guard to prove revealed rounds cannot mutate the wallet through insurance.
         def blackjack_insurance_phase_guard():
             # Start from the canonical table rules so the persisted fixture remains compatible with the public state endpoint.

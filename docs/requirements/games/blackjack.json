@@ -506,8 +506,26 @@
         "casino/games/blackjack/api.py"
       ],
       "introduced_in": "issue-758-blackjack-atomic-state",
-      "changed_in": "issue-758-blackjack-atomic-state",
-      "notes": "The direct settings publication remains explicit parent-issue #704 debt, so the multiprocess inventory classifies Blackjack as mixed atomic/direct and keeps production second-worker activation blocked. No contract, paytable, public copy, or route changes in this slice."
+      "changed_in": "issue-773-blackjack-atomic-settings",
+      "notes": "Issue #773 complements these round transitions by retiring the direct settings publication. Blackjack remains blocked for production second-worker activation because game state and money still commit through separate provider boundaries. No contract, paytable, public copy, or route changes."
+    },
+    {
+      "id": "BJ-034",
+      "module": "Blackjack",
+      "description": "Blackjack table settings publish only centrally declared and coerced fields through update_player_game_state against the provider-owned latest player document. The atomic callback rechecks active rounds, preserves omitted rules and unrelated sibling state, refreshes the frozen v1 response from the committed document, and eliminates the final reachable direct Blackjack game-state save without changing routes, envelopes, cards, payouts, or browser behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-001",
+        "API-BJ-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/blackjack/api.py"
+      ],
+      "introduced_in": "issue-773-blackjack-atomic-settings",
+      "changed_in": "issue-773-blackjack-atomic-settings",
+      "notes": "Real fresh-process evidence covers settings versus sibling state, disjoint settings, and an ordered provider-latest active-round conflict. Provider-atomic state publication does not authorize a second production worker because ledger and state remain separate transactions."
     }
   ]
 }
