@@ -12136,6 +12136,28 @@
       "notes": "Fresh workers use the real JSON provider and exact Craps service. Lost-response fixtures retain the accepted frozen v1 response and ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     },
     {
+      "id": "TEST-211",
+      "module": "Tests",
+      "description": "Real stale-load Andar Bahar workers race complete match-rank rounds around a separately committed sibling update, proving one provider-winning round, no stale terminal overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication and rollback schedules prove identical state is idempotent and action-owned rejected-wager cleanup preserves concurrent siblings without creating a wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AB-001",
+        "API-AB-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/andar_bahar/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-799-andar-bahar-atomic-state",
+      "changed_in": "issue-799-andar-bahar-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Andar Bahar service. Existing replay, payout, restart, and frozen v1 behavior remain covered while multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -18204,6 +18226,29 @@
       "introduced_in": "game-expansion-andar-bahar",
       "changed_in": "issue-434-complete-game-test-discovery",
       "notes": "Descriptor sort order 250 and the catalog-discovered long driver are canonical; catalog validation now fails closed if a test-bearing game package lacks the marker required by CI unittest discovery."
+    },
+    {
+      "id": "AB-006",
+      "module": "Andar Bahar",
+      "description": "Andar Bahar publishes complete rounds, durable action receipts, wager and settlement proof markers, recovery cleanup, and rejected-wager rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale play can issue a ledger movement or overwrite the winning round, while exact replays recover immutable ledger proof without repeating a debit or credit.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AB-001",
+        "API-AB-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/andar_bahar/service.py",
+        "tests/games/andar_bahar/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-799-andar-bahar-atomic-state",
+      "changed_in": "issue-799-andar-bahar-atomic-state",
+      "notes": "The frozen v1 routes, envelopes, side prices, alternating deal rules, transaction types, retry identities, and public history remain unchanged. Production multiworker activation stays blocked because player state and wallet/history movements remain separate transaction boundaries."
     },
     {
       "id": "AD-001",

@@ -4,6 +4,20 @@
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.
 import copy
+# Import JSON serialization for real provider subprocess evidence.
+import json
+# Import environment selection for disposable child persistence.
+import os
+# Import filesystem paths for process rendezvous gates and state inspection.
+from pathlib import Path
+# Import child processes for fresh-interpreter race evidence.
+import subprocess
+# Import the current interpreter for exact child-runtime selection.
+import sys
+# Import disposable directories for isolated JSON provider documents.
+import tempfile
+# Import bounded polling for deterministic stale-load rendezvous.
+import time
 # Import the standard dependency-free test runner.
 import unittest
 
@@ -29,10 +43,16 @@ class MemoryRepository:
         # Copy state so every mutation requires an explicit save.
         return copy.deepcopy(self.documents.get(player_id, engine.default_state()))
 
-    # Save one detached player document.
-    def save(self, player_id, state):
-        # Persist a deep copy to model the JSON/provider boundary.
-        self.documents[player_id] = copy.deepcopy(state)
+    # Apply one callback to provider-current state and return detached authority.
+    def update(self, game_id, player_id, mutator, factory):
+        # Give the callback an isolated copy of the latest player document.
+        current = copy.deepcopy(self.documents.get(player_id, factory()))
+        # Apply the transition before publishing any result.
+        updated = mutator(current)
+        # Persist a detached copy only after the callback completes.
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Return detached provider-authoritative state to the service.
+        return copy.deepcopy(updated)
 
 
 # Record signed ledger events and enforce action-id replay behavior in memory.
@@ -88,7 +108,7 @@ class AndarBaharApiTests(unittest.TestCase):
         # Define deterministic fixtures keyed by action id.
         self.fixtures = {"play-win": {"match_card": "7H", "dealt_cards": [{"side": "andar", "card": "2C", "matched": False}, {"side": "bahar", "card": "QS", "matched": False}, {"side": "andar", "card": "7D", "matched": True}]}, "play-loss": {"match_card": "9C", "dealt_cards": [{"side": "andar", "card": "4C", "matched": False}, {"side": "bahar", "card": "9S", "matched": True}]}, "play-bahar-win": {"match_card": "9C", "dealt_cards": [{"side": "andar", "card": "4C", "matched": False}, {"side": "bahar", "card": "9S", "matched": True}]}}
         # Build a deterministic service without filesystem or ambient randomness.
-        self.service = AndarBaharService(ledger_gateway=self.ledger, state_loader=self.repository.load, state_saver=self.repository.save, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", fixture_factory=lambda action_id: self.fixtures.get(action_id))
+        self.service = AndarBaharService(ledger_gateway=self.ledger, state_loader=self.repository.load, state_updater=self.repository.update, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", fixture_factory=lambda action_id: self.fixtures.get(action_id))
         # Register only the game-owned routes on the real shared router.
         self.router = Router()
         # Inject the focused service without changing global registration.
@@ -100,6 +120,161 @@ class AndarBaharApiTests(unittest.TestCase):
     def call(self, path, body=None, method="POST", context=None):
         # Delegate with a copied context so router mutations remain request-local.
         return self.router.dispatch(method, path, body or {}, context=dict(context or self.context))
+
+    # Confirm identical publication stays idempotent and preserves provider siblings.
+    def test_atomic_publication_preserves_siblings_and_private_baseline(self):
+        # Load one tracked default document through the service boundary.
+        state = self.service._load("session-player")
+        # Add one deterministic durable receipt as the desired owned transition.
+        state["action_receipts"]["atomic-same"] = {"stage": "play", "round_id": "ab_atomic_same", "request_fingerprint": "a" * 64}
+        # Publish the tracked transition through provider-current comparison.
+        self.service._save("session-player", state)
+        # Add unrelated metadata after the first game-owned publication.
+        self.repository.documents["session-player"]["atomic_markers"] = ["sibling"]
+        # Publish the exact same desired result from the advanced baseline.
+        self.service._save("session-player", state)
+        # Read the final provider-authoritative document.
+        persisted = self.repository.documents["session-player"]
+        # Verify the sibling survives and operation metadata never persists.
+        self.assertEqual(["sibling"], persisted["atomic_markers"])
+        # Keep the optimistic snapshot outside durable player state.
+        self.assertNotIn("_andar_bahar_atomic_baseline", persisted)
+
+    # Confirm rejected wager rollback removes only action-owned prepared state.
+    def test_rejected_debit_rollback_preserves_concurrent_sibling(self):
+        # Build an empty wallet whose first debit must fail before any event.
+        empty_ledger = RecordingLedger({"session-player": 0.0})
+        # Build fresh provider-current state for the rejected action.
+        empty_repository = MemoryRepository()
+        # Retain the ordinary ledger method before injecting a sibling transition.
+        apply_once = empty_ledger.apply_once
+
+        # Publish unrelated metadata immediately before the ledger rejects the debit.
+        def reject_with_sibling(**kwargs):
+            # Add a sibling directly to the provider-current document after preparation.
+            empty_repository.documents["session-player"]["atomic_markers"] = ["concurrent"]
+            # Delegate to the zero-balance ledger so no movement can commit.
+            return apply_once(**kwargs)
+
+        # Inject the concurrent provider update into the first debit boundary.
+        empty_ledger.apply_once = reject_with_sibling
+        # Build the atomic service against the isolated repository.
+        empty_service = AndarBaharService(ledger_gateway=empty_ledger, state_loader=empty_repository.load, state_updater=empty_repository.update, get_player=lambda player_id: {"player_id": player_id, "balance": empty_ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", fixture_factory=lambda action_id: self.fixtures["play-win"])
+        # Reject the unaffordable action after its recovery state is prepared.
+        with self.assertRaises(ValidationError):
+            # Attempt one wager that cannot create a ledger event.
+            empty_service.play("session-player", {"action_id": "atomic-rollback", "wager": 1, "side": "andar"})
+        # Read the provider-authoritative document after rollback.
+        persisted = empty_repository.documents["session-player"]
+        # Verify action-owned state was removed while the sibling survived.
+        self.assertEqual(([], {}, ["concurrent"]), (persisted["recent_rounds"], persisted["action_receipts"], persisted["atomic_markers"]))
+        # Verify failure occurred before any append-only money movement.
+        self.assertEqual([], empty_ledger.events)
+        # Verify private optimistic state never entered provider bytes.
+        self.assertNotIn("_andar_bahar_atomic_baseline", persisted)
+
+    # Prove stale fresh processes preserve siblings and admit one terminal winner.
+    def test_fresh_process_play_race_has_one_winner_and_zero_loser_ledger_calls(self):
+        # Own every provider and rendezvous byte inside one disposable directory.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Resolve this exact checkout for child imports.
+            repository_root = Path(__file__).resolve().parents[3]
+            # Bind provider state to the task-owned disposable root.
+            data_root = Path(temporary) / "data"
+            # Resolve the exact player-game document used by both workers.
+            state_path = data_root / "games" / engine.GAME_ID / "session-player.json"
+            # Create the state directory before seeding one empty game document.
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            # Publish exact initial JSON for both child providers.
+            state_path.write_text(json.dumps(engine.default_state(), sort_keys=True), encoding="utf-8")
+            # Copy the environment before selecting the isolated JSON provider.
+            environment = os.environ.copy()
+            # Bind every child to the disposable state and exact checkout.
+            environment.update({"CASINO_STORAGE_PROVIDER": "json", "CASINO_DATA_DIR": str(data_root), "CASINO_LOG_DIR": str(Path(temporary) / "logs"), "PYTHONPATH": str(repository_root)})
+            # Define one worker whose load pauses after capturing stale state.
+            worker_source = r"""
+import sys
+import time
+from pathlib import Path
+from casino.core.state_store import load_player_game_state, update_player_game_state
+from casino.errors import ConflictError
+from casino.games.andar_bahar import engine
+from casino.games.andar_bahar.service import AndarBaharService
+ready = Path(sys.argv[1])
+release = Path(sys.argv[2])
+action_id = sys.argv[3]
+def load_state(player_id):
+    state = load_player_game_state(engine.GAME_ID, player_id, engine.default_state)
+    ready.write_text('ready', encoding='utf-8')
+    deadline = time.monotonic() + 10
+    while not release.exists() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    if not release.exists():
+        raise RuntimeError('release gate timeout')
+    return state
+class Ledger:
+    def __init__(self):
+        self.calls = []
+    def find(self, player_id, action_id):
+        return None
+    def apply_once(self, **kwargs):
+        self.calls.append(kwargs['action_id'])
+        return {'ledger_id': 'ledger-' + str(len(self.calls)), 'player_id': kwargs['player_id'], 'amount': kwargs['signed_amount'], 'transaction_type': kwargs['transaction_type'], 'game': engine.GAME_ID, 'round_id': kwargs['round_id'], 'details': dict(kwargs['details'])}, False
+ledger = Ledger()
+fixture = {'match_card': '9C', 'dealt_cards': [{'side': 'andar', 'card': '4C', 'matched': False}, {'side': 'bahar', 'card': '9S', 'matched': True}]}
+game = AndarBaharService(ledger_gateway=ledger, state_loader=load_state, state_updater=update_player_game_state, get_player=lambda player_id: {'player_id': player_id, 'balance': 100.0}, clock=lambda: '2026-08-15T00:03:00Z', fixture_factory=lambda _action_id: fixture)
+try:
+    game.play('session-player', {'action_id': action_id, 'wager': 1, 'side': 'andar'})
+    print('PASS:' + str(len(ledger.calls)))
+except ConflictError:
+    print('CONFLICT:' + str(len(ledger.calls)))
+"""
+            # Retain both independently loaded process contenders.
+            workers = []
+            # Start one provider winner candidate and one stale loser candidate.
+            for index in range(2):
+                # Allocate task-owned readiness and release gates.
+                ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
+                # Launch without a shell so interpreter and arguments remain exact.
+                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), f"atomic-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                # Retain process and gate ownership.
+                workers.append((process, ready_path, release_path))
+            # Bound the stale-load rendezvous.
+            deadline = time.monotonic() + 10
+            # Wait until both workers have captured the same initial document.
+            while not all(ready.exists() for _process, ready, _release in workers) and time.monotonic() < deadline:
+                # Stop early if either worker failed before readiness.
+                if any(process.poll() is not None for process, _ready, _release in workers):
+                    # Leave polling for the diagnostic assertion below.
+                    break
+                # Yield briefly without starting another action.
+                time.sleep(0.01)
+            # Require both stale snapshots before publishing a concurrent sibling.
+            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            # Define one unrelated provider-atomic sibling update.
+            sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.andar_bahar import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('andar_bahar', 'session-player', add, engine.default_state)\n"
+            # Commit the sibling after both workers captured stale baselines.
+            sibling = subprocess.run([sys.executable, "-c", sibling_source], cwd=repository_root, env=environment, capture_output=True, text=True, timeout=15)
+            # Require the sibling provider transition to complete cleanly.
+            self.assertEqual(sibling.returncode, 0, f"stdout={sibling.stdout!r} stderr={sibling.stderr!r}")
+            # Release the first worker to publish and debit the winning round.
+            workers[0][2].write_text("go", encoding="utf-8")
+            # Collect the exact winner result.
+            winner_output, winner_error = workers[0][0].communicate(timeout=20)
+            # Require one and only one ledger call from the provider winner.
+            self.assertEqual((workers[0][0].returncode, winner_output.strip()), (0, "PASS:1"), winner_error)
+            # Release the stale worker only after the winner is durable.
+            workers[1][2].write_text("go", encoding="utf-8")
+            # Collect the fail-closed stale result.
+            stale_output, stale_error = workers[1][0].communicate(timeout=15)
+            # Require conflict before the losing process reaches the ledger.
+            self.assertEqual((workers[1][0].returncode, stale_output.strip()), (0, "CONFLICT:0"), stale_error)
+            # Read final provider-authoritative bytes directly.
+            persisted = json.loads(state_path.read_text(encoding="utf-8"))
+            # Require one terminal winner, sibling preservation, and no overwrite.
+            self.assertEqual((persisted["recent_rounds"][-1]["action_id"], persisted["recent_rounds"][-1]["wager_status"], persisted["atomic_markers"]), ("atomic-process-0", "complete", ["concurrent"]))
+            # Verify private optimistic metadata never enters persistent bytes.
+            self.assertNotIn("_andar_bahar_atomic_baseline", persisted)
 
     # Confirm hostile body and query player ids cannot override the session.
     def test_session_binding_and_idempotent_win(self):
@@ -139,7 +314,7 @@ class AndarBaharApiTests(unittest.TestCase):
         # Build fresh storage for the rejected action.
         empty_repository = MemoryRepository()
         # Create the isolated empty-balance service.
-        empty_service = AndarBaharService(ledger_gateway=empty_ledger, state_loader=empty_repository.load, state_saver=empty_repository.save, get_player=lambda player_id: {"player_id": player_id, "balance": empty_ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", fixture_factory=lambda action_id: self.fixtures["play-win"])
+        empty_service = AndarBaharService(ledger_gateway=empty_ledger, state_loader=empty_repository.load, state_updater=empty_repository.update, get_player=lambda player_id: {"player_id": player_id, "balance": empty_ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", fixture_factory=lambda action_id: self.fixtures["play-win"])
         # Reject the debit without committing a ledger row.
         with self.assertRaises(ValidationError):
             # Attempt one unaffordable round.

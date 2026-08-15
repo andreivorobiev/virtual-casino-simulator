@@ -40,7 +40,7 @@ Historical source baseline: 9.1.0
 - over_under_7: 1.1.4
 - plinko: 1.1.2
 - fan_tan: 1.1.4
-- andar_bahar: 1.1.4
+- andar_bahar: 1.1.5
 - acey_deucey: 1.1.3
 - caribbean_stud: 1.1.3
 - let_it_ride: 1.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.20
-- docs: 1.96.20
+- tests: 1.100.21
+- docs: 1.96.21
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -701,6 +701,7 @@ Historical source baseline: 9.1.0
 - **TEST-208** (Tests) - PASS: Real stale-load Pai Gow Poker workers race terminal sets around a separately committed sibling update, proving one provider-winning set, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante rollback preserves concurrent siblings and that lost ante-debit and settlement-credit responses recover immutable proof without a second wallet movement.
 - **TEST-209** (Tests) - PASS: Real stale-load Texas Hold'em Practice Table workers race complete escrow-backed terminal hands around a separately committed sibling update, proving one provider-winning hand, no active-hand resurrection, no sibling loss, and zero ledger calls from the stale loser. Deterministic recovery schedules prove action-owned compensation and stranded-hand healing preserve concurrent siblings while lost terminal-credit responses recover immutable proof without a second refund or payout.
 - **TEST-210** (Tests) - PASS: Real stale-load Craps workers race prepared line-wager rounds around a separately committed sibling update, proving one provider-winning round, no stale active-round overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication, rollback, and settlement schedules prove identical state is idempotent, action-owned wager rollback preserves concurrent siblings, and lost debit or settlement responses recover immutable proof without a second wallet movement.
+- **TEST-211** (Tests) - PASS: Real stale-load Andar Bahar workers race complete match-rank rounds around a separately committed sibling update, proving one provider-winning round, no stale terminal overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication and rollback schedules prove identical state is idempotent and action-owned rejected-wager cleanup preserves concurrent siblings without creating a wallet movement.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1034,6 +1035,7 @@ Historical source baseline: 9.1.0
 - **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with unobscured wallet and feedback controls.
 - **AB-005** (Tests) - PASS: Catalog, contract, browser, per-game Python, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
+- **AB-006** (Andar Bahar) - PASS: Andar Bahar publishes complete rounds, durable action receipts, wager and settlement proof markers, recovery cleanup, and rejected-wager rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale play can issue a ledger movement or overwrite the winning round, while exact replays recover immutable ledger proof without repeating a debit or credit.
 - **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision; a play requires at least one strict inside rank and settles at the server-owned spread price that holds a constant target house edge, while outside ranks and boundary ties lose.
 - **AD-002** (Acey-Deucey) - PASS: Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.
 - **AD-003** (Acey-Deucey) - PASS: Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
