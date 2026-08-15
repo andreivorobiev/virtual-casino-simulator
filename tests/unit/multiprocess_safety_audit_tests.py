@@ -53,7 +53,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(len(games), audit.EXPECTED_GAME_COUNT)
         # Reject duplicate or omitted game identities.
         self.assertEqual(len({row["game_id"] for row in games}), audit.EXPECTED_GAME_COUNT)
-        # Pin the exact current persistence families after Multi-Hand Video Poker retires direct saves.
+        # Pin the exact current persistence families after Roulette retires direct saves.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
@@ -64,7 +64,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 30, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 5},  # Pin current counts.
+            {"player_document_load_save": 29, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 6},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -78,6 +78,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(casino_war["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked because state and money remain separate boundaries.
         self.assertEqual(casino_war["multiworker_status"], "blocked")
+        # Resolve Roulette after bet, refund, spin, terminal, and settings paths retire direct publication.
+        roulette = next(row for row in games if row["game_id"] == "roulette")
+        # Require the authoritative Roulette reads used by payload and recovery paths.
+        self.assertGreater(roulette["load_call_sites"], 0)
+        # Require every reachable Roulette publication to avoid stale whole-document saves.
+        self.assertEqual(roulette["save_call_sites"], 0)
+        # Bind preparation, reconciliation, spin, terminal, and settings transitions to atomic updates.
+        self.assertGreater(roulette["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(roulette["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while state and money remain separate transactions.
+        self.assertEqual(roulette["multiworker_status"], "blocked")
         # Resolve Keno after draw and ticket transitions retire every direct state publication.
         keno = next(row for row in games if row["game_id"] == "keno")
         # Require the authoritative Keno read used for response and interruption recovery.

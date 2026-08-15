@@ -11930,6 +11930,30 @@
       "introduced_in": "issue-775-mhvp-atomic-state",
       "changed_in": "issue-775-mhvp-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact game engine; injected money failures remain listener-free and prove committed ledger evidence is never compensated. Multiworker activation remains blocked because state and money are not one provider transaction."
+    },
+    {
+      "id": "TEST-202",
+      "module": "Tests",
+      "description": "Real fresh-process Roulette evidence races wager preparation and committed spin/finalization against unrelated sibling updates, proves provider-ordered settings cannot erase an already committed wager, and verifies one exact debit. Deterministic failure schedules preserve sibling state during action-owned pre-ledger rollback, retain committed bets and removals after lost debit/refund responses, replay one exact committed settlement without resampling or duplicate history, restore clear-all order, and require zero reachable direct Roulette state saves.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ROU-001",
+        "API-ROU-ATOMIC-001",
+        "API-LEGACY-SETTLE-002",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/roulette/test_atomic_state.py",
+        "tests/roulette_keno_settlement_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-777-roulette-atomic-state",
+      "changed_in": "issue-777-roulette-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Roulette engine. Failure fixtures patch only settlement while the provider callback preserves concurrent siblings and immutable action proof. Multiworker activation remains blocked because state, ledger, and history are separate boundaries."
     }
   ]
 }

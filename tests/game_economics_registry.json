@@ -14,7 +14,7 @@
       "requirement_id": "ROU-001",
       "engine_path": "casino/games/roulette/engine.py",
       "settlement_path": "casino/games/roulette/api.py",
-      "production_sha256": "cff57dc610911250e7095243caca45f24ab173054e6f7f9ed33f271a00329c3f",
+      "production_sha256": "d98795a4b4ef55b033f649821ced9f2187f46116eb4ae08b86faa18b34d70c88",
       "proof_tests": ["tests.game_economics_registry_tests:ProductionEconomicsProofTests.test_roulette_catalog_is_house_side"],
       "rationale": "Every published single- and double-zero bet returns less than its stake on average; the favorable zero rules remain below even return over repeated play."
     },
