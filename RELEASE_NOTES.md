@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.81 Release Notes
+
+## Poller lag-monitor cleanup and production completion
+
+- Packages the accepted #820 repair from PR #821 after v0.9.5.80 activated successfully but its first fresh edge-monitor invocation failed in `check-lag` when a function-local `RETURN` trap outlived `work_root`.
+- Runs `check_lag` in an isolated subshell with an invocation-scoped `EXIT` cleanup, preventing the trap from firing again after the local path leaves scope.
+- Adds listener-free executable evidence for current, within-window deployment, overdue deployment, and same-version identity-conflict decisions through the real `main check-lag` path.
+- Preserves exact temporary-directory cleanup, unrelated sibling files, durable lag and identity alarms, and caller execution after the lag check returns.
+- Preserves frozen APIs, the exact 46-game catalog, game mathematics, paytables, wager acceptance, ledger behavior, and every content-owned module revision.
+- Keeps production and application-only rollback at exact MySQL schema 2 while the catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, database rollback, provider activation, public signup, live OAuth, billing, DNS, or secret mutation is authorized.
+- Adds no permanent requirement identifier; the governed total remains exactly 1040 requirements.
+- Records the exact canonical package inventory as 774 regular files: current source selection 773 plus this v0.9.5.81 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.46.3`, tooling `1.40.1`, Players `9.1.3`, Ledger `9.1.2`, and all content-owned module revisions remain exact.
+- Retains exact immutable v0.9.5.80 as the application-only schema-two rollback predecessor. Issue #820 is already closed through its content PR; issue #732 remains open until v0.9.5.81 deployment, monitor recovery, Browser/PWA verification, and cleanup evidence are posted.
+
 # Virtual Casino Simulator v0.9.5.80 Release Notes
 
 ## Immutable poller-root protection and production requalification
