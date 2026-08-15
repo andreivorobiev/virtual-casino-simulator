@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.80 Release Notes
+
+## Immutable poller-root protection and production requalification
+
+- Packages the accepted #816 repair from PR #817 after the immutable v0.9.5.79 production pull failed closed before activation because rollback-drill Python probes created bytecode artifacts inside the verified release root.
+- Exports `PYTHONDONTWRITEBYTECODE=1` from the pull poller before any Python invocation and from both systemd units so rollback, readiness, and monitor validation cannot create `__pycache__` or `.pyc` residue in an immutable release.
+- Adds a disposable rollback-drill-to-same-release-poll regression that proves the release root remains byte-identical, while retaining a negative control that rejects an unrelated extra file.
+- Preserves the existing checksum, provenance, inventory, schema, health, readiness, rollback, persistence, and durable-alarm gates without weakening root comparison or retrying the failed v0.9.5.79 deployment.
+- Preserves frozen APIs, the exact 46-game catalog, game mathematics, paytables, wager acceptance, ledger behavior, and every content-owned module revision.
+- Keeps production and application-only rollback at exact MySQL schema 2 while the catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, database rollback, provider activation, public signup, live OAuth, billing, DNS, or secret mutation is authorized.
+- Adds no permanent requirement identifier; the governed total remains exactly 1040 requirements.
+- Records the exact canonical package inventory as 773 regular files: current source selection 772 plus this v0.9.5.80 compatibility record.
+- Advances only release-owned application, contracts, tests, and docs revisions; accepted Core `9.46.3`, tooling `1.40.1`, Players `9.1.3`, Ledger `9.1.2`, and all content-owned module revisions remain exact.
+- Retains exact immutable v0.9.5.79 as the application-only schema-two rollback predecessor. Issue #818 closes through the release PR; issue #732 remains open until the production host installation, first successful pull, Browser/PWA verification, and cleanup evidence are posted.
+
 # Virtual Casino Simulator v0.9.5.79 Release Notes
 
 ## Poller recovery and production delivery repair
