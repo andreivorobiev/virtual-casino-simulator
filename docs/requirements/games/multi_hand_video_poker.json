@@ -125,6 +125,28 @@
       "introduced_in": "issue-241-reject-nonfinite-wagers",
       "changed_in": "issue-241-reject-nonfinite-wagers",
       "notes": "This closes the independent wager helper that does not use the shared require_amount function."
+    },
+    {
+      "id": "MHVP-007",
+      "module": "Multi-Hand Video Poker",
+      "description": "Multi-Hand Video Poker publishes round preparation, bounded rollback, hold selection, draw/archive results, and wager or payout completion markers through provider-atomic latest-document callbacks without losing sibling player state.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MHVP-001",
+        "API-MHVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/multi_hand_video_poker/api.py",
+        "tests/games/multi_hand_video_poker/test_api.py",
+        "tests/games/multi_hand_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-775-mhvp-atomic-state",
+      "changed_in": "issue-775-mhvp-atomic-state",
+      "notes": "The provider boundary serializes state only; production remains blocked for a second worker because state and wallet movement are separate transactions. Frozen v1 routes, envelopes, game math, and ledger action identity are unchanged."
     }
   ]
 }

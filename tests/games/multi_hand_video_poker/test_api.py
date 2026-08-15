@@ -27,14 +27,20 @@ class FakeCasino:
         self.sequence = 0
 
     # Load a deep copy of one player-scoped state document.
-    def load_state(self, game_id, player_id, factory):
+    def load(self, player_id):
         # Return persisted state or a fresh default without sharing references.
-        return copy.deepcopy(self.states.get(player_id, factory()))
+        return copy.deepcopy(self.states.get(player_id, engine.default_state()))
 
-    # Save a deep copy of one player-scoped state document.
-    def save_state(self, game_id, player_id, state):
-        # Persist state under the bound player only.
-        self.states[player_id] = copy.deepcopy(state)
+    # Apply one callback to the current player document like the production atomic seam.
+    def update(self, player_id, mutator):
+        # Give the mutator a detached copy so a rejected update cannot alter stored state.
+        current = copy.deepcopy(self.states.get(player_id, engine.default_state()))
+        # Apply the complete state transition inside this fake provider boundary.
+        updated = mutator(current)
+        # Persist and return independent copies like JSON serialization boundaries.
+        self.states[player_id] = copy.deepcopy(updated)
+        # Return a detached authoritative result to the game service.
+        return copy.deepcopy(updated)
 
     # Create one fake ledger event through the same signed-amount semantics as core ledger.
     def transact(self, player_id, amount, transaction_type, game=None, round_id=None, details=None):
@@ -85,7 +91,7 @@ class MultiHandVideoPokerApiTests(unittest.TestCase):
         # Create fresh in-memory state and ledger adapters.
         self.fake = FakeCasino()
         # Build the service with deterministic ids, timestamps, and cards.
-        self.service = api.MultiHandVideoPokerService(load_state=self.fake.load_state, save_state=self.fake.save_state, debit=self.fake.debit, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=lambda: "2026-07-13T00:00:00.000Z", id_factory=lambda prefix: f"{prefix}_round", seed_factory=lambda request_id: f"api:{request_id}")
+        self.service = api.MultiHandVideoPokerService(repository=self.fake, debit=self.fake.debit, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=lambda: "2026-07-13T00:00:00.000Z", id_factory=lambda prefix: f"{prefix}_round", seed_factory=lambda request_id: f"api:{request_id}")
         # Create a game-local router without touching the global registry.
         self.router = Router()
         # Register only the issue #94 routes for focused tests.
@@ -151,6 +157,63 @@ class MultiHandVideoPokerApiTests(unittest.TestCase):
         self.assertIsNone(second["state"]["active_round"])
         # Verify the newest archived round is the completed round.
         self.assertEqual(round_id, second["state"]["recent_rounds"][-1]["round_id"])
+
+    # Prove a rejected pre-debit wager rolls back only its owned prepared round. (MHVP-007, TEST-201)
+    def test_pre_debit_failure_preserves_concurrent_sibling_state(self):
+        # Publish a sibling field after preparation but before the injected debit rejects.
+        def reject_debit(player_id, amount, transaction_type, game=None, round_id=None, details=None):
+            # Apply one independent provider-current update during the money boundary.
+            def publish_sibling(current):
+                # Preserve one exact marker that the action-owned rollback must not erase.
+                current["atomic_sibling"] = {"owner": "other-request"}
+                # Return the complete latest document to the fake provider.
+                return current
+
+            # Commit the sibling publication before surfacing the wager failure.
+            self.fake.update(player_id, publish_sibling)
+            # Simulate a wallet rejection before any ledger event exists.
+            raise RuntimeError("synthetic pre-debit rejection")
+
+        # Build a service whose only changed seam is the rejecting debit.
+        service = api.MultiHandVideoPokerService(repository=self.fake, debit=reject_debit, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=lambda: "2026-07-13T00:00:00.000Z", id_factory=lambda prefix: f"{prefix}_failed", seed_factory=lambda request_id: f"failure:{request_id}")
+        # Require the original wallet failure to remain visible to the route boundary.
+        with self.assertRaisesRegex(RuntimeError, "synthetic pre-debit rejection"):
+            # Attempt one otherwise valid wagered round.
+            service.start_round("session-player", {"request_id": "failure-1", "hand_count": 3, "wager_per_hand": 1})
+        # Read the provider-current state after bounded rollback.
+        current = self.fake.states["session-player"]
+        # Require only the action-owned active round to be cleared.
+        self.assertIsNone(current["active_round"])
+        # Require the concurrently published sibling body to survive byte-for-byte.
+        self.assertEqual({"owner": "other-request"}, current["atomic_sibling"])
+        # Require zero money evidence because the injected debit never committed.
+        self.assertEqual([], self.fake.events)
+
+    # Prove a committed lost response remains recoverable and is never rolled back. (MHVP-007, TEST-201)
+    def test_lost_debit_response_preserves_round_and_replays_one_event(self):
+        # Commit through the established fake ledger and then lose only its response.
+        def commit_then_fail(player_id, amount, transaction_type, game=None, round_id=None, details=None):
+            # Append the exact immutable wager event before simulating transport loss.
+            self.fake.debit(player_id, amount, transaction_type, game, round_id, details)
+            # Surface a failure after durable money movement.
+            raise RuntimeError("synthetic lost debit response")
+
+        # Build a service whose debit seam loses the post-commit response.
+        service = api.MultiHandVideoPokerService(repository=self.fake, debit=commit_then_fail, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=lambda: "2026-07-13T00:00:00.000Z", id_factory=lambda prefix: f"{prefix}_lost", seed_factory=lambda request_id: f"lost:{request_id}")
+        # Require the synthetic response loss to propagate without erasing state.
+        with self.assertRaisesRegex(RuntimeError, "synthetic lost debit response"):
+            # Start one round whose debit commits before the exception.
+            service.start_round("session-player", {"request_id": "lost-1", "hand_count": 3, "wager_per_hand": 2})
+        # Require the prepared round to remain available for ledger-proof recovery.
+        self.assertEqual("mhvp_lost", self.fake.states["session-player"]["active_round"]["round_id"])
+        # Replay through the normal service so immutable ledger evidence completes the marker.
+        recovered = self.service.start_round("session-player", {"request_id": "lost-1", "hand_count": 3, "wager_per_hand": 2})
+        # Require the established round and explicit replay response.
+        self.assertEqual(("mhvp_lost", True, "complete"), (recovered["round"]["round_id"], recovered["replayed"], recovered["round"]["wager_status"]))
+        # Require the frozen public response fields to remain exact.
+        self.assertEqual({"round", "wager", "replayed", "game", "state", "player", "hand_counts", "paytable"}, set(recovered))
+        # Require exactly one aggregate debit despite the lost response and replay.
+        self.assertEqual(1, sum(event["transaction_type"] == "MHVP_WAGER_DEBIT" for event in self.fake.events))
 
 
 # Run this focused suite when invoked directly by a worker.

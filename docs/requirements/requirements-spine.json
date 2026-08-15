@@ -11907,6 +11907,29 @@
       "introduced_in": "issue-773-blackjack-atomic-settings",
       "changed_in": "issue-773-blackjack-atomic-settings",
       "notes": "The ordered active-round test releases both stale loaders together, waits for provider publication, then executes the losing settings callback. Blackjack remains blocked for production multiworker activation because state and ledger movement are not one cross-process transaction."
+    },
+    {
+      "id": "TEST-201",
+      "module": "Tests",
+      "description": "Real fresh-process Multi-Hand Video Poker evidence races hold publication against unrelated sibling state, proves provider-ordered hold-then-draw consumes the latest selection, and proves draw-then-hold refuses stale round resurrection. Deterministic failure evidence preserves sibling state during action-owned pre-debit rollback, retains a committed round after a lost debit response, and recovers exactly one aggregate debit, while static inventory requires zero direct game-state saves.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MHVP-001",
+        "API-MHVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/multi_hand_video_poker/test_api.py",
+        "tests/games/multi_hand_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-775-mhvp-atomic-state",
+      "changed_in": "issue-775-mhvp-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact game engine; injected money failures remain listener-free and prove committed ledger evidence is never compensated. Multiworker activation remains blocked because state and money are not one provider transaction."
     }
   ]
 }

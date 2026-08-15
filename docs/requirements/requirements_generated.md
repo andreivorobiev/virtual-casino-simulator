@@ -23,7 +23,7 @@ Historical source baseline: 9.1.0
 - baccarat: 9.2.1
 - keno: 9.4.1
 - bingo: 9.3.7
-- multi_hand_video_poker: 1.1.2
+- multi_hand_video_poker: 1.1.3
 - casino_war: 1.2.1
 - big_six_wheel: 1.1.4
 - red_dog: 1.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.8
-- docs: 1.96.8
+- tests: 1.100.9
+- docs: 1.96.9
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -691,6 +691,7 @@ Historical source baseline: 9.1.0
 - **TEST-198** (Tests) - PASS: Real two-process Baccarat evidence races prepared bet placement and refund settlements against sibling player-game updates, then proves exact bet identity, one debit and one refund, restored wallet value, preserved sibling state, and zero pending-marker residue. A second real two-process race proves one same-bet refund winner, one fail-closed contender, and one credit. Deterministic failure evidence proves action-owned rollback preserves unrelated state, settings use the latest provider document, and the static multiprocess inventory recognizes atomic-only player-state publication without authorizing a second worker.
 - **TEST-199** (Tests) - PASS: Real two-process Casino War evidence races initial-round and war-decision preparation against sibling player-game updates and same-action contenders, proving one prepared transition, exact request and round identity, one card-consumption sequence, and preserved sibling state. Deterministic ledger failures prove action-owned rollback restores exact cards, requests, rounds, and pruned bounded history only after authoritative first-action absence, while a committed lost response remains durable and recovers without a duplicate debit.
 - **TEST-200** (Tests) - PASS: Real fresh-process Blackjack evidence loads one stale provider document per worker and proves table settings preserve unrelated sibling state, disjoint declared settings merge without lost updates, and a provider-latest active round defeats a stale settings request without changing any existing rule or sibling field. The frozen v1 API proves the established response envelope and centrally coerced value, while static inventory evidence requires zero direct Blackjack saves and retains the state-and-money multiworker blocker.
+- **TEST-201** (Tests) - PASS: Real fresh-process Multi-Hand Video Poker evidence races hold publication against unrelated sibling state, proves provider-ordered hold-then-draw consumes the latest selection, and proves draw-then-hold refuses stale round resurrection. Deterministic failure evidence preserves sibling state during action-owned pre-debit rollback, retains a committed round after a lost debit response, and recovers exactly one aggregate debit, while static inventory requires zero direct game-state saves.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -923,6 +924,7 @@ Historical source baseline: 9.1.0
 - **MHVP-004** (Application) - PASS: The Multi-Hand Video Poker surface provides complete English and Russian copy and remains usable without overflow across required desktop, tablet, and mobile viewports.
 - **MHVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Multi-Hand Video Poker with requirement, module, version, and visual evidence traceability.
 - **MHVP-006** (Multi-Hand Video Poker) - PASS: Multi-Hand Video Poker rejects decoded and string non-finite wager-per-hand values before round construction, state persistence, aggregate debit, or payout handling.
+- **MHVP-007** (Multi-Hand Video Poker) - PASS: Multi-Hand Video Poker publishes round preparation, bounded rollback, hold selection, draw/archive results, and wager or payout completion markers through provider-atomic latest-document callbacks without losing sibling player state.
 - **CW-001** (Casino War) - PASS: Casino War compares one player card with one dealer card from a six-deck shoe, offers surrender or war on an initial tie, and awards a second war tie to the player.
 - **CW-002** (Casino War) - PASS: Authenticated sessions own isolated reload-safe Casino War state, tie decisions, recent rounds, and canonical route restoration.
 - **CW-003** (Casino War) - PASS: Casino War ante, optional war wager, surrender return, and settlement movements use the shared ledger exactly once under stable action identifiers.
