@@ -82,6 +82,8 @@ from tests.unit import concurrent_browser_138_tests
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
 from tests.progress import ProgressReporter
+# Import state-driven Bingo reload validation so Browser acceptance never relies on a fixed locator race. (issue #785)
+from tests.browser_readiness import require_bingo_terminal_auto_payload, require_bingo_terminal_reload_payload, wait_for_bingo_terminal_render
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
 # Track the browser-suite reporter only while named browser cases are executing.
@@ -10000,12 +10002,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     run_case('BR-BINGO-PURCHASE-001',['BINGO-012','BINGO-022','LEDGER-020','TEST-010','TEST-012'],bingo_purchase_guard)
                     # Call one ball through the existing visible action before completing the normal Bingo scenario.
                     page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700)
-                    # Complete the session through the existing bounded compatibility helper.
-                    page.evaluate("""async () => { const response = await fetch('/api/v1/games/bingo/auto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max_calls: 75 }) }); const payload = await response.json(); if (!payload.ok) throw new Error(payload.error?.message || 'Bingo auto failed'); }""")
-                    # Remount Bingo and wait for the authoritative completed session to render.
-                    page.get_by_test_id('nav-bingo').click(); page.locator('[data-winning-cell="true"]').first.wait_for(timeout=5000)
+                    # Complete the session through the existing bounded compatibility helper and retain its authoritative response.
+                    bingo_auto_payload=page.evaluate("""async () => { const response = await fetch('/api/v1/games/bingo/auto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max_calls: 75 }) }); return await response.json(); }""")
+                    # Fail closed unless the mutation response contains one archived winning session.
+                    bingo_terminal=require_bingo_terminal_auto_payload(bingo_auto_payload)
+                    # Leave Bingo through a deterministic route transition so clicking Bingo must create a fresh mount.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Observe the exact state response consumed by the fresh Bingo route mount.
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/state') and response.request.method=='GET',timeout=5000) as bingo_reload_info:
+                        # Remount Bingo through its real navigation control after route ownership changed.
+                        page.get_by_test_id('nav-bingo').click()
+                    # Prove the remount loaded the same authoritative terminal session before inspecting markup.
+                    bingo_reload_terminal=require_bingo_terminal_reload_payload(bingo_reload_info.value.json(),bingo_terminal['session_id'])
+                    # Wait on the complete terminal render projection without extending the old five-second budget.
+                    bingo_terminal_render=wait_for_bingo_terminal_render(page,bingo_reload_terminal)
                     # Preserve the existing premium Bingo acceptance after the new purchase boundary proof.
-                    run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013'],lambda: page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
+                    run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013'],lambda: bingo_terminal_render['winningCellCount']==bingo_terminal['winning_cell_count'] and page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
                     # Seed one isolated deferred natural so the rendered Stand path is deterministic. (BJ-031, TEST-054)
                     browser_blackjack_state=blackjack_engine.default_state(); browser_blackjack_state['shoe']=['2S']*52+['9D','AS','KH','AS']
                     # Persist only the synthetic browser player's controlled Blackjack shoe before mounting the route.

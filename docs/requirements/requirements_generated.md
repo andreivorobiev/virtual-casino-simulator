@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.3
 - pai_gow_poker: 1.1.3
 - teen_patti: 1.1.3
-- tests: 1.100.15
-- docs: 1.96.15
+- tests: 1.100.16
+- docs: 1.96.16
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
