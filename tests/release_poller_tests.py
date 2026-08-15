@@ -262,6 +262,87 @@ class ReleasePollerTests(unittest.TestCase):
         # Return the exact disposable evidence paths with the process result.
         return result, releases_root, predecessor_root, selector_record, alarm_file, sentinel, stable_poller, trace
 
+    # Exercise lag-check through main so function-return trap lifetime matches production execution.
+    def run_lag_scenario(self, scenario: str, installed_version: str, installed_commit: str, published_epoch: int):
+        # Allocate a scenario-specific directory for cleanup and alarm assertions.
+        scenario_root = self.root / f"lag-{scenario}"
+        # Create the isolated state root consumed by the real alarm helpers.
+        state_root = scenario_root / "state"
+        # Materialize the state root before the production helper writes into it.
+        state_root.mkdir(parents=True)
+        # Bind the exact deterministic temporary directory returned by the mktemp seam.
+        work_root = scenario_root / "owned-work"
+        # Retain one sibling proving cleanup never broadens beyond the captured work root.
+        sibling = scenario_root / "operator-sentinel"
+        # Persist fixed sibling bytes for exact post-check verification.
+        sibling.write_text("preserve\n", encoding="utf-8", newline="\n")
+        # Capture the production log decision without invoking the host logger.
+        trace = scenario_root / "trace"
+        # Bind the real durable alarm path under the disposable state root.
+        alarm = state_root / "alarm"
+        # Build one sourceable main-path harness with deterministic release metadata and time.
+        harness = r'''
+            export CASINO_RELEASE_POLLER_STATE_ROOT="__STATE_ROOT__"
+            export CASINO_RELEASE_POLLER_ALARM_FILE="__ALARM__"
+            export CASINO_RELEASE_POLL_INTERVAL_SECONDS=300
+            export CASINO_RELEASE_LAG_INTERVAL_MULTIPLIER=3
+            export CASINO_PYTHON="__PYTHON__"
+            source "__POLLER__"
+            log() { printf '%s\n' "$1" >> "__TRACE__"; }
+            require_runtime() { :; }
+            mktemp() {
+              test "$1" = "-d"
+              command mkdir "__WORK_ROOT__"
+              printf '%s\n' "__WORK_ROOT__"
+            }
+            query_release() {
+              : > "$1"
+              printf 'v0.9.5.80\t%s\t%s\thttps://github.com/checksums\thttps://github.com/manifest\thttps://github.com/archive\n' "__LATEST_COMMIT__" "__PUBLISHED_EPOCH__"
+            }
+            installed_version() { printf '%s\n' "__INSTALLED_VERSION__"; }
+            installed_commit() { printf '%s\n' "__INSTALLED_COMMIT__"; }
+            date() {
+              test "$1" = "+%s"
+              printf '2000\n'
+            }
+            main_rc=0
+            if main check-lag; then
+              :
+            else
+              main_rc=$?
+            fi
+            printf 'main_rc=%s\n' "${main_rc}"
+            test ! -e "__WORK_ROOT__"
+            test -f "__SIBLING__"
+            printf 'after_main=PASS\n'
+        '''
+        # Bind one exact candidate commit shared by all deterministic scenarios.
+        latest_commit = "a" * 40
+        # Replace only fixed test-owned markers with safe fixture values.
+        replacements = {
+            "__STATE_ROOT__": bash_path(state_root),
+            "__ALARM__": bash_path(alarm),
+            "__PYTHON__": bash_path(sys.executable),
+            "__POLLER__": bash_path(POLLER),
+            "__TRACE__": bash_path(trace),
+            "__WORK_ROOT__": bash_path(work_root),
+            "__LATEST_COMMIT__": latest_commit,
+            "__PUBLISHED_EPOCH__": str(published_epoch),
+            "__INSTALLED_VERSION__": installed_version,
+            "__INSTALLED_COMMIT__": installed_commit,
+            "__SIBLING__": bash_path(sibling),
+        }
+        # Apply every deterministic marker and fail authoring if a marker disappears.
+        for marker, value in replacements.items():
+            # Require each marker to remain represented in the harness contract.
+            self.assertIn(marker, harness)
+            # Replace all intentional uses of the fixed marker.
+            harness = harness.replace(marker, value)
+        # Execute the actual main-to-check_lag call without network, service, or production access.
+        result = self.run_sourced_poller(harness)
+        # Return exact process, alarm, sibling, work-root, trace, and candidate evidence.
+        return result, alarm, sibling, work_root, trace, latest_commit
+
     # Build one canonical stable release API object with the exact required assets.
     def release_payload(self):
         # Use one full commit so provenance validation remains exact.
@@ -299,6 +380,52 @@ class ReleasePollerTests(unittest.TestCase):
             result = self.run_poller("decide", installed, latest, check=False)
             # Require every malformed comparison to fail rather than guess.
             self.assertNotEqual(result.returncode, 0)
+
+    # Prove lag-check owns cleanup for exactly one main call and preserves all decision alarms.
+    def test_lag_check_main_path_cleans_once_without_return_trap_leak(self):
+        # Define current, within-window deploy, overdue deploy, and identity-conflict cases.
+        scenarios = (
+            ("current", "0.9.5.80", "latest", 1500, 0, None, "lag_check=current"),
+            ("deploy-within", "0.9.5.79", "previous", 1500, 0, None, "lag_check=deploy"),
+            ("deploy-overdue", "0.9.5.79", "previous", 0, 1, "release_delivery_lag", None),
+            ("identity-conflict", "0.9.5.80", "different", 1500, 1, "release_identity_conflict", None),
+        )
+        # Exercise each decision independently so one cleanup cannot satisfy a sibling case.
+        for scenario, version, commit_kind, published, expected_rc, alarm_reason, log_fragment in scenarios:
+            # Bind the exact installed commit needed for current or conflict behavior.
+            installed_commit = "a" * 40 if commit_kind == "latest" else ("b" * 40)
+            # Run the production main path through the disposable lag harness.
+            result, alarm, sibling, work_root, trace, _latest = self.run_lag_scenario(
+                scenario,
+                version,
+                installed_commit,
+                published,
+            )
+            # Require the harness itself to complete after main returns.
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            # Bind the exact inner main status for success and fail-closed decisions.
+            self.assertIn(f"main_rc={expected_rc}", result.stdout, scenario)
+            # Prove execution continued after the function-local cleanup scope ended.
+            self.assertIn("after_main=PASS", result.stdout, scenario)
+            # Reject the production regression explicitly in both output channels.
+            self.assertNotIn("unbound variable", result.stdout + result.stderr, scenario)
+            # Require exact captured-work cleanup and sibling preservation.
+            self.assertFalse(work_root.exists(), scenario)
+            # Preserve the unrelated sibling bytes exactly.
+            self.assertEqual(sibling.read_text(encoding="utf-8"), "preserve\n", scenario)
+            # Read the optional decision log only when a successful check should emit one.
+            trace_text = trace.read_text(encoding="utf-8") if trace.exists() else ""
+            # Bind successful decision logging without weakening alarm cases.
+            if log_fragment is not None:
+                # Require the exact successful current or deploy-within decision.
+                self.assertIn(log_fragment, trace_text, scenario)
+            # Require success to leave no durable alarm behind.
+            if alarm_reason is None:
+                # A successful lag check must not invent an alarm.
+                self.assertFalse(alarm.exists(), scenario)
+            else:
+                # A fail-closed decision must persist its exact bounded alarm reason.
+                self.assertEqual(alarm.read_text(encoding="utf-8"), f"status=alarm\nreason={alarm_reason}\n", scenario)
 
     # Prove stable release inspection binds exact identity, publication time, and asset URLs.
     def test_release_json_inspection_is_exact_and_listener_free(self):
