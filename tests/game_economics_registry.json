@@ -453,7 +453,7 @@
       "requirement_id": "THPT-001",
       "engine_path": "casino/games/texas_holdem_practice_table/engine.py",
       "settlement_path": "casino/games/texas_holdem_practice_table/api.py",
-      "production_sha256": "3a194d2da34055f15cc24c2fbc0c8bea0079c56c20c3a99407a18f31d4f46d2e",
+        "production_sha256": "0fccd5682510df5b30369a28575dd39ca0b1998323d52f6bd68766d2b680909a",
       "proof_tests": ["casino.games.texas_holdem_practice_table.tests.test_economics:TexasHoldemPracticeTableEconomicsTests.test_rake_is_withheld_and_pot_conserves", "casino.games.texas_holdem_practice_table.tests.test_economics:TexasHoldemPracticeTableEconomicsTests.test_always_play_return_is_house_side"],
       "rationale": "The five-percent production pot rake converts the audited best call-or-fold return to a house-side result while conserving the remaining pot."
     },

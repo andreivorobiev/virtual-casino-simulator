@@ -4,8 +4,22 @@
 
 # Import detached-copy support so memory persistence matches JSON boundaries.
 import copy
+# Import JSON support for exact disposable provider bytes.
+import json
+# Import environment access for isolated child-provider configuration.
+import os
+# Import subprocess support for independent stale-load workers.
+import subprocess
+# Import the active interpreter selected by the repository test runner.
+import sys
+# Import task-owned temporary directories for provider bytes and gates.
+import tempfile
+# Import bounded polling for worker rendezvous.
+import time
 # Import unittest for dependency-free focused execution.
 import unittest
+# Import portable paths for exact checkout and worker files.
+from pathlib import Path
 
 # Import shared public errors for recording-ledger behavior assertions.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
@@ -27,10 +41,16 @@ class MemoryRepository:
         # Return a deep copy so every mutation requires an explicit save.
         return copy.deepcopy(self.documents.get(player_id, engine.default_state()))
 
-    # Save one detached player-scoped document.
-    def save(self, player_id: str, state: dict) -> None:
-        # Persist a deep copy to model serialization boundaries.
-        self.documents[player_id] = copy.deepcopy(state)
+    # Apply one callback to provider-current state and publish its detached result.
+    def update(self, player_id: str, mutator) -> dict:
+        # Give the callback a detached document so failed transitions cannot leak.
+        current = copy.deepcopy(self.documents.get(player_id, engine.default_state()))
+        # Apply the complete transition inside this fake provider boundary.
+        updated = mutator(current)
+        # Store a detached result so later loads remain isolated.
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Return an independent authoritative value like production storage.
+        return copy.deepcopy(updated)
 
 
 # Record append-only human and funded-opponent events through ledger-shaped operations.
@@ -39,6 +59,10 @@ class RecordingLedger:
     def __init__(self):
         # Retain chronological append-only event rows.
         self.events = []
+        # Select committed actions whose first response should be lost.
+        self.lost_response_action_ids = set()
+        # Count every attempted transaction before replay recovery.
+        self.transact_calls = []
         # Retain balances only inside this ledger test double.
         self.balances = {"bound-player": 100.0, "other-player": 100.0, "bot_1": 100_000.0, "bot_2": 100_000.0, "bot_3": 100_000.0}
 
@@ -54,6 +78,8 @@ class RecordingLedger:
 
     # Apply one prepared debit or credit inside the recording adapter.
     def transact(self, intent: dict) -> dict:
+        # Record the exact action before applying or rejecting the movement.
+        self.transact_calls.append(intent["action_id"])
         # Read the current balance before applying the signed movement.
         before = self.balances[intent["player_id"]]
         # Convert the positive intent magnitude into a signed ledger amount.
@@ -70,6 +96,12 @@ class RecordingLedger:
         event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": intent["player_id"], "game": intent["game"], "round_id": intent["round_id"], "transaction_type": intent["transaction_type"], "amount": signed, "details": copy.deepcopy(intent["details"])}
         # Append the committed immutable-shaped event.
         self.events.append(event)
+        # Lose one configured response only after immutable evidence commits.
+        if intent["action_id"] in self.lost_response_action_ids:
+            # Consume the fault so normal recovery can return the existing row.
+            self.lost_response_action_ids.remove(intent["action_id"])
+            # Surface the same ambiguous boundary as a dropped provider response.
+            raise RuntimeError("lost Texas Hold'em ledger response")
         # Return a detached committed row.
         return copy.deepcopy(event)
 
@@ -196,6 +228,143 @@ class TexasHoldemPracticeTableApiTests(unittest.TestCase):
         self.assertEqual(5, len(self.ledger.events))
         # Verify the settled hand remains reload-safe and fully reconciled.
         self.assertTrue(payload["state"]["recent_hands"][0]["settlement"]["complete"])
+
+    # Confirm a committed terminal credit with a lost response recovers once.
+    def test_lost_terminal_response_recovers_without_repeating_credit(self):
+        # Start one deterministic fully escrowed hand.
+        started = self.start(wager=1)
+        # Bind the first terminal human refund to an ambiguous response loss.
+        lost_action_id = f"thpt:{started['hand']['hand_id']}:human:refund"
+        # Lose only the first response after that refund commits.
+        self.ledger.lost_response_action_ids.add(lost_action_id)
+        # Surface the injected post-commit response loss.
+        with self.assertRaisesRegex(RuntimeError, "lost Texas Hold'em ledger response"):
+            # Fold so server-managed seats finish the hand and prepare terminal credits.
+            self.controller.act("bound-player", started["hand"]["hand_id"], "fold", "action-fold-lost-001", "preflop")
+        # Reconcile immutable proof through the normal state route.
+        recovered = self.controller.state("bound-player")
+        # Replay the exact fold after recovery without another state transition.
+        replayed = self.controller.act("bound-player", started["hand"]["hand_id"], "fold", "action-fold-lost-001", "preflop")
+        # Select the exact ambiguous refund from append-only evidence.
+        refund_events = [event for event in self.ledger.events if event["details"]["texas_holdem_action_id"] == lost_action_id]
+        # Require one credit, one transaction attempt, and one stable terminal hand.
+        self.assertEqual((len(refund_events), self.ledger.transact_calls.count(lost_action_id), recovered["state"]["recent_hands"][0], replayed["hand"]), (1, 1, replayed["hand"], replayed["hand"]))
+        # Verify the private optimistic baseline never enters persisted state.
+        self.assertNotIn(api._ATOMIC_BASELINE_KEY, self.repository.documents["bound-player"])
+
+    # Prove stale fresh processes preserve siblings and only one terminal hand wins.
+    def test_fresh_process_start_race_has_one_terminal_winner_and_no_loser_escrow(self):
+        # Own every provider and rendezvous byte inside one disposable directory.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Resolve this exact checkout for child imports.
+            repository_root = Path(__file__).resolve().parents[4]
+            # Bind provider state to the task-owned root.
+            data_root = Path(temporary) / "data"
+            # Resolve the exact player-game document used by both workers.
+            state_path = data_root / "games" / engine.GAME_ID / "session-player.json"
+            # Create the state directory before seeding one empty table.
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            # Publish exact initial JSON for both child providers.
+            state_path.write_text(json.dumps(engine.default_state(), sort_keys=True), encoding="utf-8")
+            # Copy the environment before selecting the isolated JSON provider.
+            environment = os.environ.copy()
+            # Bind all child persistence to the disposable root.
+            environment.update({"CASINO_STORAGE_PROVIDER": "json", "CASINO_DATA_DIR": str(data_root), "CASINO_LOG_DIR": str(Path(temporary) / "logs"), "PYTHONPATH": str(repository_root)})
+            # Define one service worker whose repository load pauses after capturing stale state.
+            worker_source = r"""
+import sys
+import time
+from pathlib import Path
+from casino.errors import ConflictError
+from casino.games.texas_holdem_practice_table.api import StateRepository, TexasHoldemPracticeTableController
+base = StateRepository()
+ready = Path(sys.argv[1])
+release = Path(sys.argv[2])
+action_id = sys.argv[3]
+class RendezvousRepository:
+    def load(self, player_id):
+        state = base.load(player_id)
+        ready.write_text('ready', encoding='utf-8')
+        deadline = time.monotonic() + 10
+        while not release.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        if not release.exists():
+            raise RuntimeError("Texas Hold'em race release timed out")
+        return state
+    def update(self, player_id, mutator):
+        return base.update(player_id, mutator)
+class RecordingLedger:
+    def __init__(self):
+        self.calls = []
+        self.events = {}
+    def ensure_accounts(self):
+        return []
+    def find_action(self, player_id, requested_action_id):
+        return self.events.get((player_id, requested_action_id))
+    def transact(self, intent):
+        self.calls.append(intent['action_id'])
+        event = {'ledger_id': 'ledger-' + str(len(self.calls)), 'player_id': intent['player_id'], 'game': intent['game'], 'round_id': intent['round_id'], 'transaction_type': intent['transaction_type'], 'details': dict(intent['details'])}
+        self.events[(intent['player_id'], intent['action_id'])] = event
+        return event
+ledger = RecordingLedger()
+game = TexasHoldemPracticeTableController(repository=RendezvousRepository(), ledger_adapter=ledger, player_reader=lambda player_id: {'player_id': player_id, 'balance': 100000.0}, clock=lambda: '2026-08-15T00:01:00Z', id_factory=lambda prefix: prefix + '_' + action_id, seed_factory=lambda request_id: 'race:' + request_id)
+try:
+    started = game.start_hand('session-player', 1, action_id)
+    game.act('session-player', started['hand']['hand_id'], 'fold', 'fold-' + action_id, 'preflop')
+    print('PASS:' + str(len(ledger.calls)))
+except ConflictError:
+    print('CONFLICT:' + str(len(ledger.calls)))
+"""
+            # Retain both independently loaded process contenders.
+            workers = []
+            # Start one terminal winner candidate and one stale loser candidate.
+            for index in range(2):
+                # Allocate task-owned readiness and release gates.
+                ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
+                # Launch without a shell so interpreter and arguments remain exact.
+                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), f"start-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                # Retain process and gate ownership.
+                workers.append((process, ready_path, release_path))
+            # Bound the stale-load rendezvous.
+            deadline = time.monotonic() + 10
+            # Wait until both workers have captured the same initial document.
+            while not all(ready.exists() for _process, ready, _release in workers) and time.monotonic() < deadline:
+                # Stop early if either worker failed before readiness.
+                if any(process.poll() is not None for process, _ready, _release in workers):
+                    # Leave polling for the diagnostic assertion below.
+                    break
+                # Yield briefly without starting another action.
+                time.sleep(0.01)
+            # Require both stale snapshots before publishing a concurrent sibling.
+            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            # Define one unrelated provider-atomic sibling update.
+            sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.texas_holdem_practice_table import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('texas_holdem_practice_table', 'session-player', add, engine.default_state)\n"
+            # Commit the sibling after both workers captured their stale baselines.
+            sibling = subprocess.run([sys.executable, "-c", sibling_source], cwd=repository_root, env=environment, capture_output=True, text=True, timeout=15)
+            # Require the sibling provider transition to complete cleanly.
+            self.assertEqual(sibling.returncode, 0, f"stdout={sibling.stdout!r} stderr={sibling.stderr!r}")
+            # Release the first worker to publish and settle the winning hand.
+            workers[0][2].write_text("go", encoding="utf-8")
+            # Collect the exact winner result.
+            winner_output, winner_error = workers[0][0].communicate(timeout=20)
+            # Require the first start and terminal action to commit wallet-shaped calls.
+            self.assertRegex(winner_output.strip(), r"^PASS:[1-9][0-9]*$")
+            # Preserve stderr for a precise unexpected-process diagnostic.
+            self.assertEqual(workers[0][0].returncode, 0, winner_error)
+            # Release the stale second worker only after the winner is durable.
+            workers[1][2].write_text("go", encoding="utf-8")
+            # Collect the fail-closed stale result.
+            stale_output, stale_error = workers[1][0].communicate(timeout=15)
+            # Require conflict before the losing process attempts any escrow.
+            self.assertEqual((workers[1][0].returncode, stale_output.strip()), (0, "CONFLICT:0"), stale_error)
+            # Read final provider-authoritative bytes directly.
+            persisted = json.loads(state_path.read_text(encoding="utf-8"))
+            # Resolve the sole terminal hand.
+            terminal = persisted["recent_hands"][-1]
+            # Require one winner, sibling preservation, and no active-hand resurrection.
+            self.assertEqual((persisted["active_hand"], terminal["phase"], "fold-start-process-0" in terminal["action_ids"], "fold-start-process-1" in terminal["action_ids"], persisted["atomic_markers"]), (None, "settled", True, False, ["concurrent"]))
+            # Verify the private optimistic baseline never enters persisted bytes.
+            self.assertNotIn(api._ATOMIC_BASELINE_KEY, persisted)
 
     # Confirm public history bounds do not invalidate older durable retry receipts.
     def test_old_receipts_replay_after_public_history_window(self):
