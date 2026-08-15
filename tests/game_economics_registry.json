@@ -100,7 +100,7 @@
       "requirement_id": "MHVP-001",
       "engine_path": "casino/games/multi_hand_video_poker/engine.py",
       "settlement_path": "casino/games/multi_hand_video_poker/api.py",
-      "production_sha256": "a83cc3c3a70bcc44d356e1a070bfc01b5283d1befbb50485e50cc93d9d65479d",
+      "production_sha256": "bf65fce823ea09c4afed4e439e113f70fdf8b2685bb46eaa58cbee7c817e0cf2",
       "proof_tests": ["tests.games.multi_hand_video_poker.test_engine:MultiHandVideoPokerEngineTests.test_jacks_or_better_paytable_boundaries", "tests.games.multi_hand_video_poker.test_engine:MultiHandVideoPokerEngineTests.test_holds_are_shared_across_ten_hands"],
       "rationale": "All modes share the same source-pinned Jacks-or-Better schedule and production hold/draw evaluator qualified by the prior optimal-policy audit."
     },

@@ -53,7 +53,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(len(games), audit.EXPECTED_GAME_COUNT)
         # Reject duplicate or omitted game identities.
         self.assertEqual(len({row["game_id"] for row in games}), audit.EXPECTED_GAME_COUNT)
-        # Pin the exact current persistence families after Blackjack retires the final mixed direct-save path.
+        # Pin the exact current persistence families after Multi-Hand Video Poker retires direct saves.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
@@ -64,7 +64,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 31, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 4},  # Pin current counts.
+            {"player_document_load_save": 30, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 5},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -114,6 +114,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(blackjack["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked because state and money remain separate boundaries.
         self.assertEqual(blackjack["multiworker_status"], "blocked")
+        # Resolve Multi-Hand Video Poker after all seven direct publications move behind callbacks.
+        multi_hand = next(row for row in games if row["game_id"] == "multi_hand_video_poker")
+        # Require the authoritative read used for public state and recovery payloads.
+        self.assertGreater(multi_hand["load_call_sites"], 0)
+        # Require preparation, rollback, holds, draw, and settlement markers to avoid direct saves.
+        self.assertEqual(multi_hand["save_call_sites"], 0)
+        # Bind every reachable state mutation to the provider-atomic repository method.
+        self.assertGreater(multi_hand["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(multi_hand["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while money is a separate transaction.
+        self.assertEqual(multi_hand["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))
         # Refuse second-worker authorization for every game.
