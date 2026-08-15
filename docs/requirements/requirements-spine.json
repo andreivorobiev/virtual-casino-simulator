@@ -12044,6 +12044,28 @@
       "introduced_in": "issue-786-three-card-poker-atomic-state",
       "changed_in": "issue-786-three-card-poker-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Three Card Poker engine. Lost-response fixtures retain the accepted frozen v1 response and ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+    },
+    {
+      "id": "TEST-207",
+      "module": "Tests",
+      "description": "Real stale-load Casino Hold'em workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante and Call rollback preserve concurrent siblings and that lost ante debit, Call debit, and settlement-credit responses recover immutable proof without a second wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CH-001",
+        "API-CH-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/casino_holdem/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-788-casino-holdem-atomic-state",
+      "changed_in": "issue-788-casino-holdem-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Casino Hold'em engine. Lost-response fixtures retain the accepted frozen v1 response and ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     }
   ]
 }

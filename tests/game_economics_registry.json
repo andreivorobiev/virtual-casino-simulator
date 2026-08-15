@@ -397,7 +397,7 @@
       "requirement_id": "CH-001",
       "engine_path": "casino/games/casino_holdem/engine.py",
       "settlement_path": "casino/games/casino_holdem/service.py",
-      "production_sha256": "4baa2da9e170069d1ecbf25649e4ab181e583782e3f139c21ce54fe8e45e5ab6",
+      "production_sha256": "add53cfa7c943a3e27fe301201b6cc433e91c158bae51d589298401ff4ab6683",
       "proof_tests": ["tests.games.casino_holdem.test_engine:CasinoHoldemEngineTests.test_call_dealer_not_qualified_returns_call_and_pays_ante", "tests.games.casino_holdem.test_engine:CasinoHoldemEngineTests.test_call_player_win_against_qualified_dealer", "tests.games.casino_holdem.test_engine:CasinoHoldemEngineTests.test_fold_settles_without_revealing_hidden_cards"],
       "rationale": "The prior policy audit is pinned to every production qualification and payout branch, including the ante bonus schedule."
     },
