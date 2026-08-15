@@ -21,8 +21,8 @@ from casino.core.clock import utc_now
 from casino.core.settlement import GameSettlementGateway
 # Import stable server-side identifier generation.
 from casino.core.ids import new_id
-# Import player-scoped persistence through the configured storage provider.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import provider-atomic player-scoped persistence through the configured storage provider.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict and validation errors.
 from casino.errors import ConflictError, ValidationError
 # Import only this game's pure engine through the allowed module boundary.
@@ -34,6 +34,10 @@ GAME_ID = engine.GAME_ID
 CLIENT_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Serialize prepared state and replay scans in this local simulator process.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent game state.
+_ATOMIC_BASELINE_KEY = "_three_card_poker_atomic_baseline"
+# Name only the Three Card Poker fields one transition may replace.
+_GAME_STATE_KEYS = ("rounds", "round_order", "requests", "ledger_actions")
 
 
 # Validate one public idempotency identifier without echoing its value.
@@ -53,10 +57,10 @@ class StateRepository:
         # Delegate provider selection and schema metadata to shared storage.
         return load_player_game_state(GAME_ID, player_id, engine.default_state)
 
-    # Save one authenticated player's state document.
-    def save(self, player_id: str, state: dict) -> None:
-        # Delegate atomic JSON replacement or provider persistence to shared storage.
-        save_player_game_state(GAME_ID, player_id, state)
+    # Apply one transition while the selected provider owns its process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate latest-state loading, callback rollback, and publication atomically.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
 
 
 # Construct the shared settlement gateway while retaining the controller seam name.
@@ -82,6 +86,65 @@ class ThreeCardPokerService:
         # Store an optional seed factory that production registration leaves disabled.
         self.seed_factory = seed_factory
 
+    # Capture only the game fields owned by Three Card Poker transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Detach nested rounds, request records, and ledger markers from later mutation.
+        return {key: copy.deepcopy(state.get(key, engine.default_state()[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its provider-current baseline to this operation.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before any local engine mutation.
+        state = self.repository.load(player_id)
+        # Retain the exact owned values the next publication expects to replace.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting the private baseline field.
+        return state
+
+    # Publish one compare-and-replace transition while preserving unrelated siblings.
+    def _save(self, player_id: str, state: dict) -> None:
+        # Require every publication to originate from a tracked provider read or prior result.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked whole-document write before entering provider storage.
+        if not isinstance(expected, dict):
+            # Keep accidental stale saves outside persistent player state.
+            raise ConflictError("Three Card Poker state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only owned game fields against provider-latest state.
+        def publish(current: dict) -> dict:
+            # Capture provider-current game fields without metadata or unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result completion without overwriting provider-owned values.
+            if observed == desired:
+                # Preserve current metadata and siblings unchanged.
+                return current
+            # Reject a stale transition before it can replace another action's state.
+            if observed != expected:
+                # Require a fresh load and authoritative recovery from the winning transition.
+                raise ConflictError("Three Card Poker state changed during this action; reload and retry")
+            # Replace only the four fields owned by the Three Card Poker engine.
+            for key, value in desired.items():
+                # Publish detached values so later caller mutation cannot leak into storage.
+                current[key] = copy.deepcopy(value)
+            # Return the complete provider document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process read-modify-write boundary.
+        authoritative = self.repository.update(player_id, publish)
+        # Advance the private baseline to the exact committed game-owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+
+    # Restore a rejected action through the current operation's provider baseline.
+    def _restore(self, player_id: str, state: dict, prior_state: dict) -> None:
+        # Copy only action-owned values back into the tracked current operation.
+        for key, value in self._game_snapshot(prior_state).items():
+            # Leave provider-owned sibling fields outside the rollback scope.
+            state[key] = copy.deepcopy(value)
+        # Publish the rollback against the most recently committed operation baseline.
+        self._save(player_id, state)
+
     # Persist one committed ledger event marker immediately after movement.
     def _mark_committed(self, player_id: str, state: dict, intent: dict, event: dict) -> None:
         # Retain a detached event snapshot for stable replay responses.
@@ -92,7 +155,7 @@ class ThreeCardPokerService:
             "event": copy.deepcopy(event),  # Preserve the response evidence.
         }
         # Save after every movement so later intents cannot overtake it.
-        self.repository.save(player_id, state)
+        self._save(player_id, state)
 
     # Apply or recover every prepared ledger intent in stable order.
     def _reconcile_round(self, player_id: str, state: dict, round_item: dict) -> dict:
@@ -123,7 +186,7 @@ class ThreeCardPokerService:
             # Transition prepared settlement to the public terminal phase.
             round_item["phase"] = "settled"
             # Persist terminal state for reload-safe state responses.
-            self.repository.save(player_id, state)
+            self._save(player_id, state)
         # Return committed event evidence keyed by action id.
         return events
 
@@ -199,7 +262,7 @@ class ThreeCardPokerService:
         # Serialize recovery against concurrent commands in this process.
         with _ACTION_LOCK:
             # Load only this authenticated player's state document.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Complete pending ledger work before public state is projected.
             self._recover(player_id, state)
             # Return the reload-safe state payload.
@@ -216,7 +279,7 @@ class ThreeCardPokerService:
         # Serialize state preparation, ledger recovery, and marker saving.
         with _ACTION_LOCK:
             # Load the latest player-scoped document.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover older prepared work before accepting another command.
             self._recover(player_id, state)
             # Read any prior use of this globally player-scoped client id.
@@ -244,7 +307,7 @@ class ThreeCardPokerService:
             # Bind the request fingerprint before the first ledger call.
             state["requests"][request_id] = {"command": "deal", "round_id": round_item["round_id"], "fingerprint": fingerprint}
             # Persist private dealer cards and initial intent before wallet mutation.
-            self.repository.save(player_id, state)
+            self._save(player_id, state)
             # Reconcile the prepared initial debit with rollback on a clean rejection.
             try:
                 # Apply or recover the one aggregate initial debit.
@@ -258,7 +321,7 @@ class ThreeCardPokerService:
                 # Restore the exact prior document when no wallet movement exists.
                 if committed is None:
                     # Remove the rejected prepared round and request mapping.
-                    self.repository.save(player_id, prior_state)
+                    self._restore(player_id, state, prior_state)
                 # Preserve pending state after a committed debit and re-raise the original failure.
                 raise
             # Resolve the committed initial debit evidence.
@@ -281,7 +344,7 @@ class ThreeCardPokerService:
         # Serialize decision preparation and all remaining ledger work.
         with _ACTION_LOCK:
             # Load the latest player-scoped document.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Complete older prepared movements before interpreting the decision.
             self._recover(player_id, state)
             # Read any prior use of this client identifier.
@@ -313,7 +376,7 @@ class ThreeCardPokerService:
             # Bind the decision fingerprint before any new wallet movement.
             state["requests"][action_id] = {"command": "decision", "round_id": round_id, "fingerprint": fingerprint}
             # Persist the decision, revealed result, and intents before reconciliation.
-            self.repository.save(player_id, state)
+            self._save(player_id, state)
             # Capture only movements introduced by this decision.
             new_intents = round_item.get("ledger_intents", [])[prior_intent_count:]
             # Reconcile Play debit then payout, or settle Fold without movement.
@@ -329,7 +392,7 @@ class ThreeCardPokerService:
                 # Restore the pre-decision document when no decision movement committed.
                 if committed is None:
                     # Make the same action id safely retryable after funds or storage recover.
-                    self.repository.save(player_id, prior_state)
+                    self._restore(player_id, state, prior_state)
                 # Preserve pending state after a committed Play debit and re-raise.
                 raise
             # Resolve the optional matching Play debit.
