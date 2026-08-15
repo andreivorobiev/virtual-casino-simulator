@@ -127,6 +127,27 @@
       "introduced_in": "issue-255-over-under-7-payout-convention",
       "changed_in": "issue-255-over-under-7-payout-convention",
       "notes": "Issue #255: paytable rows now render net odds sourced from the same backend field the wager list uses, unifying the two conventions."
+    },
+    {
+      "id": "OU7-007",
+      "module": "Over/Under 7",
+      "description": "Every Over/Under 7 settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OU7-001",
+        "API-OU7-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/over_under_7/service.py",
+        "tests/games/over_under_7/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-801-over-under-7-atomic-state",
+      "changed_in": "issue-801-over-under-7-atomic-state",
+      "notes": "The frozen v1 envelope, deterministic dice settlement, and ledger retry vocabulary remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     }
   ]
 }
