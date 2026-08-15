@@ -19,8 +19,8 @@ from casino.core.clock import utc_now
 from casino.core.settlement import GameSettlementGateway
 # Import the shared id generator for ledger-correlated round identifiers.
 from casino.core.ids import new_id
-# Import player-scoped state helpers for authenticated reload isolation.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import provider-current player-scoped state helpers for authenticated isolation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import the canonical player-id validator used after router resolution.
 from casino.core.validation import require_player_id
 # Import public conflict, lookup, and validation errors for route boundaries.
@@ -34,6 +34,10 @@ GAME_ID = engine.GAME_ID
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Serialize state, dice, ledger replay, and recovery checks inside this process.
 _SETTLEMENT_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_craps_atomic_baseline"
+# Name every private or compatibility field owned by Craps state transitions.
+_GAME_STATE_KEYS = ("active_round", "_round_journal", "recent_rounds")
 # Use operating-system-backed randomness for production-only dice generation.
 _SYSTEM_RANDOM = random.SystemRandom()
 
@@ -62,14 +66,20 @@ def require_request_id(value) -> str:
     return value
 
 
+# Apply one Craps state transition through the selected provider's atomic boundary.
+def update_state(game_id: str, player_id: str, mutator, factory) -> dict:
+    # Delegate provider locking, callback rollback, and publication to shared storage.
+    return update_player_game_state(game_id, player_id, mutator, factory)
+
+
 # Coordinate game state with ledger-only settlement through injectable dependencies.
 class CrapsService:
     # Store production dependencies while isolated tests use in-memory adapters.
-    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, id_factory=new_id, roller=roll_two_dice):
+    def __init__(self, *, load_state=load_player_game_state, update_state_callback=update_state, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, id_factory=new_id, roller=roll_two_dice):
         # Store the state loader used for player-scoped documents.
         self._load_state = load_state
-        # Store the state writer used for crash-recovery markers.
-        self._save_state = save_state
+        # Store the provider-current writer used for crash-recovery transitions.
+        self._update_state = update_state_callback
         # Bind production and injected test seams behind the canonical settlement adapter.
         settlement = GameSettlementGateway(GAME_ID, "idempotency_key", debit=debit, credit=credit, read_recent=read_ledger)
         # Preserve the historical callback shape while routing through the shared adapter.
@@ -90,12 +100,59 @@ class CrapsService:
     # Load one authenticated player's isolated game state.
     def _load(self, player_id: str) -> dict:
         # Delegate through the standard player-game state storage abstraction.
-        return self._load_state(GAME_ID, player_id, engine.default_state)
+        state = self._load_state(GAME_ID, player_id, engine.default_state)
+        # Retain the exact game-owned values the next publication may replace.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting the private baseline field.
+        return state
 
-    # Save one authenticated player's crash-recovery state.
+    # Capture only the private and compatibility fields owned by Craps.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Normalize the optional legacy history key while detaching all owned values.
+        return {key: copy.deepcopy(state.get(key, None if key == "active_round" else [])) for key in _GAME_STATE_KEYS}
+
+    # Publish one authenticated player's compare-and-replace recovery transition.
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate through the standard player-game state storage abstraction.
-        self._save_state(GAME_ID, player_id, state)
+        # Require every publication to originate from a provider read or prior result.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked whole-document write before entering provider storage.
+        if not isinstance(expected, dict):
+            # Keep accidental stale saves outside persistent player state.
+            raise ConflictError("Craps state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Craps-owned fields against provider-current state.
+        def publish(current: dict) -> dict:
+            # Capture provider-current game fields without metadata or siblings.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result completion without rewriting provider values.
+            if observed == desired:
+                # Preserve current metadata and unrelated siblings unchanged.
+                return current
+            # Reject a stale transition before it can replace another action's state.
+            if observed != expected:
+                # Require a fresh load and authoritative recovery from the winner.
+                raise ConflictError("Craps state changed during this action; reload and retry")
+            # Publish the actionable slot and durable journal as detached values.
+            for key in ("active_round", "_round_journal"):
+                # Replace one engine-owned field without copying unrelated metadata.
+                current[key] = copy.deepcopy(desired[key])
+            # Preserve legacy history only until the engine explicitly retires it.
+            if "recent_rounds" in state:
+                # Publish the exact compatibility value when it remains present.
+                current["recent_rounds"] = copy.deepcopy(desired["recent_rounds"])
+            else:
+                # Remove the legacy key after canonical journal migration.
+                current.pop("recent_rounds", None)
+            # Return the complete provider document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process read-modify-write boundary.
+        authoritative = self._update_state(GAME_ID, player_id, publish, engine.default_state)
+        # Advance the private baseline to the exact committed game-owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Read complete same-player ledger history without a fixed recovery horizon.
     def _read_complete_ledger(self, player_id: str) -> list[dict]:

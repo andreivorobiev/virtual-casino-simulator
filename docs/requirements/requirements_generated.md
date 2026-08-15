@@ -35,7 +35,7 @@ Historical source baseline: 9.1.0
 - scratch_cards: 1.1.2
 - sic_bo: 1.1.4
 - chuck_a_luck: 1.1.3
-- craps: 1.1.2
+- craps: 1.1.3
 - crown_and_anchor: 1.1.4
 - over_under_7: 1.1.4
 - plinko: 1.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.19
-- docs: 1.96.19
+- tests: 1.100.20
+- docs: 1.96.20
 - contracts: 1.62.0
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -700,6 +700,7 @@ Historical source baseline: 9.1.0
 - **TEST-207** (Tests) - PASS: Real stale-load Casino Hold'em workers race terminal folds around a separately committed sibling update, proving one provider-winning fold, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante and Call rollback preserve concurrent siblings and that lost ante debit, Call debit, and settlement-credit responses recover immutable proof without a second wallet movement.
 - **TEST-208** (Tests) - PASS: Real stale-load Pai Gow Poker workers race terminal sets around a separately committed sibling update, proving one provider-winning set, no active-round resurrection, and no sibling loss. Deterministic settlement schedules prove action-owned ante rollback preserves concurrent siblings and that lost ante-debit and settlement-credit responses recover immutable proof without a second wallet movement.
 - **TEST-209** (Tests) - PASS: Real stale-load Texas Hold'em Practice Table workers race complete escrow-backed terminal hands around a separately committed sibling update, proving one provider-winning hand, no active-hand resurrection, no sibling loss, and zero ledger calls from the stale loser. Deterministic recovery schedules prove action-owned compensation and stranded-hand healing preserve concurrent siblings while lost terminal-credit responses recover immutable proof without a second refund or payout.
+- **TEST-210** (Tests) - PASS: Real stale-load Craps workers race prepared line-wager rounds around a separately committed sibling update, proving one provider-winning round, no stale active-round overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication, rollback, and settlement schedules prove identical state is idempotent, action-owned wager rollback preserves concurrent siblings, and lost debit or settlement responses recover immutable proof without a second wallet movement.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -983,6 +984,7 @@ Historical source baseline: 9.1.0
 - **CRAPS-003** (Craps) - PASS: Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.
 - **CRAPS-004** (Application) - PASS: Craps supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CRAPS-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Craps with requirement, module, version, and visual traceability.
+- **CRAPS-006** (Craps) - PASS: Craps publishes prepared rounds, authoritative rolls and point transitions, durable private history, wager and settlement proof markers, terminal archive, interruption recovery, and action-owned rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before stale starts can issue a ledger movement or overwrite a winning round, while lost ledger responses reconcile immutable proof without repeating a wager, payout, or refund.
 - **JOBVP-001** (Jacks or Better Video Poker) - PASS: Single-hand 9/6 Jacks or Better supports one through five coins and the five-coin royal-flush bonus.
 - **JOBVP-002** (Jacks or Better Video Poker) - PASS: Authenticated sessions own isolated reload-safe active hands, holds, completed history, and canonical route restoration.
 - **JOBVP-003** (Jacks or Better Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw action identities.

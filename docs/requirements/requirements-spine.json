@@ -12112,6 +12112,28 @@
       "introduced_in": "issue-795-texas-holdem-atomic-state",
       "changed_in": "issue-795-texas-holdem-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact practice-table controller. Lost-response fixtures retain the accepted frozen v1 response and four-wallet ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+    },
+    {
+      "id": "TEST-210",
+      "module": "Tests",
+      "description": "Real stale-load Craps workers race prepared line-wager rounds around a separately committed sibling update, proving one provider-winning round, no stale active-round overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication, rollback, and settlement schedules prove identical state is idempotent, action-owned wager rollback preserves concurrent siblings, and lost debit or settlement responses recover immutable proof without a second wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CRAPS-001",
+        "API-CRAPS-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/craps/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-797-craps-atomic-state",
+      "changed_in": "issue-797-craps-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Craps service. Lost-response fixtures retain the accepted frozen v1 response and ledger vocabulary while exercising no-retry recovery. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
     }
   ]
 }
