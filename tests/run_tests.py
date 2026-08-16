@@ -1608,6 +1608,8 @@ def run_api_tests():
     run_case('API-JP-ATOMIC-001',['JP-006','TEST-222'],lambda: run_unit_module('tests.games.joker_poker.test_atomic_state','Joker Poker atomic state suite failed'))
     # Prove Hi-Lo stale terminal guesses publish through one provider-owned state boundary.
     run_case('API-HILO-ATOMIC-001',['HILO-006','TEST-223'],lambda: run_unit_module('tests.games.hi_lo.test_atomic_state','Hi-Lo atomic state suite failed'))
+    # Prove Jacks-or-Better rejects stale terminal writers through the real JSON provider.
+    run_case('API-JOBVP-ATOMIC-001',['JOBVP-006','TEST-224'],lambda: run_unit_module('tests.games.jacks_or_better_video_poker.test_atomic_state','Jacks-or-Better atomic state suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.

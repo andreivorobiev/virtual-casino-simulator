@@ -1,9 +1,8 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Focused session and retry-safety tests for Jacks-or-Better issue #91.
+"""Focused session, retry, and atomic-state tests for Jacks-or-Better issues #91 and #839.
 
-Confirmed requirements: LEDGER-005, LEDGER-006, LEDGER-007, and SESSION-005.
-JOBVP is a proposed local prefix only and is not claimed as centrally allocated.
+Confirmed requirements include JOBVP-001 through JOBVP-006 and TEST-224.
 """
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.
@@ -43,6 +42,22 @@ class FakeCasino:
     def save_state(self, game_id, player_id, state):
         # Persist state under the bound player only.
         self.states[player_id] = copy.deepcopy(state)
+
+    # Load one detached player document through the repository contract.
+    def load(self, player_id):
+        # Delegate to the historical fake helper with the game default factory.
+        return self.load_state(engine.GAME_ID, player_id, engine.default_state)
+
+    # Apply one callback against the latest provider-owned document.
+    def update(self, player_id, mutator):
+        # Load a detached current document before entering the callback.
+        current = self.load(player_id)
+        # Let the game replace only fields it owns.
+        updated = mutator(current)
+        # Persist a detached complete provider result.
+        self.states[player_id] = copy.deepcopy(updated)
+        # Return another detached copy like the shared provider helper.
+        return copy.deepcopy(updated)
 
     # Create one deterministic server round identifier.
     def new_id(self, prefix):
@@ -100,7 +115,7 @@ class JacksOrBetterVideoPokerApiTests(unittest.TestCase):
         # Create fresh in-memory state and ledger adapters.
         self.fake = FakeCasino()
         # Build the service with deterministic ids, timestamps, and card seeds.
-        self.service = api.JacksOrBetterVideoPokerService(load_state=self.fake.load_state, save_state=self.fake.save_state, debit=self.fake.debit, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=lambda: "2026-07-14T00:00:00.000Z", id_factory=self.fake.new_id, seed_factory=lambda action_id: f"api:{action_id}")
+        self.service = api.JacksOrBetterVideoPokerService(repository=self.fake, debit=self.fake.debit, credit=self.fake.credit, read_ledger=self.fake.read_ledger, get_player=self.fake.get_player, clock=lambda: "2026-07-14T00:00:00.000Z", id_factory=self.fake.new_id, seed_factory=lambda action_id: f"api:{action_id}")
         # Create a game-local router without touching the shared registry.
         self.router = Router()
         # Register only the issue #91 routes for focused tests.
@@ -117,6 +132,88 @@ class JacksOrBetterVideoPokerApiTests(unittest.TestCase):
     def events(self, transaction_type):
         # Filter the fake ledger by its stable transaction type.
         return [event for event in self.fake.events if event["transaction_type"] == transaction_type]
+
+    # Refuse untracked publication before provider storage can observe a callback.
+    def test_atomic_publication_requires_a_loaded_baseline(self):
+        # Construct one detached engine default that never passed through the repository.
+        detached = engine.default_state()
+        # Reject the missing optimistic snapshot with a stable game-owned conflict.
+        with self.assertRaisesRegex(ConflictError, "missing its atomic baseline"):
+            # Attempt direct publication without a provider read.
+            self.service._save("session-player", detached)
+        # Prove the refusal occurred before creating provider state.
+        self.assertNotIn("session-player", self.fake.states)
+
+    # Accept one exact duplicate result while preserving provider-owned siblings.
+    def test_atomic_publication_is_idempotent_and_preserves_siblings(self):
+        # Load one tracked empty state through the repository boundary.
+        state = self.service._load("session-player")
+        # Publish the canonical empty result once to establish durable bytes.
+        self.service._save("session-player", state)
+        # Add unrelated metadata after the caller's baseline advances.
+        self.fake.states["session-player"]["atomic_markers"] = ["sibling"]
+        # Publish the exact same game-owned result through idempotent comparison.
+        self.service._save("session-player", state)
+        # Read the complete provider-authoritative document after both updates.
+        persisted = self.fake.load("session-player")
+        # Preserve the unrelated sibling while keeping operation metadata private.
+        self.assertEqual(["sibling"], persisted["atomic_markers"])
+        # Reject internal optimistic metadata from durable state bytes.
+        self.assertNotIn("_jobvp_atomic_baseline", persisted)
+
+    # Reject one stale writer after a competing game-owned publication wins.
+    def test_atomic_publication_rejects_stale_game_state(self):
+        # Load two independent snapshots of the same provider-owned initial state.
+        first = self.service._load("session-player")
+        # Load the competing snapshot before either writer publishes.
+        stale = self.service._load("session-player")
+        # Give the first writer one unique terminal result.
+        first["recent_rounds"] = [{"round_id": "winner", "phase": "settled"}]
+        # Publish the first writer against the shared baseline.
+        self.service._save("session-player", first)
+        # Add one unrelated sibling beside the provider winner.
+        self.fake.states["session-player"]["atomic_markers"] = ["sibling"]
+        # Give the stale writer a distinct result over the old baseline.
+        stale["recent_rounds"] = [{"round_id": "loser", "phase": "settled"}]
+        # Reject the stale replacement rather than merging incompatible game state.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt to publish the stale owned snapshot.
+            self.service._save("session-player", stale)
+        # Read the authoritative provider result after the conflict.
+        persisted = self.fake.load("session-player")
+        # Retain only the winner and the unrelated sibling.
+        self.assertEqual(("winner", ["sibling"]), (persisted["recent_rounds"][0]["round_id"], persisted["atomic_markers"]))
+
+    # Prevent rejected-debit cleanup from erasing a concurrent game-state winner.
+    def test_rejected_wager_rollback_cannot_erase_concurrent_winner(self):
+        # Replace the ledger debit with one provider winner followed by failure.
+        def fail_after_concurrent_update(*_args, **_kwargs):
+            # Change the prepared round through provider-current state.
+            def publish_winner(current):
+                # Mark the prepared hand with one concurrent diagnostic field.
+                current["active_round"]["atomic_winner"] = True
+                # Publish one unrelated sibling beside the winning game state.
+                current["atomic_markers"] = ["provider-winner"]
+                # Return the complete current document.
+                return current
+
+            # Commit the concurrent winner before the attempted rollback.
+            self.fake.update("session-player", publish_winner)
+            # Fail before any append-only fake ledger movement can commit.
+            raise RuntimeError("injected pre-ledger wager failure")
+
+        # Install only the bounded failing movement seam.
+        self.service._debit = fail_after_concurrent_update
+        # Surface the cleanup conflict because another writer owns prepared state.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt one money-bearing deal whose rollback is now stale.
+            self.call("/api/v1/games/jacks-or-better-video-poker/rounds", {"action_id": "atomic-rollback-0001", "coin_value": 1, "coins": 1})
+        # Read the exact provider-authoritative state after rejected cleanup.
+        persisted = self.fake.load("session-player")
+        # Preserve the concurrent marker and unrelated sibling.
+        self.assertEqual((True, ["provider-winner"]), (persisted["active_round"]["atomic_winner"], persisted["atomic_markers"]))
+        # Prove the failure occurred before any wallet movement.
+        self.assertEqual([], self.fake.events)
 
     # Confirm hostile caller ids cannot escape the session and deal retry debits once.
     def test_session_binding_and_exactly_once_wager_recovery(self):

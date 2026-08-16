@@ -198,7 +198,7 @@
       "requirement_id": "JOBVP-001",
       "engine_path": "casino/games/jacks_or_better_video_poker/engine.py",
       "settlement_path": "casino/games/jacks_or_better_video_poker/api.py",
-      "production_sha256": "e8f397c692d6c9fdb82ff13a5ee90cc1c25878e028eb86e681f4e46f0aabd322",
+      "production_sha256": "a6d366fbd10cdbd46089b87a6fe54596530c62c5ed5ddc3dc8e90e131e82ceb0",
       "proof_tests": ["tests.games.jacks_or_better_video_poker.test_engine:JacksOrBetterVideoPokerEngineTests.test_paytable_classification_boundaries", "tests.games.jacks_or_better_video_poker.test_engine:JacksOrBetterVideoPokerEngineTests.test_classic_paytable_and_max_coin_royal_bonus"],
       "rationale": "The full legal hold space was audited against the unchanged production evaluator; source pinning prevents silent paytable or settlement drift."
     },
