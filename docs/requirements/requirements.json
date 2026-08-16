@@ -12601,6 +12601,33 @@
       "notes": "Fresh workers use the real JSON provider and exact Sic Bo service. Existing session isolation, private prepared dice, round replay, wager and payout recovery, fifty-position economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-231",
+      "module": "Tests",
+      "description": "Real stale-load Slots workers race different recent-spin publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, optional bonus and legacy-meter deletion is atomic, private baselines never persist or enter v1 payloads, and stale cleanup cannot erase a concurrent winner while existing free-spin, progressive, payout, history, and insufficient-funds paths remain covered.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001",
+        "API-SLOT-ATOMIC-001",
+        "API-SLOT-ECONOMICS-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-SLOT-001",
+        "BR-SLOT-ECONOMICS-001"
+      ],
+      "implementation_files": [
+        "tests/games/slots/test_atomic_state.py",
+        "tests/games/slots/test_economics.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-853-slots-atomic-state",
+      "changed_in": "issue-853-slots-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Slots API helpers. Existing session isolation, trusted bonus basis, progressive economics, round correlation, restart, browser, Long simulation, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -14476,6 +14503,34 @@
       "introduced_in": "issue-527-roulette-slots-presentation",
       "changed_in": "issue-527-roulette-slots-presentation",
       "notes": "Listener-free tests dispose the real route-owned timer scope through actual Slots mount, unmount, and remount cycles at API, landing, and delayed-wallet boundaries. Hosted exact-head Browser evidence executes normal and reduced public spins in English and Russian at all four governed viewports. This bounded presentation slice does not claim the planned SLOT-030 through SLOT-035 full pacing, adoption, one-hundred-spin, or video gates, and issues #170 and #74 remain open."
+    },
+    {
+      "id": "SLOT-038",
+      "module": "Slots",
+      "description": "Slots publishes the free-spin bank and trusted basis, progressive scalar and qualifier basis, compatible legacy-meter deletion, and bounded spin history through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action or cleanup can overwrite the winning result, while the frozen v1 envelope, reel entropy, paytable, bonus economics, round identity, ledger-only debit and payout, and history behavior remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001",
+        "API-SLOT-ATOMIC-001",
+        "API-SLOT-ECONOMICS-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-SLOT-001",
+        "BR-SLOT-ECONOMICS-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/api.py",
+        "tests/games/slots/test_atomic_state.py",
+        "tests/games/slots/test_economics.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-853-slots-atomic-state",
+      "changed_in": "issue-853-slots-atomic-state",
+      "notes": "Private optimistic baselines never enter provider bytes or the public state payload. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "KENO-001",
