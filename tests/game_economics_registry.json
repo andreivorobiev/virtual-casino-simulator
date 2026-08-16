@@ -170,7 +170,7 @@
       "requirement_id": "HILO-001",
       "engine_path": "casino/games/hi_lo/engine.py",
       "settlement_path": "casino/games/hi_lo/service.py",
-      "production_sha256": "9fbd94640961696c121b8b71f2aa319618e0ec18ede89081c11dc7554e563f36",
+      "production_sha256": "964ebb372cc9d8cb675383d4badb721417208c2d6904b7ab17b104a0c9c1a972",
       "proof_tests": ["tests.games.hi_lo.test_economics:HiLoEconomicsTests.test_every_rank_price_is_house_side", "tests.games.hi_lo.test_economics:HiLoEconomicsTests.test_real_engine_best_play_is_house_side"],
       "rationale": "The player may choose the better direction for every visible rank; the server-owned rank price keeps that exact best choice below one."
     },

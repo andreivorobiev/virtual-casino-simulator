@@ -12407,6 +12407,29 @@
       "notes": "Fresh workers use the real JSON provider and exact Joker Poker service. Existing session isolation, deal/draw replay, wager and payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-223",
+      "module": "Tests",
+      "description": "Real stale-load Hi-Lo workers race different terminal guesses around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-HILO-001",
+        "API-HILO-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/hi_lo/test_api.py",
+        "tests/games/hi_lo/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-837-hi-lo-atomic-state",
+      "changed_in": "issue-837-hi-lo-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Hi-Lo service. Existing session isolation, deal/guess replay, wager and settlement recovery, rank-pricing economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -17021,6 +17044,30 @@
       "introduced_in": "game-expansion-hi-lo",
       "changed_in": "issue-406-hi-lo-rank-pricing",
       "notes": "The descriptor uses sort order 120; the normalized tests.game_drivers.hi_lo:play driver verifies fractional-wager settlement against the published rank table at ledger precision."
+    },
+    {
+      "id": "HILO-006",
+      "module": "Hi-Lo",
+      "description": "Hi-Lo publishes active decisions, recovery markers, bounded terminal history, and durable deal/guess receipts through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale guess can overwrite or resurrect the winning round, while wager, refund, and payout recovery retain the frozen v1 behavior and exactly-once ledger movements.",
+      "status": "PASS",
+      "api_tests": [
+        "API-HILO-001",
+        "API-HILO-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/hi_lo/service.py",
+        "tests/games/hi_lo/test_api.py",
+        "tests/games/hi_lo/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-837-hi-lo-atomic-state",
+      "changed_in": "issue-837-hi-lo-atomic-state",
+      "notes": "The frozen v1 contract, rank pricing, card ordering, tie rules, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "SCRATCH-001",

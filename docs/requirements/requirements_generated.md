@@ -28,7 +28,7 @@ Historical source baseline: 9.1.0
 - big_six_wheel: 1.1.5
 - red_dog: 1.1.2
 - dragon_tiger: 1.1.3
-- hi_lo: 1.1.3
+- hi_lo: 1.1.4
 - three_card_poker: 1.1.4
 - jacks_or_better_video_poker: 1.1.3
 - deuces_wild_video_poker: 1.1.5
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.39
-- docs: 1.96.39
+- tests: 1.100.40
+- docs: 1.96.40
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -713,6 +713,7 @@ Historical source baseline: 9.1.0
 - **TEST-220** (Tests) - PASS: Capacity-two MySQL pool evidence repeats three cohorts of twenty unique atomic debits with worker concurrency aligned to the two physical leases, proving the exact wallet delta, sixty unique ledger events, every lease returned, both sessions idle, zero waiter residue, and zero unexpected checkout timeouts or discards. Focused pool evidence also runs successful and failed serialized workers through the same cleanup boundary while retaining the separate bounded exhaustion proof.
 - **TEST-221** (Tests) - PASS: Real stale-load Dragon Tiger workers race terminal round publication around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no prepared-action resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-222** (Tests) - PASS: Real stale-load Joker Poker workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
+- **TEST-223** (Tests) - PASS: Real stale-load Hi-Lo workers race different terminal guesses around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -978,6 +979,7 @@ Historical source baseline: 9.1.0
 - **HILO-003** (Hi-Lo) - PASS: Hi-Lo wager debits, equal-rank refunds, and winning payouts use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
 - **HILO-004** (Application) - PASS: The Hi-Lo surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and decision outcomes.
 - **HILO-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Hi-Lo with requirement, module, version, and visual evidence traceability.
+- **HILO-006** (Hi-Lo) - PASS: Hi-Lo publishes active decisions, recovery markers, bounded terminal history, and durable deal/guess receipts through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale guess can overwrite or resurrect the winning round, while wager, refund, and payout recovery retain the frozen v1 behavior and exactly-once ledger movements.
 - **SCRATCH-001** (Scratch Cards) - PASS: One private three-by-three card applies the documented match-three prize profile without exposing covered values.
 - **SCRATCH-002** (Scratch Cards) - PASS: Authenticated sessions own private reload-safe cards, partial reveals, history, and canonical route restoration.
 - **SCRATCH-003** (Scratch Cards) - PASS: Each card uses one ledger wager debit and at most one payout credit under stable retry identities.
