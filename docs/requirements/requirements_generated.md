@@ -18,7 +18,7 @@ Historical source baseline: 9.1.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.3
-- slots: 9.5.1
+- slots: 9.5.2
 - blackjack: 9.1.13
 - baccarat: 9.2.1
 - keno: 9.4.1
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.47
-- docs: 1.96.47
+- tests: 1.100.48
+- docs: 1.96.48
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -721,6 +721,7 @@ Historical source baseline: 9.1.0
 - **TEST-228** (Tests) - PASS: Real stale-load Red Dog workers race different terminal call publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, one terminal round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-action cleanup cannot erase a concurrent winner while existing wager, raise, refund, payout, replay, and recovery paths retain exactly-once wallet behavior.
 - **TEST-229** (Tests) - PASS: Real stale-load Scratch Cards workers race different partial reveal publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one reveal record, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing purchase, debit, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.
 - **TEST-230** (Tests) - PASS: Real stale-load Sic Bo workers race different private round preparations around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one active round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing wager, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.
+- **TEST-231** (Tests) - PASS: Real stale-load Slots workers race different recent-spin publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, optional bonus and legacy-meter deletion is atomic, private baselines never persist or enter v1 payloads, and stale cleanup cannot erase a concurrent winner while existing free-spin, progressive, payout, history, and insufficient-funds paths remain covered.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -830,6 +831,7 @@ Historical source baseline: 9.1.0
 - **SLOT-035** (Tests) - PASS: Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
 - **SLOT-036** (Slots) - PASS: Slots uses one server-authoritative paytable, scatter award, four-free-spin feature, and constant-size progressive meter; only a paid spin at exactly twenty lines and a 1.00 line bet contributes to or can win the meter, every free spin preserves it, and an earned feature remains locked to its paid-trigger line and stake basis. The frozen v1 cent stake and line-count vocabulary remains accepted, current debit and payout rows reconcile to one result round, and governed evidence proves house-side best play over at least one million paid spins per approved scenario with complete bonus-chain drainage plus localized responsive presentation.
 - **SLOT-037** (Slots) - PASS: Slots preserves the existing fast 180-millisecond unattended hold while attended normal motion uses five independent deterministic decorative strips with staggered deceleration and bounded anticipation over the authoritative grid, true reduced motion uses a strip-free comfort hold, and route-owned action identity makes API, landing, wallet, sound, voice, teardown, and remount continuation exactly once and stale-safe.
+- **SLOT-038** (Slots) - PASS: Slots publishes the free-spin bank and trusted basis, progressive scalar and qualifier basis, compatible legacy-meter deletion, and bounded spin history through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action or cleanup can overwrite the winning result, while the frozen v1 envelope, reel entropy, paytable, bonus economics, round identity, ledger-only debit and payout, and history behavior remain unchanged.
 - **KENO-001** (Keno) - PASS: Keno supports numbers 1 through 80.
 - **KENO-002** (Keno) - PASS: Keno allows selecting 1 to 20 spots.
 - **KENO-003** (Keno) - PASS: Keno draws 20 unique numbers.

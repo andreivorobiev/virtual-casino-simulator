@@ -199,7 +199,7 @@ class SlotsEconomicsTests(TestCase):
         # Build one all-SEVEN result that qualifies on every active payline.
         seven_grid = [["SEVEN"] * 5 for _ in range(3)]
         # Patch only provider boundaries while running the real API and engine settlement.
-        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "save_player_game_state") as save_state, mock.patch.object(slots_api.SETTLEMENT, "apply_once", side_effect=[({"amount": -20}, False), ({"amount": 1}, False)]) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 1000}), mock.patch.object(slots_api, "append_history") as history, mock.patch.object(engine, "render_grid", return_value=seven_grid):
+        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "_save_state") as save_state, mock.patch.object(slots_api.SETTLEMENT, "apply_once", side_effect=[({"amount": -20}, False), ({"amount": 1}, False)]) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 1000}), mock.patch.object(slots_api, "append_history") as history, mock.patch.object(engine, "render_grid", return_value=seven_grid):
             # Settle one exact paid twenty-line by one-token qualifier.
             response = router.handlers[("POST", r"/api/v1/games/slots/spin")]({"player_id": "human", "active_lines": 20, "line_bet": 1}, {})
         # Retain the authoritative result for exact component and current-money assertions.
@@ -261,7 +261,7 @@ class SlotsEconomicsTests(TestCase):
         # Force a result with ordinary line return that would hit the progressive if the guard were absent.
         seven_grid = [["SEVEN"] * 5 for _ in range(3)]
         # Isolate only current money, persistence, history, and entropy seams.
-        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "save_player_game_state"), mock.patch.object(slots_api.SETTLEMENT, "apply_once", return_value=({"amount": 1}, False)) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 100}), mock.patch.object(slots_api, "append_history") as history, mock.patch.object(engine, "render_grid", return_value=seven_grid):
+        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "_save_state"), mock.patch.object(slots_api.SETTLEMENT, "apply_once", return_value=({"amount": 1}, False)) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 100}), mock.patch.object(slots_api, "append_history") as history, mock.patch.object(engine, "render_grid", return_value=seven_grid):
             # Consume the feature through the exact qualifying submitted controls.
             response = router.handlers[("POST", r"/api/v1/games/slots/spin")]({"player_id": "human", "active_lines": 20, "line_bet": 1}, {})
         # Require no free-spin debit and exactly one ordinary payout credit.
@@ -284,7 +284,7 @@ class SlotsEconomicsTests(TestCase):
         # Build a deterministic paid result with one exact line payout.
         paid_grid = [["LEMON", "BAR", "BELL", "SEVEN", "CHERRY"], ["CHERRY"] * 5, ["BAR", "BELL", "SEVEN", "CHERRY", "LEMON"]]
         # Patch only external persistence/money seams while executing the real API and engine.
-        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "save_player_game_state") as save_state, mock.patch.object(slots_api.SETTLEMENT, "apply_once", side_effect=[({"amount": -0.01}, False), ({"amount": 0.3}, False)]) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 100.29}), mock.patch.object(slots_api, "append_history") as history, mock.patch.object(engine, "render_grid", return_value=paid_grid):
+        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "_save_state") as save_state, mock.patch.object(slots_api.SETTLEMENT, "apply_once", side_effect=[({"amount": -0.01}, False), ({"amount": 0.3}, False)]) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 100.29}), mock.patch.object(slots_api, "append_history") as history, mock.patch.object(engine, "render_grid", return_value=paid_grid):
             # Execute the current frozen spin route at the minimum accepted stake.
             response = router.handlers[("POST", r"/api/v1/games/slots/spin")]({"player_id": "human", "active_lines": 1, "line_bet": 0.01}, {})
         # Require the debit equals lines times stake and the credit equals the engine payout.
@@ -313,7 +313,7 @@ class SlotsEconomicsTests(TestCase):
         # Retain the historical numeric-string compatibility when it names one exact supported integer.
         state = engine.default_state()
         # Force a no-win action while isolating current persistence and wallet seams.
-        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "save_player_game_state"), mock.patch.object(slots_api.SETTLEMENT, "apply_once", return_value=({"amount": -20}, False)), mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 80}), mock.patch.object(slots_api, "append_history"), mock.patch.object(engine, "render_grid", return_value=[list(row) for row in NO_WIN_GRID]):
+        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "_save_state"), mock.patch.object(slots_api.SETTLEMENT, "apply_once", return_value=({"amount": -20}, False)), mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 80}), mock.patch.object(slots_api, "append_history"), mock.patch.object(engine, "render_grid", return_value=[list(row) for row in NO_WIN_GRID]):
             # Submit the frozen route's historically accepted exact numeric string.
             response = router.handlers[("POST", r"/api/v1/games/slots/spin")]({"player_id": "human", "active_lines": "20", "line_bet": 1}, {})
         # Require the engine-owned normalizer to publish the exact supported integer.
@@ -328,7 +328,7 @@ class SlotsEconomicsTests(TestCase):
         # Start from one fresh server-owned state document.
         state = engine.default_state()
         # Isolate storage and wallet providers while leaving normalize, entropy, grid, evaluate, and spin unmocked.
-        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "save_player_game_state") as save_state, mock.patch.object(slots_api.SETTLEMENT, "apply_once", return_value=({"amount": -0.01}, False)) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 99.99}), mock.patch.object(slots_api, "append_history") as history:
+        with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "_save_state") as save_state, mock.patch.object(slots_api.SETTLEMENT, "apply_once", return_value=({"amount": -0.01}, False)) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": 99.99}), mock.patch.object(slots_api, "append_history") as history:
             # Execute one complete minimum-stake route action through the production engine.
             response = router.handlers[("POST", r"/api/v1/games/slots/spin")]({"player_id": "human", "active_lines": 1, "line_bet": 0.01}, {})
         # Require the live engine grid to retain its exact three-by-five shape through the API.
@@ -401,7 +401,7 @@ class SlotsEconomicsTests(TestCase):
                 # Calculate the exact debit from the submitted line count and stake.
                 expected_cost = round(active_lines * line_bet, 2)
                 # Patch only external provider seams while running the real route and engine.
-                with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "save_player_game_state") as save_state, mock.patch.object(slots_api.SETTLEMENT, "apply_once", side_effect=[({"amount": -expected_cost}, False), ({"amount": expected_payout}, False)]) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": expected_payout}), mock.patch.object(slots_api, "append_history") as history, mock.patch.object(engine, "render_grid", return_value=grid):
+                with mock.patch.object(slots_api, "load_player_game_state", return_value=state), mock.patch.object(slots_api, "_save_state") as save_state, mock.patch.object(slots_api.SETTLEMENT, "apply_once", side_effect=[({"amount": -expected_cost}, False), ({"amount": expected_payout}, False)]) as settlement, mock.patch.object(slots_api.players, "get_player", return_value={"player_id": "human", "balance": expected_payout}), mock.patch.object(slots_api, "append_history") as history, mock.patch.object(engine, "render_grid", return_value=grid):
                     # Settle the representative or exact-maximum action through the production route.
                     response = router.handlers[("POST", r"/api/v1/games/slots/spin")]({"player_id": "human", "active_lines": active_lines, "line_bet": line_bet}, {})
                 # Retain the exact current result from the standard response envelope.

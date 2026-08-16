@@ -12599,6 +12599,33 @@
       "introduced_in": "issue-851-sic-bo-atomic-state",
       "changed_in": "issue-851-sic-bo-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Sic Bo service. Existing session isolation, private prepared dice, round replay, wager and payout recovery, fifty-position economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-231",
+      "module": "Tests",
+      "description": "Real stale-load Slots workers race different recent-spin publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, optional bonus and legacy-meter deletion is atomic, private baselines never persist or enter v1 payloads, and stale cleanup cannot erase a concurrent winner while existing free-spin, progressive, payout, history, and insufficient-funds paths remain covered.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001",
+        "API-SLOT-ATOMIC-001",
+        "API-SLOT-ECONOMICS-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-SLOT-001",
+        "BR-SLOT-ECONOMICS-001"
+      ],
+      "implementation_files": [
+        "tests/games/slots/test_atomic_state.py",
+        "tests/games/slots/test_economics.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-853-slots-atomic-state",
+      "changed_in": "issue-853-slots-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Slots API helpers. Existing session isolation, trusted bonus basis, progressive economics, round correlation, restart, browser, Long simulation, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }

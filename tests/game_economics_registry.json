@@ -28,7 +28,7 @@
       "requirement_id": "SLOT-001",
       "engine_path": "casino/games/slots/engine.py",
       "settlement_path": "casino/games/slots/api.py",
-      "production_sha256": "05fb2694276d1e84b8e8b6681adc64e401e40362363e293c4671c9807e81b272",
+      "production_sha256": "765d30cd39ec391e807aa68bfc45554f86f2a9fe2744b9436db8981aee09a0fe",
       "proof_tests": ["tests.games.slots.test_economics:SlotsEconomicsTests.test_existing_route_uses_engine_cost_and_payout_equation"],
       "evidence_artifact": "logs/test-runs/slots-economics-split-a.json",
       "rationale": "The complete legal line-and-bet matrix drains every production bonus chain and keeps each predeclared 99-percent upper confidence bound below one."
