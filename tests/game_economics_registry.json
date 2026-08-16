@@ -425,7 +425,7 @@
       "requirement_id": "MSTUD-001",
       "engine_path": "casino/games/mississippi_stud/engine.py",
       "settlement_path": "casino/games/mississippi_stud/service.py",
-      "production_sha256": "269739d3a187328f2c5934e6c65dfc65533f5691d213436e1a4233fd4adb8a12",
+      "production_sha256": "5df93145edaf2c99ae019bb04afa9e147debbccd1fb43e8a11d43a7cfb67ecda",
       "proof_tests": ["tests.mississippi_stud_tests:MississippiStudTests.test_house_edge_is_positive"],
       "rationale": "The production street choices, total committed wager, pushes, and paytable are exercised by the deterministic house-edge simulation."
     },

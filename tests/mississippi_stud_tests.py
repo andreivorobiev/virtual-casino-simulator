@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Focused Mississippi Stud engine and service tests. (#143, MSTUD-001/002)"""
+"""Focused Mississippi Stud engine and service tests. (#143, #843, MSTUD-001/003)"""
 
 # Import deep copy so the in-memory state store isolates every saved document.
 import copy
@@ -79,6 +79,17 @@ class MemoryState:
         # Store a deep copy so later loads are isolated.
         self.docs[player_id] = copy.deepcopy(state)
 
+    # Apply one callback against the latest provider-owned document.
+    def update(self, player_id, mutator):
+        # Load a detached current document before entering the callback.
+        current = self.load(player_id)
+        # Let the game replace only fields it owns.
+        updated = mutator(current)
+        # Persist a detached complete provider result.
+        self.docs[player_id] = copy.deepcopy(updated)
+        # Return another detached copy like the shared provider helper.
+        return copy.deepcopy(updated)
+
 
 # Build a Mississippi Stud service bound to in-memory fakes and a fixed fixture.
 def _service(fixture, ledger=None, memory=None):
@@ -87,7 +98,7 @@ def _service(fixture, ledger=None, memory=None):
     # Use the supplied state store or a fresh one.
     store = memory or MemoryState()
     # Compose the service with all seams injected and one pinned deal fixture.
-    return service.MississippiStudService(ledger_gateway=service.CoreLedgerGateway(debit=fake_ledger.debit, credit=fake_ledger.credit, read_recent=fake_ledger.read_recent), state_loader=store.load, state_saver=store.save, get_player=lambda pid: {"player_id": pid, "balance": fake_ledger.balance}, clock=lambda: "2026-07-25T00:00:00Z", fixture_factory=lambda action_id: fixture), fake_ledger, store
+    return service.MississippiStudService(ledger_gateway=service.CoreLedgerGateway(debit=fake_ledger.debit, credit=fake_ledger.credit, read_recent=fake_ledger.read_recent), repository=store, get_player=lambda pid: {"player_id": pid, "balance": fake_ledger.balance}, clock=lambda: "2026-07-25T00:00:00Z", fixture_factory=lambda action_id: fixture), fake_ledger, store
 
 
 # Play all three streets with a fixed one-times bet and return the settled round.
@@ -104,6 +115,95 @@ def _play_through(svc, player_id, round_id, tag, multiplier=1):
 
 # Verify Mississippi Stud settles by paytable, runs three streets, and stays house-positive.
 class MississippiStudTests(unittest.TestCase):
+    # Refuse untracked publication before provider storage can observe a callback.
+    def test_atomic_publication_requires_a_loaded_baseline(self) -> None:
+        # Build the service through its normal focused seam.
+        svc, _ledger, store = _service({"hole_cards": ["JS", "JH"], "community_cards": ["2C", "5D", "8S"]})
+        # Reject a detached default that never passed through the service loader.
+        with self.assertRaisesRegex(ConflictError, "missing its atomic baseline"):
+            # Attempt direct publication without a provider read.
+            svc._save("p1", engine.default_state())
+        # Prove the refusal occurred before creating provider state.
+        self.assertNotIn("p1", store.docs)
+
+    # Accept one exact duplicate result while preserving provider-owned siblings.
+    def test_atomic_publication_is_idempotent_and_preserves_siblings(self) -> None:
+        # Build the service through its normal focused seam.
+        svc, _ledger, store = _service({"hole_cards": ["JS", "JH"], "community_cards": ["2C", "5D", "8S"]})
+        # Load one tracked empty state through the service boundary.
+        state = svc._load("p1")
+        # Publish the canonical empty result once to establish durable bytes.
+        svc._save("p1", state)
+        # Add unrelated metadata after the caller baseline advances.
+        store.docs["p1"]["atomic_markers"] = ["sibling"]
+        # Publish the exact same game-owned result through idempotent comparison.
+        svc._save("p1", state)
+        # Read the complete provider-authoritative document after both updates.
+        persisted = store.load("p1")
+        # Preserve the unrelated sibling while keeping operation metadata private.
+        self.assertEqual(["sibling"], persisted["atomic_markers"])
+        # Reject internal optimistic metadata from durable state bytes.
+        self.assertNotIn("_mississippi_stud_atomic_baseline", persisted)
+
+    # Reject one stale writer after a competing game-owned publication wins.
+    def test_atomic_publication_rejects_stale_game_state(self) -> None:
+        # Build the service through its normal focused seam.
+        svc, _ledger, store = _service({"hole_cards": ["JS", "JH"], "community_cards": ["2C", "5D", "8S"]})
+        # Load two independent snapshots before either writer publishes.
+        first = svc._load("p1")
+        # Retain one competing snapshot over the same baseline.
+        stale = svc._load("p1")
+        # Give the first writer one unique terminal record.
+        first["recent_rounds"] = [{"round_id": "winner"}]
+        # Publish the first writer against the shared baseline.
+        svc._save("p1", first)
+        # Add one unrelated sibling beside the provider winner.
+        store.docs["p1"]["atomic_markers"] = ["sibling"]
+        # Give the stale writer a distinct result over the old baseline.
+        stale["recent_rounds"] = [{"round_id": "loser"}]
+        # Reject the stale replacement rather than merging incompatible game state.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt to publish the stale owned snapshot.
+            svc._save("p1", stale)
+        # Read the authoritative provider result after the conflict.
+        persisted = store.load("p1")
+        # Retain only the winner and the unrelated sibling.
+        self.assertEqual(([{"round_id": "winner"}], ["sibling"]), (persisted["recent_rounds"], persisted["atomic_markers"]))
+
+    # Prevent rejected ante cleanup from erasing a concurrent game-state winner.
+    def test_rejected_ante_rollback_cannot_erase_concurrent_winner(self) -> None:
+        # Build shared fakes for one bounded injected ledger failure.
+        svc, fake_ledger, store = _service({"hole_cards": ["JS", "JH"], "community_cards": ["2C", "5D", "8S"]})
+
+        # Publish one provider winner before rejecting the fake ledger movement.
+        def fail_after_concurrent_update(**_kwargs):
+            # Define the provider-current competing mutation.
+            def publish_winner(current):
+                # Mark the prepared round with one concurrent diagnostic field.
+                current["active_round"]["atomic_winner"] = True
+                # Publish one unrelated sibling beside the winning game state.
+                current["atomic_markers"] = ["provider-winner"]
+                # Return the complete current document.
+                return current
+
+            # Commit the concurrent winner before the attempted rollback.
+            store.update("p1", publish_winner)
+            # Fail before any append-only fake ledger movement can commit.
+            raise RuntimeError("injected pre-ledger ante failure")
+
+        # Install only the bounded failing transaction seam.
+        svc._ledger.apply_once = fail_after_concurrent_update
+        # Surface the cleanup conflict because another writer owns prepared state.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt one money-bearing deal whose rollback is now stale.
+            svc.start_round("p1", {"action_id": "atomic-rollback-0001", "ante": 5})
+        # Read the exact provider-authoritative state after rejected cleanup.
+        persisted = store.load("p1")
+        # Preserve the concurrent marker and unrelated sibling.
+        self.assertEqual((True, ["provider-winner"]), (persisted["active_round"]["atomic_winner"], persisted["atomic_markers"]))
+        # Prove the failure occurred before any wallet movement.
+        self.assertEqual([], fake_ledger.events)
+
     # Classify one five-card hand through the engine paytable.
     def _tier(self, cards):
         # Return only the tier name for a completed hand.
