@@ -254,7 +254,7 @@
       "requirement_id": "CHUCK-001",
       "engine_path": "casino/games/chuck_a_luck/engine.py",
       "settlement_path": "casino/games/chuck_a_luck/service.py",
-      "production_sha256": "47d9e4f9a3fd0b4c14f7e3c4185dc66c4e0ad26ef3c50585a7ae803e25651a5e",
+      "production_sha256": "1db6a12f1b1b931ce408504dbe193c7fcddcfd01fa3af956f5061e3fe4c82709",
       "proof_tests": ["tests.games.chuck_a_luck.test_engine:ChuckALuckEngineTests.test_settlement_uses_match_count_net_odds", "tests.games.chuck_a_luck.test_engine:ChuckALuckEngineTests.test_triple_number_bet_pays_three_to_one_net"],
       "rationale": "The exact dice space and every match-count payout remain below fair odds through the production settlement function."
     },

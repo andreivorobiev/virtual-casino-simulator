@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Session-bound, ledger-only, retry-safe Chuck-a-Luck orchestration."""
 
+# Import deep-copy support for detached optimistic state snapshots.
+import copy
 # Import bounded request validation for client retry identifiers.
 import re
 # Import cryptographic bounded random selection for production dice.
@@ -15,8 +17,8 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Import the one approved play-token settlement compatibility boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistence helpers for authenticated session isolation.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict and validation errors for safe API boundaries.
 from casino.errors import ConflictError, ValidationError
 # Import only this game's pure engine and immutable rule metadata.
@@ -30,6 +32,10 @@ _SETTLEMENT_LOCK = threading.RLock()
 WAGER_TRANSACTION_TYPE = "CHUCK_A_LUCK_WAGER_DEBIT"
 # Name the optional stake-plus-winnings aggregate credit consistently.
 SETTLEMENT_TRANSACTION_TYPE = "CHUCK_A_LUCK_SETTLEMENT_CREDIT"
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_chuck_a_luck_atomic_baseline"
+# Name every state field owned by Chuck-a-Luck transitions.
+_GAME_STATE_KEYS = ("recent_rounds",)
 
 
 # Validate the required caller-stable identity used for network retries.
@@ -48,16 +54,27 @@ def CoreLedgerGateway(**kwargs):
     return GameSettlementGateway(rules.GAME_ID, "idempotency_key", **kwargs)
 
 
+# Persist player-scoped game documents through the selected storage provider.
+class StateRepository:
+    # Load one authenticated player's document.
+    def load(self, player_id: str) -> dict:
+        # Delegate JSON/MySQL selection and defaults to shared state storage.
+        return load_player_game_state(rules.GAME_ID, player_id, engine.default_state)
+
+    # Apply one transition while the provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate latest-state loading, rollback, and publication atomically.
+        return update_player_game_state(rules.GAME_ID, player_id, mutator, engine.default_state)
+
+
 # Coordinate authenticated state, server entropy, and exactly-once ledger settlement.
 class ChuckALuckService:
     # Capture injectable dependencies so focused tests avoid filesystem and ambient entropy.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, randbelow=None, clock=None, get_player=None):
+    def __init__(self, *, ledger_gateway=None, repository=None, randbelow=None, clock=None, get_player=None):
         # Use the production apply-once ledger adapter unless a focused test supplies one.
         self._ledger_gateway = ledger_gateway or CoreLedgerGateway()
-        # Use player-scoped production state loading unless a focused test supplies memory state.
-        self._state_loader = state_loader or self._load_production_state
-        # Use player-scoped production state saving unless a focused test supplies memory state.
-        self._state_saver = state_saver or self._save_production_state
+        # Use provider-backed state reads and atomic updates unless a focused test supplies memory storage.
+        self.repository = repository or StateRepository()
         # Use cryptographic uniform selection unless a focused test injects deterministic indices.
         self._randbelow = randbelow or secrets.randbelow
         # Use the shared UTC clock unless a focused test pins settlement time.
@@ -65,27 +82,57 @@ class ChuckALuckService:
         # Use read-only player snapshots unless a focused test supplies an in-memory wallet.
         self._get_player = get_player or players.get_player
 
-    # Load one authenticated player's isolated production game document.
+    # Capture detached values for every Chuck-a-Luck-owned state field.
     @staticmethod
-    def _load_production_state(player_id: str) -> dict:  # Load the game document for one authenticated player.
-        # Delegate through the shared player-scoped storage abstraction.
-        return load_player_game_state(rules.GAME_ID, player_id, engine.default_state)
-
-    # Save one authenticated player's isolated production game document.
-    @staticmethod
-    def _save_production_state(player_id: str, state: dict) -> None:  # Save only one authenticated player's game document.
-        # Delegate through the shared player-scoped storage abstraction.
-        save_player_game_state(rules.GAME_ID, player_id, state)
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Normalize current and predecessor documents to one complete shape.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
 
     # Load one player document through the injected state dependency.
     def _load(self, player_id: str) -> dict:
-        # Return only state owned by the already resolved authenticated player.
-        return self._state_loader(player_id)
+        # Read only state owned by the already resolved authenticated player.
+        state = self.repository.load(player_id)
+        # Retain only the values this service may replace during the operation.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting private operation metadata.
+        return state
 
-    # Save one player document through the injected state dependency.
+    # Publish one player document through provider-current compare-and-replace.
     def _save(self, player_id: str, state: dict) -> None:
-        # Persist only state owned by the already resolved authenticated player.
-        self._state_saver(player_id, state)
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked detached-document write before entering storage.
+        if not isinstance(expected, dict):
+            # Keep stale or fabricated state outside provider bytes.
+            raise ConflictError("Chuck-a-Luck state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Chuck-a-Luck-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach current owned values from unrelated provider metadata.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose owned baseline lost a concurrent race.
+            if observed != expected:
+                # Require recovery from the authoritative winner.
+                raise ConflictError("Chuck-a-Luck state changed during this action; reload and retry")
+            # Replace only fields governed by this game service.
+            for key in _GAME_STATE_KEYS:
+                # Publish detached JSON-compatible values without sibling loss.
+                current[key] = copy.deepcopy(desired[key])
+            # Return the complete provider document for atomic persistence.
+            return current
+
+        # Commit the transition through the provider's cross-process boundary.
+        authoritative = self.repository.update(player_id, publish)
+        # Advance the operation baseline to the exact committed owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Derive the deterministic action key for one round movement.
     @staticmethod

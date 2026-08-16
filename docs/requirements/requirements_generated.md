@@ -34,7 +34,7 @@ Historical source baseline: 9.1.0
 - deuces_wild_video_poker: 1.1.4
 - scratch_cards: 1.1.2
 - sic_bo: 1.1.4
-- chuck_a_luck: 1.1.3
+- chuck_a_luck: 1.1.4
 - craps: 1.1.3
 - crown_and_anchor: 1.1.5
 - over_under_7: 1.1.5
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.33
-- docs: 1.96.33
+- tests: 1.100.34
+- docs: 1.96.34
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -707,6 +707,7 @@ Historical source baseline: 9.1.0
 - **TEST-214** (Tests) - PASS: Real stale-load Crown and Anchor workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, and private baselines never persist while existing replay and ledger behavior remain unchanged.
 - **TEST-215** (Tests) - PASS: Real stale-load Fan-Tan workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and post-debit retry recovers the committed pile count without duplicate debit or credit.
 - **TEST-216** (Tests) - PASS: Real stale-load Acey-Deucey workers race terminal passes around a separately committed sibling update, proving one provider-winning round, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and existing wager rejection plus lost-response recovery retain exactly-once wallet behavior.
+- **TEST-217** (Tests) - PASS: Real stale-load Chuck-a-Luck workers race complete ledger-backed rolls around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and a rejected post-ledger publication recovers committed debit and credit proof without duplicate wallet movements or winner erasure.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -986,6 +987,7 @@ Historical source baseline: 9.1.0
 - **CHUCK-003** (Chuck-a-Luck) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable request identities.
 - **CHUCK-004** (Application) - PASS: Chuck-a-Luck supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CHUCK-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Chuck-a-Luck with requirement, module, version, and visual traceability.
+- **CHUCK-006** (Chuck-a-Luck) - PASS: Chuck-a-Luck publishes bounded settled-round history through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale round can overwrite the winning journal, while committed debit and credit recovery retains the frozen v1 behavior and exactly-once ledger movements.
 - **CRAPS-001** (Craps) - PASS: Pass Line and Don't Pass implement come-out, point, win, loss, and bar-12 refund rules with server-authoritative dice.
 - **CRAPS-002** (Craps) - PASS: Authenticated sessions own private reload-safe rounds, roll actions, recovery state, history, and canonical route restoration.
 - **CRAPS-003** (Craps) - PASS: Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.
