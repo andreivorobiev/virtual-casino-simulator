@@ -1588,8 +1588,8 @@ def run_api_tests():
     run_case('API-AB-ATOMIC-001',['AB-006','TEST-211'],lambda: run_unit_module('tests.games.andar_bahar.test_api','Andar Bahar atomic state suite failed'))
     # Execute fresh-process Over/Under 7 ordering plus rejected-wager preservation. (issue #801)
     run_case('API-OU7-ATOMIC-001',['OU7-007','TEST-212'],lambda: run_unit_module('tests.games.over_under_7.test_api','Over/Under 7 atomic state suite failed'))
-    # Execute fresh-process Big Six Wheel ordering plus sibling-state preservation. (issue #803)
-    run_case('API-BIG-SIX-ATOMIC-001',['BIG-SIX-007','TEST-213'],lambda: run_unit_module('tests.unit.big_six_wheel_engine_tests','Big Six Wheel atomic state suite failed'))
+    # Execute shared-helper delegation, historical proof recovery, and distinct-round sibling preservation. (issue #859)
+    run_case('API-BIG-SIX-ATOMIC-001',['BIG-SIX-007','BIG-SIX-008','TEST-213','TEST-234'],lambda: run_unit_module('tests.unit.big_six_wheel_engine_tests','Big Six Wheel atomic state suite failed'))
     # Execute fresh-process Crown and Anchor ordering plus sibling-state preservation. (issue #805)
     run_case('API-CAA-ATOMIC-001',['CAA-006','TEST-214'],lambda: run_unit_module('tests.games.crown_and_anchor.test_api','Crown and Anchor atomic state suite failed'))
     # Execute fresh-process Fan-Tan ordering plus sibling-state and ledger recovery proof. (issue #807)
@@ -1990,7 +1990,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('simple-game provider-atomic suite failed')
     # Record provider-current merge, fresh-process concurrency, and complete catalog adoption evidence.
-    run_case('API-GAMECORE-005',['GAMECORE-005','TEST-233'],run_simple_game_atomic_tests)
+    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','TEST-233','TEST-234'],run_simple_game_atomic_tests)
     # Execute the route-free signed-action settlement-adapter proof without opening a listener.
     def run_settlement_adapter_tests():
         # Load only the focused storage-atomic adapter class.
@@ -3258,7 +3258,7 @@ def run_api_tests():
         # Record Casino War session, ledger, settlement, and retry coverage under its permanent test id.
         run_case('API-CW-001',['CW-001','CW-002','CW-003'],lambda: assert_condition(integrity_state['casino_war_verified'],'Casino War integration evidence missing'))
         # Record Big Six session, ledger, conflict, and retry coverage under its permanent test id.
-        run_case('API-BIG-SIX-001',['BIG-SIX-001','BIG-SIX-002','BIG-SIX-003'],lambda: assert_condition(integrity_state['big_six_verified'],'Big Six integration evidence missing'))
+        run_case('API-BIG-SIX-001',['BIG-SIX-001','BIG-SIX-002','BIG-SIX-003','BIG-SIX-008'],lambda: assert_condition(integrity_state['big_six_verified'],'Big Six integration evidence missing'))
         # Record Red Dog session, ledger, conflict, and retry coverage under its permanent test id.
         run_case('API-RD-001',['RD-001','RD-002','RD-003'],lambda: assert_condition(integrity_state['red_dog_verified'],'Red Dog integration evidence missing'))
         # Record Dragon Tiger session, ledger, conflict, and retry coverage under its permanent test id.

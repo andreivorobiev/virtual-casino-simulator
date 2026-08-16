@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.7
-- core: 9.46.4
+- core: 9.47.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
@@ -25,7 +25,7 @@ Historical source baseline: 9.1.0
 - bingo: 9.3.8
 - multi_hand_video_poker: 1.1.3
 - casino_war: 1.2.1
-- big_six_wheel: 1.1.5
+- big_six_wheel: 1.2.0
 - red_dog: 1.1.3
 - dragon_tiger: 1.1.3
 - hi_lo: 1.1.4
@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.4
-- tests: 1.100.50
-- docs: 1.96.50
+- tests: 1.100.51
+- docs: 1.96.51
 - contracts: 1.62.4
-- tooling: 1.40.2
+- tooling: 1.41.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.6
 - poker_dice: 1.1.4
@@ -703,7 +703,7 @@ Historical source baseline: 9.1.0
 - **TEST-210** (Tests) - PASS: Real stale-load Craps workers race prepared line-wager rounds around a separately committed sibling update, proving one provider-winning round, no stale active-round overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication, rollback, and settlement schedules prove identical state is idempotent, action-owned wager rollback preserves concurrent siblings, and lost debit or settlement responses recover immutable proof without a second wallet movement.
 - **TEST-211** (Tests) - PASS: Real stale-load Andar Bahar workers race complete match-rank rounds around a separately committed sibling update, proving one provider-winning round, no stale terminal overwrite, no sibling loss, and zero ledger calls from the stale loser. Deterministic publication and rollback schedules prove identical state is idempotent and action-owned rejected-wager cleanup preserves concurrent siblings without creating a wallet movement.
 - **TEST-212** (Tests) - PASS: Real stale-load Over/Under 7 workers race complete dice rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication and rejected-debit schedules prove identical state is idempotent, private baselines never persist, failed debits publish no round, and committed lost-state retries recover immutable ledger proof without a duplicate wallet movement.
-- **TEST-213** (Tests) - PASS: Real stale-load Big Six Wheel workers race complete ledger-backed spins around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent and private baselines never persist while existing retry and post-debit recovery schedules retain exactly-once ledger behavior.
+- **TEST-213** (Tests) - PASS: Real stale-load Big Six Wheel workers race distinct complete ledger-backed spins around a separately committed sibling update, proving both provider-committed rounds and the sibling survive without overwrite. Deterministic publication preserves the frozen direct-row state representation while existing retry and historical post-debit recovery schedules retain exactly-once ledger behavior.
 - **TEST-214** (Tests) - PASS: Real stale-load Crown and Anchor workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, and private baselines never persist while existing replay and ledger behavior remain unchanged.
 - **TEST-215** (Tests) - PASS: Real stale-load Fan-Tan workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and post-debit retry recovers the committed pile count without duplicate debit or credit.
 - **TEST-216** (Tests) - PASS: Real stale-load Acey-Deucey workers race terminal passes around a separately committed sibling update, proving one provider-winning round, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and existing wager rejection plus lost-response recovery retain exactly-once wallet behavior.
@@ -725,6 +725,8 @@ Historical source baseline: 9.1.0
 - **TEST-232** (Tests) - PASS: Real stale-load Teen Patti workers race different settled-round publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist or enter v1 payloads, and stale recovery cleanup cannot erase a concurrent winner while existing ante, play, fold, payout, replay, private-card, and recovery paths remain covered.
 - **GAMECORE-005** (Core) - PASS: The shared SimpleWagerGame core publishes each ledger-committed terminal round through the provider-current atomic player-document callback. Distinct concurrent rounds and unrelated sibling fields survive, exact same-request publication is idempotent, changed-meaning or divergent same-request state fails closed, retained history stays bounded, and existing ledger proof, entropy recovery, game math, routes, and response envelopes remain unchanged.
 - **TEST-233** (Tests) - PASS: A real two-process JSON-provider race starts two distinct SimpleWagerGame rounds from the same stale read around a separately committed sibling update and proves both terminal rounds plus the sibling survive. Deterministic provider-current evidence retains bounded history and the established response, while the fail-closed structural inventory requires the shared helper to own exactly one atomic updater, no direct saver, and classifies all forty-six catalog games as provider-atomic without weakening the state-plus-money multiworker blocker.
+- **GAMECORE-006** (Core) - PASS: SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, wager proof write/read, settlement details, public round projection, and bounded history capacity. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public and persisted shape without bypassing the shared settlement or provider-current publication boundaries.
+- **TEST-234** (Tests) - PASS: Focused SimpleWagerGame and Big Six Wheel evidence proves unchanged default helper behavior, exact legacy request and round identities, canonical and historical ledger-proof recovery, frozen action/state rows, 100-round retention, no direct Big Six settlement gateway call, and two-process provider-current preservation of two distinct rounds plus an unrelated sibling.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -974,7 +976,8 @@ Historical source baseline: 9.1.0
 - **BIG-SIX-004** (Application) - PASS: The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, cumulative forward wheel motion, delayed result reveal, and reduced-motion-safe timer lifecycle behavior.
 - **BIG-SIX-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Big Six Wheel with requirement, module, version, and visual evidence traceability.
 - **BIG-SIX-006** (Big Six Wheel) - PASS: Every normal Big Six spin advances cumulatively through at least six clockwise turns, keeps the authoritative outcome hidden and wager controls locked until presentation settles, and lands the fixed pointer on the server-selected segment without snap, reset, reverse, or stale lifecycle state.
-- **BIG-SIX-007** (Big Six Wheel) - PASS: Every Big Six Wheel settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.
+- **BIG-SIX-007** (Big Six Wheel) - PASS: Every Big Six Wheel settled-history publication merges its committed round into provider-current state, preserves unrelated sibling fields and distinct concurrent rounds, accepts an identical result idempotently, and rejects changed-meaning or divergent same-request state.
+- **BIG-SIX-008** (Big Six Wheel) - PASS: Big Six Wheel delegates its one-shot wager, committed entropy recovery, optional settlement credit, replay lookup, and provider-current history publication to SimpleWagerGame while preserving the frozen v1 client_request_id, round identity, public round, state history, and ledger evidence semantics.
 - **DT-001** (Dragon Tiger) - PASS: The standard-8d Dragon Tiger profile deals Dragon first from an eight-deck shoe, compares ranks ace-low without suit tie-breaks, and applies the documented main-bet returns.
 - **DT-002** (Dragon Tiger) - PASS: Authenticated sessions own isolated reload-safe Dragon Tiger shoe state, settled rounds, and canonical route restoration.
 - **DT-003** (Dragon Tiger) - PASS: Dragon Tiger wager debits and settlement credits use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.

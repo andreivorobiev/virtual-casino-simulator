@@ -128,7 +128,7 @@
       "requirement_id": "BIG-SIX-001",
       "engine_path": "casino/games/big_six_wheel/engine.py",
       "settlement_path": "casino/games/big_six_wheel/service.py",
-      "production_sha256": "cf7b5e1e6c82fdbcfe178005a523c6698071d6c6f8725633adc4bb6735a91e4f",
+      "production_sha256": "412185c16783d2426cbebc0dd9ab77bb4d832a4c85e67d4e972122a2b61d790f",
       "proof_tests": ["tests.unit.big_six_wheel_engine_tests:BigSixWheelEngineTests.test_regulated_wheel_profile_counts", "tests.unit.big_six_wheel_engine_tests:BigSixWheelEngineTests.test_settlement_is_deterministic_for_selected_index"],
       "rationale": "Every wager row combines its exact physical segment count with the production returned-credit multiplier below fair odds."
     },

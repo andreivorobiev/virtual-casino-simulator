@@ -22,8 +22,8 @@ import time
 import unittest
 # Import the project conflict error used for idempotency misuse.
 from casino.errors import ConflictError
-# Import the pure game engine under direct test.
-from casino.games.big_six_wheel import engine
+# Import the pure game engine and orchestration source under direct test.
+from casino.games.big_six_wheel import engine, service as service_module
 # Import the immutable wheel profile under direct test.
 from casino.games.big_six_wheel.rules import NET_ODDS, SEGMENT_COUNTS, WHEEL_SEGMENTS
 # Import the orchestration service with injectable storage, entropy, and ledger seams.
@@ -36,6 +36,8 @@ class MemoryRepository:
     def __init__(self):
         # Store detached documents by player id.
         self.documents = {}
+        # Allow one test to publish a concurrent sibling immediately before the provider callback.
+        self.before_update = None
 
     # Load one detached state document or a fresh default.
     def load(self, player_id):
@@ -44,6 +46,12 @@ class MemoryRepository:
 
     # Update one player document through a provider-current callback.
     def update(self, game_id, player_id, mutator, factory):
+        # Execute one scheduled provider-current publication before the tested mutator.
+        if self.before_update is not None:
+            # Detach the hook before execution so a failed callback cannot repeat it.
+            hook, self.before_update = self.before_update, None
+            # Apply the sibling update to exact provider-owned state.
+            hook(self.documents.setdefault(player_id, factory()))
         # Load current provider state or one fresh game default.
         current = copy.deepcopy(self.documents.get(player_id, factory()))
         # Apply the production-shaped callback to provider-current state.
@@ -64,7 +72,7 @@ class FakeLedgerGateway:
         self.calls = []
 
     # Apply or replay one event without touching any real player balance.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, details):
+    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint=None, details):
         # Record each requested action for exact call-count assertions.
         self.calls.append(action_key)
         # Return an existing event when the action key already committed.
@@ -77,6 +85,11 @@ class FakeLedgerGateway:
         self.events[action_key] = event
         # Return the new event and non-replay evidence.
         return event, False
+
+    # Find one committed event through the shared helper's exact action identity.
+    def find(self, *, action_key, **_dimensions):
+        # Return the immutable fake event or no proof for a losing settlement lookup.
+        return self.events.get(action_key)
 
 
 # Verify the regulated profile and pure settlement calculations.
@@ -128,27 +141,37 @@ class BigSixWheelServiceTests(unittest.TestCase):
         # Build the service with deterministic Joker selection and pinned time.
         self.service = BigSixWheelService(ledger_gateway=self.ledger, state_loader=self.repository.load, state_updater=self.repository.update, randbelow=lambda size: 0, clock=lambda: "2026-07-13T00:00:00Z")
 
-    # Confirm identical publication stays idempotent and preserves siblings.
-    def test_atomic_publication_preserves_siblings_and_private_baseline(self):
-        # Load one tracked default document through the service boundary.
-        state = self.service._load("player-a")
-        # Add one deterministic settled row as the desired owned transition.
-        state["recent_rounds"].append({"client_request_id": "atomic-same", "request_fingerprint": "a" * 64})
-        # Publish the tracked transition through provider-current comparison.
-        self.service._save("player-a", state)
-        # Add unrelated metadata after the first game-owned publication.
-        self.repository.documents["player-a"]["atomic_markers"] = ["sibling"]
-        # Publish the exact same desired result from the advanced baseline.
-        self.service._save("player-a", state)
-        # Read the final provider-authoritative document.
-        persisted = self.repository.documents["player-a"]
-        # Verify the sibling survives and operation metadata never persists.
-        self.assertEqual(["sibling"], persisted["atomic_markers"])
-        # Keep the optimistic snapshot outside durable player state.
-        self.assertNotIn("_big_six_wheel_atomic_baseline", persisted)
+    # Require production orchestration to delegate money movement exclusively to SimpleWagerGame.
+    def test_service_uses_shared_simple_wager_boundary(self):
+        # Read exact tracked production source instead of trusting runtime monkeypatches.
+        source = Path(service_module.__file__).read_text(encoding="utf-8")
+        # Require one shared-helper construction and no direct compatibility gateway or apply-once call.
+        self.assertEqual((source.count("SimpleWagerGame("), "GameSettlementGateway" in source, ".apply_once(" in source), (1, False, False))
 
-    # Prove stale fresh processes preserve siblings and expose one conflict.
-    def test_fresh_process_spin_race_has_one_state_winner(self):
+    # Confirm shared publication merges distinct rounds and unrelated provider siblings.
+    def test_atomic_publication_preserves_distinct_round_and_sibling(self):
+        # Define one provider-current sibling and previously committed round.
+        def publish_concurrent(current):
+            # Preserve one unrelated field through the shared-helper callback.
+            current["atomic_markers"] = ["sibling"]
+            # Publish one distinct legacy-shaped round after the action's initial read.
+            current["recent_rounds"] = [{"round_id": "bsw_other", "client_request_id": "other", "request_fingerprint": "other-fingerprint", "player_id": "player-a", "status": "settled", "wagers": {"one": 1.0}, "settled_at": "2026-07-12T00:00:00Z", **engine.settle({"one": 1.0}, 1)}]
+
+        # Schedule the publication at the exact provider-owned update boundary.
+        self.repository.before_update = publish_concurrent
+        # Execute one distinct round from the stale initial state snapshot.
+        result = self.service.spin("player-a", {"client_request_id": "atomic-same", "wagers": {"joker": 2}})
+        # Read the final provider-authoritative direct-row document.
+        persisted = self.repository.documents["player-a"]
+        # Verify the unrelated sibling and both distinct terminal rounds survive.
+        self.assertEqual((["sibling"], ["other", "atomic-same"]), (persisted["atomic_markers"], [row["client_request_id"] for row in persisted["recent_rounds"]]))
+        # Preserve the exact frozen direct-row state shape without shared wrapper fields.
+        self.assertEqual(result["round"], persisted["recent_rounds"][-1])
+        # Keep shared-helper storage wrappers outside durable Big Six state.
+        self.assertTrue(all("public" not in row and "request_id" not in row for row in persisted["recent_rounds"]))
+
+    # Prove stale fresh processes preserve both distinct rounds and unrelated siblings.
+    def test_fresh_process_spin_race_preserves_both_rounds(self):
         # Own every provider and rendezvous byte inside one disposable directory.
         with tempfile.TemporaryDirectory() as temporary:
             # Resolve this exact checkout for child imports.
@@ -189,9 +212,16 @@ def load_state(player_id):
 class Ledger:
     def __init__(self):
         self.calls = []
+        self.events = {}
     def apply_once(self, **kwargs):
         self.calls.append(kwargs['action_key'])
-        return {'ledger_id': 'ledger-' + str(len(self.calls)), 'player_id': kwargs['player_id'], 'amount': kwargs['amount'], 'transaction_type': kwargs['transaction_type'], 'game': engine.GAME_ID, 'round_id': kwargs['round_id'], 'ts': '2026-08-15T00:03:00Z', 'details': dict(kwargs['details'])}, False
+        if kwargs['action_key'] in self.events:
+            return self.events[kwargs['action_key']], True
+        event = {'ledger_id': 'ledger-' + str(len(self.calls)), 'player_id': kwargs['player_id'], 'amount': kwargs['amount'], 'transaction_type': kwargs['transaction_type'], 'game': engine.GAME_ID, 'round_id': kwargs['round_id'], 'ts': '2026-08-15T00:03:00Z', 'details': dict(kwargs['details'])}
+        self.events[kwargs['action_key']] = event
+        return event, False
+    def find(self, **kwargs):
+        return self.events.get(kwargs['action_key'])
 ledger = Ledger()
 game = BigSixWheelService(ledger_gateway=ledger, state_loader=load_state, state_updater=update_player_game_state, randbelow=lambda _size: 0, clock=lambda: '2026-08-15T00:03:00Z')
 try:
@@ -228,24 +258,24 @@ except ConflictError:
             sibling = subprocess.run([sys.executable, "-c", sibling_source], cwd=repository_root, env=environment, capture_output=True, text=True, timeout=15)
             # Require the sibling provider transition to complete cleanly.
             self.assertEqual(sibling.returncode, 0, f"stdout={sibling.stdout!r} stderr={sibling.stderr!r}")
-            # Release the first worker to publish the winning round.
+            # Release the first worker to publish its distinct round.
             workers[0][2].write_text("go", encoding="utf-8")
-            # Collect the exact winner result.
+            # Collect the exact first result.
             winner_output, winner_error = workers[0][0].communicate(timeout=20)
-            # Require one losing-round debit call from the provider winner.
+            # Require one losing-round debit call from the first provider worker.
             self.assertEqual((workers[0][0].returncode, winner_output.strip()), (0, "PASS:1"), winner_error)
-            # Release the stale worker only after the winner is durable.
+            # Release the stale worker only after the first distinct round is durable.
             workers[1][2].write_text("go", encoding="utf-8")
-            # Collect the explicit fail-closed stale result.
+            # Collect the second provider-atomic merge result.
             stale_output, stale_error = workers[1][0].communicate(timeout=15)
-            # Require conflict instead of a silent stale overwrite.
-            self.assertEqual((workers[1][0].returncode, stale_output.strip()), (0, "CONFLICT:1"), stale_error)
+            # Require the second distinct action to publish without overwriting the first.
+            self.assertEqual((workers[1][0].returncode, stale_output.strip()), (0, "PASS:1"), stale_error)
             # Read final provider-authoritative bytes directly.
             persisted = json.loads(state_path.read_text(encoding="utf-8"))
-            # Require one terminal winner, sibling preservation, and no overwrite.
-            self.assertEqual((len(persisted["recent_rounds"]), persisted["recent_rounds"][-1]["client_request_id"], persisted["atomic_markers"]), (1, "atomic-process-0", ["concurrent"]))
-            # Verify private optimistic metadata never enters persistent bytes.
-            self.assertNotIn("_big_six_wheel_atomic_baseline", persisted)
+            # Require both terminal rounds in commit order plus sibling preservation.
+            self.assertEqual(([row["client_request_id"] for row in persisted["recent_rounds"]], persisted["atomic_markers"]), (["atomic-process-0", "atomic-process-1"], ["concurrent"]))
+            # Verify shared helper wrappers never enter the frozen direct-row state shape.
+            self.assertTrue(all("public" not in row and "request_id" not in row for row in persisted["recent_rounds"]))
 
     # Confirm a normal retry returns one debit and one credit only.
     def test_retry_reuses_settled_round_without_new_ledger_actions(self):
@@ -261,6 +291,19 @@ except ConflictError:
         self.assertTrue(second["replayed"])
         # Verify exactly one debit and one settlement credit were requested.
         self.assertEqual(2, len(self.ledger.calls))
+
+    # Confirm the compatibility adapter retains the established 100-round direct-row history.
+    def test_shared_helper_preserves_legacy_history_capacity_and_order(self):
+        # Execute one more action than the published Big Six history bound.
+        for index in range(101):
+            # Use one losing wager so each round requires exactly one fake movement.
+            self.service.spin("player-a", {"client_request_id": f"history-{index}", "wagers": {"one": 1}})
+        # Read the frozen public state payload through the game-owned projection.
+        state = self.service.state("player-a")
+        # Require exactly the newest 100 direct rows in oldest-to-newest response order.
+        self.assertEqual((100, "history-1", "history-100"), (len(state["recent_rounds"]), state["recent_rounds"][0]["client_request_id"], state["recent_rounds"][-1]["client_request_id"]))
+        # Reject leakage of the shared helper's private wrapper representation.
+        self.assertTrue(all("public" not in row and "request_id" not in row for row in state["recent_rounds"]))
 
     # Confirm a crash after ledger commit reconstructs the committed result and credits once.
     def test_post_debit_crash_retry_recovers_committed_index(self):

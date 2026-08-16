@@ -1350,9 +1350,13 @@ def _game_inventory(games: list[dict], modules: list[dict]) -> list[dict]:
         if uses_player_documents and (player_loads == 0 or (player_saves == 0 and atomic_updates == 0)):
             # Fail closed on incomplete direct or provider-atomic persistence semantics.
             raise MultiprocessSafetyAuditError("game inventory unavailable")
-        # Require exactly one deployed persistence family.
-        if uses_player_documents == uses_simple_game:
-            # Fail closed on absent or overlapping models.
+        # Reject a package with neither a direct provider path nor shared-helper delegation.
+        if not uses_player_documents and not uses_simple_game:
+            # Fail closed when no reachable persistence family exists.
+            raise MultiprocessSafetyAuditError("game inventory unavailable")
+        # Permit a shared-helper compatibility adapter only when its game-local writes are provider-atomic.
+        if uses_simple_game and uses_player_documents and (player_saves != 0 or atomic_updates == 0):
+            # Reject any adapted helper path that can still replace a detached whole document.
             raise MultiprocessSafetyAuditError("game inventory unavailable")
         # Name direct or delegated provider-atomic persistence precisely.
         state_model = "player_document_load_save" if uses_player_documents else "provider_atomic_player_document"
