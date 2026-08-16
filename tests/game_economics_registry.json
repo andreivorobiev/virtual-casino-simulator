@@ -481,7 +481,7 @@
       "requirement_id": "TEENP-001",
       "engine_path": "casino/games/teen_patti/engine.py",
       "settlement_path": "casino/games/teen_patti/service.py",
-      "production_sha256": "f55812eb63527e66cea766829cf4ba862e74f2d7cc1ca6af7b305c1698853c1a",
+      "production_sha256": "b4cf6ba7c03a05b672442ce4d625f88f6eeca08b4752d2012095d94fa5786e31",
       "proof_tests": ["tests.teen_patti_tests:TeenPattiTests.test_house_edge_is_positive"],
       "rationale": "The production category, dealer qualification, bonus, and fold branches remain below even return under the deterministic strategy audit."
     },

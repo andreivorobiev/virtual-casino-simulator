@@ -51,6 +51,32 @@
       "introduced_in": "issue-150-teen-patti",
       "changed_in": "issue-150-teen-patti",
       "notes": "Allocated for GitHub issue #150. The governed Browser case exercises real authenticated routes through the public game controls and rejects page overflow or fixed-feedback occlusion at all standard viewports."
+    },
+    {
+      "id": "TEENP-003",
+      "module": "Teen Patti",
+      "description": "Teen Patti publishes its active round, settled history, action receipts, opening and play recovery markers, rollback, and terminal settlement state through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action or cleanup can overwrite the winning result, while the frozen v1 routes and envelopes, private dealer cards, caller-stable action identities, settlement ordering, replay behavior, rules, and economics remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TEEN-PATTI-001",
+        "API-TEEN-PATTI-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "casino/games/teen_patti/service.py",
+        "tests/games/teen_patti/test_atomic_state.py",
+        "tests/teen_patti_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-855-teen-patti-atomic-state",
+      "changed_in": "issue-855-teen-patti-atomic-state",
+      "notes": "Private optimistic baselines never enter provider bytes or the public state payload. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     }
   ]
 }
