@@ -13,8 +13,8 @@ import threading
 from casino.core.settlement import GameSettlementGateway
 # Import the shared UTC clock for stable purchase and settlement timestamps.
 from casino.core.clock import utc_now
-# Import player-scoped persistence helpers without changing shared storage code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import standard conflict, insufficient-funds, and not-found domain errors.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 # Import pure Scratch Cards rules and public-state sanitization.
@@ -22,6 +22,10 @@ from casino.games.scratch_cards import engine
 
 # Serialize the complete local read-modify-ledger-write path against duplicate requests.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_scratch_cards_atomic_baseline"
+# Name every state field owned by Scratch Cards transitions.
+_GAME_STATE_KEYS = tuple(engine.default_state())
 
 
 # Reduce one internal ledger event to correlation fields safe for action responses.
@@ -42,27 +46,94 @@ def CoreLedgerGateway(**kwargs):
     return GameSettlementGateway(engine.GAME_ID, "idempotency_key", **kwargs)
 
 
+# Persist Scratch Cards state through the shared player-scoped provider abstraction.
+class StateRepository:
+    # Load one authenticated player's isolated game document.
+    def load(self, player_id: str) -> dict:
+        # Delegate schema metadata and JSON/MySQL selection to shared storage.
+        return load_player_game_state(engine.GAME_ID, player_id, engine.default_state)
+
+    # Apply one transition while the provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate current-state loading, rollback, and publication atomically.
+        return update_player_game_state(engine.GAME_ID, player_id, mutator, engine.default_state)
+
+
 # Coordinate private ticket state, deterministic entropy, and ledger-only settlement.
 class ScratchCardsService:
     # Capture injectable seams so focused tests avoid filesystem, wallet, time, and entropy state.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, randbelow=None, clock=None):
+    def __init__(self, *, ledger_gateway=None, repository=None, randbelow=None, clock=None):
         # Use the game-local ledger adapter unless a focused test supplies a fake.
         self.ledger_gateway = ledger_gateway or CoreLedgerGateway()
-        # Use player-scoped storage compatible with the shared authenticated resolver.
-        self.state_loader = state_loader or (lambda player_id: load_player_game_state(engine.GAME_ID, player_id, engine.default_state))
-        # Persist private game state without mutating any shared state module.
-        self.state_saver = state_saver or (lambda player_id, state: save_player_game_state(engine.GAME_ID, player_id, state))
+        # Use provider-atomic player-scoped storage unless a focused test supplies a repository.
+        self.repository = repository or StateRepository()
         # Use cryptographic bounded selection unless a focused test injects a deterministic sequence.
         self.randbelow = randbelow or secrets.randbelow
         # Use the shared UTC clock unless a focused test pins response timing.
         self.clock = clock or utc_now
 
-    # Load an independent state copy so failures do not leak unsaved mutations through test adapters.
+    # Capture only the fields owned by Scratch Cards transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Detach private cards and bounded history from later caller mutation.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Load an independent state copy and bind its optimistic game-owned baseline.
     def _load_state(self, player_id: str) -> dict:
-        # Deep-copy nested cards, cells, and action records before modification.
-        state = copy.deepcopy(self.state_loader(player_id))
+        # Deep-copy nested cards, cells, and action records from the repository.
+        state = copy.deepcopy(self.repository.load(player_id))
         # Replace malformed stored payloads with a safe player-owned default.
-        return state if isinstance(state, dict) else engine.default_state()
+        state = state if isinstance(state, dict) else engine.default_state()
+        # Retain the exact game-owned values expected by the next publication.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting operation metadata.
+        return state
+
+    # Publish one provider-current compare-and-replace transition. (SCRATCH-006)
+    def _save_state(self, player_id: str, state: dict) -> None:
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Reject fabricated or stale detached documents before storage access.
+        if not isinstance(expected, dict):
+            # Keep untracked private ticket state outside provider bytes.
+            raise ConflictError("Scratch Cards state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Scratch Cards-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach provider-current private game fields from unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept an identical publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose game-owned baseline lost a race.
+            if observed != expected:
+                # Require recovery from the authoritative winning action.
+                raise ConflictError("Scratch Cards state changed during this action; reload and retry")
+            # Replace only the fields governed by this game service.
+            for key, value in desired.items():
+                # Publish detached values so caller mutation cannot leak later.
+                current[key] = copy.deepcopy(value)
+            # Return the complete document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process mutation boundary.
+        authoritative = self.repository.update(player_id, publish)
+        # Advance the in-memory baseline to the exact committed result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+
+    # Restore game-owned fields through the prepared action's latest baseline.
+    def _restore_state(self, player_id: str, state: dict, prior_state: dict) -> None:
+        # Replace only Scratch Cards fields while retaining the post-preparation baseline.
+        for key, value in self._game_snapshot(prior_state).items():
+            # Detach the restored private value from the saved pre-action snapshot.
+            state[key] = copy.deepcopy(value)
+        # Publish action-owned cleanup against exact provider-current preparation.
+        self._save_state(player_id, state)
 
     # Build one sanitized response around the current private state.
     def _response(self, state: dict, card: dict | None = None, *, replayed: bool = False, wager_event=None, payout_event=None) -> dict:
@@ -127,7 +198,7 @@ class ScratchCardsService:
                 # Make this prepared ticket the only current actionable card.
                 state["current_card"] = card
                 # Persist outcome and request mapping before the debit for reload-safe recovery.
-                self.state_saver(player_id, state)
+                self._save_state(player_id, state)
                 # Mark this as the first execution of the prepared intent.
                 resumed_intent = False
             # Build ledger details without private ticket values because player-visible ledger feeds expose details.
@@ -143,7 +214,7 @@ class ScratchCardsService:
                 # Restore the exact pre-action state for a newly prepared ticket.
                 if not resumed_intent:
                     # Persist removal of the non-funded card intent.
-                    self.state_saver(player_id, original_state)
+                    self._restore_state(player_id, state, original_state)
                 # Re-raise the canonical domain error for the standard envelope.
                 raise
             # Restore a newly proposed board when an older ledger identity conflicts semantically.
@@ -151,13 +222,13 @@ class ScratchCardsService:
                 # Roll back only when this call created a state intent not previously retained.
                 if not resumed_intent:
                     # Preserve the exact state that existed before the conflicting late retry.
-                    self.state_saver(player_id, original_state)
+                    self._restore_state(player_id, state, original_state)
                 # Re-raise the immutable ledger-identity conflict.
                 raise
             # Fail closed when an expired state record collides with an older committed purchase.
             if debit_replayed and not resumed_intent:
                 # Remove the newly proposed board because the original private outcome is no longer retained.
-                self.state_saver(player_id, original_state)
+                self._restore_state(player_id, state, original_state)
                 # Preserve exactly-once money behavior without substituting a rerolled ticket.
                 raise ConflictError("Scratch Card purchase retry is older than retained game state")
             # Mark the persisted private card ready only after the wager event exists.
@@ -167,7 +238,7 @@ class ScratchCardsService:
             # Prefer the committed timestamp so retries preserve purchase timing.
             card["purchased_at"] = debit_event.get("ts") or card.get("purchased_at") or self.clock()
             # Persist the funded masked card after recovering committed private details.
-            self.state_saver(player_id, state)
+            self._save_state(player_id, state)
             # Return the masked card with exact ledger replay evidence.
             return self._response(state, card, replayed=resumed_intent or debit_replayed, wager_event=debit_event)
 
@@ -236,7 +307,7 @@ class ScratchCardsService:
                     # Publish a stable player-facing phase for reload and UI rendering.
                     card["status"] = "scratching"
                 # Persist action identity and reveal progress before returning or crediting.
-                self.state_saver(player_id, state)
+                self._save_state(player_id, state)
             # Return a partial reveal immediately because no payout is yet known to the player.
             if card.get("status") != "settling":
                 # Expose only newly authorized prize cells through the public masking boundary.
@@ -260,6 +331,6 @@ class ScratchCardsService:
             # Prefer the committed credit time or the current injected time for a losing card.
             card["settled_at"] = (payout_event or {}).get("ts") or self.clock()
             # Persist the fully revealed terminal card for reload and history.
-            self.state_saver(player_id, state)
+            self._save_state(player_id, state)
             # Return all now-authorized prizes and exact replay evidence.
             return self._response(state, card, replayed=resumed_action or payout_replayed, payout_event=payout_event)

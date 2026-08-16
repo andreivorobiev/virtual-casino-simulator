@@ -226,7 +226,7 @@
       "requirement_id": "SCRATCH-001",
       "engine_path": "casino/games/scratch_cards/engine.py",
       "settlement_path": "casino/games/scratch_cards/service.py",
-      "production_sha256": "b515f9d1c93cc0725ef81baeee46bf3b39cbfcbc349d45b24cb010be79e99220",
+      "production_sha256": "8fc7845c43a23f5700d2bcbca74035229f7f7beb0116eddfef59c8fb122d2c1c",
       "proof_tests": ["tests.games.scratch_cards.test_engine:ScratchCardsEngineTests.test_loss_board_has_pairs_only", "tests.games.scratch_cards.test_engine:ScratchCardsEngineTests.test_winning_board_and_payout_are_deterministic"],
       "rationale": "The source-pinned production win table and deterministic board constructor preserve the accepted below-even expected return."
     },

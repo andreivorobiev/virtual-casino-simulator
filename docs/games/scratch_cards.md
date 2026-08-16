@@ -6,7 +6,7 @@ Parents: #66 and #73. Shared integration owner: #77. Catalog foundation: #81.
 
 ## Requirement traceability
 
-Permanent requirements `SCRATCH-001` through `SCRATCH-005` are registered in `docs/requirements/requirements.json` and cover rules, authenticated reload-safe API state, ledger/retry safety, EN/RU responsive UI, and catalog/contract/browser/long-suite/visual evidence. The descriptor's `SCRATCH` prefix is declared in `modules/scratch_cards.json`.
+Permanent requirements `SCRATCH-001` through `SCRATCH-006` are registered in `docs/requirements/requirements.json` and cover rules, authenticated reload-safe API state, ledger/retry safety, EN/RU responsive UI, catalog/contract/browser/long-suite/visual evidence, and provider-atomic state publication. The descriptor's `SCRATCH` prefix is declared in `modules/scratch_cards.json`.
 
 Existing impacted requirements read before implementation are:
 
@@ -61,7 +61,7 @@ Scratching and settlement:
 4. If the card wins, apply one `SCRATCH_CARD_PAYOUT_CREDIT` with action key `scratch:<card_id>:payout`.
 5. Persist terminal state and expose all nine prizes, payout, outcome, and net.
 
-Identical retries return existing state while their private card remains retained. An older committed purchase identity whose board aged out fails closed without rerolling or moving tokens. Reusing an action identity with changed meaning also fails closed. A losing card never creates a zero-value ledger event. The read-before-write adapter uses one process lock because this repository is a local single-process simulator; multi-process deployment would require a storage-level unique idempotency constraint.
+Identical retries return existing state while their private card remains retained. An older committed purchase identity whose board aged out fails closed without rerolling or moving tokens. Reusing an action identity with changed meaning also fails closed. A losing card never creates a zero-value ledger event. Every private state transition publishes through a provider-current callback that compares only Scratch Cards-owned fields, preserves unrelated player-document siblings, accepts an identical result idempotently, and rejects stale actions or cleanup. Ledger movement remains a separate durable boundary, so this eliminates stale whole-document state overwrites without claiming cross-provider state-and-money atomicity or authorizing production multiworker activation.
 
 ## Browser and primitive decisions
 
@@ -76,7 +76,7 @@ The canonical descriptor at `modules/scratch_cards.json` owns the module version
 #77 completed integration:
 
 - the `scratch_cards` revision in `modules/module-manifest.json`;
-- permanent requirements `SCRATCH-001` through `SCRATCH-005` plus generated documentation;
+- permanent requirements `SCRATCH-001` through `SCRATCH-006` plus generated documentation;
 - the OpenAPI contract in compatibility matrix and digest metadata;
 - the central visual row and central test-discovery/version revisions;
 - the real copied-deployment catalog/API/browser/long-suite gate;
