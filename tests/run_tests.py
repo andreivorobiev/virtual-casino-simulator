@@ -1977,6 +1977,20 @@ def run_api_tests():
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
     run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-127'],run_simple_game_core_tests)
+    # Execute the shared helper's real cross-process provider-current publication proof.
+    def run_simple_game_atomic_tests():
+        # Import the dedicated fresh-process suite only when its named case runs.
+        from tests import simple_game_atomic_tests
+        # Load the exact provider-atomic shared-helper class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(simple_game_atomic_tests.SimpleGameAtomicStateTests)
+        # Execute the bounded child-process proof with concise reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the permanent case when either terminal round or its sibling is lost.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('simple-game provider-atomic suite failed')
+    # Record provider-current merge, fresh-process concurrency, and complete catalog adoption evidence.
+    run_case('API-GAMECORE-005',['GAMECORE-005','TEST-233'],run_simple_game_atomic_tests)
     # Execute the route-free signed-action settlement-adapter proof without opening a listener.
     def run_settlement_adapter_tests():
         # Load only the focused storage-atomic adapter class.

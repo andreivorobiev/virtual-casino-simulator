@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.7
-- core: 9.46.3
+- core: 9.46.4
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.4
-- tests: 1.100.49
-- docs: 1.96.49
+- tests: 1.100.50
+- docs: 1.96.50
 - contracts: 1.62.4
-- tooling: 1.40.1
+- tooling: 1.40.2
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.6
 - poker_dice: 1.1.4
@@ -723,6 +723,8 @@ Historical source baseline: 9.1.0
 - **TEST-230** (Tests) - PASS: Real stale-load Sic Bo workers race different private round preparations around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one active round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing wager, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.
 - **TEST-231** (Tests) - PASS: Real stale-load Slots workers race different recent-spin publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, optional bonus and legacy-meter deletion is atomic, private baselines never persist or enter v1 payloads, and stale cleanup cannot erase a concurrent winner while existing free-spin, progressive, payout, history, and insufficient-funds paths remain covered.
 - **TEST-232** (Tests) - PASS: Real stale-load Teen Patti workers race different settled-round publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist or enter v1 payloads, and stale recovery cleanup cannot erase a concurrent winner while existing ante, play, fold, payout, replay, private-card, and recovery paths remain covered.
+- **GAMECORE-005** (Core) - PASS: The shared SimpleWagerGame core publishes each ledger-committed terminal round through the provider-current atomic player-document callback. Distinct concurrent rounds and unrelated sibling fields survive, exact same-request publication is idempotent, changed-meaning or divergent same-request state fails closed, retained history stays bounded, and existing ledger proof, entropy recovery, game math, routes, and response envelopes remain unchanged.
+- **TEST-233** (Tests) - PASS: A real two-process JSON-provider race starts two distinct SimpleWagerGame rounds from the same stale read around a separately committed sibling update and proves both terminal rounds plus the sibling survive. Deterministic provider-current evidence retains bounded history and the established response, while the fail-closed structural inventory requires the shared helper to own exactly one atomic updater, no direct saver, and classifies all forty-six catalog games as provider-atomic without weakening the state-plus-money multiworker blocker.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

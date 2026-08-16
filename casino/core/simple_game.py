@@ -27,7 +27,7 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Import the canonical game-money compatibility gateway owned by SettlementAdapter. (GAMECORE-004)
 from casino.core.settlement import GameSettlementGateway
-from casino.core.state_store import load_player_game_state, save_player_game_state
+from casino.core.state_store import load_player_game_state, update_player_game_state
 from casino.errors import ConflictError, ValidationError
 
 # Bound request identifiers to conservative URL-safe characters and length.
@@ -57,7 +57,7 @@ def round_id_for(game_id: str, player_id: str, request_id: str) -> str:
 # Coordinate authenticated state, server entropy, and exactly-once ledger settlement for one game.
 class SimpleWagerGame:
     # Configure the core with one game's identity, rules, and injectable test seams.
-    def __init__(self, *, game_id, wager_transaction_type, settlement_transaction_type, entropy, resolve, validate_bet, public_bet_catalog=None, ledger_gateway=None, state_loader=None, state_saver=None, entropy_source=None, clock=None, get_player=None) -> None:
+    def __init__(self, *, game_id, wager_transaction_type, settlement_transaction_type, entropy, resolve, validate_bet, public_bet_catalog=None, ledger_gateway=None, state_loader=None, state_updater=None, entropy_source=None, clock=None, get_player=None) -> None:
         # Retain the fixed game identity used across every ledger and state dimension.
         self.game_id = str(game_id)
         # Retain the two aggregate transaction-type names used for recovery-stable proof.
@@ -73,9 +73,10 @@ class SimpleWagerGame:
         self._public_bet_catalog = public_bet_catalog or (lambda: {})
         # Bind every production movement to SettlementAdapter while retaining the old detail key for one release.
         self._ledger_gateway = ledger_gateway or GameSettlementGateway(self.game_id, "idempotency_key")
-        # Use player-scoped production persistence unless a test injects loaders.
+        # Use player-scoped production reads unless a test injects a detached loader.
         self._state_loader = state_loader or (lambda player_id: load_player_game_state(self.game_id, player_id, self._default_state))
-        self._state_saver = state_saver or (lambda player_id, state: save_player_game_state(self.game_id, player_id, state))
+        # Publish every settled-round append against provider-current state instead of a detached snapshot.
+        self._state_updater = state_updater or (lambda player_id, mutator: update_player_game_state(self.game_id, player_id, mutator, self._default_state))
         # Use a cryptographic bounded random source unless a test pins entropy.
         self._entropy_source = entropy_source or secrets.randbelow
         # Use the shared UTC clock unless a focused test pins settlement time.
@@ -104,6 +105,47 @@ class SimpleWagerGame:
             if round_row.get("request_id") == request_id:
                 return round_row
         return None
+
+    # Publish one committed round without replacing a concurrent round or unrelated sibling field. (GAMECORE-005)
+    def _publish_round(self, player_id: str, stored_round: dict) -> dict:
+        # Bind immutable request identity before entering provider-owned mutable state.
+        request_id = stored_round["request_id"]
+        # Bind the request fingerprint used to reject changed-meaning reuse.
+        fingerprint = stored_round["request_fingerprint"]
+
+        # Merge the committed round into the exact current provider document.
+        def publish(current: dict) -> dict:
+            # Locate a same-request publication that may have won in another process.
+            existing = self._find_round(current, request_id)
+            # Treat an exact prior publication as an idempotent state replay.
+            if existing is not None:
+                # Reject a same request identity whose semantic wager changed.
+                if existing.get("request_fingerprint") != fingerprint:
+                    # Fail closed before replacing any provider-current state.
+                    raise ConflictError(f"{self.game_id} request_id conflicts with a prior round")
+                # Require state identity to agree with the ledger-derived committed round.
+                if existing.get("round_id") != stored_round.get("round_id") or existing.get("public") != stored_round.get("public"):
+                    # Refuse malformed or divergent state rather than concealing it as a replay.
+                    raise ConflictError(f"{self.game_id} committed round conflicts with state")
+                # Preserve the complete provider document byte-for-byte except provider-owned stamps.
+                return current
+            # Preserve an established game marker or restore it when an old document omitted the field.
+            current.setdefault("game", self.game_id)
+            # Prepend this distinct committed round to provider-current history and retain concurrent rows.
+            current["recent_rounds"] = ([stored_round] + current.get("recent_rounds", []))[:RECENT_ROUND_LIMIT]
+            # Return the complete provider-current document for atomic publication.
+            return current
+
+        # Execute the merge through the configured JSON/MySQL atomic document boundary.
+        committed = self._state_updater(player_id, publish)
+        # Re-read the exact committed row from provider-returned authority.
+        published = self._find_round(committed, request_id)
+        # Reject an updater that returned no exact publication.
+        if published is None:
+            # Fail closed instead of fabricating a successful state response.
+            raise ConflictError(f"{self.game_id} committed round publication is missing")
+        # Return the exact provider-owned stored round used by response and ledger reconstruction.
+        return published
 
     # Execute or replay one atomic wager, entropy draw, and settlement for a player.
     def play(self, player_id: str, request: dict) -> dict:
@@ -165,12 +207,12 @@ class SimpleWagerGame:
             public_round = {"round_id": round_id, "wager": committed_wager, "wager_total": wager_total, "entropy": entropy, "total_return": total_return, "outcome": settlement.get("outcome"), "detail": settlement.get("detail", {}), "net": round(total_return - wager_total, 2), "settled_at": settled_at}
             # Build the compact stored round with replay and fingerprint bookkeeping.
             stored_round = {"request_id": request_id, "request_fingerprint": fingerprint, "round_id": round_id, "total_return": total_return, "public": public_round}
-            # Prepend the new round and bound the retained history.
-            state["recent_rounds"] = ([stored_round] + state.get("recent_rounds", []))[:RECENT_ROUND_LIMIT]
-            # Persist only this player's document.
-            self._state_saver(player_id, state)
-            ledger_events = self._round_ledger(player_id, stored_round)
-            return {"round": public_round, "replayed": wager_replayed, "ledger": ledger_events, **self.state(player_id)}
+            # Atomically merge the committed round into provider-current history.
+            published_round = self._publish_round(player_id, stored_round)
+            # Rebuild ledger proof from the exact provider-owned round identity.
+            ledger_events = self._round_ledger(player_id, published_round)
+            # Return the committed provider round while preserving the established response envelope.
+            return {"round": published_round["public"], "replayed": wager_replayed, "ledger": ledger_events, **self.state(player_id)}
 
     # Rebuild the committed ledger events for one round from stored proof.
     def _round_ledger(self, player_id: str, stored_round: dict) -> dict:
