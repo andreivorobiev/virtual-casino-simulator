@@ -108,6 +108,32 @@
       "introduced_in": "game-expansion-scratch-cards",
       "changed_in": "game-expansion-scratch-cards",
       "notes": "Descriptor sort order 130 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "SCRATCH-006",
+      "module": "Scratch Cards",
+      "description": "Scratch Cards publishes private card preparation, funded state, reveal progress, immutable action records, settlement state, and action-owned cleanup through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale reveal or cleanup can overwrite the winning action, while covered prizes, the frozen v1 envelope, match-three profile, and exactly-once ledger movements remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SCRATCH-001",
+        "API-SCRATCH-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-SCRATCH-001"
+      ],
+      "implementation_files": [
+        "casino/games/scratch_cards/service.py",
+        "tests/games/scratch_cards/test_service.py",
+        "tests/games/scratch_cards/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-849-scratch-cards-atomic-state",
+      "changed_in": "issue-849-scratch-cards-atomic-state",
+      "notes": "The frozen v1 contract, private covered-value boundary, three-by-three prize profile, debit and payout transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     }
   ]
 }

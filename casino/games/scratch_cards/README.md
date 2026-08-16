@@ -15,7 +15,7 @@ The explicit toy outcome profile is 70% no win, 18% 1x, 7% 2x, 3% 5x, 1% 10x, an
 - Private board data is persisted before debit so a post-debit crash cannot reroll the card, while player-visible ledger details remain free of covered values.
 - Final reveal intent is persisted before any payout credit, allowing a restart retry to recover without duplicate movement.
 - The game never mutates a player balance or storage-provider balance field directly.
-- Apply-once locking is intentionally scoped to this local simulator's single-process runtime. A multi-process deployment needs a storage-level unique idempotency constraint.
+- Private card preparation, reveal progress, replay records, settlement state, and action-owned cleanup publish through provider-current callbacks that preserve unrelated player-document fields and reject stale writers. Ledger movement remains a separate durable boundary, so production multiworker activation stays blocked until state and money share a cross-process transaction.
 
 ## Public actions
 

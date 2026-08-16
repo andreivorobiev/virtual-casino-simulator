@@ -12549,6 +12549,31 @@
       "introduced_in": "issue-847-red-dog-atomic-state",
       "changed_in": "issue-847-red-dog-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Red Dog controller. Existing session isolation, opening and decision replay, ledger recovery, six-deck economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-229",
+      "module": "Tests",
+      "description": "Real stale-load Scratch Cards workers race different partial reveal publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one reveal record, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing purchase, debit, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SCRATCH-001",
+        "API-SCRATCH-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-SCRATCH-001"
+      ],
+      "implementation_files": [
+        "tests/games/scratch_cards/test_service.py",
+        "tests/games/scratch_cards/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-849-scratch-cards-atomic-state",
+      "changed_in": "issue-849-scratch-cards-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Scratch Cards service. Existing session isolation, covered-value privacy, purchase and reveal replay, debit and payout recovery, match-three economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }

@@ -15,6 +15,34 @@ from casino.games.scratch_cards import engine
 from casino.games.scratch_cards.service import ScratchCardsService
 
 
+# Adapt detached in-memory documents to the production repository contract.
+class MemoryRepository:
+    # Retain shared fixture documents and an optional publication hook.
+    def __init__(self, states, update_hook=None):
+        # Share the test-owned durable document mapping across service instances.
+        self.states = states
+        # Retain an optional transaction-shaped hook for interruption tests.
+        self.update_hook = update_hook
+
+    # Read a detached state document like the real provider.
+    def load(self, player_id):
+        # Return a copy so unsaved mutations cannot leak into persistence.
+        return copy.deepcopy(self.states.get(player_id, engine.default_state()))
+
+    # Apply one callback against the current detached provider document.
+    def update(self, player_id, mutator):
+        # Let interruption tests own the simulated transaction boundary.
+        if self.update_hook:
+            # Delegate the complete provider-current update to the hook.
+            return self.update_hook(player_id, mutator)
+        # Execute the production callback against current provider state.
+        updated = mutator(self.load(player_id))
+        # Persist only after the callback succeeds.
+        self.states[player_id] = copy.deepcopy(updated)
+        # Return a detached authoritative result like shared storage.
+        return copy.deepcopy(updated)
+
+
 # Supply deterministic outcome selection followed by zero-valued shuffle swaps.
 class SequenceRandom:
     # Store only the first documented outcome roll.
@@ -90,20 +118,10 @@ class ScratchCardsServiceTests(unittest.TestCase):
         # Create one reusable apply-once fake ledger.
         self.ledger = FakeLedgerGateway()
 
-    # Read a detached state document like the real JSON provider.
-    def load_state(self, player_id):
-        # Return a copy so unsaved mutations cannot leak into persistence.
-        return copy.deepcopy(self.states.get(player_id, engine.default_state()))
-
-    # Persist a detached state document like the real JSON provider.
-    def save_state(self, player_id, state):
-        # Copy nested private data into the test store.
-        self.states[player_id] = copy.deepcopy(state)
-
     # Build one service with a selected deterministic outcome tier.
-    def service(self, outcome_roll=99, state_saver=None):
+    def service(self, outcome_roll=99, state_updater=None):
         # Return the production service over isolated test seams.
-        return ScratchCardsService(ledger_gateway=self.ledger, state_loader=self.load_state, state_saver=state_saver or self.save_state, randbelow=SequenceRandom(outcome_roll), clock=lambda: "2026-07-14T00:00:00Z")
+        return ScratchCardsService(ledger_gateway=self.ledger, repository=MemoryRepository(self.states, state_updater), randbelow=SequenceRandom(outcome_roll), clock=lambda: "2026-07-14T00:00:00Z")
 
     # Prove identical purchase retries debit exactly once and preserve hidden prizes.
     def test_purchase_retry_reuses_one_masked_card_and_debit(self):
@@ -194,20 +212,24 @@ class ScratchCardsServiceTests(unittest.TestCase):
 
     # Prove a post-debit crash recovers persisted private state without ledger leakage or rerolling.
     def test_post_debit_crash_recovers_original_ticket(self):
-        # Count saver calls so the funded-state save can fail after intent persistence.
+        # Count provider updates so funded publication can fail after intent persistence.
         save_calls = {"count": 0}
-        # Define a saver that persists intent then crashes before ready-state persistence.
-        def crash_after_debit(player_id, state):
+        # Define an updater that persists intent then crashes before ready-state publication.
+        def crash_after_debit(player_id, mutator):
             # Advance the deterministic save boundary.
             save_calls["count"] += 1
+            # Evaluate the provider-current mutation inside the simulated transaction.
+            updated = mutator(copy.deepcopy(self.states.get(player_id, engine.default_state())))
             # Raise on the post-ledger ready-state save.
             if save_calls["count"] == 2:
                 # Simulate process loss after the atomic debit event.
                 raise RuntimeError("simulated post-debit crash")
             # Persist every earlier state transition normally.
-            self.save_state(player_id, state)
-        # Start a highest-tier winning ticket through the crash saver.
-        crashing = self.service(99, state_saver=crash_after_debit)
+            self.states[player_id] = copy.deepcopy(updated)
+            # Return the detached authoritative result.
+            return copy.deepcopy(updated)
+        # Start a highest-tier winning ticket through the crashing updater.
+        crashing = self.service(99, state_updater=crash_after_debit)
         # Observe the simulated failure after one committed debit.
         with self.assertRaises(RuntimeError):
             # Execute the interrupted purchase.
@@ -240,7 +262,7 @@ class ScratchCardsServiceTests(unittest.TestCase):
                 # Simulate loss of the request worker before the shared ledger transaction.
                 raise RuntimeError("simulated pre-debit crash")
         # Build a crashing service over normal persisted game state.
-        crashing = ScratchCardsService(ledger_gateway=PreDebitCrashGateway(), state_loader=self.load_state, state_saver=self.save_state, randbelow=SequenceRandom(99), clock=lambda: "2026-07-14T00:00:00Z")
+        crashing = ScratchCardsService(ledger_gateway=PreDebitCrashGateway(), repository=MemoryRepository(self.states), randbelow=SequenceRandom(99), clock=lambda: "2026-07-14T00:00:00Z")
         # Observe the interrupted purchase after its private intent was saved.
         with self.assertRaises(RuntimeError):
             # Start one stable five-token purchase identity.
@@ -258,22 +280,26 @@ class ScratchCardsServiceTests(unittest.TestCase):
     def test_post_credit_crash_recovers_one_payout(self):
         # Start and persist a deterministic winning card normally.
         service = self.service(99)
-        # Fund the card before installing the settlement crash saver.
+        # Fund the card before installing the settlement crash updater.
         started = service.start_card("player-a", {"client_request_id": "credit-crash", "wager": 1})
         # Count only saves made by the reveal action.
         reveal_saves = {"count": 0}
         # Persist the settlement intent but crash before terminal state persistence.
-        def crash_after_credit(player_id, state):
+        def crash_after_credit(player_id, mutator):
             # Advance the reveal save boundary.
             reveal_saves["count"] += 1
+            # Evaluate the provider-current mutation inside the simulated transaction.
+            updated = mutator(copy.deepcopy(self.states.get(player_id, engine.default_state())))
             # Raise on the second reveal save after the payout event exists.
             if reveal_saves["count"] == 2:
                 # Simulate process loss after atomic credit.
                 raise RuntimeError("simulated post-credit crash")
             # Persist the pre-credit settlement intent normally.
-            self.save_state(player_id, state)
-        # Build a service over the same state and ledger with the crash saver.
-        crashing = self.service(0, state_saver=crash_after_credit)
+            self.states[player_id] = copy.deepcopy(updated)
+            # Return the detached authoritative result.
+            return copy.deepcopy(updated)
+        # Build a service over the same state and ledger with the crashing updater.
+        crashing = self.service(0, state_updater=crash_after_credit)
         # Define one complete reveal retry identity.
         request = {"action_id": "credit-resume", "positions": list(range(engine.CELL_COUNT))}
         # Observe the simulated failure after payout commit.
