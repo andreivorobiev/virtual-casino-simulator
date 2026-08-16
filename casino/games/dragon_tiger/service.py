@@ -15,8 +15,8 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Import the one approved play-token settlement compatibility boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistent state helpers.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict and validation errors.
 from casino.errors import ConflictError, InsufficientFundsError, ValidationError
 # Import only this game's pure rules engine.
@@ -26,6 +26,10 @@ from casino.games.dragon_tiger import engine
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 # Serialize state preparation and reconciliation in this local process.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_dragon_tiger_atomic_baseline"
+# Name every state field owned by Dragon Tiger transitions.
+_GAME_STATE_KEYS = ("profile", "shoe", "shoe_number", "burned_cards", "prepared_actions", "prepared_order", "settled_actions", "recent_rounds")
 
 
 # Validate one required public retry identity.
@@ -47,10 +51,10 @@ class StateRepository:
         # Delegate JSON/MySQL selection and schema metadata to shared state storage.
         return load_player_game_state(engine.GAME_ID, player_id, engine.default_state)
 
-    # Save one authenticated player's document.
-    def save(self, player_id: str, state: dict) -> None:
-        # Delegate atomic file replacement or provider storage.
-        save_player_game_state(engine.GAME_ID, player_id, state)
+    # Apply one transition while the provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate current-state loading, rollback, and publication atomically.
+        return update_player_game_state(engine.GAME_ID, player_id, mutator, engine.default_state)
 
 
 # Construct the shared settlement gateway while retaining the historical test seam name.
@@ -73,6 +77,65 @@ class DragonTigerService:
         self.shoe_factory = shoe_factory or engine.standard_shoe
         # Use the shared UTC clock unless a test pins time.
         self.clock = clock or utc_now
+
+    # Capture only the fields owned by Dragon Tiger transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Detach nested cards, actions, and receipts from later engine mutation.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its optimistic game-owned baseline.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before provider mutation.
+        state = self.repository.load(player_id)
+        # Retain the exact game-owned values expected by the next publication.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting operation metadata.
+        return state
+
+    # Publish one provider-current compare-and-replace transition. (DT-006)
+    def _save(self, player_id: str, state: dict) -> None:
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Reject fabricated or stale detached documents before storage access.
+        if not isinstance(expected, dict):
+            # Keep untracked state outside provider bytes.
+            raise ConflictError("Dragon Tiger state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Dragon Tiger-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach provider-current game fields from unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept an identical publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose game-owned baseline lost a race.
+            if observed != expected:
+                # Require recovery from the authoritative winning action.
+                raise ConflictError("Dragon Tiger state changed during this action; reload and retry")
+            # Replace only the fields governed by this game service.
+            for key, value in desired.items():
+                # Publish detached values so caller mutation cannot leak later.
+                current[key] = copy.deepcopy(value)
+            # Return the complete document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process mutation boundary.
+        authoritative = self.repository.update(player_id, publish)
+        # Advance the in-memory baseline to the exact committed result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+
+    # Restore one pre-action game snapshot against the latest successful publication.
+    def _restore(self, player_id: str, state: dict, prior_state: dict) -> None:
+        # Bind rollback to the exact game state last published by this operation.
+        prior_state[_ATOMIC_BASELINE_KEY] = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Publish cleanup only when no competing game transition won first.
+        self._save(player_id, prior_state)
 
     # Build immutable wager ledger details sufficient for crash reconstruction.
     def _wager_details(self, prepared: dict) -> dict:
@@ -113,7 +176,7 @@ class DragonTigerService:
             # Append only a missing action identity.
             state["prepared_order"].append(prepared["action_id"])
         # Persist before any remaining ledger movement.
-        self.repository.save(player_id, state)
+        self._save(player_id, state)
 
     # Reconcile one prepared action through wager and optional settlement proof.
     def _reconcile(self, player_id: str, state: dict, prepared: dict, *, include_recent: bool = True) -> dict:
@@ -200,7 +263,7 @@ class DragonTigerService:
         # Archive the settled round and remove private action state.
         engine.record_round(state, round_item, ledger_evidence, include_recent=include_recent)
         # Persist terminal state after all required movements commit.
-        self.repository.save(player_id, state)
+        self._save(player_id, state)
         # Return public round, proof, and replay status.
         return {"round": round_item, "ledger": ledger_evidence, "replayed": wager_replayed or settlement_replayed}
 
@@ -229,7 +292,7 @@ class DragonTigerService:
         # Serialize recovery against concurrent duplicate requests.
         with _ACTION_LOCK:
             # Load only this authenticated player's state.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Finish actions already requested before interruption.
             self._recover_all(player_id, state)
             # Return the exact public state contract.
@@ -258,7 +321,7 @@ class DragonTigerService:
         # Serialize preparation, ledger lookup, and state persistence.
         with _ACTION_LOCK:
             # Load a detached document so failed preparation cannot leak mutations.
-            state = copy.deepcopy(self.repository.load(player_id))
+            state = copy.deepcopy(self._load(player_id))
             # Recover earlier persisted actions before accepting a new one.
             self._recover_all(player_id, state)
             # Replay a settled response from bounded state first.
@@ -302,7 +365,7 @@ class DragonTigerService:
                 # Prepare cards, comparison, and settlement entirely before ledger mutation.
                 prepared = engine.prepare_action(state, player_id=player_id, action_id=action_id, bet=bet, wager=wager, fingerprint=fingerprint, round_id=round_id, created_at=self.clock(), shoe_factory=self.shoe_factory)
                 # Persist prepared shoe/result state before the wager debit.
-                self.repository.save(player_id, state)
+                self._save(player_id, state)
             # Reconcile the prepared action through the ledger.
             try:
                 # Commit or recover the debit and possible credit.
@@ -312,7 +375,7 @@ class DragonTigerService:
                 # A rejected shared debit is definitive and cannot have changed the balance.
                 if self.ledger.find(player_id, f"{round_id}:wager") is None:
                     # Restore shoe and prepared state so a later funded action can proceed normally.
-                    self.repository.save(player_id, prior_state)
+                    self._restore(player_id, state, prior_state)
                 # Preserve the shared insufficient-funds response.
                 raise
             # Preserve fail-closed movement stages for every ambiguous provider failure.
@@ -322,7 +385,7 @@ class DragonTigerService:
                 # Check append-only proof in case failure followed a successful debit.
                 if current.get("status") not in {"wager_attempting", "settlement_attempting"} and self.ledger.find(player_id, f"{round_id}:wager") is None:
                     # Restore shoe and action state after validation or insufficient funds failure.
-                    self.repository.save(player_id, prior_state)
+                    self._restore(player_id, state, prior_state)
                 # Re-raise the original domain or provider error.
                 raise
             # Return POST additions beside the shared base payload.

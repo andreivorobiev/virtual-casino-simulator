@@ -12361,6 +12361,29 @@
       "notes": "The production pool policy and fixed MySQLPoolExhaustedError deadline remain unchanged. The disposable fixture removes artificial checkout starvation by matching worker count to exact capacity while retaining real wallet-row contention and repeated hosted MySQL execution."
     },
     {
+      "id": "TEST-221",
+      "module": "Tests",
+      "description": "Real stale-load Dragon Tiger workers race terminal round publication around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no prepared-action resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DT-001",
+        "API-DT-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/dragon_tiger/test_api.py",
+        "tests/games/dragon_tiger/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-833-dragon-tiger-atomic-state",
+      "changed_in": "issue-833-dragon-tiger-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Dragon Tiger service. Existing session isolation, replay, wager and settlement recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -16738,6 +16761,30 @@
       "introduced_in": "game-expansion-dragon-tiger",
       "changed_in": "game-expansion-dragon-tiger",
       "notes": "The descriptor uses sort order 100 and the normalized tests.game_drivers.dragon_tiger:play driver reference released by issue #77."
+    },
+    {
+      "id": "DT-006",
+      "module": "Dragon Tiger",
+      "description": "Dragon Tiger publishes shoe progress, prepared actions, recovery markers, bounded terminal history, and durable replay evidence through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action can overwrite or resurrect the winning result, while debit and settlement recovery retain the frozen v1 behavior and exactly-once ledger movements.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DT-001",
+        "API-DT-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/dragon_tiger/service.py",
+        "tests/games/dragon_tiger/test_api.py",
+        "tests/games/dragon_tiger/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-833-dragon-tiger-atomic-state",
+      "changed_in": "issue-833-dragon-tiger-atomic-state",
+      "notes": "The frozen v1 contract, standard-8d shoe, card ordering, payout math, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "RD-001",
