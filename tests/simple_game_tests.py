@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Focused exactly-once settlement tests for the shared simple-game core. (#73 expansion, GAMECORE-001/002)"""
 
+# Import deep-copy support for provider-shaped state fixtures.
+import copy
 # Import the standard unittest framework used by the repository's focused suites.
 import unittest
 
@@ -45,6 +47,42 @@ def _resolve(wager: dict, entropy: dict) -> dict:
         return {"outcome": "win", "total_return": wager["stake"] * 5, "detail": {"face": entropy["face"]}}
     # Return the losing settlement with no return.
     return {"outcome": "lose", "total_return": 0, "detail": {"face": entropy["face"]}}
+
+
+# Simulate provider-current document callbacks without bypassing the atomic mutator shape.
+class MemoryState:
+    # Start with no player documents and one optional pre-publication hook.
+    def __init__(self) -> None:
+        # Retain detached provider-owned documents by player id.
+        self.documents = {}
+        # Allow one test to publish a concurrent provider transition after a stale load.
+        self.before_update = None
+
+    # Build one fresh shared-core state document.
+    @staticmethod
+    def _default() -> dict:
+        # Match the production helper's game-owned default fields.
+        return {"game": "unit_flip", "recent_rounds": []}
+
+    # Return a detached snapshot so callers cannot mutate provider state directly.
+    def load(self, player_id: str) -> dict:
+        # Copy the exact current document or a fresh default.
+        return copy.deepcopy(self.documents.get(player_id, self._default()))
+
+    # Apply one callback against provider-current state.
+    def update(self, player_id: str, mutator) -> dict:
+        # Run a configured concurrent publication exactly once before the caller callback.
+        if self.before_update is not None:
+            # Detach the hook before execution so recursive or failed updates cannot repeat it.
+            hook, self.before_update = self.before_update, None
+            # Let the test modify only the provider-owned document.
+            hook(self.documents.setdefault(player_id, self._default()))
+        # Execute the production mutator against a detached provider-current copy.
+        updated = mutator(copy.deepcopy(self.documents.get(player_id, self._default())))
+        # Publish only after the callback returns successfully.
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Return detached committed authority to the core.
+        return copy.deepcopy(updated)
 
 
 # Build one isolated game whose entropy is pinned for deterministic assertions.
@@ -117,20 +155,20 @@ class SimpleGameCoreTests(unittest.TestCase):
 
     # Require settlement to recover deterministically from committed ledger proof after state loss.
     def test_recovers_from_committed_entropy_after_state_loss(self) -> None:
-        # Use a mutable in-memory state so it can be wiped mid-round to simulate a crash.
-        store = {}
+        # Use a provider-shaped in-memory state so it can be wiped mid-round to simulate a crash.
+        store = MemoryState()
         # Supply different first and retry draws so any accidental entropy redraw changes the outcome.
         draws = iter((4, 2))
         # Supply different first and retry timestamps so public replay identity is also proven.
         timestamps = iter(("2026-07-26T00:00:00Z", "2026-07-26T00:01:00Z"))
-        # Build a game whose state loader and saver use the wipeable store.
-        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, entropy_source=lambda n: next(draws), clock=lambda: next(timestamps), state_loader=lambda p: store.get(p, {"game": "unit_flip", "recent_rounds": []}), state_saver=lambda p, s: store.__setitem__(p, s))
+        # Build a game whose loader and atomic updater use the wipeable provider fixture.
+        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, entropy_source=lambda n: next(draws), clock=lambda: next(timestamps), state_loader=store.load, state_updater=store.update)
         # Play a winning round.
         first = game.play(self.pid, {"request_id": "r-crash", "face": 3, "stake": 10})
         # Record the balance after the first settlement.
         after_first = self._balance()
         # Simulate a crash that lost the saved per-player state entirely.
-        store.clear()
+        store.documents.clear()
         # Replay the same request after state loss so proof must come from the ledger alone.
         second = game.play(self.pid, {"request_id": "r-crash", "face": 3, "stake": 10})
         # Require the recovered public round to equal the original committed outcome and timestamp exactly.
@@ -139,6 +177,33 @@ class SimpleGameCoreTests(unittest.TestCase):
         self.assertTrue(second["replayed"])
         # Require the wallet not to have moved a second time despite the lost state.
         self.assertEqual(self._balance(), after_first)
+
+    # Require provider-current publication to retain a stale-read sibling and distinct round.
+    def test_atomic_publication_merges_provider_current_state(self) -> None:
+        # Build one provider-shaped state fixture.
+        store = MemoryState()
+        # Build one deterministic losing game over the injected provider seams.
+        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, entropy_source=lambda n: 2, state_loader=store.load, state_updater=store.update)
+
+        # Publish one unrelated sibling and distinct round after play captures its stale snapshot.
+        def publish_concurrent(current: dict) -> None:
+            # Retain unrelated provider metadata that the shared core does not own.
+            current["atomic_markers"] = ["concurrent"]
+            # Retain a separately committed round that must not be lost.
+            current["recent_rounds"] = [{"request_id": "other", "request_fingerprint": "other:1", "round_id": "other-round", "total_return": 0, "public": {"round_id": "other-round"}}]
+
+        # Schedule the concurrent publication at the provider boundary.
+        store.before_update = publish_concurrent
+        # Execute one distinct losing round from the previously loaded state.
+        result = game.play(self.pid, {"request_id": "atomic-merge", "face": 5, "stake": 10})
+        # Read exact provider-owned state after the atomic callback.
+        persisted = store.documents[self.pid]
+        # Preserve both the new round and the provider-current distinct round.
+        self.assertEqual(["atomic-merge", "other"], [row["request_id"] for row in persisted["recent_rounds"]])
+        # Preserve unrelated sibling metadata through the shared updater.
+        self.assertEqual(["concurrent"], persisted["atomic_markers"])
+        # Preserve the established response envelope and exact terminal round.
+        self.assertEqual(result["round"], persisted["recent_rounds"][0]["public"])
 
     # Require an empty or malformed wager to be rejected before any wallet movement.
     def test_invalid_wager_is_rejected(self) -> None:

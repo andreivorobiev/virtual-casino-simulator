@@ -1284,6 +1284,24 @@ def _component_inventory(modules: list[dict], module_state: list[dict], instance
 
 # Classify every registered game from executable AST calls and imports.
 def _game_inventory(games: list[dict], modules: list[dict]) -> list[dict]:
+    # Select the one shared settlement helper whose production defaults own delegated state publication.
+    simple_game_modules = [module for module in modules if module["path"] == "casino/core/simple_game.py"]
+    # Start with no accepted delegated atomic call when a focused fixture omits the shared helper.
+    simple_game_atomic_updates = 0
+    # Start with no reachable direct helper save in focused fixtures or current production.
+    simple_game_direct_saves = 0
+    # Analyze the helper exactly once when the complete repository source is present.
+    if simple_game_modules:
+        # Require one unambiguous helper source owner.
+        if len(simple_game_modules) != 1:
+            # Reject duplicate or ambiguous shared settlement implementations.
+            raise MultiprocessSafetyAuditError("game inventory unavailable")
+        # Traverse every method because a constructed helper may dispatch any public or private method.
+        simple_game_reachability = _reachable_facts(simple_game_modules, {"SimpleWagerGame"})
+        # Count the provider-current production updater wired by the helper.
+        simple_game_atomic_updates = sum(call["name"] == "update_player_game_state" for call in simple_game_reachability["calls"])
+        # Count any reachable detached whole-document save that would invalidate delegated atomicity.
+        simple_game_direct_saves = sum(call["name"] == "save_player_game_state" for call in simple_game_reachability["calls"])
     # Collect exact per-game dispositions.
     rows = []
     # Inspect each registered game package.
@@ -1324,6 +1342,10 @@ def _game_inventory(games: list[dict], modules: list[dict]) -> list[dict]:
         uses_player_documents = player_loads > 0 or player_saves > 0 or atomic_updates > 0
         # Detect the current shared simple-game family.
         uses_simple_game = simple_game_calls > 0 or simple_game_imported
+        # Require the shared family to resolve through one atomic updater and zero direct saves.
+        if uses_simple_game and (simple_game_atomic_updates != 1 or simple_game_direct_saves != 0):
+            # Fail closed if a helper regression would make all delegated game classifications stale.
+            raise MultiprocessSafetyAuditError("game inventory unavailable")
         # Reject player-document paths that cannot read current state or publish any mutation.
         if uses_player_documents and (player_loads == 0 or (player_saves == 0 and atomic_updates == 0)):
             # Fail closed on incomplete direct or provider-atomic persistence semantics.
@@ -1332,8 +1354,8 @@ def _game_inventory(games: list[dict], modules: list[dict]) -> list[dict]:
         if uses_player_documents == uses_simple_game:
             # Fail closed on absent or overlapping models.
             raise MultiprocessSafetyAuditError("game inventory unavailable")
-        # Name direct, provider-atomic, or shared-simple persistence precisely.
-        state_model = "player_document_load_save" if uses_player_documents else "shared_simple_game_load_save"
+        # Name direct or delegated provider-atomic persistence precisely.
+        state_model = "player_document_load_save" if uses_player_documents else "provider_atomic_player_document"
         # Expose a fully provider-atomic player-document path after every direct save is retired.
         if uses_player_documents and atomic_updates and player_saves == 0:
             # Distinguish state serialization from broader state-plus-money worker safety.
@@ -1350,7 +1372,7 @@ def _game_inventory(games: list[dict], modules: list[dict]) -> list[dict]:
                 "state_model": state_model,  # Publish executable persistence semantics.
                 "load_call_sites": player_loads,  # Publish direct load count.
                 "save_call_sites": player_saves,  # Publish direct save count.
-                "atomic_update_call_sites": atomic_updates,  # Publish atomic update count.
+                "atomic_update_call_sites": atomic_updates + (simple_game_atomic_updates if uses_simple_game else 0),  # Include delegated atomic publication.
                 "simple_game_call_sites": simple_game_calls,  # Publish shared-core construction count.
                 "reachable_definitions": reachability["definition_count"],  # Reconcile bounded package call graph.
                 "multiworker_status": "blocked",  # Refuse second-worker authorization.

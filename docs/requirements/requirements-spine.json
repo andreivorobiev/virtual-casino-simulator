@@ -8877,8 +8877,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-430-player-state-atomic",
-      "changed_in": "issue-430-player-state-atomic",
-      "notes": "Introduced as the independently revertible Phase 0b prerequisite for issue #430. This slice is route-free and game-inert; SimpleWagerGame adoption and composite state-plus-ledger settlement remain separately governed."
+      "changed_in": "issue-857-simple-wager-atomic-state",
+      "notes": "Introduced as the independently revertible Phase 0b prerequisite for issue #430. Issue #857 adopts the helper across every SimpleWagerGame catalog route; composite state-plus-ledger settlement remains separately governed."
     },
     {
       "id": "CORE-031",
@@ -12651,6 +12651,49 @@
       "introduced_in": "issue-855-teen-patti-atomic-state",
       "changed_in": "issue-855-teen-patti-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Teen Patti service. Existing session isolation, private dealer cards, deal and decision replay, ledger recovery, strategy economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "GAMECORE-005",
+      "module": "Core",
+      "description": "The shared SimpleWagerGame core publishes each ledger-committed terminal round through the provider-current atomic player-document callback. Distinct concurrent rounds and unrelated sibling fields survive, exact same-request publication is idempotent, changed-meaning or divergent same-request state fails closed, retained history stays bounded, and existing ledger proof, entropy recovery, game math, routes, and response envelopes remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/simple_game.py",
+        "casino/core/state_store.py",
+        "tests/simple_game_tests.py",
+        "tests/simple_game_atomic_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-857-simple-wager-atomic-state",
+      "changed_in": "issue-857-simple-wager-atomic-state",
+      "notes": "This completes player-document atomic publication for the eleven shared-helper games without authorizing a second production worker: wallet, ledger, history, and player-game state remain separate provider transactions."
+    },
+    {
+      "id": "TEST-233",
+      "module": "Tests",
+      "description": "A real two-process JSON-provider race starts two distinct SimpleWagerGame rounds from the same stale read around a separately committed sibling update and proves both terminal rounds plus the sibling survive. Deterministic provider-current evidence retains bounded history and the established response, while the fail-closed structural inventory requires the shared helper to own exactly one atomic updater, no direct saver, and classifies all forty-six catalog games as provider-atomic without weakening the state-plus-money multiworker blocker.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "API-GAMECORE-005",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/simple_game_tests.py",
+        "tests/simple_game_atomic_tests.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "scripts/audit_multiprocess_safety.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-857-simple-wager-atomic-state",
+      "changed_in": "issue-857-simple-wager-atomic-state",
+      "notes": "The eleven existing game suites retain their economics and frozen v1 behavior. State-only atomicity does not combine ledger movement with player-game state and therefore does not activate production multiworker mode."
     }
   ]
 }

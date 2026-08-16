@@ -53,19 +53,21 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(len(games), audit.EXPECTED_GAME_COUNT)
         # Reject duplicate or omitted game identities.
         self.assertEqual(len({row["game_id"] for row in games}), audit.EXPECTED_GAME_COUNT)
-        # Pin the exact current persistence families after Roulette retires direct saves.
+        # Pin one exact provider-atomic persistence family after the shared helper migration.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
-            {"shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
+            {"provider_atomic_player_document"},  # Reject every detached direct or shared load/save model.
         )
-        # Pin the exact current family cardinalities after Teen Patti retires the final direct publication.
-        self.assertEqual(
-            {
-                model: sum(row["state_model"] == model for row in games)  # Count one model.
-                for model in {"shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all remaining models.
-            },
-            {"shared_simple_game_load_save": 11, "provider_atomic_player_document": 35},  # Pin current counts.
-        )
+        # Require every catalog game to publish player state through a provider-owned callback.
+        self.assertEqual(46, sum(row["state_model"] == "provider_atomic_player_document" for row in games))
+        # Bind the exact eleven packages that delegate state publication through SimpleWagerGame.
+        shared_game_ids = {"boule", "coin_pusher", "color_wheel", "daily_draw_lab", "faro", "lucky_grid", "marble_race", "pachinko", "pattern_draw", "poker_dice", "trente_et_quarante"}
+        # Select only the reachable shared-helper constructors.
+        shared_games = [row for row in games if row["game_id"] in shared_game_ids]
+        # Require complete shared-family cardinality and no stale direct persistence call.
+        self.assertEqual((11, {0}, {1}), (len(shared_games), {row["save_call_sites"] for row in shared_games}, {row["atomic_update_call_sites"] for row in shared_games}))
+        # Require every shared package to remain conservatively blocked on separate state and money transactions.
+        self.assertEqual({"blocked"}, {row["multiworker_status"] for row in shared_games})
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
         # Require the authoritative Casino War read used for response and interruption recovery.
@@ -870,6 +872,50 @@ def dead_helper():
             audit._game_inventory(
                 [{"game_id": "fixture", "backend": "casino.games.fixture.api"}],  # Define governed fixture.
                 [dead_only],  # Supply marker-only source.
+            )
+
+    # Prove a shared helper is provider-atomic only while its production default has no direct saver.
+    def test_shared_simple_game_classification_requires_atomic_helper(self) -> None:
+        # Parse one reachable shared-helper game constructor.
+        game_module = parsed_module(
+            "casino/games/fixture/api.py",  # Assign one portable game package.
+            """
+def register():
+    SimpleWagerGame()
+""",
+        )
+        # Parse one minimal atomic helper source with the exact production class identity.
+        atomic_helper = parsed_module(
+            "casino/core/simple_game.py",  # Bind the governed shared-helper owner.
+            """
+class SimpleWagerGame:
+    def __init__(self):
+        update_player_game_state('fixture', 'player', mutate, default_state)
+""",
+        )
+        # Classify the delegated game only through the atomic helper shape.
+        rows = audit._game_inventory(
+            [{"game_id": "fixture", "backend": "casino.games.fixture.api"}],  # Define one registered game.
+            [game_module, atomic_helper],  # Supply game and helper ownership together.
+        )
+        # Require delegated atomic evidence and the broader multiworker blocker.
+        self.assertEqual(("provider_atomic_player_document", 1, "blocked"), (rows[0]["state_model"], rows[0]["atomic_update_call_sites"], rows[0]["multiworker_status"]))
+        # Parse a regressed helper that also reaches a detached whole-document save.
+        mixed_helper = parsed_module(
+            "casino/core/simple_game.py",  # Reuse the governed helper identity.
+            """
+class SimpleWagerGame:
+    def __init__(self):
+        update_player_game_state('fixture', 'player', mutate, default_state)
+        save_player_game_state('fixture', 'player', state)
+""",
+        )
+        # Reject a shared helper whose atomic marker masks any reachable direct save.
+        with self.assertRaisesRegex(audit.MultiprocessSafetyAuditError, "game inventory unavailable"):
+            # Attempt classification with the unsafe mixed helper.
+            audit._game_inventory(
+                [{"game_id": "fixture", "backend": "casino.games.fixture.api"}],  # Define the same registered game.
+                [game_module, mixed_helper],  # Supply the exact regressed helper shape.
             )
 
     # Prove tracked and untracked dirt independently block provenance before source reads.
