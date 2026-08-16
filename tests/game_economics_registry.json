@@ -383,7 +383,7 @@
       "requirement_id": "LIR-001",
       "engine_path": "casino/games/let_it_ride/engine.py",
       "settlement_path": "casino/games/let_it_ride/api.py",
-      "production_sha256": "1492add83ab37635093c5c0cd5a0bcd04a13121399c623b8cc88e9fad36c7926",
+      "production_sha256": "369f80d4c084ab1f3295ee849dae2439628f73ba65ab448a429311c24cba06f2",
       "proof_tests": ["tests.games.let_it_ride.test_engine:LetItRideEngineTests.test_pull_refund_and_final_payout_are_prepared_in_order", "tests.games.let_it_ride.test_engine:LetItRideEngineTests.test_pair_of_tens_or_better_threshold"],
       "rationale": "The complete pull-or-ride decision tree and returned-stake accounting are pinned to the production evaluator and paytable."
     },
