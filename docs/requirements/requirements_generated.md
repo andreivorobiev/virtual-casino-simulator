@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.7
-- core: 9.47.0
+- core: 9.48.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
@@ -33,7 +33,7 @@ Historical source baseline: 9.1.0
 - jacks_or_better_video_poker: 1.1.4
 - deuces_wild_video_poker: 1.1.5
 - scratch_cards: 1.1.3
-- sic_bo: 1.1.5
+- sic_bo: 1.2.0
 - chuck_a_luck: 1.1.4
 - craps: 1.1.3
 - crown_and_anchor: 1.1.5
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.4
-- tests: 1.100.51
-- docs: 1.96.51
+- tests: 1.100.52
+- docs: 1.96.52
 - contracts: 1.62.4
 - tooling: 1.41.0
 - commenting_policy: 2.0.0
@@ -720,13 +720,15 @@ Historical source baseline: 9.1.0
 - **TEST-227** (Tests) - PASS: Real stale-load Plinko workers race different terminal drop publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit cleanup cannot erase a concurrent winner while existing debit, settlement, replay, and recovery paths retain exactly-once wallet behavior.
 - **TEST-228** (Tests) - PASS: Real stale-load Red Dog workers race different terminal call publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, one terminal round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-action cleanup cannot erase a concurrent winner while existing wager, raise, refund, payout, replay, and recovery paths retain exactly-once wallet behavior.
 - **TEST-229** (Tests) - PASS: Real stale-load Scratch Cards workers race different partial reveal publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one reveal record, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing purchase, debit, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.
-- **TEST-230** (Tests) - PASS: Real stale-load Sic Bo workers race different private round preparations around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one active round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing wager, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.
+- **TEST-230** (Tests) - PASS: Real Sic Bo workers race different private round preparations through the selected JSON provider around a separately committed sibling update, proving one provider-winning action, one explicit competing-action conflict, one active round, and no sibling loss. Deterministic lifecycle evidence proves exact preparation is idempotent without redrawing entropy, terminal archival preserves older history and siblings, private helper wrappers never persist, and action-owned cleanup cannot erase an advanced winner while wager, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.
 - **TEST-231** (Tests) - PASS: Real stale-load Slots workers race different recent-spin publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, optional bonus and legacy-meter deletion is atomic, private baselines never persist or enter v1 payloads, and stale cleanup cannot erase a concurrent winner while existing free-spin, progressive, payout, history, and insufficient-funds paths remain covered.
 - **TEST-232** (Tests) - PASS: Real stale-load Teen Patti workers race different settled-round publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist or enter v1 payloads, and stale recovery cleanup cannot erase a concurrent winner while existing ante, play, fold, payout, replay, private-card, and recovery paths remain covered.
 - **GAMECORE-005** (Core) - PASS: The shared SimpleWagerGame core publishes each ledger-committed terminal round through the provider-current atomic player-document callback. Distinct concurrent rounds and unrelated sibling fields survive, exact same-request publication is idempotent, changed-meaning or divergent same-request state fails closed, retained history stays bounded, and existing ledger proof, entropy recovery, game math, routes, and response envelopes remain unchanged.
 - **TEST-233** (Tests) - PASS: A real two-process JSON-provider race starts two distinct SimpleWagerGame rounds from the same stale read around a separately committed sibling update and proves both terminal rounds plus the sibling survive. Deterministic provider-current evidence retains bounded history and the established response, while the fail-closed structural inventory requires the shared helper to own exactly one atomic updater, no direct saver, and classifies all forty-six catalog games as provider-atomic without weakening the state-plus-money multiworker blocker.
-- **GAMECORE-006** (Core) - PASS: SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, wager proof write/read, settlement details, public round projection, and bounded history capacity. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public and persisted shape without bypassing the shared settlement or provider-current publication boundaries.
+- **GAMECORE-006** (Core) - PASS: SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, movement action keys, historical action-detail keys, wager proof write/read, settlement details, public round projection, and bounded history capacity. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public, ledger, and persisted shape without bypassing the shared settlement or provider-current publication boundaries.
 - **TEST-234** (Tests) - PASS: Focused SimpleWagerGame and Big Six Wheel evidence proves unchanged default helper behavior, exact legacy request and round identities, canonical and historical ledger-proof recovery, frozen action/state rows, 100-round retention, no direct Big Six settlement gateway call, and two-process provider-current preservation of two distinct rounds plus an unrelated sibling.
+- **GAMECORE-007** (Core) - PASS: SimpleWagerGame exposes one optional prepared-state lifecycle protocol that can durably prepare private entropy, reconcile wager failure, publish immutable wager proof, publish deterministic settlement intent, publish optional credit proof, and freeze terminal fields before the helper archives its provider-current round. Ordinary helper games retain their established default path, and an incomplete lifecycle fails before silently skipping a money-sensitive stage.
+- **TEST-235** (Tests) - PASS: Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1007,7 +1009,8 @@ Historical source baseline: 9.1.0
 - **SIC-BO-003** (Sic Bo) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable action identities.
 - **SIC-BO-004** (Application) - PASS: Sic Bo supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **SIC-BO-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Sic Bo with requirement, module, version, and visual traceability.
-- **SIC-BO-006** (Sic Bo) - PASS: Sic Bo publishes private dice preparation, wager and payout recovery markers, settlement state, bounded history, and action-owned cleanup through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action or cleanup can overwrite the winning round, while the frozen v1 envelope, fifty-position rules, server entropy, and exactly-once ledger movements remain unchanged.
+- **SIC-BO-006** (Sic Bo) - PASS: Sic Bo publishes private dice preparation, wager and payout recovery markers, settlement state, bounded history, and action-owned cleanup through provider-current callbacks that replace only game-owned fields. Competing processes serialize distinct preparations, preserve unrelated player-state siblings and terminal history, and prevent stale cleanup from erasing an advanced winner, while the frozen v1 envelope, fifty-position rules, server entropy, and exactly-once ledger movements remain unchanged.
+- **SIC-BO-007** (Sic Bo) - PASS: Sic Bo delegates its prepared wager, committed-dice recovery, optional payout credit, replay lookup, lifecycle finalization, and provider-current history publication to one SimpleWagerGame coordinator while preserving the frozen v1 action_id, sb_ round identity, direct oldest-to-newest fifty-round history, public round, active-state privacy, and historical ledger evidence semantics.
 - **CHUCK-001** (Chuck-a-Luck) - PASS: Three server-authoritative dice implement one-through-six face wagers and the documented one-, two-, and three-match payout profile.
 - **CHUCK-002** (Chuck-a-Luck) - PASS: Authenticated sessions own private reload-safe rolls, recovery state, history, and canonical route restoration.
 - **CHUCK-003** (Chuck-a-Luck) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable request identities.

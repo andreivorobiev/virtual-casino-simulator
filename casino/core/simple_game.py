@@ -57,7 +57,7 @@ def round_id_for(game_id: str, player_id: str, request_id: str) -> str:
 # Coordinate authenticated state, server entropy, and exactly-once ledger settlement for one game.
 class SimpleWagerGame:
     # Configure the core with one game's identity, rules, and injectable test seams.
-    def __init__(self, *, game_id, wager_transaction_type, settlement_transaction_type, entropy, resolve, validate_bet, public_bet_catalog=None, ledger_gateway=None, state_loader=None, state_updater=None, entropy_source=None, clock=None, get_player=None, request_id_resolver=None, round_id_factory=None, wager_details_builder=None, wager_proof_reader=None, settlement_details_builder=None, public_round_builder=None, recent_round_limit=RECENT_ROUND_LIMIT) -> None:
+    def __init__(self, *, game_id, wager_transaction_type, settlement_transaction_type, entropy, resolve, validate_bet, public_bet_catalog=None, ledger_gateway=None, state_loader=None, state_updater=None, entropy_source=None, clock=None, get_player=None, request_id_resolver=None, round_id_factory=None, action_key_builder=None, wager_details_builder=None, wager_proof_reader=None, settlement_details_builder=None, public_round_builder=None, recent_round_limit=RECENT_ROUND_LIMIT, legacy_action_detail_key="idempotency_key", lifecycle=None) -> None:
         # Retain the fixed game identity used across every ledger and state dimension.
         self.game_id = str(game_id)
         # Retain the two aggregate transaction-type names used for recovery-stable proof.
@@ -72,7 +72,7 @@ class SimpleWagerGame:
         # Retain the optional public bet catalog builder for the state payload.
         self._public_bet_catalog = public_bet_catalog or (lambda: {})
         # Bind every production movement to SettlementAdapter while retaining the old detail key for one release.
-        self._ledger_gateway = ledger_gateway or GameSettlementGateway(self.game_id, "idempotency_key")
+        self._ledger_gateway = ledger_gateway or GameSettlementGateway(self.game_id, legacy_action_detail_key)
         # Use player-scoped production reads unless a test injects a detached loader.
         self._state_loader = state_loader or (lambda player_id: load_player_game_state(self.game_id, player_id, self._default_state))
         # Publish every settled-round append against provider-current state instead of a detached snapshot.
@@ -87,6 +87,8 @@ class SimpleWagerGame:
         self._request_id_resolver = request_id_resolver or (lambda request: require_request_id(request.get("request_id")))
         # Preserve the standard game-scoped digest unless a legacy game has an established round identity.
         self._round_id_factory = round_id_factory or round_id_for
+        # Preserve the standard wager/settlement action suffixes unless a legacy game names payout differently.
+        self._action_key_builder = action_key_builder or (lambda round_id, action: f"{round_id}:{action}")
         # Preserve the canonical wager-proof detail shape unless a legacy ledger row needs compatible fields.
         self._wager_details_builder = wager_details_builder or self._default_wager_details
         # Preserve canonical proof recovery while allowing an established ledger shape to be decoded.
@@ -95,6 +97,8 @@ class SimpleWagerGame:
         self._settlement_details_builder = settlement_details_builder or self._default_settlement_details
         # Preserve the standard public round while allowing a game to retain its frozen response shape.
         self._public_round_builder = public_round_builder or self._default_public_round
+        # Retain one optional game-owned lifecycle adapter for prepared-state compatibility.
+        self._lifecycle = lifecycle
         # Retain one explicit positive history bound so adapted games preserve their established capacity.
         self._recent_round_limit = int(recent_round_limit)
         # Reject an invalid history policy at construction rather than truncating committed state unpredictably.
@@ -133,8 +137,23 @@ class SimpleWagerGame:
 
     # Build one deterministic ledger movement identity for a wager or settlement action.
     def _action_key(self, round_id: str, action: str) -> str:
-        # Combine the round and action so the two movements never share an identity.
-        return f"{round_id}:{action}"
+        # Delegate to the standard or explicitly configured stable action-key builder.
+        return self._action_key_builder(round_id, action)
+
+    # Invoke one required method on an explicitly configured prepared-state lifecycle adapter.
+    def _lifecycle_call(self, method: str, **context):
+        # Skip lifecycle work for ordinary shared-simple games so their behavior remains byte-compatible.
+        if self._lifecycle is None:
+            # Report the absence of an adapter result to the caller.
+            return None
+        # Resolve the named stage without accepting a silently incomplete adapter.
+        callback = getattr(self._lifecycle, method, None)
+        # Reject a partial adapter before continuing a money-sensitive transition.
+        if not callable(callback):
+            # Surface a programmer-facing integration error rather than skipping recovery state.
+            raise TypeError(f"SimpleWagerGame lifecycle is missing {method}")
+        # Execute the game-owned state transition with only bounded authoritative context.
+        return callback(**context)
 
     # Build the public state payload for one authenticated player.
     def state(self, player_id: str) -> dict:
@@ -217,18 +236,69 @@ class SimpleWagerGame:
                 ledger_events = self._round_ledger(player_id, existing)
                 # Return the identical replayed round with explicit replay evidence.
                 return {"round": existing["public"], "replayed": True, "ledger": ledger_events, **self.state(player_id)}
-            # Draw tentative server entropy that becomes authoritative only if this request writes the wager proof.
-            tentative_entropy = self._entropy(self._entropy_source)
-            # Capture one tentative settlement timestamp alongside the entropy for exact crash-recovery replay.
-            tentative_settled_at = self._clock()
+            # Persist or recover optional game-owned preparation before any ledger movement.
+            lifecycle_context = self._lifecycle_call("prepare", player_id=player_id, request=request or {}, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=wager, wager_total=wager_total)
+            # Preserve preparation replay evidence even if finalization returns a replacement context.
+            lifecycle_replayed = bool((lifecycle_context or {}).get("replayed"))
+            # Re-read terminal state after preparation because another process may have completed this action.
+            if self._lifecycle is not None:
+                # Load provider-current state after the lifecycle callback's atomic preparation.
+                prepared_state = self._state_loader(player_id)
+                # Resolve a same-request terminal round that won during the original read/preparation gap.
+                prepared_existing = self._find_round(prepared_state, request_id)
+                # Return the exact provider winner without repeating entropy or money work.
+                if prepared_existing is not None:
+                    # Reject a same identity whose semantic wager differs from provider authority.
+                    if prepared_existing.get("request_fingerprint") != fingerprint:
+                        # Fail closed before reading or returning another action's ledger proof.
+                        raise ConflictError(f"{self.game_id} request_id conflicts with a prior round")
+                    # Rebuild exact terminal movement evidence for the provider-owned round.
+                    prepared_ledger = self._round_ledger(player_id, prepared_existing)
+                    # Return the immutable winner with explicit state replay evidence.
+                    return {"round": prepared_existing["public"], "replayed": True, "ledger": prepared_ledger, **self.state(player_id)}
+            # Require configured lifecycle preparation to publish authoritative entropy and timing.
+            if self._lifecycle is not None:
+                # Reject a malformed lifecycle result before any wager can move tokens.
+                if not isinstance(lifecycle_context, dict) or lifecycle_context.get("entropy") is None or not isinstance(lifecycle_context.get("settled_at"), str) or not lifecycle_context.get("settled_at"):
+                    # Surface an integration error rather than drawing or timestamping behind prepared state.
+                    raise TypeError("SimpleWagerGame lifecycle preparation is incomplete")
+                # Reuse the exact entropy persisted or recovered by the lifecycle adapter.
+                tentative_entropy = lifecycle_context["entropy"]
+                # Reuse the prepared lifecycle timestamp for deterministic recovery.
+                tentative_settled_at = lifecycle_context["settled_at"]
+            else:
+                # Draw tentative server entropy that becomes authoritative only if this request writes the wager proof.
+                tentative_entropy = self._entropy(self._entropy_source)
+                # Capture one tentative settlement timestamp alongside the entropy for exact crash-recovery replay.
+                tentative_settled_at = self._clock()
             # Build the audit details that commit the wager, entropy, and public timestamp for deterministic recovery.
-            wager_details = self._wager_details_builder(request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, wager=wager, wager_total=wager_total, entropy=tentative_entropy, settled_at=tentative_settled_at)
+            wager_details = self._wager_details_builder(request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, wager=wager, wager_total=wager_total, entropy=tentative_entropy, settled_at=tentative_settled_at, lifecycle_context=lifecycle_context)
             # Apply or recover the aggregate wager debit and retain its authoritative committed proof.
-            wager_event, wager_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=-wager_total, transaction_type=self.wager_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "wager"), request_fingerprint=fingerprint, details=wager_details)
+            try:
+                # Commit or recover the aggregate wager through the one shared gateway boundary.
+                wager_event, wager_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=-wager_total, transaction_type=self.wager_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "wager"), request_fingerprint=fingerprint, details=wager_details)
+            # Preserve the original action error after lifecycle-owned safe cleanup or retention.
+            except Exception as error:
+                # Start without committed proof when the wager failed before provider publication.
+                committed_wager_event = None
+                # Probe exact action proof only when a lifecycle adapter owns prepared cleanup.
+                if self._lifecycle is not None:
+                    # Read the immutable action using the same dimensions as the attempted wager.
+                    try:
+                        # Distinguish a lost response from a genuinely uncommitted wager.
+                        committed_wager_event = self._ledger_gateway.find(player_id=player_id, round_id=round_id, transaction_type=self.wager_transaction_type, action_key=self._action_key(round_id, "wager"), request_fingerprint=fingerprint)
+                    # Treat a conflicting proof as non-authorizing for this prepared request.
+                    except ConflictError:
+                        # Preserve the original conflict while allowing action-owned preparation cleanup.
+                        committed_wager_event = None
+                    # Let the adapter clear only an uncommitted preparation or retain committed recovery state.
+                    self._lifecycle_call("wager_failed", player_id=player_id, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=wager, wager_total=wager_total, lifecycle_context=lifecycle_context, committed_event=committed_wager_event, error=error)
+                # Re-raise the original ledger or provider failure through the established API envelope.
+                raise
             # Read only the committed proof because a retry's tentative entropy must never replace the first draw.
             committed_wager_details = wager_event.get("details") or {}
             # Decode the committed proof through the canonical or configured compatibility reader.
-            committed_proof = self._wager_proof_reader(details=committed_wager_details, event=wager_event, request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, proposed_wager=wager)
+            committed_proof = self._wager_proof_reader(details=committed_wager_details, event=wager_event, request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, proposed_wager=wager, lifecycle_context=lifecycle_context)
             # Recover the exact normalized wager recorded with the debit.
             committed_wager = committed_proof.get("wager")
             # Recover the exact entropy recorded before the first debit.
@@ -239,19 +309,31 @@ class SimpleWagerGame:
             if committed_wager != wager or entropy is None or not isinstance(settled_at, str) or not settled_at:
                 # Reject incomplete or inconsistent proof rather than redrawing or fabricating settlement state.
                 raise ConflictError(f"{self.game_id} committed wager proof is incomplete")
+            # Publish optional committed-wager recovery markers before calculating settlement intent.
+            self._lifecycle_call("wager_committed", player_id=player_id, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, settled_at=settled_at, lifecycle_context=lifecycle_context, wager_event=wager_event, replayed=wager_replayed)
             # Resolve the deterministic outcome from the committed wager and committed entropy.
             settlement = self._resolve(committed_wager, entropy)
             total_return = round(float(settlement.get("total_return", 0)), 2)
+            # Publish optional deterministic result intent before any returned-credit movement.
+            self._lifecycle_call("settlement_resolved", player_id=player_id, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at, lifecycle_context=lifecycle_context)
             # Start with no replayed settlement event for a losing round.
             settlement_replayed = False
             # Branch when the deterministic outcome returns any value to the wallet.
             if total_return > 0:
                 # Build the settlement audit details from the committed round.
-                settlement_details = self._settlement_details_builder(request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at)
+                settlement_details = self._settlement_details_builder(request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at, lifecycle_context=lifecycle_context)
                 # Commit the single aggregate credit exactly once.
-                _settlement_event, settlement_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=total_return, transaction_type=self.settlement_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "settlement"), request_fingerprint=fingerprint, details=settlement_details)
+                settlement_event, settlement_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=total_return, transaction_type=self.settlement_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "settlement"), request_fingerprint=fingerprint, details=settlement_details)
+                # Publish optional payout proof only after the credit exists immutably.
+                self._lifecycle_call("settlement_committed", player_id=player_id, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at, lifecycle_context=lifecycle_context, settlement_event=settlement_event, replayed=settlement_replayed)
+            # Freeze optional terminal lifecycle fields before building one cross-process-stable public round.
+            finalized_context = self._lifecycle_call("finalize", player_id=player_id, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at, lifecycle_context=lifecycle_context)
+            # Adopt a lifecycle adapter's authoritative terminal context when it returns one.
+            if finalized_context is not None:
+                # Carry provider-owned terminal timestamps and evidence into the public round builder.
+                lifecycle_context = finalized_context
             # Build the public round through the default or explicitly configured compatibility adapter.
-            public_round = self._public_round_builder(request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at)
+            public_round = self._public_round_builder(request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at, lifecycle_context=lifecycle_context)
             # Build the compact stored round with replay and fingerprint bookkeeping.
             stored_round = {"request_id": request_id, "request_fingerprint": fingerprint, "round_id": round_id, "total_return": total_return, "public": public_round}
             # Atomically merge the committed round into provider-current history.
@@ -259,7 +341,7 @@ class SimpleWagerGame:
             # Rebuild ledger proof from the exact provider-owned round identity.
             ledger_events = self._round_ledger(player_id, published_round)
             # Return the committed provider round while preserving the established response envelope.
-            return {"round": published_round["public"], "replayed": wager_replayed or settlement_replayed, "ledger": ledger_events, **self.state(player_id)}
+            return {"round": published_round["public"], "replayed": lifecycle_replayed or wager_replayed or settlement_replayed, "ledger": ledger_events, **self.state(player_id)}
 
     # Rebuild the committed ledger events for one round from stored proof.
     def _round_ledger(self, player_id: str, stored_round: dict) -> dict:

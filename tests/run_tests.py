@@ -1620,8 +1620,14 @@ def run_api_tests():
     run_case('API-RD-ATOMIC-001',['RD-006','TEST-228'],lambda: run_unit_module('tests.games.red_dog.test_atomic_state','Red Dog atomic state suite failed'))
     # Prove Scratch Cards rejects stale reveal publications through the real JSON provider.
     run_case('API-SCRATCH-ATOMIC-001',['SCRATCH-006','TEST-229'],lambda: run_unit_module('tests.games.scratch_cards.test_atomic_state','Scratch Cards atomic state suite failed'))
-    # Prove Sic Bo rejects stale round publications through the real JSON provider.
-    run_case('API-SIC-BO-ATOMIC-001',['SIC-BO-006','TEST-230'],lambda: run_unit_module('tests.games.sic_bo.test_atomic_state','Sic Bo atomic state suite failed'))
+    # Execute shared-helper recovery and provider-current process serialization together. (issue #861)
+    def run_sic_bo_shared_helper_tests():
+        # Run every deterministic movement, crash-window, history, and source-topology case.
+        run_unit_module('tests.games.sic_bo.test_service','Sic Bo shared-helper service suite failed')
+        # Run provider-current lifecycle and real two-process preparation evidence.
+        run_unit_module('tests.games.sic_bo.test_atomic_state','Sic Bo atomic state suite failed')
+    # Bind both focused suites to the permanent Sic Bo settlement-migration evidence row.
+    run_case('API-SIC-BO-ATOMIC-001',['SIC-BO-006','SIC-BO-007','GAMECORE-007','TEST-230','TEST-235'],run_sic_bo_shared_helper_tests)
     # Prove Slots rejects stale spin publications through the real JSON provider.
     run_case('API-SLOT-ATOMIC-001',['SLOT-038','TEST-231'],lambda: run_unit_module('tests.games.slots.test_atomic_state','Slots atomic state suite failed'))
     # Prove Teen Patti rejects stale round publications through the real JSON provider.
@@ -1976,7 +1982,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
-    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-127'],run_simple_game_core_tests)
+    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','GAMECORE-007','TEST-127','TEST-235'],run_simple_game_core_tests)
     # Execute the shared helper's real cross-process provider-current publication proof.
     def run_simple_game_atomic_tests():
         # Import the dedicated fresh-process suite only when its named case runs.
@@ -1990,7 +1996,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('simple-game provider-atomic suite failed')
     # Record provider-current merge, fresh-process concurrency, and complete catalog adoption evidence.
-    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','TEST-233','TEST-234'],run_simple_game_atomic_tests)
+    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','GAMECORE-007','TEST-233','TEST-234','TEST-235'],run_simple_game_atomic_tests)
     # Execute the route-free signed-action settlement-adapter proof without opening a listener.
     def run_settlement_adapter_tests():
         # Load only the focused storage-atomic adapter class.
@@ -3278,7 +3284,7 @@ def run_api_tests():
         # Record Scratch Cards coverage against its retained per-player card ids. (issue #414)
         run_case('API-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-003'],game_evidence('scratch_cards'))
         # Record Sic Bo coverage against its retained per-player round ids. (issue #414)
-        run_case('API-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-003'],game_evidence('sic_bo_rounds'))
+        run_case('API-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-003','SIC-BO-007'],game_evidence('sic_bo_rounds'))
         # Record Chuck-a-Luck coverage against its retained per-player round ids. (issue #414)
         run_case('API-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-003'],game_evidence('chuck_a_luck_rounds'))
         # Record Craps coverage against its retained per-player round ids. (issue #414)

@@ -1,6 +1,6 @@
 # Sic Bo
 
-Issue: [#88](https://github.com/andreivorobiev/virtual-casino-simulator/issues/88)
+Issue: [#88](https://github.com/andreivorobiev/virtual-casino-simulator/issues/88); shared-settlement migration: [#861](https://github.com/andreivorobiev/virtual-casino-simulator/issues/861)
 
 This isolated game implements a complete 50-position Sic Bo table: small, big, totals 4-17, six single-number positions, six specific doubles, six specific triples, any triple, and all fifteen two-number combinations. The payout profile follows the Massachusetts Gaming Commission Sic Bo rules linked below.
 
@@ -14,12 +14,12 @@ Each round accepts a required bounded `action_id` plus a canonical map of positi
 ## Session, ledger, and reload invariants
 
 - The handler prefers `resolved_player_id` and `bound_player_id` from authenticated request context. Caller body or query IDs remain compatibility-only fallbacks and cannot override a session binding.
-- Every token movement calls `casino.core.settlement.GameSettlementGateway`; game code never imports the ledger implementation or mutates balances or storage-provider balance fields.
+- One `casino.core.simple_game.SimpleWagerGame` coordinator owns the aggregate wager and optional payout movements; game code never constructs a settlement gateway, calls `apply_once`, imports the ledger implementation, or mutates balance fields.
 - Wager and payout events use deterministic `sic_bo_action_id` values derived from a server-bounded round ID.
 - Reusing `action_id` with the same normalized wagers returns the same dice and settlement. Reusing it with different wagers fails closed.
-- Private dice and prepared state persist before debit. Dice remain hidden from the public state shape until ledger proof of the wager exists.
-- A retry recovers committed dice from ledger details, recovers any committed payout, archives the settled round, and cannot duplicate either movement in the supported local server.
-- Private preparation, recovery markers, settlement state, bounded history, and action-owned cleanup publish through provider-current callbacks that preserve unrelated player-document fields and reject stale writers. Ledger movement remains a separate durable boundary, so production multiworker activation stays blocked until state and money share one cross-process transaction.
+- The helper's Sic Bo lifecycle adapter persists private dice and prepared state before debit. Dice remain hidden from the public state shape until ledger proof of the wager exists.
+- A retry reuses prepared entropy, recovers committed dice from canonical or historical ledger details, recovers any committed payout, archives the settled round, and cannot duplicate either movement.
+- Lifecycle preparation, recovery markers, settlement intent, payout proof, finalization, and direct oldest-to-newest 50-round history publish through provider-current callbacks that preserve unrelated player-document fields and serialize competing preparations. Ledger movement remains a separate durable boundary, so production multiworker activation stays blocked until state and money share one cross-process transaction.
 - The browser keeps the same action ID and wager snapshot across an ambiguous response, restores active recovery state after reload, and uses only public API actions.
 
 ## Deterministic and motion seams
@@ -37,4 +37,4 @@ These links document three dice, the eight wager families used by the 50 positio
 
 Existing impacted IDs: `CORE-008` through `CORE-012`, `CORE-022`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `SESSION-005`, `I18N-001`, `I18N-002`, `DICE-001`, `MOTION-001` through `MOTION-003`, `UX-001`, `UX-002`, `UX-003`, `UX-004`, `UX-006`, and `UX-009`.
 
-Permanent Sic Bo requirements `SIC-BO-001` through `SIC-BO-006` are registered in `docs/requirements/requirements.json` and cover rules, session/reload safety, ledger retry safety, EN/RU responsive UI, discovered acceptance evidence, and provider-atomic state publication.
+Permanent Sic Bo requirements `SIC-BO-001` through `SIC-BO-007` are registered in `docs/requirements/requirements.json` and cover rules, session/reload safety, shared-helper ledger retry safety, EN/RU responsive UI, discovered acceptance evidence, provider-atomic lifecycle publication, and frozen-shape compatibility.

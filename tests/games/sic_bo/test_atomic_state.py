@@ -54,7 +54,7 @@ class MemoryRepository:
         return copy.deepcopy(updated)
 
 
-# Prove provider-current comparison and stale-writer rejection locally and across processes.
+# Prove provider-current lifecycle publication locally and across processes.
 class SicBoAtomicStateTests(unittest.TestCase):
     # Build one deterministic private prepared round for transition fixtures.
     @staticmethod
@@ -75,85 +75,100 @@ class SicBoAtomicStateTests(unittest.TestCase):
             "created_at": "2026-08-16T00:00:00Z",
         }
 
-    # Reject fabricated detached state before entering provider storage.
-    def test_missing_baseline_fails_before_storage(self) -> None:
-        # Build production orchestration over one empty provider document.
-        repository = MemoryRepository()
-        # Construct the service with only the persistence seams exercised.
-        service = SicBoService(state_loader=repository.load, state_updater=repository.update)
-        # Reject state that did not originate from the tracked loader.
-        with self.assertRaises(ConflictError):
-            # Attempt to publish an untracked default document.
-            service._save("atomic-player", engine.default_state())
-        # Prove storage never saw the invalid publication.
-        self.assertEqual(0, repository.update_calls)
+    # Build one deterministic service over a provider-current in-memory repository.
+    @staticmethod
+    def _service(repository: MemoryRepository) -> SicBoService:
+        # Use fixed entropy and time so recovered preparation bytes can be compared exactly.
+        return SicBoService(state_loader=repository.load, state_updater=repository.update, randbelow=lambda _upper: 0, clock=lambda: "2026-08-16T00:00:00Z")
 
-    # Preserve sibling fields when the desired game bytes already won.
-    def test_identical_publication_is_idempotent_and_preserves_sibling(self) -> None:
-        # Build production orchestration over one default provider document.
-        repository = MemoryRepository()
-        # Construct the service with only the persistence seams exercised.
-        service = SicBoService(state_loader=repository.load, state_updater=repository.update)
-        # Capture a tracked provider state.
-        state = service._load("atomic-player")
-        # Publish unrelated provider metadata after the tracked read.
-        repository.document["atomic_markers"] = ["sibling"]
-        # Accept the identical game-owned state without replacing the document.
-        service._save("atomic-player", state)
-        # Preserve unrelated provider metadata exactly.
-        self.assertEqual(["sibling"], repository.document["atomic_markers"])
-        # Keep private optimistic metadata outside storage.
+    # Persist preparation atomically while preserving unrelated provider-owned fields.
+    def test_preparation_preserves_provider_sibling(self) -> None:
+        # Seed one sibling field that the Sic Bo adapter does not own.
+        repository = MemoryRepository({**engine.default_state(), "atomic_markers": ["sibling"]})
+        # Build the lifecycle adapter over exact provider-current callbacks.
+        service = self._service(repository)
+        # Publish one private preparation through the production lifecycle method.
+        prepared = service.prepare(player_id="atomic-player", request_id="sic-bo-alpha", round_id=engine.round_id_for("atomic-player", "sic-bo-alpha"), fingerprint=engine.wager_fingerprint({"small": 1.0}), wager={"small": 1.0})
+        # Preserve the sibling while exposing only authoritative private entropy internally.
+        self.assertEqual((["sibling"], [1, 1, 1]), (repository.document["atomic_markers"], prepared["entropy"]))
+        # Keep retired optimistic baseline metadata outside provider storage.
         self.assertNotIn("_sic_bo_atomic_baseline", repository.document)
 
-    # Reject one stale preparation after another action wins.
-    def test_stale_preparation_publication_conflicts(self) -> None:
-        # Seed one common empty state for competing actions.
+    # Reuse exact provider preparation without redrawing entropy or changing time.
+    def test_identical_preparation_is_idempotent(self) -> None:
+        # Start with one empty provider document.
         repository = MemoryRepository()
-        # Construct the service with only the persistence seams exercised.
-        service = SicBoService(state_loader=repository.load, state_updater=repository.update)
-        # Capture two independently stale copies.
-        first = service._load("atomic-player")
-        # Capture another operation before either publishes.
-        second = service._load("atomic-player")
-        # Prepare the first action's private recovery record.
-        first["active_round"] = self._prepared_round("sic-bo-alpha")
-        # Prepare a different action against the stale baseline.
-        second["active_round"] = self._prepared_round("sic-bo-beta")
-        # Commit the first preparation publication.
-        service._save("atomic-player", first)
-        # Reject the incompatible stale second preparation.
+        # Build deterministic lifecycle orchestration.
+        service = self._service(repository)
+        # Bind one exact action identity and semantic fingerprint.
+        round_id = engine.round_id_for("atomic-player", "sic-bo-same")
+        # Publish the first preparation.
+        first = service.prepare(player_id="atomic-player", request_id="sic-bo-same", round_id=round_id, fingerprint=engine.wager_fingerprint({"small": 1.0}), wager={"small": 1.0})
+        # Retry the same preparation against provider authority.
+        second = service.prepare(player_id="atomic-player", request_id="sic-bo-same", round_id=round_id, fingerprint=engine.wager_fingerprint({"small": 1.0}), wager={"small": 1.0})
+        # Prove exact private bytes are reused and replay is explicit.
+        self.assertEqual((first["entropy"], first["settled_at"], True), (second["entropy"], second["settled_at"], second["replayed"]))
+
+    # Reject a different action while provider recovery belongs to the winner.
+    def test_distinct_preparation_conflicts(self) -> None:
+        # Start with one empty provider document.
+        repository = MemoryRepository()
+        # Build deterministic lifecycle orchestration.
+        service = self._service(repository)
+        # Publish the first action's private recovery record.
+        service.prepare(player_id="atomic-player", request_id="sic-bo-alpha", round_id=engine.round_id_for("atomic-player", "sic-bo-alpha"), fingerprint=engine.wager_fingerprint({"small": 1.0}), wager={"small": 1.0})
+        # Reject a competing action without replacing the provider winner.
         with self.assertRaises(ConflictError):
-            # Attempt to overwrite the winning active round.
-            service._save("atomic-player", second)
-        # Preserve only the winning action identity.
+            # Attempt a distinct action through the same atomic preparation boundary.
+            service.prepare(player_id="atomic-player", request_id="sic-bo-beta", round_id=engine.round_id_for("atomic-player", "sic-bo-beta"), fingerprint=engine.wager_fingerprint({"small": 1.0}), wager={"small": 1.0})
+        # Preserve only the winning active action.
         self.assertEqual("sic-bo-alpha", repository.document["active_round"]["action_id"])
 
-    # Prevent action-owned cleanup from erasing a newer publication.
+    # Prevent action-owned cleanup from erasing a concurrently advanced winner.
     def test_stale_cleanup_cannot_erase_concurrent_winner(self) -> None:
-        # Seed one empty shared provider state.
+        # Start with one empty shared provider state.
         repository = MemoryRepository()
-        # Construct the service with only the persistence seams exercised.
-        service = SicBoService(state_loader=repository.load, state_updater=repository.update)
-        # Load the soon-to-be-rejected operation state.
-        rejected = service._load("atomic-player")
-        # Publish its private preparation before the simulated ledger failure.
-        rejected["active_round"] = self._prepared_round("sic-bo-rejected")
-        # Commit the prepared recovery state and advance its baseline.
-        service._save("atomic-player", rejected)
-        # Load that preparation for a newer authoritative publication.
-        winning = service._load("atomic-player")
-        # Advance the same round to a committed-wager recovery marker.
-        winning["active_round"]["phase"] = "settling"
-        # Publish the newer game-owned result.
-        service._save("atomic-player", winning)
-        # Model the rejected operation's action-owned cleanup.
-        rejected["active_round"] = None
-        # Reject cleanup based on the superseded prepared baseline.
-        with self.assertRaises(ConflictError):
-            # Attempt to erase the winning committed-wager marker.
-            service._save("atomic-player", rejected)
-        # Preserve the concurrent authoritative phase.
-        self.assertEqual("settling", repository.document["active_round"]["phase"])
+        # Build deterministic lifecycle orchestration.
+        service = self._service(repository)
+        # Publish a prepared action and retain its original lifecycle context.
+        context = service.prepare(player_id="atomic-player", request_id="sic-bo-rejected", round_id=engine.round_id_for("atomic-player", "sic-bo-rejected"), fingerprint=engine.wager_fingerprint({"small": 1.0}), wager={"small": 1.0})
+        # Advance provider authority as though another process observed committed wager proof.
+        repository.document["active_round"].update({"phase": "settling", "wager_status": "complete", "wager_ledger_id": "led_winner"})
+        # Run the original action's cleanup callback with no newly observed event.
+        service.wager_failed(player_id="atomic-player", request_id="sic-bo-rejected", fingerprint=engine.wager_fingerprint({"small": 1.0}), lifecycle_context=context, committed_event=None, error=RuntimeError("lost response"))
+        # Preserve the newer committed-wager phase and proof.
+        self.assertEqual(("settling", "led_winner"), (repository.document["active_round"]["phase"], repository.document["active_round"]["wager_ledger_id"]))
+
+    # Archive an exact terminal action without losing sibling state or older history.
+    def test_terminal_publication_preserves_sibling_and_history(self) -> None:
+        # Build one complete active action from deterministic engine settlement.
+        active = self._prepared_round("sic-bo-terminal")
+        # Merge deterministic result and terminal lifecycle proof into the active record.
+        active.update(engine.settle(active["wagers"], active["dice"]))
+        # Mark both ledger phases and completion as authoritative.
+        active.update({"phase": "settled", "wager_status": "complete", "wager_ledger_id": "led_wager", "payout_status": "complete", "completed_at": "2026-08-16T00:00:01Z"})
+        # Retain an older direct history row and unrelated sibling metadata.
+        older = copy.deepcopy(active)
+        # Give the retained historical row a distinct public identity.
+        older.update({"action_id": "sic-bo-older", "round_id": engine.round_id_for("atomic-player", "sic-bo-older")})
+        # Seed exact provider state before helper publication.
+        repository = MemoryRepository({"game": engine.GAME_ID, "active_round": active, "recent_rounds": [older], "atomic_markers": ["sibling"]})
+        # Build lifecycle orchestration over provider authority.
+        service = self._service(repository)
+
+        # Prepend the exact active terminal wrapper like the shared helper.
+        def publish(core_state: dict) -> dict:
+            # Insert only the action-owned terminal projection.
+            core_state["recent_rounds"].insert(0, {"request_id": active["action_id"], "request_fingerprint": active["request_fingerprint"], "round_id": active["round_id"], "total_return": active["total_return"], "public": engine.public_round(active)})
+            # Return the helper-owned projection for atomic conversion.
+            return core_state
+
+        # Publish through the production provider-current archival seam.
+        service._update_core_state("atomic-player", publish)
+        # Preserve oldest-to-newest direct history and unrelated sibling metadata.
+        self.assertEqual((["sic-bo-older", "sic-bo-terminal"], ["sibling"]), ([row["action_id"] for row in repository.document["recent_rounds"]], repository.document["atomic_markers"]))
+        # Release only the terminal action's private recovery slot.
+        self.assertIsNone(repository.document["active_round"])
 
     # Prove two stale fresh processes produce one preparation winner and one conflict.
     def test_fresh_process_preparation_race_preserves_sibling(self) -> None:
@@ -191,7 +206,6 @@ tag = sys.argv[1]
 ready_path = Path(sys.argv[2])
 go_path = Path(sys.argv[3])
 service = SicBoService()
-state = service._load('atomic-player')
 ready_path.write_text('ready', encoding='utf-8')
 deadline = time.monotonic() + 10
 while not go_path.exists() and time.monotonic() < deadline:
@@ -200,20 +214,14 @@ if not go_path.exists():
     raise RuntimeError('Sic Bo atomic race release timed out')
 action_id = f'sic-bo-{tag}'
 wagers = {'small': 1.0}
-state['active_round'] = {
-    'round_id': engine.round_id_for('atomic-player', action_id),
-    'action_id': action_id,
-    'player_id': 'atomic-player',
-    'request_fingerprint': engine.wager_fingerprint(wagers),
-    'wagers': wagers,
-    'dice': [1, 2, 3],
-    'phase': 'prepared',
-    'wager_status': 'pending',
-    'payout_status': 'not_ready',
-    'created_at': '2026-08-16T00:00:00Z',
-}
 try:
-    service._save('atomic-player', state)
+    service.prepare(
+        player_id='atomic-player',
+        request_id=action_id,
+        round_id=engine.round_id_for('atomic-player', action_id),
+        fingerprint=engine.wager_fingerprint(wagers),
+        wager=wagers,
+    )
 except ConflictError:
     print(f'CONFLICT:{tag}')
 else:

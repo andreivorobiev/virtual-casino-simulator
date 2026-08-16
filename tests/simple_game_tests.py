@@ -209,6 +209,69 @@ class SimpleGameCoreTests(unittest.TestCase):
         # Preserve the established response envelope and exact terminal round.
         self.assertEqual(result["round"], persisted["recent_rounds"][0]["public"])
 
+    # Require an optional prepared-state lifecycle to own entropy and ordered recovery stages.
+    def test_prepared_lifecycle_adapter_orders_terminal_stages(self) -> None:
+        # Build one provider-shaped state fixture for shared terminal publication.
+        store = MemoryState()
+        # Retain every lifecycle callback name in exact execution order.
+        stages = []
+
+        # Provide the bounded lifecycle protocol used by prepared legacy games.
+        class Lifecycle:
+            # Publish authoritative private entropy before ledger movement.
+            def prepare(self, **_context):
+                # Record the first lifecycle stage.
+                stages.append("prepare")
+                # Return provider-owned entropy and time instead of using helper defaults.
+                return {"entropy": {"face": 3}, "settled_at": "2026-08-16T00:00:00Z", "replayed": False}
+
+            # Record immutable wager proof publication.
+            def wager_committed(self, **_context):
+                # Retain exact stage order for the assertion.
+                stages.append("wager_committed")
+
+            # Record deterministic settlement-intent publication.
+            def settlement_resolved(self, **_context):
+                # Retain exact stage order for the assertion.
+                stages.append("settlement_resolved")
+
+            # Record positive returned-credit proof publication.
+            def settlement_committed(self, **_context):
+                # Retain exact stage order for the assertion.
+                stages.append("settlement_committed")
+
+            # Freeze provider-owned terminal fields before helper history publication.
+            def finalize(self, *, lifecycle_context, **_context):
+                # Retain exact stage order for the assertion.
+                stages.append("finalize")
+                # Return the same bounded context for public-round construction.
+                return lifecycle_context
+
+            # Fail the test if a successful wager enters cleanup.
+            def wager_failed(self, **_context):
+                # Report an impossible successful-path callback immediately.
+                raise AssertionError("successful lifecycle invoked wager_failed")
+
+        # Build a winning helper whose default entropy seam must never execute.
+        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, entropy_source=lambda _n: (_ for _ in ()).throw(AssertionError("helper redrew lifecycle entropy")), state_loader=store.load, state_updater=store.update, lifecycle=Lifecycle(), action_key_builder=lambda round_id, action: f"{round_id}:{'return' if action == 'settlement' else action}", legacy_action_detail_key="unit_action_key")
+        # Execute one winning round through every positive-settlement lifecycle stage.
+        result = game.play(self.pid, {"request_id": "lifecycle-win", "face": 3, "stake": 10})
+        # Require lifecycle order, provider entropy, configured suffix, and historical action-detail key.
+        self.assertEqual((["prepare", "wager_committed", "settlement_resolved", "settlement_committed", "finalize"], {"face": 3}, f'{result["round"]["round_id"]}:return', f'{result["round"]["round_id"]}:return'), (stages, result["round"]["entropy"], result["ledger"]["settlement"]["details"]["ledger_action_key"], result["ledger"]["settlement"]["details"]["unit_action_key"]))
+
+    # Require an incomplete lifecycle to fail before entropy or wallet movement.
+    def test_incomplete_lifecycle_fails_before_wager(self) -> None:
+        # Record the starting balance before constructing the malformed integration.
+        starting_balance = self._balance()
+        # Build a helper whose object supplies none of the required lifecycle stages.
+        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, lifecycle=object())
+        # Reject the missing prepare stage before any protected action starts.
+        with self.assertRaisesRegex(TypeError, "lifecycle is missing prepare"):
+            # Attempt one otherwise valid winning request.
+            game.play(self.pid, {"request_id": "lifecycle-incomplete", "face": 3, "stake": 10})
+        # Require the malformed adapter to leave the wallet untouched.
+        self.assertEqual(starting_balance, self._balance())
+
     # Require an empty or malformed wager to be rejected before any wallet movement.
     def test_invalid_wager_is_rejected(self) -> None:
         # Build one game instance.
