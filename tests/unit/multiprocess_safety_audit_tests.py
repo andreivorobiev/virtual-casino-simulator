@@ -58,13 +58,13 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
-        # Pin the exact current family cardinalities after Let It Ride retires direct publication.
+        # Pin the exact current family cardinalities after Mississippi Stud retires direct publication.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 7, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 28},  # Pin current counts.
+            {"player_document_load_save": 6, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 29},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -402,6 +402,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(let_it_ride["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while money is a separate transaction.
         self.assertEqual(let_it_ride["multiworker_status"], "blocked")
+        # Resolve Mississippi Stud after preparation, streets, recovery, settlement, and rollback become atomic.
+        mississippi_stud = next(row for row in games if row["game_id"] == "mississippi_stud")
+        # Require authoritative reads for response, replay, and ledger recovery.
+        self.assertGreater(mississippi_stud["load_call_sites"], 0)
+        # Require every reachable game-state publication to avoid stale whole-document saves.
+        self.assertEqual(mississippi_stud["save_call_sites"], 0)
+        # Bind deals, streets, markers, recovery, terminal archive, and rollback to provider updates.
+        self.assertGreater(mississippi_stud["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(mississippi_stud["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while money is a separate transaction.
+        self.assertEqual(mississippi_stud["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))
         # Refuse second-worker authorization for every game.

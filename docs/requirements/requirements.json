@@ -12476,6 +12476,31 @@
       "notes": "Fresh workers use the real JSON provider and exact Let It Ride controller. Existing session isolation, staged-decision replay, wager/refund/payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-226",
+      "module": "Tests",
+      "description": "Real stale-load Mississippi Stud workers race different terminal fold decisions around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no actionable-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-ante cleanup cannot erase a concurrent winner while existing ante, street-bet, settlement, replay, and recovery paths retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MISSISSIPPI-STUD-001",
+        "API-MSTUD-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-MSTUD-001"
+      ],
+      "implementation_files": [
+        "tests/mississippi_stud_tests.py",
+        "tests/games/mississippi_stud/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-843-mississippi-stud-atomic-state",
+      "changed_in": "issue-843-mississippi-stud-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Mississippi Stud service. Existing session isolation, three-street decision replay, ante/bet/settlement recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -20252,6 +20277,32 @@
       "introduced_in": "issue-143-mississippi-stud",
       "changed_in": "issue-143-mississippi-stud",
       "notes": "Allocated for GitHub issue #143."
+    },
+    {
+      "id": "MSTUD-003",
+      "module": "Mississippi Stud",
+      "description": "Mississippi Stud publishes prepared deals, street decisions, compact action receipts, ante and bet recovery markers, terminal archives, settlement state, and uncommitted-action rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale terminal decision or rejected-movement cleanup can overwrite or resurrect the winning round, while the frozen v1 envelope, three-street rules, card privacy, paytable returns, and exactly-once ledger movements remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MISSISSIPPI-STUD-001",
+        "API-MSTUD-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-MSTUD-001"
+      ],
+      "implementation_files": [
+        "casino/games/mississippi_stud/service.py",
+        "tests/mississippi_stud_tests.py",
+        "tests/games/mississippi_stud/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-843-mississippi-stud-atomic-state",
+      "changed_in": "issue-843-mississippi-stud-atomic-state",
+      "notes": "The frozen v1 contract, three-street decisions, card privacy, paytable, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "TEENP-001",
