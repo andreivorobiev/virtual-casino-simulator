@@ -109,6 +109,29 @@
       "introduced_in": "game-expansion-chuck-a-luck",
       "changed_in": "game-expansion-chuck-a-luck",
       "notes": "Descriptor sort order 150 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "CHUCK-006",
+      "module": "Chuck-a-Luck",
+      "description": "Chuck-a-Luck publishes bounded settled-round history through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale round can overwrite the winning journal, while committed debit and credit recovery retains the frozen v1 behavior and exactly-once ledger movements.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CHUCK-001",
+        "API-CHUCK-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/chuck_a_luck/service.py",
+        "tests/games/chuck_a_luck/test_engine.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-825-chuck-a-luck-atomic-state",
+      "changed_in": "issue-825-chuck-a-luck-atomic-state",
+      "notes": "The frozen v1 contract, dice, paytable, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     }
   ]
 }
