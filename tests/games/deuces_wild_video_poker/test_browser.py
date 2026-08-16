@@ -118,20 +118,26 @@ class InMemoryCasino:
         self._clock_number = 0
 
     # Load one player-game document as a persistence provider would after reload.
-    def load_state(self, game_id, player_id, default_factory):
+    def load(self, player_id):
         # Serialize reads against state writes from the HTTP worker thread.
         with self._lock:
             # Read the stored document or create a fresh engine-owned default.
-            state = self._states.get((game_id, player_id), default_factory())
+            state = self._states.get((engine.GAME_ID, player_id), engine.default_state())
             # Return a copy so callers must save every durable mutation explicitly.
             return deepcopy(state)
 
-    # Save one complete player-game document without external filesystem effects.
-    def save_state(self, game_id, player_id, state):
-        # Serialize writes against reload and diagnostic assertion reads.
+    # Apply one provider-current transition without external filesystem effects.
+    def update(self, player_id, mutator):
+        # Serialize reads and publication against diagnostic assertion reads.
         with self._lock:
+            # Load a detached current document so callback failure cannot mutate storage.
+            current = deepcopy(self._states.get((engine.GAME_ID, player_id), engine.default_state()))
+            # Run the complete transition while this provider owns its lock.
+            updated = mutator(current)
             # Persist a deep copy to model a real serialization boundary.
-            self._states[(game_id, player_id)] = deepcopy(state)
+            self._states[(engine.GAME_ID, player_id)] = deepcopy(updated)
+            # Return a detached authoritative result to the service.
+            return deepcopy(updated)
 
     # Return one authenticated player's current fake-money wallet payload.
     def get_player(self, player_id):
@@ -652,8 +658,7 @@ class DeucesWildVideoPokerDiagnosticBrowserTests(unittest.TestCase):
         router = Router()
         # Build the actual service against only in-memory diagnostic adapters.
         service = game_api.DeucesWildVideoPokerService(
-            load_state=backend.load_state,  # Inject reload-safe in-memory state reads.
-            save_state=backend.save_state,  # Inject reload-safe in-memory state writes.
+            repository=backend,  # Inject provider-current in-memory state transitions.
             debit=backend.debit,  # Inject append-only fake-money wager debits.
             credit=backend.credit,  # Inject append-only fake-money payout credits.
             read_ledger=backend.read_ledger,  # Inject retry-recovery ledger scans.

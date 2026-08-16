@@ -1598,6 +1598,8 @@ def run_api_tests():
     run_case('API-AD-ATOMIC-001',['AD-006','TEST-216'],lambda: run_unit_module('tests.games.acey_deucey.test_api','Acey-Deucey atomic state suite failed'))
     # Execute fresh-process Chuck-a-Luck ordering plus sibling-state and ledger recovery proof. (issue #825)
     run_case('API-CHUCK-ATOMIC-001',['CHUCK-006','TEST-217'],lambda: run_unit_module('tests.games.chuck_a_luck.test_engine','Chuck-a-Luck atomic state suite failed'))
+    # Execute fresh-process Deuces Wild terminal ordering plus sibling-state and recovery proof. (issue #827)
+    run_case('API-DWVP-ATOMIC-001',['DWVP-006','TEST-218'],lambda: run_unit_module('tests.games.deuces_wild_video_poker.test_atomic_state','Deuces Wild atomic state suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.

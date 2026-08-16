@@ -31,7 +31,7 @@ Historical source baseline: 9.1.0
 - hi_lo: 1.1.3
 - three_card_poker: 1.1.4
 - jacks_or_better_video_poker: 1.1.3
-- deuces_wild_video_poker: 1.1.4
+- deuces_wild_video_poker: 1.1.5
 - scratch_cards: 1.1.2
 - sic_bo: 1.1.4
 - chuck_a_luck: 1.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.34
-- docs: 1.96.34
+- tests: 1.100.35
+- docs: 1.96.35
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -708,6 +708,7 @@ Historical source baseline: 9.1.0
 - **TEST-215** (Tests) - PASS: Real stale-load Fan-Tan workers race complete ledger-backed rounds around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict instead of a silent overwrite, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and post-debit retry recovers the committed pile count without duplicate debit or credit.
 - **TEST-216** (Tests) - PASS: Real stale-load Acey-Deucey workers race terminal passes around a separately committed sibling update, proving one provider-winning round, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and existing wager rejection plus lost-response recovery retain exactly-once wallet behavior.
 - **TEST-217** (Tests) - PASS: Real stale-load Chuck-a-Luck workers race complete ledger-backed rolls around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and a rejected post-ledger publication recovers committed debit and credit proof without duplicate wallet movements or winner erasure.
+- **TEST-218** (Tests) - PASS: Real stale-load Deuces Wild workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1004,6 +1005,7 @@ Historical source baseline: 9.1.0
 - **DWVP-003** (Deuces Wild Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw identities.
 - **DWVP-004** (Application) - PASS: Deuces Wild supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.
 - **DWVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Deuces Wild with requirement, module, version, and visual traceability.
+- **DWVP-006** (Deuces Wild Video Poker) - PASS: Deuces Wild publishes active rounds, held-card selections, bounded terminal history, replay records, and recovery markers through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale hand can overwrite or resurrect the winning result, while committed debit and credit recovery retains the frozen v1 behavior and exactly-once ledger movements.
 - **TCP-001** (Three Card Poker) - PASS: Three Card Poker applies the documented three-card ranking, queen-high dealer qualification, Ante Bonus A, Pair Plus C, and Play or Fold settlement rules.
 - **TCP-002** (Three Card Poker) - PASS: Authenticated sessions own isolated reload-safe Three Card Poker decisions, recent rounds, hidden dealer cards, and canonical route restoration.
 - **TCP-003** (Three Card Poker) - PASS: Ante, Pair Plus, Play, refund, and payout movements use the shared ledger exactly once under stable identifiers and immutable fingerprints.

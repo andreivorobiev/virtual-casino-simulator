@@ -12292,6 +12292,29 @@
       "introduced_in": "issue-825-chuck-a-luck-atomic-state",
       "changed_in": "issue-825-chuck-a-luck-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Chuck-a-Luck service. Existing session isolation, replay, recovery, economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-218",
+      "module": "Tests",
+      "description": "Real stale-load Deuces Wild workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DWVP-001",
+        "API-DWVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/deuces_wild_video_poker/test_api.py",
+        "tests/games/deuces_wild_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-827-deuces-wild-atomic-state",
+      "changed_in": "issue-827-deuces-wild-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Deuces Wild service. Existing session isolation, replay, wager and payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }
