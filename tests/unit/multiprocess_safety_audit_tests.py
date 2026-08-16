@@ -64,7 +64,7 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 11, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 24},  # Pin current counts.
+            {"player_document_load_save": 10, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 25},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -354,6 +354,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(dragon_tiger["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while money is a separate transaction.
         self.assertEqual(dragon_tiger["multiworker_status"], "blocked")
+        # Resolve Joker Poker after every deal, hold, draw, replay, and recovery publication becomes atomic.
+        joker_poker = next(row for row in games if row["game_id"] == "joker_poker")
+        # Require authoritative reads for response, replay, and ledger recovery.
+        self.assertGreater(joker_poker["load_call_sites"], 0)
+        # Require every reachable game-state publication to avoid stale whole-document saves.
+        self.assertEqual(joker_poker["save_call_sites"], 0)
+        # Bind preparation, holds, terminal history, receipts, recovery markers, and rollback to provider updates.
+        self.assertGreater(joker_poker["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming wallet-state atomicity.
+        self.assertEqual(joker_poker["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while money is a separate transaction.
+        self.assertEqual(joker_poker["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))
         # Refuse second-worker authorization for every game.

@@ -47,12 +47,12 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.1.3
 - double_bonus_video_poker: 1.1.4
 - mississippi_stud: 1.1.3
-- joker_poker: 1.1.2
+- joker_poker: 1.1.3
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.38
-- docs: 1.96.38
+- tests: 1.100.39
+- docs: 1.96.39
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -712,6 +712,7 @@ Historical source baseline: 9.1.0
 - **TEST-219** (Tests) - PASS: Real stale-load Double Bonus workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-220** (Tests) - PASS: Capacity-two MySQL pool evidence repeats three cohorts of twenty unique atomic debits with worker concurrency aligned to the two physical leases, proving the exact wallet delta, sixty unique ledger events, every lease returned, both sessions idle, zero waiter residue, and zero unexpected checkout timeouts or discards. Focused pool evidence also runs successful and failed serialized workers through the same cleanup boundary while retaining the separate bounded exhaustion proof.
 - **TEST-221** (Tests) - PASS: Real stale-load Dragon Tiger workers race terminal round publication around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no prepared-action resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
+- **TEST-222** (Tests) - PASS: Real stale-load Joker Poker workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1083,6 +1084,7 @@ Historical source baseline: 9.1.0
 - **JP-003** (Joker Poker) - PASS: One wager debit and at most one returned-token payout credit use the shared ledger exactly once under durable deal and draw action identities.
 - **JP-004** (Application) - PASS: Joker Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **JP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Joker Poker with requirement, module, version, and visual traceability.
+- **JP-006** (Joker Poker) - PASS: Joker Poker publishes active hands, reload-safe holds, recovery markers, bounded terminal history, and durable deal/draw receipts through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale draw can overwrite or resurrect the winning hand, while wager and payout recovery retain the frozen v1 behavior and exactly-once ledger movements.
 - **CWHEEL-001** (Color Wheel) - PASS: Color Wheel is a twenty-segment wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake on a chosen colour, draws one server-authoritative landed segment, and credits the colour's total-return multiplier on a match: red and black pay two times, green six times, and gold sixteen times. Every payout is house-positive because each colour's segment probability times its multiplier is below one. Unknown colours and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.
 - **CWHEEL-002** (Color Wheel) - PASS: Color Wheel inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed landed segment and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest segment counts and multipliers.
 - **PGP-001** (Pai Gow Poker) - PASS: A 53-card joker deck deals seven player cards set into a five-card high hand and a two-card low hand against a house-way dealer, where the low hand may never outrank the high hand, copies go to the dealer, winning both hands pays even money minus a five percent commission, and the semi-wild joker completes straights and flushes and otherwise plays as an ace.
