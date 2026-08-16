@@ -21,8 +21,8 @@ from casino.core.clock import utc_now
 from casino.core.settlement import GameSettlementGateway
 # Import the shared authenticated-player resolver used before every game dispatch.
 from casino.core.request_player import resolve_authenticated_player
-# Import player-scoped persistence so authenticated users never share game state.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import provider-current player-scoped persistence for isolated atomic publication.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict, lookup, and validation errors for route boundaries.
 from casino.errors import ConflictError, NotFoundError, ValidationError
 # Import only this game's engine through the allowed isolated package boundary.
@@ -34,6 +34,10 @@ GAME_ID = engine.GAME_ID
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 # Serialize state preparation, ledger recovery, and marker persistence in this local process.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_deuces_wild_atomic_baseline"
+# Name the complete set of document fields owned by this game's engine and API adapter.
+_GAME_STATE_KEYS = ("active_round", "recent_rounds", "actions")
 # Name the game-owned ledger detail carrying stable internal idempotency keys.
 IDEMPOTENCY_DETAIL = "idempotency_key"
 
@@ -56,14 +60,25 @@ def request_player_id(body: dict, query: dict, context: dict | None = None) -> s
     return resolve_authenticated_player(context or {}, body, query)
 
 
+# Persist and load one player's state through explicit provider-owned boundaries.
+class StateRepository:
+    # Load one player-scoped document for read-only payload construction.
+    def load(self, player_id: str) -> dict:
+        # Delegate schema normalization and provider selection to the shared store.
+        return load_player_game_state(GAME_ID, player_id, engine.default_state)
+
+    # Apply one complete transition while the provider owns its cross-process lock.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate current-state loading, rollback, and publication to the atomic helper.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
+
+
 # Coordinate reload-safe game state with exactly-once ledger-only settlement.
 class DeucesWildVideoPokerService:
     # Store production dependencies while allowing isolated tests to inject in-memory ports.
-    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, seed_factory=None):
-        # Store the player-game state loader.
-        self._load_state = load_state
-        # Store the player-game state writer.
-        self._save_state = save_state
+    def __init__(self, *, repository=None, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, seed_factory=None):
+        # Use shared provider persistence unless a focused test supplies an in-memory repository.
+        self._repository = repository or StateRepository()
         # Bind production and injected test seams behind the canonical settlement adapter.
         settlement = GameSettlementGateway(GAME_ID, IDEMPOTENCY_DETAIL, debit=debit, credit=credit, read_recent=read_ledger)
         # Preserve the historical callback shape while routing through the shared adapter.
@@ -82,12 +97,54 @@ class DeucesWildVideoPokerService:
     # Load one authenticated player's isolated state document.
     def _load(self, player_id: str) -> dict:
         # Delegate schema migration and active provider selection to the shared store.
-        return self._load_state(GAME_ID, player_id, engine.default_state)
+        state = self._repository.load(player_id)
+        # Retain the exact game-owned values the next publication may replace.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting the private comparison field.
+        return state
 
-    # Save one authenticated player's crash-recovery document.
+    # Capture only fields owned by Deuces Wild while normalizing older documents.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Start from the engine's canonical empty state for absent legacy fields.
+        defaults = engine.default_state()
+        # Detach each game-owned value so later caller mutation cannot change the baseline.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Publish one authenticated player's compare-and-replace recovery transition. (DWVP-006)
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate atomic document persistence to the shared state abstraction.
-        self._save_state(GAME_ID, player_id, state)
+        # Require every publication to originate from a provider read or prior result.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Refuse an untracked whole-document write before entering provider storage.
+        if not isinstance(expected, dict):
+            # Keep accidental stale saves outside persistent player state.
+            raise ConflictError("Deuces Wild state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Deuces Wild fields against provider-current state.
+        def publish(current: dict) -> dict:
+            # Capture provider-current game fields without metadata or sibling values.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result completion without rewriting provider values.
+            if observed == desired:
+                # Preserve current metadata and unrelated siblings unchanged.
+                return current
+            # Reject a stale transition before it can replace another action's state.
+            if observed != expected:
+                # Require a fresh load and authoritative recovery from the winner.
+                raise ConflictError("Deuces Wild state changed during this action; reload and retry")
+            # Publish every game-owned field as a detached provider value.
+            for key in _GAME_STATE_KEYS:
+                # Replace one owned field without copying operation metadata or siblings.
+                current[key] = copy.deepcopy(desired[key])
+            # Return the complete provider document with every unrelated sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process read-modify-write boundary.
+        authoritative = self._repository.update(player_id, publish)
+        # Advance the private baseline to the exact committed game-owned result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Read the replay registry while tolerating pre-module or malformed documents.
     def _actions(self, state: dict) -> dict:
@@ -279,8 +336,12 @@ class DeucesWildVideoPokerService:
                 committed = self._find_ledger_action(player_id, f"{round_id}:wager")
                 # Roll back prepared state only when the shared ledger has no event.
                 if committed is None:
-                    # Restore the exact pre-request player document.
-                    self._save(player_id, prior_state)
+                    # Restore only game-owned values while retaining the prepared-state baseline.
+                    for key in _GAME_STATE_KEYS:
+                        # Copy the pre-request field without replacing provider siblings.
+                        state[key] = copy.deepcopy(prior_state[key])
+                    # Publish cleanup only if this request still owns the prepared result.
+                    self._save(player_id, state)
                 # Re-raise the original ledger, storage, or conflict error.
                 raise
             # Return the new initial hand and committed wager evidence.

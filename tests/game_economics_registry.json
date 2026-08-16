@@ -212,7 +212,7 @@
       "requirement_id": "DWVP-001",
       "engine_path": "casino/games/deuces_wild_video_poker/engine.py",
       "settlement_path": "casino/games/deuces_wild_video_poker/api.py",
-      "production_sha256": "9ef44c93f41c3685022448ee2fc8c6f4c328805bab1fbedd814f53c5e27960ec",
+      "production_sha256": "b4d9c995f6dd3925da054f0f321e2d9422b3296ea4bda11cc0e9b18fda9c8fc3",
       "proof_tests": ["tests.games.deuces_wild_video_poker.test_economics:DeucesWildEconomicsTests.test_paytable_matches_the_house_edged_schedule"],
       "rationale": "The corrected four-of-a-kind row lowers audited optimal-play RTP to roughly 94 percent while preserving the production hand ranking."
     },

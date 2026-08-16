@@ -27,6 +27,8 @@ class FakeCasino:
         self.balances = {"session-player": 100.0, "other-player": 100.0}
         # Count events for stable local ledger identifiers.
         self.sequence = 0
+        # Count provider-current publications for pre-storage refusal assertions.
+        self.update_calls = 0
 
     # Build the same two-dimensional key accepted by the state-store port.
     def state_key(self, game_id, player_id):
@@ -38,17 +40,27 @@ class FakeCasino:
         # Resolve this game's player-scoped document without copying its marker fields.
         return self.states[self.state_key(engine.GAME_ID, player_id)]
 
-    # Load a deep copy so service mutations require an explicit save operation.
-    def load_state(self, game_id, player_id, factory):
+    # Load a deep copy so service mutations require an explicit update operation.
+    def load(self, player_id):
         # Resolve the complete persistence key for this game and authenticated player.
-        key = self.state_key(game_id, player_id)
+        key = self.state_key(engine.GAME_ID, player_id)
         # Return a detached stored document or a detached fresh default.
-        return copy.deepcopy(self.states.get(key, factory()))
+        return copy.deepcopy(self.states.get(key, engine.default_state()))
 
-    # Save a deep copy so later request objects cannot mutate durable state implicitly.
-    def save_state(self, game_id, player_id, state):
-        # Persist only beneath the complete game/player key supplied by the service.
-        self.states[self.state_key(game_id, player_id)] = copy.deepcopy(state)
+    # Apply one provider-current mutation and publish only its detached result.
+    def update(self, player_id, mutator):
+        # Resolve the complete game/player key used by the production repository.
+        key = self.state_key(engine.GAME_ID, player_id)
+        # Record entry into the provider boundary before invoking the transition.
+        self.update_calls += 1
+        # Load a detached current document so callback failure cannot mutate storage.
+        current = copy.deepcopy(self.states.get(key, engine.default_state()))
+        # Run the service transition against the provider-current document.
+        updated = mutator(current)
+        # Persist a detached result only after the complete callback succeeds.
+        self.states[key] = copy.deepcopy(updated)
+        # Return another detached copy like the shared provider boundary.
+        return copy.deepcopy(updated)
 
     # Commit one signed fake ledger movement with the production public event shape.
     def transact(self, player_id, amount, transaction_type, game=None, round_id=None, details=None):
@@ -126,8 +138,7 @@ class DeucesWildVideoPokerApiTests(unittest.TestCase):
     def rebuild_runtime(self, seed="api:paying-seed-0001", debit=None, credit=None):
         # Inject deterministic time, cards, persistence, ledger, and player-read ports.
         self.service = api.DeucesWildVideoPokerService(
-            load_state=self.fake.load_state,  # Reuse player-scoped durable documents.
-            save_state=self.fake.save_state,  # Reuse explicit durable writes.
+            repository=self.fake,  # Reuse player-scoped provider-current documents.
             debit=debit or self.fake.debit,  # Preserve or deliberately interrupt ledger-only wager settlement.
             credit=credit or self.fake.credit,  # Preserve or deliberately interrupt ledger-only payout settlement.
             read_ledger=self.fake.read_ledger,  # Enable crash-window proof recovery.
@@ -149,6 +160,82 @@ class DeucesWildVideoPokerApiTests(unittest.TestCase):
     def events_of_type(self, transaction_type):
         # Filter immutable event history without relying on event order.
         return [event for event in self.fake.events if event["transaction_type"] == transaction_type]
+
+    # Refuse untracked publication before provider storage can observe a callback.
+    def test_atomic_publication_requires_a_loaded_baseline(self):
+        # Construct one detached engine default that never passed through the repository.
+        detached = engine.default_state()
+        # Reject the missing optimistic snapshot with a stable game-owned conflict.
+        with self.assertRaisesRegex(ConflictError, "missing its atomic baseline"):
+            # Attempt direct publication without a provider read.
+            self.service._save("session-player", detached)
+        # Prove the refusal occurred before entering fake provider storage.
+        self.assertEqual(0, self.fake.update_calls)
+
+    # Accept one exact duplicate result while preserving provider-owned siblings.
+    def test_atomic_publication_is_idempotent_and_preserves_siblings(self):
+        # Load one tracked empty state through the repository boundary.
+        state = self.service._load("session-player")
+        # Publish the canonical empty result once to establish durable bytes.
+        self.service._save("session-player", state)
+        # Add unrelated metadata after the caller's baseline advances.
+        self.fake.stored_state("session-player")["atomic_markers"] = ["sibling"]
+        # Publish the exact same game-owned result through idempotent comparison.
+        self.service._save("session-player", state)
+        # Read the complete provider-authoritative document after both updates.
+        persisted = self.fake.stored_state("session-player")
+        # Preserve the unrelated sibling while keeping the operation baseline private.
+        self.assertEqual(["sibling"], persisted["atomic_markers"])
+        # Reject internal optimistic metadata from durable state bytes.
+        self.assertNotIn(api._ATOMIC_BASELINE_KEY, persisted)
+
+    # Reject one stale writer after a competing game-owned publication wins.
+    def test_atomic_publication_rejects_stale_game_state(self):
+        # Load two independent snapshots of the same provider-owned initial state.
+        first = self.service._load("session-player")
+        # Load the competing snapshot before either writer publishes.
+        stale = self.service._load("session-player")
+        # Give the first writer one unique replay record.
+        first["actions"]["atomic-winner-0001"] = {"command": "holds", "round_id": "winner", "fingerprint": {"holds": [0]}}
+        # Publish the first writer against the shared baseline.
+        self.service._save("session-player", first)
+        # Give the stale writer a distinct result over the old baseline.
+        stale["actions"]["atomic-loser-0001"] = {"command": "holds", "round_id": "loser", "fingerprint": {"holds": [1]}}
+        # Reject the stale replacement rather than merging incompatible game state.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt to publish the stale owned snapshot.
+            self.service._save("session-player", stale)
+        # Retain only the authoritative winner's action identity.
+        self.assertEqual(["atomic-winner-0001"], sorted(self.fake.stored_state("session-player")["actions"]))
+
+    # Prevent rejected-debit cleanup from erasing a concurrent game-state winner.
+    def test_rejected_wager_rollback_cannot_erase_concurrent_winner(self):
+        # Publish a competing owned transition after preparation, then fail before debit proof.
+        def fail_after_concurrent_update(*_args, **_kwargs):
+            # Mark the provider-current prepared hand as held by a competing action.
+            def publish_winner(current):
+                # Change one owned round field so rollback no longer owns the baseline.
+                current["active_round"]["holds"] = [0]
+                # Return the complete provider-current document for publication.
+                return current
+
+            # Commit the competing owned result through the same repository boundary.
+            self.fake.update("session-player", publish_winner)
+            # Fail before any append-only fake ledger movement can commit.
+            raise RuntimeError("injected pre-ledger wager failure")
+
+        # Rebuild the service with the bounded failing debit seam.
+        self.rebuild_runtime(debit=fail_after_concurrent_update)
+        # Surface the cleanup conflict because another writer owns the prepared state.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt one money-bearing deal whose rollback is now stale.
+            self.call("/api/v1/games/deuces-wild-video-poker/rounds", {"action_id": "atomic-rollback-0001", "wager": 2})
+        # Read the exact provider-authoritative state after the rejected rollback.
+        persisted = self.fake.stored_state("session-player")
+        # Preserve the concurrent hold instead of resurrecting the clean baseline.
+        self.assertEqual([0], persisted["active_round"]["holds"])
+        # Prove the failure occurred before any wallet movement.
+        self.assertEqual([], self.fake.events)
 
     # Confirm hostile caller IDs cannot override the session and debit recovery is exactly once.
     def test_session_binding_and_reconstructed_deal_retry_are_exactly_once(self):
