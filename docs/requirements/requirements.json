@@ -12576,6 +12576,31 @@
       "notes": "Fresh workers use the real JSON provider and exact Scratch Cards service. Existing session isolation, covered-value privacy, purchase and reveal replay, debit and payout recovery, match-three economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-230",
+      "module": "Tests",
+      "description": "Real stale-load Sic Bo workers race different private round preparations around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one active round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing wager, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SIC-BO-001",
+        "API-SIC-BO-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-SIC-BO-001"
+      ],
+      "implementation_files": [
+        "tests/games/sic_bo/test_service.py",
+        "tests/games/sic_bo/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-851-sic-bo-atomic-state",
+      "changed_in": "issue-851-sic-bo-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Sic Bo service. Existing session isolation, private prepared dice, round replay, wager and payout recovery, fifty-position economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -17477,6 +17502,32 @@
       "introduced_in": "game-expansion-sic-bo",
       "changed_in": "game-expansion-sic-bo",
       "notes": "Descriptor sort order 140 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "SIC-BO-006",
+      "module": "Sic Bo",
+      "description": "Sic Bo publishes private dice preparation, wager and payout recovery markers, settlement state, bounded history, and action-owned cleanup through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action or cleanup can overwrite the winning round, while the frozen v1 envelope, fifty-position rules, server entropy, and exactly-once ledger movements remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SIC-BO-001",
+        "API-SIC-BO-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-SIC-BO-001"
+      ],
+      "implementation_files": [
+        "casino/games/sic_bo/service.py",
+        "tests/games/sic_bo/test_service.py",
+        "tests/games/sic_bo/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-851-sic-bo-atomic-state",
+      "changed_in": "issue-851-sic-bo-atomic-state",
+      "notes": "The frozen v1 contract, fifty-position payout profile, private prepared-dice boundary, debit and payout transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "CHUCK-001",

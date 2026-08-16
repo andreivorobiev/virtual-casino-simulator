@@ -58,13 +58,13 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             {row["state_model"] for row in games},  # Compare every current model.
             {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
-        # Pin the exact current family cardinalities after Scratch Cards retires direct publication.
+        # Pin the exact current family cardinalities after Sic Bo retires direct publication.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
                 for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
             },
-            {"player_document_load_save": 3, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 32},  # Pin current counts.
+            {"player_document_load_save": 2, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 33},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -450,6 +450,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(scratch_cards["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while money is a separate transaction.
         self.assertEqual(scratch_cards["multiworker_status"], "blocked")
+        # Resolve Sic Bo after preparation, recovery markers, settlement, and cleanup become atomic.
+        sic_bo = next(row for row in games if row["game_id"] == "sic_bo")
+        # Require authoritative reads for response, replay, and ledger recovery.
+        self.assertGreater(sic_bo["load_call_sites"], 0)
+        # Require every reachable game-state publication to avoid stale whole-document saves.
+        self.assertEqual(sic_bo["save_call_sites"], 0)
+        # Bind private dice, ledger markers, terminal history, and cleanup to provider updates.
+        self.assertGreater(sic_bo["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming state-and-money atomicity.
+        self.assertEqual(sic_bo["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while money is a separate transaction.
+        self.assertEqual(sic_bo["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))
         # Refuse second-worker authorization for every game.
