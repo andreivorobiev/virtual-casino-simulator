@@ -411,7 +411,7 @@
       "requirement_id": "DBVP-001",
       "engine_path": "casino/games/double_bonus_video_poker/engine.py",
       "settlement_path": "casino/games/double_bonus_video_poker/service.py",
-      "production_sha256": "879ab2492de708ead96a46a926da017e7981624f9c82773d67f56519f51b97a6",
+      "production_sha256": "d8f95e511ab708218a30deba8636038576d3e80ae73872437d94e1f6df1b2e57",
       "proof_tests": ["tests.double_bonus_video_poker_tests:DoubleBonusVideoPokerTests.test_house_edge_is_positive"],
       "rationale": "The deterministic production simulation and exact paytable bands keep the accepted strategy return below one."
     },

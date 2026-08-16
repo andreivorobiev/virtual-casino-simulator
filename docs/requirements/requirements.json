@@ -12317,6 +12317,29 @@
       "notes": "Fresh workers use the real JSON provider and exact Deuces Wild service. Existing session isolation, replay, wager and payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-219",
+      "module": "Tests",
+      "description": "Real stale-load Double Bonus workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001",
+        "API-DBVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/double_bonus_video_poker_tests.py",
+        "tests/games/double_bonus_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-830-double-bonus-atomic-state",
+      "changed_in": "issue-830-double-bonus-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Double Bonus service. Existing session isolation, replay, wager and settlement recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -19902,6 +19925,30 @@
       "introduced_in": "issue-131-double-bonus-video-poker",
       "changed_in": "issue-131-double-bonus-video-poker",
       "notes": "Allocated for GitHub issue #131."
+    },
+    {
+      "id": "DBVP-003",
+      "module": "Double Bonus Video Poker",
+      "description": "Double Bonus Video Poker publishes prepared deals, active decisions, bounded terminal history, compact replay receipts, and ledger-recovery markers through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale hand can overwrite or resurrect the winning result, while committed debit and credit recovery retains the frozen v1 behavior and exactly-once ledger movements.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001",
+        "API-DBVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/double_bonus_video_poker/service.py",
+        "tests/double_bonus_video_poker_tests.py",
+        "tests/games/double_bonus_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-830-double-bonus-atomic-state",
+      "changed_in": "issue-830-double-bonus-atomic-state",
+      "notes": "The frozen v1 contract, cards and draw math, 9/6 Double Bonus paytable, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "MSTUD-001",

@@ -79,6 +79,17 @@ class MemoryState:
         # Store a deep copy so later loads are isolated.
         self.docs[player_id] = copy.deepcopy(state)
 
+    # Update one document through a provider-current callback.
+    def update(self, player_id, mutator):
+        # Load a detached provider-current document or one fresh default.
+        current = copy.deepcopy(self.docs.get(player_id) or engine.default_state())
+        # Apply the production-shaped callback while this fake owns publication.
+        updated = mutator(current)
+        # Persist only the callback result, detached from caller mutation.
+        self.docs[player_id] = copy.deepcopy(updated)
+        # Return an authoritative detached result like shared storage.
+        return copy.deepcopy(updated)
+
 
 # Build a Double Bonus service bound to in-memory fakes and a fixed fixture.
 def _service(fixture, ledger=None, memory=None):
@@ -87,11 +98,123 @@ def _service(fixture, ledger=None, memory=None):
     # Use the supplied state store or a fresh one.
     store = memory or MemoryState()
     # Compose the service with all seams injected and one pinned deal fixture.
-    return service.DoubleBonusVideoPokerService(ledger_gateway=service.CoreLedgerGateway(debit=fake_ledger.debit, credit=fake_ledger.credit, read_recent=fake_ledger.read_recent), state_loader=store.load, state_saver=store.save, get_player=lambda pid: {"player_id": pid, "balance": fake_ledger.balance}, clock=lambda: "2026-07-25T00:00:00Z", fixture_factory=lambda action_id: fixture), fake_ledger, store
+    return service.DoubleBonusVideoPokerService(ledger_gateway=service.CoreLedgerGateway(debit=fake_ledger.debit, credit=fake_ledger.credit, read_recent=fake_ledger.read_recent), repository=store, get_player=lambda pid: {"player_id": pid, "balance": fake_ledger.balance}, clock=lambda: "2026-07-25T00:00:00Z", fixture_factory=lambda action_id: fixture), fake_ledger, store
 
 
 # Verify Double Bonus classifies hands, draws deterministically, and stays house-positive.
 class DoubleBonusVideoPokerTests(unittest.TestCase):
+    # Confirm identical atomic publication preserves unrelated provider siblings.
+    def test_atomic_publication_preserves_siblings_and_private_baseline(self) -> None:
+        # Build one service with deterministic fakes.
+        svc, _fake_ledger, store = _service({"hand": ["AS", "AH", "AD", "2C", "3D"], "draw_pile": ["AC", "KH", "4C", "5D", "6S"]})
+        # Load one tracked default document through the service boundary.
+        state = svc._load("p1")
+        # Add one deterministic receipt as the desired owned transition.
+        state["action_receipts"]["atomic-same"] = {"stage": "deal", "round_id": "round-same", "request_fingerprint": "a" * 64}
+        # Publish the tracked transition through provider-current comparison.
+        svc._save("p1", state)
+        # Add unrelated metadata after the first game-owned publication.
+        store.docs["p1"]["atomic_markers"] = ["sibling"]
+        # Publish the exact same desired result from the advanced baseline.
+        svc._save("p1", state)
+        # Read the final provider-authoritative document.
+        persisted = store.docs["p1"]
+        # Verify the sibling survives and operation metadata never persists.
+        self.assertEqual(["sibling"], persisted["atomic_markers"])
+        # Keep the optimistic snapshot outside durable player state.
+        self.assertNotIn("_double_bonus_atomic_baseline", persisted)
+
+    # Reject fabricated detached state before entering the provider updater.
+    def test_missing_atomic_baseline_fails_before_update(self) -> None:
+        # Retain a call list that must stay empty on fail-closed input.
+        updates = []
+
+        # Expose a repository seam whose update would reveal accidental entry.
+        class RejectingRepository:
+            # Record forbidden writes without mutating any storage.
+            def update(self, player_id, mutator):
+                # Retain exact attempted arguments for the final assertion.
+                updates.append((player_id, mutator))
+
+        # Build a service whose write seam must remain untouched.
+        svc = service.DoubleBonusVideoPokerService(repository=RejectingRepository())
+        # Reject an untracked default document as a stale publication.
+        with self.assertRaisesRegex(ConflictError, "missing its atomic baseline"):
+            # Attempt publication without the required provider-read baseline.
+            svc._save("p1", engine.default_state())
+        # Prove storage was never reached.
+        self.assertEqual([], updates)
+
+    # Reject one stale game-owned publication without losing a newer sibling.
+    def test_atomic_publication_rejects_stale_game_state(self) -> None:
+        # Build one service and detached provider repository.
+        svc, _fake_ledger, store = _service({"hand": ["AS", "AH", "AD", "2C", "3D"], "draw_pile": ["AC", "KH", "4C", "5D", "6S"]})
+        # Load two independent copies of the same provider baseline.
+        winner = svc._load("p1")
+        # Capture the stale contender before the winner commits.
+        stale = svc._load("p1")
+        # Give the winning transition one durable receipt.
+        winner["action_receipts"]["atomic-winner"] = {"stage": "deal", "round_id": "winner", "request_fingerprint": "b" * 64}
+        # Publish the winner against the common baseline.
+        svc._save("p1", winner)
+        # Add unrelated provider metadata after the winner.
+        store.docs["p1"]["atomic_markers"] = ["sibling"]
+        # Give the stale transition a different owned result.
+        stale["action_receipts"]["atomic-loser"] = {"stage": "deal", "round_id": "loser", "request_fingerprint": "c" * 64}
+        # Reject the stale result before replacement.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt the stale provider-current publication.
+            svc._save("p1", stale)
+        # Require only the winning game state and sibling to remain.
+        self.assertEqual(({"atomic-winner"}, ["sibling"]), (set(store.docs["p1"]["action_receipts"]), store.docs["p1"]["atomic_markers"]))
+
+    # Prove rejected-debit rollback cannot erase a provider-winning round.
+    def test_rejected_debit_rollback_preserves_concurrent_winner(self) -> None:
+        # Extend memory storage with one deterministic winner scheduled during cleanup.
+        class RacingRepository(MemoryState):
+            # Start with ordinary detached documents and no update calls.
+            def __init__(self):
+                # Initialize the base in-memory repository.
+                super().__init__()
+                # Count provider publications so only rollback loses the race.
+                self.update_calls = 0
+
+            # Publish preparation normally, then expose a concurrent winner.
+            def update(self, player_id, mutator):
+                # Count this provider-current publication attempt.
+                self.update_calls += 1
+                # Let the prepared wager state commit normally.
+                if self.update_calls == 1:
+                    # Delegate the first transition to ordinary memory storage.
+                    return super().update(player_id, mutator)
+                # Define one provider-winning deal identity.
+                winner_action = "deal-provider-winner"
+                # Bind the winner to one exact normalized wager.
+                winner_fingerprint = service.request_fingerprint({"stage": "deal", "bet": 1.0})
+                # Derive its stable player-scoped round id.
+                winner_round_id = engine.round_id_for(player_id, winner_action)
+                # Build a different valid active round before stale rollback enters.
+                winner_round = engine.create_round(player_id, 1, winner_action, round_id=winner_round_id, created_at="2026-08-16T00:00:01Z", request_fingerprint=winner_fingerprint, fixture={"hand": ["JS", "JH", "3C", "6D", "9S"], "draw_pile": ["AC", "KH", "4C", "5D", "6S"]})
+                # Persist the concurrent authoritative game-owned result first.
+                self.docs[player_id] = {"active_round": winner_round, "recent_rounds": [], "action_receipts": {winner_action: {"stage": "deal", "round_id": winner_round_id, "request_fingerprint": winner_fingerprint}}, "atomic_markers": ["provider-winner"]}
+                # Present that provider-current winner to the stale cleanup callback.
+                return mutator(copy.deepcopy(self.docs[player_id]))
+
+        # Create one race-aware provider and an underfunded wallet.
+        repository, ledger = RacingRepository(), FakeLedger(balance=5.0)
+        # Build the real service around both deterministic fakes.
+        svc = service.DoubleBonusVideoPokerService(ledger_gateway=service.CoreLedgerGateway(debit=ledger.debit, credit=ledger.credit, read_recent=ledger.read_recent), repository=repository, get_player=lambda pid: {"player_id": pid, "balance": ledger.balance}, clock=lambda: "2026-08-16T00:00:00Z", fixture_factory=lambda _action_id: {"hand": ["AS", "AH", "AD", "2C", "3D"], "draw_pile": ["AC", "KH", "4C", "5D", "6S"]})
+        # Require stale rollback to surface a provider conflict.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt an unaffordable round whose cleanup loses the state race.
+            svc.start_round("p1", {"action_id": "deal-rollback-race", "bet": 10})
+        # Read the authoritative concurrent winner after failed cleanup.
+        persisted = repository.load("p1")
+        # Verify the winner and unrelated sibling remain intact.
+        self.assertEqual(("deal-provider-winner", ["provider-winner"]), (persisted["active_round"]["start_action_id"], persisted["atomic_markers"]))
+        # Verify rejected debit created no wallet movement.
+        self.assertEqual((5.0, []), (ledger.balance, ledger.events))
+
     # Require the Double Bonus paytable to band four of a kind and trim two pair.
     def test_paytable_bands(self) -> None:
         # Require four aces to pay the top quad band.
