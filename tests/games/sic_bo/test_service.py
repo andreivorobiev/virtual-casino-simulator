@@ -4,15 +4,19 @@
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.
 import copy
+# Import repository paths for exact source-topology evidence.
+from pathlib import Path
 # Import the dependency-free standard unit-test runner.
 import unittest
 
 # Import public errors used by validation, failure, and conflict assertions.
 from casino.errors import ConflictError, InsufficientFundsError, ValidationError
+# Import the one shared compatibility gateway used by every helper-backed game.
+from casino.core.settlement import GameSettlementGateway
 # Import the isolated engine for default player-state fixtures.
 from casino.games.sic_bo import engine
-# Import the production ledger adapter and orchestration service under focused tests.
-from casino.games.sic_bo.service import CoreLedgerGateway, SicBoService
+# Import only the game-owned orchestration service under focused tests.
+from casino.games.sic_bo.service import SicBoService
 
 
 # Provide deep-copied player state with injectable write-failure points.
@@ -57,14 +61,26 @@ class FakeLedgerGateway:
         self.events = []
         # Allocate stable event identifiers.
         self.sequence = 0
+        # Name transaction types whose first committed response should be lost.
+        self.fail_after_types = set()
 
     # Find one committed action for the authenticated player.
-    def find(self, player_id, action_key):
+    def find(self, player_id, action_key=None, **dimensions):
         # Scan newest-first while preserving player isolation.
-        return next((event for event in reversed(self.events) if event["player_id"] == player_id and event["details"].get("sic_bo_action_id") == action_key), None)
+        event = next((row for row in reversed(self.events) if row["player_id"] == player_id and (row["details"].get("game_action_key") == action_key or row["details"].get("sic_bo_action_id") == action_key)), None)
+        # Report an absent committed action without validating optional dimensions.
+        if event is None:
+            # Preserve the shared gateway's nullable lookup contract.
+            return None
+        # Reject a mismatched round, transaction type, or semantic fingerprint.
+        if dimensions.get("round_id") is not None and event["round_id"] != dimensions["round_id"] or dimensions.get("transaction_type") is not None and event["transaction_type"] != dimensions["transaction_type"] or dimensions.get("request_fingerprint") is not None and event["details"].get("request_fingerprint") != dimensions["request_fingerprint"]:
+            # Match the production gateway's fail-closed recovery behavior.
+            raise ConflictError("fake ledger proof conflict")
+        # Return the immutable fake provider event.
+        return event
 
     # Apply one signed movement once using deterministic action identity.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, details):
+    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint=None, details):
         # Resolve an earlier event before changing the fake balance.
         existing = self.find(player_id, action_key)
         # Reuse a semantically identical event on retry.
@@ -88,15 +104,21 @@ class FakeLedgerGateway:
         # Allocate the next stable event id.
         self.sequence += 1
         # Build the audit dimensions consumed by service recovery.
-        event = {"ledger_id": f"led_{self.sequence}", "player_id": player_id, "amount": round(amount, 2), "transaction_type": transaction_type, "game": "sic_bo", "round_id": round_id, "details": {**details, "sic_bo_action_id": action_key}, "balance_before": before, "balance_after": after}
+        event = {"ledger_id": f"led_{self.sequence}", "player_id": player_id, "amount": round(amount, 2), "transaction_type": transaction_type, "game": "sic_bo", "round_id": round_id, "details": {**details, "game_action_key": action_key, "sic_bo_action_id": action_key, "request_fingerprint": request_fingerprint or details.get("request_fingerprint")}, "balance_before": before, "balance_after": after}
         # Append the committed event exactly once.
         self.events.append(event)
+        # Simulate one transport failure after immutable movement publication.
+        if transaction_type in self.fail_after_types:
+            # Consume the one-shot failure so an explicit retry can recover proof.
+            self.fail_after_types.remove(transaction_type)
+            # Surface an ambiguous response after the balance and event already committed.
+            raise RuntimeError("simulated lost ledger response")
         # Return new-event evidence.
         return event, False
 
 
 # Verify the production adapter's read-before-write conflict checks directly.
-class CoreLedgerGatewayTests(unittest.TestCase):
+class SharedLedgerGatewayTests(unittest.TestCase):
     # Confirm an exact replay reuses one shared-ledger event and changed semantics fail closed.
     def test_production_gateway_replays_only_identical_debits(self):
         # Store fake shared-ledger events in chronological order.
@@ -117,7 +139,7 @@ class CoreLedgerGatewayTests(unittest.TestCase):
             return event
 
         # Build the shared adapter against explicit focused-test seams.
-        gateway = CoreLedgerGateway(read_recent=read_recent, debit=debit)
+        gateway = GameSettlementGateway("sic_bo", "sic_bo_action_id", read_recent=read_recent, debit=debit)
         # Preserve one semantic request fingerprint in ledger details.
         details = {"request_fingerprint": "a" * 64, "dice": [1, 2, 3]}
         # Commit the original aggregate wager debit.
@@ -224,6 +246,21 @@ class SicBoServiceTests(unittest.TestCase):
         # Verify the recovered winning action creates one payout only.
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "SIC_BO_PAYOUT_CREDIT"]))
 
+    # Confirm a lost wager response preserves preparation and recovers exact committed dice.
+    def test_lost_wager_response_recovers_without_second_debit(self):
+        # Lose the first debit response only after the fake provider commits it.
+        self.ledger.fail_after_types = {"SIC_BO_WAGER_DEBIT"}
+        # Surface the ambiguous response through the established service boundary.
+        with self.assertRaises(RuntimeError):
+            # Start the deterministic winning action.
+            self.service.play("session-player", self.winning_request())
+        # Require one debit and retained private preparation after the lost response.
+        self.assertEqual((1, "prepared"), (len(self.ledger.events), self.store.states["session-player"]["active_round"]["phase"]))
+        # Retry the exact action and recover immutable wager proof.
+        recovered = self.service.play("session-player", self.winning_request())
+        # Require original dice, one debit, and one payout only.
+        self.assertEqual(([3, 3, 3], 1, 1), (recovered["round"]["dice"], len([event for event in self.ledger.events if event["transaction_type"] == "SIC_BO_WAGER_DEBIT"]), len([event for event in self.ledger.events if event["transaction_type"] == "SIC_BO_PAYOUT_CREDIT"])))
+
     # Confirm a crash before result persistence exposes recovery rather than partial metrics.
     def test_post_wager_marker_crash_exposes_incomplete_settling_state(self):
         # Fail the result-intent write after committed dice and wager proof were saved.
@@ -268,6 +305,57 @@ class SicBoServiceTests(unittest.TestCase):
         # Verify active recovery state is cleared after archival.
         self.assertIsNone(recovered["state"]["active_round"])
 
+    # Confirm a lost payout response recovers the committed credit without duplication.
+    def test_lost_payout_response_recovers_without_second_credit(self):
+        # Lose the first payout response only after the fake provider commits it.
+        self.ledger.fail_after_types = {"SIC_BO_PAYOUT_CREDIT"}
+        # Surface the ambiguous positive-movement response.
+        with self.assertRaises(RuntimeError):
+            # Start the deterministic winning action.
+            self.service.play("session-player", self.winning_request())
+        # Require both movements and a durable pending payout marker.
+        self.assertEqual((2, "pending"), (len(self.ledger.events), self.store.states["session-player"]["active_round"]["payout_status"]))
+        # Retry from deterministic settlement intent and immutable payout proof.
+        recovered = self.service.play("session-player", self.winning_request())
+        # Require one credit total and terminal recovery cleanup.
+        self.assertEqual((1, None), (len([event for event in self.ledger.events if event["transaction_type"] == "SIC_BO_PAYOUT_CREDIT"]), recovered["state"]["active_round"]))
+
+    # Confirm a crash before terminal lifecycle proof recovers without another movement.
+    def test_prefinalize_crash_recovers_completed_payout(self):
+        # Fail the terminal lifecycle write after both ledger movements and payout proof persist.
+        self.store.fail_on = {5}
+        # Execute until the simulated pre-finalization storage crash.
+        with self.assertRaises(RuntimeError):
+            # Start the deterministic winning action.
+            self.service.play("session-player", self.winning_request())
+        # Verify exactly one wager and one payout committed before the failure.
+        self.assertEqual(2, len(self.ledger.events))
+        # Disable later simulated failures for action-owned recovery.
+        self.store.fail_on.clear()
+        # Resume from provider lifecycle and immutable ledger proof.
+        recovered = self.service.play("session-player", self.winning_request())
+        # Require one settled round, no third movement, and no active residue.
+        self.assertEqual(("settled", 2, None), (recovered["round"]["phase"], len(self.ledger.events), recovered["state"]["active_round"]))
+
+    # Confirm a crash during terminal history publication recovers the exact finalized round.
+    def test_prearchive_crash_recovers_finalized_round(self):
+        # Fail the provider-current history write after lifecycle finalization persisted.
+        self.store.fail_on = {6}
+        # Execute until the simulated archival publication crash.
+        with self.assertRaises(RuntimeError):
+            # Start the deterministic winning action.
+            self.service.play("session-player", self.winning_request())
+        # Capture the authoritative finalized active record for exact replay comparison.
+        finalized = copy.deepcopy(self.store.states["session-player"]["active_round"])
+        # Require both movements and terminal lifecycle proof before the failed archive.
+        self.assertEqual((2, "settled"), (len(self.ledger.events), finalized["phase"]))
+        # Disable later simulated failures for terminal publication recovery.
+        self.store.fail_on.clear()
+        # Resume and archive the already-finalized action.
+        recovered = self.service.play("session-player", self.winning_request())
+        # Require the exact public round, no duplicate movement, and one direct history row.
+        self.assertEqual((engine.public_round(finalized), 2, 1), (recovered["round"], len(self.ledger.events), len(self.store.states["session-player"]["recent_rounds"])))
+
     # Confirm a losing result emits no zero-value credit event.
     def test_losing_round_has_no_payout_event(self):
         # Replace deterministic entropy with faces one, two, and four.
@@ -295,6 +383,30 @@ class SicBoServiceTests(unittest.TestCase):
         self.assertEqual([], empty_ledger.events)
         # Verify the safe-to-edit active state was cleared.
         self.assertIsNone(self.store.states["session-player"]["active_round"])
+
+    # Confirm bounded history remains direct, oldest-to-newest, and free of helper wrappers.
+    def test_history_retains_fifty_direct_terminal_rounds(self):
+        # Build a deterministic losing service so 51 actions create only wager movements.
+        service = SicBoService(ledger_gateway=self.ledger, state_loader=self.store.load, state_updater=self.store.update, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, randbelow=lambda _upper: 0, clock=lambda: "2026-07-14T00:00:00.000Z")
+        # Execute one action beyond the established history capacity.
+        for index in range(engine.RECENT_ROUND_LIMIT + 1):
+            # Use a distinct stable action id with the same losing wager semantics.
+            service.play("session-player", {"action_id": f"history-{index}", "wagers": {"triple:6": 1}})
+        # Read the exact direct persisted history after bounded truncation.
+        history = self.store.states["session-player"]["recent_rounds"]
+        # Require fifty oldest-to-newest direct rows with the first action evicted.
+        self.assertEqual((engine.RECENT_ROUND_LIMIT, "history-1", "history-50"), (len(history), history[0]["action_id"], history[-1]["action_id"]))
+        # Reject shared-helper wrapper metadata from the frozen Sic Bo state shape.
+        self.assertFalse(any("public" in row or "request_id" in row for row in history))
+        # Require no recovery slot after every terminal publication.
+        self.assertIsNone(self.store.states["session-player"]["active_round"])
+
+    # Confirm the game owns one helper instance and no direct money-mutation boundary.
+    def test_source_uses_one_shared_helper_without_local_gateway(self):
+        # Read the exact production service source under test.
+        source = (Path(__file__).resolve().parents[3] / "casino" / "games" / "sic_bo" / "service.py").read_text(encoding="utf-8")
+        # Bind one coordinator and forbid bespoke gateway or raw movement calls.
+        self.assertEqual((1, False, False, False), (source.count("SimpleWagerGame("), "CoreLedgerGateway" in source, ".apply_once(" in source, "GameSettlementGateway" in source))
 
 
 # Run the focused suite when invoked directly by a worker.

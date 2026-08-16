@@ -240,7 +240,7 @@
       "requirement_id": "SIC-BO-001",
       "engine_path": "casino/games/sic_bo/engine.py",
       "settlement_path": "casino/games/sic_bo/service.py",
-      "production_sha256": "c18e59bfd684bf4b04b918197acd07e80ac7861ac17ea7f39184e34f8f4d6d15",
+      "production_sha256": "764c4db3958f3b6c7edaf6613a68a29bfaed65af7fc994e2f58da1dd8bf2dd85",
       "proof_tests": ["tests.games.sic_bo.test_engine:SicBoEngineTests.test_complete_fifty_position_catalog", "tests.games.sic_bo.test_engine:SicBoEngineTests.test_multi_position_settlement_uses_returned_credit_semantics"],
       "rationale": "Every three-die outcome and every catalog wager family is source-bound to the audited production total-return schedule."
     },

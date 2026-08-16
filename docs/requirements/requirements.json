@@ -12578,7 +12578,7 @@
     {
       "id": "TEST-230",
       "module": "Tests",
-      "description": "Real stale-load Sic Bo workers race different private round preparations around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one active round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing wager, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.",
+      "description": "Real Sic Bo workers race different private round preparations through the selected JSON provider around a separately committed sibling update, proving one provider-winning action, one explicit competing-action conflict, one active round, and no sibling loss. Deterministic lifecycle evidence proves exact preparation is idempotent without redrawing entropy, terminal archival preserves older history and siblings, private helper wrappers never persist, and action-owned cleanup cannot erase an advanced winner while wager, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.",
       "status": "PASS",
       "api_tests": [
         "API-SIC-BO-001",
@@ -12597,8 +12597,8 @@
         "tests/unit/request_latency_benchmark_tests.py"
       ],
       "introduced_in": "issue-851-sic-bo-atomic-state",
-      "changed_in": "issue-851-sic-bo-atomic-state",
-      "notes": "Fresh workers use the real JSON provider and exact Sic Bo service. Existing session isolation, private prepared dice, round replay, wager and payout recovery, fifty-position economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+      "changed_in": "issue-861-sic-bo-simple-wager",
+      "notes": "Fresh workers use the real JSON provider and SimpleWagerGame-backed Sic Bo service. Source and crash-window evidence binds one helper path, private prepared dice, round replay, wager and payout recovery, finalization, direct fifty-round history, economics, restart, browser, and frozen v1 behavior while production multiworker activation stays blocked."
     },
     {
       "id": "TEST-231",
@@ -12698,23 +12698,26 @@
     {
       "id": "GAMECORE-006",
       "module": "Core",
-      "description": "SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, wager proof write/read, settlement details, public round projection, and bounded history capacity. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public and persisted shape without bypassing the shared settlement or provider-current publication boundaries.",
+      "description": "SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, movement action keys, historical action-detail keys, wager proof write/read, settlement details, public round projection, and bounded history capacity. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public, ledger, and persisted shape without bypassing the shared settlement or provider-current publication boundaries.",
       "status": "PASS",
       "api_tests": [
         "API-GAMECORE-001",
         "API-GAMECORE-005",
-        "API-BIG-SIX-001"
+        "API-BIG-SIX-001",
+        "API-SIC-BO-001"
       ],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/simple_game.py",
         "casino/games/big_six_wheel/service.py",
+        "casino/games/sic_bo/service.py",
         "tests/simple_game_tests.py",
-        "tests/unit/big_six_wheel_engine_tests.py"
+        "tests/unit/big_six_wheel_engine_tests.py",
+        "tests/games/sic_bo/test_service.py"
       ],
       "introduced_in": "issue-859-big-six-simple-wager",
-      "changed_in": "issue-859-big-six-simple-wager",
-      "notes": "Adapters may change representation only; the helper still exclusively owns entropy commitment, exactly-once movements, proof recovery, replay conflict checks, and provider-current terminal publication."
+      "changed_in": "issue-861-sic-bo-simple-wager",
+      "notes": "Adapters may change compatibility representation and stable identity naming only; the helper still exclusively owns exactly-once movements, proof recovery, replay conflict checks, and provider-current terminal publication."
     },
     {
       "id": "TEST-234",
@@ -12741,6 +12744,56 @@
       "introduced_in": "issue-859-big-six-simple-wager",
       "changed_in": "issue-859-big-six-simple-wager",
       "notes": "The structural audit accepts a shared-helper compatibility adapter only with a provider-current game-local updater and zero direct saver. State and money remain separate provider transactions, so production multiworker activation remains blocked."
+    },
+    {
+      "id": "GAMECORE-007",
+      "module": "Core",
+      "description": "SimpleWagerGame exposes one optional prepared-state lifecycle protocol that can durably prepare private entropy, reconcile wager failure, publish immutable wager proof, publish deterministic settlement intent, publish optional credit proof, and freeze terminal fields before the helper archives its provider-current round. Ordinary helper games retain their established default path, and an incomplete lifecycle fails before silently skipping a money-sensitive stage.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "API-GAMECORE-005",
+        "API-SIC-BO-001",
+        "API-SIC-BO-ATOMIC-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/simple_game.py",
+        "casino/games/sic_bo/service.py",
+        "tests/simple_game_tests.py",
+        "tests/games/sic_bo/test_service.py",
+        "tests/games/sic_bo/test_atomic_state.py"
+      ],
+      "introduced_in": "issue-861-sic-bo-simple-wager",
+      "changed_in": "issue-861-sic-bo-simple-wager",
+      "notes": "The adapter owns only game-state lifecycle compatibility. SimpleWagerGame retains exclusive entropy adoption, movement ordering, proof recovery, replay checks, and terminal provider-current publication."
+    },
+    {
+      "id": "TEST-235",
+      "module": "Tests",
+      "description": "Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "API-GAMECORE-005",
+        "API-SIC-BO-001",
+        "API-SIC-BO-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-SIC-BO-001"
+      ],
+      "implementation_files": [
+        "tests/simple_game_tests.py",
+        "tests/games/sic_bo/test_service.py",
+        "tests/games/sic_bo/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-861-sic-bo-simple-wager",
+      "changed_in": "issue-861-sic-bo-simple-wager",
+      "notes": "The structural inventory continues to classify Sic Bo provider state as atomic while refusing production multiworker activation because state and money remain separate durable transactions."
     },
     {
       "id": "ROU-001",
@@ -17629,8 +17682,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-sic-bo",
-      "changed_in": "game-expansion-sic-bo",
-      "notes": "Session context overrides caller player ids and prepared dice stay private until ledger proof exists."
+      "changed_in": "issue-861-sic-bo-simple-wager",
+      "notes": "Session context overrides caller player ids, and the SimpleWagerGame lifecycle adapter keeps prepared dice private until immutable wager proof exists."
     },
     {
       "id": "SIC-BO-003",
@@ -17648,8 +17701,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-sic-bo",
-      "changed_in": "game-expansion-sic-bo",
-      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+      "changed_in": "issue-861-sic-bo-simple-wager",
+      "notes": "SimpleWagerGame owns both aggregate movements and deterministic proof recovery; no game code mutates balances directly and conflicting retries fail closed."
     },
     {
       "id": "SIC-BO-004",
@@ -17699,7 +17752,7 @@
     {
       "id": "SIC-BO-006",
       "module": "Sic Bo",
-      "description": "Sic Bo publishes private dice preparation, wager and payout recovery markers, settlement state, bounded history, and action-owned cleanup through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action or cleanup can overwrite the winning round, while the frozen v1 envelope, fifty-position rules, server entropy, and exactly-once ledger movements remain unchanged.",
+      "description": "Sic Bo publishes private dice preparation, wager and payout recovery markers, settlement state, bounded history, and action-owned cleanup through provider-current callbacks that replace only game-owned fields. Competing processes serialize distinct preparations, preserve unrelated player-state siblings and terminal history, and prevent stale cleanup from erasing an advanced winner, while the frozen v1 envelope, fifty-position rules, server entropy, and exactly-once ledger movements remain unchanged.",
       "status": "PASS",
       "api_tests": [
         "API-SIC-BO-001",
@@ -17719,8 +17772,32 @@
         "tests/unit/request_latency_benchmark_tests.py"
       ],
       "introduced_in": "issue-851-sic-bo-atomic-state",
-      "changed_in": "issue-851-sic-bo-atomic-state",
-      "notes": "The frozen v1 contract, fifty-position payout profile, private prepared-dice boundary, debit and payout transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+      "changed_in": "issue-861-sic-bo-simple-wager",
+      "notes": "The SimpleWagerGame lifecycle adapter now owns each provider-current transition without a detached whole-document saver. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+    },
+    {
+      "id": "SIC-BO-007",
+      "module": "Sic Bo",
+      "description": "Sic Bo delegates its prepared wager, committed-dice recovery, optional payout credit, replay lookup, lifecycle finalization, and provider-current history publication to one SimpleWagerGame coordinator while preserving the frozen v1 action_id, sb_ round identity, direct oldest-to-newest fifty-round history, public round, active-state privacy, and historical ledger evidence semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SIC-BO-001",
+        "API-SIC-BO-ATOMIC-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [
+        "BR-SIC-BO-001"
+      ],
+      "implementation_files": [
+        "casino/games/sic_bo/service.py",
+        "casino/core/simple_game.py",
+        "tests/games/sic_bo/test_service.py",
+        "tests/games/sic_bo/test_atomic_state.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-861-sic-bo-simple-wager",
+      "changed_in": "issue-861-sic-bo-simple-wager",
+      "notes": "The game service contains exactly one SimpleWagerGame construction and no direct GameSettlementGateway, CoreLedgerGateway, or apply_once call. Canonical proof fields remain beside the legacy sic_bo_action_id compatibility field without changing the frozen v1 contract."
     },
     {
       "id": "CHUCK-001",
