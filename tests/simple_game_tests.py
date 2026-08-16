@@ -113,6 +113,10 @@ class SimpleGameCoreTests(unittest.TestCase):
         self.assertEqual((result["round"]["outcome"], result["round"]["total_return"]), ("win", 50))
         # Require both wallet movements to use storage-enforced atomic action identities.
         self.assertEqual((result["ledger"]["wager"]["details"]["ledger_action_key"], result["ledger"]["settlement"]["details"]["ledger_action_key"]), (f'{result["round"]["round_id"]}:wager', f'{result["round"]["round_id"]}:settlement'))
+        # Pin the established default public round keys while optional adapters serve legacy games.
+        self.assertEqual(set(result["round"]), {"round_id", "wager", "wager_total", "entropy", "total_return", "outcome", "detail", "net", "settled_at"})
+        # Pin the canonical recovery fields retained inside the default wager proof.
+        self.assertEqual({key: result["ledger"]["wager"]["details"][key] for key in ("request_id", "wager", "entropy", "settled_at")}, {"request_id": "r-win", "wager": {"face": 3, "stake": 10}, "entropy": {"face": 3}, "settled_at": result["round"]["settled_at"]})
         # Require the wallet to reflect exactly minus-stake plus-return once.
         self.assertEqual(self._balance(), 1000.0 - 10 + 50)
 

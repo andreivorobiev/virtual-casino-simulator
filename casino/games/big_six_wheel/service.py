@@ -1,19 +1,19 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Ledger-only, retry-safe orchestration for Big Six Wheel spins."""
+"""SimpleWagerGame-backed orchestration for retry-safe Big Six Wheel spins."""
 
-# Import deep-copy support for detached optimistic state snapshots.
+# Import deep-copy support for detached compatibility projections.
 import copy
 # Import cryptographic index selection for production wheel outcomes.
 import secrets
 # Import the shared UTC clock for settled response timestamps.
 from casino.core.clock import utc_now
-# Import the one approved play-token settlement compatibility boundary.
-from casino.core.settlement import GameSettlementGateway
+# Import the shared one-shot wager and settlement coordinator.
+from casino.core.simple_game import SimpleWagerGame
 # Import player-scoped reads and provider-atomic state mutation.
 from casino.core.state_store import load_player_game_state, update_player_game_state
-# Import standard conflict and validation errors for request identity enforcement.
-from casino.errors import ConflictError, ValidationError
+# Import standard validation errors for request identity enforcement.
+from casino.errors import ValidationError
 # Import pure Big Six calculations and state helpers.
 from casino.games.big_six_wheel import engine
 # Import the stable game identity for every ledger event.
@@ -21,93 +21,28 @@ from casino.games.big_six_wheel.rules import GAME_ID, outcome_catalog
 
 # Bound caller-supplied idempotency identifiers before persistence.
 MAX_CLIENT_REQUEST_ID_LENGTH = 128
-# Keep one operation's optimistic comparison snapshot outside persistent state.
-_ATOMIC_BASELINE_KEY = "_big_six_wheel_atomic_baseline"
-# Name every state field owned by Big Six Wheel transitions.
-_GAME_STATE_KEYS = ("recent_rounds",)
+# Retain the established Big Six history capacity across the shared-helper migration.
+RECENT_ROUND_LIMIT = 100
 
 
-# Construct the shared settlement gateway while retaining the historical test seam name.
-def CoreLedgerGateway(**kwargs):
-    # Preserve the old idempotency key beside canonical action evidence.
-    return GameSettlementGateway(GAME_ID, "idempotency_key", **kwargs)
-
-
-# Expose the provider-atomic writer behind an injectable test seam.
-def update_state(game_id: str, player_id: str, mutator, factory):
-    # Delegate to the shared cross-process read-modify-write boundary.
-    return update_player_game_state(game_id, player_id, mutator, factory)
-
-
-# Coordinate player state, entropy, and exactly-once ledger actions for one spin.
+# Coordinate legacy-compatible state projection with shared exactly-once settlement.
 class BigSixWheelService:
     # Capture injectable seams so deterministic tests avoid filesystem and ambient entropy.
     def __init__(self, *, ledger_gateway=None, state_loader=None, state_updater=None, randbelow=None, clock=None):
-        # Use the game-local ledger adapter unless a focused test supplies a fake.
-        self.ledger_gateway = ledger_gateway or CoreLedgerGateway()
-        # Use player-scoped storage compatible with the #81 authenticated-player resolver.
+        # Use player-scoped storage compatible with the authenticated-player resolver.
         self.state_loader = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
         # Publish state through the provider-current callback boundary by default.
-        self.state_updater = state_updater or update_state
+        self.state_updater = state_updater
         # Use cryptographic uniform selection unless a focused test supplies a deterministic index.
         self.randbelow = randbelow or secrets.randbelow
         # Use the shared UTC clock unless a focused test pins response time.
         self.clock = clock or utc_now
-
-    # Load one player document and capture its exact game-owned baseline.
-    def _load(self, player_id: str) -> dict:
-        # Read through the injected player-scoped persistence boundary.
-        state = self.state_loader(player_id)
-        # Retain only the values this service may replace during the operation.
-        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
-        # Return tracked state without persisting private operation metadata.
-        return state
-
-    # Capture detached values for every Big Six Wheel-owned state field.
-    @staticmethod
-    def _game_snapshot(state: dict) -> dict:
-        # Build one fresh compatibility baseline for absent predecessor fields.
-        defaults = engine.default_state()
-        # Normalize current and predecessor documents to one complete shape.
-        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
-
-    # Publish one player document through provider-current compare-and-replace.
-    def _save(self, player_id: str, state: dict) -> None:
-        # Require every publication to originate from a tracked provider read.
-        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
-        # Refuse an untracked detached-document write before entering storage.
-        if not isinstance(expected, dict):
-            # Keep stale or fabricated state outside provider bytes.
-            raise ConflictError("Big Six Wheel state transition is missing its atomic baseline")
-        # Capture the exact game-owned result before entering provider code.
-        desired = self._game_snapshot(state)
-
-        # Compare and replace only Big Six Wheel-owned fields on current state.
-        def publish(current: dict) -> dict:
-            # Detach current owned values from unrelated provider metadata.
-            observed = self._game_snapshot(current)
-            # Accept exact same-result publication without rewriting siblings.
-            if observed == desired:
-                # Preserve the complete authoritative provider document.
-                return current
-            # Reject an operation whose owned baseline lost a concurrent race.
-            if observed != expected:
-                # Require recovery from the authoritative winner.
-                raise ConflictError("Big Six Wheel state changed during this action; reload and retry")
-            # Replace only fields governed by this game service.
-            for key in _GAME_STATE_KEYS:
-                # Publish detached JSON-compatible values without sibling loss.
-                current[key] = copy.deepcopy(desired[key])
-            # Return the complete provider document for atomic persistence.
-            return current
-
-        # Commit the transition through the provider's cross-process boundary.
-        authoritative = self.state_updater(GAME_ID, player_id, publish, engine.default_state)
-        # Advance the operation baseline to the exact committed owned result.
-        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+        # Build one shared coordinator with adapters for the frozen Big Six public and ledger shapes.
+        self._game = SimpleWagerGame(game_id=GAME_ID, wager_transaction_type="BIG_SIX_WAGER_DEBIT", settlement_transaction_type="BIG_SIX_SETTLEMENT_CREDIT", entropy=self._entropy, resolve=self._resolve, validate_bet=self._validate_bet, ledger_gateway=ledger_gateway, state_loader=self._load_core_state, state_updater=self._update_core_state, entropy_source=self.randbelow, clock=self.clock, get_player=lambda player_id: {"player_id": player_id}, request_id_resolver=self._request_id, round_id_factory=self._round_id, wager_details_builder=self._wager_details, wager_proof_reader=self._wager_proof, settlement_details_builder=self._settlement_details, public_round_builder=self._public_round, recent_round_limit=RECENT_ROUND_LIMIT)
 
     # Validate a required client action identity used for safe network retries.
-    def _client_request_id(self, value) -> str:
+    @staticmethod
+    def _client_request_id(value) -> str:
         # Normalize only string ids and reject empty, oversized, or control-character values.
         request_id = value.strip() if isinstance(value, str) else ""
         # Branch when the public idempotency identity is not safe to persist.
@@ -117,68 +52,125 @@ class BigSixWheelService:
         # Return the bounded identity without changing caller-visible casing.
         return request_id
 
+    # Read the established retry identity from the frozen v1 request field.
+    def _request_id(self, request: dict) -> str:
+        # Delegate exact trimming and control-character validation to the game-owned rule.
+        return self._client_request_id(request.get("client_request_id"))
+
+    # Preserve Big Six's established player-plus-client-request round identity.
+    @staticmethod
+    def _round_id(_game_id: str, player_id: str, request_id: str) -> str:
+        # Delegate to the published game-owned hash and prefix contract.
+        return engine.round_id_for(player_id, request_id)
+
+    # Normalize a frozen v1 wager request for the shared settlement coordinator.
+    @staticmethod
+    def _validate_bet(request: dict) -> tuple:
+        # Normalize every public outcome amount through the game-owned decimal rules.
+        wagers = engine.normalize_wagers(request.get("wagers"))
+        # Calculate the established aggregate debit at ledger precision.
+        total_wager = round(sum(wagers.values()), 2)
+        # Bind conflicting retries to the exact normalized wager map.
+        fingerprint = engine.wager_fingerprint(wagers)
+        # Return the wager, aggregate movement, and semantic identity expected by the core.
+        return wagers, total_wager, fingerprint
+
+    # Draw one validated wheel position through the injected entropy source.
+    @staticmethod
+    def _entropy(randbelow) -> dict:
+        # Wrap the game-owned index in a JSON-compatible proof object.
+        return {"result_index": engine.select_index(randbelow)}
+
+    # Resolve one Big Six settlement from committed wagers and committed entropy.
+    @staticmethod
+    def _resolve(wagers: dict, entropy: dict) -> dict:
+        # Reuse the pure game engine so payout semantics remain unchanged.
+        return engine.settle(wagers, int(entropy["result_index"]))
+
+    # Build canonical and historical debit proof fields during the compatibility window.
+    @staticmethod
+    def _wager_details(*, request_id, fingerprint, wager, entropy, settled_at, **_context) -> dict:
+        # Preserve old proof readers while adding the shared helper's canonical recovery fields.
+        return {"request_id": request_id, "client_request_id": request_id, "request_fingerprint": fingerprint, "wager": wager, "wagers": wager, "entropy": entropy, "result_index": entropy["result_index"], "settled_at": settled_at}
+
+    # Decode either canonical shared proof or a pre-migration Big Six debit event.
+    def _wager_proof(self, *, details, event, **_context) -> dict:
+        # Prefer the canonical wager and fall back to historical plural naming.
+        wager = details.get("wager", details.get("wagers"))
+        # Prefer canonical entropy and rebuild it from the historical wheel index when absent.
+        entropy = details.get("entropy") if details.get("entropy") is not None else ({"result_index": details.get("result_index")} if details.get("result_index") is not None else None)
+        # Prefer the canonical proof timestamp and preserve historical event timing during recovery.
+        settled_at = details.get("settled_at") or event.get("ts") or self.clock()
+        # Return only the committed deterministic inputs consumed by the core.
+        return {"wager": wager, "entropy": entropy, "settled_at": settled_at}
+
+    # Build canonical and historical credit evidence without changing settlement meaning.
+    @staticmethod
+    def _settlement_details(*, request_id, fingerprint, entropy, total_return, settlement, **_context) -> dict:
+        # Preserve old Big Six audit fields alongside the shared proof dimensions.
+        return {"request_id": request_id, "client_request_id": request_id, "request_fingerprint": fingerprint, "entropy": entropy, "total_return": total_return, "outcome": settlement["outcome"], "result_index": entropy["result_index"], "settlements": settlement["settlements"]}
+
+    # Preserve the frozen Big Six public round shape over the shared settlement result.
+    @staticmethod
+    def _public_round(*, request_id, player_id, round_id, fingerprint, wager, settlement, settled_at, **_context) -> dict:
+        # Return the established direct round row without shared-helper wrapper fields.
+        return {"round_id": round_id, "client_request_id": request_id, "request_fingerprint": fingerprint, "player_id": player_id, "status": "settled", "wagers": wager, "settled_at": settled_at, **settlement}
+
+    # Convert one established direct-row state document into shared-helper storage wrappers.
+    @staticmethod
+    def _to_core_state(raw_state: dict) -> dict:
+        # Preserve unrelated provider-owned fields while adapting only recent-round representation.
+        core_state = copy.deepcopy(raw_state)
+        # Wrap newest rounds first because the shared helper prepends committed history.
+        core_state["recent_rounds"] = [{"request_id": row.get("client_request_id"), "request_fingerprint": row.get("request_fingerprint"), "round_id": row.get("round_id"), "total_return": row.get("total_return", 0), "public": copy.deepcopy(row)} for row in reversed(raw_state.get("recent_rounds", []))]
+        # Preserve or restore the game marker expected by the shared helper.
+        core_state.setdefault("game", GAME_ID)
+        # Return detached compatibility state so mutations remain callback-scoped.
+        return core_state
+
+    # Convert shared wrappers back to the frozen direct-row state representation.
+    @staticmethod
+    def _to_raw_state(core_state: dict) -> dict:
+        # Preserve unrelated provider-owned fields before unwrapping recent rounds.
+        raw_state = copy.deepcopy(core_state)
+        # Restore oldest-to-newest public rows exactly as the Big Six state endpoint established.
+        raw_state["recent_rounds"] = [copy.deepcopy(row["public"]) for row in reversed(core_state.get("recent_rounds", []))]
+        # Return a detached provider-ready document without shared wrapper metadata.
+        return raw_state
+
+    # Load provider state and expose it in the shared helper's private representation.
+    def _load_core_state(self, player_id: str) -> dict:
+        # Adapt one detached authenticated-player document without persisting a rewrite.
+        return self._to_core_state(self.state_loader(player_id))
+
+    # Publish one shared-helper mutation against exact provider-current Big Six state.
+    def _update_core_state(self, player_id: str, mutator) -> dict:
+        # Adapt current provider state, invoke the shared merge, and restore frozen storage shape.
+        def publish(raw_state: dict) -> dict:
+            # Run the shared mutation only against a detached compatibility projection.
+            updated_core = mutator(self._to_core_state(raw_state))
+            # Persist direct public rows and every unrelated sibling field.
+            return self._to_raw_state(updated_core)
+
+        # Commit through the provider's cross-process atomic callback boundary.
+        authoritative = update_player_game_state(GAME_ID, player_id, publish, engine.default_state) if self.state_updater is None else self.state_updater(GAME_ID, player_id, publish, engine.default_state)
+        # Return exact committed authority in the private representation expected by the core.
+        return self._to_core_state(authoritative)
+
     # Return the current isolated game state and immutable outcome metadata.
     def state(self, player_id: str) -> dict:
-        # Load only the session-bound player's game document.
-        state = self._load(player_id)
-        # Return game-owned state without exposing another player's balance or action history.
+        # Read only the session-bound player's established direct-row document.
+        state = self.state_loader(player_id)
+        # Return the exact frozen state response without shared-helper private wrappers.
         return {"game": GAME_ID, "outcomes": outcome_catalog(), "recent_rounds": list(state.get("recent_rounds", []))}
 
-    # Execute or replay one ledger-backed spin request.
+    # Execute or replay one ledger-backed spin request through the shared helper.
     def spin(self, player_id: str, request: dict) -> dict:
-        # Require an object payload before reading request fields.
+        # Require an object payload before the shared resolver reads request fields.
         if not isinstance(request, dict):
-            # Reject malformed bodies before state or ledger access.
+            # Reject malformed bodies before state, entropy, or ledger access.
             raise ValidationError("Big Six spin body must be an object")
-        # Validate the retry identity required by the additive v1 contract.
-        client_request_id = self._client_request_id(request.get("client_request_id"))
-        # Normalize all wagers before looking up an existing request.
-        wagers = engine.normalize_wagers(request.get("wagers"))
-        # Compute a semantic request fingerprint that detects conflicting retries.
-        request_fingerprint = engine.wager_fingerprint(wagers)
-        # Load only state owned by the authenticated player resolved upstream.
-        state = self._load(player_id)
-        # Resolve a settled retry from the bounded state cache first.
-        existing_round = engine.find_round(state, client_request_id)
-        # Branch when the client repeats a settled request.
-        if existing_round:
-            # Reject reuse with different wager content.
-            if existing_round.get("request_fingerprint") != request_fingerprint:
-                # Preserve exactly-once semantics for this client identity.
-                raise ConflictError("Big Six client_request_id was already used with different wagers")
-            # Return the original round without issuing any ledger action or entropy call.
-            return {"round": existing_round, "replayed": True}
-        # Derive one stable round id so crash retries address the same ledger events.
-        round_id = engine.round_id_for(player_id, client_request_id)
-        # Select an initial wheel index before debit so the debit event can recover it after a crash.
-        proposed_index = engine.select_index(self.randbelow)
-        # Calculate the total debit from already normalized wagers.
-        total_wager = round(sum(wagers.values()), 2)
-        # Build stable debit details containing all information needed to reconstruct settlement.
-        debit_details = {"client_request_id": client_request_id, "request_fingerprint": request_fingerprint, "wagers": wagers, "result_index": proposed_index}
-        # Apply the full round wager as one atomic ledger debit with a deterministic action key.
-        debit_event, debit_replayed = self.ledger_gateway.apply_once(player_id=player_id, amount=-total_wager, transaction_type="BIG_SIX_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", details=debit_details)
-        # Recover the originally committed index when a retry follows a post-debit crash.
-        result_index = int((debit_event.get("details") or {}).get("result_index", proposed_index))
-        # Calculate the exact settlement from the committed wheel index.
-        settlement = engine.settle(wagers, result_index)
-        # Start with no credit event for losing rounds.
-        credit_event = None
-        # Track whether an existing payout was reused for response evidence.
-        credit_replayed = False
-        # Branch when at least one winning wager returns stake plus winnings.
-        if settlement["total_return"] > 0:
-            # Build stable settlement details without changing the original wager identity.
-            credit_details = {"client_request_id": client_request_id, "request_fingerprint": request_fingerprint, "outcome": settlement["outcome"], "result_index": result_index, "settlements": settlement["settlements"]}
-            # Apply the total return as one atomic ledger credit with its own deterministic action key.
-            credit_event, credit_replayed = self.ledger_gateway.apply_once(player_id=player_id, amount=settlement["total_return"], transaction_type="BIG_SIX_SETTLEMENT_CREDIT", round_id=round_id, action_key=f"{round_id}:settlement", details=credit_details)
-        # Prefer the committed debit timestamp so reconstructed retries preserve round timing.
-        settled_at = debit_event.get("ts") or self.clock()
-        # Build the stable settled round returned by state and action endpoints.
-        round_row = {"round_id": round_id, "client_request_id": client_request_id, "request_fingerprint": request_fingerprint, "player_id": player_id, "status": "settled", "wagers": wagers, "settled_at": settled_at, **settlement}
-        # Record the round only after all required ledger actions have committed.
-        engine.record_round(state, round_row)
-        # Persist reload-safe state; ledger keys allow safe reconstruction if this write fails.
-        self._save(player_id, state)
-        # Return ledger evidence without exposing unrelated player history.
-        return {"round": round_row, "replayed": debit_replayed or credit_replayed, "ledger": {"wager": debit_event, "settlement": credit_event}}
+        # Execute the complete exactly-once action through SimpleWagerGame.
+        result = self._game.play(player_id, request)
+        # Preserve the established game-owned action envelope without shared player/state metadata.
+        return {"round": result["round"], "replayed": result["replayed"], "ledger": result["ledger"]}

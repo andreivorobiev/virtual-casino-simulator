@@ -918,6 +918,53 @@ class SimpleWagerGame:
                 [game_module, mixed_helper],  # Supply the exact regressed helper shape.
             )
 
+    # Prove a legacy state-shape adapter may wrap SimpleWagerGame only through provider-current mutation.
+    def test_shared_simple_game_compatibility_adapter_requires_atomic_game_path(self) -> None:
+        # Parse one reachable shared-helper game with direct read and provider-current adaptation.
+        adapted_game = parsed_module(
+            "casino/games/fixture/api.py",  # Assign one portable game package.
+            """
+def register():
+    load_player_game_state('fixture', 'player')
+    update_player_game_state('fixture', 'player', mutate, default_state)
+    SimpleWagerGame()
+""",
+        )
+        # Parse one minimal provider-atomic shared helper.
+        atomic_helper = parsed_module(
+            "casino/core/simple_game.py",  # Bind the governed helper owner.
+            """
+class SimpleWagerGame:
+    def __init__(self):
+        update_player_game_state('fixture', 'player', mutate, default_state)
+""",
+        )
+        # Classify the adapter only when both game-local and delegated publications are atomic.
+        rows = audit._game_inventory(
+            [{"game_id": "fixture", "backend": "casino.games.fixture.api"}],  # Define one registered game.
+            [adapted_game, atomic_helper],  # Supply the adapter and helper together.
+        )
+        # Require exact provider-atomic classification and both reachable update call sites.
+        self.assertEqual(("provider_atomic_player_document", 2, 0), (rows[0]["state_model"], rows[0]["atomic_update_call_sites"], rows[0]["save_call_sites"]))
+        # Parse an unsafe adapter that retains a detached whole-document save.
+        unsafe_adapter = parsed_module(
+            "casino/games/fixture/api.py",  # Reuse the exact package identity.
+            """
+def register():
+    load_player_game_state('fixture', 'player')
+    update_player_game_state('fixture', 'player', mutate, default_state)
+    save_player_game_state('fixture', 'player', state)
+    SimpleWagerGame()
+""",
+        )
+        # Reject mixed direct-save and shared-helper ownership before publication.
+        with self.assertRaisesRegex(audit.MultiprocessSafetyAuditError, "game inventory unavailable"):
+            # Attempt classification through the exact compatibility shape.
+            audit._game_inventory(
+                [{"game_id": "fixture", "backend": "casino.games.fixture.api"}],  # Preserve governed identity.
+                [unsafe_adapter, atomic_helper],  # Supply the unsafe adapter and safe helper.
+            )
+
     # Prove tracked and untracked dirt independently block provenance before source reads.
     def test_clean_tree_guard_rejects_tracked_and_untracked_changes(self) -> None:
         # Exercise both porcelain forms through the sanitized Git seam.

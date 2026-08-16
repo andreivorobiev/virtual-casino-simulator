@@ -1,6 +1,6 @@
 # Big Six Wheel
 
-Issue: [#86](https://github.com/andreivorobiev/virtual-casino-simulator/issues/86)
+Issue: [#86](https://github.com/andreivorobiev/virtual-casino-simulator/issues/86); shared-settlement migration: [#859](https://github.com/andreivorobiev/virtual-casino-simulator/issues/859)
 
 Parents: #66, #73
 
@@ -23,18 +23,18 @@ The profile is based on the public [Maryland Big Six standard rules](https://www
 
 ## Ledger and exactly-once design
 
-One spin is one atomic game action:
+One spin is one shared `SimpleWagerGame` action:
 
 1. Normalize the complete wager map and derive a semantic request fingerprint.
 2. Select the wheel index before debit and persist it in the wager debit's ledger details.
-3. Apply one total `BIG_SIX_WAGER_DEBIT` through `casino/core/ledger.py` with action key `<round_id>:wager`.
+3. Let `SimpleWagerGame` apply one total `BIG_SIX_WAGER_DEBIT` through the shared settlement adapter with action key `<round_id>:wager`.
 4. Calculate all winning and losing rows from that committed index.
-5. When applicable, apply one `BIG_SIX_SETTLEMENT_CREDIT` containing stake plus net winnings with action key `<round_id>:settlement`.
-6. Persist the settled player-owned state only after required ledger actions commit.
+5. Let `SimpleWagerGame` apply, when applicable, one `BIG_SIX_SETTLEMENT_CREDIT` containing stake plus net winnings with action key `<round_id>:settlement`.
+6. Merge the settled round into provider-current player state only after required ledger actions commit.
 
-On retry, the game scans that player's ledger under a process lock. A committed debit supplies the original result index, so a crash after debit cannot change the outcome. A committed settlement credit is returned instead of repeated. Reusing a `client_request_id` with different wagers fails closed. This exactly-once adapter assumes the intended single-process local simulator runtime; a future multi-process deployment must enforce a unique ledger idempotency key in shared storage before claiming the same guarantee.
+On retry, the shared settlement gateway resolves deterministic action keys through provider-indexed ledger proof. A committed debit supplies the original result index, so a crash after debit cannot change the outcome. A committed settlement credit is returned instead of repeated. Reusing a `client_request_id` with different wagers fails closed. Compatibility adapters preserve the frozen `client_request_id`, `bsw_` round identity, direct public history rows, 100-round capacity, and historical ledger detail fields while dual-writing canonical proof.
 
-Game code never writes balances directly. Insufficient funds, balance mutation, event creation, and atomic provider persistence remain owned by the shared ledger.
+Game code never constructs `GameSettlementGateway`, calls `apply_once`, or writes balances directly. `SimpleWagerGame` owns entropy commitment, movement orchestration, ledger recovery, and provider-current terminal publication. Production multiworker activation remains blocked because player state, wallet movement, and history are not one cross-provider transaction.
 
 ## Session boundary
 
@@ -53,7 +53,7 @@ Version `1.0.1` preserves the game and API contract while correcting the browser
 The integrated descriptor and shared lane now:
 
 - register `big_six_wheel` in the aggregate manifest at catalog sort order 90, with the current revision owned by `modules/module-manifest.json`;
-- map permanent `BIG-SIX-001` through `BIG-SIX-006` requirements to API, browser, long-suite, motion-soak, and visual evidence;
+- map permanent `BIG-SIX-001` through `BIG-SIX-008` requirements to API, browser, long-suite, settlement, atomic-state, motion-soak, and visual evidence;
 - register the additive contract in the shared digest and compatibility inventories;
 - discover the backend, lazy frontend, and `tests.game_drivers.big_six_wheel:play` from the module descriptor;
 - govern `ready`, `spinning`, `settled`, `motion_qualified`, `reduced_motion`, and `route_restored` visual states for both locales and all four required viewports;

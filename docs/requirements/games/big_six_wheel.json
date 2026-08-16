@@ -62,8 +62,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-big-six",
-      "changed_in": "game-expansion-big-six",
-      "notes": "Game code never mutates balances directly; stable round and ledger action keys make exact retries safe while changed wagers fail closed."
+      "changed_in": "issue-859-big-six-simple-wager",
+      "notes": "SimpleWagerGame owns both aggregate ledger movements and crash recovery; stable historical round and ledger action keys keep exact retries safe while changed wagers fail closed."
     },
     {
       "id": "BIG-SIX-004",
@@ -134,7 +134,7 @@
     {
       "id": "BIG-SIX-007",
       "module": "Big Six Wheel",
-      "description": "Every Big Six Wheel settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.",
+      "description": "Every Big Six Wheel settled-history publication merges its committed round into provider-current state, preserves unrelated sibling fields and distinct concurrent rounds, accepts an identical result idempotently, and rejects changed-meaning or divergent same-request state.",
       "status": "PASS",
       "api_tests": [
         "API-BIG-SIX-001",
@@ -149,8 +149,31 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-803-big-six-wheel-atomic-state",
-      "changed_in": "issue-803-big-six-wheel-atomic-state",
-      "notes": "The frozen v1 envelope, 54-segment profile, entropy seam, and deterministic ledger action keys remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+      "changed_in": "issue-859-big-six-simple-wager",
+      "notes": "SimpleWagerGame now owns atomic publication while the adapter preserves the frozen direct-row state shape, 54-segment profile, entropy seam, and deterministic ledger action keys. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+    },
+    {
+      "id": "BIG-SIX-008",
+      "module": "Big Six Wheel",
+      "description": "Big Six Wheel delegates its one-shot wager, committed entropy recovery, optional settlement credit, replay lookup, and provider-current history publication to SimpleWagerGame while preserving the frozen v1 client_request_id, round identity, public round, state history, and ledger evidence semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BIG-SIX-001",
+        "API-BIG-SIX-ATOMIC-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [
+        "BR-BIG-SIX-001"
+      ],
+      "implementation_files": [
+        "casino/games/big_six_wheel/service.py",
+        "casino/core/simple_game.py",
+        "tests/unit/big_six_wheel_engine_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-859-big-six-simple-wager",
+      "changed_in": "issue-859-big-six-simple-wager",
+      "notes": "The game service contains no direct GameSettlementGateway construction or apply_once call. Compatibility adapters dual-read historical debit proof and dual-write canonical evidence without changing the additive v1 contract."
     }
   ]
 }
