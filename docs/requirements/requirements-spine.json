@@ -12382,6 +12382,29 @@
       "introduced_in": "issue-833-dragon-tiger-atomic-state",
       "changed_in": "issue-833-dragon-tiger-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Dragon Tiger service. Existing session isolation, replay, wager and settlement recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-222",
+      "module": "Tests",
+      "description": "Real stale-load Joker Poker workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JP-001",
+        "API-JP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/joker_poker/test_api.py",
+        "tests/games/joker_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-835-joker-poker-atomic-state",
+      "changed_in": "issue-835-joker-poker-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Joker Poker service. Existing session isolation, deal/draw replay, wager and payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }

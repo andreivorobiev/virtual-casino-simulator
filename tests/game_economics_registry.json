@@ -439,7 +439,7 @@
       "requirement_id": "JP-001",
       "engine_path": "casino/games/joker_poker/engine.py",
       "settlement_path": "casino/games/joker_poker/service.py",
-      "production_sha256": "58a2a7d2b1be8eef210b25f55332575dd3a57c7fedf6b01647805b116d7d69c9",
+      "production_sha256": "ea30aa005cfff3d6efac497927baad4a965286d07a701e6367fb757497f3e07f",
       "proof_tests": ["tests.games.joker_poker.test_engine:JokerPokerEngineTests.test_paytable_boundaries_include_wild_only_rows", "tests.games.joker_poker.test_engine:JokerPokerEngineTests.test_holds_drive_one_final_hand"],
       "rationale": "All natural and joker-substitution outcomes and the legal hold path are pinned to the production evaluator used by the accepted optimal audit."
     },

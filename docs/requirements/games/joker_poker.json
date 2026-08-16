@@ -108,6 +108,30 @@
       "introduced_in": "game-expansion-joker-poker",
       "changed_in": "game-expansion-joker-poker",
       "notes": "Descriptor sort order 300 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "JP-006",
+      "module": "Joker Poker",
+      "description": "Joker Poker publishes active hands, reload-safe holds, recovery markers, bounded terminal history, and durable deal/draw receipts through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale draw can overwrite or resurrect the winning hand, while wager and payout recovery retain the frozen v1 behavior and exactly-once ledger movements.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JP-001",
+        "API-JP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/joker_poker/service.py",
+        "tests/games/joker_poker/test_api.py",
+        "tests/games/joker_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-835-joker-poker-atomic-state",
+      "changed_in": "issue-835-joker-poker-atomic-state",
+      "notes": "The frozen v1 contract, 53-card deck, card ordering, hold rules, paytable, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     }
   ]
 }

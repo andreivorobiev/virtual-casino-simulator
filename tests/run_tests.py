@@ -1604,6 +1604,8 @@ def run_api_tests():
     run_case('API-DBVP-ATOMIC-001',['DBVP-003','TEST-219'],lambda: run_unit_module('tests.games.double_bonus_video_poker.test_atomic_state','Double Bonus atomic state suite failed'))
     # Execute fresh-process Dragon Tiger terminal ordering plus sibling-state and recovery proof. (issue #833)
     run_case('API-DT-ATOMIC-001',['DT-006','TEST-221'],lambda: run_unit_module('tests.games.dragon_tiger.test_atomic_state','Dragon Tiger atomic state suite failed'))
+    # Execute fresh-process Joker Poker terminal ordering plus sibling-state and recovery proof. (issue #835)
+    run_case('API-JP-ATOMIC-001',['JP-006','TEST-222'],lambda: run_unit_module('tests.games.joker_poker.test_atomic_state','Joker Poker atomic state suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.
