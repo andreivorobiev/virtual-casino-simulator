@@ -4,6 +4,8 @@
 
 # Import canonical JSON encoding for semantic action fingerprints.
 import json
+# Import deep-copy support for optimistic baselines and provider boundaries.
+import copy
 # Import hashing so changed retries fail even when wagers happen to match.
 import hashlib
 # Import regular expressions for bounded public action identities.
@@ -17,8 +19,8 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Route every player-wallet movement through the shared exactly-once settlement boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistent state without editing shared storage code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state publication.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict, lookup, and validation errors for route boundaries.
 from casino.errors import ConflictError, NotFoundError, ValidationError
 # Import only this game's deterministic state and rule helpers.
@@ -31,6 +33,10 @@ ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local history to preserve retry recovery for the supported simulator.
 # Serialize action-id lookup and ledger writes inside the one-process server.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent game state.
+_ATOMIC_BASELINE_KEY = "_teen_patti_atomic_baseline"
+# Name every Teen Patti field one transition may replace.
+_GAME_STATE_KEYS = tuple(engine.default_state())
 
 
 # Validate one required client action identity without echoing hostile input.
@@ -60,13 +66,13 @@ def CoreLedgerGateway(**kwargs):
 # Coordinate player state, deterministic cards, and retry-safe ledger movements.
 class TeenPattiService:
     # Capture production dependencies while exposing deterministic focused-test seams.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, get_player=None, clock=None, seed_factory=None, fixture_factory=None):
+    def __init__(self, *, ledger_gateway=None, state_loader=None, state_updater=None, get_player=None, clock=None, seed_factory=None, fixture_factory=None):
         # Use the game-local shared-ledger adapter unless a test supplies a fake.
         self._ledger = ledger_gateway or CoreLedgerGateway()
         # Load one authenticated player's isolated state document by default.
         self._load_state = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Save one authenticated player's isolated state document by default.
-        self._save_state = state_saver or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
+        # Publish through the selected provider's cross-process callback boundary.
+        self._update_state = state_updater or (lambda player_id, mutator: update_player_game_state(GAME_ID, player_id, mutator, engine.default_state))
         # Return read-only current-player information without balance mutation.
         self._get_player = get_player or players.get_player
         # Use the shared UTC clock unless a focused test pins timestamps.
@@ -76,10 +82,55 @@ class TeenPattiService:
         # Provide exact fixture rounds for focused tests without randomness.
         self._fixture_factory = fixture_factory
 
-    # Save one player document through the injected persistence boundary.
+    # Capture only the fields owned by Teen Patti transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Detach the active round, settled history, and retry receipts from caller mutation.
+        return {key: copy.deepcopy(state.get(key, engine.default_state()[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its provider-current baseline to this operation.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected provider-aware state seam.
+        state = self._load_state(player_id)
+        # Retain the exact owned values the next publication expects to replace.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting the private comparison field.
+        return state
+
+    # Save one player document through provider-current compare-and-replace.
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate without mutating shared storage configuration.
-        self._save_state(player_id, state)
+        # Require every publication to originate from a tracked provider read or prior result.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Reject fabricated detached state before entering provider storage.
+        if not isinstance(expected, dict):
+            # Keep accidental stale saves outside persistent player state.
+            raise ConflictError("Teen Patti state transition is missing its atomic baseline")
+        # Capture the exact desired game-owned result before provider code runs.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Teen Patti fields against provider-current state.
+        def publish(current: dict) -> dict:
+            # Capture provider-current owned fields without metadata or unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept exact same-result completion without replacing provider-owned values.
+            if observed == desired:
+                # Preserve current metadata and siblings unchanged.
+                return current
+            # Reject a stale action before it can overwrite another publication.
+            if observed != expected:
+                # Require a fresh load and authoritative recovery from the winner.
+                raise ConflictError("Teen Patti state changed during this action; reload and retry")
+            # Replace only the three fields owned by the Teen Patti engine.
+            for key, value in desired.items():
+                # Publish detached values so later caller mutation cannot leak.
+                current[key] = copy.deepcopy(value)
+            # Return the complete provider document with every sibling preserved.
+            return current
+
+        # Commit through the selected provider's cross-process atomic callback.
+        authoritative = self._update_state(player_id, publish)
+        # Advance the private baseline to the exact committed owned state.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Build the public state, rules, and current-player payload.
     def _payload(self, player_id: str, state: dict) -> dict:
@@ -215,7 +266,7 @@ class TeenPattiService:
         # Serialize recovery against concurrent actions for the same local process.
         with _ACTION_LOCK:
             # Load the newest player-scoped document inside the lock.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
             self._recover(player_id, state)
             # Return sanitized state and current-player information.
@@ -236,7 +287,7 @@ class TeenPattiService:
         # Serialize state preparation, debit, and marker persistence.
         with _ACTION_LOCK:
             # Load the current player's state inside the critical section.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover any interrupted prior action before enforcing active-round rules.
             self._recover(player_id, state)
             # Load durable compact receipts that prevent reuse after round-history pruning.
@@ -311,7 +362,7 @@ class TeenPattiService:
         # Serialize reveal, play debit, archive, and returned-token settlement.
         with _ACTION_LOCK:
             # Load only the authenticated player's latest document.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover or clear any interrupted action before allowing a decision.
             self._recover(player_id, state)
             # Find the target without exposing another player's round.

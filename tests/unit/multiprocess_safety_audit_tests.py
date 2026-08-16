@@ -56,15 +56,15 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         # Pin the exact current persistence families after Roulette retires direct saves.
         self.assertEqual(
             {row["state_model"] for row in games},  # Compare every current model.
-            {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
+            {"shared_simple_game_load_save", "provider_atomic_player_document"},  # Pin accepted families.
         )
-        # Pin the exact current family cardinalities after Slots retires direct publication.
+        # Pin the exact current family cardinalities after Teen Patti retires the final direct publication.
         self.assertEqual(
             {
                 model: sum(row["state_model"] == model for row in games)  # Count one model.
-                for model in {"player_document_load_save", "shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all models.
+                for model in {"shared_simple_game_load_save", "provider_atomic_player_document"}  # Cover all remaining models.
             },
-            {"player_document_load_save": 1, "shared_simple_game_load_save": 11, "provider_atomic_player_document": 34},  # Pin current counts.
+            {"shared_simple_game_load_save": 11, "provider_atomic_player_document": 35},  # Pin current counts.
         )
         # Resolve Casino War after preparation and rollback retire its final direct publication.
         casino_war = next(row for row in games if row["game_id"] == "casino_war")
@@ -474,6 +474,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         self.assertEqual(slots["state_model"], "provider_atomic_player_document")
         # Keep production second-worker activation blocked while money is a separate transaction.
         self.assertEqual(slots["multiworker_status"], "blocked")
+        # Resolve Teen Patti after opening, decision, recovery, settlement, and cleanup become atomic.
+        teen_patti = next(row for row in games if row["game_id"] == "teen_patti")
+        # Require authoritative reads for action, replay, and ledger recovery.
+        self.assertGreater(teen_patti["load_call_sites"], 0)
+        # Require every reachable game-state publication to avoid stale whole-document saves.
+        self.assertEqual(teen_patti["save_call_sites"], 0)
+        # Bind active rounds, receipts, recovery markers, history, and cleanup to provider updates.
+        self.assertGreater(teen_patti["atomic_update_call_sites"], 0)
+        # Name completed state serialization without claiming state-and-money atomicity.
+        self.assertEqual(teen_patti["state_model"], "provider_atomic_player_document")
+        # Keep production second-worker activation blocked while money is a separate transaction.
+        self.assertEqual(teen_patti["multiworker_status"], "blocked")
         # Require bounded live call-graph evidence for every game.
         self.assertTrue(all(row["reachable_definitions"] > 0 for row in games))
         # Refuse second-worker authorization for every game.

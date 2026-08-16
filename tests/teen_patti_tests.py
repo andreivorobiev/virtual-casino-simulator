@@ -72,10 +72,16 @@ class MemoryState:
         # Return a deep copy so service mutations never leak into storage.
         return copy.deepcopy(self.docs.get(player_id) or engine.default_state())
 
-    # Save a detached copy of one player's document.
-    def save(self, player_id, state):
-        # Store a deep copy so later loads are isolated.
-        self.docs[player_id] = copy.deepcopy(state)
+    # Apply one callback against provider-current state.
+    def update(self, player_id, mutator):
+        # Give the callback a detached current document so failure cannot leak mutation.
+        current = copy.deepcopy(self.docs.get(player_id) or engine.default_state())
+        # Run the complete transition inside the fake provider boundary.
+        updated = mutator(current)
+        # Persist a detached authoritative result.
+        self.docs[player_id] = copy.deepcopy(updated)
+        # Return an independent result like the production state helper.
+        return copy.deepcopy(updated)
 
 
 # Capture route decorators without opening a listener.
@@ -146,7 +152,7 @@ def _service(fixture, ledger=None, memory=None):
     # Use the supplied state store or a fresh one.
     store = memory or MemoryState()
     # Compose the service with all seams injected and one pinned deal fixture.
-    return service.TeenPattiService(ledger_gateway=service.CoreLedgerGateway(debit=fake_ledger.debit, credit=fake_ledger.credit, read_recent=fake_ledger.read_recent), state_loader=store.load, state_saver=store.save, get_player=lambda pid: {"player_id": pid, "balance": fake_ledger.balance}, clock=lambda: "2026-07-25T00:00:00Z", fixture_factory=lambda action_id: fixture), fake_ledger, store
+    return service.TeenPattiService(ledger_gateway=service.CoreLedgerGateway(debit=fake_ledger.debit, credit=fake_ledger.credit, read_recent=fake_ledger.read_recent), state_loader=store.load, state_updater=store.update, get_player=lambda pid: {"player_id": pid, "balance": fake_ledger.balance}, clock=lambda: "2026-07-25T00:00:00Z", fixture_factory=lambda action_id: fixture), fake_ledger, store
 
 
 # Verify Teen Patti ranks three-card hands, settles every path, and stays house-positive.
