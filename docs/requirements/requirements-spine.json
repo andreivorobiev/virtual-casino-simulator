@@ -12704,19 +12704,22 @@
         "API-GAMECORE-001",
         "API-GAMECORE-005",
         "API-BIG-SIX-001",
-        "API-SIC-BO-001"
+        "API-SIC-BO-001",
+        "API-CHUCK-001"
       ],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/simple_game.py",
         "casino/games/big_six_wheel/service.py",
         "casino/games/sic_bo/service.py",
+        "casino/games/chuck_a_luck/service.py",
         "tests/simple_game_tests.py",
         "tests/unit/big_six_wheel_engine_tests.py",
-        "tests/games/sic_bo/test_service.py"
+        "tests/games/sic_bo/test_service.py",
+        "tests/games/chuck_a_luck/test_engine.py"
       ],
       "introduced_in": "issue-859-big-six-simple-wager",
-      "changed_in": "issue-861-sic-bo-simple-wager",
+      "changed_in": "issue-863-chuck-a-luck-simple-wager",
       "notes": "Adapters may change compatibility representation and stable identity naming only; the helper still exclusively owns exactly-once movements, proof recovery, replay conflict checks, and provider-current terminal publication."
     },
     {
@@ -12754,18 +12757,22 @@
         "API-GAMECORE-001",
         "API-GAMECORE-005",
         "API-SIC-BO-001",
-        "API-SIC-BO-ATOMIC-001"
+        "API-SIC-BO-ATOMIC-001",
+        "API-CHUCK-001",
+        "API-CHUCK-ATOMIC-001"
       ],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/simple_game.py",
         "casino/games/sic_bo/service.py",
+        "casino/games/chuck_a_luck/service.py",
         "tests/simple_game_tests.py",
         "tests/games/sic_bo/test_service.py",
-        "tests/games/sic_bo/test_atomic_state.py"
+        "tests/games/sic_bo/test_atomic_state.py",
+        "tests/games/chuck_a_luck/test_engine.py"
       ],
       "introduced_in": "issue-861-sic-bo-simple-wager",
-      "changed_in": "issue-861-sic-bo-simple-wager",
+      "changed_in": "issue-863-chuck-a-luck-simple-wager",
       "notes": "The adapter owns only game-state lifecycle compatibility. SimpleWagerGame retains exclusive entropy adoption, movement ordering, proof recovery, replay checks, and terminal provider-current publication."
     },
     {
@@ -12794,6 +12801,32 @@
       "introduced_in": "issue-861-sic-bo-simple-wager",
       "changed_in": "issue-861-sic-bo-simple-wager",
       "notes": "The structural inventory continues to classify Sic Bo provider state as atomic while refusing production multiworker activation because state and money remain separate durable transactions."
+    },
+    {
+      "id": "TEST-236",
+      "module": "Tests",
+      "description": "Focused SimpleWagerGame and Chuck-a-Luck evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "API-GAMECORE-005",
+        "API-CHUCK-001",
+        "API-CHUCK-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-CHUCK-001"
+      ],
+      "implementation_files": [
+        "tests/simple_game_tests.py",
+        "tests/games/chuck_a_luck/test_engine.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-863-chuck-a-luck-simple-wager",
+      "changed_in": "issue-863-chuck-a-luck-simple-wager",
+      "notes": "The structural inventory continues to classify Chuck-a-Luck provider state as atomic while refusing production multiworker activation because state and money remain separate durable transactions."
     }
   ]
 }

@@ -34,7 +34,7 @@ Historical source baseline: 9.1.0
 - deuces_wild_video_poker: 1.1.5
 - scratch_cards: 1.1.3
 - sic_bo: 1.2.0
-- chuck_a_luck: 1.1.4
+- chuck_a_luck: 1.2.0
 - craps: 1.1.3
 - crown_and_anchor: 1.1.5
 - over_under_7: 1.1.5
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.4
-- tests: 1.100.52
-- docs: 1.96.52
+- tests: 1.100.53
+- docs: 1.96.53
 - contracts: 1.62.4
 - tooling: 1.41.0
 - commenting_policy: 2.0.0
@@ -729,6 +729,7 @@ Historical source baseline: 9.1.0
 - **TEST-234** (Tests) - PASS: Focused SimpleWagerGame and Big Six Wheel evidence proves unchanged default helper behavior, exact legacy request and round identities, canonical and historical ledger-proof recovery, frozen action/state rows, 100-round retention, no direct Big Six settlement gateway call, and two-process provider-current preservation of two distinct rounds plus an unrelated sibling.
 - **GAMECORE-007** (Core) - PASS: SimpleWagerGame exposes one optional prepared-state lifecycle protocol that can durably prepare private entropy, reconcile wager failure, publish immutable wager proof, publish deterministic settlement intent, publish optional credit proof, and freeze terminal fields before the helper archives its provider-current round. Ordinary helper games retain their established default path, and an incomplete lifecycle fails before silently skipping a money-sensitive stage.
 - **TEST-235** (Tests) - PASS: Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
+- **TEST-236** (Tests) - PASS: Focused SimpleWagerGame and Chuck-a-Luck evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1017,6 +1018,7 @@ Historical source baseline: 9.1.0
 - **CHUCK-004** (Application) - PASS: Chuck-a-Luck supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CHUCK-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Chuck-a-Luck with requirement, module, version, and visual traceability.
 - **CHUCK-006** (Chuck-a-Luck) - PASS: Chuck-a-Luck publishes bounded settled-round history through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale round can overwrite the winning journal, while committed debit and credit recovery retains the frozen v1 behavior and exactly-once ledger movements.
+- **CHUCK-007** (Chuck-a-Luck) - PASS: Chuck-a-Luck delegates its prepared wager, committed-dice recovery, optional returned-credit movement, replay lookup, lifecycle finalization, and provider-current history publication to one SimpleWagerGame coordinator while preserving the frozen v1 request_id, cal_ round identity, direct oldest-to-newest one-hundred-round history, public round, active-state privacy, and historical ledger evidence semantics.
 - **CRAPS-001** (Craps) - PASS: Pass Line and Don't Pass implement come-out, point, win, loss, and bar-12 refund rules with server-authoritative dice.
 - **CRAPS-002** (Craps) - PASS: Authenticated sessions own private reload-safe rounds, roll actions, recovery state, history, and canonical route restoration.
 - **CRAPS-003** (Craps) - PASS: Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.

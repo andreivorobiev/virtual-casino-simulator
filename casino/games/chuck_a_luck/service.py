@@ -1,22 +1,20 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Session-bound, ledger-only, retry-safe Chuck-a-Luck orchestration."""
+"""SimpleWagerGame-backed, reload-safe Chuck-a-Luck orchestration."""
 
-# Import deep-copy support for detached optimistic state snapshots.
+# Import deep-copy support for detached provider and lifecycle projections.
 import copy
 # Import bounded request validation for client retry identifiers.
 import re
 # Import cryptographic bounded random selection for production dice.
 import secrets
-# Import a process-local reentrant lock for exactly-once local actions.
-import threading
 
 # Import the shared player service without a game-owned ledger mutation boundary.
 from casino.core import players
-# Import the shared UTC clock for stable settled response timestamps.
+# Import the shared UTC clock for stable lifecycle timestamps.
 from casino.core.clock import utc_now
-# Import the one approved play-token settlement compatibility boundary.
-from casino.core.settlement import GameSettlementGateway
+# Import the shared one-shot wager and settlement coordinator.
+from casino.core.simple_game import SimpleWagerGame
 # Import player-scoped reads and provider-atomic state mutation.
 from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict and validation errors for safe API boundaries.
@@ -26,16 +24,10 @@ from casino.games.chuck_a_luck import engine, rules
 
 # Bound request identifiers to conservative URL-safe characters and length.
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Serialize state, ledger proof, debit, settlement, and state-save operations locally.
-_SETTLEMENT_LOCK = threading.RLock()
 # Name the single aggregate wager debit consistently across recovery paths.
 WAGER_TRANSACTION_TYPE = "CHUCK_A_LUCK_WAGER_DEBIT"
 # Name the optional stake-plus-winnings aggregate credit consistently.
 SETTLEMENT_TRANSACTION_TYPE = "CHUCK_A_LUCK_SETTLEMENT_CREDIT"
-# Keep one operation's optimistic comparison snapshot outside persistent state.
-_ATOMIC_BASELINE_KEY = "_chuck_a_luck_atomic_baseline"
-# Name every state field owned by Chuck-a-Luck transitions.
-_GAME_STATE_KEYS = ("recent_rounds",)
 
 
 # Validate the required caller-stable identity used for network retries.
@@ -48,216 +40,380 @@ def require_request_id(value) -> str:
     return value
 
 
-# Construct the shared settlement gateway while retaining the historical test seam name.
-def CoreLedgerGateway(**kwargs):
-    # Preserve the old idempotency key beside canonical action evidence.
-    return GameSettlementGateway(rules.GAME_ID, "idempotency_key", **kwargs)
-
-
-# Persist player-scoped game documents through the selected storage provider.
-class StateRepository:
-    # Load one authenticated player's document.
-    def load(self, player_id: str) -> dict:
-        # Delegate JSON/MySQL selection and defaults to shared state storage.
-        return load_player_game_state(rules.GAME_ID, player_id, engine.default_state)
-
-    # Apply one transition while the provider owns its cross-process boundary.
-    def update(self, player_id: str, mutator) -> dict:
-        # Delegate latest-state loading, rollback, and publication atomically.
-        return update_player_game_state(rules.GAME_ID, player_id, mutator, engine.default_state)
-
-
-# Coordinate authenticated state, server entropy, and exactly-once ledger settlement.
+# Coordinate Chuck-a-Luck prepared-state compatibility with shared settlement.
 class ChuckALuckService:
     # Capture injectable dependencies so focused tests avoid filesystem and ambient entropy.
-    def __init__(self, *, ledger_gateway=None, repository=None, randbelow=None, clock=None, get_player=None):
-        # Use the production apply-once ledger adapter unless a focused test supplies one.
-        self._ledger_gateway = ledger_gateway or CoreLedgerGateway()
-        # Use provider-backed state reads and atomic updates unless a focused test supplies memory storage.
-        self.repository = repository or StateRepository()
-        # Use cryptographic uniform selection unless a focused test injects deterministic indices.
-        self._randbelow = randbelow or secrets.randbelow
-        # Use the shared UTC clock unless a focused test pins settlement time.
-        self._clock = clock or utc_now
-        # Use read-only player snapshots unless a focused test supplies an in-memory wallet.
+    def __init__(self, *, ledger_gateway=None, repository=None, state_loader=None, state_updater=None, randbelow=None, clock=None, get_player=None):
+        # Preserve the historical repository seam while preferring explicit provider callbacks.
+        if repository is not None:
+            # Reject ambiguous state dependency ownership at construction.
+            if state_loader is not None or state_updater is not None:
+                # Keep tests and production from mixing incompatible provider seams.
+                raise TypeError("repository cannot be combined with state_loader or state_updater")
+            # Adapt the established repository load method to the shared callback boundary.
+            state_loader = repository.load
+            # Adapt the established repository update method to the shared callback boundary.
+            state_updater = repository.update
+        # Use player-scoped storage compatible with the authenticated-player resolver.
+        self._state_loader = state_loader or (lambda player_id: load_player_game_state(rules.GAME_ID, player_id, engine.default_state))
+        # Retain an optional focused-test updater without hiding the production provider call.
+        self._state_updater = state_updater
+        # Use the read-only player facade for current wallet snapshots.
         self._get_player = get_player or players.get_player
+        # Use cryptographic uniform selection unless a focused test pins dice.
+        self._randbelow = randbelow or secrets.randbelow
+        # Use the shared UTC clock unless a focused test pins lifecycle time.
+        self._clock = clock or utc_now
+        # Build exactly one shared coordinator with frozen Chuck-a-Luck compatibility adapters.
+        self._game = SimpleWagerGame(game_id=rules.GAME_ID, wager_transaction_type=WAGER_TRANSACTION_TYPE, settlement_transaction_type=SETTLEMENT_TRANSACTION_TYPE, entropy=self._entropy, resolve=self._resolve, validate_bet=self._validate_bet, public_bet_catalog=rules.bet_catalog, ledger_gateway=ledger_gateway, state_loader=self._load_core_state, state_updater=self._update_core_state, entropy_source=self._randbelow, clock=self._clock, get_player=self._get_player, request_id_resolver=self._request_id, round_id_factory=self._round_id, wager_details_builder=self._wager_details, wager_proof_reader=self._wager_proof, settlement_details_builder=self._settlement_details, public_round_builder=self._public_round, recent_round_limit=engine.RECENT_ROUND_LIMIT, legacy_action_detail_key="idempotency_key", lifecycle=self)
 
-    # Capture detached values for every Chuck-a-Luck-owned state field.
+    # Read and validate the established request identity from the frozen v1 field.
     @staticmethod
-    def _game_snapshot(state: dict) -> dict:
-        # Build one fresh compatibility baseline for absent predecessor fields.
-        defaults = engine.default_state()
-        # Normalize current and predecessor documents to one complete shape.
-        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+    def _request_id(request: dict) -> str:
+        # Delegate exact pattern validation to the game-owned compatibility rule.
+        return require_request_id(request.get("request_id"))
 
-    # Load one player document through the injected state dependency.
-    def _load(self, player_id: str) -> dict:
-        # Read only state owned by the already resolved authenticated player.
-        state = self.repository.load(player_id)
-        # Retain only the values this service may replace during the operation.
-        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
-        # Return tracked state without persisting private operation metadata.
-        return state
+    # Normalize one frozen Chuck-a-Luck request for the shared coordinator.
+    @staticmethod
+    def _validate_bet(request: dict) -> tuple:
+        # Normalize all covered faces into canonical one-through-six order.
+        wagers = engine.normalize_wagers(request.get("wagers"))
+        # Calculate the aggregate debit at shared ledger precision.
+        wager_total = engine.total_wager(wagers)
+        # Bind conflicting retries to the exact normalized wager map.
+        fingerprint = engine.wager_fingerprint(wagers)
+        # Return the canonical wager, movement, and semantic identity expected by the helper.
+        return wagers, wager_total, fingerprint
 
-    # Publish one player document through provider-current compare-and-replace.
-    def _save(self, player_id: str, state: dict) -> None:
-        # Require every publication to originate from a tracked provider read.
-        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
-        # Refuse an untracked detached-document write before entering storage.
-        if not isinstance(expected, dict):
-            # Keep stale or fabricated state outside provider bytes.
-            raise ConflictError("Chuck-a-Luck state transition is missing its atomic baseline")
-        # Capture the exact game-owned result before entering provider code.
-        desired = self._game_snapshot(state)
+    # Preserve the established authenticated-player-plus-request round identity.
+    @staticmethod
+    def _round_id(_game_id: str, player_id: str, request_id: str) -> str:
+        # Delegate to the published game-owned hash and prefix contract.
+        return engine.round_id_for(player_id, request_id)
 
-        # Compare and replace only Chuck-a-Luck-owned fields on current state.
+    # Roll exactly three validated server-authoritative dice.
+    @staticmethod
+    def _entropy(randbelow) -> list[int]:
+        # Delegate bounded entropy validation and one-based face conversion to the pure engine.
+        return engine.roll_dice(randbelow)
+
+    # Resolve one settlement from committed wagers and committed dice.
+    @staticmethod
+    def _resolve(wagers: dict, dice: list[int]) -> dict:
+        # Reuse the pure engine so the established payout profile remains unchanged.
+        return engine.settle(wagers, dice)
+
+    # Build canonical and historical debit proof fields during the compatibility window.
+    @staticmethod
+    def _wager_details(*, request_id, fingerprint, wager, wager_total, entropy, settled_at, **_context) -> dict:
+        # Preserve old readers beside canonical shared-helper recovery dimensions.
+        return {"request_id": request_id, "request_fingerprint": fingerprint, "wager": wager, "wagers": wager, "entropy": list(entropy), "dice": list(entropy), "total_wager": wager_total, "settled_at": settled_at}
+
+    # Decode either canonical proof or a pre-migration Chuck-a-Luck debit event.
+    @staticmethod
+    def _wager_proof(*, details, event, lifecycle_context, **_context) -> dict:
+        # Prefer the canonical wager and fall back to historical plural naming.
+        wager = details.get("wager", details.get("wagers"))
+        # Prefer canonical entropy and recover historical committed dice when necessary.
+        entropy = details.get("entropy") if details.get("entropy") is not None else details.get("dice")
+        # Reuse persisted preparation time before falling back to immutable event timing.
+        settled_at = details.get("settled_at") or (lifecycle_context or {}).get("settled_at") or event.get("ts")
+        # Return only deterministic inputs consumed by the shared coordinator.
+        return {"wager": wager, "entropy": engine.require_dice(entropy), "settled_at": settled_at}
+
+    # Build canonical and historical returned-credit evidence without changing meaning.
+    @staticmethod
+    def _settlement_details(*, request_id, fingerprint, wager, entropy, total_return, settlement, **_context) -> dict:
+        # Preserve old audit fields beside the shared proof dimensions.
+        return {"request_id": request_id, "request_fingerprint": fingerprint, "wagers": wager, "entropy": list(entropy), "dice": list(entropy), "total_return": total_return, "settlements": settlement["settlements"]}
+
+    # Preserve the frozen terminal round shape over the shared settlement result.
+    @staticmethod
+    def _public_round(*, request_id, player_id, round_id, fingerprint, wager, settlement, settled_at, lifecycle_context, **_context) -> dict:
+        # Require one provider-owned terminal recovery record before response publication.
+        round_state = (lifecycle_context or {}).get("round_state")
+        # Reject an incomplete lifecycle rather than fabricating a settled response.
+        if not isinstance(round_state, dict) or round_state.get("phase") != "settled":
+            # Surface a programmer-facing integration error outside the public contract.
+            raise TypeError("Chuck-a-Luck lifecycle did not produce a terminal round")
+        # Return the established direct round row without private lifecycle fields.
+        return {"round_id": round_id, "request_id": request_id, "request_fingerprint": fingerprint, "player_id": player_id, "status": "settled", "wagers": copy.deepcopy(wager), **copy.deepcopy(settlement), "settled_at": settled_at}
+
+    # Load one detached provider document and normalize malformed legacy state safely.
+    def _load_raw_state(self, player_id: str) -> dict:
+        # Read one authenticated player's selected-provider document.
+        state = self._state_loader(player_id)
+        # Preserve a structured document or replace malformed bytes with a safe default.
+        return copy.deepcopy(state) if isinstance(state, dict) else engine.default_state()
+
+    # Execute one provider-current raw-state mutation through production or a focused seam.
+    def _update_raw_state(self, player_id: str, mutator) -> dict:
+        # Keep the production atomic function syntactically visible to governance discovery.
+        return update_player_game_state(rules.GAME_ID, player_id, mutator, engine.default_state) if self._state_updater is None else self._state_updater(player_id, mutator)
+
+    # Locate one request in active recovery or direct terminal history.
+    @staticmethod
+    def _round_for_request(state: dict, request_id: str):
+        # Prefer the active recovery slot because it may require ledger completion.
+        active = state.get("active_round")
+        # Return the active object itself so provider callbacks can update it safely.
+        if isinstance(active, dict) and active.get("request_id") == request_id:
+            # Preserve object identity for exact lifecycle transitions.
+            return active
+        # Scan terminal history newest-first for ordinary request replay.
+        return engine.find_round(state, request_id)
+
+    # Convert established direct-row state into the helper's private newest-first wrappers.
+    @staticmethod
+    def _to_core_state(raw_state: dict) -> dict:
+        # Preserve unrelated provider-owned fields while excluding the private active slot.
+        core_state = copy.deepcopy(raw_state)
+        # Keep active preparation outside terminal replay discovery.
+        core_state.pop("active_round", None)
+        # Wrap terminal history newest-first because the shared helper prepends publications.
+        core_state["recent_rounds"] = [{"request_id": row.get("request_id"), "request_fingerprint": row.get("request_fingerprint"), "round_id": row.get("round_id"), "total_return": row.get("total_return", 0), "public": engine.public_round(row)} for row in reversed(raw_state.get("recent_rounds", []))]
+        # Preserve or restore the game marker expected by the helper.
+        core_state.setdefault("game", rules.GAME_ID)
+        # Return detached compatibility state so mutations remain callback-scoped.
+        return core_state
+
+    # Convert helper wrappers back to direct oldest-first Chuck-a-Luck history.
+    @staticmethod
+    def _to_raw_state(core_state: dict, active_round) -> dict:
+        # Preserve every unrelated provider-owned sibling from the helper projection.
+        raw_state = copy.deepcopy(core_state)
+        # Restore direct terminal rows in the established oldest-first order.
+        raw_state["recent_rounds"] = [copy.deepcopy(row["public"]) for row in reversed(core_state.get("recent_rounds", []))]
+        # Retain private recovery only while an action owns the slot.
+        if active_round is not None:
+            # Store a detached action record for provider persistence.
+            raw_state["active_round"] = copy.deepcopy(active_round)
+        else:
+            # Preserve the historical terminal state shape without a null private field.
+            raw_state.pop("active_round", None)
+        # Return one provider-ready document without helper wrapper metadata.
+        return raw_state
+
+    # Load provider state in the representation expected by shared replay logic.
+    def _load_core_state(self, player_id: str) -> dict:
+        # Adapt one detached authenticated-player document without persisting a rewrite.
+        return self._to_core_state(self._load_raw_state(player_id))
+
+    # Publish one helper terminal round against exact provider-current state.
+    def _update_core_state(self, player_id: str, mutator) -> dict:
+        # Adapt current provider state, invoke the shared merge, and archive only the owned action.
+        def publish(raw_state: dict) -> dict:
+            # Convert exact terminal history into helper wrappers.
+            current_core = self._to_core_state(raw_state)
+            # Merge the committed terminal round while retaining concurrent distinct history.
+            updated_core = mutator(current_core)
+            # Read the current private recovery owner before clearing any state.
+            active = raw_state.get("active_round")
+            # Locate the terminal wrapper for the exact active request.
+            owned_terminal = next((row for row in updated_core.get("recent_rounds", []) if isinstance(row, dict) and isinstance(active, dict) and row.get("request_id") == active.get("request_id")), None)
+            # Clear only the active action whose exact terminal row is being archived.
+            if active is not None and isinstance(owned_terminal, dict):
+                # Reject divergent state and ledger-derived identities before archival.
+                if active.get("round_id") != owned_terminal.get("round_id") or active.get("request_fingerprint") != owned_terminal.get("request_fingerprint"):
+                    # Preserve active recovery rather than concealing corruption.
+                    raise ConflictError("Chuck-a-Luck committed round conflicts with active recovery state")
+                # Require terminal lifecycle proof before releasing the recovery slot.
+                if active.get("phase") != "settled":
+                    # Keep an incomplete action visible for exact retry recovery.
+                    raise ConflictError("Chuck-a-Luck active round is not ready for archival")
+                # Release only this exact completed action.
+                active = None
+            # Reject a publication that would bypass another action's active recovery slot.
+            elif active is not None and updated_core.get("recent_rounds") != current_core.get("recent_rounds"):
+                # Keep the distinct active action authoritative until it is recovered.
+                raise ConflictError("Resume the active Chuck-a-Luck round before archiving another")
+            # Restore direct rows and the verified active slot for provider persistence.
+            return self._to_raw_state(updated_core, active)
+
+        # Commit through the provider's cross-process atomic callback boundary.
+        authoritative = self._update_raw_state(player_id, publish)
+        # Return exact committed authority in the helper's private representation.
+        return self._to_core_state(authoritative)
+
+    # Locate and update one exact active action without replacing sibling fields.
+    def _transition_active(self, player_id: str, request_id: str, round_id: str, fingerprint: str, transition) -> dict:
+        # Apply one action-owned lifecycle transition against provider-current state.
         def publish(current: dict) -> dict:
-            # Detach current owned values from unrelated provider metadata.
-            observed = self._game_snapshot(current)
-            # Accept exact same-result publication without rewriting siblings.
-            if observed == desired:
-                # Preserve the complete authoritative provider document.
+            # Locate this action in the active slot or terminal history.
+            existing = self._round_for_request(current, request_id)
+            # Reject missing recovery state rather than reconstructing private fields.
+            if existing is None:
+                # Fail closed because committed movement must remain tied to durable action state.
+                raise ConflictError("Chuck-a-Luck active recovery state is missing")
+            # Reject semantic or round identity divergence before mutation.
+            if existing.get("request_fingerprint") != fingerprint or existing.get("round_id") != round_id:
+                # Prevent one action identity from adopting another action's proof.
+                raise ConflictError("Chuck-a-Luck active recovery state conflicts with committed proof")
+            # Preserve an already archived terminal winner without rewriting it.
+            if current.get("active_round") is not existing:
+                # Return complete provider authority unchanged.
                 return current
-            # Reject an operation whose owned baseline lost a concurrent race.
-            if observed != expected:
-                # Require recovery from the authoritative winner.
-                raise ConflictError("Chuck-a-Luck state changed during this action; reload and retry")
-            # Replace only fields governed by this game service.
-            for key in _GAME_STATE_KEYS:
-                # Publish detached JSON-compatible values without sibling loss.
-                current[key] = copy.deepcopy(desired[key])
-            # Return the complete provider document for atomic persistence.
+            # Apply the bounded transition only to the exact active object.
+            transition(existing)
+            # Return the complete provider document with siblings intact.
             return current
 
-        # Commit the transition through the provider's cross-process boundary.
-        authoritative = self.repository.update(player_id, publish)
-        # Advance the operation baseline to the exact committed owned result.
-        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+        # Commit the transition and retain provider-returned authority.
+        authoritative = self._update_raw_state(player_id, publish)
+        # Re-read the exact action from active or terminal authority.
+        round_state = self._round_for_request(authoritative, request_id)
+        # Reject an updater that returned no matching lifecycle record.
+        if round_state is None:
+            # Fail closed before later settlement or publication stages.
+            raise ConflictError("Chuck-a-Luck lifecycle transition is missing")
+        # Return a detached authoritative record for later adapters.
+        return copy.deepcopy(round_state)
 
-    # Derive the deterministic action key for one round movement.
-    @staticmethod
-    def _action_key(round_id: str, action: str) -> str:  # Build one deterministic ledger movement identity.
-        # Join the bounded round id and fixed action label without caller text.
-        return f"{round_id}:{action}"
+    # Persist or recover private dice before any aggregate wager movement.
+    def prepare(self, *, player_id, request_id, round_id, fingerprint, wager, **_context) -> dict:
+        # Track whether provider state already owned this exact action.
+        replayed = False
 
-    # Find committed ledger proof for one wager or settlement action.
-    def _proof(self, *, player_id: str, round_id: str, transaction_type: str, action: str, request_fingerprint: str):
-        # Delegate exact ownership matching to the game-owned ledger gateway.
-        return self._ledger_gateway.find(player_id=player_id, round_id=round_id, transaction_type=transaction_type, action_key=self._action_key(round_id, action), request_fingerprint=request_fingerprint)
+        # Publish one new preparation or reuse exact provider-current recovery state.
+        def publish(current: dict) -> dict:
+            # Share replay classification with the returned lifecycle context.
+            nonlocal replayed
+            # Locate any active or terminal state for this request identity.
+            existing = self._round_for_request(current, request_id)
+            # Reuse only exact semantic and round identity.
+            if existing is not None:
+                # Reject changed wagers or a divergent round before ledger access.
+                if existing.get("request_fingerprint") != fingerprint or existing.get("round_id") != round_id:
+                    # Preserve provider authority and fail this caller closed.
+                    raise ConflictError("Chuck-a-Luck request_id was already used with different wagers")
+                # Mark preparation as recovered rather than newly generated.
+                replayed = True
+                # Preserve exact provider bytes for active or terminal replay.
+                return current
+            # Prevent a new action from bypassing another interrupted settlement.
+            if current.get("active_round") is not None:
+                # Require recovery of the committed active action first.
+                raise ConflictError("Resume the active Chuck-a-Luck round before starting another")
+            # Draw one tentative triple only after provider authority proves this action is new.
+            dice = engine.roll_dice(self._randbelow)
+            # Capture one stable lifecycle start time beside newly prepared private dice.
+            created_at = self._clock()
+            # Persist the complete private preparation before ledger movement.
+            current["active_round"] = {"round_id": round_id, "request_id": request_id, "player_id": player_id, "request_fingerprint": fingerprint, "wagers": copy.deepcopy(wager), "dice": dice, "phase": "prepared", "wager_status": "pending", "settlement_status": "not_ready", "created_at": created_at}
+            # Preserve unrelated provider-owned fields in the same document.
+            return current
 
-    # Recover and validate the authoritative dice stored in committed debit details.
-    @staticmethod
-    def _committed_dice(debit_event: dict) -> list[int]:  # Recover the authoritative faces from committed wager proof.
-        # Read game-owned audit details from the matched wager event.
-        details = debit_event.get("details") or {}
-        # Translate corrupt or missing committed dice into a settlement conflict.
-        try:
-            # Validate the exact three faces before calculating any payout.
-            return engine.require_dice(details.get("dice"))
-        # Keep persisted-ledger corruption distinct from a new client validation error.
-        except ValidationError as error:
-            # Fail closed because settlement cannot safely choose replacement entropy.
-            raise ConflictError("Committed Chuck-a-Luck dice are unavailable or invalid") from error
+        # Commit or recover one provider-current preparation.
+        authoritative = self._update_raw_state(player_id, publish)
+        # Read the exact active or terminal action returned by provider authority.
+        round_state = self._round_for_request(authoritative, request_id)
+        # Reject an updater that lost the prepared action before token movement.
+        if round_state is None:
+            # Fail closed instead of drawing replacement dice.
+            raise ConflictError("Chuck-a-Luck prepared state is missing")
+        # Return private entropy and timing only to the shared coordinator.
+        return {"entropy": engine.require_dice(round_state.get("dice")), "settled_at": round_state.get("created_at") or round_state.get("settled_at"), "replayed": replayed, "round_state": copy.deepcopy(round_state)}
 
-    # Build the shared state/player/rules payload for every game endpoint.
-    def payload(self, player_id: str, state=None) -> dict:
-        # Load player-owned state only when a caller has not already mutated a copy.
-        current = state if state is not None else self._load(player_id)
-        # Return reload-safe game state, wallet snapshot, and immutable bet metadata.
+    # Clear only a genuinely uncommitted preparation after wager failure.
+    def wager_failed(self, *, player_id, request_id, fingerprint, lifecycle_context, committed_event, error, **_context) -> None:
+        # Detect a newly prepared conflict with an older durable ledger action.
+        new_action_conflict = not bool((lifecycle_context or {}).get("replayed")) and isinstance(error, ConflictError)
+        # Retain prepared state when immutable proof may require response recovery.
+        if committed_event is not None and not new_action_conflict:
+            # Leave the exact action available for retry.
+            return
+
+        # Clear only this action's unchanged pre-wager preparation.
+        def publish(current: dict) -> dict:
+            # Read the current provider-owned recovery slot.
+            active = current.get("active_round")
+            # Preserve another action or a phase already advanced by a winner.
+            if not isinstance(active, dict) or active.get("request_id") != request_id or active.get("request_fingerprint") != fingerprint or active.get("phase") != "prepared" or active.get("wager_status") != "pending":
+                # Return provider authority unchanged.
+                return current
+            # Release only the safe-to-edit uncommitted proposal.
+            current.pop("active_round", None)
+            # Preserve every unrelated sibling and terminal history row.
+            return current
+
+        # Persist action-owned cleanup before surfacing the original wager failure.
+        self._update_raw_state(player_id, publish)
+
+    # Publish committed wager proof before deterministic settlement intent.
+    def wager_committed(self, *, player_id, request_id, round_id, fingerprint, entropy, wager_event, lifecycle_context, **_context) -> None:
+        # Define the exact committed-wager marker transition.
+        def transition(active: dict) -> None:
+            # Replace any tentative dice with immutable ledger proof.
+            active["dice"] = engine.require_dice(entropy)
+            # Mark the aggregate wager complete only after ledger proof exists.
+            active["wager_status"] = "complete"
+            # Store the immutable debit event id for recovery evidence.
+            active["wager_ledger_id"] = wager_event.get("ledger_id")
+            # Mark result calculation as the next recovery phase.
+            active["phase"] = "settling"
+
+        # Commit the provider-current transition and update shared lifecycle context.
+        lifecycle_context["round_state"] = self._transition_active(player_id, request_id, round_id, fingerprint, transition)
+
+    # Publish deterministic result intent before any returned-credit movement.
+    def settlement_resolved(self, *, player_id, request_id, round_id, fingerprint, settlement, lifecycle_context, **_context) -> None:
+        # Define the exact known-result transition.
+        def transition(active: dict) -> None:
+            # Merge only deterministic engine result fields into the active record.
+            active.update(copy.deepcopy(settlement))
+            # Mark positive credits pending and zero returns complete.
+            active["settlement_status"] = "pending" if settlement["total_return"] > 0 else "complete"
+
+        # Commit result intent and carry provider authority into later stages.
+        lifecycle_context["round_state"] = self._transition_active(player_id, request_id, round_id, fingerprint, transition)
+
+    # Publish immutable returned-credit proof after a positive movement.
+    def settlement_committed(self, *, player_id, request_id, round_id, fingerprint, settlement_event, lifecycle_context, **_context) -> None:
+        # Define the exact committed-settlement marker transition.
+        def transition(active: dict) -> None:
+            # Mark returned-credit settlement complete only after proof exists.
+            active["settlement_status"] = "complete"
+            # Store the immutable credit event id for recovery evidence.
+            active["settlement_ledger_id"] = settlement_event.get("ledger_id")
+
+        # Commit credit proof and carry provider authority into terminal publication.
+        lifecycle_context["round_state"] = self._transition_active(player_id, request_id, round_id, fingerprint, transition)
+
+    # Freeze one provider-stable terminal marker before shared history publication.
+    def finalize(self, *, player_id, request_id, round_id, fingerprint, lifecycle_context, **_context) -> dict:
+        # Define an idempotent terminal lifecycle transition.
+        def transition(active: dict) -> None:
+            # Mark the public lifecycle complete after every required movement.
+            active["phase"] = "settled"
+            # Preserve the original prepared time as the frozen public settled time.
+            active.setdefault("settled_at", active.get("created_at"))
+
+        # Commit terminal fields before constructing one identical public round.
+        lifecycle_context["round_state"] = self._transition_active(player_id, request_id, round_id, fingerprint, transition)
+        # Return the mutated bounded context for the helper's public-round builder.
+        return lifecycle_context
+
+    # Build the shared state, rules, and read-only wallet payload.
+    def payload(self, player_id: str) -> dict:
+        # Load the exact current selected-provider document for this player.
+        current = self._load_raw_state(player_id)
+        # Return the frozen game state, wallet snapshot, and immutable bet metadata.
         return {"game": rules.GAME_ID, "state": engine.public_state(current), "player": self._get_player(player_id), "bet_catalog": rules.bet_catalog()}
 
     # Return the current authenticated player's reload-safe game payload.
     def state(self, player_id: str) -> dict:
-        # Reuse the common payload builder without touching the ledger or entropy.
+        # Reuse the common payload builder without touching ledger or entropy.
         return self.payload(player_id)
 
-    # Read ledger evidence for a state-cached settled replay.
-    def _round_ledger(self, player_id: str, round_row: dict) -> dict:
-        # Cache stable proof fields from the settled round.
-        round_id = round_row["round_id"]
-        # Cache the canonical wager fingerprint for both ledger actions.
-        fingerprint = round_row["request_fingerprint"]
-        # Find the required aggregate wager debit proof.
-        wager_event = self._proof(player_id=player_id, round_id=round_id, transaction_type=WAGER_TRANSACTION_TYPE, action="wager", request_fingerprint=fingerprint)
-        # Start with no settlement proof for a losing round.
-        settlement_event = None
-        # Find a credit proof only when the round returned stake plus winnings.
-        if round_row.get("total_return", 0) > 0:
-            # Resolve the optional aggregate credit through all immutable dimensions.
-            settlement_event = self._proof(player_id=player_id, round_id=round_id, transaction_type=SETTLEMENT_TRANSACTION_TYPE, action="settlement", request_fingerprint=fingerprint)
-        # Return only ledger events owned by this player and round.
-        return {"wager": wager_event, "settlement": settlement_event}
-
-    # Execute or replay one complete ledger-backed Chuck-a-Luck roll.
+    # Execute or replay one complete ledger-backed roll through the shared helper.
     def roll(self, player_id: str, request: dict) -> dict:
-        # Require an object payload before reading action fields.
+        # Require an object payload before the shared resolver reads action fields.
         if not isinstance(request, dict):
             # Reject malformed calls before state, entropy, or ledger access.
             raise ValidationError("Chuck-a-Luck roll body must be an object")
-        # Validate the caller-stable retry identity before any mutable operation.
-        request_id = require_request_id(request.get("request_id"))
-        # Normalize every face wager before state or ledger lookup.
-        wagers = engine.normalize_wagers(request.get("wagers"))
-        # Derive the semantic request fingerprint used for conflict detection.
-        request_fingerprint = engine.wager_fingerprint(wagers)
-        # Derive one stable player-scoped round identifier for ledger recovery.
-        round_id = engine.round_id_for(player_id, request_id)
-        # Serialize state cache, ledger proof, entropy, settlement, and persistence locally.
-        with _SETTLEMENT_LOCK:
-            # Load the latest state inside the same lock used by apply-once ledger checks.
-            state = self._load(player_id)
-            # Resolve a fully settled retry from the bounded player state first.
-            existing_round = engine.find_round(state, request_id)
-            # Return the original immutable state result for a normal retry.
-            if existing_round is not None:
-                # Reject reuse of one request identity for different wager content.
-                if existing_round.get("request_fingerprint") != request_fingerprint:
-                    # Fail closed without inspecting or moving the player's wallet.
-                    raise ConflictError("Chuck-a-Luck request_id was already used with different wagers")
-                # Recover player-owned ledger evidence for the settled state row.
-                ledger_events = self._round_ledger(player_id, existing_round)
-                # Return the same settled round and current reload-safe state.
-                return {"round": engine.public_round(existing_round), "replayed": True, "ledger": ledger_events, **self.payload(player_id, state)}
-            # Produce proposed server-authoritative dice for a never-seen or interrupted action.
-            proposed_dice = engine.roll_dice(self._randbelow)
-            # Calculate the one aggregate wager debit before touching the ledger.
-            wager_total = engine.total_wager(wagers)
-            # Store everything required to reconstruct the result after a post-debit crash.
-            wager_details = {"request_id": request_id, "wagers": wagers, "dice": proposed_dice, "total_wager": wager_total}
-            # Commit or recover the single aggregate wager debit.
-            wager_event, wager_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=-wager_total, transaction_type=WAGER_TRANSACTION_TYPE, round_id=round_id, action_key=self._action_key(round_id, "wager"), request_fingerprint=request_fingerprint, details=wager_details)
-            # Recover the original committed faces instead of trusting retry entropy.
-            committed_dice = self._committed_dice(wager_event)
-            # Calculate every return deterministically from committed wagers and dice.
-            settlement = engine.settle(wagers, committed_dice)
-            # Start with no credit event for a completely losing set of wagers.
-            settlement_event = None
-            # Track whether crash recovery reused a committed settlement credit.
-            settlement_replayed = False
-            # Credit stake plus net winnings only when at least one wager matched.
-            if settlement["total_return"] > 0:
-                # Build complete game-owned audit details for the aggregate return.
-                settlement_details = {"request_id": request_id, "wagers": wagers, "dice": committed_dice, "total_return": settlement["total_return"], "settlements": settlement["settlements"]}
-                # Commit or recover the one aggregate stake-plus-winnings credit.
-                settlement_event, settlement_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=settlement["total_return"], transaction_type=SETTLEMENT_TRANSACTION_TYPE, round_id=round_id, action_key=self._action_key(round_id, "settlement"), request_fingerprint=request_fingerprint, details=settlement_details)
-            # Prefer the committed debit time so reconstructed retries retain round timing.
-            settled_at = wager_event.get("ts") or self._clock()
-            # Build the stable settled row returned by state and action endpoints.
-            round_row = {
-                "round_id": round_id,  # Correlate state and both ledger actions.
-                "request_id": request_id,  # Preserve the bounded client retry identity.
-                "request_fingerprint": request_fingerprint,  # Preserve semantic conflict proof.
-                "player_id": player_id,  # Bind the result to the authenticated player.
-                "status": "settled",  # Expose one terminal state for this atomic game action.
-                "wagers": wagers,  # Preserve normalized one-through-six stakes.
-                **settlement,  # Include dice, totals, net, and per-wager audit rows.
-                "settled_at": settled_at,  # Preserve stable committed timing across retries.
-            }
-            # Add the completed round only after every required ledger action committed.
-            engine.record_round(state, round_row)
-            # Persist bounded reload-safe history; ledger keys recover a failed save.
-            self._save(player_id, state)
-            # Report whether either ledger action came from earlier committed proof.
-            replayed = wager_replayed or settlement_replayed
-            # Return the settled action, scoped ledger evidence, and refreshed game payload.
-            return {"round": engine.public_round(round_row), "replayed": replayed, "ledger": {"wager": wager_event, "settlement": settlement_event}, **self.payload(player_id, state)}
+        # Execute preparation, movements, deterministic settlement, and archival centrally.
+        result = self._game.play(player_id, request)
+        # Convert helper wrappers into the frozen direct oldest-first state shape.
+        raw_state = self._to_raw_state(result["state"], None)
+        # Preserve the established response envelope and ledger keys exactly.
+        return {"round": result["round"], "replayed": result["replayed"], "ledger": result["ledger"], "game": rules.GAME_ID, "state": engine.public_state(raw_state), "player": result["player"], "bet_catalog": rules.bet_catalog()}
