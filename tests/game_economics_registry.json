@@ -142,7 +142,7 @@
       "requirement_id": "RD-001",
       "engine_path": "casino/games/red_dog/engine.py",
       "settlement_path": "casino/games/red_dog/api.py",
-      "production_sha256": "947575da1af5e4217e1fdbbb09fa3be22835e0746eb07891e3a3b5f718b8c954",
+      "production_sha256": "f7945333f9fd7d27fbe17eac47bec5e14d7d134f623bda3a7762970b7edbe9da",
       "proof_tests": ["casino.games.red_dog.tests.test_engine:RedDogEngineTests.test_call_uses_all_spread_paytable_rows", "casino.games.red_dog.tests.test_engine:RedDogEngineTests.test_raise_matches_ante_and_pays_both_stakes", "casino.games.red_dog.tests.test_engine:RedDogEngineTests.test_pair_three_of_a_kind_returns_twelve_times_ante"],
       "rationale": "Every actionable spread and pair branch is bound to the prior optimal call-or-raise audit and real engine returned-credit semantics."
     },

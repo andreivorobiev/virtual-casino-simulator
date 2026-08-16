@@ -21,20 +21,26 @@ class MemoryRepository:
     def __init__(self, documents=None):
         # Copy every fixture so tests cannot mutate caller-owned objects.
         self.documents = copy.deepcopy(documents or {})
-        # Count explicit saves for reload-safety diagnostics.
-        self.save_count = 0
+        # Count provider-current updates for reload-safety diagnostics.
+        self.update_count = 0
 
     # Load one detached player document.
     def load(self, player_id: str) -> dict:
         # Return an independent state copy or a fresh default for unknown players.
         return copy.deepcopy(self.documents.get(player_id, engine.default_state()))
 
-    # Save one detached player document.
-    def save(self, player_id: str, state: dict) -> None:
-        # Persist a copy so later mutation requires another explicit save.
-        self.documents[player_id] = copy.deepcopy(state)
-        # Record the persistence boundary for focused diagnostics.
-        self.save_count += 1
+    # Apply one provider-current transition to a detached player document.
+    def update(self, player_id: str, mutator) -> dict:
+        # Load the exact current document seen inside the provider boundary.
+        current = self.load(player_id)
+        # Let the production-shaped callback publish or reject the transition.
+        updated = mutator(current)
+        # Persist a deep copy to model the JSON/provider boundary.
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Record the provider-owned persistence boundary.
+        self.update_count += 1
+        # Return another detached copy like shared state storage.
+        return copy.deepcopy(updated)
 
 
 # Record append-only ledger events and support verified action recovery.

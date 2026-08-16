@@ -1616,6 +1616,8 @@ def run_api_tests():
     run_case('API-MSTUD-ATOMIC-001',['MSTUD-003','TEST-226'],lambda: run_unit_module('tests.games.mississippi_stud.test_atomic_state','Mississippi Stud atomic state suite failed'))
     # Prove Plinko rejects stale terminal drops through the real JSON provider.
     run_case('API-PLINKO-ATOMIC-001',['PLINKO-006','TEST-227'],lambda: run_unit_module('tests.games.plinko.test_atomic_state','Plinko atomic state suite failed'))
+    # Prove Red Dog rejects stale terminal decisions through the real JSON provider.
+    run_case('API-RD-ATOMIC-001',['RD-006','TEST-228'],lambda: run_unit_module('tests.games.red_dog.test_atomic_state','Red Dog atomic state suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.
