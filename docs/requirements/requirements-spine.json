@@ -12499,6 +12499,31 @@
       "introduced_in": "issue-843-mississippi-stud-atomic-state",
       "changed_in": "issue-843-mississippi-stud-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Mississippi Stud service. Existing session isolation, three-street decision replay, ante/bet/settlement recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-227",
+      "module": "Tests",
+      "description": "Real stale-load Plinko workers race different terminal drop publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit cleanup cannot erase a concurrent winner while existing debit, settlement, replay, and recovery paths retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PLINKO-001",
+        "API-PLINKO-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-PLINKO-001"
+      ],
+      "implementation_files": [
+        "tests/games/plinko/test_api.py",
+        "tests/games/plinko/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-845-plinko-atomic-state",
+      "changed_in": "issue-845-plinko-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Plinko service. Existing session isolation, drop replay, debit and payout recovery, complete path economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }

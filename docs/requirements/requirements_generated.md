@@ -38,7 +38,7 @@ Historical source baseline: 9.1.0
 - craps: 1.1.3
 - crown_and_anchor: 1.1.5
 - over_under_7: 1.1.5
-- plinko: 1.1.2
+- plinko: 1.1.3
 - fan_tan: 1.1.5
 - andar_bahar: 1.1.5
 - acey_deucey: 1.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.43
-- docs: 1.96.43
+- tests: 1.100.44
+- docs: 1.96.44
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -717,6 +717,7 @@ Historical source baseline: 9.1.0
 - **TEST-224** (Tests) - PASS: Real stale-load Jacks-or-Better workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-225** (Tests) - PASS: Real stale-load Let It Ride workers race different terminal second decisions around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no actionable-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-opening rollback cannot erase a concurrent winner while existing debit, refund, and payout recovery retain exactly-once wallet behavior.
 - **TEST-226** (Tests) - PASS: Real stale-load Mississippi Stud workers race different terminal fold decisions around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no actionable-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-ante cleanup cannot erase a concurrent winner while existing ante, street-bet, settlement, replay, and recovery paths retain exactly-once wallet behavior.
+- **TEST-227** (Tests) - PASS: Real stale-load Plinko workers race different terminal drop publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit cleanup cannot erase a concurrent winner while existing debit, settlement, replay, and recovery paths retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1048,6 +1049,7 @@ Historical source baseline: 9.1.0
 - **PLINKO-003** (Plinko) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **PLINKO-004** (Application) - PASS: Plinko supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **PLINKO-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Plinko with requirement, module, version, and visual traceability.
+- **PLINKO-006** (Plinko) - PASS: Plinko publishes prepared drops, durable action receipts, debit and settlement recovery markers, terminal history, and rejected-debit rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale drop or cleanup can overwrite the winning history, while the frozen v1 envelope, peg-path math, multiplier profile, and exactly-once ledger movements remain unchanged.
 - **FAN-TAN-001** (Fan-Tan) - PASS: One server-authoritative covered pile resolves through repeated groups of four to residue one, two, three, or four with transparent three-to-one net settlement.
 - **FAN-TAN-002** (Fan-Tan) - PASS: Authenticated sessions own private reload-safe rounds, durable receipts, settled history, and canonical route restoration.
 - **FAN-TAN-003** (Fan-Tan) - PASS: Aggregate residue wagers and returned-token credits use the shared ledger exactly once under durable action identities.
