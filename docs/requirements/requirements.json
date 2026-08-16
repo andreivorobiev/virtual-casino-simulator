@@ -12430,6 +12430,29 @@
       "notes": "Fresh workers use the real JSON provider and exact Hi-Lo service. Existing session isolation, deal/guess replay, wager and settlement recovery, rank-pricing economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-224",
+      "module": "Tests",
+      "description": "Real stale-load Jacks-or-Better workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JOBVP-001",
+        "API-JOBVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/jacks_or_better_video_poker/test_api.py",
+        "tests/games/jacks_or_better_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-839-jobvp-atomic-state",
+      "changed_in": "issue-839-jobvp-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Jacks-or-Better service. Existing session isolation, deal/draw replay, wager and payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -17641,6 +17664,30 @@
       "introduced_in": "game-expansion-jacks-or-better",
       "changed_in": "game-expansion-jacks-or-better",
       "notes": "Descriptor sort order 170 and catalog long driver are canonical."
+    },
+    {
+      "id": "JOBVP-006",
+      "module": "Jacks or Better Video Poker",
+      "description": "Jacks or Better publishes active hands, wager and payout recovery markers, hold choices, and bounded terminal history through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale draw or rejected-wager cleanup can overwrite or resurrect the winning hand, while coin columns, paytable returns, and exactly-once ledger movements retain frozen v1 behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JOBVP-001",
+        "API-JOBVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/jacks_or_better_video_poker/api.py",
+        "tests/games/jacks_or_better_video_poker/test_api.py",
+        "tests/games/jacks_or_better_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-839-jobvp-atomic-state",
+      "changed_in": "issue-839-jobvp-atomic-state",
+      "notes": "The frozen v1 contract, classic coin columns, paytable, card ordering, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "DWVP-001",

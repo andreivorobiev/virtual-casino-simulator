@@ -30,7 +30,7 @@ Historical source baseline: 9.1.0
 - dragon_tiger: 1.1.3
 - hi_lo: 1.1.4
 - three_card_poker: 1.1.4
-- jacks_or_better_video_poker: 1.1.3
+- jacks_or_better_video_poker: 1.1.4
 - deuces_wild_video_poker: 1.1.5
 - scratch_cards: 1.1.2
 - sic_bo: 1.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.40
-- docs: 1.96.40
+- tests: 1.100.41
+- docs: 1.96.41
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -714,6 +714,7 @@ Historical source baseline: 9.1.0
 - **TEST-221** (Tests) - PASS: Real stale-load Dragon Tiger workers race terminal round publication around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no prepared-action resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-222** (Tests) - PASS: Real stale-load Joker Poker workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-223** (Tests) - PASS: Real stale-load Hi-Lo workers race different terminal guesses around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
+- **TEST-224** (Tests) - PASS: Real stale-load Jacks-or-Better workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1007,6 +1008,7 @@ Historical source baseline: 9.1.0
 - **JOBVP-003** (Jacks or Better Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw action identities.
 - **JOBVP-004** (Application) - PASS: Jacks or Better supplies complete English and Russian copy with responsive, accessible, reduced-motion-safe play across required viewports.
 - **JOBVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Jacks or Better with requirement, module, version, and visual traceability.
+- **JOBVP-006** (Jacks or Better Video Poker) - PASS: Jacks or Better publishes active hands, wager and payout recovery markers, hold choices, and bounded terminal history through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale draw or rejected-wager cleanup can overwrite or resurrect the winning hand, while coin columns, paytable returns, and exactly-once ledger movements retain frozen v1 behavior.
 - **DWVP-001** (Deuces Wild Video Poker) - PASS: Single-hand house-edged Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable, with the four-of-a-kind return reduced so optimal play is no longer player-positive.
 - **DWVP-002** (Deuces Wild Video Poker) - PASS: Authenticated sessions own isolated reload-safe active hands, holds, history, and canonical route restoration.
 - **DWVP-003** (Deuces Wild Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw identities.

@@ -108,6 +108,30 @@
       "introduced_in": "game-expansion-jacks-or-better",
       "changed_in": "game-expansion-jacks-or-better",
       "notes": "Descriptor sort order 170 and catalog long driver are canonical."
+    },
+    {
+      "id": "JOBVP-006",
+      "module": "Jacks or Better Video Poker",
+      "description": "Jacks or Better publishes active hands, wager and payout recovery markers, hold choices, and bounded terminal history through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale draw or rejected-wager cleanup can overwrite or resurrect the winning hand, while coin columns, paytable returns, and exactly-once ledger movements retain frozen v1 behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-JOBVP-001",
+        "API-JOBVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/jacks_or_better_video_poker/api.py",
+        "tests/games/jacks_or_better_video_poker/test_api.py",
+        "tests/games/jacks_or_better_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-839-jobvp-atomic-state",
+      "changed_in": "issue-839-jobvp-atomic-state",
+      "notes": "The frozen v1 contract, classic coin columns, paytable, card ordering, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     }
   ]
 }

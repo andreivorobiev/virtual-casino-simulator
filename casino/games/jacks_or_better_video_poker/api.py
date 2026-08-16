@@ -1,11 +1,12 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Session-bound, retry-safe ledger adapter for Jacks-or-Better issue #91.
+"""Session-bound, retry-safe ledger adapter for Jacks-or-Better issues #91 and #839.
 
-Confirmed requirements: LEDGER-005, LEDGER-006, LEDGER-007, and SESSION-005.
-Proposed local traceability prefix: JOBVP (pending central allocation by #77).
+Confirmed requirements include JOBVP-001 through JOBVP-006 and TEST-224.
 """
 
+# Import deep-copy support for detached optimistic state snapshots.
+import copy
 # Import regular-expression validation for bounded client action identifiers.
 import re
 # Import a process-local settlement lock for exactly-once local simulator actions.
@@ -19,8 +20,8 @@ from casino.core.settlement import GameSettlementGateway
 from casino.core.clock import utc_now
 # Import the shared id generator for ledger-correlated round identifiers.
 from casino.core.ids import new_id
-# Import player-scoped state helpers so authenticated users never share active rounds.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import the canonical player-id validator used after shared router resolution.
 from casino.core.validation import require_player_id
 # Import public conflict, lookup, and validation errors for route boundaries.
@@ -38,6 +39,10 @@ PAYOUT_TRANSACTION_TYPE = "JOBVP_PAYOUT_CREDIT"
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Serialize state and ledger replay checks inside this local simulator process.
 _SETTLEMENT_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_jobvp_atomic_baseline"
+# Name every state field owned by Jacks-or-Better transitions.
+_GAME_STATE_KEYS = ("active_round", "recent_rounds")
 
 
 # Resolve the player identity already replaced by the shared authenticated router.
@@ -58,14 +63,25 @@ def require_action_id(value, field_name: str) -> str:
     return value
 
 
+# Persist player-scoped game documents through the selected storage provider.
+class StateRepository:
+    # Load one authenticated player's document.
+    def load(self, player_id: str) -> dict:
+        # Delegate provider selection and legacy defaults to shared state storage.
+        return load_player_game_state(GAME_ID, player_id, engine.default_state)
+
+    # Apply one transition while the provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate current-state loading, rollback, and publication atomically.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
+
+
 # Coordinate game state with ledger-only settlement through injectable dependencies.
 class JacksOrBetterVideoPokerService:
     # Store production dependencies while allowing isolated tests to use in-memory adapters.
-    def __init__(self, *, load_state=load_player_game_state, save_state=save_player_game_state, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, id_factory=new_id, seed_factory=None):
-        # Store the state loader used for player-scoped documents.
-        self._load_state = load_state
-        # Store the state writer used for crash-recovery markers.
-        self._save_state = save_state
+    def __init__(self, *, repository=None, debit=None, credit=None, read_ledger=None, get_player=players.get_player, clock=utc_now, id_factory=new_id, seed_factory=None):
+        # Use shared persistent state unless a focused test supplies memory storage.
+        self._repository = repository or StateRepository()
         # Store the only allowed wager debit operation.
         settlement = GameSettlementGateway(GAME_ID, debit=debit, credit=credit, read_recent=read_ledger)
         self._debit = settlement.debit
@@ -82,15 +98,57 @@ class JacksOrBetterVideoPokerService:
         # Store an optional seed factory that production registration leaves disabled.
         self._seed_factory = seed_factory
 
+    # Capture only the fields owned by Jacks-or-Better transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Detach nested rounds from later engine mutation.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
     # Load one authenticated player's isolated game state.
     def _load(self, player_id: str) -> dict:
-        # Delegate through the standard player-game state storage abstraction.
-        return self._load_state(GAME_ID, player_id, engine.default_state)
+        # Read through the injected repository before provider mutation.
+        state = self._repository.load(player_id)
+        # Retain the exact game-owned values expected by the next publication.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting operation metadata.
+        return state
 
-    # Save one authenticated player's crash-recovery state.
+    # Publish one provider-current compare-and-replace transition. (JOBVP-006)
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate through the standard player-game state storage abstraction.
-        self._save_state(GAME_ID, player_id, state)
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Reject fabricated or stale detached documents before storage access.
+        if not isinstance(expected, dict):
+            # Keep untracked state outside provider bytes.
+            raise ConflictError("Jacks-or-Better state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Jacks-or-Better-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach provider-current game fields from unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept an identical publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose game-owned baseline lost a race.
+            if observed != expected:
+                # Require recovery from the authoritative winning action.
+                raise ConflictError("Jacks-or-Better state changed during this action; reload and retry")
+            # Replace only the fields governed by this game service.
+            for key, value in desired.items():
+                # Publish detached values so caller mutation cannot leak later.
+                current[key] = copy.deepcopy(value)
+            # Return the complete document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process mutation boundary.
+        authoritative = self._repository.update(player_id, publish)
+        # Advance the in-memory baseline to the exact committed result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Find prior ledger proof that one round movement already committed.
     def _ledger_event(self, player_id: str, round_id: str, transaction_type: str):
