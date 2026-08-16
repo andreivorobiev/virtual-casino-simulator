@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Focused deterministic engine, atomic-state, and ledger-recovery tests for issues #89 and #825."""
+"""Focused deterministic engine, atomic-state, and shared-settlement tests for #89, #825, and #863."""
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.
 import copy
@@ -53,6 +53,31 @@ class MemoryRepository:
         return copy.deepcopy(updated)
 
 
+# Persist one selected provider transition and then simulate a lost storage response.
+class PersistThenFailRepository(MemoryRepository):
+    # Capture the exact authoritative-state predicate that identifies one crash boundary.
+    def __init__(self, predicate):
+        # Initialize ordinary detached provider storage first.
+        super().__init__()
+        # Retain the bounded state predicate supplied by the focused test.
+        self._predicate = predicate
+        # Arm exactly one post-persistence response failure.
+        self._armed = True
+
+    # Commit the provider-current mutation before optionally losing its response.
+    def update(self, player_id, mutator):
+        # Persist through the ordinary in-memory provider callback boundary.
+        authoritative = super().update(player_id, mutator)
+        # Fail once only when the exact requested crash boundary is now durable.
+        if self._armed and self._predicate(authoritative):
+            # Consume the one-shot fault before surfacing it to the caller.
+            self._armed = False
+            # Model a provider write whose response is lost after commit.
+            raise RuntimeError("simulated lost provider response")
+        # Return normal detached provider authority for every other transition.
+        return authoritative
+
+
 # Provide an in-memory apply-once ledger with production-shaped evidence.
 class FakeLedgerGateway:
     # Initialize committed events and call evidence.
@@ -61,19 +86,39 @@ class FakeLedgerGateway:
         self.events = {}
         # Store every apply-once invocation, including safe replays.
         self.calls = []
+        # Hold one-shot pre-commit failures by deterministic action suffix.
+        self.fail_before = set()
+        # Hold one-shot lost responses after an event becomes immutable.
+        self.fail_after = set()
 
     # Commit or recover one signed game action.
     def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Record the public action request for debit and credit count assertions.
         self.calls.append({"player_id": player_id, "amount": amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": details})
+        # Fail once before publication when a test arms this exact action suffix.
+        if action_key.rsplit(":", 1)[-1] in self.fail_before:
+            # Consume the one-shot failure so an explicit retry can proceed.
+            self.fail_before.remove(action_key.rsplit(":", 1)[-1])
+            # Model a provider rejection with no committed movement.
+            raise RuntimeError("simulated pre-commit ledger failure")
         # Return the original event when this deterministic action already committed.
         if action_key in self.events:
+            # Reject one identity reused with a different semantic fingerprint.
+            if self.events[action_key]["details"]["request_fingerprint"] != request_fingerprint:
+                # Match the production gateway's fail-closed conflict boundary.
+                raise ConflictError("Fake ledger action fingerprint conflicts")
             # Preserve the same event identity and report replay recovery.
             return self.events[action_key], True
         # Build one production-shaped ledger event with complete audit dimensions.
         event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "game": "chuck_a_luck", "round_id": round_id, "transaction_type": transaction_type, "amount": amount, "ts": "2026-07-14T18:00:00Z", "details": {**details, "idempotency_key": action_key, "request_fingerprint": request_fingerprint}}
         # Persist the committed event under its unique action identity.
         self.events[action_key] = event
+        # Lose one response only after the immutable event exists.
+        if action_key.rsplit(":", 1)[-1] in self.fail_after:
+            # Consume the one-shot fault before surfacing the transport-style error.
+            self.fail_after.remove(action_key.rsplit(":", 1)[-1])
+            # Force the caller to recover from exact committed proof.
+            raise RuntimeError("simulated lost ledger response")
         # Report that this call created the event.
         return event, False
 
@@ -184,86 +229,57 @@ class ChuckALuckServiceTests(unittest.TestCase):
         # Roll three ones so normal service assertions have a deterministic triple return.
         self.service = ChuckALuckService(ledger_gateway=self.ledger, repository=self.repository, randbelow=lambda sides: 0, clock=lambda: "2026-07-14T18:00:00Z", get_player=lambda player_id: {"player_id": player_id, "balance": 100})
 
-    # Confirm identical publication stays idempotent and preserves siblings.
-    def test_atomic_publication_preserves_siblings_and_private_baseline(self):
-        # Load one tracked default document through the service boundary.
-        state = self.service._load("player-a")
-        # Add one deterministic settled row as the desired owned transition.
-        state["recent_rounds"].append({"request_id": "atomic-same", "request_fingerprint": "a" * 64})
-        # Publish the tracked transition through provider-current comparison.
-        self.service._save("player-a", state)
-        # Add unrelated metadata after the first game-owned publication.
-        self.repository.documents["player-a"]["atomic_markers"] = ["sibling"]
-        # Publish the exact same desired result from the advanced baseline.
-        self.service._save("player-a", state)
-        # Read the final provider-authoritative document.
-        persisted = self.repository.documents["player-a"]
-        # Verify the sibling survives and operation metadata never persists.
-        self.assertEqual(["sibling"], persisted["atomic_markers"])
-        # Keep the optimistic snapshot outside durable player state.
-        self.assertNotIn("_chuck_a_luck_atomic_baseline", persisted)
+    # Confirm provider-current preparation is idempotent and preserves siblings.
+    def test_preparation_preserves_sibling_and_never_redraws(self):
+        # Seed unrelated provider-owned metadata before the game prepares entropy.
+        self.repository.documents["player-a"] = {"game": "chuck_a_luck", "recent_rounds": [], "atomic_markers": ["sibling"]}
+        # Count each bounded entropy request across both identical preparations.
+        draws = []
+        # Build one service whose dice source records every requested span.
+        service = ChuckALuckService(ledger_gateway=self.ledger, repository=self.repository, randbelow=lambda sides: draws.append(sides) or 2, clock=lambda: "2026-08-15T01:00:00Z", get_player=lambda player_id: {"player_id": player_id, "balance": 100})
+        # Normalize the exact wager used by the lifecycle seam.
+        wagers = engine.normalize_wagers({"three": 1})
+        # Bind one stable fingerprint and round identity.
+        fingerprint = engine.wager_fingerprint(wagers)
+        # Prepare the action for the first time through provider-current state.
+        first = service.prepare(player_id="player-a", request_id="prepared", round_id=engine.round_id_for("player-a", "prepared"), fingerprint=fingerprint, wager=wagers)
+        # Repeat the identical preparation without allowing another draw.
+        second = service.prepare(player_id="player-a", request_id="prepared", round_id=engine.round_id_for("player-a", "prepared"), fingerprint=fingerprint, wager=wagers)
+        # Require one three-die draw, exact replay, and sibling preservation.
+        self.assertEqual(([6, 6, 6], [3, 3, 3], [3, 3, 3], False, True, ["sibling"]), (draws, first["entropy"], second["entropy"], first["replayed"], second["replayed"], self.repository.documents["player-a"]["atomic_markers"]))
 
-    # Reject fabricated detached state before entering the provider updater.
-    def test_missing_atomic_baseline_fails_before_update(self):
-        # Retain a call list that must stay empty on fail-closed input.
-        updates = []
-
-        # Expose a repository seam whose update would reveal accidental entry.
-        class RejectingRepository:
-            # Record forbidden writes without mutating any storage.
-            def update(self, player_id, mutator):
-                # Retain exact attempted arguments for the final assertion.
-                updates.append((player_id, mutator))
-
-        # Build the service around the rejecting update seam.
-        service = ChuckALuckService(repository=RejectingRepository())
-        # Reject an untracked default document as a stale publication.
+    # Confirm one active recovery slot rejects a distinct request before entropy or money.
+    def test_distinct_preparation_conflicts_without_redraw(self):
+        # Prepare the first action through the normal service boundary.
+        wagers = engine.normalize_wagers({"one": 1})
+        # Store its exact semantic identity for lifecycle preparation.
+        fingerprint = engine.wager_fingerprint(wagers)
+        # Persist one active provider-owned result.
+        self.service.prepare(player_id="player-a", request_id="first", round_id=engine.round_id_for("player-a", "first"), fingerprint=fingerprint, wager=wagers)
+        # Reject another request while the first action remains recoverable.
         with self.assertRaises(ConflictError):
-            # Attempt publication without the required provider-read baseline.
-            service._save("player-a", engine.default_state())
-        # Prove storage was never reached.
-        self.assertEqual([], updates)
+            # Attempt to allocate the only active recovery slot to a second request.
+            self.service.prepare(player_id="player-a", request_id="second", round_id=engine.round_id_for("player-a", "second"), fingerprint=fingerprint, wager=wagers)
+        # Require the first exact action to remain authoritative.
+        self.assertEqual("first", self.repository.documents["player-a"]["active_round"]["request_id"])
 
-    # Prove a stale state publication cannot overwrite a concurrent winner or duplicate ledger events.
-    def test_stale_publication_after_committed_ledger_preserves_winner_and_recovers_once(self):
-        # Extend memory storage with one deterministic provider-winner schedule.
-        class RacingRepository(MemoryRepository):
-            # Present one concurrent winner before the first callback executes.
-            def update(self, player_id, mutator):
-                # Build a valid settled row owned by another concurrent request.
-                winner_wagers = engine.normalize_wagers({"six": 1})
-                # Calculate the terminal losing result without touching the fake ledger.
-                winner_settlement = engine.settle(winner_wagers, [1, 2, 3])
-                # Preserve one stable semantic fingerprint for the winner.
-                winner_fingerprint = engine.wager_fingerprint(winner_wagers)
-                # Persist the concurrent authoritative game-owned result first.
-                self.documents[player_id] = {"recent_rounds": [{"round_id": engine.round_id_for(player_id, "provider-winner"), "request_id": "provider-winner", "request_fingerprint": winner_fingerprint, "player_id": player_id, "status": "settled", "wagers": winner_wagers, **winner_settlement, "settled_at": "2026-08-15T01:00:00Z"}], "atomic_markers": ["provider-winner"]}
-                # Present the already-committed winner to the stale callback.
-                return mutator(copy.deepcopy(self.documents[player_id]))
+    # Prove stale uncommitted cleanup cannot erase a concurrently advanced action.
+    def test_stale_cleanup_preserves_advanced_wager_state(self):
+        # Prepare one exact request before simulating a later lifecycle winner.
+        wagers = engine.normalize_wagers({"one": 1})
+        # Bind its immutable semantic identity.
+        fingerprint = engine.wager_fingerprint(wagers)
+        # Capture the lifecycle context used by a stale failure callback.
+        context = self.service.prepare(player_id="player-a", request_id="advanced", round_id=engine.round_id_for("player-a", "advanced"), fingerprint=fingerprint, wager=wagers)
+        # Advance provider authority as though another caller observed committed debit proof.
+        self.repository.documents["player-a"]["active_round"].update({"phase": "settling", "wager_status": "complete", "wager_ledger_id": "ledger-1"})
+        # Run stale cleanup with no proof returned to this losing caller.
+        self.service.wager_failed(player_id="player-a", request_id="advanced", round_id=engine.round_id_for("player-a", "advanced"), fingerprint=fingerprint, wager=wagers, wager_total=1.0, lifecycle_context=context, committed_event=None, error=RuntimeError("stale failure"))
+        # Require the advanced provider winner and its proof marker to survive.
+        self.assertEqual(("settling", "ledger-1"), (self.repository.documents["player-a"]["active_round"]["phase"], self.repository.documents["player-a"]["active_round"]["wager_ledger_id"]))
 
-        # Create the race-aware provider with one deterministic winning ledger action.
-        repository = RacingRepository()
-        # Build the real service around the race-aware provider and existing ledger.
-        service = ChuckALuckService(ledger_gateway=self.ledger, repository=repository, randbelow=lambda sides: 0, clock=lambda: "2026-08-15T01:00:00Z", get_player=lambda player_id: {"player_id": player_id, "balance": 100})
-        # Define one stable request whose debit and credit commit before state publication.
-        request = {"request_id": "stale-ledger", "wagers": {"one": 1}}
-        # Require stale state publication to surface an explicit provider conflict.
-        with self.assertRaises(ConflictError):
-            # Execute the complete ledger-backed action whose save loses the race.
-            service.roll("player-a", request)
-        # Verify the provider-winning round and unrelated sibling remain authoritative.
-        self.assertEqual(("provider-winner", ["provider-winner"]), (repository.documents["player-a"]["recent_rounds"][0]["request_id"], repository.documents["player-a"]["atomic_markers"]))
-        # Require exactly one debit and one credit after the rejected publication.
-        self.assertEqual(2, len(self.ledger.events))
-        # Disable the one-shot race hook while retaining the provider-winning document.
-        repository.update = MemoryRepository.update.__get__(repository, RacingRepository)
-        # Recover the missing state row through the same public request identity.
-        recovered = service.roll("player-a", request)
-        # Require ledger replay and both terminal rounds without a duplicate movement.
-        self.assertEqual((True, ["provider-winner", "stale-ledger"], 2), (recovered["replayed"], [row["request_id"] for row in repository.documents["player-a"]["recent_rounds"]], len(self.ledger.events)))
-
-    # Prove stale fresh processes preserve siblings and expose one state winner.
-    def test_fresh_process_round_race_has_one_state_winner(self):
+    # Prove fresh processes serialize preparation before entropy is drawn.
+    def test_fresh_process_preparation_race_has_one_entropy_winner(self):
         # Own every provider and rendezvous byte inside one disposable directory.
         with tempfile.TemporaryDirectory() as temporary:
             # Resolve this exact checkout for child imports.
@@ -280,57 +296,45 @@ class ChuckALuckServiceTests(unittest.TestCase):
             environment = os.environ.copy()
             # Bind every child to disposable state and this exact checkout.
             environment.update({"CASINO_STORAGE_PROVIDER": "json", "CASINO_DATA_DIR": str(data_root), "CASINO_LOG_DIR": str(Path(temporary) / "logs"), "PYTHONPATH": str(repository_root)})
-            # Define one worker whose repository pauses after capturing stale state.
+            # Define one worker that waits before entering provider-current preparation.
             worker_source = r"""
 import sys
 import time
 from pathlib import Path
 from casino.core.state_store import load_player_game_state, update_player_game_state
-from casino.errors import ConflictError
 from casino.games.chuck_a_luck import engine
 from casino.games.chuck_a_luck.service import ChuckALuckService
 ready = Path(sys.argv[1])
 release = Path(sys.argv[2])
 request_id = sys.argv[3]
-class Repository:
-    def load(self, player_id):
-        state = load_player_game_state('chuck_a_luck', player_id, engine.default_state)
-        ready.write_text('ready', encoding='utf-8')
-        deadline = time.monotonic() + 10
-        while not release.exists() and time.monotonic() < deadline:
-            time.sleep(0.01)
-        if not release.exists():
-            raise RuntimeError('release gate timeout')
-        return state
-    def update(self, player_id, mutator):
-        return update_player_game_state('chuck_a_luck', player_id, mutator, engine.default_state)
-class Ledger:
-    def __init__(self):
-        self.calls = []
-    def apply_once(self, **kwargs):
-        self.calls.append(kwargs['action_key'])
-        return {'ledger_id': 'ledger-' + str(len(self.calls)), 'player_id': kwargs['player_id'], 'amount': kwargs['amount'], 'transaction_type': kwargs['transaction_type'], 'game': 'chuck_a_luck', 'round_id': kwargs['round_id'], 'ts': '2026-08-15T01:00:00Z', 'details': {**kwargs['details'], 'idempotency_key': kwargs['action_key'], 'request_fingerprint': kwargs['request_fingerprint']}}, False
-ledger = Ledger()
-game = ChuckALuckService(ledger_gateway=ledger, repository=Repository(), randbelow=lambda span: 5, clock=lambda: '2026-08-15T01:00:00Z', get_player=lambda player_id: {'player_id': player_id, 'balance': 100})
-try:
-    game.roll('player-a', {'request_id': request_id, 'wagers': {'one': 1}})
-    print('PASS:' + str(len(ledger.calls)))
-except ConflictError:
-    print('CONFLICT:' + str(len(ledger.calls)))
+ready.write_text('ready', encoding='utf-8')
+deadline = time.monotonic() + 10
+while not release.exists() and time.monotonic() < deadline:
+    time.sleep(0.01)
+if not release.exists():
+    raise RuntimeError('release gate timeout')
+draws = []
+def randbelow(span):
+    draws.append(span)
+    return 5
+game = ChuckALuckService(state_loader=lambda player_id: load_player_game_state('chuck_a_luck', player_id, engine.default_state), state_updater=lambda player_id, mutator: update_player_game_state('chuck_a_luck', player_id, mutator, engine.default_state), randbelow=randbelow, clock=lambda: '2026-08-15T01:00:00Z', get_player=lambda player_id: {'player_id': player_id, 'balance': 100})
+wagers = engine.normalize_wagers({'one': 1})
+result = game.prepare(player_id='player-a', request_id=request_id, round_id=engine.round_id_for('player-a', request_id), fingerprint=engine.wager_fingerprint(wagers), wager=wagers)
+print('PASS:' + str(len(draws)) + ':' + ','.join(str(face) for face in result['entropy']) + ':' + str(int(result['replayed'])))
 """
             # Retain both independently loaded process contenders.
             workers = []
-            # Start one provider winner candidate and one stale loser candidate.
+            # Start two contenders for the same provider-owned preparation.
             for index in range(2):
                 # Allocate task-owned readiness and release gates.
                 ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
                 # Launch without a shell so interpreter and arguments remain exact.
-                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), f"atomic-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), "atomic-preparation"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Retain process and gate ownership.
                 workers.append((process, ready_path, release_path))
-            # Bound the stale-load rendezvous.
+            # Bound the pre-preparation rendezvous.
             deadline = time.monotonic() + 10
-            # Wait until both workers have captured the same initial document.
+            # Wait until both workers are ready to contend for provider authority.
             while not all(ready.exists() for _process, ready, _release in workers) and time.monotonic() < deadline:
                 # Stop early if either worker failed before readiness.
                 if any(process.poll() is not None for process, _ready, _release in workers):
@@ -338,32 +342,30 @@ except ConflictError:
                     break
                 # Yield briefly without starting another action.
                 time.sleep(0.01)
-            # Require both stale snapshots before publishing a concurrent sibling.
+            # Require both contenders before publishing a concurrent sibling.
             self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
             # Define one unrelated provider-atomic sibling update.
             sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.chuck_a_luck import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('chuck_a_luck', 'player-a', add, engine.default_state)\n"
-            # Commit the sibling after both workers captured stale baselines.
+            # Commit the sibling before either preparation enters provider state.
             sibling = subprocess.run([sys.executable, "-c", sibling_source], cwd=repository_root, env=environment, capture_output=True, text=True, timeout=15)
             # Require the sibling provider transition to complete cleanly.
             self.assertEqual(sibling.returncode, 0, f"stdout={sibling.stdout!r} stderr={sibling.stderr!r}")
-            # Release the first worker to publish the winning round.
-            workers[0][2].write_text("go", encoding="utf-8")
-            # Collect the exact winner result.
-            winner_output, winner_error = workers[0][0].communicate(timeout=20)
-            # Require one losing-round debit call from the provider winner.
-            self.assertEqual((workers[0][0].returncode, winner_output.strip()), (0, "PASS:1"), winner_error)
-            # Release the stale worker only after the winner is durable.
-            workers[1][2].write_text("go", encoding="utf-8")
-            # Collect the explicit fail-closed stale result.
-            stale_output, stale_error = workers[1][0].communicate(timeout=15)
-            # Require conflict instead of a silent stale overwrite.
-            self.assertEqual((workers[1][0].returncode, stale_output.strip()), (0, "CONFLICT:1"), stale_error)
+            # Release both contenders without choosing a winner in the test process.
+            for _process, _ready, release in workers:
+                # Open each bounded gate before collecting either result.
+                release.write_text("go", encoding="utf-8")
+            # Collect both provider-serialized preparation results.
+            outputs = [process.communicate(timeout=20) for process, _ready, _release in workers]
+            # Require both processes to return the exact same authoritative dice.
+            self.assertTrue(all(process.returncode == 0 and output.strip().startswith("PASS:") for (process, _ready, _release), (output, error) in zip(workers, outputs)), outputs)
+            # Split local draw counts, dice, and replay flags from both workers.
+            evidence = [output.strip().split(":") for output, _error in outputs]
+            # Require exactly one three-die entropy owner and one provider replay.
+            self.assertEqual(([0, 3], ["6,6,6", "6,6,6"], [0, 1]), (sorted(int(row[1]) for row in evidence), sorted(row[2] for row in evidence), sorted(int(row[3]) for row in evidence)))
             # Read final provider-authoritative bytes directly.
             persisted = json.loads(state_path.read_text(encoding="utf-8"))
-            # Require one terminal winner, sibling preservation, and no overwrite.
-            self.assertEqual((len(persisted["recent_rounds"]), persisted["recent_rounds"][-1]["request_id"], persisted["atomic_markers"]), (1, "atomic-process-0", ["seed", "concurrent"]))
-            # Verify private optimistic metadata never enters persistent bytes.
-            self.assertNotIn("_chuck_a_luck_atomic_baseline", persisted)
+            # Require one active winner, sibling preservation, and no terminal fabrication.
+            self.assertEqual((persisted["active_round"]["request_id"], persisted["active_round"]["dice"], persisted["recent_rounds"], persisted["atomic_markers"]), ("atomic-preparation", [6, 6, 6], [], ["seed", "concurrent"]))
 
     # Confirm an identical retry returns one debit and at most one credit.
     def test_identical_retry_reuses_round_and_ledger_actions(self):
@@ -419,6 +421,106 @@ except ConflictError:
         self.assertTrue(result["replayed"])
         # Require the two original action identities to remain the complete ledger set.
         self.assertEqual(2, len(self.ledger.events))
+
+    # Confirm an uncommitted wager failure clears preparation and permits one explicit retry.
+    def test_precommit_wager_failure_clears_preparation(self):
+        # Arm one rejection before the wager action becomes immutable.
+        self.ledger.fail_before.add("wager")
+        # Attempt one valid winning request through the public service boundary.
+        with self.assertRaisesRegex(RuntimeError, "pre-commit"):
+            # Require the original provider error to surface unchanged.
+            self.service.roll("player-a", {"request_id": "precommit", "wagers": {"one": 1}})
+        # Require safe cleanup to leave no invented active or terminal result.
+        self.assertEqual({"game": "chuck_a_luck", "recent_rounds": []}, self.repository.documents["player-a"])
+        # Retry explicitly after the transient provider error.
+        recovered = self.service.roll("player-a", {"request_id": "precommit", "wagers": {"one": 1}})
+        # Require one exact settled result and two aggregate ledger movements.
+        self.assertEqual(([1, 1, 1], 2), (recovered["round"]["dice"], len(self.ledger.events)))
+
+    # Confirm a lost wager response retains committed dice for no-redraw recovery.
+    def test_lost_wager_response_recovers_exact_committed_result(self):
+        # Arm one response loss after the debit event becomes immutable.
+        self.ledger.fail_after.add("wager")
+        # Execute one winning request whose first response is intentionally lost.
+        with self.assertRaisesRegex(RuntimeError, "lost ledger response"):
+            # Preserve the original transport-style error for the caller.
+            self.service.roll("player-a", {"request_id": "lost-wager", "wagers": {"one": 1}})
+        # Require the exact prepared dice to remain durable beside the committed debit.
+        self.assertEqual(([1, 1, 1], "prepared", 1), (self.repository.documents["player-a"]["active_round"]["dice"], self.repository.documents["player-a"]["active_round"]["phase"], len(self.ledger.events)))
+        # Recover with a fresh service whose entropy would otherwise differ.
+        recovering = ChuckALuckService(ledger_gateway=self.ledger, repository=self.repository, randbelow=lambda sides: 5, clock=lambda: "later", get_player=lambda player_id: {"player_id": player_id, "balance": 100})
+        # Retry the exact public action identity once.
+        result = recovering.roll("player-a", {"request_id": "lost-wager", "wagers": {"one": 1}})
+        # Require exact dice recovery, explicit replay evidence, and no duplicate movements.
+        self.assertEqual(([1, 1, 1], True, 2), (result["round"]["dice"], result["replayed"], len(self.ledger.events)))
+
+    # Confirm a lost settlement response recovers one immutable returned-credit action.
+    def test_lost_settlement_response_recovers_without_duplicate_credit(self):
+        # Arm one response loss after the positive settlement credit commits.
+        self.ledger.fail_after.add("settlement")
+        # Execute one triple-winning action through the public service.
+        with self.assertRaisesRegex(RuntimeError, "lost ledger response"):
+            # Preserve the first failed response while keeping both events durable.
+            self.service.roll("player-a", {"request_id": "lost-credit", "wagers": {"one": 1}})
+        # Require the deterministic result intent and both exact ledger movements.
+        self.assertEqual((4.0, "pending", 2), (self.repository.documents["player-a"]["active_round"]["total_return"], self.repository.documents["player-a"]["active_round"]["settlement_status"], len(self.ledger.events)))
+        # Retry the identical action to reconstruct the missing response and state writes.
+        result = self.service.roll("player-a", {"request_id": "lost-credit", "wagers": {"one": 1}})
+        # Require one terminal round, explicit replay, and exactly two events total.
+        self.assertEqual((4.0, True, 2, 1), (result["round"]["total_return"], result["replayed"], len(self.ledger.events), len(result["state"]["recent_rounds"])))
+
+    # Confirm every durable lifecycle write can lose its response and recover exactly once.
+    def test_provider_write_crash_boundaries_converge(self):
+        # Name exact provider states after debit, result, credit, finalization, and archival.
+        boundaries = {
+            "post-debit": lambda state: isinstance(state.get("active_round"), dict) and state["active_round"].get("phase") == "settling" and "total_return" not in state["active_round"],
+            "post-result": lambda state: isinstance(state.get("active_round"), dict) and state["active_round"].get("settlement_status") == "pending" and "settlement_ledger_id" not in state["active_round"],
+            "post-credit": lambda state: isinstance(state.get("active_round"), dict) and bool(state["active_round"].get("settlement_ledger_id")),
+            "post-finalize": lambda state: isinstance(state.get("active_round"), dict) and state["active_round"].get("phase") == "settled",
+            "post-archive": lambda state: state.get("active_round") is None and len(state.get("recent_rounds", [])) == 1,
+        }
+        # Exercise every durable state boundary independently for unambiguous evidence.
+        for boundary, predicate in boundaries.items():
+            # Label failures by the exact crash schedule under test.
+            with self.subTest(boundary=boundary):
+                # Create isolated provider and ledger authority for this schedule.
+                repository, ledger = PersistThenFailRepository(predicate), FakeLedgerGateway()
+                # Draw one triple-one result before losing exactly one provider response.
+                service = ChuckALuckService(ledger_gateway=ledger, repository=repository, randbelow=lambda sides: 0, clock=lambda: "2026-08-15T01:00:00Z", get_player=lambda player_id: {"player_id": player_id, "balance": 100})
+                # Require the selected persisted transition to surface a response failure.
+                with self.assertRaisesRegex(RuntimeError, "lost provider response"):
+                    # Execute one stable action identity per isolated schedule.
+                    service.roll("player-a", {"request_id": boundary, "wagers": {"one": 1}})
+                # Resume with entropy that would visibly redraw if provider proof were ignored.
+                recovering = ChuckALuckService(ledger_gateway=ledger, repository=repository, randbelow=lambda sides: 5, clock=lambda: "later", get_player=lambda player_id: {"player_id": player_id, "balance": 100})
+                # Recover the exact interrupted public action.
+                result = recovering.roll("player-a", {"request_id": boundary, "wagers": {"one": 1}})
+                # Require exact dice, one archived row, no active residue, and no duplicate money.
+                self.assertEqual(([1, 1, 1], 1, False, 2), (result["round"]["dice"], len(repository.documents["player-a"]["recent_rounds"]), "active_round" in repository.documents["player-a"], len(ledger.events)))
+
+    # Confirm terminal history remains direct, oldest-to-newest, and bounded to one hundred.
+    def test_history_retains_newest_one_hundred_direct_rounds(self):
+        # Use deterministic sixes against one-only wagers so every round has one debit event.
+        service = ChuckALuckService(ledger_gateway=self.ledger, repository=self.repository, randbelow=lambda sides: 5, clock=lambda: "2026-08-15T01:00:00Z", get_player=lambda player_id: {"player_id": player_id, "balance": 1000000})
+        # Publish five more rounds than the documented reload-safe history bound.
+        for index in range(engine.RECENT_ROUND_LIMIT + 5):
+            # Use one stable caller identity per completed action.
+            service.roll("player-a", {"request_id": f"history-{index:03d}", "wagers": {"one": 1}})
+        # Read exact direct provider rows after bounded archival.
+        rows = self.repository.documents["player-a"]["recent_rounds"]
+        # Require direct oldest-to-newest rows for indices five through one hundred four.
+        self.assertEqual((100, "history-005", "history-104", False), (len(rows), rows[0]["request_id"], rows[-1]["request_id"], any("public" in row for row in rows)))
+        # Require one debit-only event per losing round without hidden credits.
+        self.assertEqual(105, len(self.ledger.events))
+
+    # Confirm source topology contains only the shared helper orchestration boundary.
+    def test_service_source_uses_one_shared_coordinator(self):
+        # Read the exact module bytes inspected by central governance.
+        source = Path(ChuckALuckService.__module__.replace(".", "/") + ".py")
+        # Resolve the module path from this checkout rather than the process directory.
+        text = (Path(__file__).resolve().parents[3] / source).read_text(encoding="utf-8")
+        # Require one construction and no legacy direct settlement seams.
+        self.assertEqual((1, False, False, False, False), (text.count("SimpleWagerGame("), "GameSettlementGateway" in text, "CoreLedgerGateway" in text, ".apply_once(" in text, "_SETTLEMENT_LOCK" in text))
 
     # Confirm a losing number wager creates no forbidden zero-value payout row.
     def test_losing_roll_creates_only_wager_debit(self):

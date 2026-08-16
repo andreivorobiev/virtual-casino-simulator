@@ -43,8 +43,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-chuck-a-luck",
-      "changed_in": "game-expansion-chuck-a-luck",
-      "notes": "Session context overrides caller player ids and committed dice recover from ledger proof."
+      "changed_in": "issue-863-chuck-a-luck-simple-wager",
+      "notes": "Session context overrides caller player ids, and the SimpleWagerGame lifecycle adapter keeps prepared dice private until immutable wager proof exists."
     },
     {
       "id": "CHUCK-003",
@@ -62,8 +62,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-chuck-a-luck",
-      "changed_in": "game-expansion-chuck-a-luck",
-      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+      "changed_in": "issue-863-chuck-a-luck-simple-wager",
+      "notes": "SimpleWagerGame owns both aggregate movements and deterministic proof recovery; no game code mutates balances directly and conflicting retries fail closed."
     },
     {
       "id": "CHUCK-004",
@@ -130,8 +130,31 @@
         "tests/unit/request_latency_benchmark_tests.py"
       ],
       "introduced_in": "issue-825-chuck-a-luck-atomic-state",
-      "changed_in": "issue-825-chuck-a-luck-atomic-state",
-      "notes": "The frozen v1 contract, dice, paytable, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+      "changed_in": "issue-863-chuck-a-luck-simple-wager",
+      "notes": "The SimpleWagerGame lifecycle adapter now owns each provider-current transition without a detached whole-document saver. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+    },
+    {
+      "id": "CHUCK-007",
+      "module": "Chuck-a-Luck",
+      "description": "Chuck-a-Luck delegates its prepared wager, committed-dice recovery, optional returned-credit movement, replay lookup, lifecycle finalization, and provider-current history publication to one SimpleWagerGame coordinator while preserving the frozen v1 request_id, cal_ round identity, direct oldest-to-newest one-hundred-round history, public round, active-state privacy, and historical ledger evidence semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CHUCK-001",
+        "API-CHUCK-ATOMIC-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [
+        "BR-CHUCK-001"
+      ],
+      "implementation_files": [
+        "casino/games/chuck_a_luck/service.py",
+        "casino/core/simple_game.py",
+        "tests/games/chuck_a_luck/test_engine.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-863-chuck-a-luck-simple-wager",
+      "changed_in": "issue-863-chuck-a-luck-simple-wager",
+      "notes": "The game service contains exactly one SimpleWagerGame construction and no direct GameSettlementGateway, CoreLedgerGateway, apply_once call, or game-local settlement lock. Canonical proof fields remain beside the legacy idempotency_key compatibility field without changing the frozen v1 contract."
     }
   ]
 }

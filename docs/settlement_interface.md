@@ -12,7 +12,9 @@ Issue #430 converges all 46 registered game backends on `casino.core.settlement.
 
 ## Migration cohorts
 
-The shared-simple games delegate through `SimpleWagerGame`. Big Six Wheel uses representation adapters, and Sic Bo additionally uses the helper's prepared-state lifecycle protocol; neither game constructs a settlement gateway or calls `apply_once`. Baccarat, Keno, and Texas Hold'em Practice Table use the gateway directly. Roulette, Bingo, and Blackjack use it for every wager, refund, and settlement path. Chuck-a-Luck, Crown and Anchor, Dragon Tiger, Fan-Tan, Scratch Cards, and Slots no longer call raw ledger mutation functions. The formerly injected and staged-intent game services also delegate to the same gateway.
+The shared-simple games delegate through `SimpleWagerGame`. Big Six Wheel uses representation adapters, while Sic Bo and Chuck-a-Luck additionally use the helper's prepared-state lifecycle protocol; none of these games constructs a settlement gateway or calls `apply_once`. Baccarat, Keno, and Texas Hold'em Practice Table use the gateway directly. Roulette, Bingo, and Blackjack use it for every wager, refund, and settlement path. Crown and Anchor, Dragon Tiger, Fan-Tan, Scratch Cards, and Slots no longer call raw ledger mutation functions. The formerly injected and staged-intent game services also delegate to the same gateway.
+
+Chuck-a-Luck keeps its frozen `request_id`, `cal_` round identity, dice and wager proof details, and direct oldest-to-newest one-hundred-round public history. Its provider-current lifecycle persists private dice before the aggregate debit, recovers exact committed wager and returned-credit evidence after lost responses, and archives only a terminal action through the shared helper.
 
 Texas Hold'em Practice Table's fixed opponent accounts are not player wallets and continue to use the separate core practice-account transaction. Every human action uses the common settlement gateway.
 

@@ -1597,7 +1597,7 @@ def run_api_tests():
     # Execute fresh-process Acey-Deucey ordering plus sibling-state and recovery proof. (issue #823)
     run_case('API-AD-ATOMIC-001',['AD-006','TEST-216'],lambda: run_unit_module('tests.games.acey_deucey.test_api','Acey-Deucey atomic state suite failed'))
     # Execute fresh-process Chuck-a-Luck ordering plus sibling-state and ledger recovery proof. (issue #825)
-    run_case('API-CHUCK-ATOMIC-001',['CHUCK-006','TEST-217'],lambda: run_unit_module('tests.games.chuck_a_luck.test_engine','Chuck-a-Luck atomic state suite failed'))
+    run_case('API-CHUCK-ATOMIC-001',['CHUCK-006','CHUCK-007','GAMECORE-007','TEST-217','TEST-236'],lambda: run_unit_module('tests.games.chuck_a_luck.test_engine','Chuck-a-Luck atomic state and shared-helper suite failed'))
     # Execute fresh-process Deuces Wild terminal ordering plus sibling-state and recovery proof. (issue #827)
     run_case('API-DWVP-ATOMIC-001',['DWVP-006','TEST-218'],lambda: run_unit_module('tests.games.deuces_wild_video_poker.test_atomic_state','Deuces Wild atomic state suite failed'))
     # Execute fresh-process Double Bonus terminal ordering plus sibling-state and recovery proof. (issue #830)
@@ -1982,7 +1982,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
-    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','GAMECORE-007','TEST-127','TEST-235'],run_simple_game_core_tests)
+    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','GAMECORE-007','TEST-127','TEST-235','TEST-236'],run_simple_game_core_tests)
     # Execute the shared helper's real cross-process provider-current publication proof.
     def run_simple_game_atomic_tests():
         # Import the dedicated fresh-process suite only when its named case runs.
@@ -1996,7 +1996,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('simple-game provider-atomic suite failed')
     # Record provider-current merge, fresh-process concurrency, and complete catalog adoption evidence.
-    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','GAMECORE-007','TEST-233','TEST-234','TEST-235'],run_simple_game_atomic_tests)
+    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','GAMECORE-007','TEST-233','TEST-234','TEST-235','TEST-236'],run_simple_game_atomic_tests)
     # Execute the route-free signed-action settlement-adapter proof without opening a listener.
     def run_settlement_adapter_tests():
         # Load only the focused storage-atomic adapter class.
@@ -3286,7 +3286,7 @@ def run_api_tests():
         # Record Sic Bo coverage against its retained per-player round ids. (issue #414)
         run_case('API-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-003','SIC-BO-007'],game_evidence('sic_bo_rounds'))
         # Record Chuck-a-Luck coverage against its retained per-player round ids. (issue #414)
-        run_case('API-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-003'],game_evidence('chuck_a_luck_rounds'))
+        run_case('API-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-003','CHUCK-007'],game_evidence('chuck_a_luck_rounds'))
         # Record Craps coverage against its retained per-player round ids. (issue #414)
         run_case('API-CRAPS-001',['CRAPS-001','CRAPS-002','CRAPS-003'],game_evidence('craps_rounds'))
         # Record Crown and Anchor coverage against its retained per-player round ids. (issue #414)

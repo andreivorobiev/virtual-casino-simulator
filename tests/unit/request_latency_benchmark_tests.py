@@ -1376,7 +1376,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
         # Require the first two settlement-alias retirement slices to total exactly 1081 permanent rows.
-        self.assertEqual(len(requirements), 1081)
+        self.assertEqual(len(requirements), 1083)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1476,6 +1476,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "AD-006": "Acey-Deucey",  # Bind every round-state publication to provider-current callbacks.
             "TEST-216": "Tests",  # Bind real Acey-Deucey ordering, sibling, and recovery evidence.
             "CHUCK-006": "Chuck-a-Luck",  # Bind settled-round publication to provider-current callbacks.
+            "CHUCK-007": "Chuck-a-Luck",  # Bind prepared settlement orchestration to the shared helper.
             "TEST-217": "Tests",  # Bind real Chuck-a-Luck ordering, sibling, and recovery evidence.
             "DWVP-006": "Deuces Wild Video Poker",  # Bind round, hold, replay, and recovery publication to provider-current callbacks.
             "TEST-218": "Tests",  # Bind real Deuces Wild terminal ordering, sibling, and recovery evidence.
@@ -1514,6 +1515,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "GAMECORE-007": "Core",  # Bind prepared-state lifecycle stages to shared settlement ordering.
             "SIC-BO-007": "Sic Bo",  # Bind Sic Bo orchestration to one SimpleWagerGame coordinator.
             "TEST-235": "Tests",  # Bind lifecycle, recovery, history, source, and process evidence.
+            "TEST-236": "Tests",  # Bind Chuck-a-Luck lifecycle, recovery, history, and process evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
