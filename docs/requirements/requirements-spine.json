@@ -12315,6 +12315,29 @@
       "introduced_in": "issue-827-deuces-wild-atomic-state",
       "changed_in": "issue-827-deuces-wild-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Deuces Wild service. Existing session isolation, replay, wager and payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-219",
+      "module": "Tests",
+      "description": "Real stale-load Double Bonus workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001",
+        "API-DBVP-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/double_bonus_video_poker_tests.py",
+        "tests/games/double_bonus_video_poker/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-830-double-bonus-atomic-state",
+      "changed_in": "issue-830-double-bonus-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Double Bonus service. Existing session isolation, replay, wager and settlement recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }
