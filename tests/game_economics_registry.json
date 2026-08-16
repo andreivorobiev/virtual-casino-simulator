@@ -310,7 +310,7 @@
       "requirement_id": "PLINKO-001",
       "engine_path": "casino/games/plinko/engine.py",
       "settlement_path": "casino/games/plinko/service.py",
-      "production_sha256": "278c793bc9130ee528e629621e93b3d3e7b00b1cda5da9ebb4274919490f03a0",
+      "production_sha256": "34d03352fb6c6de1ef9a6e865b3a497c04061c24a43b003a85cb967454ce65e7",
       "proof_tests": ["tests.games.plinko.test_engine:PlinkoEngineTests.test_multiplier_profile_is_symmetric_and_below_full_return", "tests.games.plinko.test_engine:PlinkoEngineTests.test_create_drop_calculates_transparent_payout"],
       "rationale": "The complete path space and production bucket multipliers are symmetric, transparent, and strictly house-side."
     },

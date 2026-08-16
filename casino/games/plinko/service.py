@@ -1,6 +1,9 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Session-bound, ledger-only orchestration for catalog-integrated Plinko."""
+"""Session-bound, ledger-only orchestration for Plinko (#136, #845, PLINKO-006)."""
+
+# Import deep-copy support for detached optimistic state snapshots.
+import copy
 
 # Import canonical JSON encoding for semantic action fingerprints.
 import json
@@ -17,8 +20,8 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Route every player-wallet movement through the shared exactly-once settlement boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistent state without editing shared storage code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict and validation errors for route boundaries.
 from casino.errors import ConflictError, ValidationError
 # Import only this game's deterministic state and rule helpers.
@@ -31,6 +34,10 @@ ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local history to preserve retry recovery for the supported simulator.
 # Serialize action-id lookup and ledger writes inside the one-process server.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_plinko_atomic_baseline"
+# Name every state field owned by Plinko transitions.
+_GAME_STATE_KEYS = tuple(engine.default_state())
 
 
 # Validate one required client action identity without echoing hostile input.
@@ -57,16 +64,27 @@ def CoreLedgerGateway(**kwargs):
     return GameSettlementGateway(GAME_ID, "plinko_action_id", **kwargs)
 
 
+# Persist player-scoped game documents through the selected storage provider.
+class StateRepository:
+    # Load one authenticated player's document.
+    def load(self, player_id: str) -> dict:
+        # Delegate provider selection and legacy defaults to shared state storage.
+        return load_player_game_state(GAME_ID, player_id, engine.default_state)
+
+    # Apply one transition while the provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate current-state loading, rollback, and publication atomically.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
+
+
 # Coordinate player state, deterministic paths, and retry-safe ledger movements.
 class PlinkoService:
     # Capture production dependencies while exposing deterministic focused-test seams.
-    def __init__(self, *, ledger_gateway=None, state_loader=None, state_saver=None, get_player=None, clock=None, seed_factory=None):
+    def __init__(self, *, ledger_gateway=None, repository=None, get_player=None, clock=None, seed_factory=None):
         # Use the game-local shared-ledger adapter unless a test supplies a fake.
         self._ledger = ledger_gateway or CoreLedgerGateway()
-        # Load one authenticated player's isolated state document by default.
-        self._load_state = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Save one authenticated player's isolated state document by default.
-        self._save_state = state_saver or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
+        # Use shared persistent state unless a focused test supplies memory storage.
+        self._repository = repository or StateRepository()
         # Return read-only current-player information without balance mutation.
         self._get_player = get_player or players.get_player
         # Use the shared UTC clock unless a focused test pins timestamps.
@@ -74,10 +92,57 @@ class PlinkoService:
         # Derive deterministic paths only through an injected non-production hook.
         self._seed_factory = seed_factory
 
-    # Save one player document through the injected persistence boundary.
+    # Capture only the fields owned by Plinko transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Detach nested drops and receipts from later engine mutation.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its optimistic game-owned baseline.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before provider mutation.
+        state = self._repository.load(player_id)
+        # Retain the exact game-owned values expected by the next publication.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting operation metadata.
+        return state
+
+    # Publish one provider-current compare-and-replace transition. (PLINKO-006)
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate without mutating shared storage configuration.
-        self._save_state(player_id, state)
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Reject fabricated or stale detached documents before storage access.
+        if not isinstance(expected, dict):
+            # Keep untracked state outside provider bytes.
+            raise ConflictError("Plinko state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Plinko-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach provider-current game fields from unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept an identical publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose game-owned baseline lost a race.
+            if observed != expected:
+                # Require recovery from the authoritative winning action.
+                raise ConflictError("Plinko state changed during this action; reload and retry")
+            # Replace only the fields governed by this game service.
+            for key, value in desired.items():
+                # Publish detached values so caller mutation cannot leak later.
+                current[key] = copy.deepcopy(value)
+            # Return the complete document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process mutation boundary.
+        authoritative = self._repository.update(player_id, publish)
+        # Advance the in-memory baseline to the exact committed result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Build the public state, rules, and current-player payload.
     def _payload(self, player_id: str, state: dict) -> dict:
@@ -153,7 +218,7 @@ class PlinkoService:
         # Serialize recovery against concurrent actions for the same local process.
         with _ACTION_LOCK:
             # Load the newest player-scoped document inside the lock.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
             self._recover(player_id, state)
             # Return sanitized state and current-player information.
@@ -174,7 +239,7 @@ class PlinkoService:
         # Serialize state preparation, debit, settlement, and marker persistence.
         with _ACTION_LOCK:
             # Load the current player's state inside the critical section.
-            state = self._load_state(player_id)
+            state = self._load(player_id)
             # Recover any interrupted prior action before enforcing action rules.
             self._recover(player_id, state)
             # Load durable compact receipts that prevent reuse after history pruning.

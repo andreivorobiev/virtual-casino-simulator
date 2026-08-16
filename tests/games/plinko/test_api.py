@@ -29,10 +29,16 @@ class MemoryRepository:
         # Copy state so every mutation requires an explicit save.
         return copy.deepcopy(self.documents.get(player_id, engine.default_state()))
 
-    # Save one detached player document.
-    def save(self, player_id, state):
+    # Apply one provider-current transition to a detached player document.
+    def update(self, player_id, mutator):
+        # Load the exact current document seen inside the provider boundary.
+        current = self.load(player_id)
+        # Let the production-shaped callback publish or reject the transition.
+        updated = mutator(current)
         # Persist a deep copy to model the JSON/provider boundary.
-        self.documents[player_id] = copy.deepcopy(state)
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Return another detached copy like shared state storage.
+        return copy.deepcopy(updated)
 
 
 # Record signed ledger events and enforce action-id replay behavior in memory.
@@ -86,7 +92,7 @@ class PlinkoApiTests(unittest.TestCase):
         # Create fresh fake balances and append-only ledger events.
         self.ledger = RecordingLedger()
         # Build a deterministic service without filesystem or ambient randomness.
-        self.service = PlinkoService(ledger_gateway=self.ledger, state_loader=self.repository.load, state_saver=self.repository.save, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", seed_factory=lambda action_id: f"api:{action_id}")
+        self.service = PlinkoService(ledger_gateway=self.ledger, repository=self.repository, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", seed_factory=lambda action_id: f"api:{action_id}")
         # Register only the game-owned routes on the real shared router.
         self.router = Router()
         # Inject the focused service without changing global registration.
@@ -141,7 +147,7 @@ class PlinkoApiTests(unittest.TestCase):
         # Build fresh storage for the rejected action.
         empty_repository = MemoryRepository()
         # Create the isolated empty-balance service.
-        empty_service = PlinkoService(ledger_gateway=empty_ledger, state_loader=empty_repository.load, state_saver=empty_repository.save, get_player=lambda player_id: {"player_id": player_id, "balance": empty_ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", seed_factory=lambda action_id: action_id)
+        empty_service = PlinkoService(ledger_gateway=empty_ledger, repository=empty_repository, get_player=lambda player_id: {"player_id": player_id, "balance": empty_ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:00Z", seed_factory=lambda action_id: action_id)
         # Reject the debit without committing a ledger row.
         with self.assertRaises(ValidationError):
             # Attempt one unaffordable drop.
