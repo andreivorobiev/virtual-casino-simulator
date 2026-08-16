@@ -43,7 +43,7 @@ Historical source baseline: 9.1.0
 - andar_bahar: 1.1.5
 - acey_deucey: 1.1.4
 - caribbean_stud: 1.1.3
-- let_it_ride: 1.1.2
+- let_it_ride: 1.1.3
 - casino_holdem: 1.1.3
 - double_bonus_video_poker: 1.1.4
 - mississippi_stud: 1.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.41
-- docs: 1.96.41
+- tests: 1.100.42
+- docs: 1.96.42
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -715,6 +715,7 @@ Historical source baseline: 9.1.0
 - **TEST-222** (Tests) - PASS: Real stale-load Joker Poker workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-223** (Tests) - PASS: Real stale-load Hi-Lo workers race different terminal guesses around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-224** (Tests) - PASS: Real stale-load Jacks-or-Better workers race different terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-hand resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
+- **TEST-225** (Tests) - PASS: Real stale-load Let It Ride workers race different terminal second decisions around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no actionable-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-opening rollback cannot erase a concurrent winner while existing debit, refund, and payout recovery retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1076,6 +1077,7 @@ Historical source baseline: 9.1.0
 - **LIR-003** (Let It Ride) - PASS: Opening wager debits, pull refunds, and returned-token payout credits use the shared ledger exactly once under durable action identities.
 - **LIR-004** (Application) - PASS: Let It Ride supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **LIR-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Let It Ride with requirement, module, version, and visual traceability.
+- **LIR-006** (Let It Ride) - PASS: Let It Ride publishes prepared rounds, staged ride-or-pull decisions, request ownership, ledger recovery markers, terminal results, and uncommitted-action rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale second decision or rejected-movement cleanup can overwrite or resurrect the winning round, while staged rules, paytable returns, and exactly-once ledger movements retain frozen v1 behavior.
 - **CH-001** (Casino Hold'em) - PASS: An ante reveals two player cards and a three-card flop before a fold or call of twice the ante, followed by turn, river, dealer qualification at a pair of fours, and transparent best-five-card settlement.
 - **CH-002** (Casino Hold'em) - PASS: Authenticated sessions own private reload-safe decision rounds, hidden dealer cards and unrevealed community cards, durable receipts, settled history, and canonical route restoration.
 - **CH-003** (Casino Hold'em) - PASS: Ante and call debits plus returned-token settlement credits use the shared ledger exactly once under durable action identities, while folds add no token movement.

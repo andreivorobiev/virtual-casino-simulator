@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Replay, ledger, reload, and session-bound controller tests for issue #134."""
+"""Replay, ledger, reload, session, and atomic-state tests for issues #134 and #841."""
 
 # Import detached-copy support to model persistence boundaries accurately.
 import copy
@@ -35,6 +35,19 @@ class MemoryRepository:
         self.documents[player_id] = copy.deepcopy(state)
         # Record the persistence boundary for focused diagnostics.
         self.save_count += 1
+
+    # Apply one callback against the latest provider-owned document.
+    def update(self, player_id: str, mutator) -> dict:
+        # Load a detached current document before entering the callback.
+        current = self.load(player_id)
+        # Let the game replace only fields it owns.
+        updated = mutator(current)
+        # Persist a detached complete provider result.
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Record the provider-owned publication boundary.
+        self.save_count += 1
+        # Return another detached copy like the shared provider helper.
+        return copy.deepcopy(updated)
 
 
 # Record append-only ledger events and support verified action recovery.
@@ -128,6 +141,107 @@ class LetItRideApiTests(unittest.TestCase):
             clock=lambda: "2026-07-14T00:00:00.000Z",  # Freeze lifecycle timestamps for exact state comparisons.
             id_factory=id_factory,  # Allocate predictable route-safe server ids.
         )
+
+    # Refuse untracked publication before provider storage can observe a callback.
+    def test_atomic_publication_requires_a_loaded_baseline(self):
+        # Build isolated repository and ledger ports.
+        repository = MemoryRepository()
+        # Construct the controller through the normal focused seam.
+        controller = self.controller(repository, RecordingLedger())
+        # Reject a detached default that never passed through the controller loader.
+        with self.assertRaisesRegex(ConflictError, "missing its atomic baseline"):
+            # Attempt direct publication without a provider read.
+            controller._save("bound-player", engine.default_state())
+        # Prove the refusal occurred before creating provider state.
+        self.assertNotIn("bound-player", repository.documents)
+
+    # Accept one exact duplicate result while preserving provider-owned siblings.
+    def test_atomic_publication_is_idempotent_and_preserves_siblings(self):
+        # Build isolated repository and ledger ports.
+        repository = MemoryRepository()
+        # Construct the controller through the normal focused seam.
+        controller = self.controller(repository, RecordingLedger())
+        # Load one tracked empty state through the controller boundary.
+        state = controller._load("bound-player")
+        # Publish the canonical empty result once to establish durable bytes.
+        controller._save("bound-player", state)
+        # Add unrelated metadata after the caller's baseline advances.
+        repository.documents["bound-player"]["atomic_markers"] = ["sibling"]
+        # Publish the exact same game-owned result through idempotent comparison.
+        controller._save("bound-player", state)
+        # Read the complete provider-authoritative document after both updates.
+        persisted = repository.load("bound-player")
+        # Preserve the unrelated sibling while keeping operation metadata private.
+        self.assertEqual(["sibling"], persisted["atomic_markers"])
+        # Reject internal optimistic metadata from durable state bytes.
+        self.assertNotIn("_let_it_ride_atomic_baseline", persisted)
+
+    # Reject one stale writer after a competing game-owned publication wins.
+    def test_atomic_publication_rejects_stale_game_state(self):
+        # Build isolated repository and ledger ports.
+        repository = MemoryRepository()
+        # Construct the controller through the normal focused seam.
+        controller = self.controller(repository, RecordingLedger())
+        # Load two independent snapshots before either writer publishes.
+        first = controller._load("bound-player")
+        # Retain one competing snapshot over the same baseline.
+        stale = controller._load("bound-player")
+        # Give the first writer one unique terminal record.
+        first["round_order"] = ["winner"]
+        # Publish the first writer against the shared baseline.
+        controller._save("bound-player", first)
+        # Add one unrelated sibling beside the provider winner.
+        repository.documents["bound-player"]["atomic_markers"] = ["sibling"]
+        # Give the stale writer a distinct result over the old baseline.
+        stale["round_order"] = ["loser"]
+        # Reject the stale replacement rather than merging incompatible game state.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt to publish the stale owned snapshot.
+            controller._save("bound-player", stale)
+        # Read the authoritative provider result after the conflict.
+        persisted = repository.load("bound-player")
+        # Retain only the winner and the unrelated sibling.
+        self.assertEqual((["winner"], ["sibling"]), (persisted["round_order"], persisted["atomic_markers"]))
+
+    # Prevent rejected opening cleanup from erasing a concurrent game-state winner.
+    def test_rejected_wager_rollback_cannot_erase_concurrent_winner(self):
+        # Seed a deterministic source document for the opening action.
+        repository = MemoryRepository({"bound-player": self.pair_tens_state()})
+        # Build a ledger adapter whose first movement publishes a competing winner.
+        recording_ledger = RecordingLedger()
+        # Construct the controller before installing the bounded failing seam.
+        controller = self.controller(repository, recording_ledger)
+
+        # Publish one provider winner before rejecting the fake ledger movement.
+        def fail_after_concurrent_update(_intent):
+            # Define the provider-current competing mutation.
+            def publish_winner(current):
+                # Mark the prepared round with one concurrent diagnostic field.
+                current["rounds"][current["round_order"][-1]]["atomic_winner"] = True
+                # Publish one unrelated sibling beside the winning game state.
+                current["atomic_markers"] = ["provider-winner"]
+                # Return the complete current document.
+                return current
+
+            # Commit the concurrent winner before the attempted rollback.
+            repository.update("bound-player", publish_winner)
+            # Fail before any append-only fake ledger movement can commit.
+            raise RuntimeError("injected pre-ledger wager failure")
+
+        # Install only the bounded failing transaction seam.
+        recording_ledger.transact = fail_after_concurrent_update
+        # Surface the cleanup conflict because another writer owns prepared state.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt one money-bearing deal whose rollback is now stale.
+            controller.start_round("bound-player", 5, "atomic-rollback-0001")
+        # Read the exact provider-authoritative state after rejected cleanup.
+        persisted = repository.load("bound-player")
+        # Resolve the concurrently preserved prepared round.
+        winning_round = persisted["rounds"][persisted["round_order"][-1]]
+        # Preserve the concurrent marker and unrelated sibling.
+        self.assertEqual((True, ["provider-winner"]), (winning_round["atomic_winner"], persisted["atomic_markers"]))
+        # Prove the failure occurred before any wallet movement.
+        self.assertEqual([], recording_ledger.events)
 
     # Confirm an exact opening retry reuses cards and one three-unit debit.
     def test_start_retry_is_exactly_once_and_conflicting_wager_fails(self):

@@ -12453,6 +12453,29 @@
       "notes": "Fresh workers use the real JSON provider and exact Jacks-or-Better service. Existing session isolation, deal/draw replay, wager and payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-225",
+      "module": "Tests",
+      "description": "Real stale-load Let It Ride workers race different terminal second decisions around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no actionable-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-opening rollback cannot erase a concurrent winner while existing debit, refund, and payout recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-LIR-001",
+        "API-LIR-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/let_it_ride/test_api.py",
+        "tests/games/let_it_ride/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-841-let-it-ride-atomic-state",
+      "changed_in": "issue-841-let-it-ride-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Let It Ride controller. Existing session isolation, staged-decision replay, wager/refund/payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -19128,6 +19151,30 @@
       "introduced_in": "game-expansion-let-it-ride",
       "changed_in": "game-expansion-let-it-ride",
       "notes": "Descriptor sort order 280 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "LIR-006",
+      "module": "Let It Ride",
+      "description": "Let It Ride publishes prepared rounds, staged ride-or-pull decisions, request ownership, ledger recovery markers, terminal results, and uncommitted-action rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale second decision or rejected-movement cleanup can overwrite or resurrect the winning round, while staged rules, paytable returns, and exactly-once ledger movements retain frozen v1 behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-LIR-001",
+        "API-LIR-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/let_it_ride/api.py",
+        "tests/games/let_it_ride/test_api.py",
+        "tests/games/let_it_ride/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-841-let-it-ride-atomic-state",
+      "changed_in": "issue-841-let-it-ride-atomic-state",
+      "notes": "The frozen v1 contract, three-unit opening wager, staged decision rules, paytable, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "CH-001",

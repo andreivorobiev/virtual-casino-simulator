@@ -12451,6 +12451,29 @@
       "introduced_in": "issue-839-jobvp-atomic-state",
       "changed_in": "issue-839-jobvp-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Jacks-or-Better service. Existing session isolation, deal/draw replay, wager and payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-225",
+      "module": "Tests",
+      "description": "Real stale-load Let It Ride workers race different terminal second decisions around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no actionable-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-opening rollback cannot erase a concurrent winner while existing debit, refund, and payout recovery retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-LIR-001",
+        "API-LIR-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/let_it_ride/test_api.py",
+        "tests/games/let_it_ride/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-841-let-it-ride-atomic-state",
+      "changed_in": "issue-841-let-it-ride-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Let It Ride controller. Existing session isolation, staged-decision replay, wager/refund/payout recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }
