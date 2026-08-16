@@ -37,13 +37,13 @@ def rigged_shoe(dragon_card="KS", tiger_card="QH"):
     return cards
 
 
-# Provide deep-copy player state with injectable save failures.
+# Provide deep-copy player state with injectable provider-update failures.
 class MemoryRepository:
     # Initialize empty player documents and failure controls.
     def __init__(self):
         # Store committed state by authenticated player.
         self.states = {}
-        # Count attempted saves for crash seam selection.
+        # Count attempted publications for crash seam selection.
         self.save_count = 0
         # Fail selected save numbers once.
         self.fail_on = set()
@@ -53,9 +53,13 @@ class MemoryRepository:
         # Return committed state or a new default.
         return copy.deepcopy(self.states.get(player_id, engine.default_state()))
 
-    # Save a detached player document or simulate interruption.
-    def save(self, player_id, state):
-        # Advance the deterministic save counter.
+    # Update the provider-current document or simulate interruption.
+    def update(self, player_id, mutator):
+        # Load the authoritative document inside the fake provider boundary.
+        current = copy.deepcopy(self.states.get(player_id, engine.default_state()))
+        # Apply the production callback before publication.
+        desired = mutator(current)
+        # Advance the deterministic publication counter.
         self.save_count += 1
         # Simulate one configured provider interruption.
         if self.save_count in self.fail_on:
@@ -64,7 +68,9 @@ class MemoryRepository:
             # Raise after prior ledger work can already be durable.
             raise RuntimeError("simulated state save failure")
         # Persist a detached copy like JSON storage.
-        self.states[player_id] = copy.deepcopy(state)
+        self.states[player_id] = copy.deepcopy(desired)
+        # Return provider-authoritative state like the shared updater.
+        return copy.deepcopy(self.states[player_id])
 
 
 # Provide append-only apply-once ledger behavior without real balances/files.
@@ -132,6 +138,116 @@ class DragonTigerServiceTests(unittest.TestCase):
         self.ledger = MemoryLedger()
         # Construct the service with fixed cards and time.
         self.service = DragonTigerService(repository=self.repository, ledger_gateway=self.ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, shoe_factory=lambda: rigged_shoe(), clock=lambda: "2026-07-14T00:00:00Z")
+
+    # Preserve unrelated provider state across an idempotent publication.
+    def test_atomic_publication_is_idempotent_and_preserves_sibling(self):
+        # Load one tracked provider document.
+        state = self.service._load("session-player")
+        # Add one durable game-owned marker to the desired state.
+        state["prepared_order"] = ["atomic-same"]
+        # Publish the tracked transition through provider-current comparison.
+        self.service._save("session-player", state)
+        # Add unrelated metadata after the game publication.
+        self.repository.states["session-player"]["atomic_markers"] = ["sibling"]
+        # Repeat the identical desired state from the advanced baseline.
+        self.service._save("session-player", state)
+        # Read the final provider-authoritative document.
+        persisted = self.repository.load("session-player")
+        # Verify the sibling survives and operation metadata never persists.
+        self.assertEqual(["sibling"], persisted["atomic_markers"])
+        # Keep the optimistic snapshot outside durable player state.
+        self.assertNotIn("_dragon_tiger_atomic_baseline", persisted)
+
+    # Reject fabricated detached state before entering the provider updater.
+    def test_missing_atomic_baseline_fails_before_update(self):
+        # Retain a call list that must stay empty on fail-closed input.
+        updates = []
+
+        # Expose a repository seam whose update would reveal accidental entry.
+        class RejectingRepository:
+            # Record forbidden writes without mutating any storage.
+            def update(self, player_id, mutator):
+                # Retain exact attempted arguments for the final assertion.
+                updates.append((player_id, mutator))
+
+        # Build a service whose write seam must remain untouched.
+        dragon_tiger = DragonTigerService(repository=RejectingRepository())
+        # Reject an untracked default document as a stale publication.
+        with self.assertRaisesRegex(ConflictError, "missing its atomic baseline"):
+            # Attempt publication without the required provider-read baseline.
+            dragon_tiger._save("session-player", engine.default_state())
+        # Prove storage was never reached.
+        self.assertEqual([], updates)
+
+    # Reject one stale game-owned publication without losing a newer sibling.
+    def test_atomic_publication_rejects_stale_game_state(self):
+        # Load two independent copies of the same provider baseline.
+        winner = self.service._load("session-player")
+        # Capture the stale contender before the winner commits.
+        stale = self.service._load("session-player")
+        # Give the winning transition one durable prepared identity.
+        winner["prepared_order"] = ["atomic-winner"]
+        # Publish the winner against the common baseline.
+        self.service._save("session-player", winner)
+        # Add unrelated provider metadata after the winner.
+        self.repository.states["session-player"]["atomic_markers"] = ["sibling"]
+        # Give the stale transition a different owned result.
+        stale["prepared_order"] = ["atomic-loser"]
+        # Reject the stale result before replacement.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt the stale provider-current publication.
+            self.service._save("session-player", stale)
+        # Require only the winning game state and sibling to remain.
+        self.assertEqual((["atomic-winner"], ["sibling"]), (self.repository.states["session-player"]["prepared_order"], self.repository.states["session-player"]["atomic_markers"]))
+
+    # Prove rejected-debit rollback cannot erase a provider-winning round.
+    def test_rejected_debit_rollback_preserves_concurrent_winner(self):
+        # Extend memory storage with one deterministic winner scheduled during cleanup.
+        class RacingRepository(MemoryRepository):
+            # Initialize ordinary storage and a publication counter.
+            def __init__(self):
+                # Initialize base in-memory state.
+                super().__init__()
+                # Count provider updates so rollback alone loses the race.
+                self.update_calls = 0
+
+            # Publish preparation normally, then expose a concurrent winner.
+            def update(self, player_id, mutator):
+                # Count this provider-current publication attempt.
+                self.update_calls += 1
+                # Delegate all preparation and intent markers normally.
+                if self.update_calls < 3:
+                    # Preserve exact fake-provider behavior before rollback.
+                    return super().update(player_id, mutator)
+                # Build the provider winner from current game state.
+                winner = copy.deepcopy(self.states[player_id])
+                # Retire the stale prepared action as a concurrent terminal result.
+                winner["prepared_actions"] = {}
+                # Clear recovery order so stale rollback would resurrect it.
+                winner["prepared_order"] = []
+                # Publish an unrelated provider sibling beside the winning result.
+                winner["atomic_markers"] = ["provider-winner"]
+                # Replace authoritative state before stale cleanup enters.
+                self.states[player_id] = winner
+                # Present that provider-current winner to the stale callback.
+                return mutator(copy.deepcopy(winner))
+
+        # Create one race-aware provider and an underfunded wallet.
+        repository, ledger = RacingRepository(), MemoryLedger()
+        # Keep the attempted wager above the available balance.
+        ledger.balances["session-player"] = 1.0
+        # Build the real service around deterministic fakes.
+        dragon_tiger = DragonTigerService(repository=repository, ledger_gateway=ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]}, shoe_factory=lambda: rigged_shoe(), clock=lambda: "2026-07-14T00:00:00Z")
+        # Require stale rollback to surface a provider conflict.
+        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
+            # Attempt an unaffordable round whose cleanup loses the state race.
+            dragon_tiger.play("session-player", {"action_id": "atomic-rollback-race", "bet": "dragon", "wager": 2})
+        # Read the authoritative concurrent winner after failed cleanup.
+        persisted = repository.load("session-player")
+        # Verify the winner and unrelated sibling remain intact.
+        self.assertEqual(([], ["provider-winner"]), (persisted["prepared_order"], persisted["atomic_markers"]))
+        # Verify rejected debit created no wallet movement.
+        self.assertEqual((1.0, []), (ledger.balances["session-player"], ledger.events))
 
     # Confirm exact retries do not deal or move balances twice.
     def test_exact_retry_replays_one_debit_and_credit(self):

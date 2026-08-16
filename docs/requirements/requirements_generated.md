@@ -27,7 +27,7 @@ Historical source baseline: 9.1.0
 - casino_war: 1.2.1
 - big_six_wheel: 1.1.5
 - red_dog: 1.1.2
-- dragon_tiger: 1.1.2
+- dragon_tiger: 1.1.3
 - hi_lo: 1.1.3
 - three_card_poker: 1.1.4
 - jacks_or_better_video_poker: 1.1.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.37
-- docs: 1.96.37
+- tests: 1.100.38
+- docs: 1.96.38
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -711,6 +711,7 @@ Historical source baseline: 9.1.0
 - **TEST-218** (Tests) - PASS: Real stale-load Deuces Wild workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-219** (Tests) - PASS: Real stale-load Double Bonus workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-220** (Tests) - PASS: Capacity-two MySQL pool evidence repeats three cohorts of twenty unique atomic debits with worker concurrency aligned to the two physical leases, proving the exact wallet delta, sixty unique ledger events, every lease returned, both sessions idle, zero waiter residue, and zero unexpected checkout timeouts or discards. Focused pool evidence also runs successful and failed serialized workers through the same cleanup boundary while retaining the separate bounded exhaustion proof.
+- **TEST-221** (Tests) - PASS: Real stale-load Dragon Tiger workers race terminal round publication around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no prepared-action resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -965,6 +966,7 @@ Historical source baseline: 9.1.0
 - **DT-003** (Dragon Tiger) - PASS: Dragon Tiger wager debits and settlement credits use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
 - **DT-004** (Application) - PASS: The Dragon Tiger surface and persistent shared shell provide complete English and Russian copy and remain responsive, accessible, and reduced-motion safe across required viewports.
 - **DT-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Dragon Tiger with requirement, module, version, and visual evidence traceability.
+- **DT-006** (Dragon Tiger) - PASS: Dragon Tiger publishes shoe progress, prepared actions, recovery markers, bounded terminal history, and durable replay evidence through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action can overwrite or resurrect the winning result, while debit and settlement recovery retain the frozen v1 behavior and exactly-once ledger movements.
 - **RD-001** (Red Dog) - PASS: Six-deck Red Dog supports consecutive-card pushes, opening-pair handling, spread decisions, and the approved spread and pair payout schedule.
 - **RD-002** (Red Dog) - PASS: Authenticated sessions own isolated reload-safe Red Dog state, active decisions, recent rounds, and canonical route restoration.
 - **RD-003** (Red Dog) - PASS: Red Dog ante, optional matching raise, push return, and payout movements use the shared ledger exactly once under stable action identifiers.

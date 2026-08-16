@@ -156,7 +156,7 @@
       "requirement_id": "DT-001",
       "engine_path": "casino/games/dragon_tiger/engine.py",
       "settlement_path": "casino/games/dragon_tiger/service.py",
-      "production_sha256": "b63b3e73826c5695122a8cf097e73d51144c58cd16f91841ef03f308f28a01ec",
+      "production_sha256": "db64c583e72a2d2bca3f24dcec224901cb9c0c9af88d053996a3db5cf1469f53",
       "proof_tests": ["tests.games.dragon_tiger.test_engine:DragonTigerEngineTests.test_standard_payouts_and_half_loss"],
       "rationale": "Dragon and Tiger wagers lose half on ties, while the separately priced tie wager also remains below fair return."
     },
