@@ -719,17 +719,17 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009','LEDGER-033','TEST-164'],storage_tests.run_mysql_schema_provider_path)
     # Execute bounded capacity, cleanup, fork, observability, and 1/2/4/8 pool evidence without a service.
-    run_case('MYSQL-POOL-001',['STORAGE-010','TEST-141'],run_mysql_pool_tests)
+    run_case('MYSQL-POOL-001',['STORAGE-010','TEST-141','TEST-220'],run_mysql_pool_tests)
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','STORAGE-010','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091','TEST-141','TEST-171'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','STORAGE-010','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091','TEST-141','TEST-171','TEST-220'],storage_tests.run_mysql_live_provider_path)
     # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
     if include_migration_live:
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','MYSQL-007','MYSQL-008','MYSQL-009','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141','TEST-174'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','MYSQL-007','MYSQL-008','MYSQL-009','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141','TEST-174','TEST-220'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
