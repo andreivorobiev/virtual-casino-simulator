@@ -33,7 +33,7 @@ Historical source baseline: 9.1.0
 - jacks_or_better_video_poker: 1.1.4
 - deuces_wild_video_poker: 1.1.5
 - scratch_cards: 1.1.3
-- sic_bo: 1.1.4
+- sic_bo: 1.1.5
 - chuck_a_luck: 1.1.4
 - craps: 1.1.3
 - crown_and_anchor: 1.1.5
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.46
-- docs: 1.96.46
+- tests: 1.100.47
+- docs: 1.96.47
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -720,6 +720,7 @@ Historical source baseline: 9.1.0
 - **TEST-227** (Tests) - PASS: Real stale-load Plinko workers race different terminal drop publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit cleanup cannot erase a concurrent winner while existing debit, settlement, replay, and recovery paths retain exactly-once wallet behavior.
 - **TEST-228** (Tests) - PASS: Real stale-load Red Dog workers race different terminal call publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, one terminal round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-action cleanup cannot erase a concurrent winner while existing wager, raise, refund, payout, replay, and recovery paths retain exactly-once wallet behavior.
 - **TEST-229** (Tests) - PASS: Real stale-load Scratch Cards workers race different partial reveal publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one reveal record, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing purchase, debit, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.
+- **TEST-230** (Tests) - PASS: Real stale-load Sic Bo workers race different private round preparations around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one active round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and action-owned cleanup cannot erase a concurrent winner while existing wager, payout, replay, privacy, and recovery paths retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -998,6 +999,7 @@ Historical source baseline: 9.1.0
 - **SIC-BO-003** (Sic Bo) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable action identities.
 - **SIC-BO-004** (Application) - PASS: Sic Bo supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **SIC-BO-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Sic Bo with requirement, module, version, and visual traceability.
+- **SIC-BO-006** (Sic Bo) - PASS: Sic Bo publishes private dice preparation, wager and payout recovery markers, settlement state, bounded history, and action-owned cleanup through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action or cleanup can overwrite the winning round, while the frozen v1 envelope, fifty-position rules, server entropy, and exactly-once ledger movements remain unchanged.
 - **CHUCK-001** (Chuck-a-Luck) - PASS: Three server-authoritative dice implement one-through-six face wagers and the documented one-, two-, and three-match payout profile.
 - **CHUCK-002** (Chuck-a-Luck) - PASS: Authenticated sessions own private reload-safe rolls, recovery state, history, and canonical route restoration.
 - **CHUCK-003** (Chuck-a-Luck) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable request identities.

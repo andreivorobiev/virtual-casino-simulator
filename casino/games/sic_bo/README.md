@@ -18,7 +18,8 @@ Each round accepts a required bounded `action_id` plus a canonical map of positi
 - Wager and payout events use deterministic `sic_bo_action_id` values derived from a server-bounded round ID.
 - Reusing `action_id` with the same normalized wagers returns the same dice and settlement. Reusing it with different wagers fails closed.
 - Private dice and prepared state persist before debit. Dice remain hidden from the public state shape until ledger proof of the wager exists.
-- A retry recovers committed dice from ledger details, recovers any committed payout, archives the settled round, and cannot duplicate either movement in the supported single-process local server.
+- A retry recovers committed dice from ledger details, recovers any committed payout, archives the settled round, and cannot duplicate either movement in the supported local server.
+- Private preparation, recovery markers, settlement state, bounded history, and action-owned cleanup publish through provider-current callbacks that preserve unrelated player-document fields and reject stale writers. Ledger movement remains a separate durable boundary, so production multiworker activation stays blocked until state and money share one cross-process transaction.
 - The browser keeps the same action ID and wager snapshot across an ambiguous response, restores active recovery state after reload, and uses only public API actions.
 
 ## Deterministic and motion seams
@@ -36,4 +37,4 @@ These links document three dice, the eight wager families used by the 50 positio
 
 Existing impacted IDs: `CORE-008` through `CORE-012`, `CORE-022`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `SESSION-005`, `I18N-001`, `I18N-002`, `DICE-001`, `MOTION-001` through `MOTION-003`, `UX-001`, `UX-002`, `UX-003`, `UX-004`, `UX-006`, and `UX-009`.
 
-Permanent Sic Bo requirements `SIC-BO-001` through `SIC-BO-005` are registered in `docs/requirements/requirements.json` and cover rules, session/reload safety, ledger retry safety, EN/RU responsive UI, and discovered acceptance evidence.
+Permanent Sic Bo requirements `SIC-BO-001` through `SIC-BO-006` are registered in `docs/requirements/requirements.json` and cover rules, session/reload safety, ledger retry safety, EN/RU responsive UI, discovered acceptance evidence, and provider-atomic state publication.

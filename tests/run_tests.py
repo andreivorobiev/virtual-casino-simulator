@@ -1620,6 +1620,8 @@ def run_api_tests():
     run_case('API-RD-ATOMIC-001',['RD-006','TEST-228'],lambda: run_unit_module('tests.games.red_dog.test_atomic_state','Red Dog atomic state suite failed'))
     # Prove Scratch Cards rejects stale reveal publications through the real JSON provider.
     run_case('API-SCRATCH-ATOMIC-001',['SCRATCH-006','TEST-229'],lambda: run_unit_module('tests.games.scratch_cards.test_atomic_state','Scratch Cards atomic state suite failed'))
+    # Prove Sic Bo rejects stale round publications through the real JSON provider.
+    run_case('API-SIC-BO-ATOMIC-001',['SIC-BO-006','TEST-230'],lambda: run_unit_module('tests.games.sic_bo.test_atomic_state','Sic Bo atomic state suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.

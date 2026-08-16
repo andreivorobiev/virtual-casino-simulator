@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Ledger-only, reload-safe, exactly-once Sic Bo orchestration for issue #88."""
 
+# Import deep-copy support for private provider comparison snapshots.
+import copy
 # Import conservative action-id validation for persisted retry identities.
 import re
 # Import cryptographic bounded integers for production dice entropy.
@@ -15,8 +17,8 @@ from casino.core import players
 from casino.core.clock import utc_now
 # Import the one approved play-token settlement compatibility boundary.
 from casino.core.settlement import GameSettlementGateway
-# Import player-scoped persistence without changing shared storage code.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import public conflict and validation errors for route envelopes.
 from casino.errors import ConflictError, ValidationError
 # Import pure validation, settlement, and state helpers from this game only.
@@ -28,6 +30,10 @@ from casino.games.sic_bo.rules import GAME_ID
 _SETTLEMENT_LOCK = threading.RLock()
 # Restrict client action identities to bounded log-safe characters.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_sic_bo_atomic_baseline"
+# Name every state field owned by Sic Bo transitions.
+_GAME_STATE_KEYS = tuple(engine.default_state())
 
 
 # Construct the shared settlement gateway while retaining the historical test seam name.
@@ -39,13 +45,13 @@ def CoreLedgerGateway(**kwargs):
 # Coordinate player state, dice entropy, and exactly-once settlement.
 class SicBoService:
     # Capture injectable dependencies so focused tests avoid filesystem and ambient entropy.
-    def __init__(self, *, ledger_gateway=None, load_state=None, save_state=None, get_player=None, randbelow=None, clock=None):
+    def __init__(self, *, ledger_gateway=None, state_loader=None, state_updater=None, get_player=None, randbelow=None, clock=None):
         # Use the game-local shared-ledger adapter unless a test supplies a fake.
         self._ledger_gateway = ledger_gateway or CoreLedgerGateway()
         # Use player-scoped storage compatible with the shared authenticated resolver.
-        self._load_state = load_state or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Use player-scoped persistence without changing shared state code.
-        self._save_state = save_state or (lambda player_id, state: save_player_game_state(GAME_ID, player_id, state))
+        self._state_loader = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
+        # Publish state through the selected provider's atomic callback boundary.
+        self._state_updater = state_updater or (lambda player_id, mutator: update_player_game_state(GAME_ID, player_id, mutator, engine.default_state))
         # Use the read-only player facade for current wallet snapshots.
         self._get_player = get_player or players.get_player
         # Use cryptographic bounded integers unless a test injects deterministic dice.
@@ -62,15 +68,59 @@ class SicBoService:
         # Return the original case-sensitive action identity.
         return value
 
-    # Load one authenticated player's isolated state document.
-    def _load(self, player_id: str) -> dict:
-        # Delegate through the injected or production player-scoped loader.
-        return self._load_state(player_id)
+    # Capture only the fields owned by Sic Bo transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Detach private active dice and bounded history from later mutation.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
 
-    # Persist one authenticated player's recovery or settled state.
+    # Load one authenticated player's isolated state document and comparison baseline.
+    def _load(self, player_id: str) -> dict:
+        # Read one detached document through the injected or production loader.
+        state = copy.deepcopy(self._state_loader(player_id))
+        # Replace malformed stored payloads with a safe game-owned default.
+        state = state if isinstance(state, dict) else engine.default_state()
+        # Retain the exact game-owned values expected by the next publication.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting operation metadata.
+        return state
+
+    # Publish one authenticated player's provider-current transition. (SIC-BO-006)
     def _save(self, player_id: str, state: dict) -> None:
-        # Delegate through the injected or production player-scoped writer.
-        self._save_state(player_id, state)
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Reject fabricated or stale detached documents before storage access.
+        if not isinstance(expected, dict):
+            # Keep untracked private dice and recovery state outside provider bytes.
+            raise ConflictError("Sic Bo state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Sic Bo-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach provider-current private game fields from unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept an identical publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose game-owned baseline lost a race.
+            if observed != expected:
+                # Require recovery from the authoritative winning action.
+                raise ConflictError("Sic Bo state changed during this action; reload and retry")
+            # Replace only the fields governed by this game service.
+            for key, value in desired.items():
+                # Publish detached values so caller mutation cannot leak later.
+                current[key] = copy.deepcopy(value)
+            # Return the complete document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process mutation boundary.
+        authoritative = self._state_updater(player_id, publish)
+        # Advance the in-memory baseline to the exact committed result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
 
     # Build the public state, rules, and read-only wallet snapshot shared by routes.
     def payload(self, player_id: str, state=None) -> dict:

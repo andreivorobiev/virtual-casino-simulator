@@ -31,16 +31,20 @@ class FakeStateStore:
         # Return a deep copy so mutations require an explicit save.
         return copy.deepcopy(self.states.get(player_id, engine.default_state()))
 
-    # Save one detached player state unless this write simulates a crash.
-    def save(self, player_id, state):
+    # Apply one provider-current mutation unless this publication simulates a crash.
+    def update(self, player_id, mutator):
         # Advance the deterministic write counter.
         self.save_calls += 1
+        # Evaluate the callback against exact current provider state.
+        updated = mutator(self.load(player_id))
         # Raise before persistence at configured crash windows.
         if self.save_calls in self.fail_on:
             # Simulate abrupt storage failure without altering prior durable state.
             raise RuntimeError(f"simulated save failure {self.save_calls}")
         # Persist a deep copy under only the authenticated player.
-        self.states[player_id] = copy.deepcopy(state)
+        self.states[player_id] = copy.deepcopy(updated)
+        # Return a detached authoritative result like shared storage.
+        return copy.deepcopy(updated)
 
 
 # Provide an in-memory apply-once ledger with real signed-balance semantics.
@@ -143,7 +147,7 @@ class SicBoServiceTests(unittest.TestCase):
         # Start deterministic entropy with a specific triple of threes.
         self.rolls = iter([2, 2, 2])
         # Build the service through only injected test seams.
-        self.service = SicBoService(ledger_gateway=self.ledger, load_state=self.store.load, save_state=self.store.save, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, randbelow=lambda upper: next(self.rolls), clock=lambda: "2026-07-14T00:00:00.000Z")
+        self.service = SicBoService(ledger_gateway=self.ledger, state_loader=self.store.load, state_updater=self.store.update, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, randbelow=lambda upper: next(self.rolls), clock=lambda: "2026-07-14T00:00:00.000Z")
 
     # Return one winning specific-triple request with a stable action id.
     def winning_request(self):
@@ -269,7 +273,7 @@ class SicBoServiceTests(unittest.TestCase):
         # Replace deterministic entropy with faces one, two, and four.
         rolls = iter([0, 1, 3])
         # Build a fresh service that covers a losing specific triple.
-        service = SicBoService(ledger_gateway=self.ledger, load_state=self.store.load, save_state=self.store.save, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, randbelow=lambda upper: next(rolls), clock=lambda: "2026-07-14T00:00:00.000Z")
+        service = SicBoService(ledger_gateway=self.ledger, state_loader=self.store.load, state_updater=self.store.update, get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, randbelow=lambda upper: next(rolls), clock=lambda: "2026-07-14T00:00:00.000Z")
         # Execute the losing action.
         result = service.play("session-player", {"action_id": "loss-1", "wagers": {"triple:6": 2}})
         # Verify the public settlement is a loss with zero returned credits.
@@ -282,7 +286,7 @@ class SicBoServiceTests(unittest.TestCase):
         # Replace the fake ledger with an empty wallet.
         empty_ledger = FakeLedgerGateway(balance=0.0)
         # Build a service against the same isolated state store.
-        service = SicBoService(ledger_gateway=empty_ledger, load_state=self.store.load, save_state=self.store.save, get_player=lambda player_id: {"player_id": player_id, "balance": empty_ledger.balances[player_id]}, randbelow=lambda upper: 0, clock=lambda: "2026-07-14T00:00:00.000Z")
+        service = SicBoService(ledger_gateway=empty_ledger, state_loader=self.store.load, state_updater=self.store.update, get_player=lambda player_id: {"player_id": player_id, "balance": empty_ledger.balances[player_id]}, randbelow=lambda upper: 0, clock=lambda: "2026-07-14T00:00:00.000Z")
         # Reject the aggregate debit through the ledger adapter.
         with self.assertRaises(InsufficientFundsError):
             # Attempt a positive wager with no available play tokens.
