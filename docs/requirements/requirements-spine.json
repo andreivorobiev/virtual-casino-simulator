@@ -12524,6 +12524,31 @@
       "introduced_in": "issue-845-plinko-atomic-state",
       "changed_in": "issue-845-plinko-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Plinko service. Existing session isolation, drop replay, debit and payout recovery, complete path economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-228",
+      "module": "Tests",
+      "description": "Real stale-load Red Dog workers race different terminal call publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, one terminal round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-action cleanup cannot erase a concurrent winner while existing wager, raise, refund, payout, replay, and recovery paths retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RD-001",
+        "API-RD-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-RD-001"
+      ],
+      "implementation_files": [
+        "casino/games/red_dog/tests/test_api.py",
+        "tests/games/red_dog/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-847-red-dog-atomic-state",
+      "changed_in": "issue-847-red-dog-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Red Dog controller. Existing session isolation, opening and decision replay, ledger recovery, six-deck economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     }
   ]
 }

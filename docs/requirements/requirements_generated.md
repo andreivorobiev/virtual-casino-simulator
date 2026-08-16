@@ -26,7 +26,7 @@ Historical source baseline: 9.1.0
 - multi_hand_video_poker: 1.1.3
 - casino_war: 1.2.1
 - big_six_wheel: 1.1.5
-- red_dog: 1.1.2
+- red_dog: 1.1.3
 - dragon_tiger: 1.1.3
 - hi_lo: 1.1.4
 - three_card_poker: 1.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.44
-- docs: 1.96.44
+- tests: 1.100.45
+- docs: 1.96.45
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -718,6 +718,7 @@ Historical source baseline: 9.1.0
 - **TEST-225** (Tests) - PASS: Real stale-load Let It Ride workers race different terminal second decisions around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no actionable-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-opening rollback cannot erase a concurrent winner while existing debit, refund, and payout recovery retain exactly-once wallet behavior.
 - **TEST-226** (Tests) - PASS: Real stale-load Mississippi Stud workers race different terminal fold decisions around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no actionable-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-ante cleanup cannot erase a concurrent winner while existing ante, street-bet, settlement, replay, and recovery paths retain exactly-once wallet behavior.
 - **TEST-227** (Tests) - PASS: Real stale-load Plinko workers race different terminal drop publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit cleanup cannot erase a concurrent winner while existing debit, settlement, replay, and recovery paths retain exactly-once wallet behavior.
+- **TEST-228** (Tests) - PASS: Real stale-load Red Dog workers race different terminal call publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, one terminal round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-action cleanup cannot erase a concurrent winner while existing wager, raise, refund, payout, replay, and recovery paths retain exactly-once wallet behavior.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -978,6 +979,7 @@ Historical source baseline: 9.1.0
 - **RD-003** (Red Dog) - PASS: Red Dog ante, optional matching raise, push return, and payout movements use the shared ledger exactly once under stable action identifiers.
 - **RD-004** (Application) - PASS: The Red Dog surface provides complete English and Russian copy and remains responsive, accessible, and timer-clean across required desktop, tablet, and mobile viewports.
 - **RD-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Red Dog with requirement, module, version, and visual evidence traceability.
+- **RD-006** (Red Dog) - PASS: Red Dog publishes prepared rounds, immutable request mappings, ledger recovery markers, terminal call or raise results, and rejected-action rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale result or cleanup can overwrite the winning round, while the frozen v1 envelope, six-deck rules, payout schedule, and exactly-once ledger movements remain unchanged.
 - **HILO-001** (Hi-Lo) - PASS: Hi-Lo compares two standard-card ranks with ace high and suits ignored, using the server-owned visible-rank paytable for a correct prediction, a 1x equal-rank refund, and a 0x incorrect result.
 - **HILO-002** (Hi-Lo) - PASS: Authenticated sessions own isolated reload-safe Hi-Lo active decisions, recent rounds, and canonical route restoration.
 - **HILO-003** (Hi-Lo) - PASS: Hi-Lo wager debits, equal-rank refunds, and winning payouts use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.

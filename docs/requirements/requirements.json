@@ -12526,6 +12526,31 @@
       "notes": "Fresh workers use the real JSON provider and exact Plinko service. Existing session isolation, drop replay, debit and payout recovery, complete path economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
     },
     {
+      "id": "TEST-228",
+      "module": "Tests",
+      "description": "Real stale-load Red Dog workers race different terminal call publications around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, one terminal round, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-action cleanup cannot erase a concurrent winner while existing wager, raise, refund, payout, replay, and recovery paths retain exactly-once wallet behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RD-001",
+        "API-RD-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-RD-001"
+      ],
+      "implementation_files": [
+        "casino/games/red_dog/tests/test_api.py",
+        "tests/games/red_dog/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-847-red-dog-atomic-state",
+      "changed_in": "issue-847-red-dog-atomic-state",
+      "notes": "Fresh workers use the real JSON provider and exact Red Dog controller. Existing session isolation, opening and decision replay, ledger recovery, six-deck economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
@@ -17032,6 +17057,32 @@
       "introduced_in": "game-expansion-red-dog",
       "changed_in": "game-expansion-red-dog",
       "notes": "The descriptor uses sort order 110 and the normalized tests.game_drivers.red_dog:play driver reference released by issue #77."
+    },
+    {
+      "id": "RD-006",
+      "module": "Red Dog",
+      "description": "Red Dog publishes prepared rounds, immutable request mappings, ledger recovery markers, terminal call or raise results, and rejected-action rollback through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale result or cleanup can overwrite the winning round, while the frozen v1 envelope, six-deck rules, payout schedule, and exactly-once ledger movements remain unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RD-001",
+        "API-RD-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-RD-001"
+      ],
+      "implementation_files": [
+        "casino/games/red_dog/api.py",
+        "casino/games/red_dog/tests/test_api.py",
+        "tests/games/red_dog/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-847-red-dog-atomic-state",
+      "changed_in": "issue-847-red-dog-atomic-state",
+      "notes": "The frozen v1 contract, six-deck shoe, call and matching-raise rules, payout schedule, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
     },
     {
       "id": "HILO-001",

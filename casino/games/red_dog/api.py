@@ -21,8 +21,8 @@ from casino.core.clock import utc_now
 from casino.core.settlement import GameSettlementGateway
 # Import the shared identifier factory for production round and shoe identities.
 from casino.core.ids import new_id
-# Import player-scoped persistence so authenticated users never share game state.
-from casino.core.state_store import load_player_game_state, save_player_game_state
+# Import player-scoped reads and provider-atomic state mutation.
+from casino.core.state_store import load_player_game_state, update_player_game_state
 # Import canonical player validation for trusted context and focused router tests.
 from casino.core.validation import require_player_id
 # Import public conflict and validation errors for fail-closed retry handling.
@@ -36,6 +36,10 @@ GAME_ID = engine.GAME_ID
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 # Serialize prepared state, ledger scans, movements, and markers in this local process.
 _ACTION_LOCK = threading.RLock()
+# Keep one operation's optimistic comparison snapshot outside persistent state.
+_ATOMIC_BASELINE_KEY = "_red_dog_atomic_baseline"
+# Name every state field owned by Red Dog transitions.
+_GAME_STATE_KEYS = tuple(engine.default_state())
 
 
 # Persist Red Dog state through the shared player-scoped provider abstraction.
@@ -45,10 +49,10 @@ class StateRepository:
         # Delegate schema metadata and JSON/MySQL selection to shared storage.
         return load_player_game_state(GAME_ID, player_id, engine.default_state)
 
-    # Save one authenticated player's prepared or committed game document.
-    def save(self, player_id: str, state: dict) -> None:
-        # Delegate atomic file replacement or provider persistence to shared storage.
-        save_player_game_state(GAME_ID, player_id, state)
+    # Apply one transition while the provider owns its cross-process boundary.
+    def update(self, player_id: str, mutator) -> dict:
+        # Delegate current-state loading, rollback, and publication atomically.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state)
 
 
 # Construct the shared settlement gateway while retaining the controller seam name.
@@ -74,6 +78,67 @@ class RedDogController:
         # Store an optional deterministic seed factory that production registration omits.
         self.seed_factory = seed_factory
 
+    # Capture only the fields owned by Red Dog transitions.
+    @staticmethod
+    def _game_snapshot(state: dict) -> dict:
+        # Build one fresh compatibility baseline for absent predecessor fields.
+        defaults = engine.default_state()
+        # Detach nested rounds, requests, shoe state, and recovery markers from later mutation.
+        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+
+    # Load one document and bind its optimistic game-owned baseline.
+    def _load(self, player_id: str) -> dict:
+        # Read through the injected repository before provider mutation.
+        state = self.repository.load(player_id)
+        # Retain the exact game-owned values expected by the next publication.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
+        # Return tracked state without persisting operation metadata.
+        return state
+
+    # Publish one provider-current compare-and-replace transition. (RD-006)
+    def _save(self, player_id: str, state: dict) -> None:
+        # Require every publication to originate from a tracked provider read.
+        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
+        # Reject fabricated or stale detached documents before storage access.
+        if not isinstance(expected, dict):
+            # Keep untracked state outside provider bytes.
+            raise ConflictError("Red Dog state transition is missing its atomic baseline")
+        # Capture the exact game-owned result before entering provider code.
+        desired = self._game_snapshot(state)
+
+        # Compare and replace only Red Dog-owned fields on current state.
+        def publish(current: dict) -> dict:
+            # Detach provider-current game fields from unrelated siblings.
+            observed = self._game_snapshot(current)
+            # Accept an identical publication without rewriting siblings.
+            if observed == desired:
+                # Preserve the complete authoritative provider document.
+                return current
+            # Reject an operation whose game-owned baseline lost a race.
+            if observed != expected:
+                # Require recovery from the authoritative winning action.
+                raise ConflictError("Red Dog state changed during this action; reload and retry")
+            # Replace only the fields governed by this game controller.
+            for key, value in desired.items():
+                # Publish detached values so caller mutation cannot leak later.
+                current[key] = copy.deepcopy(value)
+            # Return the complete document with every sibling preserved.
+            return current
+
+        # Commit through the provider's cross-process mutation boundary.
+        authoritative = self.repository.update(player_id, publish)
+        # Advance the in-memory baseline to the exact committed result.
+        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+
+    # Restore game-owned fields through the prepared action's latest baseline.
+    def _restore(self, player_id: str, state: dict, prior_state: dict) -> None:
+        # Replace only Red Dog fields while retaining the post-preparation baseline.
+        for key, value in self._game_snapshot(prior_state).items():
+            # Detach the restored value from the saved pre-action snapshot.
+            state[key] = copy.deepcopy(value)
+        # Publish action-owned cleanup against exact provider-current preparation.
+        self._save(player_id, state)
+
     # Save one recovered or newly committed event marker immediately.
     def _mark_committed(self, player_id: str, state: dict, intent: dict, event: dict) -> None:
         # Record immutable audit identifiers without caching mutable balances.
@@ -84,7 +149,7 @@ class RedDogController:
             "amount": round(float(event.get("amount", 0)), 2),  # Preserve signed audit amount.
         }
         # Persist after each movement so later intents cannot overtake it.
-        self.repository.save(player_id, state)
+        self._save(player_id, state)
 
     # Apply or recover every prepared round movement exactly once and in order.
     def _reconcile_round(self, player_id: str, state: dict, round_item: dict) -> dict:
@@ -143,7 +208,7 @@ class RedDogController:
         # Serialize reload recovery against concurrent commands in this process.
         with _ACTION_LOCK:
             # Load the authenticated player's isolated document.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover any durable prepared action without creating new gameplay.
             self._recover(player_id, state)
             # Return sanitized reload-safe state.
@@ -158,7 +223,7 @@ class RedDogController:
         # Serialize preparation, ledger scans, movements, and markers locally.
         with _ACTION_LOCK:
             # Load the authenticated player's latest document.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Finish only prior prepared movements before evaluating a new command.
             self._recover(player_id, state)
             # Resolve a prior command with this client action id.
@@ -201,7 +266,7 @@ class RedDogController:
             # Store the immutable command fingerprint before the first ledger call.
             state["requests"][validated_action_id] = {"command": "rounds", "round_id": round_item["round_id"], "wager": normalized_wager}
             # Persist cards, outcome, request mapping, and intents before wallet mutation.
-            self.repository.save(player_id, state)
+            self._save(player_id, state)
             # Apply or recover the prepared movement sequence.
             try:
                 # Reconcile wager first and automatic refund or payout second.
@@ -213,7 +278,7 @@ class RedDogController:
                 # Remove a phantom round after an ordinary pre-commit ledger rejection.
                 if not self._any_committed(player_id, [wager_intent]):
                     # Restore the exact document that existed before the request.
-                    self.repository.save(player_id, prior_state)
+                    self._restore(player_id, state, prior_state)
                 # Preserve the original public or storage failure.
                 raise
             # Return the new decision-ready or automatically settled result.
@@ -230,7 +295,7 @@ class RedDogController:
         # Serialize decision preparation and settlement locally.
         with _ACTION_LOCK:
             # Load the authenticated player's isolated document.
-            state = self.repository.load(player_id)
+            state = self._load(player_id)
             # Recover the opening wager or earlier prepared movements first.
             self._recover(player_id, state)
             # Resolve a prior command with this client action id.
@@ -264,7 +329,7 @@ class RedDogController:
             # Store the immutable decision fingerprint before any new movement.
             state["requests"][validated_action_id] = {"command": command, "round_id": round_id}
             # Persist result card, outcome, and ordered new intents first.
-            self.repository.save(player_id, state)
+            self._save(player_id, state)
             # Slice only movements introduced by this decision for rollback classification.
             new_intents = round_item.get("ledger_intents", [])[existing_intent_count:]
             # Apply or recover the complete round sequence in original order.
@@ -276,7 +341,7 @@ class RedDogController:
                 # Keep prepared recovery state after a durable raise or payout event.
                 if not self._any_committed(player_id, new_intents):
                     # Restore cards, shoe, request map, and decision phase exactly.
-                    self.repository.save(player_id, prior_state)
+                    self._restore(player_id, state, prior_state)
                 # Preserve the original public or storage failure.
                 raise
             # Return the newly settled result and refreshed balance.
