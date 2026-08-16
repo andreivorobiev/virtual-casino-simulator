@@ -8971,7 +8971,8 @@
       "implementation_files": [
         "tests/mysql_pool_tests.py",
         "tests/storage_tests.py",
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
       ],
       "introduced_in": "issue-323-mysql-pool-lifecycle",
       "changed_in": "issue-323-mysql-pool-lifecycle",
@@ -12338,6 +12339,26 @@
       "introduced_in": "issue-830-double-bonus-atomic-state",
       "changed_in": "issue-830-double-bonus-atomic-state",
       "notes": "Fresh workers use the real JSON provider and exact Double Bonus service. Existing session isolation, replay, wager and settlement recovery, house-edge economics, restart, browser, and frozen v1 behavior remain covered while production multiworker activation stays blocked."
+    },
+    {
+      "id": "TEST-220",
+      "module": "Tests",
+      "description": "Capacity-two MySQL pool evidence repeats three cohorts of twenty unique atomic debits with worker concurrency aligned to the two physical leases, proving the exact wallet delta, sixty unique ledger events, every lease returned, both sessions idle, zero waiter residue, and zero unexpected checkout timeouts or discards. Focused pool evidence also runs successful and failed serialized workers through the same cleanup boundary while retaining the separate bounded exhaustion proof.",
+      "status": "PASS",
+      "api_tests": [
+        "MYSQL-POOL-001",
+        "STORAGE-MYSQL-LIVE-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/mysql_pool_tests.py",
+        "tests/storage_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-809-mysql-capacity-two-evidence",
+      "changed_in": "issue-809-mysql-capacity-two-evidence",
+      "notes": "The production pool policy and fixed MySQLPoolExhaustedError deadline remain unchanged. The disposable fixture removes artificial checkout starvation by matching worker count to exact capacity while retaining real wallet-row contention and repeated hosted MySQL execution."
     }
   ]
 }

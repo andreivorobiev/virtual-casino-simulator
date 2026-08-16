@@ -290,6 +290,67 @@ class MySQLPoolTests(unittest.TestCase):
         # Close the remaining idle physical connection.
         pool.close_all()
 
+    # Prove capacity-aligned serialized work returns every successful and failed worker lease. (TEST-220)
+    def test_capacity_two_serialized_workload_returns_all_leases(self) -> None:
+        # Build the exact capacity-two pool with the unchanged bounded checkout deadline.
+        pool, factory = self.build_pool(capacity=2, wait_ms=20)
+        # Define one test-local worker error distinct from every production pool RuntimeError.
+        class SyntheticWorkerError(Exception):
+            # Keep the synthetic category behavior-free.
+            pass
+        # Model one MySQL wallet-row lock shared by every synthetic debit.
+        wallet_lock = threading.Lock()
+        # Retain successful synthetic action identities only for exact completion evidence.
+        completed: list[int] = []
+        # Retain the one intentionally failed worker identity without leaking exception text.
+        failed: list[int] = []
+
+        # Execute one request-scoped operation that always returns its lease.
+        def execute(index: int, fail: bool = False) -> None:
+            # Acquire one of the two bounded physical sessions.
+            lease = pool.acquire()
+            # Start protected row work so success and failure share the same cleanup boundary.
+            try:
+                # Serialize the money-adjacent resource like a SELECT FOR UPDATE wallet row.
+                with wallet_lock:
+                    # Hold the row briefly so both pool slots overlap deterministically.
+                    time.sleep(0.001)
+                    # Trigger one synthetic operation failure after checkout when requested.
+                    if fail:
+                        # Raise only fixed test-local failure text.
+                        raise SyntheticWorkerError("synthetic serialized worker failure")
+                    # Record one successful synthetic action identity.
+                    completed.append(index)
+            # Classify only the deliberate synthetic worker failure.
+            except SyntheticWorkerError:
+                # Record the failed identity without swallowing pool errors.
+                failed.append(index)
+            # Always return the request-scoped lease through production cleanup.
+            finally:
+                # Sanitize and release the physical session.
+                lease.close()
+
+        # Repeat the same twenty-operation schedule three times at exact pool capacity.
+        for cohort_index in range(3):
+            # Use exactly two workers so row-lock contention cannot manufacture checkout starvation.
+            with ThreadPoolExecutor(max_workers=pool.config.capacity) as executor:
+                # Materialize every worker result so unexpected pool exceptions fail this test.
+                list(executor.map(lambda index: execute((cohort_index * 20) + index), range(20)))
+        # Run one successful and one failed operation together through the same cleanup path.
+        with ThreadPoolExecutor(max_workers=pool.config.capacity) as executor:
+            # Wait for both bounded workers and surface any unexpected exception.
+            list(executor.map(lambda item: execute(item[0], item[1]), ((60, False), (61, True))))
+        # Require sixty-one successes, one classified failure, and no lost synthetic identity.
+        self.assertEqual((len(completed), len(set(completed)), failed), (61, 61, [61]))
+        # Capture the final secret-free pool state after both executors joined.
+        snapshot = pool.snapshot()
+        # Require both physical sessions idle with no wait, timeout, discard, or lease residue.
+        self.assertEqual((snapshot["capacity"], snapshot["in_use"], snapshot["idle"], snapshot["waiting"], snapshot["wait_count"], snapshot["timeout_count"], snapshot["discarded"]), (2, 0, 2, 0, 0, 0, 0))
+        # Require exactly two physical sessions despite repeated work and one worker failure.
+        self.assertEqual((snapshot["physical_created"], len(factory.connections)), (2, 2))
+        # Close both reusable sessions after the evidence is complete.
+        pool.close_all()
+
     # Prove open transactions are rolled back and sessions reset before reuse.
     def test_transaction_cleanup_before_reuse(self) -> None:
         # Build one physical slot for exact cleanup assertions.

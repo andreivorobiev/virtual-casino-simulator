@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.3
-- tests: 1.100.36
-- docs: 1.96.36
+- tests: 1.100.37
+- docs: 1.96.37
 - contracts: 1.62.4
 - tooling: 1.40.1
 - commenting_policy: 2.0.0
@@ -710,6 +710,7 @@ Historical source baseline: 9.1.0
 - **TEST-217** (Tests) - PASS: Real stale-load Chuck-a-Luck workers race complete ledger-backed rolls around a separately committed sibling update, proving one provider-winning journal, one explicit stale-writer conflict, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and a rejected post-ledger publication recovers committed debit and credit proof without duplicate wallet movements or winner erasure.
 - **TEST-218** (Tests) - PASS: Real stale-load Deuces Wild workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
 - **TEST-219** (Tests) - PASS: Real stale-load Double Bonus workers race terminal draws around a separately committed sibling update, proving one provider-winning result, one explicit stale-writer conflict, no active-round resurrection, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist, and rejected-debit rollback cannot erase a concurrent winner while existing post-debit and post-credit recovery retain exactly-once wallet behavior.
+- **TEST-220** (Tests) - PASS: Capacity-two MySQL pool evidence repeats three cohorts of twenty unique atomic debits with worker concurrency aligned to the two physical leases, proving the exact wallet delta, sixty unique ledger events, every lease returned, both sessions idle, zero waiter residue, and zero unexpected checkout timeouts or discards. Focused pool evidence also runs successful and failed serialized workers through the same cleanup boundary while retaining the separate bounded exhaustion proof.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

@@ -1205,6 +1205,50 @@ def _run_mysql_pool_live_measurements(provider):
     return evidence
 
 
+# Exercise the capacity-two pool with repeated real wallet-row contention. (STORAGE-010, TEST-220)
+def _run_mysql_capacity_two_debit_cohorts(provider, ledger_module, players_module):
+    # Capture the exact pool policy and counters before any contested debit starts.
+    before_snapshot = provider.pool_snapshot()
+    # Require the disposable gate to exercise the issue's exact capacity-two contract.
+    assert before_snapshot["capacity"] == 2
+    # Require no lease or waiter residue from the preceding pool measurement packet.
+    assert before_snapshot["in_use"] == 0 and before_snapshot["waiting"] == 0
+    # Capture the authoritative wallet balance before three repeated cohorts.
+    starting_balance = players_module.get_player("human")["balance"]
+    # Retain only unique public ledger identifiers across all repeated cohorts.
+    ledger_ids = set()
+    # Repeat the twenty-debit schedule so one lucky timing pass cannot satisfy the gate.
+    for cohort_index in range(3):
+        # Match worker concurrency to physical capacity so a row-lock waiter owns the second lease without stranding six checkout waiters.
+        with ThreadPoolExecutor(max_workers=before_snapshot["capacity"]) as executor:
+            # Execute twenty unique one-token debits through the production ledger boundary.
+            events = list(executor.map(lambda index: ledger_module.debit("human", 1, "MYSQL_CONCURRENT_DEBIT", "storage", f"mysql_concurrent_{cohort_index}_{index}", {"cohort": cohort_index, "index": index}), range(20)))
+        # Require the current cohort to publish twenty distinct append-only events.
+        assert len({event["ledger_id"] for event in events}) == 20
+        # Accumulate exact event identities for the repeated-run uniqueness assertion.
+        ledger_ids.update(event["ledger_id"] for event in events)
+        # Require the wallet to reflect every completed cohort without a lost update.
+        assert players_module.get_player("human")["balance"] == starting_balance - (20 * (cohort_index + 1))
+        # Capture pool state only after the executor has joined every worker.
+        after_cohort = provider.pool_snapshot()
+        # Prove every successful worker returned its lease and left no capacity waiter behind.
+        assert after_cohort["in_use"] == 0 and after_cohort["waiting"] == 0 and after_cohort["idle"] == after_cohort["capacity"]
+        # Prove the capacity-aligned cohort did not hide, swallow, or trigger checkout exhaustion.
+        assert after_cohort["timeout_count"] == before_snapshot["timeout_count"]
+        # Prove capacity-aligned scheduling introduced no artificial checkout waiter.
+        assert after_cohort["wait_count"] == before_snapshot["wait_count"]
+        # Prove no uncertain connection cleanup forced a physical discard during the cohort.
+        assert after_cohort["discarded"] == before_snapshot["discarded"]
+    # Require all three repeated cohorts to preserve sixty unique committed event identities.
+    assert len(ledger_ids) == 60
+    # Build one secret-free aggregate for hosted acceptance evidence.
+    evidence = {"capacity": after_cohort["capacity"], "cohorts": 3, "debits_per_cohort": 20, "committed": len(ledger_ids), "wallet_delta": starting_balance - players_module.get_player("human")["balance"], "pool": after_cohort}
+    # Emit only fixed counts and the production pool's existing secret-free telemetry.
+    print("MYSQL_POOL_CAPACITY_TWO_DEBITS " + json.dumps(evidence, sort_keys=True), flush=True)
+    # Return exact before/after balances for the following cross-process idempotency proof.
+    return starting_balance, players_module.get_player("human")["balance"]
+
+
 # Exercise real MySQL persistence, domain documents, and concurrent ledger locking.
 def run_mysql_live_provider_path():
     # Import representative provider-backed domains only when live MySQL was requested.
@@ -1244,16 +1288,8 @@ def run_mysql_live_provider_path():
         bot = profiles.update_bot("bot_1", {"enabled": False})
         # Persist an autoplay session through the real control-plane module.
         autoplay_session = autoplay.start("slots", "human", "medium", 2, {"type": "mysql-live"}, {})
-        # Capture the wallet balance before overlapping atomic debits.
-        starting_balance = players.get_player("human")["balance"]
-        # Execute independent MySQL transactions concurrently against one wallet row.
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            # Materialize all futures so every debit either commits or fails the test.
-            events = list(executor.map(lambda index: ledger.debit("human", 1, "MYSQL_CONCURRENT_DEBIT", "storage", f"mysql_concurrent_{index}", {"index": index}), range(20)))
-        # Verify row locking prevented lost updates across concurrent connections.
-        assert players.get_player("human")["balance"] == starting_balance - 20
-        # Verify each committed transaction produced one unique append-only ledger event.
-        assert len({event["ledger_id"] for event in events}) == 20
+        # Run the repeated capacity-two debit gate before cross-process replay evidence. (TEST-220)
+        _, balance_after_concurrent = _run_mysql_capacity_two_debit_cohorts(provider, ledger, players)
         # Execute 25 duplicate calls through two independent spawned processes.
         with ProcessPoolExecutor(max_workers=2) as executor:
             # Materialize every duplicate result so cross-process failures surface.
@@ -1262,8 +1298,8 @@ def run_mysql_live_provider_path():
         assert len({ledger_id for _, ledger_id, _ in action_results}) == 1
         # Verify the unique action identity committed exactly once across processes.
         assert sum(1 for _, _, replayed in action_results if replayed is False) == 1
-        # Verify the wallet absorbed only one three-token debit from 25 calls.
-        assert players.get_player("human")["balance"] == starting_balance - 23
+        # Verify the wallet absorbed only one three-token debit after the repeated concurrency cohorts.
+        assert players.get_player("human")["balance"] == balance_after_concurrent - 3
         # Preserve the workflow's default provider selector around the focused token proof.
         previous_provider_name = os.environ.get("CASINO_STORAGE_PROVIDER")
         # Route parent issue and read operations through the injected MySQL provider.
