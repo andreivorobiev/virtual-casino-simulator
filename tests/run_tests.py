@@ -74,6 +74,8 @@ from tests.cases.api import delivery_infrastructure as api_delivery_infrastructu
 from tests.cases.api import frontend_presentation as api_frontend_presentation
 # Import listener-free self-service foundation ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import self_service_foundation as api_self_service_foundation
+# Import listener-free specialized-game acceptance ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import specialized_game_acceptance as api_specialized_game_acceptance
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -1388,77 +1390,8 @@ def run_api_tests():
     api_frontend_presentation.run_cases(run_case,run_roulette_motion_tests,run_game_frontend_node_test)
     # Delegate listener-free documentation, settings, and receipt cases at their historical execution point.
     api_self_service_foundation.run_cases(run_case)
-    # Execute the Double Bonus Video Poker engine and settlement proof without opening a listener.
-    def run_double_bonus_video_poker_tests():
-        # Import the focused suite only when its mapped API case runs.
-        from tests import double_bonus_video_poker_tests
-        # Load exactly the Double Bonus engine and service assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(double_bonus_video_poker_tests.DoubleBonusVideoPokerTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Double Bonus assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('double bonus video poker suite failed')
-    # Record the Double Bonus paytable, deal-and-draw settlement, replay, recovery, and house-edge proof.
-    run_case('API-DOUBLE-BONUS-VIDEO-POKER-001',['DBVP-001','DBVP-002','TEST-114'],run_double_bonus_video_poker_tests)
-    # Execute the Mississippi Stud engine and settlement proof without opening a listener.
-    def run_mississippi_stud_tests():
-        # Import the focused suite only when its mapped API case runs.
-        from tests import mississippi_stud_tests
-        # Load exactly the Mississippi Stud engine and service assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(mississippi_stud_tests.MississippiStudTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Mississippi Stud assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('mississippi stud suite failed')
-    # Record the Mississippi Stud paytable, three-street settlement, replay, recovery, and house-edge proof.
-    run_case('API-MISSISSIPPI-STUD-001',['MSTUD-001','MSTUD-002','TEST-115'],run_mississippi_stud_tests)
-    # Execute the Teen Patti engine, authenticated routes, and settlement proof without opening a listener.
-    def run_teen_patti_tests():
-        # Import the focused suite only when its mapped API case runs.
-        from tests import teen_patti_tests
-        # Load exactly the Teen Patti engine, service, and direct-route assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(teen_patti_tests.TeenPattiTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Teen Patti assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('teen patti suite failed')
-    # Record the Teen Patti ranking, settlement, replay, recovery, authenticated route, and house-edge proof.
-    run_case('API-TEEN-PATTI-001',['TEENP-001','TEENP-002','TEST-116'],run_teen_patti_tests)
-    # Execute the corrected cross-game copy and shared keyboard-focus contract without opening a listener.
-    def run_game_polish_tests():
-        # Import the focused suite only when its mapped API case runs.
-        from tests import game_polish_tests
-        # Load exactly the copy and focus assertions allocated to TEST-117.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(game_polish_tests.GamePolishTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused copy or focus assertion failed.
-        if not result.wasSuccessful():
-            # Preserve one stable diagnostic while unittest retains assertion detail.
-            raise AssertionError('cross-game copy and focus suite failed')
-    # Record the listener-free return semantics, identifier privacy, Russian terminology, and focus proof.
-    run_case('UI-GAME-POLISH-001',['I18N-010','UX-020','TEST-117'],run_game_polish_tests)
-
-    # Execute the listener-free Slots economics, route, ledger-equation, and copy regressions.
-    def run_slots_economics_tests():
-        # Import the bounded SLOT-036 test module without opening a browser or listener.
-        from tests.games.slots import test_economics
-        # Load exactly the module-owned economics assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(test_economics.SlotsEconomicsTests)
-        # Run through the shared fail-closed unittest result collector.
-        result = unittest.TextTestRunner(verbosity=1).run(suite)
-        # Fail the named API case when any focused invariant failed or errored.
-        if not result.wasSuccessful():
-            # Raise one stable harness error after unittest printed exact diagnostics.
-            raise AssertionError('Slots economics suite failed')
-    # Record the complete browser-free Split A acceptance under its permanent requirement.
-    run_case('API-SLOT-ECONOMICS-001',['SLOT-036'],run_slots_economics_tests)
+    # Delegate listener-free specialized-game and cross-game-polish cases at their historical point.
+    api_specialized_game_acceptance.run_cases(run_case)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
