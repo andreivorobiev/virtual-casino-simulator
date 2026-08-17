@@ -68,6 +68,8 @@ from tests import api_case_inventory
 from tests.cases.api import governance as api_governance
 # Import listener-free authentication infrastructure ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import auth as api_auth
+# Import listener-free feedback registration ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import feedback as api_feedback
 # Import listener-free Guest Trial registration ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import guest as api_guest
 # Import the listener-free host-poller proof for protected-main delivery ownership.
@@ -2136,18 +2138,8 @@ def run_api_tests():
     run_case('UI-REPEAT-BET-001',['UX-022','TEST-137'],run_repeat_bet_tests)
     # Delegate the listener-free authentication infrastructure area at its exact historical point. (TEST-242)
     api_auth.run_cases(run_case,run_oauth_mock_tests,validate_deployment_bootstrap,run_server_authority_tests)
-    # Run provider-neutral feedback lifecycle, concurrency, retention, and image-safety tests. (TEST-094, issue #349)
-    def run_feedback_tests():
-        # Import the focused suite lazily so unrelated runners do not require image tooling.
-        from tests import feedback_tests
-        # Load exactly the feedback service acceptance class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(feedback_tests.FeedbackServiceTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the mapped API case when any recovery, privacy, or concurrency proof fails.
-        if not result.wasSuccessful(): raise AssertionError('manual problem-report service suite failed')
-    # Map the manual-only slice to its unique permanent test requirement.
-    run_case('API-FEEDBACK-001',['CORE-027','ADMIN-025','SEC-011','I18N-005','TEST-094'],run_feedback_tests)
+    # Delegate the listener-free feedback area at its exact historical point. (TEST-242)
+    api_feedback.run_cases(run_case)
     # Delegate the listener-free Guest Trial area at its exact historical point. (TEST-242)
     api_guest.run_cases(run_case,validate_guest_lifecycle,validate_guest_analytics,validate_guest_contracts)
     # Set proc,base to the value needed for the next operation.
