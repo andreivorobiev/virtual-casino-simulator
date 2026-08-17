@@ -527,11 +527,42 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         delegation = "api_game_lifecycle.run_cases(run_case,run_unit_module)"
         # Reject missing or duplicated delegation in the compatibility runner.
         self.assertEqual(runner_source.count(delegation), 1)
-        # Preserve the historical boundary after Admin policy and before inline edge preparation.
+        # Preserve the historical boundary after Admin policy and before delivery infrastructure.
         self.assertLess(runner_source.index("api_admin_policy.run_cases("), runner_source.index(delegation))
-        # Keep the next inline edge preparation case after the complete lifecycle area.
-        self.assertLess(runner_source.index(delegation), runner_source.index("EDGE-PREPARATION-001"))
+        # Keep the next extracted delivery-infrastructure area after the complete lifecycle area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_delivery_infrastructure.run_cases("))
         # Keep process construction, execution, and listener ownership in the compatibility runner.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+
+    # Prove the listener-free delivery-infrastructure registrations moved as one ordered area.
+    def test_api_delivery_infrastructure_area_registration_ownership_is_exact(self):
+        # Define the reviewed order from edge preparation through CI qualification.
+        expected_ids = (
+            "EDGE-PREPARATION-001", "DEPLOY-PROVENANCE-001", "RELEASE-PREDECESSOR-001",
+            "MONITOR-CONFIG-001", "DEPLOY-CICD-001", "DEPLOY-PULL-001", "CI-QUALIFICATION-001",
+        )
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit delivery-infrastructure area module.
+        area_source = (API_CASES_ROOT / "delivery_infrastructure.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", area_source))
+        # Require the whole reviewed area to move in its original order.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id in expected_ids:
+            # Reject duplicated ownership that could execute a delivery-policy gate twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit area delegation through the compatibility runner's run_case helper.
+        delegation = "api_delivery_infrastructure.run_cases(run_case)"
+        # Reject missing or duplicated delegation in the compatibility runner.
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the historical boundary after game lifecycle and before Roulette motion.
+        self.assertLess(runner_source.index("api_game_lifecycle.run_cases("), runner_source.index(delegation))
+        # Keep the next unrelated motion case after the complete delivery-infrastructure area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("UI-ROU-MOTION-001"))
+        # Keep subprocess construction and every listener owner outside the extracted area.
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("ServerThread", area_source)
 

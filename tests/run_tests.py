@@ -56,10 +56,6 @@ from tests import mysql_pool_tests
 from tests import mysql_migration_tests
 # Import listener-free encrypted recovery policy tests for every storage validation run.
 from tests import recovery_tests
-# Import listener-free edge policy and sanitized observation tests for the API validation run.
-from tests import edge_gate_tests
-# Import the focused deployment build-provenance suite.
-from tests import release_env_tests
 # Import pure Browser discovery, affinity packing, and shard verification outside the compatibility runner. (TEST-242)
 from tests import browser_sharding
 # Import source-only API registration discovery and exact reviewed inventory validation. (TEST-242)
@@ -72,6 +68,8 @@ from tests.cases.api import money_integrity as api_money_integrity
 from tests.cases.api import admin_policy as api_admin_policy
 # Import the listener-free game lifecycle registration area for #727's thin-runner series.
 from tests.cases.api import game_lifecycle as api_game_lifecycle
+# Import listener-free delivery-infrastructure ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import delivery_infrastructure as api_delivery_infrastructure
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -82,14 +80,6 @@ from tests.cases.api import auth as api_auth
 from tests.cases.api import feedback as api_feedback
 # Import listener-free Guest Trial registration ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import guest as api_guest
-# Import the listener-free host-poller proof for protected-main delivery ownership.
-from tests import release_poller_tests
-# Import listener-free compatibility-owned predecessor tests for protected publication.
-from tests import release_predecessor_tests
-# Import listener-free monitor bearer/digest validation and repair tests.
-from tests import monitor_config_tests
-# Import inert production workflow policy tests for exact-head deployment.
-from tests import cicd_deployment_tests
 # Import the catalog-derived economics registry for listener-free API-suite governance. (TEST-175)
 from tests import game_economics_registry_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
@@ -1368,90 +1358,8 @@ def run_api_tests():
     api_admin_policy.run_cases(run_case,run_unit_module)
     # Delegate the complete listener-free game lifecycle area at its historical point. (TEST-242)
     api_game_lifecycle.run_cases(run_case,run_unit_module)
-    # Execute the complete non-mutating edge preparation proof before any test listener starts.
-    def run_edge_gate_tests():
-        # Load only the focused TEST-050 unit-test class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(edge_gate_tests.EdgeGateTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused edge proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('restricted-preview edge preparation suite failed')
-    # Record the listener-free edge templates, validator, observation, and rollback proof.
-    run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
-    # Execute the complete deployment build-provenance proof without writing any repository file.
-    def run_release_env_tests():
-        # Load only the focused deployment fragment class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(release_env_tests.ReleaseEnvFragmentTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused provenance proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('deployment build provenance suite failed')
-    # Record the listener-free deployment provenance fragment and service-unit ordering proof.
-    run_case('DEPLOY-PROVENANCE-001',['TOOL-007','TEST-098'],run_release_env_tests)
-    # Execute compatibility-owned predecessor selection without contacting GitHub Releases.
-    def run_release_predecessor_tests():
-        # Load only the focused predecessor policy class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(release_predecessor_tests.ReleasePredecessorTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any predecessor assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('release predecessor policy suite failed')
-    # Record exact compatibility-owned rollback selection and manifest binding.
-    run_case('RELEASE-PREDECESSOR-001',['TOOL-003','TOOL-008','TOOL-011','TEST-133'],run_release_predecessor_tests)
-    # Execute the split monitor bearer/digest proof without opening a listener.
-    def run_monitor_config_tests():
-        # Load only the focused root-managed monitor configuration class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(monitor_config_tests.MonitorConfigTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any monitor assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure secret-safe.
-            raise AssertionError('monitor configuration suite failed')
-    # Record listener-free validation, mismatch refusal, and explicit atomic repair.
-    run_case('MONITOR-CONFIG-001',['OPS-006','TOOL-008','TEST-133'],run_monitor_config_tests)
-    # Execute the inert production-workflow policy proof without GitHub, SSH, or deployment.
-    def run_cicd_deployment_tests():
-        # Load only the focused protected-main workflow policy class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(cicd_deployment_tests.CicdDeploymentWorkflowTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any workflow assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('production CI/CD workflow suite failed')
-    # Record immutable publication, hosted assets, SSH boundaries, and rollback behavior.
-    run_case('DEPLOY-CICD-001',['TOOL-008','TOOL-011','TEST-133'],run_cicd_deployment_tests)
-    # Execute the listener-free pull-poller comparison, verification, and activation-order proofs.
-    def run_release_poller_tests():
-        # Load only the focused host-poller contract class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(release_poller_tests.ReleasePollerTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any pull-delivery assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('release poller suite failed')
-    # Record listener-free compare/verify/decide, rollback ordering, lag, and workflow ownership evidence.
-    run_case('DEPLOY-PULL-001',['OPS-007','TOOL-015','TEST-180'],run_release_poller_tests)
-    # Execute listener-free ordinary-workflow cancellation and sharded qualification policy proofs.
-    def run_ci_qualification_tests():
-        # Load only the focused acceleration policy class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(cicd_deployment_tests.CiQualificationWorkflowTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any workflow assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('qualification acceleration policy suite failed')
-    # Record safe PR cancellation, exhaustive shards, audio ownership, artifacts, and aggregate behavior.
-    run_case('CI-QUALIFICATION-001',['TOOL-002','TEST-036','TEST-242'],run_ci_qualification_tests)
+    # Delegate the complete listener-free delivery-infrastructure area at its historical point. (TEST-242)
+    api_delivery_infrastructure.run_cases(run_case)
     # Execute the bounded Roulette anti-strobe proof without opening a listener or browser.
     def run_roulette_motion_tests():
         # Import the focused suite only when its mapped API case runs.
