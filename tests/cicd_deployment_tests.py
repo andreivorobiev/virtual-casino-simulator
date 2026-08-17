@@ -431,6 +431,63 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertNotIn("ServerThread", area_source)
         self.assertNotIn("start_server", area_source)
 
+    # Prove live infrastructure cases moved without transferring listener or reset ownership.
+    def test_api_live_infrastructure_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed cases and requirement mappings in historical order.
+        expected_cases = (
+            ("API-MONEY-NONFINITE-001", ["CORE-025", "LEDGER-027", "MHVP-006", "TEST-055"]),
+            ("API-OPS-001", ["OPS-001", "OPS-002", "OPS-003", "OPS-005", "TEST-044"]),
+            ("API-OAUTH-001", ["OAUTH-001", "OAUTH-002", "OAUTH-006", "OAUTH-007", "AUTH-007", "TEST-045", "TEST-093"]),
+            ("API-OAUTH-002", ["OAUTH-007", "OAUTH-008", "OAUTH-009", "OAUTH-010", "OAUTH-012", "OAUTH-013", "AUTH-007", "AUTH-017", "TEST-093", "TEST-167", "TEST-168"]),
+            ("API-MAIL-002", ["MAIL-001", "MAIL-002", "MAIL-003", "TEST-090"]),
+            ("API-INVITE-002", ["INVITE-001", "INVITE-002", "INVITE-003", "INVITE-004", "TEST-091"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "live_infrastructure.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the area owner so its registrations can be inspected without a server.
+        spec = importlib.util.spec_from_file_location("live_infrastructure_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture registration identity while leaving every live callback unexecuted.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Preserve permanent ID, mapping, order, and callback ownership dimensions.
+            captured.append((case_id, requirements, callback.__name__))
+        # Register the one pre-reset case with inert dependency sentinels.
+        module.run_money_boundary_case(capture, object(), object(), object(), object())
+        # Register the five post-reset cases with inert dependency sentinels.
+        module.run_service_cases(capture, object(), object(), object())
+        # Bind exact reviewed IDs, requirement mappings, and historical order.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        # Bind the six moved callback bodies to the new owner.
+        self.assertEqual(tuple(callback for _, _, callback in captured), (
+            "nonfinite_money_api", "operations_api", "oauth_api",
+            "oauth_runtime_api", "mail_api", "invitation_api",
+        ))
+        # Reject duplicate literal registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require the exact two delegations around the runner-owned reset and login boundary.
+        money_delegation = "api_live_infrastructure.run_money_boundary_case(run_case,base,api,raw_api,ROOT)"
+        service_delegation = "api_live_infrastructure.run_service_cases(run_case,base,api,ROOT)"
+        reset_call = "api(base,'/api/v1/casino/reset','POST',{})"
+        login_call = "login_default_user(base)"
+        self.assertEqual(runner_source.count(money_delegation), 1)
+        self.assertEqual(runner_source.count(service_delegation), 1)
+        self.assertLess(runner_source.index("api_admin_guest.run_cases(run_case,base,validate_guest_admin_api)"), runner_source.index(money_delegation))
+        self.assertLess(runner_source.index(money_delegation), runner_source.index(reset_call, runner_source.index(money_delegation)))
+        self.assertLess(runner_source.index(reset_call, runner_source.index(money_delegation)), runner_source.index(login_call, runner_source.index(reset_call, runner_source.index(money_delegation))))
+        self.assertLess(runner_source.index(login_call, runner_source.index(reset_call, runner_source.index(money_delegation))), runner_source.index(service_delegation))
+        self.assertLess(runner_source.index(service_delegation), runner_source.index("def auth_backend"))
+        # Keep listener, process, reset, and login lifecycle out of the extracted owner.
+        self.assertNotIn("start_server", area_source)
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("/api/v1/casino/reset", area_source)
+        self.assertNotIn("login_default_user", area_source)
+
     # Prove the first API area moved as one exact registration group without duplication in the shim.
     def test_api_governance_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
