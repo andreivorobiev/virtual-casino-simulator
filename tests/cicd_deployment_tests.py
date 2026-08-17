@@ -453,6 +453,35 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject ordering drift that would change the historical API-lane execution sequence.
         self.assertLess(runner_source.index("api_feedback.run_cases("), runner_source.index("api_guest.run_cases("))
 
+    # Prove the live Guest/Admin registration moved without transferring server lifecycle ownership.
+    def test_api_admin_guest_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed registration moved by this slice.
+        expected_ids = ("API-ADMIN-GUEST-001",)
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit live Guest/Admin area module.
+        area_source = (API_CASES_ROOT / "admin_guest.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", area_source))
+        # Require the complete reviewed area to move without adding or dropping an ID.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Reject duplicated ownership that could execute the live Guest/Admin gate twice.
+        self.assertNotRegex(runner_source, r"\brun_case\(\s*['\"]API\-ADMIN\-GUEST\-001['\"]")
+        # Require one explicit area delegation with the existing runner-owned base and validator.
+        delegation = "api_admin_guest.run_cases(run_case,base,validate_guest_admin_api)"
+        # Reject missing or duplicated delegation in the compatibility runner.
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Isolate the initial live-server window before the next inline case body begins.
+        live_window = runner_source.split("proc,base=start_server()", 1)[1].split("def nonfinite_money_api():", 1)[0]
+        # Preserve login before registration so the validator receives the historical Admin session.
+        self.assertLess(live_window.index("login_default_user(base)"), live_window.index(delegation))
+        # Keep server startup, login, and validator implementation in the compatibility runner.
+        self.assertIn("proc,base=start_server()", runner_source)
+        # Reject accidental listener or validator ownership expansion into the extracted area.
+        self.assertNotIn("start_server", area_source)
+        # Keep the live validator outside the area owner so this slice moves registration only.
+        self.assertNotIn("def validate_guest_admin_api", area_source)
+
     # Prove listener-free Guest Trial registrations moved as one exact ordered area.
     def test_api_guest_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
