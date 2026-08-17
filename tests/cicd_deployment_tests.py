@@ -431,6 +431,25 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one explicit area delegation at the historical registration point.
         self.assertEqual(runner_source.count("api_auth.run_cases(run_case,run_oauth_mock_tests,validate_deployment_bootstrap,run_server_authority_tests)"), 1)
 
+    # Prove listener-free Guest Trial registrations moved as one exact ordered area.
+    def test_api_guest_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed registrations moved by this slice in historical execution order.
+        expected_ids = ("API-GUEST-LIFECYCLE-001", "API-GUEST-ANALYTICS-001", "API-GUEST-CONTRACT-001")
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit Guest Trial area module.
+        guest_source = (API_CASES_ROOT / "guest.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", guest_source))
+        # Require the whole reviewed area to move in its original order.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id in expected_ids:
+            # Reject duplicated ownership that could execute a Guest Trial gate twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit area delegation at the historical registration point.
+        self.assertEqual(runner_source.count("api_guest.run_cases(run_case,validate_guest_lifecycle,validate_guest_analytics,validate_guest_contracts)"), 1)
+
     # Prove the shared semantic fallbacks cannot flatten Color Wheel's route-owned gradients.
     def test_semantic_game_color_cascade_preserves_color_wheel_gradients(self):
         # Read the shared stylesheet as inert text so the focused oracle opens no listener or browser.

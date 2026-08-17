@@ -1728,6 +1728,7 @@
         "tests/api_case_inventory.py",
         "tests/api_case_inventory.json",
         "tests/cases/api/auth.py",
+        "tests/cases/api/guest.py",
         "tests/cases/api/governance.py",
         "tests/browser_sharding.py",
         "tests/browser_case_inventory.json",
@@ -1735,8 +1736,8 @@
         "docs/long_test_suites.md"
       ],
       "introduced_in": "9.1.2",
-      "changed_in": "issue-878-api-auth-extraction",
-      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Browser pull requests may omit only dedicated cases owned by unaffected games; shared or unknown changes, protected-main pushes, and authorized manual profiles run complete coverage. Pure Browser discovery, affinity data, duration packing, affected-game selection, and aggregate ownership verification live in tests/browser_sharding.py while tests/run_tests.py retains the compatibility CLI and active execution state. Checked-in count plus sorted case-ID baselines must match the 123 Browser registrations and 207 non-Browser API-lane registrations before listener or provider startup, so every #727 slice proves exact inventory equality across the compatibility runner and extracted area packages. Listener-free governance and authentication-infrastructure registrations now live in their tests/cases/api area owners at their historical execution points. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
+      "changed_in": "issue-880-api-guest-extraction",
+      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Browser pull requests may omit only dedicated cases owned by unaffected games; shared or unknown changes, protected-main pushes, and authorized manual profiles run complete coverage. Pure Browser discovery, affinity data, duration packing, affected-game selection, and aggregate ownership verification live in tests/browser_sharding.py while tests/run_tests.py retains the compatibility CLI and active execution state. Checked-in count plus sorted case-ID baselines must match the 123 Browser registrations and 207 non-Browser API-lane registrations before listener or provider startup, so every #727 slice proves exact inventory equality across the compatibility runner and extracted area packages. Listener-free governance, authentication-infrastructure, and Guest Trial registrations now live in their tests/cases/api area owners at their historical execution points. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
     },
     {
       "id": "TOOL-003",
@@ -13022,6 +13023,7 @@
         "tests/browser_case_inventory.json",
         "tests/browser_sharding.py",
         "tests/cases/api/auth.py",
+        "tests/cases/api/guest.py",
         "tests/cases/api/governance.py",
         "tests/cases/api/__init__.py",
         "tests/cases/__init__.py",
@@ -13031,8 +13033,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-727-browser-sharding-extraction",
-      "changed_in": "issue-878-api-auth-extraction",
-      "notes": "The baselines record count and sorted IDs rather than set-only digests. Runtime validation checks 123 Browser registrations before Browser startup and 207 non-Browser API-lane registrations across tests/run_tests.py plus tests/cases/api before any listener or provider opens. The listener-free CI policy independently compares both dimensions, rejects duplicate, ordering, type, and packet-shape drift, binds the 15 governance registrations to one ordered owner, and binds the eight listener-free authentication infrastructure registrations plus their focused unittest adapters to a second ordered owner. Later #727 slices must update neither baseline dimension unless their own ticket explicitly authorizes an inventory change."
+      "changed_in": "issue-880-api-guest-extraction",
+      "notes": "The baselines record count and sorted IDs rather than set-only digests. Runtime validation checks 123 Browser registrations before Browser startup and 207 non-Browser API-lane registrations across tests/run_tests.py plus tests/cases/api before any listener or provider opens. The listener-free CI policy independently compares both dimensions, rejects duplicate, ordering, type, and packet-shape drift, binds the 15 governance registrations to one ordered owner, binds the eight listener-free authentication infrastructure registrations plus their focused unittest adapters to a second ordered owner, and binds the three listener-free Guest Trial registrations to a third ordered owner. Later #727 slices must update neither baseline dimension unless their own ticket explicitly authorizes an inventory change."
     }
   ]
 }

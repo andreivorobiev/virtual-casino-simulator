@@ -68,6 +68,8 @@ from tests import api_case_inventory
 from tests.cases.api import governance as api_governance
 # Import listener-free authentication infrastructure ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import auth as api_auth
+# Import listener-free Guest Trial registration ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import guest as api_guest
 # Import the listener-free host-poller proof for protected-main delivery ownership.
 from tests import release_poller_tests
 # Import listener-free compatibility-owned predecessor tests for protected publication.
@@ -2146,12 +2148,8 @@ def run_api_tests():
         if not result.wasSuccessful(): raise AssertionError('manual problem-report service suite failed')
     # Map the manual-only slice to its unique permanent test requirement.
     run_case('API-FEEDBACK-001',['CORE-027','ADMIN-025','SEC-011','I18N-005','TEST-094'],run_feedback_tests)
-    # Record listener-free disposable-principal lifecycle and browser-binding proof.
-    run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
-    # Record listener-free telemetry privacy, milestones, and retention proof.
-    run_case('API-GUEST-ANALYTICS-001',['GUEST-003','TEST-088'],validate_guest_analytics)
-    # Record exact additive v2 and restricted-preview compatibility contract proof.
-    run_case('API-GUEST-CONTRACT-001',['GUEST-005','TEST-088'],validate_guest_contracts)
+    # Delegate the listener-free Guest Trial area at its exact historical point. (TEST-242)
+    api_guest.run_cases(run_case,validate_guest_lifecycle,validate_guest_analytics,validate_guest_contracts)
     # Set proc,base to the value needed for the next operation.
     proc,base=start_server()
     # Start protected logic so failures can be handled safely.
