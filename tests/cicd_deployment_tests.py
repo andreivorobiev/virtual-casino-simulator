@@ -839,6 +839,50 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("ServerThread", area_source)
 
+    # Prove security and UI-foundation registrations moved as one exact listener-free area.
+    def test_api_security_ui_foundation_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed cases and requirement mappings in historical order.
+        expected_cases = (
+            ("API-MAGIC-LINK-001", ["MAGIC-001", "MAGIC-002", "MAGIC-003", "TEST-118"]),
+            ("API-SEC-PREVIEW-001", ["SEC-010", "SESSION-006", "ADMIN-024", "AUTH-007", "TEST-047"]),
+            ("FRONTEND-SAFETY-001", ["SEC-013", "SEC-015", "UX-021", "UX-027", "CORE-028", "ROU-043", "TEENP-002", "MOTION-010", "AUTO-015", "AUDIO-010", "ADMIN-032", "TEST-136", "TEST-153", "TEST-155", "TEST-156"]),
+            ("GOV-INNER-HTML-001", ["CORE-033", "SEC-017", "TEST-186"]),
+            ("UI-REPEAT-BET-001", ["UX-022", "TEST-137"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "security_ui_foundation.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the registration owner so callbacks can be inspected without execution.
+        spec = importlib.util.spec_from_file_location("security_ui_foundation_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture exact registration identity without running any focused suite.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Preserve all ownership dimensions for one fail-closed equality proof.
+            captured.append((case_id, requirements, callback.__name__))
+        module.run_cases(capture)
+        # Bind permanent IDs, requirement mappings, order, and focused callback ownership.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        self.assertEqual(tuple(callback for _, _, callback in captured), (
+            "_run_magic_link_tests", "_run_restricted_preview_security_tests", "_run_frontend_safety_tests",
+            "_run_inner_html_template_tests", "_run_repeat_bet_tests",
+        ))
+        # Reject duplicate registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the original Admin-ledger-label to authentication boundary.
+        delegation = "api_security_ui_foundation.run_cases(run_case)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        self.assertLess(runner_source.index("UI-ADMIN-LEDGER-LABELS-001"), runner_source.index(delegation))
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_auth.run_cases("))
+        # Keep process, listener, and server lifecycle out of the extracted owner.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+        self.assertNotIn("start_server", area_source)
+
     # Prove listener-free authentication infrastructure moved as one exact ordered area.
     def test_api_auth_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.

@@ -80,6 +80,8 @@ from tests.cases.api import specialized_game_acceptance as api_specialized_game_
 from tests.cases.api import player_foundation as api_player_foundation
 # Import listener-free catalog-expansion ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import catalog_expansion as api_catalog_expansion
+# Import listener-free security and UI-foundation ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import security_ui_foundation as api_security_ui_foundation
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -1528,74 +1530,8 @@ def run_api_tests():
             raise AssertionError('Admin ledger label suite failed')
     # Record the listener-free enum normalization, locale-resource, fallback, and surface-wiring proof.
     run_case('UI-ADMIN-LEDGER-LABELS-001',['ADMIN-027','TEST-132'],run_admin_ledger_label_tests)
-    # Execute the complete disabled passwordless magic-link proof without opening a listener.
-    def run_magic_link_tests():
-        # Load only the focused magic-link class.
-        from tests import magic_link_tests
-        # Build the focused listener-free security suite.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(magic_link_tests.MagicLinkServiceTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused magic-link proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('passwordless magic-link suite failed')
-    # Record the listener-free disabled passwordless-login lifecycle proof.
-    run_case('API-MAGIC-LINK-001',['MAGIC-001','MAGIC-002','MAGIC-003','TEST-118'],run_magic_link_tests)
-    # Discover and execute every focused restricted-preview security module without opening a listener.
-    def run_restricted_preview_security_tests():
-        # Load the package directory through unittest's standard test discovery.
-        suite = unittest.defaultTestLoader.discover(str(ROOT / 'tests' / 'security'), pattern='test_*.py', top_level_dir=str(ROOT))
-        # Execute the suite with a concise in-process result collector.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused test failed or errored.
-        if not result.wasSuccessful():
-            # Preserve detailed unittest output while keeping the named case diagnostic stable.
-            raise AssertionError('restricted-preview security suite failed')
-    # Record the complete listener-free request, access, session, and browser-helper security proof.
-    run_case('API-SEC-PREVIEW-001',['SEC-010','SESSION-006','ADMIN-024','AUTH-007','TEST-047'],run_restricted_preview_security_tests)
-    # Execute the exact frontend safety helpers and tracked-source contracts without opening a listener.
-    def run_frontend_safety_tests():
-        # Import the focused frontend safety suite only when its mapped case runs.
-        from tests import frontend_safety_tests
-        # Load exactly the browser-free security, feedback, motion, and runtime-state class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(frontend_safety_tests.FrontendSafetyTests)
-        # Execute the focused suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the named case when any exact-source assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the central failure label stable.
-            raise AssertionError('frontend safety suite failed')
-    # Record invitation-log, toast, motion, Roulette, mobile, runtime, and autoplay rate-limit recovery proof.
-    run_case('FRONTEND-SAFETY-001',['SEC-013','SEC-015','UX-021','UX-027','CORE-028','ROU-043','TEENP-002','MOTION-010','AUTO-015','AUDIO-010','ADMIN-032','TEST-136','TEST-153','TEST-155','TEST-156'],run_frontend_safety_tests)
-    # Execute the escape-by-default helper and monotonic innerHTML baseline proof without opening a listener. (TEST-186)
-    def run_inner_html_template_tests():
-        # Import the focused governance suite only when its mapped case runs.
-        from tests import inner_html_template_tests
-        # Load exactly the helper, scanner, reduction, and fail-closed regression cases.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(inner_html_template_tests.InnerHtmlTemplateTests)
-        # Execute the focused suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the named case when any production helper or baseline assertion failed.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the central failure label stable.
-            raise AssertionError('innerHTML template governance suite failed')
-    # Record the canonical escape boundary, Admin migration, and monotonic remainder gate. (CORE-033, SEC-017, TEST-186)
-    run_case('GOV-INNER-HTML-001',['CORE-033','SEC-017','TEST-186'],run_inner_html_template_tests)
-    # Execute the complete listener-free catalog repeat-bet contract without opening a listener.
-    def run_repeat_bet_tests():
-        # Import the focused repeat-bet suite only when its mapped case runs.
-        from tests import repeat_bet_tests
-        # Load exactly the catalog, localization, delegation, guard, and timer assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(repeat_bet_tests.RepeatBetTests)
-        # Execute the focused suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the named case when any governed game contract fails or errors.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the central failure label stable.
-            raise AssertionError('repeat-bet suite failed')
-    # Record all forty-three localized one-click repeat foundations under permanent ownership.
-    run_case('UI-REPEAT-BET-001',['UX-022','TEST-137'],run_repeat_bet_tests)
+    # Delegate the listener-free security and UI-foundation block at its exact historical point. (TEST-242)
+    api_security_ui_foundation.run_cases(run_case)
     # Delegate the listener-free authentication infrastructure area at its exact historical point. (TEST-242)
     api_auth.run_cases(run_case,run_oauth_mock_tests,validate_deployment_bootstrap,run_server_authority_tests)
     # Delegate the listener-free feedback area at its exact historical point. (TEST-242)
