@@ -80,6 +80,8 @@ from tests.cases.api import specialized_game_acceptance as api_specialized_game_
 from tests.cases.api import player_foundation as api_player_foundation
 # Import listener-free catalog-expansion ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import catalog_expansion as api_catalog_expansion
+# Import listener-free Keno and Admin-foundation ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import keno_admin_foundation as api_keno_admin_foundation
 # Import listener-free security and UI-foundation ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import security_ui_foundation as api_security_ui_foundation
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
@@ -1489,47 +1491,8 @@ def run_api_tests():
     run_case('API-MOBILE-CORE-001',['CORE-032','AUTH-019','SEC-016','SESSION-013','TEST-172'],run_mobile_core_security_tests)
     # Delegate the listener-free catalog-expansion block at its exact historical point. (TEST-242)
     api_catalog_expansion.run_cases(run_case)
-    # Execute the Keno drawn-ball rail layout regression without opening a listener.
-    def run_keno_ball_rail_tests():
-        # Load only the focused Keno ball-rail class.
-        from tests import keno_ball_rail_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(keno_ball_rail_tests.KenoBallRailTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when the ball-rail layout contract regresses.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('keno ball-rail layout suite failed')
-    # Record the listener-free Keno drawn-ball rail overflow regression proof.
-    run_case('UI-KENO-BALL-RAIL-001',['KENO-026','TEST-113'],run_keno_ball_rail_tests)
-    # Execute the exact Keno paytable, float-rounding, engine, route, ledger, and UI policy proof.
-    def run_keno_economics_tests():
-        # Import only the focused Keno economics class at its mapped API-suite position.
-        from tests.games.keno import test_economics as keno_economics_tests
-        # Load the exact listener-free economics and compatibility suite.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(keno_economics_tests.KenoEconomicsTests)
-        # Execute with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any exact proof or current-route equation regresses.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('Keno economics suite failed')
-    # Record the exact all-domain Keno economics and current-route settlement proof.
-    run_case('API-KENO-ECONOMICS-001',['KENO-027','TEST-147'],run_keno_economics_tests)
-    # Execute the production Admin label rules, EN/RU resources, and surface wiring without opening a listener or browser.
-    def run_admin_ledger_label_tests():
-        # Import the focused listener-free suite only when its mapped case runs.
-        from tests import admin_ledger_label_tests
-        # Load exactly the production-rule, resource-parity, and renderer-wiring assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(admin_ledger_label_tests.AdminLedgerLabelTests)
-        # Execute the dependency-free suite with concise standard output.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the mapped central case when any focused assertion failed or errored.
-        if not result.wasSuccessful():
-            # Keep the named failure stable while unittest retains assertion detail.
-            raise AssertionError('Admin ledger label suite failed')
-    # Record the listener-free enum normalization, locale-resource, fallback, and surface-wiring proof.
-    run_case('UI-ADMIN-LEDGER-LABELS-001',['ADMIN-027','TEST-132'],run_admin_ledger_label_tests)
+    # Delegate the listener-free Keno and Admin-foundation block at its exact historical point. (TEST-242)
+    api_keno_admin_foundation.run_cases(run_case)
     # Delegate the listener-free security and UI-foundation block at its exact historical point. (TEST-242)
     api_security_ui_foundation.run_cases(run_case)
     # Delegate the listener-free authentication infrastructure area at its exact historical point. (TEST-242)
