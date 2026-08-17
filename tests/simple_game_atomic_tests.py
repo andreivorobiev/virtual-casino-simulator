@@ -73,10 +73,10 @@ def resolve(wager, drawn):
     return {'outcome': 'lose', 'total_return': 0, 'detail': {'face': drawn['face']}}
 class Gateway:
     def apply_once(self, **kwargs):
-        details = {**kwargs['details'], 'ledger_action_key': kwargs['action_key'], 'request_fingerprint': kwargs['request_fingerprint']}
-        return {'ledger_id': 'ledger-' + request_id, 'player_id': kwargs['player_id'], 'amount': kwargs['amount'], 'transaction_type': kwargs['transaction_type'], 'game': 'unit_flip', 'round_id': kwargs['round_id'], 'details': details}, False
+        details = {**kwargs['details'], 'game_action_key': kwargs['action_key'], 'request_fingerprint': kwargs['request_fingerprint']}
+        return {'ledger_id': 'ledger-' + request_id, 'player_id': kwargs['player_id'], 'amount': kwargs['signed_amount'], 'transaction_type': kwargs['transaction_type'], 'game': 'unit_flip', 'round_id': kwargs['round_id'], 'details': details}, False
     def find(self, **kwargs):
-        return {'ledger_id': 'ledger-' + request_id, 'player_id': kwargs['player_id'], 'amount': -10.0, 'transaction_type': kwargs['transaction_type'], 'game': 'unit_flip', 'round_id': kwargs['round_id'], 'details': {'ledger_action_key': kwargs['action_key'], 'request_fingerprint': kwargs['request_fingerprint']}}
+        return {'ledger_id': 'ledger-' + request_id, 'player_id': kwargs['player_id'], 'amount': -10.0, 'transaction_type': kwargs['transaction_type'], 'game': 'unit_flip', 'round_id': kwargs['round_id'], 'details': {'game_action_key': kwargs['action_key'], 'request_fingerprint': kwargs['request_fingerprint']}}
 game = SimpleWagerGame(game_id='unit_flip', wager_transaction_type='UNIT_FLIP_WAGER_DEBIT', settlement_transaction_type='UNIT_FLIP_SETTLEMENT_CREDIT', entropy=entropy, resolve=resolve, validate_bet=validate, ledger_gateway=Gateway(), state_loader=load_state, state_updater=update_state, entropy_source=lambda _span: 2, clock=lambda: '2026-08-16T09:30:00Z', get_player=lambda player_id: {'player_id': player_id, 'balance': 90.0})
 result = game.play('atomic-player', {'request_id': request_id, 'face': 5, 'stake': 10})
 print('PASS:' + result['round']['round_id'])

@@ -161,7 +161,7 @@ class PlinkoService:
     # Ensure one drop has its wager debit committed.
     def _ensure_debit(self, player_id: str, state: dict, drop: dict) -> tuple[dict, bool]:
         # Apply or recover the stable action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-drop["wager"], transaction_type="PLINKO_WAGER_DEBIT", drop_id=drop["drop_id"], action_id=drop["action_id"], fingerprint=drop["request_fingerprint"], details={"stage": "drop", "wager": drop["wager"], "bucket": drop["bucket"], "multiplier": drop["multiplier"], "path": drop["path"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-drop["wager"], transaction_type="PLINKO_WAGER_DEBIT", round_id=drop["drop_id"], action_key=drop["action_id"], request_fingerprint=drop["request_fingerprint"], details={"stage": "drop", "wager": drop["wager"], "bucket": drop["bucket"], "multiplier": drop["multiplier"], "path": drop["path"]})
         # Mark the debit complete only after ledger proof exists.
         drop["debit_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -182,7 +182,7 @@ class PlinkoService:
             # Return no event and no ledger replay.
             return None, False
         # Apply or recover the returned-token credit through the same action id and fingerprint.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=drop["payout"], transaction_type="PLINKO_PAYOUT_CREDIT", drop_id=drop["drop_id"], action_id=drop["action_id"] + ":payout", fingerprint=drop["request_fingerprint"], details={"stage": "settlement", "wager": drop["wager"], "bucket": drop["bucket"], "multiplier": drop["multiplier"], "path": drop["path"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=drop["payout"], transaction_type="PLINKO_PAYOUT_CREDIT", round_id=drop["drop_id"], action_key=drop["action_id"] + ":payout", request_fingerprint=drop["request_fingerprint"], details={"stage": "settlement", "wager": drop["wager"], "bucket": drop["bucket"], "multiplier": drop["multiplier"], "path": drop["path"]})
         # Mark the settlement complete only after ledger proof exists.
         drop["settlement_status"] = "complete"
         # Store the immutable payout ledger id.

@@ -208,7 +208,7 @@ class ScratchCardsService:
             # Start protected debit handling so insufficient funds can remove an uncommitted intent.
             try:
                 # Apply exactly one wager debit for this card through the shared ledger.
-                debit_event, debit_replayed = self.ledger_gateway.apply_once(player_id=player_id, amount=-wager, transaction_type="SCRATCH_CARD_WAGER_DEBIT", card_id=card_id, action_key=f"scratch:{card_id}:wager", details=debit_details)
+                debit_event, debit_replayed = self.ledger_gateway.apply_once(player_id=player_id, signed_amount=-wager, transaction_type="SCRATCH_CARD_WAGER_DEBIT", round_id=card_id, action_key=f"scratch:{card_id}:wager", request_fingerprint=request_fingerprint, details=debit_details)
             # Roll back only the known no-commit insufficient-funds path.
             except InsufficientFundsError:
                 # Restore the exact pre-action state for a newly prepared ticket.
@@ -323,7 +323,7 @@ class ScratchCardsService:
                 # Build stable payout details tied to both purchase and completion identities.
                 payout_details = {"action_id": card["completion_action_id"], "request_fingerprint": card["request_fingerprint"], "scratch_fingerprint": action_fingerprint, "card_id": card_id, "payout": payout, "winning_multiplier": card["winning_multiplier"]}
                 # Apply at most one positive prize credit through the shared ledger.
-                payout_event, payout_replayed = self.ledger_gateway.apply_once(player_id=player_id, amount=payout, transaction_type="SCRATCH_CARD_PAYOUT_CREDIT", card_id=card_id, action_key=f"scratch:{card_id}:payout", details=payout_details)
+                payout_event, payout_replayed = self.ledger_gateway.apply_once(player_id=player_id, signed_amount=payout, transaction_type="SCRATCH_CARD_PAYOUT_CREDIT", round_id=card_id, action_key=f"scratch:{card_id}:payout", request_fingerprint=card["request_fingerprint"], details=payout_details)
             # Mark the card terminal only after any required payout event has committed.
             card["status"] = "settled"
             # Preserve the shared payout ledger identifier without exposing private details.

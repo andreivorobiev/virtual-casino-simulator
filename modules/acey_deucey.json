@@ -1,6 +1,6 @@
 {
   "module": "acey_deucey",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "paths": [
     "casino/games/acey_deucey/",
     "web/games/acey_deucey.js",

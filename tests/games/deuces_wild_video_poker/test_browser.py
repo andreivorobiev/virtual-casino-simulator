@@ -40,6 +40,10 @@ LOOPBACK_HOST = "127.0.0.1"
 PROTECTED_LIVE_PORT = 8765
 # Name the test-only cookie that binds browser requests to one fake session player.
 SESSION_COOKIE = "dwvp_diagnostic_session"
+# Name the browser-readable production CSRF cookie required before unsafe API fetches.
+CSRF_COOKIE = "casino_csrf"
+# Use one bounded non-secret proof because the diagnostic server never reaches live authentication.
+DIAGNOSTIC_CSRF_TOKEN = "dwvp-diagnostic-csrf-proof-0001"
 # Allow only the two locale-specific fake session players used by this diagnostic.
 SESSION_PLAYERS = frozenset({"browser-en", "browser-ru"})
 
@@ -478,7 +482,10 @@ class DeucesWildVideoPokerDiagnosticBrowserTests(unittest.TestCase):
         # Create an isolated browser context for one authenticated fake user.
         context = browser.new_context(viewport=viewport)
         # Bind subsequent same-origin API requests to the selected session player.
-        context.add_cookies([{"name": SESSION_COOKIE, "value": player_id, "url": base_url}])
+        context.add_cookies([
+            {"name": SESSION_COOKIE, "value": player_id, "url": base_url},  # Bind the fake authenticated player.
+            {"name": CSRF_COOKIE, "value": DIAGNOSTIC_CSRF_TOKEN, "url": base_url},  # Model the paired browser proof issued with a real session.
+        ])
         # Create the actual page after authentication state is installed.
         page = context.new_page()
         # Emulate the user's reduced-motion preference before styles are evaluated.

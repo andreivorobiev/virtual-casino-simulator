@@ -161,7 +161,7 @@ class DoubleBonusVideoPokerService:
     # Ensure a prepared round has one committed bet debit.
     def _ensure_opening(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable deal action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["bet"], transaction_type="DOUBLE_BONUS_VIDEO_POKER_WAGER_DEBIT", round_id=round_state["round_id"], action_id=round_state["start_action_id"], fingerprint=round_state["request_fingerprint"], details={"stage": "deal", "bet": round_state["bet"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["bet"], transaction_type="DOUBLE_BONUS_VIDEO_POKER_WAGER_DEBIT", round_id=round_state["round_id"], action_key=round_state["start_action_id"], request_fingerprint=round_state["request_fingerprint"], details={"stage": "deal", "bet": round_state["bet"]})
         # Mark the debit complete only after ledger proof exists.
         round_state["opening_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -182,7 +182,7 @@ class DoubleBonusVideoPokerService:
             # Return no event and no ledger replay.
             return None, False
         # Apply or recover the stable settlement through a derived action id.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="DOUBLE_BONUS_VIDEO_POKER_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_id=f"{round_state['draw_action_id']}:settlement", fingerprint=round_state["draw_fingerprint"], details={"stage": "settlement", "hand_tier": round_state.get("hand_tier"), "multiplier": round_state.get("multiplier")})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="DOUBLE_BONUS_VIDEO_POKER_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_key=f"{round_state['draw_action_id']}:settlement", request_fingerprint=round_state["draw_fingerprint"], details={"stage": "settlement", "hand_tier": round_state.get("hand_tier"), "multiplier": round_state.get("multiplier")})
         # Mark the returned-token movement complete only after ledger proof exists.
         round_state["settlement_status"] = "complete"
         # Store the immutable payout ledger id.

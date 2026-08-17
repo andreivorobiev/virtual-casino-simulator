@@ -170,7 +170,7 @@ class CasinoHoldemService:
     # Ensure a prepared round has one committed ante debit.
     def _ensure_ante(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable deal action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="CASINO_HOLDEM_ANTE_DEBIT", round_id=round_state["round_id"], action_id=round_state["start_action_id"], fingerprint=round_state["request_fingerprint"], details={"stage": "deal", "ante": round_state["wager"], "flop": round_state["community_cards"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="CASINO_HOLDEM_ANTE_DEBIT", round_id=round_state["round_id"], action_key=round_state["start_action_id"], request_fingerprint=round_state["request_fingerprint"], details={"stage": "deal", "ante": round_state["wager"], "flop": round_state["community_cards"]})
         # Mark the debit complete only after ledger proof exists.
         round_state["ante_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -183,7 +183,7 @@ class CasinoHoldemService:
     # Ensure a prepared call has one committed two-times ante debit.
     def _ensure_call(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable call action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["call_wager"], transaction_type="CASINO_HOLDEM_CALL_DEBIT", round_id=round_state["round_id"], action_id=round_state["decision_action_id"], fingerprint=round_state["decision_fingerprint"], details={"stage": "call", "ante": round_state["wager"], "call_wager": round_state["call_wager"], "flop": round_state["community_cards"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["call_wager"], transaction_type="CASINO_HOLDEM_CALL_DEBIT", round_id=round_state["round_id"], action_key=round_state["decision_action_id"], request_fingerprint=round_state["decision_fingerprint"], details={"stage": "call", "ante": round_state["wager"], "call_wager": round_state["call_wager"], "flop": round_state["community_cards"]})
         # Mark the call debit complete only after ledger proof exists.
         round_state["call_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -204,7 +204,7 @@ class CasinoHoldemService:
             # Return no event and no ledger replay.
             return None, False
         # Apply or recover the stable settlement through a derived action id.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="CASINO_HOLDEM_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_id=f"{round_state['decision_action_id']}:settlement", fingerprint=round_state["decision_fingerprint"], details={"stage": "settlement", "ante": round_state["wager"], "call_wager": round_state.get("call_wager", 0), "outcome": round_state.get("outcome"), "player_rank": round_state.get("player_rank"), "dealer_rank": round_state.get("dealer_rank"), "dealer_qualifies": round_state.get("dealer_qualifies")})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="CASINO_HOLDEM_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_key=f"{round_state['decision_action_id']}:settlement", request_fingerprint=round_state["decision_fingerprint"], details={"stage": "settlement", "ante": round_state["wager"], "call_wager": round_state.get("call_wager", 0), "outcome": round_state.get("outcome"), "player_rank": round_state.get("player_rank"), "dealer_rank": round_state.get("dealer_rank"), "dealer_qualifies": round_state.get("dealer_qualifies")})
         # Mark the returned-token movement complete only after ledger proof exists.
         round_state["settlement_status"] = "complete"
         # Store the immutable payout ledger id.

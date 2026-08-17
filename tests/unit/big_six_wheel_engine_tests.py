@@ -72,7 +72,7 @@ class FakeLedgerGateway:
         self.calls = []
 
     # Apply or replay one event without touching any real player balance.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint=None, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Record each requested action for exact call-count assertions.
         self.calls.append(action_key)
         # Return an existing event when the action key already committed.
@@ -80,7 +80,7 @@ class FakeLedgerGateway:
             # Reuse the original event as exactly-once evidence.
             return self.events[action_key], True
         # Build a minimal shared-ledger-shaped event for service recovery logic.
-        event = {"player_id": player_id, "amount": amount, "transaction_type": transaction_type, "round_id": round_id, "ts": "2026-07-13T00:00:00Z", "details": {**details, "idempotency_key": action_key}}
+        event = {"player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "round_id": round_id, "ts": "2026-07-13T00:00:00Z", "details": {**details, "game_action_key": action_key, "request_fingerprint": request_fingerprint}}
         # Commit the event under its deterministic identity.
         self.events[action_key] = event
         # Return the new event and non-replay evidence.
@@ -217,7 +217,7 @@ class Ledger:
         self.calls.append(kwargs['action_key'])
         if kwargs['action_key'] in self.events:
             return self.events[kwargs['action_key']], True
-        event = {'ledger_id': 'ledger-' + str(len(self.calls)), 'player_id': kwargs['player_id'], 'amount': kwargs['amount'], 'transaction_type': kwargs['transaction_type'], 'game': engine.GAME_ID, 'round_id': kwargs['round_id'], 'ts': '2026-08-15T00:03:00Z', 'details': dict(kwargs['details'])}
+        event = {'ledger_id': 'ledger-' + str(len(self.calls)), 'player_id': kwargs['player_id'], 'amount': kwargs['signed_amount'], 'transaction_type': kwargs['transaction_type'], 'game': engine.GAME_ID, 'round_id': kwargs['round_id'], 'ts': '2026-08-15T00:03:00Z', 'details': dict(kwargs['details'])}
         self.events[kwargs['action_key']] = event
         return event, False
     def find(self, **kwargs):
@@ -314,7 +314,7 @@ except ConflictError:
         # Normalize and fingerprint the original wagers.
         wagers = engine.normalize_wagers(request["wagers"])
         # Precommit only the debit to simulate a crash before settlement and state save.
-        self.ledger.apply_once(player_id="player-a", amount=-2.0, transaction_type="BIG_SIX_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", details={"client_request_id": "crash-1", "request_fingerprint": engine.wager_fingerprint(wagers), "wagers": wagers, "result_index": 0})
+        self.ledger.apply_once(player_id="player-a", signed_amount=-2.0, transaction_type="BIG_SIX_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=engine.wager_fingerprint(wagers), details={"client_request_id": "crash-1", "request_fingerprint": engine.wager_fingerprint(wagers), "wagers": wagers, "result_index": 0})
         # Retry with an entropy source that would choose another segment if recovery failed.
         recovering = BigSixWheelService(ledger_gateway=self.ledger, state_loader=self.repository.load, state_updater=self.repository.update, randbelow=lambda size: 1, clock=lambda: "later")
         # Resume the interrupted action.

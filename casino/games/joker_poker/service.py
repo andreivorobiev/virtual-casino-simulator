@@ -162,7 +162,7 @@ class JokerPokerService:
     # Ensure a prepared round has one committed wager debit.
     def _ensure_wager(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable deal action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="JOKER_POKER_WAGER_DEBIT", round_id=round_state["round_id"], action_id=round_state["start_action_id"], fingerprint=round_state["request_fingerprint"], details={"stage": "deal", "wager": round_state["wager"], "initial_hand": round_state["initial_hand"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="JOKER_POKER_WAGER_DEBIT", round_id=round_state["round_id"], action_key=round_state["start_action_id"], request_fingerprint=round_state["request_fingerprint"], details={"stage": "deal", "wager": round_state["wager"], "initial_hand": round_state["initial_hand"]})
         # Mark the debit complete only after ledger proof exists.
         round_state["wager_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -183,7 +183,7 @@ class JokerPokerService:
             # Return no event and no ledger replay.
             return None, False
         # Apply or recover the stable draw action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["total_payout"], transaction_type="JOKER_POKER_PAYOUT_CREDIT", round_id=round_state["round_id"], action_id=round_state["draw_action_id"], fingerprint=round_state["draw_fingerprint"], details={"stage": "draw", "wager": round_state["wager"], "outcome": round_state["result"]["outcome"], "multiplier": round_state["result"]["multiplier"], "payout": round_state["total_payout"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["total_payout"], transaction_type="JOKER_POKER_PAYOUT_CREDIT", round_id=round_state["round_id"], action_key=round_state["draw_action_id"], request_fingerprint=round_state["draw_fingerprint"], details={"stage": "draw", "wager": round_state["wager"], "outcome": round_state["result"]["outcome"], "multiplier": round_state["result"]["multiplier"], "payout": round_state["total_payout"]})
         # Mark the returned-token movement complete only after ledger proof exists.
         round_state["settlement_status"] = "complete"
         # Store the immutable payout ledger id.

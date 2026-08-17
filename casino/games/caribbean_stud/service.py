@@ -191,7 +191,7 @@ class CaribbeanStudService:
         # Persist intent so ambiguous provider failures never repeat silently.
         self._save(player_id, state)
         # Commit or recover the one ante debit.
-        event, replayed = self.ledger.apply_once(player_id=player_id, signed_amount=-round_state["ante"], transaction_type="CARIBBEAN_STUD_ANTE_DEBIT", round_id=round_state["round_id"], action_key=action_key, fingerprint=round_state["deal_fingerprint"], details=self._ante_details(round_state))
+        event, replayed = self.ledger.apply_once(player_id=player_id, signed_amount=-round_state["ante"], transaction_type="CARIBBEAN_STUD_ANTE_DEBIT", round_id=round_state["round_id"], action_key=action_key, request_fingerprint=round_state["deal_fingerprint"], details=self._ante_details(round_state))
         # Mark the ante complete only after append-only proof exists.
         self._mark_ante_complete(player_id, state, round_state, event)
         # Return proof and replay evidence.
@@ -210,7 +210,7 @@ class CaribbeanStudService:
         # Restore a lost marker when proof exists.
         if event is not None:
             # Validate proof before trusting recovered state.
-            self.ledger.validate_existing(event, signed_amount=-round_state["ante"], transaction_type="CARIBBEAN_STUD_ANTE_DEBIT", round_id=round_state["round_id"], fingerprint=round_state["deal_fingerprint"])
+            self.ledger.validate_existing(event, signed_amount=-round_state["ante"], transaction_type="CARIBBEAN_STUD_ANTE_DEBIT", round_id=round_state["round_id"], request_fingerprint=round_state["deal_fingerprint"])
             # Mark the ante complete from ledger evidence.
             self._mark_ante_complete(player_id, state, round_state, event)
             # Stop after recovery.
@@ -263,7 +263,7 @@ class CaribbeanStudService:
             # Persist intent for fail-closed recovery.
             self._save(player_id, state)
             # Commit or recover the 2x ante call debit.
-            call_event, call_replayed = self.ledger.apply_once(player_id=player_id, signed_amount=-round_state["call_wager"], transaction_type="CARIBBEAN_STUD_CALL_DEBIT", round_id=round_state["round_id"], action_key=call_key, fingerprint=round_state["call_fingerprint"], details=self._call_details(round_state))
+            call_event, call_replayed = self.ledger.apply_once(player_id=player_id, signed_amount=-round_state["call_wager"], transaction_type="CARIBBEAN_STUD_CALL_DEBIT", round_id=round_state["round_id"], action_key=call_key, request_fingerprint=round_state["call_fingerprint"], details=self._call_details(round_state))
             # Mark the call debit complete only after proof exists.
             self._mark_call_complete(player_id, state, round_state, call_event)
             # Track replay evidence.
@@ -287,7 +287,7 @@ class CaribbeanStudService:
             # Persist intent for fail-closed recovery.
             self._save(player_id, state)
             # Commit or recover the settlement credit.
-            settlement_event, settlement_replayed = self.ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="CARIBBEAN_STUD_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_key=settlement_key, fingerprint=round_state["call_fingerprint"], details=self._settlement_details(round_state))
+            settlement_event, settlement_replayed = self.ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="CARIBBEAN_STUD_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_key=settlement_key, request_fingerprint=round_state["call_fingerprint"], details=self._settlement_details(round_state))
             # Mark the settlement complete only after proof exists.
             self._mark_settlement_complete(player_id, state, round_state, settlement_event)
             # Track replay evidence.
@@ -310,7 +310,7 @@ class CaribbeanStudService:
             # Restore a lost call marker when proof exists.
             if call_event is not None:
                 # Validate call debit proof before trusting it.
-                self.ledger.validate_existing(call_event, signed_amount=-round_state["call_wager"], transaction_type="CARIBBEAN_STUD_CALL_DEBIT", round_id=round_state["round_id"], fingerprint=round_state["call_fingerprint"])
+                self.ledger.validate_existing(call_event, signed_amount=-round_state["call_wager"], transaction_type="CARIBBEAN_STUD_CALL_DEBIT", round_id=round_state["round_id"], request_fingerprint=round_state["call_fingerprint"])
                 # Mark the call debit complete from proof.
                 self._mark_call_complete(player_id, state, round_state, call_event)
             # Fail closed when an attempted call debit lacks proof.
@@ -326,7 +326,7 @@ class CaribbeanStudService:
             # Restore a lost settlement marker when proof exists.
             if settlement_event is not None:
                 # Validate settlement credit proof before trusting it.
-                self.ledger.validate_existing(settlement_event, signed_amount=round_state["payout"], transaction_type="CARIBBEAN_STUD_SETTLEMENT_CREDIT", round_id=round_state["round_id"], fingerprint=round_state["call_fingerprint"])
+                self.ledger.validate_existing(settlement_event, signed_amount=round_state["payout"], transaction_type="CARIBBEAN_STUD_SETTLEMENT_CREDIT", round_id=round_state["round_id"], request_fingerprint=round_state["call_fingerprint"])
                 # Mark settlement complete from proof.
                 self._mark_settlement_complete(player_id, state, round_state, settlement_event)
             # Fail closed when an attempted credit lacks proof.

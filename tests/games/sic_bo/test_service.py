@@ -80,7 +80,7 @@ class FakeLedgerGateway:
         return event
 
     # Apply one signed movement once using deterministic action identity.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint=None, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Resolve an earlier event before changing the fake balance.
         existing = self.find(player_id, action_key)
         # Reuse a semantically identical event on retry.
@@ -94,7 +94,7 @@ class FakeLedgerGateway:
         # Read the balance before applying the signed movement.
         before = self.balances[player_id]
         # Calculate the candidate balance at shared precision.
-        after = round(before + amount, 2)
+        after = round(before + signed_amount, 2)
         # Reject overdrafts through the same public error category as production.
         if after < 0:
             # Preserve the pre-movement fake balance.
@@ -104,7 +104,7 @@ class FakeLedgerGateway:
         # Allocate the next stable event id.
         self.sequence += 1
         # Build the audit dimensions consumed by service recovery.
-        event = {"ledger_id": f"led_{self.sequence}", "player_id": player_id, "amount": round(amount, 2), "transaction_type": transaction_type, "game": "sic_bo", "round_id": round_id, "details": {**details, "game_action_key": action_key, "sic_bo_action_id": action_key, "request_fingerprint": request_fingerprint or details.get("request_fingerprint")}, "balance_before": before, "balance_after": after}
+        event = {"ledger_id": f"led_{self.sequence}", "player_id": player_id, "amount": round(signed_amount, 2), "transaction_type": transaction_type, "game": "sic_bo", "round_id": round_id, "details": {**details, "game_action_key": action_key, "request_fingerprint": request_fingerprint}, "balance_before": before, "balance_after": after}
         # Append the committed event exactly once.
         self.events.append(event)
         # Simulate one transport failure after immutable movement publication.
@@ -143,19 +143,19 @@ class SharedLedgerGatewayTests(unittest.TestCase):
         # Preserve one semantic request fingerprint in ledger details.
         details = {"request_fingerprint": "a" * 64, "dice": [1, 2, 3]}
         # Commit the original aggregate wager debit.
-        first, first_replayed = gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
+        first, first_replayed = gateway.apply_once(player_id="session-player", signed_amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", request_fingerprint=details["request_fingerprint"], details=details)
         # Retry the exact same movement and action identity.
-        replay, replayed = gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
+        replay, replayed = gateway.apply_once(player_id="session-player", signed_amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", request_fingerprint=details["request_fingerprint"], details=details)
         # Verify only one event exists and its original identity is returned.
         self.assertEqual((1, first, False, True), (len(events), replay, first_replayed, replayed))
         # Reject a different signed amount behind the committed action identity.
         with self.assertRaises(ConflictError):
             # Attempt to enlarge the already committed wager.
-            gateway.apply_once(player_id="session-player", amount=-4, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", details=details)
+            gateway.apply_once(player_id="session-player", signed_amount=-4, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_core", action_key="sb_core:wager", request_fingerprint=details["request_fingerprint"], details=details)
         # Reject the same key when a different round dimension is supplied.
         with self.assertRaises(ConflictError):
             # Attempt to transplant the action key into another round.
-            gateway.apply_once(player_id="session-player", amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_other", action_key="sb_core:wager", details=details)
+            gateway.apply_once(player_id="session-player", signed_amount=-3, transaction_type="SIC_BO_WAGER_DEBIT", round_id="sb_other", action_key="sb_core:wager", request_fingerprint=details["request_fingerprint"], details=details)
 
 
 # Build deterministic service dependencies for each recovery scenario.

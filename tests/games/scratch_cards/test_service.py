@@ -80,11 +80,11 @@ class FakeLedgerGateway:
         self.reject_debits = False
 
     # Apply or replay one signed event without touching a real wallet.
-    def apply_once(self, *, player_id, amount, transaction_type, card_id, action_key, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Record the full action identity before resolving its outcome.
         self.calls.append(action_key)
         # Reject configured wager debits through the canonical domain error.
-        if self.reject_debits and amount < 0 and action_key not in self.events:
+        if self.reject_debits and signed_amount < 0 and action_key not in self.events:
             # Simulate the shared provider's no-commit insufficient-funds path.
             raise InsufficientFundsError()
         # Return an existing atomic event for a safe retry.
@@ -92,17 +92,17 @@ class FakeLedgerGateway:
             # Read the immutable event before validating semantic replay content.
             existing = self.events[action_key]
             # Reject a changed amount or transaction meaning like the production gateway.
-            if existing["amount"] != amount or existing["transaction_type"] != transaction_type:
+            if existing["amount"] != signed_amount or existing["transaction_type"] != transaction_type:
                 # Preserve one immutable financial meaning per action key.
                 raise ConflictError("fake ledger action identity conflict")
             # Reject changed purchase or completion action metadata like production.
-            if existing["details"].get("request_fingerprint") != details.get("request_fingerprint") or existing["details"].get("action_id") != details.get("action_id"):
+            if existing["details"].get("request_fingerprint") != request_fingerprint or existing["details"].get("action_id") != details.get("action_id"):
                 # Fail before returning a semantically unrelated committed event.
                 raise ConflictError("fake ledger action content conflict")
             # Reuse the original event as exactly-once evidence.
             return copy.deepcopy(existing), True
         # Build a minimal shared-ledger-shaped event for service recovery logic.
-        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "game": engine.GAME_ID, "round_id": card_id, "amount": amount, "transaction_type": transaction_type, "ts": "2026-07-14T00:00:00Z", "details": {**copy.deepcopy(details), "idempotency_key": action_key}}
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "game": engine.GAME_ID, "round_id": round_id, "amount": signed_amount, "transaction_type": transaction_type, "ts": "2026-07-14T00:00:00Z", "details": {**copy.deepcopy(details), "game_action_key": action_key, "request_fingerprint": request_fingerprint}}
         # Commit the event under its deterministic action key.
         self.events[action_key] = copy.deepcopy(event)
         # Return the new event and non-replay evidence.

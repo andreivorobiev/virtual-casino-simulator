@@ -92,9 +92,9 @@ class FakeLedgerGateway:
         self.fail_after = set()
 
     # Commit or recover one signed game action.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Record the public action request for debit and credit count assertions.
-        self.calls.append({"player_id": player_id, "amount": amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": details})
+        self.calls.append({"player_id": player_id, "signed_amount": signed_amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": details})
         # Fail once before publication when a test arms this exact action suffix.
         if action_key.rsplit(":", 1)[-1] in self.fail_before:
             # Consume the one-shot failure so an explicit retry can proceed.
@@ -110,7 +110,7 @@ class FakeLedgerGateway:
             # Preserve the same event identity and report replay recovery.
             return self.events[action_key], True
         # Build one production-shaped ledger event with complete audit dimensions.
-        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "game": "chuck_a_luck", "round_id": round_id, "transaction_type": transaction_type, "amount": amount, "ts": "2026-07-14T18:00:00Z", "details": {**details, "idempotency_key": action_key, "request_fingerprint": request_fingerprint}}
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "game": "chuck_a_luck", "round_id": round_id, "transaction_type": transaction_type, "amount": signed_amount, "ts": "2026-07-14T18:00:00Z", "details": {**details, "game_action_key": action_key, "request_fingerprint": request_fingerprint}}
         # Persist the committed event under its unique action identity.
         self.events[action_key] = event
         # Lose one response only after the immutable event exists.
@@ -391,7 +391,7 @@ print('PASS:' + str(len(draws)) + ':' + ','.join(str(face) for face in result['e
         # Derive the deterministic player-scoped round identity.
         round_id = engine.round_id_for("player-a", request["request_id"])
         # Commit only the wager with its original two-two-three result.
-        self.ledger.apply_once(player_id="player-a", amount=-2.0, transaction_type="CHUCK_A_LUCK_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=engine.wager_fingerprint(wagers), details={"request_id": request["request_id"], "wagers": wagers, "dice": [2, 2, 3]})
+        self.ledger.apply_once(player_id="player-a", signed_amount=-2.0, transaction_type="CHUCK_A_LUCK_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=engine.wager_fingerprint(wagers), details={"request_id": request["request_id"], "wagers": wagers, "dice": [2, 2, 3]})
         # Build a recovery service whose fresh entropy would otherwise roll three sixes.
         recovering = ChuckALuckService(ledger_gateway=self.ledger, repository=self.repository, randbelow=lambda sides: 5, clock=lambda: "later", get_player=lambda player_id: {"player_id": player_id, "balance": 100})
         # Resume the interrupted request through the public service action.
@@ -412,9 +412,9 @@ print('PASS:' + str(len(draws)) + ':' + ','.join(str(face) for face in result['e
         # Store the shared fingerprint once for both action details.
         fingerprint = engine.wager_fingerprint(wagers)
         # Precommit the original triple-one wager debit.
-        self.ledger.apply_once(player_id="player-a", amount=-1.0, transaction_type="CHUCK_A_LUCK_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=fingerprint, details={"request_id": request["request_id"], "wagers": wagers, "dice": [1, 1, 1]})
+        self.ledger.apply_once(player_id="player-a", signed_amount=-1.0, transaction_type="CHUCK_A_LUCK_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=fingerprint, details={"request_id": request["request_id"], "wagers": wagers, "dice": [1, 1, 1]})
         # Precommit the corresponding stake-plus-winnings credit.
-        self.ledger.apply_once(player_id="player-a", amount=4.0, transaction_type="CHUCK_A_LUCK_SETTLEMENT_CREDIT", round_id=round_id, action_key=f"{round_id}:settlement", request_fingerprint=fingerprint, details={"request_id": request["request_id"], "dice": [1, 1, 1], "settlements": []})
+        self.ledger.apply_once(player_id="player-a", signed_amount=4.0, transaction_type="CHUCK_A_LUCK_SETTLEMENT_CREDIT", round_id=round_id, action_key=f"{round_id}:settlement", request_fingerprint=fingerprint, details={"request_id": request["request_id"], "dice": [1, 1, 1], "settlements": []})
         # Recover the missing state write through the normal service call.
         result = self.service.roll("player-a", request)
         # Require replay evidence and no third committed ledger event.

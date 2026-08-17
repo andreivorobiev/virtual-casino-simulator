@@ -2015,7 +2015,7 @@ def run_api_tests():
     # Record the additive audit, sign routing, replay, conflict, and bounded recovery proof.
     run_case('API-GAMECORE-002',['GAMECORE-003','LEDGER-033','TEST-164'],run_settlement_adapter_tests)
 
-    # Prove every registered game remains behind the one shared settlement boundary. (LEDGER-032, GAMECORE-004, TEST-157)
+    # Prove every registered game remains behind the canonical shared settlement boundary. (LEDGER-032, GAMECORE-004/008, TEST-157/241)
     def run_catalog_settlement_boundary_tests():
         # Import the focused gate lazily so ordinary runner startup remains lightweight.
         from tests import settlement_core_tests
@@ -2026,7 +2026,7 @@ def run_api_tests():
         # Fail this permanent case when any game regresses to a direct ledger path.
         if not result.wasSuccessful(): raise AssertionError('catalog settlement boundary suite failed')
     # Register one permanent API evidence id for the 46-game prevention gate.
-    run_case('API-GAMECORE-004',['LEDGER-032','GAMECORE-004','TEST-157'],run_catalog_settlement_boundary_tests)
+    run_case('API-GAMECORE-004',['LEDGER-032','GAMECORE-004','GAMECORE-008','TEST-157','TEST-241'],run_catalog_settlement_boundary_tests)
     # Execute the route-free provider-neutral game-action contract proof without opening a listener.
     def run_game_action_contract_tests():
         # Import the focused contract suite only when its named case runs.

@@ -83,14 +83,14 @@ class RecordingLedger:
         return next((event for event in reversed(self.events) if event["player_id"] == player_id and event["game"] == engine.GAME_ID and event["details"]["caribbean_stud_action_key"] == action_key), None)
 
     # Verify fake prior proof against the retried movement.
-    def validate_existing(self, event, *, signed_amount, transaction_type, round_id, fingerprint):
+    def validate_existing(self, event, *, signed_amount, transaction_type, round_id, request_fingerprint):
         # Reject amount, type, round, game, or request mismatches.
-        if event["amount"] != signed_amount or event["transaction_type"] != transaction_type or event["round_id"] != round_id or event["details"]["request_fingerprint"] != fingerprint:
+        if event["amount"] != signed_amount or event["transaction_type"] != transaction_type or event["round_id"] != round_id or event["details"]["request_fingerprint"] != request_fingerprint:
             # Fail before any second movement.
             raise ConflictError("fake action identity conflict")
 
     # Apply or recover one signed movement exactly once.
-    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, fingerprint, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Count every call before replay or failure handling.
         self.apply_calls[transaction_type] = self.apply_calls.get(transaction_type, 0) + 1
         # Resolve any prior committed movement before changing the fake balance.
@@ -98,7 +98,7 @@ class RecordingLedger:
         # Reuse an exact matching event.
         if existing is not None:
             # Validate the prior event.
-            self.validate_existing(existing, signed_amount=signed_amount, transaction_type=transaction_type, round_id=round_id, fingerprint=fingerprint)
+            self.validate_existing(existing, signed_amount=signed_amount, transaction_type=transaction_type, round_id=round_id, request_fingerprint=request_fingerprint)
             # Return immutable proof and replay evidence.
             return copy.deepcopy(existing), True
         # Simulate one definitive failure before any append-only event exists.
@@ -120,7 +120,7 @@ class RecordingLedger:
         # Commit the fake balance only through this ledger adapter.
         self.balances[player_id] = new_balance
         # Build the public ledger fields used by service recovery and assertions.
-        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "caribbean_stud_action_key": action_key, "request_fingerprint": fingerprint}}
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "caribbean_stud_action_key": action_key, "request_fingerprint": request_fingerprint}}
         # Append the event once.
         self.events.append(event)
         # Simulate a provider or transport loss only after immutable proof commits.

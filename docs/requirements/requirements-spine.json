@@ -9928,7 +9928,7 @@
     {
       "id": "LEDGER-032",
       "module": "Ledger",
-      "description": "Every accepted game wager, ticket, card purchase, insurance action, split, double, refund, payout, and settlement for all registered games crosses casino.core.settlement.GameSettlementGateway and the storage-atomic SettlementAdapter exactly-once boundary; game modules cannot import or directly call ledger debit, credit, debit-once, or credit-once functions. Canonical game action, request fingerprint, and round evidence is written beside one-release legacy detail keys without rewriting historical rows or changing current API response semantics.",
+      "description": "Every accepted game wager, ticket, card purchase, insurance action, split, double, refund, payout, and settlement for all registered games crosses casino.core.settlement.GameSettlementGateway and the storage-atomic SettlementAdapter exactly-once boundary; game modules cannot import or directly call ledger debit, credit, debit-once, or credit-once functions. New events write only canonical game action, request fingerprint, and round evidence while immutable historical detail aliases remain read-compatible without changing current API response semantics.",
       "status": "PASS",
       "api_tests": [
         "API-GAMECORE-004",
@@ -9943,13 +9943,13 @@
         "contracts/compatibility/server-authority-matrix.json"
       ],
       "introduced_in": "issue-430-settlement-convergence",
-      "changed_in": "issue-430-settlement-convergence",
-      "notes": "The catalog-wide migration preserves each game's accepted debit timing and final payout or refund behavior. Opponent-only Texas Hold'em practice accounts remain under the separate core practice-account transaction while the human wallet path uses the common gateway."
+      "changed_in": "issue-703-settlement-alias-retirement",
+      "notes": "The catalog-wide migration preserves each game's accepted debit timing and final payout or refund behavior. Mutation aliases and new legacy-detail dual writes retired on 2026-08-17; historical rows remain readable. Opponent-only Texas Hold'em practice accounts remain under the separate core practice-account transaction while the human wallet path uses the common gateway."
     },
     {
       "id": "GAMECORE-004",
       "module": "Core",
-      "description": "The shared game-money compatibility gateway presents one canonical signed settlement contract to direct, shared-simple, staged-intent, and historically injected game service shapes, delegates production value movement only to SettlementAdapter, preserves deterministic replay and changed-meaning conflict behavior, and keeps transitional detail aliases read-compatible for one release.",
+      "description": "The shared game-money gateway presents one canonical signed settlement contract to direct, shared-simple, staged-intent, and historically injected game service shapes, delegates production value movement only to SettlementAdapter, preserves deterministic replay and changed-meaning conflict behavior, and keeps immutable predecessor detail aliases read-compatible without writing them on new events.",
       "status": "PASS",
       "api_tests": [
         "API-GAMECORE-002",
@@ -9963,13 +9963,13 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-430-settlement-convergence",
-      "changed_in": "issue-430-settlement-convergence",
-      "notes": "Legacy game-specific method names may remain only as source-local compatibility aliases during the one-release transition; they no longer own production ledger mutation."
+      "changed_in": "issue-703-settlement-alias-retirement",
+      "notes": "Prepared controller and callback adapters may translate their existing internal state into the canonical call, but GameSettlementGateway.apply_once accepts only the universal mutation vocabulary."
     },
     {
       "id": "TEST-157",
       "module": "Tests",
-      "description": "A catalog-derived source gate and focused settlement suite prove every registered game uses the shared settlement boundary, rejects direct game imports or calls to ledger money functions, preserves canonical and one-release compatibility evidence, and routes both direct actions and staged intents through storage-atomic debit-once or credit-once seams.",
+      "description": "A catalog-derived source gate and focused settlement suite prove every registered game uses the shared settlement boundary, rejects direct game imports or calls to ledger money functions, preserves canonical evidence and immutable historical read compatibility, and routes both direct actions and staged intents through storage-atomic debit-once or credit-once seams.",
       "status": "PASS",
       "api_tests": [
         "API-GAMECORE-004"
@@ -9981,8 +9981,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-430-settlement-convergence",
-      "changed_in": "issue-430-settlement-convergence",
-      "notes": "The gate derives the game inventory from the runtime catalog so a newly registered game cannot ship another money interface without failing required checks."
+      "changed_in": "issue-703-settlement-alias-retirement",
+      "notes": "The gate derives the game inventory from the runtime catalog so a newly registered game cannot ship another money interface without failing required checks; TEST-241 separately pins the canonical apply-once vocabulary."
     },
     {
       "id": "ADMIN-033",
@@ -12805,6 +12805,27 @@
       "notes": "The adapter owns only game-state lifecycle compatibility. SimpleWagerGame retains exclusive entropy adoption, movement ordering, proof recovery, replay checks, and terminal provider-current publication."
     },
     {
+      "id": "GAMECORE-008",
+      "module": "Core",
+      "description": "GameSettlementGateway.apply_once exposes one keyword-only mutation vocabulary: authenticated player_id, finite non-zero signed_amount, transaction_type, stable round_id, stable action_key, deterministic request_fingerprint, and optional details. The retired amount, drop_id, card_id, ledger_action_id, action_id, and fingerprint aliases are rejected before provider access; new events omit configured legacy action-detail keys while immutable predecessor rows remain read-compatible.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-004"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/settlement.py",
+        "casino/core/simple_game.py",
+        "casino/games/",
+        "docs/settlement_interface.md",
+        "tests/settlement_core_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-703-settlement-alias-retirement",
+      "changed_in": "issue-703-settlement-alias-retirement",
+      "notes": "The retirement changes only the internal Python mutation boundary. Frozen API routes and envelopes, wallet timing, action identities, paytables, and historical ledger bytes remain unchanged."
+    },
+    {
       "id": "TEST-235",
       "module": "Tests",
       "description": "Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.",
@@ -12961,6 +12982,24 @@
       "introduced_in": "issue-871-dragon-tiger-simple-wager",
       "changed_in": "issue-871-dragon-tiger-simple-wager",
       "notes": "The structural inventory continues to classify Dragon Tiger provider state as atomic while refusing production multiworker activation because state and money remain separate durable transactions."
+    },
+    {
+      "id": "TEST-241",
+      "module": "Tests",
+      "description": "Listener-free settlement evidence pins the exact canonical keyword-only GameSettlementGateway.apply_once signature, rejects every retired alias and missing, empty, or structured fingerprints before ledger access, proves new events contain no configured historical detail-key alias, preserves reads of immutable predecessor rows, and parses every production game apply-once call to reject an explicit retired keyword spelling.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-004"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/settlement_core_tests.py",
+        "tests/run_tests.py",
+        "docs/settlement_interface.md"
+      ],
+      "introduced_in": "issue-703-settlement-alias-retirement",
+      "changed_in": "issue-703-settlement-alias-retirement",
+      "notes": "The syntax-tree gate is formatting-independent and supplements the catalog-derived direct-ledger boundary without accepting dynamic legacy keyword aliases."
     }
   ]
 }

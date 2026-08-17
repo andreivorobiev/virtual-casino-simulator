@@ -173,7 +173,7 @@ class MississippiStudService:
     # Ensure a prepared round has one committed ante debit.
     def _ensure_opening(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable deal action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["ante"], transaction_type="MISSISSIPPI_STUD_ANTE_DEBIT", round_id=round_state["round_id"], action_id=round_state["start_action_id"], fingerprint=round_state["request_fingerprint"], details={"stage": "ante", "ante": round_state["ante"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["ante"], transaction_type="MISSISSIPPI_STUD_ANTE_DEBIT", round_id=round_state["round_id"], action_key=round_state["start_action_id"], request_fingerprint=round_state["request_fingerprint"], details={"stage": "ante", "ante": round_state["ante"]})
         # Mark the debit complete only after ledger proof exists.
         round_state["opening_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -186,7 +186,7 @@ class MississippiStudService:
     # Ensure a prepared street bet has one committed debit.
     def _ensure_bet(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable street bet through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["pending_wager"], transaction_type="MISSISSIPPI_STUD_BET_DEBIT", round_id=round_state["round_id"], action_id=round_state["pending_action_id"], fingerprint=round_state["pending_fingerprint"], details={"stage": "bet", "street": round_state["pending_street"], "wager": round_state["pending_wager"], "multiplier": round_state["pending_multiplier"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["pending_wager"], transaction_type="MISSISSIPPI_STUD_BET_DEBIT", round_id=round_state["round_id"], action_key=round_state["pending_action_id"], request_fingerprint=round_state["pending_fingerprint"], details={"stage": "bet", "street": round_state["pending_street"], "wager": round_state["pending_wager"], "multiplier": round_state["pending_multiplier"]})
         # Mark the street bet complete only after ledger proof exists.
         round_state["bet_status"] = "complete"
         # Persist the marker so reloads can safely advance the round.
@@ -207,7 +207,7 @@ class MississippiStudService:
         # Read the stable round-scoped settlement identity.
         action_id, fingerprint = self._settlement_action(round_state)
         # Apply or recover the stable settlement through the round-scoped action id.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="MISSISSIPPI_STUD_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_id=action_id, fingerprint=fingerprint, details={"stage": "settlement", "hand_tier": round_state.get("hand_tier"), "total_wager": round_state.get("total_wager"), "multiplier": round_state.get("multiplier")})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="MISSISSIPPI_STUD_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_key=action_id, request_fingerprint=fingerprint, details={"stage": "settlement", "hand_tier": round_state.get("hand_tier"), "total_wager": round_state.get("total_wager"), "multiplier": round_state.get("multiplier")})
         # Mark the returned-token movement complete only after ledger proof exists.
         round_state["settlement_status"] = "complete"
         # Store the immutable payout ledger id.

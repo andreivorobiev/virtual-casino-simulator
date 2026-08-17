@@ -84,13 +84,13 @@ class RecordingLedger:
         return next((event for event in reversed(self.events) if event["player_id"] == player_id and event["game"] == engine.GAME_ID and event["details"]["acey_deucey_action_id"] == ledger_action_id), None)
 
     # Apply or recover one signed movement exactly once.
-    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, ledger_action_id, fingerprint, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Resolve any prior committed action before changing balance.
-        existing = self.find(player_id, ledger_action_id)
+        existing = self.find(player_id, action_key)
         # Reuse exact matching events.
         if existing is not None:
             # Reject semantic conflicts like production.
-            if existing["amount"] != signed_amount or existing["transaction_type"] != transaction_type or existing["round_id"] != round_id or existing["details"]["request_fingerprint"] != fingerprint:
+            if existing["amount"] != signed_amount or existing["transaction_type"] != transaction_type or existing["round_id"] != round_id or existing["details"]["request_fingerprint"] != request_fingerprint:
                 # Fail before a second movement.
                 raise ConflictError("fake action identity conflict")
             # Return detached proof and replay evidence.
@@ -104,7 +104,7 @@ class RecordingLedger:
         # Commit the fake balance.
         self.balances[player_id] = new_balance
         # Build public ledger fields used by assertions.
-        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "acey_deucey_action_id": ledger_action_id, "request_fingerprint": fingerprint}}
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "acey_deucey_action_id": action_key, "request_fingerprint": request_fingerprint}}
         # Append the event once.
         self.events.append(event)
         # Return detached proof and non-replay evidence.
@@ -552,7 +552,7 @@ except ConflictError:
         # Persist the crash-recoverable terminal state.
         self.repository.save("session-player", state)
         # Commit the exact append-only wager movement without saving its state marker.
-        self.ledger.apply_once(player_id="session-player", signed_amount=-4.0, transaction_type="ACEY_DEUCEY_WAGER_DEBIT", round_id=round_id, ledger_action_id="ad:play-committed-window:wager", fingerprint=play_fingerprint, details={"stage": "play_wager", "wager": 4.0, "left_card": "3H", "right_card": "KS"})
+        self.ledger.apply_once(player_id="session-player", signed_amount=-4.0, transaction_type="ACEY_DEUCEY_WAGER_DEBIT", round_id=round_id, action_key="ad:play-committed-window:wager", request_fingerprint=play_fingerprint, details={"stage": "play_wager", "wager": 4.0, "left_card": "3H", "right_card": "KS"})
         # Reload through the public route to reconcile the missing marker.
         recovered = self.call("/api/v1/games/acey-deucey/state", method="GET")
         # Verify committed terminal state remains archived and never returns active.

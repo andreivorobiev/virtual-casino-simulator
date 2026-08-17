@@ -104,9 +104,9 @@ class FakeLedgerGateway:
         self.fail_after = set()
 
     # Commit or recover one signed game action.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Record every helper-owned movement request for count assertions.
-        self.calls.append({"player_id": player_id, "amount": amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": copy.deepcopy(details)})
+        self.calls.append({"player_id": player_id, "signed_amount": signed_amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": copy.deepcopy(details)})
         # Resolve the bounded movement role once for failure injection.
         suffix = action_key.rsplit(":", 1)[-1]
         # Fail once before publication when the test arms this role.
@@ -120,13 +120,13 @@ class FakeLedgerGateway:
             # Read immutable proof once for exact conflict checks.
             existing = self.events[action_key]
             # Reject one identity reused with different money or meaning.
-            if existing["player_id"] != player_id or existing["round_id"] != round_id or existing["transaction_type"] != transaction_type or existing["amount"] != amount or existing["details"]["request_fingerprint"] != request_fingerprint:
+            if existing["player_id"] != player_id or existing["round_id"] != round_id or existing["transaction_type"] != transaction_type or existing["amount"] != signed_amount or existing["details"]["request_fingerprint"] != request_fingerprint:
                 # Match the production gateway conflict boundary.
                 raise ConflictError("Fake Dragon Tiger ledger dimensions conflict")
             # Preserve the same event identity and report recovery.
             return copy.deepcopy(existing), True
         # Calculate candidate wallet balance before committing evidence.
-        candidate = round(self.balances[player_id] + amount, 2)
+        candidate = round(self.balances[player_id] + signed_amount, 2)
         # Reject an aggregate wager that would overdraw the fake wallet.
         if candidate < 0:
             # Preserve provider state and ledger bytes on rejection.
@@ -134,7 +134,7 @@ class FakeLedgerGateway:
         # Commit the fake wallet movement exactly once.
         self.balances[player_id] = candidate
         # Build one production-shaped immutable ledger event.
-        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "game": engine.GAME_ID, "round_id": round_id, "transaction_type": transaction_type, "amount": amount, "ts": "2026-07-14T00:00:00Z", "details": {**copy.deepcopy(details), "idempotency_key": action_key, "request_fingerprint": request_fingerprint}}
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "game": engine.GAME_ID, "round_id": round_id, "transaction_type": transaction_type, "amount": signed_amount, "ts": "2026-07-14T00:00:00Z", "details": {**copy.deepcopy(details), "game_action_key": action_key, "request_fingerprint": request_fingerprint}}
         # Persist the committed event under its unique action identity.
         self.events[action_key] = event
         # Lose one response only after the immutable event exists.
@@ -338,7 +338,7 @@ class DragonTigerServiceTests(unittest.TestCase):
         # Build historical proof fields without canonical entropy or request_id.
         details = {"action_id": request["action_id"], "request_fingerprint": fingerprint, "bet": "dragon", "wager": 1.0, "dragon_card": "KS", "tiger_card": "QH", "winner": "dragon", "outcome": "win", "total_return": 2.0, "net": 1.0, "created_at": "2026-07-14T00:00:00Z", "shoe_number": 0, "profile": engine.PROFILE_ID}
         # Commit the pre-migration debit exactly once.
-        self.ledger.apply_once(player_id="player-a", amount=-1.0, transaction_type="DRAGON_TIGER_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=fingerprint, details=details)
+        self.ledger.apply_once(player_id="player-a", signed_amount=-1.0, transaction_type="DRAGON_TIGER_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=fingerprint, details=details)
         # Recover through ordinary service with a shoe seam that must remain unused.
         recovering = DragonTigerService(repository=self.repository, ledger_gateway=self.ledger, shoe_factory=lambda: (_ for _ in ()).throw(AssertionError("ledger-only recovery consumed a shoe")), clock=lambda: "later", player_reader=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]})
         # Recover the historical action through frozen public input.

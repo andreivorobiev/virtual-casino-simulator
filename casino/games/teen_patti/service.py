@@ -150,7 +150,7 @@ class TeenPattiService:
     # Ensure a prepared round has one committed ante debit.
     def _ensure_opening(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable deal action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["ante"], transaction_type="TEEN_PATTI_ANTE_DEBIT", round_id=round_state["round_id"], action_id=round_state["start_action_id"], fingerprint=round_state["request_fingerprint"], details={"stage": "ante", "ante": round_state["ante"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["ante"], transaction_type="TEEN_PATTI_ANTE_DEBIT", round_id=round_state["round_id"], action_key=round_state["start_action_id"], request_fingerprint=round_state["request_fingerprint"], details={"stage": "ante", "ante": round_state["ante"]})
         # Mark the debit complete only after ledger proof exists.
         round_state["opening_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -163,7 +163,7 @@ class TeenPattiService:
     # Ensure a prepared play has one committed play debit.
     def _ensure_play(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable play action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["play_wager"], transaction_type="TEEN_PATTI_PLAY_DEBIT", round_id=round_state["round_id"], action_id=round_state["decision_action_id"], fingerprint=round_state["decision_fingerprint"], details={"stage": "play", "ante": round_state["ante"], "play_wager": round_state["play_wager"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["play_wager"], transaction_type="TEEN_PATTI_PLAY_DEBIT", round_id=round_state["round_id"], action_key=round_state["decision_action_id"], request_fingerprint=round_state["decision_fingerprint"], details={"stage": "play", "ante": round_state["ante"], "play_wager": round_state["play_wager"]})
         # Mark the play debit complete only after ledger proof exists.
         round_state["play_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -184,7 +184,7 @@ class TeenPattiService:
             # Return no event and no ledger replay.
             return None, False
         # Apply or recover the stable settlement through a derived action id.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="TEEN_PATTI_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_id=f"{round_state['decision_action_id']}:settlement", fingerprint=round_state["decision_fingerprint"], details={"stage": "settlement", "outcome": round_state.get("outcome"), "ante_credit": round_state.get("ante_credit"), "play_credit": round_state.get("play_credit"), "bonus_credit": round_state.get("bonus_credit")})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="TEEN_PATTI_SETTLEMENT_CREDIT", round_id=round_state["round_id"], action_key=f"{round_state['decision_action_id']}:settlement", request_fingerprint=round_state["decision_fingerprint"], details={"stage": "settlement", "outcome": round_state.get("outcome"), "ante_credit": round_state.get("ante_credit"), "play_credit": round_state.get("play_credit"), "bonus_credit": round_state.get("bonus_credit")})
         # Mark the returned-token movement complete only after ledger proof exists.
         round_state["settlement_status"] = "complete"
         # Store the immutable payout ledger id.
