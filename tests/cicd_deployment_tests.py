@@ -780,12 +780,59 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one delegation through the runner-owned recorder and Node executor.
         delegation = "api_player_foundation.run_cases(run_case,run_game_frontend_node_test)"
         self.assertEqual(runner_source.count(delegation), 1)
-        # Preserve the boundary after specialized-game acceptance and before settlement-core cases.
+        # Preserve the boundary after specialized-game acceptance and before GameCore ownership.
         self.assertLess(runner_source.index("api_specialized_game_acceptance.run_cases("), runner_source.index(delegation))
-        self.assertLess(runner_source.index(delegation), runner_source.index("def run_simple_game_core_tests"))
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_gamecore_mobile_foundation.run_cases("))
         # Keep subprocess and listener construction outside the extracted registration owner.
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("ServerThread", area_source)
+
+    # Prove GameCore and mobile-foundation registrations moved as one exact listener-free area.
+    def test_api_gamecore_mobile_foundation_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed cases and requirement mappings in historical order.
+        expected_cases = (
+            ("API-GAMECORE-001", ["GAMECORE-001", "GAMECORE-002", "GAMECORE-007", "TEST-127", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240"]),
+            ("API-GAMECORE-005", ["GAMECORE-005", "GAMECORE-006", "GAMECORE-007", "TEST-233", "TEST-234", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240"]),
+            ("API-GAMECORE-002", ["GAMECORE-003", "LEDGER-033", "TEST-164"]),
+            ("API-GAMECORE-004", ["LEDGER-032", "GAMECORE-004", "GAMECORE-008", "TEST-157", "TEST-241"]),
+            ("API-GAMECORE-003", ["CORE-031"]),
+            ("API-GAME-ACTION-LIFECYCLE-001", ["CORE-031", "STORAGE-013", "TEST-174"]),
+            ("API-MOBILE-CORE-001", ["CORE-032", "AUTH-019", "SEC-016", "SESSION-013", "TEST-172"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "gamecore_mobile_foundation.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the registration owner so callbacks can be inspected without execution.
+        spec = importlib.util.spec_from_file_location("gamecore_mobile_foundation_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture exact registration identity without running any focused suite.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Preserve all ownership dimensions for one fail-closed equality proof.
+            captured.append((case_id, requirements, callback.__name__))
+        module.run_cases(capture)
+        # Bind permanent IDs, requirement mappings, order, and focused callback ownership.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        self.assertEqual(tuple(callback for _, _, callback in captured), (
+            "_run_simple_game_core_tests", "_run_simple_game_atomic_tests", "_run_settlement_adapter_tests",
+            "_run_catalog_settlement_boundary_tests", "_run_game_action_contract_tests",
+            "_run_game_action_contract_tests", "_run_mobile_core_security_tests",
+        ))
+        # Reject duplicate registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the original player-foundation to catalog-expansion boundary.
+        delegation = "api_gamecore_mobile_foundation.run_cases(run_case)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        self.assertLess(runner_source.index("api_player_foundation.run_cases("), runner_source.index(delegation))
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_catalog_expansion.run_cases("))
+        # Keep process, listener, and server lifecycle out of the extracted owner.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+        self.assertNotIn("start_server", area_source)
 
     # Prove catalog-expansion registrations moved as one exact listener-free area.
     def test_api_catalog_expansion_area_registration_ownership_is_exact(self):
@@ -830,10 +877,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject duplicate registration ownership in the compatibility runner.
         for case_id, _ in expected_cases:
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
-        # Require one delegation at the original mobile-core to Keno/Admin boundary.
+        # Require one delegation after GameCore/Mobile and before Keno/Admin ownership.
         delegation = "api_catalog_expansion.run_cases(run_case)"
         self.assertEqual(runner_source.count(delegation), 1)
-        self.assertLess(runner_source.index("API-MOBILE-CORE-001"), runner_source.index(delegation))
+        self.assertLess(runner_source.index("api_gamecore_mobile_foundation.run_cases("), runner_source.index(delegation))
         self.assertLess(runner_source.index(delegation), runner_source.index("api_keno_admin_foundation.run_cases("))
         # Keep subprocess and listener lifecycle out of this extracted registration owner.
         self.assertNotIn("subprocess.run", area_source)

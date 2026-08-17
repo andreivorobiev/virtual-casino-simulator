@@ -78,6 +78,8 @@ from tests.cases.api import self_service_foundation as api_self_service_foundati
 from tests.cases.api import specialized_game_acceptance as api_specialized_game_acceptance
 # Import listener-free player-foundation ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import player_foundation as api_player_foundation
+# Import listener-free GameCore and mobile-foundation ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import gamecore_mobile_foundation as api_gamecore_mobile_foundation
 # Import listener-free catalog-expansion ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import catalog_expansion as api_catalog_expansion
 # Import listener-free Keno and Admin-foundation ownership behind the compatibility runner. (TEST-242)
@@ -1402,93 +1404,8 @@ def run_api_tests():
     api_specialized_game_acceptance.run_cases(run_case)
     # Delegate listener-free player-foundation registrations at their historical execution point. (TEST-242)
     api_player_foundation.run_cases(run_case,run_game_frontend_node_test)
-    # Execute the shared simple-game settlement-core proof without opening a listener.
-    def run_simple_game_core_tests():
-        # Load only the focused settlement-core class.
-        from tests import simple_game_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(simple_game_tests.SimpleGameCoreTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused settlement proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('simple-game settlement core suite failed')
-    # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
-    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','GAMECORE-007','TEST-127','TEST-235','TEST-236','TEST-237','TEST-238','TEST-239','TEST-240'],run_simple_game_core_tests)
-    # Execute the shared helper's real cross-process provider-current publication proof.
-    def run_simple_game_atomic_tests():
-        # Import the dedicated fresh-process suite only when its named case runs.
-        from tests import simple_game_atomic_tests
-        # Load the exact provider-atomic shared-helper class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(simple_game_atomic_tests.SimpleGameAtomicStateTests)
-        # Execute the bounded child-process proof with concise reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the permanent case when either terminal round or its sibling is lost.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('simple-game provider-atomic suite failed')
-    # Record provider-current merge, fresh-process concurrency, and complete catalog adoption evidence.
-    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','GAMECORE-007','TEST-233','TEST-234','TEST-235','TEST-236','TEST-237','TEST-238','TEST-239','TEST-240'],run_simple_game_atomic_tests)
-    # Execute the route-free signed-action settlement-adapter proof without opening a listener.
-    def run_settlement_adapter_tests():
-        # Load only the focused storage-atomic adapter class.
-        from tests import settlement_core_tests
-        # Build the focused listener-free suite explicitly.
-        # Load the low-level adapter contract first.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(settlement_core_tests.SettlementAdapterTests)
-        # Add the compatibility gateway contract used by every migrated game cohort.
-        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(settlement_core_tests.GameSettlementGatewayTests))
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any adapter proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('settlement adapter suite failed')
-    # Record the additive audit, sign routing, replay, conflict, and bounded recovery proof.
-    run_case('API-GAMECORE-002',['GAMECORE-003','LEDGER-033','TEST-164'],run_settlement_adapter_tests)
-
-    # Prove every registered game remains behind the canonical shared settlement boundary. (LEDGER-032, GAMECORE-004/008, TEST-157/241)
-    def run_catalog_settlement_boundary_tests():
-        # Import the focused gate lazily so ordinary runner startup remains lightweight.
-        from tests import settlement_core_tests
-        # Load the exact catalog-derived source-boundary test.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(settlement_core_tests.CatalogSettlementBoundaryTests)
-        # Execute without opening a listener or provider.
-        result = unittest.TextTestRunner(verbosity=0).run(suite)
-        # Fail this permanent case when any game regresses to a direct ledger path.
-        if not result.wasSuccessful(): raise AssertionError('catalog settlement boundary suite failed')
-    # Register one permanent API evidence id for the 46-game prevention gate.
-    run_case('API-GAMECORE-004',['LEDGER-032','GAMECORE-004','GAMECORE-008','TEST-157','TEST-241'],run_catalog_settlement_boundary_tests)
-    # Execute the route-free provider-neutral game-action contract proof without opening a listener.
-    def run_game_action_contract_tests():
-        # Import the focused contract suite only when its named case runs.
-        from tests import game_action_contract_tests
-        # Load the complete immutable-contract and hostile conformance class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(game_action_contract_tests.GameActionContractTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any contract or conformance proof failed.
-        if not result.wasSuccessful():
-            # Preserve detailed unittest output while keeping the named failure stable.
-            raise AssertionError('game-action contract suite failed')
-    # Record bounded identity, fingerprint, planner-order, paid, zero-cost, and receipt semantics.
-    run_case('API-GAMECORE-003',['CORE-031'],run_game_action_contract_tests)
-    # Record provider-neutral pending, committed, uncommitted, conflict, and no-planner resolution.
-    run_case('API-GAME-ACTION-LIFECYCLE-001',['CORE-031','STORAGE-013','TEST-174'],run_game_action_contract_tests)
-    # Execute the complete host-runnable mobile security and lifecycle suite without a native SDK. (TEST-172)
-    def run_mobile_core_security_tests():
-        # Import the focused mobile suite only when its named case runs.
-        from tests import mobile_core_security_tests
-        # Load the complete native transport, session, config, link, and source-conformance class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(mobile_core_security_tests.MobileCoreSecurityTests)
-        # Execute once with concise output and no listener or network access.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the permanent case when any host-runnable proof fails.
-        if not result.wasSuccessful():
-            # Keep the central failure stable while unittest retains exact subtest evidence.
-            raise AssertionError('mobile core security suite failed')
-    # Record the additive native transport, session, lifecycle, deep-link, and source-policy proof.
-    run_case('API-MOBILE-CORE-001',['CORE-032','AUTH-019','SEC-016','SESSION-013','TEST-172'],run_mobile_core_security_tests)
+    # Delegate the listener-free GameCore and mobile-foundation block at its historical point. (TEST-242)
+    api_gamecore_mobile_foundation.run_cases(run_case)
     # Delegate the listener-free catalog-expansion block at its exact historical point. (TEST-242)
     api_catalog_expansion.run_cases(run_case)
     # Delegate the listener-free Keno and Admin-foundation block at its exact historical point. (TEST-242)
