@@ -43,8 +43,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-over-under-7",
-      "changed_in": "game-expansion-over-under-7",
-      "notes": "Session context overrides caller player ids and committed results survive reload and process restart."
+      "changed_in": "issue-865-over-under-7-simple-wager",
+      "notes": "Session context overrides caller player ids, and the SimpleWagerGame lifecycle adapter keeps prepared dice private until immutable wager proof exists."
     },
     {
       "id": "OU7-003",
@@ -62,8 +62,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-over-under-7",
-      "changed_in": "game-expansion-over-under-7",
-      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+      "changed_in": "issue-865-over-under-7-simple-wager",
+      "notes": "SimpleWagerGame owns both aggregate movements and deterministic proof recovery; no game code mutates balances directly and conflicting retries fail closed."
     },
     {
       "id": "OU7-004",
@@ -146,8 +146,31 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-801-over-under-7-atomic-state",
-      "changed_in": "issue-801-over-under-7-atomic-state",
-      "notes": "The frozen v1 envelope, deterministic dice settlement, and ledger retry vocabulary remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+      "changed_in": "issue-865-over-under-7-simple-wager",
+      "notes": "The SimpleWagerGame lifecycle adapter now owns each provider-current transition without a detached whole-document saver. Multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+    },
+    {
+      "id": "OU7-008",
+      "module": "Over/Under 7",
+      "description": "Over/Under 7 delegates its prepared wager, committed-dice recovery, optional returned-credit movement, replay lookup, lifecycle finalization, and provider-current history publication to one SimpleWagerGame coordinator while preserving the frozen v1 action_id, ou7_ round identity, direct oldest-to-newest one-hundred-round history, public round, active-state privacy, and historical ledger evidence semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OU7-001",
+        "API-OU7-ATOMIC-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [
+        "BR-OU7-001"
+      ],
+      "implementation_files": [
+        "casino/games/over_under_7/service.py",
+        "casino/core/simple_game.py",
+        "tests/games/over_under_7/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-865-over-under-7-simple-wager",
+      "changed_in": "issue-865-over-under-7-simple-wager",
+      "notes": "The game service contains exactly one SimpleWagerGame construction and no direct GameSettlementGateway, CoreLedgerGateway, apply_once call, or game-local settlement lock. Canonical proof fields remain beside the legacy over_under_7_action_key compatibility field without changing the frozen v1 contract."
     }
   ]
 }

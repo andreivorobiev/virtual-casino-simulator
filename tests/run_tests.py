@@ -1586,8 +1586,8 @@ def run_api_tests():
     run_case('API-CRAPS-ATOMIC-001',['CRAPS-006','TEST-210'],lambda: run_unit_module('tests.games.craps.test_api','Craps atomic state suite failed'))
     # Execute fresh-process Andar Bahar ordering plus rejected-wager rollback. (issue #799)
     run_case('API-AB-ATOMIC-001',['AB-006','TEST-211'],lambda: run_unit_module('tests.games.andar_bahar.test_api','Andar Bahar atomic state suite failed'))
-    # Execute fresh-process Over/Under 7 ordering plus rejected-wager preservation. (issue #801)
-    run_case('API-OU7-ATOMIC-001',['OU7-007','TEST-212'],lambda: run_unit_module('tests.games.over_under_7.test_api','Over/Under 7 atomic state suite failed'))
+    # Execute shared-helper delegation, lifecycle recovery, and fresh-process Over/Under 7 ordering. (issue #865)
+    run_case('API-OU7-ATOMIC-001',['OU7-007','OU7-008','GAMECORE-007','TEST-212','TEST-237'],lambda: run_unit_module('tests.games.over_under_7.test_api','Over/Under 7 atomic state and shared-helper suite failed'))
     # Execute shared-helper delegation, historical proof recovery, and distinct-round sibling preservation. (issue #859)
     run_case('API-BIG-SIX-ATOMIC-001',['BIG-SIX-007','BIG-SIX-008','TEST-213','TEST-234'],lambda: run_unit_module('tests.unit.big_six_wheel_engine_tests','Big Six Wheel atomic state suite failed'))
     # Execute fresh-process Crown and Anchor ordering plus sibling-state preservation. (issue #805)
@@ -1982,7 +1982,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
-    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','GAMECORE-007','TEST-127','TEST-235','TEST-236'],run_simple_game_core_tests)
+    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','GAMECORE-007','TEST-127','TEST-235','TEST-236','TEST-237'],run_simple_game_core_tests)
     # Execute the shared helper's real cross-process provider-current publication proof.
     def run_simple_game_atomic_tests():
         # Import the dedicated fresh-process suite only when its named case runs.
@@ -1996,7 +1996,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('simple-game provider-atomic suite failed')
     # Record provider-current merge, fresh-process concurrency, and complete catalog adoption evidence.
-    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','GAMECORE-007','TEST-233','TEST-234','TEST-235','TEST-236'],run_simple_game_atomic_tests)
+    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','GAMECORE-007','TEST-233','TEST-234','TEST-235','TEST-236','TEST-237'],run_simple_game_atomic_tests)
     # Execute the route-free signed-action settlement-adapter proof without opening a listener.
     def run_settlement_adapter_tests():
         # Load only the focused storage-atomic adapter class.
@@ -3292,7 +3292,7 @@ def run_api_tests():
         # Record Crown and Anchor coverage against its retained per-player round ids. (issue #414)
         run_case('API-CAA-001',['CAA-001','CAA-002','CAA-003'],game_evidence('crown_and_anchor_rounds'))
         # Record Over/Under 7 coverage against its retained per-player round ids. (issue #414)
-        run_case('API-OU7-001',['OU7-001','OU7-002','OU7-003'],game_evidence('over_under_7_rounds'))
+        run_case('API-OU7-001',['OU7-001','OU7-002','OU7-003','OU7-008'],game_evidence('over_under_7_rounds'))
         # Record Plinko coverage against its retained per-player drop ids. (issue #414)
         run_case('API-PLINKO-001',['PLINKO-001','PLINKO-002','PLINKO-003'],game_evidence('plinko_drops'))
         # Record Fan-Tan coverage against its retained per-player round ids. (issue #414)

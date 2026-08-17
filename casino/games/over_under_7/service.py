@@ -1,210 +1,430 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Session-bound, ledger-only orchestration for Over/Under 7 plays."""
+"""SimpleWagerGame-backed, reload-safe Over/Under 7 orchestration."""
 
-# Import deep-copy support for detached optimistic state snapshots.
+# Import deep-copy support for detached provider and lifecycle projections.
 import copy
-# Import cryptographic randomness for production dice.
-import secrets
-# Import regular expressions for bounded public action identities.
+# Import conservative action-id validation for persisted retry identities.
 import re
-# Import a reentrant lock for local exactly-once ledger coordination.
-import threading
+# Import cryptographic bounded integers for production dice entropy.
+import secrets
 
-# Import the only approved player-balance mutation service.
+# Import the read-only players facade without a game-owned ledger mutation boundary.
 from casino.core import players
-# Import the shared UTC clock for settled round timestamps.
+# Import the shared clock for persisted round lifecycle timestamps.
 from casino.core.clock import utc_now
-# Route every player-wallet movement through the shared exactly-once settlement boundary.
-from casino.core.settlement import GameSettlementGateway
+# Import the shared one-shot wager and settlement coordinator.
+from casino.core.simple_game import SimpleWagerGame
 # Import player-scoped reads and provider-atomic state mutation.
 from casino.core.state_store import load_player_game_state, update_player_game_state
-# Import shared conflict and validation errors.
+# Import public conflict and validation errors for route envelopes.
 from casino.errors import ConflictError, ValidationError
-# Import this game's pure engine and immutable rules.
+# Import pure validation, settlement, and state helpers from this game only.
 from casino.games.over_under_7 import engine
-# Import the stable game identity and paytable.
+# Import the stable game identity and immutable paytable.
 from casino.games.over_under_7.rules import GAME_ID, paytable
 
-# Bound client action ids to log-safe characters and a conservative length.
+# Restrict client action identities to bounded log-safe characters.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Scan enough local player history to recover retries after normal restarts.
-# Serialize read-before-write checks in the local one-process simulator.
-_ACTION_LOCK = threading.RLock()
-# Keep one operation's optimistic comparison snapshot outside persistent state.
-_ATOMIC_BASELINE_KEY = "_over_under_7_atomic_baseline"
-# Name every state field owned by Over/Under 7 transitions.
-_GAME_STATE_KEYS = ("recent_rounds",)
 
 
-# Validate one required action identity.
-def require_action_id(value) -> str:
-    # Accept only bounded URL-safe string identities.
-    if not isinstance(value, str) or not ACTION_ID_PATTERN.fullmatch(value):
-        # Explain the public contract without echoing hostile text.
-        raise ValidationError("action_id must be 1-128 URL-safe characters")
-    # Return the original identity for stable retries.
-    return value
-
-
-# Construct the shared settlement gateway while retaining the historical test seam name.
-def CoreLedgerGateway(**kwargs):
-    # Preserve the old Over/Under key beside canonical action evidence.
-    return GameSettlementGateway(GAME_ID, "over_under_7_action_key", **kwargs)
-
-
-# Expose the provider-atomic writer behind an injectable test seam.
-def update_state(game_id: str, player_id: str, mutator, factory):
-    # Delegate to the shared cross-process read-modify-write boundary.
-    return update_player_game_state(game_id, player_id, mutator, factory)
-
-
-# Coordinate state, dice, and retry-safe ledger movements.
+# Coordinate Over/Under 7 prepared-state compatibility with shared exactly-once settlement.
 class OverUnder7Service:
-    # Capture production dependencies while exposing deterministic focused-test seams.
+    # Capture injectable dependencies so focused tests avoid filesystem and ambient entropy.
     def __init__(self, *, ledger_gateway=None, state_loader=None, state_updater=None, get_player=None, randbelow=None, clock=None):
-        # Use the game-local ledger adapter unless a test supplies a fake.
-        self._ledger = ledger_gateway or CoreLedgerGateway()
-        # Load one authenticated player's state document by default.
-        self._load_state = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
-        # Publish state through the provider-current callback boundary by default.
-        self._update_state = state_updater or update_state
-        # Return current-player information without direct balance mutation.
+        # Use player-scoped storage compatible with the shared authenticated resolver.
+        self._state_loader = state_loader or (lambda player_id: load_player_game_state(GAME_ID, player_id, engine.default_state))
+        # Retain an optional focused-test updater without hiding the production provider call from audits.
+        self._state_updater = state_updater
+        # Use the read-only player facade for current wallet snapshots.
         self._get_player = get_player or players.get_player
-        # Use cryptographic dice unless a focused test supplies deterministic values.
+        # Use cryptographic bounded integers unless a focused test injects deterministic dice.
         self._randbelow = randbelow or secrets.randbelow
-        # Use the shared UTC clock unless a focused test pins time.
+        # Use the shared UTC clock unless a focused test pins lifecycle time.
         self._clock = clock or utc_now
+        # Build one shared coordinator with adapters for the frozen action, proof, and state shapes.
+        self._game = SimpleWagerGame(game_id=GAME_ID, wager_transaction_type="OVER_UNDER_7_WAGER_DEBIT", settlement_transaction_type="OVER_UNDER_7_SETTLEMENT_CREDIT", entropy=self._entropy, resolve=self._resolve, validate_bet=self._validate_bet, public_bet_catalog=paytable, ledger_gateway=ledger_gateway, state_loader=self._load_core_state, state_updater=self._update_core_state, entropy_source=self._randbelow, clock=self._clock, get_player=self._get_player, request_id_resolver=self._request_id, round_id_factory=self._round_id, action_key_builder=self._action_key, wager_details_builder=self._wager_details, wager_proof_reader=self._wager_proof, settlement_details_builder=self._settlement_details, public_round_builder=self._public_round, recent_round_limit=engine.RECENT_ROUND_LIMIT, legacy_action_detail_key="over_under_7_action_key", lifecycle=self)
 
-    # Load one player document and capture its exact game-owned baseline.
-    def _load(self, player_id: str) -> dict:
-        # Read through the injected player-scoped persistence boundary.
-        state = self._load_state(player_id)
-        # Retain only the values this service may replace during the operation.
-        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(state)
-        # Return tracked state without persisting private operation metadata.
-        return state
-
-    # Capture detached values for every Over/Under 7-owned state field.
+    # Validate the stable identity required for safe action retries.
     @staticmethod
-    def _game_snapshot(state: dict) -> dict:
-        # Build one fresh compatibility baseline for absent predecessor fields.
-        defaults = engine.default_state()
-        # Normalize current and predecessor documents to one complete shape.
-        return {key: copy.deepcopy(state.get(key, defaults[key])) for key in _GAME_STATE_KEYS}
+    def _action_id(value) -> str:
+        # Require one bounded URL-safe string without coercing caller values.
+        if not isinstance(value, str) or not ACTION_ID_PATTERN.fullmatch(value):
+            # Reject malformed identities before state, entropy, or ledger access.
+            raise ValidationError("action_id must be 1-128 URL-safe characters")
+        # Return the original case-sensitive action identity.
+        return value
 
-    # Publish one player document through provider-current compare-and-replace.
-    def _save(self, player_id: str, state: dict) -> None:
-        # Require every publication to originate from a tracked provider read.
-        expected = copy.deepcopy(state.get(_ATOMIC_BASELINE_KEY))
-        # Refuse an untracked detached-document write before entering storage.
-        if not isinstance(expected, dict):
-            # Keep stale or fabricated state outside provider bytes.
-            raise ConflictError("Over/Under 7 state transition is missing its atomic baseline")
-        # Capture the exact game-owned result before entering provider code.
-        desired = self._game_snapshot(state)
+    # Read the established action identity from the frozen v1 request field.
+    def _request_id(self, request: dict) -> str:
+        # Delegate exact pattern validation to the game-owned compatibility rule.
+        return self._action_id(request.get("action_id"))
 
-        # Compare and replace only Over/Under 7-owned fields on current state.
+    # Normalize one frozen Over/Under 7 request for the shared coordinator.
+    @staticmethod
+    def _validate_bet(request: dict) -> tuple:
+        # Normalize all propositions and amounts in immutable engine order.
+        wagers = engine.normalize_wagers(request.get("wagers"))
+        # Calculate the aggregate debit at shared two-decimal precision.
+        total_wager = round(sum(wagers.values()), 2)
+        # Bind conflicting retries to the exact normalized wager map.
+        fingerprint = engine.wager_fingerprint(wagers)
+        # Return the canonical wager, movement, and semantic identity expected by the helper.
+        return wagers, total_wager, fingerprint
+
+    # Preserve the established authenticated-player-plus-action round identity.
+    @staticmethod
+    def _round_id(_game_id: str, player_id: str, request_id: str) -> str:
+        # Delegate to the published game-owned hash and ou7_ prefix contract.
+        return engine.round_id_for(player_id, request_id)
+
+    # Preserve the historical wager and settlement action suffixes explicitly.
+    @staticmethod
+    def _action_key(round_id: str, action: str) -> str:
+        # Join bounded server identities without exposing caller-controlled text.
+        return f"{round_id}:{action}"
+
+    # Validate one provider- or ledger-owned two-die entropy value.
+    @staticmethod
+    def _require_dice(dice) -> list[int]:
+        # Require an ordinary sequence with exactly two one-based die faces.
+        if not isinstance(dice, (list, tuple)) or len(dice) != 2 or any(isinstance(value, bool) or not isinstance(value, int) or value < 1 or value > 6 for value in dice):
+            # Refuse malformed recovery state before deterministic settlement.
+            raise ConflictError("Over/Under 7 committed dice proof is invalid")
+        # Return a detached JSON-compatible pair for lifecycle and ledger details.
+        return list(dice)
+
+    # Roll exactly two validated server-authoritative dice for the helper seam.
+    @staticmethod
+    def _entropy(randbelow) -> list[int]:
+        # Delegate bounded entropy validation and one-based face conversion to the pure engine.
+        return list(engine.roll_dice(randbelow))
+
+    # Resolve one proposition settlement from committed wagers and committed dice.
+    @staticmethod
+    def _resolve(wagers: dict, dice: list[int]) -> dict:
+        # Reuse the pure engine so payout semantics remain unchanged.
+        return engine.settle(wagers, tuple(dice))
+
+    # Build canonical and historical debit proof fields during the compatibility window.
+    @staticmethod
+    def _wager_details(*, request_id, fingerprint, wager, entropy, settled_at, **_context) -> dict:
+        # Resolve deterministic public classification for the historical debit fields.
+        settlement = engine.settle(wager, tuple(entropy))
+        # Preserve historical readers beside canonical shared-helper recovery dimensions.
+        return {"request_id": request_id, "action_id": request_id, "request_fingerprint": fingerprint, "wager": copy.deepcopy(wager), "wagers": copy.deepcopy(wager), "entropy": list(entropy), "dice": list(entropy), "settled_at": settled_at, "total": settlement["total"], "outcome": settlement["outcome"]}
+
+    # Decode either canonical shared proof or a pre-migration debit event.
+    @staticmethod
+    def _wager_proof(*, details, event, lifecycle_context, **_context) -> dict:
+        # Prefer the canonical wager and fall back to historical plural naming.
+        wager = details.get("wager", details.get("wagers"))
+        # Prefer canonical entropy and recover historical committed dice when necessary.
+        entropy = details.get("entropy") if details.get("entropy") is not None else details.get("dice")
+        # Reuse persisted preparation time before falling back to immutable event timing.
+        settled_at = details.get("settled_at") or event.get("ts") or (lifecycle_context or {}).get("settled_at")
+        # Return only deterministic inputs consumed by the shared coordinator.
+        return {"wager": copy.deepcopy(wager), "entropy": OverUnder7Service._require_dice(entropy), "settled_at": settled_at}
+
+    # Build canonical and historical settlement evidence without changing meaning.
+    @staticmethod
+    def _settlement_details(*, request_id, fingerprint, entropy, total_return, settlement, **_context) -> dict:
+        # Preserve old Over/Under 7 audit fields beside the shared proof dimensions.
+        return {"request_id": request_id, "action_id": request_id, "request_fingerprint": fingerprint, "entropy": list(entropy), "dice": list(entropy), "total_return": total_return, "outcome": settlement["outcome"], "total": settlement["total"], "settlements": copy.deepcopy(settlement["settlements"])}
+
+    # Preserve the frozen terminal round shape over the shared result.
+    @staticmethod
+    def _public_round(*, lifecycle_context, **_context) -> dict:
+        # Require one provider-owned terminal recovery record before response publication.
+        round_state = (lifecycle_context or {}).get("round_state")
+        # Reject an incomplete lifecycle rather than fabricating a settled response.
+        if not isinstance(round_state, dict) or round_state.get("phase") != "settled":
+            # Surface a programmer-facing integration error outside the public contract.
+            raise TypeError("Over/Under 7 lifecycle did not produce a terminal round")
+        # Return only the established sanitized public round fields.
+        return {"round_id": round_state["round_id"], "action_id": round_state["action_id"], "request_fingerprint": round_state["request_fingerprint"], "player_id": round_state["player_id"], "status": "settled", "settled_at": round_state["settled_at"], "wagers": copy.deepcopy(round_state["wagers"]), "dice": list(round_state["dice"]), "total": round_state["total"], "outcome": round_state["outcome"], "paytable": copy.deepcopy(round_state["paytable"]), "total_wager": round_state["total_wager"], "total_return": round_state["total_return"], "net": round_state["net"], "settlements": copy.deepcopy(round_state["settlements"])}
+
+    # Load one detached provider document and normalize malformed legacy state safely.
+    def _load_raw_state(self, player_id: str) -> dict:
+        # Read one authenticated player's selected-provider document.
+        state = self._state_loader(player_id)
+        # Preserve a structured document or replace malformed bytes with a safe default.
+        return copy.deepcopy(state) if isinstance(state, dict) else engine.default_state()
+
+    # Execute one provider-current raw-state mutation through production or a focused seam.
+    def _update_raw_state(self, player_id: str, mutator) -> dict:
+        # Keep the production atomic function syntactically visible to governance discovery.
+        return update_player_game_state(GAME_ID, player_id, mutator, engine.default_state) if self._state_updater is None else self._state_updater(GAME_ID, player_id, mutator, engine.default_state)
+
+    # Locate one action in private active state or public settled history.
+    @staticmethod
+    def _round_for_action(state: dict, request_id: str):
+        # Prefer an exact active recovery owner before terminal history.
+        active = state.get("active_round")
+        # Return the private active record when it owns this action.
+        if isinstance(active, dict) and active.get("action_id") == request_id:
+            # Preserve provider identity for callback-scoped mutation checks.
+            return active
+        # Scan settled history newest first for an exact retry.
+        return next((row for row in reversed(state.get("recent_rounds", [])) if isinstance(row, dict) and row.get("action_id") == request_id), None)
+
+    # Convert established state into the helper's private newest-first wrappers.
+    @staticmethod
+    def _to_core_state(raw_state: dict) -> dict:
+        # Preserve unrelated provider-owned fields while excluding the private active slot.
+        core_state = copy.deepcopy(raw_state)
+        # Keep active preparation lifecycle outside settled-round replay discovery.
+        core_state.pop("active_round", None)
+        # Wrap terminal history newest-first because the shared helper prepends publications.
+        core_state["recent_rounds"] = [{"request_id": row.get("action_id"), "request_fingerprint": row.get("request_fingerprint"), "round_id": row.get("round_id"), "total_return": row.get("total_return", 0), "public": copy.deepcopy(row)} for row in reversed(raw_state.get("recent_rounds", []))]
+        # Preserve or restore the game marker expected by the helper.
+        core_state.setdefault("game", GAME_ID)
+        # Return detached compatibility state so mutations remain callback-scoped.
+        return core_state
+
+    # Convert helper wrappers back to direct oldest-first public history.
+    @staticmethod
+    def _to_raw_state(core_state: dict, active_round) -> dict:
+        # Preserve every unrelated provider-owned sibling from the helper projection.
+        raw_state = copy.deepcopy(core_state)
+        # Restore direct terminal round rows in the established oldest-first order.
+        raw_state["recent_rounds"] = [copy.deepcopy(row["public"]) for row in reversed(core_state.get("recent_rounds", []))]
+        # Restore an exact provider-owned active recovery record only while one exists.
+        if active_round is None:
+            # Keep completed documents compatible with the historical no-active-field shape.
+            raw_state.pop("active_round", None)
+        else:
+            # Preserve the exact active owner for crash recovery.
+            raw_state["active_round"] = copy.deepcopy(active_round)
+        # Return one provider-ready document without helper wrapper metadata.
+        return raw_state
+
+    # Load provider state in the representation expected by settled-round helper logic.
+    def _load_core_state(self, player_id: str) -> dict:
+        # Adapt one detached authenticated-player document without persisting a rewrite.
+        return self._to_core_state(self._load_raw_state(player_id))
+
+    # Publish one helper terminal round against exact provider-current game state.
+    def _update_core_state(self, player_id: str, mutator) -> dict:
+        # Adapt current provider state, invoke the shared merge, and archive only the owned action.
+        def publish(raw_state: dict) -> dict:
+            # Convert exact current terminal history into helper wrappers.
+            current_core = self._to_core_state(raw_state)
+            # Merge the committed terminal round while retaining concurrent distinct history.
+            updated_core = mutator(current_core)
+            # Read the current private recovery owner before clearing any state.
+            active = raw_state.get("active_round")
+            # Locate the terminal wrapper for the exact active action instead of assuming it stayed newest.
+            owned_terminal = next((row for row in updated_core.get("recent_rounds", []) if isinstance(row, dict) and isinstance(active, dict) and row.get("request_id") == active.get("action_id")), None)
+            # Clear only the active action whose exact terminal row is being archived.
+            if active is not None and isinstance(owned_terminal, dict):
+                # Reject divergent state and ledger-derived identities before archival.
+                if active.get("round_id") != owned_terminal.get("round_id") or active.get("request_fingerprint") != owned_terminal.get("request_fingerprint"):
+                    # Preserve active recovery rather than concealing corruption.
+                    raise ConflictError("Over/Under 7 committed round conflicts with active recovery state")
+                # Require terminal lifecycle proof before releasing the recovery slot.
+                if active.get("phase") != "settled":
+                    # Keep an incomplete action visible for exact retry recovery.
+                    raise ConflictError("Over/Under 7 active round is not ready for archival")
+                # Release only this exact completed action.
+                active = None
+            # Reject a publication that would bypass another action's active recovery slot.
+            elif active is not None and updated_core.get("recent_rounds") != current_core.get("recent_rounds"):
+                # Keep the distinct active action authoritative until it is recovered.
+                raise ConflictError("Resume the active Over/Under 7 round before archiving another")
+            # Restore direct public rows and the verified active slot for provider persistence.
+            return self._to_raw_state(updated_core, active)
+
+        # Commit through the provider's cross-process atomic callback boundary.
+        authoritative = self._update_raw_state(player_id, publish)
+        # Return exact committed authority in the helper's private representation.
+        return self._to_core_state(authoritative)
+
+    # Locate and update one exact active action without replacing sibling provider fields.
+    def _transition_active(self, player_id: str, request_id: str, round_id: str, fingerprint: str, transition) -> dict:
+        # Apply one action-owned lifecycle transition against provider-current state.
         def publish(current: dict) -> dict:
-            # Detach current owned values from unrelated provider metadata.
-            observed = self._game_snapshot(current)
-            # Accept exact same-result publication without rewriting siblings.
-            if observed == desired:
-                # Preserve the complete authoritative provider document.
+            # Locate this action in the active slot or terminal history.
+            existing = self._round_for_action(current, request_id)
+            # Reject missing recovery state rather than reconstructing private fields.
+            if existing is None:
+                # Fail closed because committed movement must remain tied to durable action state.
+                raise ConflictError("Over/Under 7 active recovery state is missing")
+            # Reject semantic or round identity divergence before mutation.
+            if existing.get("request_fingerprint") != fingerprint or existing.get("round_id") != round_id:
+                # Prevent one action identity from adopting another action's proof.
+                raise ConflictError("Over/Under 7 active recovery state conflicts with committed proof")
+            # Preserve an already archived terminal winner without rewriting it.
+            if current.get("active_round") is not existing:
+                # Return the complete provider document unchanged.
                 return current
-            # Reject an operation whose owned baseline lost a concurrent race.
-            if observed != expected:
-                # Require recovery from the authoritative winner.
-                raise ConflictError("Over/Under 7 state changed during this action; reload and retry")
-            # Replace only fields governed by this game service.
-            for key in _GAME_STATE_KEYS:
-                # Publish detached JSON-compatible values without sibling loss.
-                current[key] = copy.deepcopy(desired[key])
-            # Return the complete provider document for atomic persistence.
+            # Apply the bounded transition only to the exact active object.
+            transition(existing)
+            # Return the complete provider document with siblings intact.
             return current
 
-        # Commit the transition through the provider's cross-process boundary.
-        authoritative = self._update_state(GAME_ID, player_id, publish, engine.default_state)
-        # Advance the operation baseline to the exact committed owned result.
-        state[_ATOMIC_BASELINE_KEY] = self._game_snapshot(authoritative)
+        # Commit the transition and retain provider-returned authority.
+        authoritative = self._update_raw_state(player_id, publish)
+        # Re-read the exact action from active or terminal authority.
+        round_state = self._round_for_action(authoritative, request_id)
+        # Reject an updater that returned no matching lifecycle record.
+        if round_state is None:
+            # Fail closed before later settlement or publication stages.
+            raise ConflictError("Over/Under 7 lifecycle transition is missing")
+        # Return a detached authoritative record for later adapters.
+        return copy.deepcopy(round_state)
 
-    # Build the public state, rules, and player payload.
-    def _payload(self, player_id: str, state: dict) -> dict:
-        # Return only this player's game state and transparent paytable.
-        return {"game": GAME_ID, "state": {"recent_rounds": list(state.get("recent_rounds", []))}, "player": self._get_player(player_id), "rules": {"dice": 2, "sides": 6, "paytable": paytable(), "profile": "under_7_exact_7_over_7"}}
+    # Persist or recover private dice before any aggregate wager movement.
+    def prepare(self, *, player_id, request_id, round_id, fingerprint, wager, **_context) -> dict:
+        # Track whether provider state already owned this exact active action.
+        replayed = False
+
+        # Publish one new preparation or reuse exact provider-current recovery state.
+        def publish(current: dict) -> dict:
+            # Share replay classification with the returned lifecycle context.
+            nonlocal replayed
+            # Locate any active or terminal state for this action identity.
+            existing = self._round_for_action(current, request_id)
+            # Reuse only exact semantic and round identity.
+            if existing is not None:
+                # Reject changed wagers or a divergent round before ledger access.
+                if existing.get("request_fingerprint") != fingerprint or existing.get("round_id") != round_id:
+                    # Preserve the provider winner and fail this caller closed.
+                    raise ConflictError("Over/Under 7 action_id was already used with different wagers")
+                # Mark preparation as recovered rather than newly generated.
+                replayed = True
+                # Preserve exact provider bytes for active or terminal replay.
+                return current
+            # Prevent a new action from bypassing another interrupted settlement.
+            if current.get("active_round") is not None:
+                # Require recovery of the committed active action first.
+                raise ConflictError("Resume the active Over/Under 7 round before starting another")
+            # Draw one tentative pair only after provider authority proves this action is new.
+            dice = self._require_dice(engine.roll_dice(self._randbelow))
+            # Capture one stable lifecycle start time beside newly prepared private dice.
+            created_at = self._clock()
+            # Persist the complete private preparation before ledger movement.
+            current["active_round"] = {"round_id": round_id, "action_id": request_id, "player_id": player_id, "request_fingerprint": fingerprint, "wagers": copy.deepcopy(wager), "dice": dice, "phase": "prepared", "wager_status": "pending", "settlement_status": "not_ready", "created_at": created_at}
+            # Preserve unrelated provider-owned fields in the same document.
+            return current
+
+        # Commit or recover one provider-current preparation.
+        authoritative = self._update_raw_state(player_id, publish)
+        # Read the exact active or terminal action returned by provider authority.
+        round_state = self._round_for_action(authoritative, request_id)
+        # Reject an updater that lost the prepared action before token movement.
+        if round_state is None:
+            # Fail closed instead of drawing replacement dice.
+            raise ConflictError("Over/Under 7 prepared state is missing")
+        # Return private entropy and timing only to the shared coordinator.
+        return {"entropy": self._require_dice(round_state.get("dice")), "settled_at": round_state.get("created_at") or round_state.get("settled_at"), "replayed": replayed, "round_state": copy.deepcopy(round_state)}
+
+    # Clear only a genuinely uncommitted preparation after wager failure.
+    def wager_failed(self, *, player_id, request_id, fingerprint, lifecycle_context, committed_event, error, **_context) -> None:
+        # Detect a newly prepared semantic conflict with an older durable ledger action.
+        new_action_conflict = not bool((lifecycle_context or {}).get("replayed")) and isinstance(error, ConflictError)
+        # Retain prepared state when immutable proof may require response recovery.
+        if committed_event is not None and not new_action_conflict:
+            # Leave the exact action available for retry.
+            return
+
+        # Clear only this action's unchanged pre-wager preparation.
+        def publish(current: dict) -> dict:
+            # Read the current provider-owned recovery slot.
+            active = current.get("active_round")
+            # Preserve another action or a lifecycle phase already advanced by a winner.
+            if not isinstance(active, dict) or active.get("action_id") != request_id or active.get("request_fingerprint") != fingerprint or active.get("phase") != "prepared" or active.get("wager_status") != "pending":
+                # Return provider authority unchanged.
+                return current
+            # Release only the safe-to-edit uncommitted proposal.
+            current.pop("active_round", None)
+            # Preserve every unrelated sibling and terminal history row.
+            return current
+
+        # Persist action-owned cleanup before surfacing the original wager failure.
+        self._update_raw_state(player_id, publish)
+
+    # Publish committed wager proof before deterministic settlement intent.
+    def wager_committed(self, *, player_id, request_id, round_id, fingerprint, entropy, settled_at, wager_event, lifecycle_context, **_context) -> None:
+        # Define the exact committed-wager marker transition.
+        def transition(active: dict) -> None:
+            # Replace tentative dice with immutable ledger proof.
+            active["dice"] = self._require_dice(entropy)
+            # Replace tentative timing with the immutable debit proof timestamp.
+            active["settled_at"] = settled_at
+            # Mark the aggregate wager complete only after ledger proof exists.
+            active["wager_status"] = "complete"
+            # Store the immutable debit event id for API evidence.
+            active["wager_ledger_id"] = wager_event.get("ledger_id")
+            # Mark result calculation as the next recovery phase.
+            active["phase"] = "settling"
+
+        # Commit the provider-current transition and update shared lifecycle context.
+        lifecycle_context["round_state"] = self._transition_active(player_id, request_id, round_id, fingerprint, transition)
+
+    # Publish deterministic result intent before any returned-credit movement.
+    def settlement_resolved(self, *, player_id, request_id, round_id, fingerprint, settlement, lifecycle_context, **_context) -> None:
+        # Define the exact known-result transition.
+        def transition(active: dict) -> None:
+            # Merge only deterministic engine result fields into the active record.
+            active.update(copy.deepcopy(settlement))
+            # Mark positive credits pending and zero returns complete.
+            active["settlement_status"] = "pending" if settlement["total_return"] > 0 else "complete"
+
+        # Commit result intent and carry provider authority into later stages.
+        lifecycle_context["round_state"] = self._transition_active(player_id, request_id, round_id, fingerprint, transition)
+
+    # Publish immutable returned-credit proof after a positive movement.
+    def settlement_committed(self, *, player_id, request_id, round_id, fingerprint, settlement_event, lifecycle_context, **_context) -> None:
+        # Define the exact committed-settlement marker transition.
+        def transition(active: dict) -> None:
+            # Mark returned-credit settlement complete only after proof exists.
+            active["settlement_status"] = "complete"
+            # Store the immutable credit event id for API evidence.
+            active["settlement_ledger_id"] = settlement_event.get("ledger_id")
+
+        # Commit credit proof and carry provider authority into terminal publication.
+        lifecycle_context["round_state"] = self._transition_active(player_id, request_id, round_id, fingerprint, transition)
+
+    # Freeze one provider-stable terminal marker before shared history publication.
+    def finalize(self, *, player_id, request_id, round_id, fingerprint, lifecycle_context, **_context) -> dict:
+        # Define an idempotent terminal lifecycle transition.
+        def transition(active: dict) -> None:
+            # Mark the public lifecycle complete after every required movement.
+            active["phase"] = "settled"
+            # Preserve the historical settled marker in the final public round.
+            active["status"] = "settled"
+            # Preserve the first provider-owned action timestamp across retries.
+            active.setdefault("settled_at", active.get("created_at"))
+
+        # Commit terminal fields before constructing one identical public round.
+        lifecycle_context["round_state"] = self._transition_active(player_id, request_id, round_id, fingerprint, transition)
+        # Return the mutated bounded context for the helper's public-round builder.
+        return lifecycle_context
+
+    # Build the public state, rules, and read-only wallet snapshot shared by routes.
+    def payload(self, player_id: str) -> dict:
+        # Load the exact current selected-provider document for this authenticated player.
+        current = self._load_raw_state(player_id)
+        # Expose only settled history so private prepared dice never cross the v1 boundary.
+        public_state = {"recent_rounds": copy.deepcopy(current.get("recent_rounds", []))}
+        # Preserve the frozen game, state, player, and rules response shape exactly.
+        return {"game": GAME_ID, "state": public_state, "player": self._get_player(player_id), "rules": {"dice": 2, "sides": 6, "paytable": paytable(), "profile": "under_7_exact_7_over_7"}}
 
     # Return reload-safe state for the authenticated player.
     def state(self, player_id: str) -> dict:
-        # Load only the bound player's document.
-        state = self._load(player_id)
-        # Return the sanitized payload.
-        return self._payload(player_id, state)
+        # Reuse the common public payload without touching ledger or entropy.
+        return self.payload(player_id)
 
-    # Execute or replay one complete dice proposition play.
+    # Execute or replay one complete dice proposition play through the shared helper.
     def play(self, player_id: str, request: dict) -> dict:
-        # Require an object payload before reading action fields.
+        # Require an object payload before the shared resolver reads action fields.
         if not isinstance(request, dict):
-            # Reject malformed bodies before dice, state, or ledger work.
+            # Reject malformed bodies before state, entropy, or ledger access.
             raise ValidationError("Over/Under 7 play body must be an object")
-        # Validate the retry-safe action identity.
-        action_id = require_action_id(request.get("action_id"))
-        # Normalize all proposition wagers.
-        wagers = engine.normalize_wagers(request.get("wagers"))
-        # Bind the action identity to exact normalized wager content.
-        fingerprint = engine.wager_fingerprint(wagers)
-        # Serialize state lookup, ledger debit, dice recovery, and settlement.
-        with _ACTION_LOCK:
-            # Load the current player's latest document.
-            state = self._load(player_id)
-            # Resolve an exact retained retry without rolling dice.
-            existing_round = engine.find_round(state, action_id)
-            # Branch when state already contains this action.
-            if existing_round is not None:
-                # Reject changed request content for the same action id.
-                if existing_round.get("request_fingerprint") != fingerprint:
-                    # Fail before duplicate settlement.
-                    raise ConflictError("Over/Under 7 action_id was already used with different wagers")
-                # Return the stable prior result.
-                return {"round": existing_round, "replayed": True, **self._payload(player_id, state)}
-            # Derive one stable server round id.
-            round_id = engine.round_id_for(player_id, action_id)
-            # Check the append-only ledger for a prior debit after lost state.
-            existing_debit = self._ledger.find(player_id, f"{round_id}:wager")
-            # Reuse committed dice from a recovered wager event when present.
-            if existing_debit is not None:
-                # Reject changed request content before reconstructing settlement.
-                if (existing_debit.get("details") or {}).get("request_fingerprint") != fingerprint:
-                    # Preserve the committed wallet movement.
-                    raise ConflictError("Committed Over/Under 7 wager action conflicts with request body")
-                # Recover dice from the durable debit details.
-                dice = tuple((existing_debit.get("details") or {}).get("dice", []))
-            # Roll dice before debit so debit details can recover the exact result.
-            else:
-                # Select two dice through the injectable seam.
-                dice = engine.roll_dice(self._randbelow)
-            # Calculate the complete deterministic settlement.
-            settlement = engine.settle(wagers, dice)
-            # Build debit details containing every field needed for recovery.
-            debit_details = {"action_id": action_id, "wagers": wagers, "dice": list(dice), "total": settlement["total"], "outcome": settlement["outcome"]}
-            # Apply or recover the total wager debit exactly once.
-            debit_event, debit_replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-settlement["total_wager"], transaction_type="OVER_UNDER_7_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", fingerprint=fingerprint, details=debit_details)
-            # Start with no settlement credit for uncovered or losing outcomes.
-            credit_event = None
-            # Track credit replay evidence independently of debit replay.
-            credit_replayed = False
-            # Return tokens only when the winning proposition was covered.
-            if settlement["total_return"] > 0:
-                # Build credit details from the immutable settlement.
-                credit_details = {"action_id": action_id, "outcome": settlement["outcome"], "dice": settlement["dice"], "total": settlement["total"], "settlements": settlement["settlements"]}
-                # Apply or recover the returned-token credit exactly once.
-                credit_event, credit_replayed = self._ledger.apply_once(player_id=player_id, signed_amount=settlement["total_return"], transaction_type="OVER_UNDER_7_SETTLEMENT_CREDIT", round_id=round_id, action_key=f"{round_id}:settlement", fingerprint=fingerprint, details=credit_details)
-            # Use the committed debit timestamp when available for retry stability.
-            settled_at = debit_event.get("ts") or self._clock()
-            # Build the durable round row published by state and action endpoints.
-            round_row = {"round_id": round_id, "action_id": action_id, "request_fingerprint": fingerprint, "player_id": player_id, "status": "settled", "settled_at": settled_at, "wagers": wagers, **settlement}
-            # Record the settled round after required ledger movements exist.
-            engine.record_round(state, round_row)
-            # Persist reload-safe history.
-            self._save(player_id, state)
-            # Return state, player, and ledger evidence for focused tests.
-            return {"round": round_row, "replayed": debit_replayed or credit_replayed, "ledger": {"wager": debit_event, "settlement": credit_event}, **self._payload(player_id, state)}
+        # Execute preparation, movements, deterministic settlement, and archival centrally.
+        result = self._game.play(player_id, request)
+        # Convert helper wrappers into the frozen direct oldest-first state shape.
+        raw_state = self._to_raw_state(result["state"], None)
+        # Preserve the established response envelope and ledger keys exactly.
+        return {"round": result["round"], "replayed": result["replayed"], "ledger": {"wager": result["ledger"]["wager"], "settlement": result["ledger"]["settlement"]}, "game": GAME_ID, "state": {"recent_rounds": copy.deepcopy(raw_state.get("recent_rounds", []))}, "player": result["player"], "rules": {"dice": 2, "sides": 6, "paytable": paytable(), "profile": "under_7_exact_7_over_7"}}
