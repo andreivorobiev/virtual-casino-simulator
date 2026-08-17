@@ -558,11 +558,80 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         delegation = "api_delivery_infrastructure.run_cases(run_case)"
         # Reject missing or duplicated delegation in the compatibility runner.
         self.assertEqual(runner_source.count(delegation), 1)
-        # Preserve the historical boundary after game lifecycle and before Roulette motion.
+        # Preserve the historical boundary after game lifecycle and before frontend presentation.
         self.assertLess(runner_source.index("api_game_lifecycle.run_cases("), runner_source.index(delegation))
-        # Keep the next unrelated motion case after the complete delivery-infrastructure area.
-        self.assertLess(runner_source.index(delegation), runner_source.index("UI-ROU-MOTION-001"))
+        # Keep the next extracted frontend-presentation area after delivery infrastructure.
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_frontend_presentation.run_cases("))
         # Keep subprocess construction and every listener owner outside the extracted area.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+
+    # Prove frontend-presentation registrations moved without process ownership.
+    def test_api_frontend_presentation_area_registration_ownership_is_exact(self):
+        # Define the reviewed registration and requirement order from Roulette motion through wallet timing.
+        expected_cases = (
+            ("UI-ROU-MOTION-001", ["ROU-063", "ROU-064", "ROU-065", "ROU-066", "ROU-067", "ROU-068", "ROU-069", "ROU-070", "TEST-102"]),
+            ("UI-ROU-PRESENTATION-001", ["ROU-063", "ROU-064", "ROU-065", "ROU-066", "ROU-067", "ROU-068", "ROU-072"]),
+            ("UI-SLOT-PRESENTATION-001", ["SLOT-030", "SLOT-031", "SLOT-032", "SLOT-033", "SLOT-034", "SLOT-035", "SLOT-037"]),
+            ("UI-WALLET-TIMING-001", ["LEDGER-031", "TEST-151"]),
+        )
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit frontend-presentation area module.
+        area_path = API_CASES_ROOT / "frontend_presentation.py"
+        # Read source once for duplicate and process-boundary assertions.
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load the listener-free registration module without importing the compatibility runner.
+        spec = importlib.util.spec_from_file_location("frontend_presentation_area", area_path)
+        # Require a valid loader for the checked-in Python module.
+        self.assertIsNotNone(spec.loader)
+        # Construct the isolated module object from its exact file specification.
+        module = importlib.util.module_from_spec(spec)
+        # Execute only definitions and imports from the registration-only area.
+        spec.loader.exec_module(module)
+        # Capture every registration without executing any mapped test callback.
+        captured = []
+        # Record the exact registration tuple supplied by the area owner.
+        def capture(case_id, requirements, callback):
+            # Preserve each callback so its runner-owned binding can be inspected separately.
+            captured.append((case_id, requirements, callback))
+        # Use a stable sentinel for the runner-owned in-process Roulette callback.
+        roulette_motion_callback = object()
+        # Capture every runner-owned Node callback invocation without launching a subprocess.
+        node_calls = []
+        # Record the exact relative path and failure message delegated by a presentation callback.
+        def capture_node(relative_path, failure_message):
+            # Preserve inputs for equality assertions after the lazy callback runs.
+            node_calls.append((relative_path, failure_message))
+        # Register the area through the same callback boundary used by the compatibility runner.
+        module.run_cases(capture, roulette_motion_callback, capture_node)
+        # Prove exact IDs, requirement lists, and historical registration order.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        # Prove the Roulette motion case retains the runner-owned unittest callback verbatim.
+        self.assertIs(captured[0][2], roulette_motion_callback)
+        # Execute only the three inert lazy adapters against the capture callback.
+        for _, _, callback in captured[1:]:
+            # Resolve one lazy mapping without launching Node.
+            callback()
+        # Prove exact test paths and diagnostic messages survived the extraction.
+        self.assertEqual(node_calls, [
+            (Path("tests/games/roulette/test_frontend.mjs"), "Roulette presentation suite failed"),
+            (Path("tests/games/slots/test_frontend.mjs"), "Slots presentation suite failed"),
+            (Path("tests/wallet_timing.mjs"), "wallet timing suite failed"),
+        ])
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id, _ in expected_cases:
+            # Reject duplicated ownership that could execute a presentation gate twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit delegation through both runner-owned execution callbacks.
+        delegation = "api_frontend_presentation.run_cases(run_case,run_roulette_motion_tests,run_game_frontend_node_test)"
+        # Reject missing or duplicated delegation in the compatibility runner.
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the historical boundary after delivery infrastructure and before API documentation.
+        self.assertLess(runner_source.index("api_delivery_infrastructure.run_cases("), runner_source.index(delegation))
+        # Keep the following API documentation case after the complete presentation area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("API-DOCS-001"))
+        # Keep process construction and every listener owner outside the extracted area.
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("ServerThread", area_source)
 
