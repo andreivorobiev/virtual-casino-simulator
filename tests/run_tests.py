@@ -72,6 +72,8 @@ from tests.cases.api import game_lifecycle as api_game_lifecycle
 from tests.cases.api import delivery_infrastructure as api_delivery_infrastructure
 # Import frontend-presentation registration ownership while execution stays in the runner. (TEST-242)
 from tests.cases.api import frontend_presentation as api_frontend_presentation
+# Import listener-free self-service foundation ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import self_service_foundation as api_self_service_foundation
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -1384,46 +1386,8 @@ def run_api_tests():
         if result.returncode!=0: raise AssertionError(f'{failure_message}: {(result.stdout+result.stderr)[-1800:]}')
     # Delegate the complete frontend-presentation area while the runner retains process execution. (TEST-242)
     api_frontend_presentation.run_cases(run_case,run_roulette_motion_tests,run_game_frontend_node_test)
-    # Execute the complete same-origin Swagger inventory and adapter contract without a listener.
-    def run_api_docs_tests():
-        # Import the focused suite only when its mapped API case runs.
-        from tests import api_docs_tests
-        # Load exactly the documentation inventory and routing assertions.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(api_docs_tests.ApiDocsTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the central case when any contract, asset, or routing assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('same-origin Swagger documentation suite failed')
-    # Record complete read-only API discovery through the stable docs URL.
-    run_case('API-DOCS-001',['API-003','TEST-152'],run_api_docs_tests)
-    # Execute the personal-settings, shared pagination, contract, and privacy proof without a listener.
-    def run_user_settings_tests():
-        # Import the focused suite only when its mapped API case runs.
-        from tests import user_settings_tests
-        # Load exactly the self-service foundation assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(user_settings_tests.UserSettingsTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('personal settings and self-history suite failed')
-    # Record the listener-free preference, pagination, contract, and self-only privacy proof.
-    run_case('API-SETTINGS-001',['USER-006','USER-007','USER-008','USER-009','TEST-103','TEST-158'],run_user_settings_tests)
-    # Execute ledger-derived receipt classification, privacy, contract, and retry proof without a listener.
-    def run_receipt_tests():
-        # Import the focused suite only when its mapped API case runs.
-        from tests import receipt_tests
-        # Load exactly the self-only receipt foundation assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(receipt_tests.ReceiptDerivationTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused receipt assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('play-token receipt derivation suite failed')
-    # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
-    run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
+    # Delegate listener-free documentation, settings, and receipt cases at their historical execution point.
+    api_self_service_foundation.run_cases(run_case)
     # Execute the Double Bonus Video Poker engine and settlement proof without opening a listener.
     def run_double_bonus_video_poker_tests():
         # Import the focused suite only when its mapped API case runs.
