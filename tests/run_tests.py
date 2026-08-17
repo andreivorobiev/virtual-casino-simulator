@@ -76,6 +76,8 @@ from tests.cases.api import frontend_presentation as api_frontend_presentation
 from tests.cases.api import self_service_foundation as api_self_service_foundation
 # Import listener-free specialized-game acceptance ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import specialized_game_acceptance as api_specialized_game_acceptance
+# Import listener-free player-foundation ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import player_foundation as api_player_foundation
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -1392,121 +1394,8 @@ def run_api_tests():
     api_self_service_foundation.run_cases(run_case)
     # Delegate listener-free specialized-game and cross-game-polish cases at their historical point.
     api_specialized_game_acceptance.run_cases(run_case)
-    # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
-    def run_wellness_tests():
-        # Import the focused suite only when its mapped API case runs.
-        from tests import wellness_tests
-        # Load exactly the session-wellness foundation assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(wellness_tests.SessionWellnessTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure stable.
-            raise AssertionError('session wellness foundation suite failed')
-        # Execute the dependency-free production controller lifecycle proof through Node.
-        run_game_frontend_node_test(Path('tests/wellness_browser_contract.test.mjs'),'session wellness browser controller suite failed')
-    # Record the listener-free API plus deterministic timer, reload, visibility, focus, pause, stop, and locale proof.
-    run_case('API-WELLNESS-001',['WELL-001','WELL-002','TEST-105'],run_wellness_tests)
-    # Execute the curated server-only What's New eligibility proof without opening a listener.
-    def run_whats_new_tests():
-        # Load only the focused What's New foundation assertions.
-        from tests import whats_new_tests
-        # Build the exact focused suite.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(whats_new_tests.WhatsNewTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused tour assertion failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError("what's new foundation suite failed")
-    # Record the curated opt-in, current disabled catalog, guest lifecycle, privacy, idempotency, route, and contract proof.
-    run_case('API-TOUR-001',['TOUR-001','TOUR-002','TEST-106'],run_whats_new_tests)
-    # Execute the complete player self-service batch proof without opening a listener.
-    def run_self_service_batch_tests():
-        # Load the focused self-service classes.
-        from tests import self_service_batch_tests
-        loader = unittest.defaultTestLoader
-        suite = unittest.TestSuite()
-        # Add the replay, table-profile, compare, copy, and API-contract classes.
-        for cls in (self_service_batch_tests.ReplayFoundationTests, self_service_batch_tests.TableProfileTests, self_service_batch_tests.CompareGamesTests, self_service_batch_tests.SelfServiceCopyTests, self_service_batch_tests.SelfServiceApiContractTests):
-            # Load each focused class into the combined suite.
-            suite.addTests(loader.loadTestsFromTestCase(cls))
-        # Execute the combined suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused self-service proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('player self-service batch suite failed')
-    # Record the listener-free replay, table-profile, and compare proof.
-    run_case('API-SELF-SERVICE-BATCH-001',['REPLAY-001','REPLAY-002','PROFILE-001','PROFILE-002','COMPARE-001','TEST-108','TEST-109','TEST-110'],run_self_service_batch_tests)
-    # Execute the complete guest-to-account conversion proof without opening a listener.
-    def run_guest_conversion_tests():
-        # Load only the focused conversion class.
-        from tests import guest_conversion_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(guest_conversion_tests.GuestConversionTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused conversion proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('guest conversion suite failed')
-    # Record explicit, wallet-preserving conversion plus idempotent analytics convergence.
-    run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','CONVERT-003','GUEST-007','TEST-111','TEST-158','TEST-195'],run_guest_conversion_tests)
-    # Execute the Admin-assisted conversion service and route contract proof. (#701)
-    def run_admin_guest_conversion_tests():
-        # Import the focused suite lazily after shared test storage is ready.
-        from tests import admin_guest_conversion_tests
-        # Load only the Admin-assisted conversion class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(admin_guest_conversion_tests.AdminGuestConversionTests)
-        # Execute the focused suite through the standard listener-free runner.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the named mapped case on any wallet, audit, lifecycle, or authorization regression.
-        if not result.wasSuccessful(): raise AssertionError('Admin-assisted guest conversion suite failed')
-    # Map explicit support confirmation plus the unchanged shared analytics convergence behavior.
-    run_case('API-ADMIN-GUEST-CONVERT-001',['ADMIN-035','GUEST-007','TEST-193','TEST-195'],run_admin_guest_conversion_tests)
-    # Execute the product account-spine proof without opening a listener.
-    def run_account_spine_tests():
-        # Load only the focused product account-spine class.
-        from tests import account_spine_tests
-        # Build a concise unittest suite for direct route and service assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(account_spine_tests.ProductAccountSpineTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused account-spine proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('product account-spine suite failed')
-    # Record disabled signup/passkeys, owner-only Admin delegation, and reporter-status proof.
-    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','AUTH-012','AUTH-015','AUTH-016','ADMIN-028','ADMIN-033','OAUTH-011','OAUTH-012','RESET-004','FEEDBACK-005','I18N-009','TEST-112','TEST-138','TEST-158','TEST-167'],run_account_spine_tests)
-    # Execute the privacy-safe Admin session-control core without opening a listener.
-    def run_admin_session_control_tests():
-        # Load only the focused session inventory and revocation class.
-        from tests import admin_session_control_tests
-        # Build a concise unittest suite for isolated provider-backed assertions.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(admin_session_control_tests.AdminSessionControlTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused session-control proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('Admin session-control suite failed')
-    # Record bounded inventory, one-way aliases, atomic revocation, and fail-closed storage proof.
-    run_case('API-ADMIN-SESSIONS-001',['SESSION-006','SESSION-007','SESSION-008','ADMIN-028','TEST-143'],run_admin_session_control_tests)
-    # Execute the repository-only static marketing-site proof without a listener.
-    def run_marketing_site_tests():
-        # Import the focused suite only when its mapped static case runs.
-        from tests import marketing_site_tests
-        # Load the complete semantic, resource, accessibility, module, matrix, and publication-boundary class.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(marketing_site_tests.MarketingSiteTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any static-site proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve detailed unittest output while keeping the named failure stable.
-            raise AssertionError('TiltSeven repository-scaffold suite failed')
-    # Record the listener-free bilingual, no-network, no-publication, and visual-ownership proof.
-    run_case('STATIC-MARKETING-001',['MARKETING-001','MARKETING-002','MARKETING-003','TEST-107'],run_marketing_site_tests)
+    # Delegate listener-free player-foundation registrations at their historical execution point. (TEST-242)
+    api_player_foundation.run_cases(run_case,run_game_frontend_node_test)
     # Execute the shared simple-game settlement-core proof without opening a listener.
     def run_simple_game_core_tests():
         # Load only the focused settlement-core class.
