@@ -1526,7 +1526,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "DT-007": "Dragon Tiger",  # Bind Dragon Tiger orchestration to one SimpleWagerGame coordinator.
             "TEST-240": "Tests",  # Bind Dragon Tiger lifecycle, recovery, history, and process evidence.
             "TEST-241": "Tests",  # Bind alias rejection, canonical call shape, and historical-read evidence.
-            "TEST-242": "Tests",  # Bind exact Browser inventory equality across every runner extraction.
+            "TEST-242": "Tests",  # Bind exact Browser and API-lane inventory equality across every runner extraction.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

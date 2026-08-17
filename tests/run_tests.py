@@ -62,6 +62,10 @@ from tests import edge_gate_tests
 from tests import release_env_tests
 # Import pure Browser discovery, affinity packing, and shard verification outside the compatibility runner. (TEST-242)
 from tests import browser_sharding
+# Import source-only API registration discovery and exact reviewed inventory validation. (TEST-242)
+from tests import api_case_inventory
+# Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
+from tests.cases.api import governance as api_governance
 # Import the listener-free host-poller proof for protected-main delivery ownership.
 from tests import release_poller_tests
 # Import listener-free compatibility-owned predecessor tests for protected publication.
@@ -301,6 +305,10 @@ def browser_case_total():
 
 # Point at the reviewed pre-slice identity packet required by every #727 extraction. (TEST-242)
 BROWSER_CASE_INVENTORY_PATH=Path(__file__).resolve().parent/'browser_case_inventory.json'
+# Point API source discovery at the extracted area package. (TEST-242)
+API_CASES_ROOT=Path(__file__).resolve().parent/'cases'/'api'
+# Point API source discovery at the reviewed count and sorted case-ID baseline. (TEST-242)
+API_CASE_INVENTORY_PATH=Path(__file__).resolve().parent/'api_case_inventory.json'
 # Point at the reviewed per-case duration profile used by deterministic shard packing. (issue #502)
 BROWSER_DURATION_PROFILE_PATH=Path(__file__).resolve().parent/'browser_case_durations.json'
 # Re-export strict profile constants so focused hostile tests keep their historical seam.
@@ -1264,10 +1272,16 @@ def validate_guest_admin_api(base):
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
-    # Refuse literal always-true mapped predicates so requirement-mapped cases can never regrow blind spots. (issue #414)
-    runner_source=Path(__file__).read_text(encoding='utf-8')
-    # Fail the whole lane immediately when a tautological mapped predicate reappears anywhere in this runner.
-    assert re.search(r"assert_condition\(\s*True\s*,",runner_source) is None, 'tautological always-true mapped predicate found in tests/run_tests.py'
+    # Discover the compatibility runner and every extracted API-area source without importing case modules. (TEST-242)
+    api_source_paths=api_case_inventory.api_case_source_paths(Path(__file__),API_CASES_ROOT)
+    # Discover exact permanent non-Browser registrations across the current source topology. (TEST-242)
+    current_api_case_ids=api_case_inventory.discover_api_case_ids(api_source_paths)
+    # Fail before any listener or provider opens when count, IDs, ordering, or duplication drift. (TEST-242)
+    api_case_inventory.validate_api_case_inventory(current_api_case_ids,API_CASE_INVENTORY_PATH)
+    # Refuse literal always-true mapped predicates across the compatibility runner and extracted areas. (issue #414)
+    runner_source='\n'.join(source_path.read_text(encoding='utf-8') for source_path in api_source_paths)
+    # Fail the whole lane immediately when a tautological mapped predicate reappears anywhere in API case source.
+    assert re.search(r"assert_condition\(\s*True\s*,",runner_source) is None, 'tautological always-true mapped predicate found in API case source'
     # Execute only listener-free benchmark policy and scheduler unit proof on the ordinary API path.
     def run_request_latency_unit_tests():
         # Import the focused TEST-148 suite lazily so no benchmark or WSGI application starts during runner import.
@@ -1328,50 +1342,8 @@ def run_api_tests():
         result=subprocess.run([sys.executable,'-m','unittest',module_name,'-v'],cwd=str(ROOT),capture_output=True,text=True,timeout=600)
         # Fail the named central case when any focused assertion fails, preserving the child's diagnostic tail.
         if result.returncode!=0: raise AssertionError(f'{failure_message}: {result.stderr[-1500:]}')
-    # Prove the governed source-header migration, vendor exclusion, write safety, and filler ratchet. (issue #441)
-    run_case('FILE-HEADER-POLICY-001',['COMMENT-001','TOOL-009'],lambda: run_unit_module('tests.file_header_policy_tests','file header policy suite failed'))
-    # Record the exact-source payload and shipped-asset budget checkpoint. (issue #323, TEST-159)
-    run_case('PERF-PAYLOAD-BUDGET-001',['TEST-159'],lambda: run_unit_module('tests.unit.payload_frontend_budget_tests','payload and frontend budget suite failed'))
-    # Record compact shell/Roulette projections and frozen-response compatibility. (issue #323, TEST-166)
-    run_case('PERF-PAYLOAD-PROJECTION-001',['TEST-166'],lambda: run_unit_module('tests.unit.performance_projection_tests','payload projection suite failed'))
-    # Enforce the issue-323 exact-source JSON/MySQL latency decision boundary. (issue #323, TEST-170)
-    run_case('PERF-TARGET-GATE-001',['TEST-170'],lambda: run_unit_module('tests.unit.performance_target_gate_tests','performance target gate suite failed'))
-    # Record the fail-closed process-safety inventory used before any worker-count increase. (issue #323, TEST-160)
-    run_case('PERF-MULTIPROCESS-SAFETY-001',['TEST-160'],lambda: run_unit_module('tests.unit.multiprocess_safety_audit_tests','multiprocess safety audit suite failed'))
-    # Record the descriptor-owned game-suite discovery boundary without migrating game descriptors yet. (issue #434, TEST-161)
-    run_case('GOV-GAME-SUITE-DISCOVERY-001',['TEST-161'],lambda: run_unit_module('tests.game_suite_discovery_tests','game suite discovery suite failed'))
-    # Execute every browser-free Python game suite through one shared mapped case so future games never add central runner blocks. (issue #434, TEST-161)
-    def run_complete_game_suite_discovery():
-        # Define both governed discovery roots used by complete CI discovery.
-        discovery_roots=('tests/games','casino/games')
-        # Execute each root in a fresh process so test-owned imports and storage settings remain isolated.
-        for discovery_root in discovery_roots:
-            # Discover every Python suite path while leaving Playwright-owned modules to the Browser-capable CI step.
-            suite_files=sorted(path for path in (ROOT/discovery_root).rglob('test_*.py') if path.name!='test_browser.py')
-            # Convert tracked paths to dotted unittest module names without a per-game allowlist.
-            suite_modules=['.'.join(path.relative_to(ROOT).with_suffix('').parts) for path in suite_files]
-            # Run the complete browser-free module list through unittest's normal loader.
-            result=subprocess.run([sys.executable,'-m','unittest',*suite_modules],cwd=str(ROOT),capture_output=True,text=True,timeout=600)
-            # Fail the mapped case with the child's bounded diagnostic tail when any discovered suite fails.
-            if result.returncode!=0: raise AssertionError(f'{discovery_root} discovery failed: {(result.stderr or result.stdout)[-1500:]}')
-    # Map current-and-future browser-free suite execution without one registration per game.
-    run_case('GOV-GAME-SUITES-001',['TEST-161'],run_complete_game_suite_discovery)
-    # Record deterministic requirement-source partitioning and aggregate drift rejection. (issue #434, TEST-165)
-    run_case('GOV-REQUIREMENT-SHARDS-001',['TEST-165'],lambda: run_unit_module('tests.requirements_sharding_tests','requirement sharding suite failed'))
-    # Reject stale requirement inventories, placeholder gates, and reviewed production-unused exports. (issue #711)
-    run_case('GOV-DEAD-ARTIFACTS-001',['TOOL-016','TEST-181'],lambda: run_unit_module('tests.dead_artifact_tests','dead artifact cleanup suite failed'))
-    # Preserve actionable locale, domain, and missing-key evidence at both cumulative Roulette audits. (issue #702)
-    run_case('UI-ROULETTE-I18N-DIAGNOSTICS-001',['I18N-013','TEST-182'],lambda: run_unit_module('tests.roulette_i18n_diagnostics_tests','Roulette i18n diagnostics suite failed'))
-    # Prove shared shell/Admin copy and every game tx adapter use locale resources as their single source. (I18N-014, TEST-187)
-    run_case('UI-I18N-SINGLE-SOURCE-001',['I18N-014','TEST-187'],lambda: run_unit_module('tests.i18n_single_source_tests','Single-source i18n suite failed'))
-    # Prove Roulette and Three Card Poker await semantic Browser state instead of fixed timing. (issue #750)
-    run_case('UI-BROWSER-WAIT-001',['TEST-053','TCP-005'],lambda: run_unit_module('tests.browser_wait_governance_tests','Browser wait governance suite failed'))
-    # Prove docs-only long-suite filtering and exact-head sibling-gate release evidence without weakening contexts. (issue #710)
-    run_case('CI-COMPUTE-001',['TOOL-017','TEST-183'],lambda: run_unit_module('tests.ci_compute_tests','CI compute optimization suite failed'))
-    # Enforce generic descriptor equality and exact-base monotonic revisions without shared pin literals. (issue #707)
-    run_case('GOV-MODULE-VERSIONS-001',['TOOL-018','TEST-184'],lambda: run_unit_module('tests.module_version_governance_tests','module version governance suite failed'))
-    # Bind the five newest games to dedicated Browser cases, per-game suites, duration packing, and affected-game selection. (issue #712)
-    run_case('GOV-NEWEST-GAME-BROWSER-COVERAGE-001',['TEST-185'],lambda: run_unit_module('tests.newest_game_browser_coverage_tests','newest-game Browser coverage suite failed'))
+    # Register the first extracted API area at the exact historical execution point. (TEST-242)
+    api_governance.run_cases(run_case,run_unit_module,ROOT)
     # Execute Casino War reconciliation, preparation, contention, rollback, and lost-response evidence. (issues #704, #771)
     run_case('API-CW-ATOMIC-001',['CW-006','CW-007','TEST-189','TEST-199'],lambda: run_unit_module('casino.games.casino_war.tests.test_api','Casino War atomic state suite failed'))
     # Execute the real two-process Keno draw, ticket-purchase, ticket-refund, and rollback races. (issues #754, #767)
