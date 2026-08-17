@@ -140,6 +140,17 @@ class SimpleWagerGame:
         # Delegate to the standard or explicitly configured stable action-key builder.
         return self._action_key_builder(round_id, action)
 
+    # Find one exact committed movement through the helper-owned settlement boundary.
+    def find_committed_action(self, *, player_id: str, round_id: str, request_fingerprint: str, action: str):
+        # Accept only the two movement roles owned by this one-shot coordinator.
+        if action not in {"wager", "settlement"}:
+            # Reject programmer misuse before consulting persistent money evidence.
+            raise ValueError("SimpleWagerGame action must be wager or settlement")
+        # Select the configured transaction type for the requested movement role.
+        transaction_type = self.wager_transaction_type if action == "wager" else self.settlement_transaction_type
+        # Resolve immutable proof through the same gateway used for every apply-once movement.
+        return self._ledger_gateway.find(player_id=player_id, round_id=round_id, transaction_type=transaction_type, action_key=self._action_key(round_id, action), request_fingerprint=request_fingerprint)
+
     # Invoke one required method on an explicitly configured prepared-state lifecycle adapter.
     def _lifecycle_call(self, method: str, **context):
         # Skip lifecycle work for ordinary shared-simple games so their behavior remains byte-compatible.

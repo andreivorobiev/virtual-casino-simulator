@@ -12698,7 +12698,7 @@
     {
       "id": "GAMECORE-006",
       "module": "Core",
-      "description": "SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, movement action keys, historical action-detail keys, wager proof write/read, settlement details, public round projection, and bounded history capacity. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public, ledger, and persisted shape without bypassing the shared settlement or provider-current publication boundaries.",
+      "description": "SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, movement action keys, historical action-detail keys, wager proof write/read, settlement details, public round projection, bounded history capacity, and exact read-only committed-action lookup before stateful preparation. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public, ledger, and persisted shape without bypassing the shared settlement or provider-current publication boundaries.",
       "status": "PASS",
       "api_tests": [
         "API-GAMECORE-001",
@@ -12708,7 +12708,8 @@
         "API-CHUCK-001",
         "API-OU7-001",
         "API-CAA-001",
-        "API-FAN-TAN-001"
+        "API-FAN-TAN-001",
+        "API-DT-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -12719,16 +12720,18 @@
         "casino/games/over_under_7/service.py",
         "casino/games/crown_and_anchor/service.py",
         "casino/games/fan_tan/service.py",
+        "casino/games/dragon_tiger/service.py",
         "tests/simple_game_tests.py",
         "tests/unit/big_six_wheel_engine_tests.py",
         "tests/games/sic_bo/test_service.py",
         "tests/games/chuck_a_luck/test_engine.py",
         "tests/games/over_under_7/test_api.py",
         "tests/games/crown_and_anchor/test_api.py",
-        "tests/games/fan_tan/test_api.py"
+        "tests/games/fan_tan/test_api.py",
+        "tests/games/dragon_tiger/test_api.py"
       ],
       "introduced_in": "issue-859-big-six-simple-wager",
-      "changed_in": "issue-869-fan-tan-simple-wager",
+      "changed_in": "issue-871-dragon-tiger-simple-wager",
       "notes": "Adapters may change compatibility representation and stable identity naming only; the helper still exclusively owns exactly-once movements, proof recovery, replay conflict checks, and provider-current terminal publication."
     },
     {
@@ -12774,7 +12777,9 @@
         "API-CAA-001",
         "API-CAA-ATOMIC-001",
         "API-FAN-TAN-001",
-        "API-FAN-TAN-ATOMIC-001"
+        "API-FAN-TAN-ATOMIC-001",
+        "API-DT-001",
+        "API-DT-ATOMIC-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -12784,16 +12789,19 @@
         "casino/games/over_under_7/service.py",
         "casino/games/crown_and_anchor/service.py",
         "casino/games/fan_tan/service.py",
+        "casino/games/dragon_tiger/service.py",
         "tests/simple_game_tests.py",
         "tests/games/sic_bo/test_service.py",
         "tests/games/sic_bo/test_atomic_state.py",
         "tests/games/chuck_a_luck/test_engine.py",
         "tests/games/over_under_7/test_api.py",
         "tests/games/crown_and_anchor/test_api.py",
-        "tests/games/fan_tan/test_api.py"
+        "tests/games/fan_tan/test_api.py",
+        "tests/games/dragon_tiger/test_api.py",
+        "tests/games/dragon_tiger/test_atomic_state.py"
       ],
       "introduced_in": "issue-861-sic-bo-simple-wager",
-      "changed_in": "issue-869-fan-tan-simple-wager",
+      "changed_in": "issue-871-dragon-tiger-simple-wager",
       "notes": "The adapter owns only game-state lifecycle compatibility. SimpleWagerGame retains exclusive entropy adoption, movement ordering, proof recovery, replay checks, and terminal provider-current publication."
     },
     {
@@ -12926,6 +12934,33 @@
       "introduced_in": "issue-869-fan-tan-simple-wager",
       "changed_in": "issue-869-fan-tan-simple-wager",
       "notes": "The structural inventory continues to classify Fan-Tan provider state as atomic while refusing production multiworker activation because state and money remain separate durable transactions."
+    },
+    {
+      "id": "TEST-240",
+      "module": "Tests",
+      "description": "Focused SimpleWagerGame and Dragon Tiger evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry card redraw, frozen action, shoe summary, rules, and nested response shapes, old ledger-proof recovery without shoe consumption, every shared lifecycle crash window, direct fifty-round history plus unbounded durable action replay, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "API-GAMECORE-005",
+        "API-DT-001",
+        "API-DT-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-DT-001"
+      ],
+      "implementation_files": [
+        "tests/simple_game_tests.py",
+        "tests/games/dragon_tiger/test_api.py",
+        "tests/games/dragon_tiger/test_atomic_state.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-871-dragon-tiger-simple-wager",
+      "changed_in": "issue-871-dragon-tiger-simple-wager",
+      "notes": "The structural inventory continues to classify Dragon Tiger provider state as atomic while refusing production multiworker activation because state and money remain separate durable transactions."
     }
   ]
 }

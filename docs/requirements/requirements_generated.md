@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.7
-- core: 9.48.0
+- core: 9.48.1
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
@@ -27,7 +27,7 @@ Historical source baseline: 9.1.0
 - casino_war: 1.2.1
 - big_six_wheel: 1.2.0
 - red_dog: 1.1.3
-- dragon_tiger: 1.1.3
+- dragon_tiger: 1.2.0
 - hi_lo: 1.1.4
 - three_card_poker: 1.1.4
 - jacks_or_better_video_poker: 1.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.4
-- tests: 1.100.56
-- docs: 1.96.56
+- tests: 1.100.57
+- docs: 1.96.57
 - contracts: 1.62.4
 - tooling: 1.41.0
 - commenting_policy: 2.0.0
@@ -725,7 +725,7 @@ Historical source baseline: 9.1.0
 - **TEST-232** (Tests) - PASS: Real stale-load Teen Patti workers race different settled-round publications around a separately committed sibling update, proving one provider-winning action, one explicit stale-writer conflict, one retained result, and no sibling loss. Deterministic publication proves identical state is idempotent, missing baselines fail before storage, private baselines never persist or enter v1 payloads, and stale recovery cleanup cannot erase a concurrent winner while existing ante, play, fold, payout, replay, private-card, and recovery paths remain covered.
 - **GAMECORE-005** (Core) - PASS: The shared SimpleWagerGame core publishes each ledger-committed terminal round through the provider-current atomic player-document callback. Distinct concurrent rounds and unrelated sibling fields survive, exact same-request publication is idempotent, changed-meaning or divergent same-request state fails closed, retained history stays bounded, and existing ledger proof, entropy recovery, game math, routes, and response envelopes remain unchanged.
 - **TEST-233** (Tests) - PASS: A real two-process JSON-provider race starts two distinct SimpleWagerGame rounds from the same stale read around a separately committed sibling update and proves both terminal rounds plus the sibling survive. Deterministic provider-current evidence retains bounded history and the established response, while the fail-closed structural inventory requires the shared helper to own exactly one atomic updater, no direct saver, and classifies all forty-six catalog games as provider-atomic without weakening the state-plus-money multiworker blocker.
-- **GAMECORE-006** (Core) - PASS: SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, movement action keys, historical action-detail keys, wager proof write/read, settlement details, public round projection, and bounded history capacity. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public, ledger, and persisted shape without bypassing the shared settlement or provider-current publication boundaries.
+- **GAMECORE-006** (Core) - PASS: SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, movement action keys, historical action-detail keys, wager proof write/read, settlement details, public round projection, bounded history capacity, and exact read-only committed-action lookup before stateful preparation. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public, ledger, and persisted shape without bypassing the shared settlement or provider-current publication boundaries.
 - **TEST-234** (Tests) - PASS: Focused SimpleWagerGame and Big Six Wheel evidence proves unchanged default helper behavior, exact legacy request and round identities, canonical and historical ledger-proof recovery, frozen action/state rows, 100-round retention, no direct Big Six settlement gateway call, and two-process provider-current preservation of two distinct rounds plus an unrelated sibling.
 - **GAMECORE-007** (Core) - PASS: SimpleWagerGame exposes one optional prepared-state lifecycle protocol that can durably prepare private entropy, reconcile wager failure, publish immutable wager proof, publish deterministic settlement intent, publish optional credit proof, and freeze terminal fields before the helper archives its provider-current round. Ordinary helper games retain their established default path, and an incomplete lifecycle fails before silently skipping a money-sensitive stage.
 - **TEST-235** (Tests) - PASS: Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
@@ -733,6 +733,7 @@ Historical source baseline: 9.1.0
 - **TEST-237** (Tests) - PASS: Focused SimpleWagerGame and Over/Under 7 evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-238** (Tests) - PASS: Focused SimpleWagerGame and Crown and Anchor evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-239** (Tests) - PASS: Focused SimpleWagerGame and Fan-Tan evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and nested state response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
+- **TEST-240** (Tests) - PASS: Focused SimpleWagerGame and Dragon Tiger evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry card redraw, frozen action, shoe summary, rules, and nested response shapes, old ledger-proof recovery without shoe consumption, every shared lifecycle crash window, direct fifty-round history plus unbounded durable action replay, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -990,6 +991,7 @@ Historical source baseline: 9.1.0
 - **DT-004** (Application) - PASS: The Dragon Tiger surface and persistent shared shell provide complete English and Russian copy and remain responsive, accessible, and reduced-motion safe across required viewports.
 - **DT-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Dragon Tiger with requirement, module, version, and visual evidence traceability.
 - **DT-006** (Dragon Tiger) - PASS: Dragon Tiger publishes shoe progress, prepared actions, recovery markers, bounded terminal history, and durable replay evidence through provider-current callbacks that replace only game-owned fields. Competing processes preserve unrelated player-state siblings and fail closed before a stale action can overwrite or resurrect the winning result, while debit and settlement recovery retain the frozen v1 behavior and exactly-once ledger movements.
+- **DT-007** (Dragon Tiger) - PASS: Dragon Tiger delegates prepared shoe state, committed card recovery, optional returned-credit movement, replay lookup, lifecycle finalization, and provider-current archival to one SimpleWagerGame coordinator while preserving the frozen v1 action_id, dt_ round identity, standard-8d shoe, direct oldest-to-newest fifty-round visible history, unbounded durable action index, private-card boundary, paytable, and historical ledger evidence semantics.
 - **RD-001** (Red Dog) - PASS: Six-deck Red Dog supports consecutive-card pushes, opening-pair handling, spread decisions, and the approved spread and pair payout schedule.
 - **RD-002** (Red Dog) - PASS: Authenticated sessions own isolated reload-safe Red Dog state, active decisions, recent rounds, and canonical route restoration.
 - **RD-003** (Red Dog) - PASS: Red Dog ante, optional matching raise, push return, and payout movements use the shared ledger exactly once under stable action identifiers.

@@ -107,8 +107,10 @@ class SimpleGameCoreTests(unittest.TestCase):
 
     # Require a winning round to debit the stake and credit the full return once.
     def test_winning_round_settles_once(self) -> None:
+        # Retain one helper instance so its public proof lookup can be verified after settlement.
+        game = _game(forced_face=3)
         # Play a stake on the forced winning face.
-        result = _game(forced_face=3).play(self.pid, {"request_id": "r-win", "face": 3, "stake": 10})
+        result = game.play(self.pid, {"request_id": "r-win", "face": 3, "stake": 10})
         # Require the winning outcome and a 50-token return on a 10 stake at 5x.
         self.assertEqual((result["round"]["outcome"], result["round"]["total_return"]), ("win", 50))
         # Require both wallet movements to use storage-enforced atomic action identities.
@@ -119,6 +121,14 @@ class SimpleGameCoreTests(unittest.TestCase):
         self.assertEqual({key: result["ledger"]["wager"]["details"][key] for key in ("request_id", "wager", "entropy", "settled_at")}, {"request_id": "r-win", "wager": {"face": 3, "stake": 10}, "entropy": {"face": 3}, "settled_at": result["round"]["settled_at"]})
         # Require the wallet to reflect exactly minus-stake plus-return once.
         self.assertEqual(self._balance(), 1000.0 - 10 + 50)
+        # Read the committed wager through the same helper-owned gateway boundary.
+        wager_proof = game.find_committed_action(player_id=self.pid, round_id=result["round"]["round_id"], request_fingerprint="3:10", action="wager")
+        # Require exact immutable proof without another movement.
+        self.assertEqual(result["ledger"]["wager"]["ledger_id"], wager_proof["ledger_id"])
+        # Reject an unknown action role before persistent proof access.
+        with self.assertRaisesRegex(ValueError, "wager or settlement"):
+            # Exercise programmer-facing validation on the public lookup seam.
+            game.find_committed_action(player_id=self.pid, round_id=result["round"]["round_id"], request_fingerprint="3:10", action="refund")
 
     # Require a losing round to debit the stake and credit nothing.
     def test_losing_round_debits_only(self) -> None:
