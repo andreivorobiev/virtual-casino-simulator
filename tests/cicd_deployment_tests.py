@@ -45,6 +45,10 @@ RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 LONG_SUITE_RUNNER = ROOT / "tests" / "long_suites.py"
 # Point at the browser runner whose inline state must be affinity-owned.
 BROWSER_RUNNER = ROOT / "tests" / "run_tests.py"
+# Point at the extracted pure Browser shard policy module. (TEST-242)
+BROWSER_SHARDING = ROOT / "tests" / "browser_sharding.py"
+# Point at the reviewed pre-slice count and sorted case-id inventory. (TEST-242)
+BROWSER_CASE_INVENTORY = ROOT / "tests" / "browser_case_inventory.json"
 # Point at the ordinary, formal, and sustained browser workflow.
 BROWSER_WORKFLOW = ROOT / ".github" / "workflows" / "browser-tests.yml"
 # Point at the pull-request affected-game detector.
@@ -271,6 +275,62 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Parse the source as data so ownership checks cannot execute browser code.
         return source, ast.parse(source)
 
+    # Read and parse the extracted shard policy without importing the compatibility runner.
+    def browser_sharding_syntax(self):
+        # Read exact checked-in shard-policy source once for literal ownership assertions.
+        source = self.workflow_text(BROWSER_SHARDING)
+        # Parse the source as data so focused CI tests never execute Browser code.
+        return source, ast.parse(source)
+
+    # Prove every #727 slice preserves the exact pre-slice count and sorted Browser identity list.
+    def test_browser_case_inventory_matches_runner_exactly(self):
+        # Parse the compatibility runner without importing Playwright or opening a listener.
+        source, tree = self.browser_runner_syntax()
+        # Select the one function that still owns all permanent Browser case registrations.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Extract the exact source inventory in registration order.
+        case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
+        # Load the checked-in count and sorted-ID baseline as inert JSON.
+        inventory = json.loads(BROWSER_CASE_INVENTORY.read_text(encoding="utf-8"))
+        # Require the baseline to expose only the two acceptance dimensions.
+        self.assertEqual(set(inventory), {"count", "case_ids"})
+        # Prove exact before/after case-count equality for this extraction slice. (TEST-242)
+        self.assertEqual(inventory["count"], len(case_ids))
+        # Prove exact before/after sorted identity equality, not merely set inclusion. (TEST-242)
+        self.assertEqual(inventory["case_ids"], sorted(case_ids))
+        # Require the compatibility runner to invoke the strict baseline before returning discovery.
+        self.assertIn("validate_browser_case_inventory(case_ids,BROWSER_CASE_INVENTORY_PATH)", source)
+
+    # Prove missing, added, duplicated, or malformed baseline evidence fails closed.
+    def test_browser_case_inventory_validator_rejects_drift(self):
+        # Import only the listener-free pure policy module.
+        from tests import browser_sharding
+        # Use a tiny synthetic current inventory so every mismatch is easy to isolate.
+        current = ["BR-A-001", "BR-B-001"]
+        # Create one disposable baseline path without changing tracked governance data.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Resolve the exact task-local baseline path.
+            inventory_path = Path(temp_dir) / "browser_case_inventory.json"
+            # Define hostile packets covering count drift, sorted-ID drift, duplication, and shape drift.
+            hostile_packets = (
+                {"count": 1, "case_ids": ["BR-A-001", "BR-B-001"]},
+                {"count": 2, "case_ids": ["BR-A-001", "BR-C-001"]},
+                {"count": 2, "case_ids": ["BR-A-001", "BR-A-001"]},
+                {"count": 2, "case_ids": ["BR-A-001", "BR-B-001"], "optional": True},
+            )
+            # Exercise each hostile packet independently through the production validator.
+            for packet in hostile_packets:
+                # Persist only this bounded synthetic packet.
+                inventory_path.write_text(json.dumps(packet), encoding="utf-8")
+                # Require the one fixed value-free mismatch diagnostic.
+                with self.assertRaisesRegex(AssertionError, "^browser case inventory does not match the reviewed baseline$"):
+                    # Validate exact current source identities against hostile evidence.
+                    browser_sharding.validate_browser_case_inventory(current, inventory_path)
+            # Persist one exact packet to prove the strict validator accepts the intended path.
+            inventory_path.write_text(json.dumps({"count": 2, "case_ids": current}), encoding="utf-8")
+            # Preserve source order on successful validation.
+            self.assertEqual(browser_sharding.validate_browser_case_inventory(current, inventory_path), current)
+
     # Prove the shared semantic fallbacks cannot flatten Color Wheel's route-owned gradients.
     def test_semantic_game_color_cascade_preserves_color_wheel_gradients(self):
         # Read the shared stylesheet as inert text so the focused oracle opens no listener or browser.
@@ -351,8 +411,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         keno_complete_calls = [statement.value.func.id for statement in keno_complete_callback.body if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call) and isinstance(statement.value.func, ast.Name)]
         # Require one complete 64-cell matrix pass followed by one route/restoration economics pass.
         self.assertEqual(keno_complete_calls, ["keno_edge_containment", "keno_economics_route_behavior"])
-        # Locate the literal affinity declaration at module scope.
-        affinity_node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_CASE_AFFINITY_GROUPS" for target in node.targets))
+        # Parse the extracted shard policy where ownership data now lives. (TEST-242)
+        _sharding_source, sharding_tree = self.browser_sharding_syntax()
+        # Locate the literal affinity declaration at extracted module scope.
+        affinity_node = next(node for node in sharding_tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_CASE_AFFINITY_GROUPS" for target in node.targets))
         # Read only literal strings and tuples from the tracked declaration.
         affinity_groups = ast.literal_eval(affinity_node.value)
         # Require every producer/consumer group introduced by the controller repair.
@@ -707,8 +769,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Extract the permanent browser case inventory.
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Locate the literal affected-game acceptance map.
-        mapping_node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_GAME_ACCEPTANCE_CASES" for target in node.targets))
+        # Parse the extracted shard policy where affected-game ownership now lives. (TEST-242)
+        _sharding_source, sharding_tree = self.browser_sharding_syntax()
+        # Locate the literal affected-game acceptance map in the pure policy module.
+        mapping_node = next(node for node in sharding_tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_GAME_ACCEPTANCE_CASES" for target in node.targets))
         # Read only the literal game-to-case mapping.
         game_cases = ast.literal_eval(mapping_node.value)
         # Keep shared cases and the one selected game's dedicated case.

@@ -29,10 +29,10 @@ EXPECTED_CASES = {
 
 # Prove dedicated case inventory, per-game ownership, and affected-game routing together.
 class NewestGameBrowserCoverageTests(unittest.TestCase):
-    # Load one literal assignment from the browser runner without importing Playwright.
+    # Load one literal assignment from the extracted shard policy without importing Playwright.
     def runner_assignment(self, name):
-        # Parse the complete runner so missing or computed declarations fail closed.
-        tree = ast.parse((ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8"))
+        # Parse the pure policy module so missing or computed declarations fail closed. (TEST-242)
+        tree = ast.parse((ROOT / "tests" / "browser_sharding.py").read_text(encoding="utf-8"))
         # Search deterministic top-level assignments for the requested owner.
         for node in tree.body:
             # Ignore statements that cannot bind the requested literal.
