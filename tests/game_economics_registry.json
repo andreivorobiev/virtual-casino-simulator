@@ -326,7 +326,7 @@
       "requirement_id": "FAN-TAN-001",
       "engine_path": "casino/games/fan_tan/engine.py",
       "settlement_path": "casino/games/fan_tan/service.py",
-      "production_sha256": "023d64bf2aa0b42a65a54c1b28ed947f3a4f2e21cbff4c1206e6baaeaa8fd2aa",
+        "production_sha256": "cabc0e426177b5d292609bf534f5387c2014b79598e234607e048ec246adbd2e",
       "proof_tests": ["tests.games.fan_tan.test_engine:FanTanEngineTests.test_settlement_returns_transparent_three_to_one_paytable"],
       "decision_issue": 256,
       "rationale": "Issue #256 explicitly accepted a transparent fair four-residue game; one of four outcomes returns four total stakes exactly."

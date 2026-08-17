@@ -128,8 +128,31 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-807-fan-tan-atomic-state",
-      "changed_in": "issue-807-fan-tan-atomic-state",
-      "notes": "The frozen v1 envelope, counted-pile profile, three-to-one paytable, entropy seam, and deterministic ledger action keys remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+      "changed_in": "issue-869-fan-tan-simple-wager",
+      "notes": "The SimpleWagerGame lifecycle adapter owns each provider-current transition without a detached whole-document saver. Multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+    },
+    {
+      "id": "FAN-TAN-007",
+      "module": "Fan-Tan",
+      "description": "Fan-Tan delegates its prepared wager, committed pile-count recovery, optional returned-credit movement, replay lookup, lifecycle finalization, and provider-current history publication to one SimpleWagerGame coordinator while preserving the frozen v1 action_id, ft_ round identity, nested state response, direct oldest-to-newest one-hundred-round history, active-state privacy, three-to-one settlement, and historical ledger evidence semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FAN-TAN-001",
+        "API-FAN-TAN-ATOMIC-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [
+        "BR-FAN-TAN-001"
+      ],
+      "implementation_files": [
+        "casino/games/fan_tan/service.py",
+        "casino/core/simple_game.py",
+        "tests/games/fan_tan/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-869-fan-tan-simple-wager",
+      "changed_in": "issue-869-fan-tan-simple-wager",
+      "notes": "The game service contains exactly one SimpleWagerGame construction and no direct GameSettlementGateway, CoreLedgerGateway, apply_once call, or game-local settlement lock. Canonical proof fields remain beside the legacy fan_tan_action_id compatibility field without changing the frozen v1 contract."
     }
   ]
 }
