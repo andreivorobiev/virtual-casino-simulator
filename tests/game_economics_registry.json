@@ -282,7 +282,7 @@
       "requirement_id": "CAA-001",
       "engine_path": "casino/games/crown_and_anchor/engine.py",
       "settlement_path": "casino/games/crown_and_anchor/service.py",
-      "production_sha256": "5aecf3d84f6a62c0512f256b88f7d3878c10e171b5971ecbb85b22ae90b3ad55",
+      "production_sha256": "911bd0a4b2d6efb40bb88bf099d5f6b7fc5be3c8016c72932c98f5b12e26da24",
       "proof_tests": ["tests.games.crown_and_anchor.test_engine:CrownAndAnchorEngineTests.test_settle_counts_three_symbol_dice"],
       "rationale": "Every symbol selection has the same exact production probability and below-fair returned-credit schedule."
     },

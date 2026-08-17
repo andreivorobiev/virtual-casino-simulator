@@ -36,7 +36,7 @@ Historical source baseline: 9.1.0
 - sic_bo: 1.2.0
 - chuck_a_luck: 1.2.0
 - craps: 1.1.3
-- crown_and_anchor: 1.1.5
+- crown_and_anchor: 1.2.0
 - over_under_7: 1.2.0
 - plinko: 1.1.3
 - fan_tan: 1.1.5
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.4
 - teen_patti: 1.1.4
-- tests: 1.100.54
-- docs: 1.96.54
+- tests: 1.100.55
+- docs: 1.96.55
 - contracts: 1.62.4
 - tooling: 1.41.0
 - commenting_policy: 2.0.0
@@ -731,6 +731,7 @@ Historical source baseline: 9.1.0
 - **TEST-235** (Tests) - PASS: Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-236** (Tests) - PASS: Focused SimpleWagerGame and Chuck-a-Luck evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-237** (Tests) - PASS: Focused SimpleWagerGame and Over/Under 7 evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
+- **TEST-238** (Tests) - PASS: Focused SimpleWagerGame and Crown and Anchor evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
@@ -1057,6 +1058,7 @@ Historical source baseline: 9.1.0
 - **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with all three dice and all six symbol hit-result panels painted and contained at every governed viewport.
 - **CAA-005** (Tests) - PASS: Catalog, contract, browser, long-suite, and formal TEST-092 discovery include Crown and Anchor with requirement, module, version, visual, and essential-stage traceability.
 - **CAA-006** (Crown and Anchor) - PASS: Every Crown and Anchor settled-history publication compares its detached game-owned baseline with provider-current state, preserves unrelated sibling fields, accepts an identical result idempotently, and rejects a stale different writer before it can overwrite the authoritative round journal.
+- **CAA-007** (Crown and Anchor) - PASS: Crown and Anchor delegates its prepared wager, committed-face recovery, optional returned-credit movement, replay lookup, lifecycle finalization, and provider-current history publication to one SimpleWagerGame coordinator while preserving the frozen v1 client_request_id, caa_ round identity, direct oldest-to-newest one-hundred-round history, public round, active-state privacy, and historical ledger evidence semantics.
 - **OU7-001** (Over/Under 7) - PASS: Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.
 - **OU7-002** (Over/Under 7) - PASS: Authenticated sessions own private reload-safe plays, settled history, and canonical route restoration.
 - **OU7-003** (Over/Under 7) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under durable action identities.

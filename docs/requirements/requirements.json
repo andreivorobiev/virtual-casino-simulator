@@ -12706,7 +12706,8 @@
         "API-BIG-SIX-001",
         "API-SIC-BO-001",
         "API-CHUCK-001",
-        "API-OU7-001"
+        "API-OU7-001",
+        "API-CAA-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -12715,14 +12716,16 @@
         "casino/games/sic_bo/service.py",
         "casino/games/chuck_a_luck/service.py",
         "casino/games/over_under_7/service.py",
+        "casino/games/crown_and_anchor/service.py",
         "tests/simple_game_tests.py",
         "tests/unit/big_six_wheel_engine_tests.py",
         "tests/games/sic_bo/test_service.py",
         "tests/games/chuck_a_luck/test_engine.py",
-        "tests/games/over_under_7/test_api.py"
+        "tests/games/over_under_7/test_api.py",
+        "tests/games/crown_and_anchor/test_api.py"
       ],
       "introduced_in": "issue-859-big-six-simple-wager",
-      "changed_in": "issue-865-over-under-7-simple-wager",
+      "changed_in": "issue-867-crown-and-anchor-simple-wager",
       "notes": "Adapters may change compatibility representation and stable identity naming only; the helper still exclusively owns exactly-once movements, proof recovery, replay conflict checks, and provider-current terminal publication."
     },
     {
@@ -12764,7 +12767,9 @@
         "API-CHUCK-001",
         "API-CHUCK-ATOMIC-001",
         "API-OU7-001",
-        "API-OU7-ATOMIC-001"
+        "API-OU7-ATOMIC-001",
+        "API-CAA-001",
+        "API-CAA-ATOMIC-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -12772,14 +12777,16 @@
         "casino/games/sic_bo/service.py",
         "casino/games/chuck_a_luck/service.py",
         "casino/games/over_under_7/service.py",
+        "casino/games/crown_and_anchor/service.py",
         "tests/simple_game_tests.py",
         "tests/games/sic_bo/test_service.py",
         "tests/games/sic_bo/test_atomic_state.py",
         "tests/games/chuck_a_luck/test_engine.py",
-        "tests/games/over_under_7/test_api.py"
+        "tests/games/over_under_7/test_api.py",
+        "tests/games/crown_and_anchor/test_api.py"
       ],
       "introduced_in": "issue-861-sic-bo-simple-wager",
-      "changed_in": "issue-865-over-under-7-simple-wager",
+      "changed_in": "issue-867-crown-and-anchor-simple-wager",
       "notes": "The adapter owns only game-state lifecycle compatibility. SimpleWagerGame retains exclusive entropy adoption, movement ordering, proof recovery, replay checks, and terminal provider-current publication."
     },
     {
@@ -12860,6 +12867,32 @@
       "introduced_in": "issue-865-over-under-7-simple-wager",
       "changed_in": "issue-865-over-under-7-simple-wager",
       "notes": "The structural inventory continues to classify Over/Under 7 provider state as atomic while refusing production multiworker activation because state and money remain separate durable transactions."
+    },
+    {
+      "id": "TEST-238",
+      "module": "Tests",
+      "description": "Focused SimpleWagerGame and Crown and Anchor evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "API-GAMECORE-005",
+        "API-CAA-001",
+        "API-CAA-ATOMIC-001",
+        "PERF-MULTIPROCESS-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-CAA-001"
+      ],
+      "implementation_files": [
+        "tests/simple_game_tests.py",
+        "tests/games/crown_and_anchor/test_api.py",
+        "tests/unit/multiprocess_safety_audit_tests.py",
+        "tests/game_economics_registry.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-867-crown-and-anchor-simple-wager",
+      "changed_in": "issue-867-crown-and-anchor-simple-wager",
+      "notes": "The structural inventory continues to classify Crown and Anchor provider state as atomic while refusing production multiworker activation because state and money remain separate durable transactions."
     },
     {
       "id": "ROU-001",
@@ -18733,8 +18766,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "game-expansion-crown-and-anchor",
-      "notes": "Session context overrides caller player ids and committed results survive reload and process restart."
+      "changed_in": "issue-867-crown-and-anchor-simple-wager",
+      "notes": "Session context overrides caller player ids; provider-current prepared faces remain private until exact ledger proof allows one terminal result to survive reload and process restart."
     },
     {
       "id": "CAA-003",
@@ -18752,8 +18785,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "game-expansion-crown-and-anchor",
-      "notes": "No game code mutates balances directly and conflicting retries fail closed."
+      "changed_in": "issue-867-crown-and-anchor-simple-wager",
+      "notes": "SimpleWagerGame owns the aggregate debit, optional returned credit, proof recovery, and conflicting-retry refusal; no game code mutates balances directly."
     },
     {
       "id": "CAA-004",
@@ -18821,8 +18854,31 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-805-crown-and-anchor-atomic-state",
-      "changed_in": "issue-805-crown-and-anchor-atomic-state",
-      "notes": "The frozen v1 envelope, six-symbol paytable, entropy seam, and deterministic ledger action keys remain unchanged. Multiworker activation stays blocked because state, ledger, and history remain separate boundaries."
+      "changed_in": "issue-867-crown-and-anchor-simple-wager",
+      "notes": "The SimpleWagerGame lifecycle adapter owns each provider-current transition without a detached whole-document saver. Multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+    },
+    {
+      "id": "CAA-007",
+      "module": "Crown and Anchor",
+      "description": "Crown and Anchor delegates its prepared wager, committed-face recovery, optional returned-credit movement, replay lookup, lifecycle finalization, and provider-current history publication to one SimpleWagerGame coordinator while preserving the frozen v1 client_request_id, caa_ round identity, direct oldest-to-newest one-hundred-round history, public round, active-state privacy, and historical ledger evidence semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CAA-001",
+        "API-CAA-ATOMIC-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [
+        "BR-CAA-001"
+      ],
+      "implementation_files": [
+        "casino/games/crown_and_anchor/service.py",
+        "casino/core/simple_game.py",
+        "tests/games/crown_and_anchor/test_api.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-867-crown-and-anchor-simple-wager",
+      "changed_in": "issue-867-crown-and-anchor-simple-wager",
+      "notes": "The game service contains exactly one SimpleWagerGame construction and no direct GameSettlementGateway, CoreLedgerGateway, apply_once call, or game-local settlement lock. Canonical proof fields remain beside the legacy idempotency_key compatibility field without changing the frozen v1 contract."
     },
     {
       "id": "OU7-001",
