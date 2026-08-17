@@ -627,11 +627,61 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         delegation = "api_frontend_presentation.run_cases(run_case,run_roulette_motion_tests,run_game_frontend_node_test)"
         # Reject missing or duplicated delegation in the compatibility runner.
         self.assertEqual(runner_source.count(delegation), 1)
-        # Preserve the historical boundary after delivery infrastructure and before API documentation.
+        # Preserve the historical boundary after delivery infrastructure and before self-service foundation.
         self.assertLess(runner_source.index("api_delivery_infrastructure.run_cases("), runner_source.index(delegation))
-        # Keep the following API documentation case after the complete presentation area.
-        self.assertLess(runner_source.index(delegation), runner_source.index("API-DOCS-001"))
+        # Keep the following self-service foundation area after the complete presentation area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_self_service_foundation.run_cases("))
         # Keep process construction and every listener owner outside the extracted area.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+
+    # Prove documentation, personal settings, and receipts moved as one listener-free area.
+    def test_api_self_service_foundation_area_registration_ownership_is_exact(self):
+        # Define exact case and requirement order from documentation through receipts.
+        expected_cases = (
+            ("API-DOCS-001", ["API-003", "TEST-152"]),
+            ("API-SETTINGS-001", ["USER-006", "USER-007", "USER-008", "USER-009", "TEST-103", "TEST-158"]),
+            ("API-RECEIPT-001", ["RECEIPT-001", "RECEIPT-002", "TEST-104"]),
+        )
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit self-service foundation area module.
+        area_path = API_CASES_ROOT / "self_service_foundation.py"
+        # Read source once for duplicate and process-boundary assertions.
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load the listener-free registration module without importing the compatibility runner.
+        spec = importlib.util.spec_from_file_location("self_service_foundation_area", area_path)
+        # Require a valid loader for the checked-in Python module.
+        self.assertIsNotNone(spec.loader)
+        # Construct the isolated module object from its exact file specification.
+        module = importlib.util.module_from_spec(spec)
+        # Execute only definitions and imports from the registration-only area.
+        spec.loader.exec_module(module)
+        # Capture every registration without executing any mapped test callback.
+        captured = []
+        # Record exact case identity, requirement mapping, and callback ownership.
+        def capture(case_id, requirements, callback):
+            # Preserve all three registration dimensions for one equality assertion.
+            captured.append((case_id, requirements, callback.__name__))
+        # Register the area through the same callback boundary used by the compatibility runner.
+        module.run_cases(capture)
+        # Prove exact IDs, requirement lists, and historical registration order.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        # Prove each focused adapter remains owned by the extracted area.
+        self.assertEqual(tuple(callback for _, _, callback in captured), ("_run_api_docs_tests", "_run_user_settings_tests", "_run_receipt_tests"))
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id, _ in expected_cases:
+            # Reject duplicated ownership that could execute one self-service proof twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit area delegation through the runner-owned case recorder.
+        delegation = "api_self_service_foundation.run_cases(run_case)"
+        # Reject missing or duplicated delegation in the compatibility runner.
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the historical boundary after frontend presentation.
+        self.assertLess(runner_source.index("api_frontend_presentation.run_cases("), runner_source.index(delegation))
+        # Keep the next Double Bonus game-engine block after the complete self-service foundation.
+        self.assertLess(runner_source.index(delegation), runner_source.index("API-DOUBLE-BONUS-VIDEO-POKER-001"))
+        # Keep subprocess construction and every listener owner outside the extracted area.
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("ServerThread", area_source)
 
