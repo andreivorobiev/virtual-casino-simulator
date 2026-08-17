@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the first four settlement-alias retirement slices to total exactly 1085 permanent rows.
-        self.assertEqual(len(requirements), 1085)
+        # Require the first five settlement-alias retirement slices to total exactly 1087 permanent rows.
+        self.assertEqual(len(requirements), 1087)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1471,6 +1471,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "BIG-SIX-007": "Big Six Wheel",  # Bind settled-history publication to provider-current callbacks.
             "TEST-213": "Tests",  # Bind real Big Six Wheel ordering and sibling-state evidence.
             "CAA-006": "Crown and Anchor",  # Bind settled-history publication to provider-current callbacks.
+            "CAA-007": "Crown and Anchor",  # Bind prepared settlement orchestration to the shared helper.
             "TEST-214": "Tests",  # Bind real Crown and Anchor ordering and sibling-state evidence.
             "FAN-TAN-006": "Fan-Tan",  # Bind settled-history publication to provider-current callbacks.
             "TEST-215": "Tests",  # Bind real Fan-Tan ordering, sibling, and recovery evidence.
@@ -1518,6 +1519,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-235": "Tests",  # Bind lifecycle, recovery, history, source, and process evidence.
             "TEST-236": "Tests",  # Bind Chuck-a-Luck lifecycle, recovery, history, and process evidence.
             "TEST-237": "Tests",  # Bind Over/Under 7 lifecycle, recovery, history, and process evidence.
+            "TEST-238": "Tests",  # Bind Crown and Anchor lifecycle, recovery, history, and process evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
