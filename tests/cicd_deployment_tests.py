@@ -49,6 +49,10 @@ BROWSER_RUNNER = ROOT / "tests" / "run_tests.py"
 BROWSER_SHARDING = ROOT / "tests" / "browser_sharding.py"
 # Point at the reviewed pre-slice count and sorted case-id inventory. (TEST-242)
 BROWSER_CASE_INVENTORY = ROOT / "tests" / "browser_case_inventory.json"
+# Point at every extracted API-area module owned by the compatibility runner. (TEST-242)
+API_CASES_ROOT = ROOT / "tests" / "cases" / "api"
+# Point at the reviewed non-Browser count and sorted case-id inventory. (TEST-242)
+API_CASE_INVENTORY = ROOT / "tests" / "api_case_inventory.json"
 # Point at the ordinary, formal, and sustained browser workflow.
 BROWSER_WORKFLOW = ROOT / ".github" / "workflows" / "browser-tests.yml"
 # Point at the pull-request affected-game detector.
@@ -330,6 +334,80 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             inventory_path.write_text(json.dumps({"count": 2, "case_ids": current}), encoding="utf-8")
             # Preserve source order on successful validation.
             self.assertEqual(browser_sharding.validate_browser_case_inventory(current, inventory_path), current)
+
+    # Prove every #727 API slice preserves the exact reviewed non-Browser count and sorted identities.
+    def test_api_case_inventory_matches_extracted_sources_exactly(self):
+        # Import only the source-reading inventory helper with no runner or case execution.
+        from tests import api_case_inventory
+        # Resolve the compatibility entrypoint plus every extracted API-area source deterministically.
+        source_paths = api_case_inventory.api_case_source_paths(BROWSER_RUNNER, API_CASES_ROOT)
+        # Discover literal non-Browser registrations without importing the runner or opening a listener.
+        case_ids = api_case_inventory.discover_api_case_ids(source_paths)
+        # Load the checked-in count and sorted-ID baseline as inert JSON.
+        inventory = json.loads(API_CASE_INVENTORY.read_text(encoding="utf-8"))
+        # Require the baseline to expose only the two acceptance dimensions.
+        self.assertEqual(set(inventory), {"count", "case_ids"})
+        # Prove exact before/after case-count equality for the current extraction slice. (TEST-242)
+        self.assertEqual(inventory["count"], len(case_ids))
+        # Prove exact before/after sorted identity equality, including every storage and API-lane gate.
+        self.assertEqual(inventory["case_ids"], list(case_ids))
+        # Require the compatibility runner to invoke strict source validation before API execution.
+        self.assertIn("validate_api_case_inventory(current_api_case_ids,API_CASE_INVENTORY_PATH)", BROWSER_RUNNER.read_text(encoding="utf-8"))
+
+    # Prove missing, added, duplicated, unsorted, or malformed API baseline evidence fails closed.
+    def test_api_case_inventory_validator_rejects_drift(self):
+        # Import only the source-neutral exact inventory validator.
+        from tests import api_case_inventory
+        # Use a tiny synthetic sorted current inventory so every mismatch is easy to isolate.
+        current = ("API-A-001", "GOV-B-001")
+        # Create one disposable baseline path without changing tracked governance data.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Resolve the exact task-local baseline path.
+            inventory_path = Path(temp_dir) / "api_case_inventory.json"
+            # Define hostile packets covering count, ID, duplicate, ordering, type, and shape drift.
+            hostile_packets = (
+                {"count": 1, "case_ids": ["API-A-001", "GOV-B-001"]},
+                {"count": 2, "case_ids": ["API-A-001", "GOV-C-001"]},
+                {"count": 2, "case_ids": ["API-A-001", "API-A-001"]},
+                {"count": 2, "case_ids": ["GOV-B-001", "API-A-001"]},
+                {"count": True, "case_ids": ["API-A-001", "GOV-B-001"]},
+                {"count": 2, "case_ids": ["API-A-001", "GOV-B-001"], "optional": True},
+            )
+            # Exercise each hostile packet independently through the production validator.
+            for packet in hostile_packets:
+                # Persist only this bounded synthetic packet.
+                inventory_path.write_text(json.dumps(packet), encoding="utf-8")
+                # Require the one fixed value-free mismatch diagnostic.
+                with self.assertRaisesRegex(AssertionError, "^API case inventory does not match the reviewed baseline$"):
+                    # Validate exact current source identities against hostile evidence.
+                    api_case_inventory.validate_api_case_inventory(current, inventory_path)
+            # Persist one exact packet to prove the strict validator accepts the intended path.
+            inventory_path.write_text(json.dumps({"count": 2, "case_ids": list(current)}), encoding="utf-8")
+            # Preserve sorted immutable identities on successful validation.
+            self.assertEqual(api_case_inventory.validate_api_case_inventory(current, inventory_path), current)
+
+    # Prove the first API area moved as one exact registration group without duplication in the shim.
+    def test_api_governance_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed registrations moved by this slice in historical execution order.
+        expected_ids = (
+            "FILE-HEADER-POLICY-001", "PERF-PAYLOAD-BUDGET-001", "PERF-PAYLOAD-PROJECTION-001", "PERF-TARGET-GATE-001", "PERF-MULTIPROCESS-SAFETY-001",
+            "GOV-GAME-SUITE-DISCOVERY-001", "GOV-GAME-SUITES-001", "GOV-REQUIREMENT-SHARDS-001", "GOV-DEAD-ARTIFACTS-001", "UI-ROULETTE-I18N-DIAGNOSTICS-001",
+            "UI-I18N-SINGLE-SOURCE-001", "UI-BROWSER-WAIT-001", "CI-COMPUTE-001", "GOV-MODULE-VERSIONS-001", "GOV-NEWEST-GAME-BROWSER-COVERAGE-001",
+        )
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit governance area module.
+        governance_source = (API_CASES_ROOT / "governance.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", governance_source))
+        # Require the whole reviewed area to move in its original order.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id in expected_ids:
+            # Reject duplicated ownership that could execute a gate twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit area delegation at the historical registration point.
+        self.assertEqual(runner_source.count("api_governance.run_cases(run_case,run_unit_module,ROOT)"), 1)
 
     # Prove the shared semantic fallbacks cannot flatten Color Wheel's route-owned gradients.
     def test_semantic_game_color_cascade_preserves_color_wheel_gradients(self):
