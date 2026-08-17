@@ -830,14 +830,55 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject duplicate registration ownership in the compatibility runner.
         for case_id, _ in expected_cases:
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
-        # Require one delegation at the original mobile-core to Keno-rail boundary.
+        # Require one delegation at the original mobile-core to Keno/Admin boundary.
         delegation = "api_catalog_expansion.run_cases(run_case)"
         self.assertEqual(runner_source.count(delegation), 1)
         self.assertLess(runner_source.index("API-MOBILE-CORE-001"), runner_source.index(delegation))
-        self.assertLess(runner_source.index(delegation), runner_source.index("def run_keno_ball_rail_tests"))
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_keno_admin_foundation.run_cases("))
         # Keep subprocess and listener lifecycle out of this extracted registration owner.
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("ServerThread", area_source)
+
+    # Prove Keno and Admin-foundation registrations moved as one exact listener-free area.
+    def test_api_keno_admin_foundation_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed cases and requirement mappings in historical order.
+        expected_cases = (
+            ("UI-KENO-BALL-RAIL-001", ["KENO-026", "TEST-113"]),
+            ("API-KENO-ECONOMICS-001", ["KENO-027", "TEST-147"]),
+            ("UI-ADMIN-LEDGER-LABELS-001", ["ADMIN-027", "TEST-132"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "keno_admin_foundation.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the registration owner so callbacks can be inspected without execution.
+        spec = importlib.util.spec_from_file_location("keno_admin_foundation_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture exact registration identity without running any focused suite.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Preserve all ownership dimensions for one fail-closed equality proof.
+            captured.append((case_id, requirements, callback.__name__))
+        module.run_cases(capture)
+        # Bind permanent IDs, requirement mappings, order, and focused callback ownership.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        self.assertEqual(tuple(callback for _, _, callback in captured), (
+            "_run_keno_ball_rail_tests", "_run_keno_economics_tests", "_run_admin_ledger_label_tests",
+        ))
+        # Reject duplicate registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the original catalog-expansion to security/UI boundary.
+        delegation = "api_keno_admin_foundation.run_cases(run_case)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        self.assertLess(runner_source.index("api_catalog_expansion.run_cases("), runner_source.index(delegation))
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_security_ui_foundation.run_cases("))
+        # Keep process, listener, and server lifecycle out of the extracted owner.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+        self.assertNotIn("start_server", area_source)
 
     # Prove security and UI-foundation registrations moved as one exact listener-free area.
     def test_api_security_ui_foundation_area_registration_ownership_is_exact(self):
@@ -873,10 +914,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject duplicate registration ownership in the compatibility runner.
         for case_id, _ in expected_cases:
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
-        # Require one delegation at the original Admin-ledger-label to authentication boundary.
+        # Require one delegation after the extracted Keno/Admin block and before authentication.
         delegation = "api_security_ui_foundation.run_cases(run_case)"
         self.assertEqual(runner_source.count(delegation), 1)
-        self.assertLess(runner_source.index("UI-ADMIN-LEDGER-LABELS-001"), runner_source.index(delegation))
+        self.assertLess(runner_source.index("api_keno_admin_foundation.run_cases("), runner_source.index(delegation))
         self.assertLess(runner_source.index(delegation), runner_source.index("api_auth.run_cases("))
         # Keep process, listener, and server lifecycle out of the extracted owner.
         self.assertNotIn("subprocess.run", area_source)
