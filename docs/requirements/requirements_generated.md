@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.7
-- core: 9.48.1
+- core: 10.0.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.3
@@ -28,31 +28,31 @@ Historical source baseline: 9.1.0
 - big_six_wheel: 1.2.0
 - red_dog: 1.1.3
 - dragon_tiger: 1.2.0
-- hi_lo: 1.1.4
+- hi_lo: 1.1.5
 - three_card_poker: 1.1.4
 - jacks_or_better_video_poker: 1.1.4
 - deuces_wild_video_poker: 1.1.5
-- scratch_cards: 1.1.3
+- scratch_cards: 1.1.4
 - sic_bo: 1.2.0
 - chuck_a_luck: 1.2.0
 - craps: 1.1.3
 - crown_and_anchor: 1.2.0
 - over_under_7: 1.2.0
-- plinko: 1.1.3
+- plinko: 1.1.4
 - fan_tan: 1.2.0
-- andar_bahar: 1.1.5
-- acey_deucey: 1.1.4
-- caribbean_stud: 1.1.3
+- andar_bahar: 1.1.6
+- acey_deucey: 1.1.5
+- caribbean_stud: 1.1.4
 - let_it_ride: 1.1.3
-- casino_holdem: 1.1.3
-- double_bonus_video_poker: 1.1.4
-- mississippi_stud: 1.1.4
-- joker_poker: 1.1.3
+- casino_holdem: 1.1.4
+- double_bonus_video_poker: 1.1.5
+- mississippi_stud: 1.1.5
+- joker_poker: 1.1.4
 - texas_holdem_practice_table: 1.1.4
-- pai_gow_poker: 1.1.4
-- teen_patti: 1.1.4
-- tests: 1.100.57
-- docs: 1.96.57
+- pai_gow_poker: 1.1.5
+- teen_patti: 1.1.5
+- tests: 1.100.58
+- docs: 1.96.58
 - contracts: 1.62.4
 - tooling: 1.41.0
 - commenting_policy: 2.0.0
@@ -67,7 +67,7 @@ Historical source baseline: 9.1.0
 - pattern_draw: 1.1.5
 - lucky_grid: 1.1.5
 - daily_draw_lab: 1.1.6
-- four_card_poker: 1.1.5
+- four_card_poker: 1.1.6
 
 ## Requirements
 
@@ -599,9 +599,9 @@ Historical source baseline: 9.1.0
 - **SEC-015** (Core) - PASS: The platform owner can adjust the global per-client application request allowance and fixed-window duration without restarting the service; values are provider-backed and bounded to 60 through 10000 requests and 1 through 3600 seconds, default to 1200 requests per 60 seconds, and apply immediately to existing limiter state. The exact owner-only control route uses an independent fixed 60-per-minute recovery bucket while retaining normal authentication and mutation-integrity enforcement.
 - **ADMIN-032** (Admin) - PASS: The owner-only Sessions and security console displays localized bounded controls for application requests per window and window seconds, while Guest Trials displays the fixed 10,000-token grant and lets the current platform owner pause or resume only new trial admission; both provider-backed policies apply without restart through additive v2 contracts and expose no per-client limiter or guest identity state.
 - **TEST-156** (Tests) - PASS: Listener-free provider, limiter, WSGI, contract, and frontend checks prove owner authorization, persistence, clamping, immediate live rate-policy application, recovery-route isolation, a fixed 10,000-token guest grant, no-restart guest admission pause/resume without current-trial revocation, truthful localized login and Admin controls, and delayed-frame document-scroll restoration.
-- **LEDGER-032** (Ledger) - PASS: Every accepted game wager, ticket, card purchase, insurance action, split, double, refund, payout, and settlement for all registered games crosses casino.core.settlement.GameSettlementGateway and the storage-atomic SettlementAdapter exactly-once boundary; game modules cannot import or directly call ledger debit, credit, debit-once, or credit-once functions. Canonical game action, request fingerprint, and round evidence is written beside one-release legacy detail keys without rewriting historical rows or changing current API response semantics.
-- **GAMECORE-004** (Core) - PASS: The shared game-money compatibility gateway presents one canonical signed settlement contract to direct, shared-simple, staged-intent, and historically injected game service shapes, delegates production value movement only to SettlementAdapter, preserves deterministic replay and changed-meaning conflict behavior, and keeps transitional detail aliases read-compatible for one release.
-- **TEST-157** (Tests) - PASS: A catalog-derived source gate and focused settlement suite prove every registered game uses the shared settlement boundary, rejects direct game imports or calls to ledger money functions, preserves canonical and one-release compatibility evidence, and routes both direct actions and staged intents through storage-atomic debit-once or credit-once seams.
+- **LEDGER-032** (Ledger) - PASS: Every accepted game wager, ticket, card purchase, insurance action, split, double, refund, payout, and settlement for all registered games crosses casino.core.settlement.GameSettlementGateway and the storage-atomic SettlementAdapter exactly-once boundary; game modules cannot import or directly call ledger debit, credit, debit-once, or credit-once functions. New events write only canonical game action, request fingerprint, and round evidence while immutable historical detail aliases remain read-compatible without changing current API response semantics.
+- **GAMECORE-004** (Core) - PASS: The shared game-money gateway presents one canonical signed settlement contract to direct, shared-simple, staged-intent, and historically injected game service shapes, delegates production value movement only to SettlementAdapter, preserves deterministic replay and changed-meaning conflict behavior, and keeps immutable predecessor detail aliases read-compatible without writing them on new events.
+- **TEST-157** (Tests) - PASS: A catalog-derived source gate and focused settlement suite prove every registered game uses the shared settlement boundary, rejects direct game imports or calls to ledger money functions, preserves canonical evidence and immutable historical read compatibility, and routes both direct actions and staged intents through storage-atomic debit-once or credit-once seams.
 - **ADMIN-033** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin access for an existing active non-guest account through a dedicated Administrators workspace that is separate from generic user lifecycle controls. Each transition requires current-password reauthentication, an explicit bounded reason, optimistic revision, an idempotency key, atomic identity persistence, target-session revocation, and an append-only hash-linked audit row; self-action and platform-owner mutation are forbidden.
 - **ADMIN-034** (Admin) - PASS: The owner-only Sessions workspace exposes localized controls for idle enforcement, idle and absolute limits, pre-expiration warning, stricter Admin behavior, and durable last-change provenance while preserving the independent rate-limit policy. Values are bounded by the provider contract, responsive in both installed locales, and ordinary Admin access remains forbidden.
 - **AUTH-015** (Core) - PASS: The platform owner can inspect secret-safe enrollment readiness beside the durable closed, invite-only, or self-signup policy, preview exact impact, and disable or roll back methods, while any newly enabled email, Google, Facebook, or invitation path fails closed until separate live-release authority exists. Readiness reports only bounded capability and blocker vocabulary and never exposes credentials or provider payloads.
@@ -728,12 +728,14 @@ Historical source baseline: 9.1.0
 - **GAMECORE-006** (Core) - PASS: SimpleWagerGame exposes optional compatibility adapters for request identity, round identity, movement action keys, historical action-detail keys, wager proof write/read, settlement details, public round projection, bounded history capacity, and exact read-only committed-action lookup before stateful preparation. Every default preserves the established shared-helper contract, while an adapted game retains its frozen public, ledger, and persisted shape without bypassing the shared settlement or provider-current publication boundaries.
 - **TEST-234** (Tests) - PASS: Focused SimpleWagerGame and Big Six Wheel evidence proves unchanged default helper behavior, exact legacy request and round identities, canonical and historical ledger-proof recovery, frozen action/state rows, 100-round retention, no direct Big Six settlement gateway call, and two-process provider-current preservation of two distinct rounds plus an unrelated sibling.
 - **GAMECORE-007** (Core) - PASS: SimpleWagerGame exposes one optional prepared-state lifecycle protocol that can durably prepare private entropy, reconcile wager failure, publish immutable wager proof, publish deterministic settlement intent, publish optional credit proof, and freeze terminal fields before the helper archives its provider-current round. Ordinary helper games retain their established default path, and an incomplete lifecycle fails before silently skipping a money-sensitive stage.
+- **GAMECORE-008** (Core) - PASS: GameSettlementGateway.apply_once exposes one keyword-only mutation vocabulary: authenticated player_id, finite non-zero signed_amount, transaction_type, stable round_id, stable action_key, deterministic request_fingerprint, and optional details. The retired amount, drop_id, card_id, ledger_action_id, action_id, and fingerprint aliases are rejected before provider access; new events omit configured legacy action-detail keys while immutable predecessor rows remain read-compatible.
 - **TEST-235** (Tests) - PASS: Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-236** (Tests) - PASS: Focused SimpleWagerGame and Chuck-a-Luck evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-237** (Tests) - PASS: Focused SimpleWagerGame and Over/Under 7 evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-238** (Tests) - PASS: Focused SimpleWagerGame and Crown and Anchor evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-239** (Tests) - PASS: Focused SimpleWagerGame and Fan-Tan evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and nested state response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-240** (Tests) - PASS: Focused SimpleWagerGame and Dragon Tiger evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry card redraw, frozen action, shoe summary, rules, and nested response shapes, old ledger-proof recovery without shoe consumption, every shared lifecycle crash window, direct fifty-round history plus unbounded durable action replay, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
+- **TEST-241** (Tests) - PASS: Listener-free settlement evidence pins the exact canonical keyword-only GameSettlementGateway.apply_once signature, rejects every retired alias and missing, empty, or structured fingerprints before ledger access, proves new events contain no configured historical detail-key alias, preserves reads of immutable predecessor rows, and parses every production game apply-once call to reject an explicit retired keyword spelling.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

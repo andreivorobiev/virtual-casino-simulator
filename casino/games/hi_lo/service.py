@@ -164,7 +164,7 @@ class HiLoService:
     # Ensure a prepared round has one committed wager debit.
     def _ensure_wager(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable deal action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="HI_LO_WAGER_DEBIT", round_id=round_state["round_id"], action_id=round_state["start_action_id"], fingerprint=round_state["request_fingerprint"], details={"stage": "deal", "wager": round_state["wager"], "current_card": round_state["current_card"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="HI_LO_WAGER_DEBIT", round_id=round_state["round_id"], action_key=round_state["start_action_id"], request_fingerprint=round_state["request_fingerprint"], details={"stage": "deal", "wager": round_state["wager"], "current_card": round_state["current_card"]})
         # Mark the debit complete only after ledger proof exists.
         round_state["wager_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -187,7 +187,7 @@ class HiLoService:
         # Use a distinct audit type for a tie refund versus a winning payout.
         transaction_type = "HI_LO_REFUND_CREDIT" if round_state.get("outcome") == "tie" else "HI_LO_PAYOUT_CREDIT"
         # Apply or recover the stable guess action through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type=transaction_type, round_id=round_state["round_id"], action_id=round_state["guess_action_id"], fingerprint=round_state["guess_fingerprint"], details={"stage": "guess", "wager": round_state["wager"], "guess": round_state["guess"], "current_card": round_state["current_card"], "next_card": round_state["next_card"], "outcome": round_state["outcome"], "correct_return_multiplier": engine.correct_return_multiplier(round_state["current_card"])})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type=transaction_type, round_id=round_state["round_id"], action_key=round_state["guess_action_id"], request_fingerprint=round_state["guess_fingerprint"], details={"stage": "guess", "wager": round_state["wager"], "guess": round_state["guess"], "current_card": round_state["current_card"], "next_card": round_state["next_card"], "outcome": round_state["outcome"], "correct_return_multiplier": engine.correct_return_multiplier(round_state["current_card"])})
         # Mark the returned-token movement complete only after ledger proof exists.
         round_state["settlement_status"] = "complete"
         # Store the immutable refund or payout ledger id.

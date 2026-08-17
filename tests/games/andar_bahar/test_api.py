@@ -70,13 +70,13 @@ class RecordingLedger:
         return next((event for event in reversed(self.events) if event["player_id"] == player_id and event["game"] == engine.GAME_ID and event["details"]["andar_bahar_action_id"] == action_id), None)
 
     # Apply or recover one signed movement exactly once.
-    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_id, fingerprint, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Resolve any prior committed action before changing the fake balance.
-        existing = self.find(player_id, action_id)
+        existing = self.find(player_id, action_key)
         # Reuse an exact matching event.
         if existing is not None:
             # Reject semantic conflicts like the production gateway.
-            if existing["amount"] != signed_amount or existing["transaction_type"] != transaction_type or existing["round_id"] != round_id or existing["details"]["request_fingerprint"] != fingerprint:
+            if existing["amount"] != signed_amount or existing["transaction_type"] != transaction_type or existing["round_id"] != round_id or existing["details"]["request_fingerprint"] != request_fingerprint:
                 # Fail before a second movement.
                 raise ConflictError("fake action identity conflict")
             # Return immutable proof and replay evidence.
@@ -90,7 +90,7 @@ class RecordingLedger:
         # Commit the fake balance only through this ledger adapter.
         self.balances[player_id] = new_balance
         # Build the public ledger fields used by service recovery and assertions.
-        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "andar_bahar_action_id": action_id, "request_fingerprint": fingerprint}}
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "andar_bahar_action_id": action_key, "request_fingerprint": request_fingerprint}}
         # Append the event once.
         self.events.append(event)
         # Return detached proof and non-replay evidence.
@@ -218,7 +218,7 @@ class Ledger:
     def find(self, player_id, action_id):
         return None
     def apply_once(self, **kwargs):
-        self.calls.append(kwargs['action_id'])
+        self.calls.append(kwargs['action_key'])
         return {'ledger_id': 'ledger-' + str(len(self.calls)), 'player_id': kwargs['player_id'], 'amount': kwargs['signed_amount'], 'transaction_type': kwargs['transaction_type'], 'game': engine.GAME_ID, 'round_id': kwargs['round_id'], 'details': dict(kwargs['details'])}, False
 ledger = Ledger()
 fixture = {'match_card': '9C', 'dealt_cards': [{'side': 'andar', 'card': '4C', 'matched': False}, {'side': 'bahar', 'card': '9S', 'matched': True}]}

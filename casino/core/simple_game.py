@@ -287,7 +287,7 @@ class SimpleWagerGame:
             # Apply or recover the aggregate wager debit and retain its authoritative committed proof.
             try:
                 # Commit or recover the aggregate wager through the one shared gateway boundary.
-                wager_event, wager_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=-wager_total, transaction_type=self.wager_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "wager"), request_fingerprint=fingerprint, details=wager_details)
+                wager_event, wager_replayed = self._ledger_gateway.apply_once(player_id=player_id, signed_amount=-wager_total, transaction_type=self.wager_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "wager"), request_fingerprint=fingerprint, details=wager_details)
             # Preserve the original action error after lifecycle-owned safe cleanup or retention.
             except Exception as error:
                 # Start without committed proof when the wager failed before provider publication.
@@ -334,7 +334,7 @@ class SimpleWagerGame:
                 # Build the settlement audit details from the committed round.
                 settlement_details = self._settlement_details_builder(request_id=request_id, player_id=player_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at, lifecycle_context=lifecycle_context)
                 # Commit the single aggregate credit exactly once.
-                settlement_event, settlement_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=total_return, transaction_type=self.settlement_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "settlement"), request_fingerprint=fingerprint, details=settlement_details)
+                settlement_event, settlement_replayed = self._ledger_gateway.apply_once(player_id=player_id, signed_amount=total_return, transaction_type=self.settlement_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "settlement"), request_fingerprint=fingerprint, details=settlement_details)
                 # Publish optional payout proof only after the credit exists immutably.
                 self._lifecycle_call("settlement_committed", player_id=player_id, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at, lifecycle_context=lifecycle_context, settlement_event=settlement_event, replayed=settlement_replayed)
             # Freeze optional terminal lifecycle fields before building one cross-process-stable public round.

@@ -158,7 +158,7 @@ class AndarBaharService:
     # Ensure a complete round has one committed wager debit.
     def _ensure_wager(self, player_id: str, state: dict, round_state: dict) -> tuple[dict, bool]:
         # Apply or recover the stable play action debit through the shared ledger.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="ANDAR_BAHAR_WAGER_DEBIT", round_id=round_state["round_id"], action_id=round_state["action_id"], fingerprint=round_state["request_fingerprint"], details={"stage": "play", "wager": round_state["wager"], "selected_side": round_state["selected_side"], "match_card": round_state["match_card"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="ANDAR_BAHAR_WAGER_DEBIT", round_id=round_state["round_id"], action_key=round_state["action_id"], request_fingerprint=round_state["request_fingerprint"], details={"stage": "play", "wager": round_state["wager"], "selected_side": round_state["selected_side"], "match_card": round_state["match_card"]})
         # Mark the debit complete only after ledger proof exists.
         round_state["wager_status"] = "complete"
         # Store the immutable ledger id for diagnostics and retry evidence.
@@ -179,7 +179,7 @@ class AndarBaharService:
             # Return no event and no ledger replay.
             return None, False
         # Apply or recover the stable play action payout through a derived action id.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="ANDAR_BAHAR_PAYOUT_CREDIT", round_id=round_state["round_id"], action_id=f"{round_state['action_id']}:settlement", fingerprint=round_state["request_fingerprint"], details={"stage": "settlement", "wager": round_state["wager"], "selected_side": round_state["selected_side"], "winning_side": round_state["winning_side"], "match_card": round_state["match_card"], "outcome": round_state["outcome"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="ANDAR_BAHAR_PAYOUT_CREDIT", round_id=round_state["round_id"], action_key=f"{round_state['action_id']}:settlement", request_fingerprint=round_state["request_fingerprint"], details={"stage": "settlement", "wager": round_state["wager"], "selected_side": round_state["selected_side"], "winning_side": round_state["winning_side"], "match_card": round_state["match_card"], "outcome": round_state["outcome"]})
         # Mark the returned-token movement complete only after ledger proof exists.
         round_state["settlement_status"] = "complete"
         # Store the immutable payout ledger id.

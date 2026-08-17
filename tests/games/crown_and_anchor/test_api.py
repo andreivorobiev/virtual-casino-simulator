@@ -130,9 +130,9 @@ class FakeLedgerGateway:
         self.fail_after = set()
 
     # Commit or recover one signed game action.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Record the public action request for debit and credit count assertions.
-        self.calls.append({"player_id": player_id, "amount": amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": copy.deepcopy(details)})
+        self.calls.append({"player_id": player_id, "signed_amount": signed_amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": copy.deepcopy(details)})
         # Resolve the bounded action role once for failure injection.
         suffix = action_key.rsplit(":", 1)[-1]
         # Fail once before publication when a test arms this exact role.
@@ -146,19 +146,19 @@ class FakeLedgerGateway:
             # Read immutable proof once for exact conflict checks.
             existing = self.events[action_key]
             # Reject one identity reused with different money or semantics.
-            if existing["player_id"] != player_id or existing["round_id"] != round_id or existing["transaction_type"] != transaction_type or existing["amount"] != amount or existing["details"]["request_fingerprint"] != request_fingerprint:
+            if existing["player_id"] != player_id or existing["round_id"] != round_id or existing["transaction_type"] != transaction_type or existing["amount"] != signed_amount or existing["details"]["request_fingerprint"] != request_fingerprint:
                 # Match the production gateway's fail-closed conflict boundary.
                 raise ConflictError("Fake ledger action dimensions conflict")
             # Preserve the same event identity and report replay recovery.
             return copy.deepcopy(existing), True
         # Reject a fake debit that would overdraw the isolated wallet.
-        if amount < 0 and self.balances[player_id] + amount < 0:
+        if signed_amount < 0 and self.balances[player_id] + signed_amount < 0:
             # Surface one ordinary pre-commit wallet failure.
             raise RuntimeError("insufficient fake balance")
         # Apply the signed movement once to the isolated fake wallet.
-        self.balances[player_id] = round(self.balances[player_id] + amount, 2)
+        self.balances[player_id] = round(self.balances[player_id] + signed_amount, 2)
         # Build immutable production-shaped event evidence.
-        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": amount, "transaction_type": transaction_type, "game": "crown_and_anchor", "round_id": round_id, "details": copy.deepcopy(details), "ts": "2026-07-14T00:00:00Z"}
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": "crown_and_anchor", "round_id": round_id, "details": copy.deepcopy(details), "ts": "2026-07-14T00:00:00Z"}
         # Persist exact proof under the deterministic action identity.
         self.events[action_key] = copy.deepcopy(event)
         # Lose the first response only after the immutable event exists.
@@ -434,7 +434,7 @@ print('PASS:' + str(len(draws)) + ':' + ','.join(str(face) for face in result['e
         # Store the semantic request fingerprint once.
         fingerprint = engine.wager_fingerprint(wagers)
         # Commit a pre-migration debit containing only historical field names.
-        self.ledger.apply_once(player_id="player-a", amount=-1.0, transaction_type="CROWN_AND_ANCHOR_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=fingerprint, details={"client_request_id": request["client_request_id"], "request_fingerprint": fingerprint, "wagers": wagers, "faces": [1, 1, 1]})
+        self.ledger.apply_once(player_id="player-a", signed_amount=-1.0, transaction_type="CROWN_AND_ANCHOR_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=fingerprint, details={"client_request_id": request["client_request_id"], "request_fingerprint": fingerprint, "wagers": wagers, "faces": [1, 1, 1]})
         # Build recovery whose fresh entropy and clock would visibly differ.
         recovering = CrownAndAnchorService(ledger_gateway=self.ledger, state_loader=self.repository.load, state_updater=self.repository.update, roll_die=lambda: 6, clock=lambda: "later", get_player=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]})
         # Recover through the ordinary public service request.

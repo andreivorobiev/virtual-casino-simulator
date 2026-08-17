@@ -266,8 +266,10 @@ class SimpleGameCoreTests(unittest.TestCase):
         game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, entropy_source=lambda _n: (_ for _ in ()).throw(AssertionError("helper redrew lifecycle entropy")), state_loader=store.load, state_updater=store.update, lifecycle=Lifecycle(), action_key_builder=lambda round_id, action: f"{round_id}:{'return' if action == 'settlement' else action}", legacy_action_detail_key="unit_action_key")
         # Execute one winning round through every positive-settlement lifecycle stage.
         result = game.play(self.pid, {"request_id": "lifecycle-win", "face": 3, "stake": 10})
-        # Require lifecycle order, provider entropy, configured suffix, and historical action-detail key.
-        self.assertEqual((["prepare", "wager_committed", "settlement_resolved", "settlement_committed", "finalize"], {"face": 3}, f'{result["round"]["round_id"]}:return', f'{result["round"]["round_id"]}:return'), (stages, result["round"]["entropy"], result["ledger"]["settlement"]["details"]["ledger_action_key"], result["ledger"]["settlement"]["details"]["unit_action_key"]))
+        # Require lifecycle order, provider entropy, and configured suffix through canonical action evidence.
+        self.assertEqual((["prepare", "wager_committed", "settlement_resolved", "settlement_committed", "finalize"], {"face": 3}, f'{result["round"]["round_id"]}:return', f'{result["round"]["round_id"]}:return'), (stages, result["round"]["entropy"], result["ledger"]["settlement"]["details"]["ledger_action_key"], result["ledger"]["settlement"]["details"]["game_action_key"]))
+        # Preserve the configured historical audit field beside the authoritative universal key.
+        self.assertEqual(f'{result["round"]["round_id"]}:return', result["ledger"]["settlement"]["details"]["unit_action_key"])
 
     # Require an incomplete lifecycle to fail before entropy or wallet movement.
     def test_incomplete_lifecycle_fails_before_wager(self) -> None:

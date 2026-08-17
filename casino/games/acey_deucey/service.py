@@ -205,7 +205,7 @@ class AceyDeuceyService:
         # Build a distinct ledger id beneath the public play action.
         ledger_action_id = f"ad:{round_state['play_action_id']}:wager"
         # Commit or recover the wager debit.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="ACEY_DEUCEY_WAGER_DEBIT", round_id=round_state["round_id"], ledger_action_id=ledger_action_id, fingerprint=round_state["play_fingerprint"], details={"stage": "play_wager", "wager": round_state["wager"], "left_card": round_state["left_card"], "right_card": round_state["right_card"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="ACEY_DEUCEY_WAGER_DEBIT", round_id=round_state["round_id"], action_key=ledger_action_id, request_fingerprint=round_state["play_fingerprint"], details={"stage": "play_wager", "wager": round_state["wager"], "left_card": round_state["left_card"], "right_card": round_state["right_card"]})
         # Mark debit completion only after proof exists.
         round_state["wager_status"] = "complete"
         # Discard private rollback material after the wager is durably committed.
@@ -230,7 +230,7 @@ class AceyDeuceyService:
         # Build a distinct payout action id beneath the public play action.
         ledger_action_id = f"ad:{round_state['play_action_id']}:payout"
         # Commit or recover the returned-token credit.
-        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="ACEY_DEUCEY_PAYOUT_CREDIT", round_id=round_state["round_id"], ledger_action_id=ledger_action_id, fingerprint=round_state["play_fingerprint"], details={"stage": "inside_payout", "wager": round_state["wager"], "left_card": round_state["left_card"], "right_card": round_state["right_card"], "third_card": round_state["third_card"], "outcome": round_state["outcome"]})
+        event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=round_state["payout"], transaction_type="ACEY_DEUCEY_PAYOUT_CREDIT", round_id=round_state["round_id"], action_key=ledger_action_id, request_fingerprint=round_state["play_fingerprint"], details={"stage": "inside_payout", "wager": round_state["wager"], "left_card": round_state["left_card"], "right_card": round_state["right_card"], "third_card": round_state["third_card"], "outcome": round_state["outcome"]})
         # Mark settlement complete only after proof exists.
         round_state["settlement_status"] = "complete"
         # Store immutable payout proof.

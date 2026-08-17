@@ -253,20 +253,19 @@ class SettlementAdapter:
             return recovered, True
 
 
-# Present one shared compatibility gateway while legacy game call sites converge. (LEDGER-032)
+# Present one canonical gateway while historical rows remain read-compatible. (LEDGER-032, GAMECORE-008)
 class GameSettlementGateway:
-    """Delegate legacy game gateway shapes to the canonical settlement adapter.
+    """Delegate game settlement actions to the canonical settlement adapter.
 
-    The gateway is intentionally temporary compatibility infrastructure: game services may keep
-    their established method names and detail keys for one release, but all production money
-    movement is owned by ``SettlementAdapter`` and storage-atomic ``*_once`` calls.
+    All new money movements use the canonical signed action dimensions. Historical game-specific
+    detail keys remain readable without extending the retired mutation-alias surface.
     """
 
-    # Bind one game namespace and its transitional legacy action-detail key.
+    # Bind one game namespace and its historical action-detail audit key.
     def __init__(
         self,  # Retain this compatibility gateway instance.
         game_id,  # Namespace every movement to one registered game.
-        legacy_action_detail_key=None,  # Preserve one old action field for compatibility reads.
+        legacy_action_detail_key=None,  # Preserve one established audit field without exposing a call alias.
         *,
         debit_once=None,  # Allow focused tests to inject a storage-atomic debit seam.
         credit_once=None,  # Allow focused tests to inject a storage-atomic credit seam.
@@ -277,7 +276,7 @@ class GameSettlementGateway:
     ) -> None:
         # Validate and retain the fixed game namespace before constructing any adapter.
         self.game_id = _require_identity(game_id, field="game_id")
-        # Retain the optional old details key only as a one-release read/write compatibility shim.
+        # Retain the optional established details key for immutable read and write audit compatibility.
         self.legacy_action_detail_key = legacy_action_detail_key
         # Record whether focused tests supplied non-atomic historical mutation callbacks.
         self._legacy_raw_seam = debit is not None or credit is not None
@@ -306,10 +305,8 @@ class GameSettlementGateway:
         # Build the one canonical adapter that owns every production money movement.
         self._adapter = SettlementAdapter(debit_once=debit_once, credit_once=credit_once, find_action=find_action, read_recent=read_recent)
 
-    # Read one committed action by canonical or transitional action-detail identity.
-    def find(self, player_id, action_key=None, **dimensions):
-        # Accept established aliases while converging callers on ``action_key``.
-        action_key = action_key or dimensions.get("ledger_action_id") or dimensions.get("action_id")
+    # Read one committed action by canonical identity while accepting historical detail rows.
+    def find(self, player_id, action_key, *, round_id=None, transaction_type=None, request_fingerprint=None):
         # Validate the authenticated wallet before opening its history.
         player_id = _require_identity(player_id, field="player_id")
         # Validate the stable game action identity before scanning proof.
@@ -333,17 +330,15 @@ class GameSettlementGateway:
             # Return only a row bound to this stable action identity.
             if canonical_match or legacy_match:
                 # Validate an optional round constraint supplied by older proof readers.
-                if dimensions.get("round_id") is not None and event.get("round_id") != dimensions.get("round_id"):
+                if round_id is not None and event.get("round_id") != round_id:
                     # Fail closed when one action identity is reused across rounds.
                     raise ConflictError("Settlement proof conflicts with committed round")
                 # Validate an optional transaction constraint supplied by older proof readers.
-                if dimensions.get("transaction_type") is not None and event.get("transaction_type") != dimensions.get("transaction_type"):
+                if transaction_type is not None and event.get("transaction_type") != transaction_type:
                     # Fail closed when one action identity is reused for another movement type.
                     raise ConflictError("Settlement proof conflicts with transaction type")
-                # Select either established fingerprint alias for compatibility validation.
-                expected_fingerprint = dimensions.get("request_fingerprint") or dimensions.get("fingerprint")
-                # Reject semantic reuse when the older caller supplied a fingerprint.
-                if expected_fingerprint is not None and details.get("request_fingerprint") != expected_fingerprint:
+                # Reject semantic reuse when the caller supplied a canonical fingerprint.
+                if request_fingerprint is not None and details.get("request_fingerprint") != request_fingerprint:
                     # Prevent equal wager totals from satisfying different requests.
                     raise ConflictError("Settlement proof conflicts with request fingerprint")
                 # Preserve the immutable provider event for existing recovery code.
@@ -389,12 +384,35 @@ class GameSettlementGateway:
         # Fall back to the round and transaction type, which distinguish wager from settlement.
         return f"{round_id}:{transaction_type}"
 
+    # Preserve deterministic fingerprints only for retained legacy callback adapters.
+    def _legacy_callback_fingerprint(self, *, player_id, signed_amount, transaction_type, round_id, action_key, details):
+        # Copy injected callback details so compatibility normalization never mutates game state.
+        event_details = dict(details or {})
+        # Reuse a canonical fingerprint already owned by the legacy game callback.
+        request_fingerprint = event_details.get("request_fingerprint")
+        # Derive the exact historical digest only at this explicit source-local adapter boundary.
+        if not isinstance(request_fingerprint, str) or not request_fingerprint.strip():
+            # Preserve structured predecessor semantics outside the canonical string field.
+            if request_fingerprint is not None:
+                # Retain the exact old object for immutable proof compatibility.
+                event_details["legacy_request_fingerprint"] = request_fingerprint
+            # Encode the predecessor gateway dimensions byte-for-byte for compatible recovery.
+            encoded = json.dumps({"game_id": self.game_id, "player_id": player_id, "movement": signed_amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "details": event_details}, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+            # Publish one explicit lowercase digest to the canonical mutation call.
+            request_fingerprint = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+        # Replace any absent or structured predecessor field with the canonical string evidence.
+        event_details["request_fingerprint"] = request_fingerprint
+        # Return the explicit fingerprint and detached details together.
+        return request_fingerprint, event_details
+
     # Preserve the historical positive-magnitude debit callback shape for focused seams.
     def debit(self, player_id, amount, transaction_type, game, round_id, details):
         # Derive the stable game action identity from existing audit details.
         action_key = self._legacy_action_key(transaction_type, round_id, details)
+        # Preserve the predecessor digest explicitly before entering the canonical call.
+        request_fingerprint, event_details = self._legacy_callback_fingerprint(player_id=player_id, signed_amount=-abs(amount), transaction_type=transaction_type, round_id=round_id, action_key=action_key, details=details)
         # Commit or replay the negative movement through the canonical adapter.
-        event, _replayed = self.apply_once(player_id=player_id, signed_amount=-abs(amount), transaction_type=transaction_type, round_id=round_id, action_key=action_key, details=details)
+        event, _replayed = self.apply_once(player_id=player_id, signed_amount=-abs(amount), transaction_type=transaction_type, round_id=round_id, action_key=action_key, request_fingerprint=request_fingerprint, details=event_details)
         # Return the historical event-only callback shape.
         return event
 
@@ -402,8 +420,10 @@ class GameSettlementGateway:
     def credit(self, player_id, amount, transaction_type, game, round_id, details):
         # Derive the stable game action identity from existing audit details.
         action_key = self._legacy_action_key(transaction_type, round_id, details)
+        # Preserve the predecessor digest explicitly before entering the canonical call.
+        request_fingerprint, event_details = self._legacy_callback_fingerprint(player_id=player_id, signed_amount=abs(amount), transaction_type=transaction_type, round_id=round_id, action_key=action_key, details=details)
         # Commit or replay the positive movement through the canonical adapter.
-        event, _replayed = self.apply_once(player_id=player_id, signed_amount=abs(amount), transaction_type=transaction_type, round_id=round_id, action_key=action_key, details=details)
+        event, _replayed = self.apply_once(player_id=player_id, signed_amount=abs(amount), transaction_type=transaction_type, round_id=round_id, action_key=action_key, request_fingerprint=request_fingerprint, details=event_details)
         # Return the historical event-only callback shape.
         return event
 
@@ -414,19 +434,15 @@ class GameSettlementGateway:
         *,
         transaction_type,  # Require the same ledger meaning.
         round_id,  # Require the same game round.
-        signed_amount=None,  # Accept the canonical signed movement name.
-        amount=None,  # Accept the older signed movement name.
-        request_fingerprint=None,  # Accept the canonical fingerprint name.
-        fingerprint=None,  # Accept the older fingerprint name.
+        signed_amount,  # Require the canonical signed movement name.
+        request_fingerprint,  # Require the canonical fingerprint name.
     ) -> None:
         # Reject malformed proof before reading any dimensions.
         if not isinstance(event, dict):
             # Fail closed because non-object evidence cannot authorize recovery.
             raise ConflictError("Settlement proof is malformed")
-        # Select the established amount alias and normalize it at ledger precision.
-        expected_amount = _normalize_signed_amount(signed_amount if signed_amount is not None else amount)
-        # Select the established semantic fingerprint alias.
-        expected_fingerprint = request_fingerprint or fingerprint
+        # Normalize the canonical signed amount at ledger precision.
+        expected_amount = _normalize_signed_amount(signed_amount)
         # Read structured proof details once for canonical and transitional checks.
         event_details = event.get("details") if isinstance(event.get("details"), dict) else {}
         # Reject proof from another game, round, transaction, or signed movement.
@@ -436,62 +452,34 @@ class GameSettlementGateway:
             # Keep one stable conflict diagnostic across all compatibility callers.
             raise ConflictError("Settlement proof conflicts with immutable action dimensions")
         # Reject proof whose request semantics differ from the prepared action.
-        if event_details.get("request_fingerprint") != expected_fingerprint:
+        if event_details.get("request_fingerprint") != request_fingerprint:
             # Prevent a coincidentally equal amount from satisfying another request.
             raise ConflictError("Settlement proof conflicts with request fingerprint")
 
-    # Commit one old or new gateway call through the canonical adapter.
+    # Commit one canonical gateway call through the canonical adapter. (GAMECORE-008)
     def apply_once(
         self,  # Retain this gateway instance.
         *,
         player_id,  # Select the authenticated wallet.
+        signed_amount,  # Require the canonical signed movement name.
         transaction_type,  # Preserve the established ledger meaning.
-        round_id=None,  # Preserve the game round when already allocated.
-        drop_id=None,  # Accept Plinko's established round alias during convergence.
-        card_id=None,  # Accept Scratch Cards' established round alias during convergence.
+        round_id,  # Require one portable game round or entity identity.
+        action_key,  # Require the canonical game action identity.
+        request_fingerprint,  # Require the canonical semantic fingerprint name.
         details=None,  # Preserve game-specific audit evidence.
-        signed_amount=None,  # Accept the canonical signed movement name.
-        amount=None,  # Accept the older signed movement name.
-        action_key=None,  # Accept the canonical game action identity.
-        ledger_action_id=None,  # Accept older bespoke gateway naming.
-        action_id=None,  # Accept older public-action naming.
-        request_fingerprint=None,  # Accept the canonical semantic fingerprint name.
-        fingerprint=None,  # Accept the older gateway fingerprint name.
     ) -> tuple[dict, bool]:
-        # Select exactly one signed amount alias without treating zero as absent.
-        movement = signed_amount if signed_amount is not None else amount
-        # Select the first established action-key alias.
-        action_key = action_key or ledger_action_id or action_id
-        # Select the canonical or established semantic fingerprint alias.
-        request_fingerprint = request_fingerprint or fingerprint
-        # Use the action key as a stable synthetic round only for legacy pre-round movements.
-        effective_round_id = round_id or drop_id or card_id or action_key
-        # Copy caller audit evidence so compatibility enrichment never mutates game state.
+        # Copy caller audit evidence so canonical validation never mutates game state.
         event_details = dict(details or {})
-        # Reuse the established details fingerprint when older gateways did not name it separately.
-        request_fingerprint = request_fingerprint or event_details.get("request_fingerprint")
-        # Canonicalize structured or absent legacy fingerprints into one portable digest string.
-        if not isinstance(request_fingerprint, str) or not request_fingerprint.strip():
-            # Retain a structured historical fingerprint under an explicitly transitional key.
-            if request_fingerprint is not None:
-                # Preserve old proof content without occupying the canonical string field.
-                event_details["legacy_request_fingerprint"] = request_fingerprint
-            # Encode immutable call semantics so equal retries derive the same fixed fingerprint.
-            encoded_fingerprint = json.dumps({"game_id": self.game_id, "player_id": player_id, "movement": movement, "transaction_type": transaction_type, "round_id": effective_round_id, "action_key": action_key, "details": event_details}, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-            # Use one lowercase digest as the canonical portable semantic identity.
-            request_fingerprint = hashlib.sha256(encoded_fingerprint.encode("utf-8")).hexdigest()
-            # Replace a structured legacy value with the canonical string expected by the adapter.
-            event_details["request_fingerprint"] = request_fingerprint
-        # Retain the legacy action field for one release when the game declared it.
+        # Preserve the configured historical audit field without extending the method's canonical signature.
         if self.legacy_action_detail_key:
-            # Add the old field only when the game did not supply a distinct entity identifier.
+            # Add the established field only when game-owned evidence did not supply a distinct entity identity.
             if self.legacy_action_detail_key not in event_details:
-                # Preserve the old action field beside the separate canonical action identity.
+                # Keep downstream ledger audits compatible while the universal key remains authoritative.
                 event_details[self.legacy_action_detail_key] = action_key
         # Emulate exactly-once replay only for injected historical test callbacks.
         if self._legacy_raw_seam:
             # Resolve a prior compatible event before a non-atomic fake can append again.
-            existing = self._adapter.find_action(game_id=self.game_id, player_id=player_id, signed_amount=movement, transaction_type=transaction_type, round_id=effective_round_id, action_key=action_key, request_fingerprint=request_fingerprint)
+            existing = self._adapter.find_action(game_id=self.game_id, player_id=player_id, signed_amount=signed_amount, transaction_type=transaction_type, round_id=round_id, action_key=action_key, request_fingerprint=request_fingerprint)
             # Return immutable proof when the injected seam already committed this action.
             if existing is not None:
                 # Mark the historical fake callback result as replayed.
@@ -500,9 +488,9 @@ class GameSettlementGateway:
         return self._adapter.apply_action_once(
             game_id=self.game_id,  # Keep provider idempotency game-scoped.
             player_id=player_id,  # Keep wallet ownership session-scoped.
-            signed_amount=movement,  # Route debit or credit by sign.
+            signed_amount=signed_amount,  # Route debit or credit by sign.
             transaction_type=transaction_type,  # Preserve current ledger vocabulary.
-            round_id=effective_round_id,  # Persist a non-empty portable action scope.
+            round_id=round_id,  # Persist the caller-owned portable action scope.
             action_key=action_key,  # Use one storage-atomic idempotency identity.
             request_fingerprint=request_fingerprint,  # Bind retries to exact semantics.
             details=event_details,  # Preserve old and new audit fields together.
@@ -538,7 +526,7 @@ class GameSettlementGateway:
             signed_amount=signed_amount,  # Route the prepared debit or credit.
             transaction_type=intent.get("transaction_type"),  # Preserve ledger meaning.
             round_id=intent.get("round_id"),  # Preserve prepared round identity.
-            action_id=intent.get("action_id"),  # Preserve caller-stable action identity.
+            action_key=intent.get("action_id"),  # Publish caller-stable identity under the canonical name.
             request_fingerprint=request_fingerprint,  # Preserve or derive semantic identity.
             details=details,  # Preserve game-specific audit details.
         )

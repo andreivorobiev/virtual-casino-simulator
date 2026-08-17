@@ -78,15 +78,15 @@ class RecordingLedger:
         return next((event for event in reversed(self.events) if event["player_id"] == player_id and event["game"] == engine.GAME_ID and event["details"]["pai_gow_poker_action_id"] == action_id), None)
 
     # Apply or recover one signed movement exactly once.
-    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_id, fingerprint, details):
+    def apply_once(self, *, player_id, signed_amount, transaction_type, round_id, action_key, request_fingerprint, details):
         # Count the attempted movement before failure or replay handling.
         self.apply_calls[transaction_type] = self.apply_calls.get(transaction_type, 0) + 1
         # Resolve any prior committed action before changing the fake balance.
-        existing = self.find(player_id, action_id)
+        existing = self.find(player_id, action_key)
         # Reuse an exact matching event.
         if existing is not None:
             # Reject semantic conflicts like the production gateway.
-            if existing["amount"] != signed_amount or existing["transaction_type"] != transaction_type or existing["round_id"] != round_id or existing["details"]["request_fingerprint"] != fingerprint:
+            if existing["amount"] != signed_amount or existing["transaction_type"] != transaction_type or existing["round_id"] != round_id or existing["details"]["request_fingerprint"] != request_fingerprint:
                 # Fail before a second movement.
                 raise ConflictError("fake action identity conflict")
             # Return immutable proof and replay evidence.
@@ -110,7 +110,7 @@ class RecordingLedger:
         # Commit the fake balance only through this ledger adapter.
         self.balances[player_id] = new_balance
         # Build the public ledger fields used by service recovery and assertions.
-        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "pai_gow_poker_action_id": action_id, "request_fingerprint": fingerprint}}
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "amount": signed_amount, "transaction_type": transaction_type, "game": engine.GAME_ID, "round_id": round_id, "details": {**copy.deepcopy(details), "pai_gow_poker_action_id": action_key, "request_fingerprint": request_fingerprint}}
         # Append the event once.
         self.events.append(event)
         # Lose the response only after the immutable movement is committed.

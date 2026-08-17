@@ -170,7 +170,7 @@
       "requirement_id": "HILO-001",
       "engine_path": "casino/games/hi_lo/engine.py",
       "settlement_path": "casino/games/hi_lo/service.py",
-      "production_sha256": "964ebb372cc9d8cb675383d4badb721417208c2d6904b7ab17b104a0c9c1a972",
+      "production_sha256": "d45b7f83a60fcae3c71256ca3d36f30b335469c66a7e9ba99a6360f40cc45471",
       "proof_tests": ["tests.games.hi_lo.test_economics:HiLoEconomicsTests.test_every_rank_price_is_house_side", "tests.games.hi_lo.test_economics:HiLoEconomicsTests.test_real_engine_best_play_is_house_side"],
       "rationale": "The player may choose the better direction for every visible rank; the server-owned rank price keeps that exact best choice below one."
     },
@@ -226,7 +226,7 @@
       "requirement_id": "SCRATCH-001",
       "engine_path": "casino/games/scratch_cards/engine.py",
       "settlement_path": "casino/games/scratch_cards/service.py",
-      "production_sha256": "8fc7845c43a23f5700d2bcbca74035229f7f7beb0116eddfef59c8fb122d2c1c",
+      "production_sha256": "8d9653716c759af6823ff5c0892691edd0343e61f63e5069c0567f71bfd8f8d8",
       "proof_tests": ["tests.games.scratch_cards.test_engine:ScratchCardsEngineTests.test_loss_board_has_pairs_only", "tests.games.scratch_cards.test_engine:ScratchCardsEngineTests.test_winning_board_and_payout_are_deterministic"],
       "rationale": "The source-pinned production win table and deterministic board constructor preserve the accepted below-even expected return."
     },
@@ -310,7 +310,7 @@
       "requirement_id": "PLINKO-001",
       "engine_path": "casino/games/plinko/engine.py",
       "settlement_path": "casino/games/plinko/service.py",
-      "production_sha256": "34d03352fb6c6de1ef9a6e865b3a497c04061c24a43b003a85cb967454ce65e7",
+      "production_sha256": "02a18b6b4eddebe7709c60b76639998246f1211264182af2a0d75a276aaf52a4",
       "proof_tests": ["tests.games.plinko.test_engine:PlinkoEngineTests.test_multiplier_profile_is_symmetric_and_below_full_return", "tests.games.plinko.test_engine:PlinkoEngineTests.test_create_drop_calculates_transparent_payout"],
       "rationale": "The complete path space and production bucket multipliers are symmetric, transparent, and strictly house-side."
     },
@@ -341,7 +341,7 @@
       "requirement_id": "AB-001",
       "engine_path": "casino/games/andar_bahar/engine.py",
       "settlement_path": "casino/games/andar_bahar/service.py",
-      "production_sha256": "a47d379a6e6c958617baf46e7481d6f9b23b7750cab826792fe8bbd54e75cc31",
+      "production_sha256": "7bfeec89e17eb171b84bbf4513e366f9330b1e2a2c34c287e8ba2c5d9b1bea70",
       "proof_tests": ["tests.games.andar_bahar.test_engine:AndarBaharEconomicsTests.test_exact_side_probabilities_and_rtp_are_house_positive"],
       "rationale": "Both player-selectable sides use exact production win probabilities and server-owned prices below even return."
     },
@@ -355,7 +355,7 @@
       "requirement_id": "AD-001",
       "engine_path": "casino/games/acey_deucey/engine.py",
       "settlement_path": "casino/games/acey_deucey/service.py",
-      "production_sha256": "69cf2fbf53d8f6074e1c26a8f0b8bfff8e9a014447251243db51d431ece49fec",
+      "production_sha256": "394c02923e1f435707f21d1e6ba4b75aa57a926bf3562dcf6f63cc5dff2d58bc",
       "proof_tests": ["tests.games.acey_deucey.test_engine:AceyDeuceySpreadPricingTests.test_every_spread_is_house_positive", "tests.games.acey_deucey.test_engine:AceyDeuceySpreadPricingTests.test_documented_exploit_is_no_longer_profitable"],
       "rationale": "Every actionable spread is priced separately so the best visible-card choice remains strictly house-side."
     },
@@ -369,7 +369,7 @@
       "requirement_id": "CS-001",
       "engine_path": "casino/games/caribbean_stud/engine.py",
       "settlement_path": "casino/games/caribbean_stud/service.py",
-      "production_sha256": "bda1f726481c259ba465cedcd8c3acbcee1e5b35858fb54de5041cbdd88a0da0",
+      "production_sha256": "b58cb0f6ae4a872e0f59325c314be6de48f4e265bbf7ea48171e5a749576be44",
       "proof_tests": ["tests.games.caribbean_stud.test_engine:CaribbeanStudEngineTests.test_dealer_not_qualified_settlement", "tests.games.caribbean_stud.test_engine:CaribbeanStudEngineTests.test_qualified_showdown_outcomes", "tests.games.caribbean_stud.test_engine:CaribbeanStudEngineTests.test_royal_flush_uses_top_call_odds"],
       "rationale": "Every player decision and dealer qualification branch is source-pinned to the production schedule used by the accepted optimal-policy audit."
     },
@@ -397,7 +397,7 @@
       "requirement_id": "CH-001",
       "engine_path": "casino/games/casino_holdem/engine.py",
       "settlement_path": "casino/games/casino_holdem/service.py",
-      "production_sha256": "add53cfa7c943a3e27fe301201b6cc433e91c158bae51d589298401ff4ab6683",
+      "production_sha256": "b01eff42d07b2ecd76b11ebbd6d9bcb66c4bf94f4ddb648f8c32305e02bbce10",
       "proof_tests": ["tests.games.casino_holdem.test_engine:CasinoHoldemEngineTests.test_call_dealer_not_qualified_returns_call_and_pays_ante", "tests.games.casino_holdem.test_engine:CasinoHoldemEngineTests.test_call_player_win_against_qualified_dealer", "tests.games.casino_holdem.test_engine:CasinoHoldemEngineTests.test_fold_settles_without_revealing_hidden_cards"],
       "rationale": "The prior policy audit is pinned to every production qualification and payout branch, including the ante bonus schedule."
     },
@@ -411,7 +411,7 @@
       "requirement_id": "DBVP-001",
       "engine_path": "casino/games/double_bonus_video_poker/engine.py",
       "settlement_path": "casino/games/double_bonus_video_poker/service.py",
-      "production_sha256": "d8f95e511ab708218a30deba8636038576d3e80ae73872437d94e1f6df1b2e57",
+      "production_sha256": "a76d5d6c7de82b4accd2cb232def2dcf6ec8f4a0501fac94b39c1e0f07a1218d",
       "proof_tests": ["tests.double_bonus_video_poker_tests:DoubleBonusVideoPokerTests.test_house_edge_is_positive"],
       "rationale": "The deterministic production simulation and exact paytable bands keep the accepted strategy return below one."
     },
@@ -425,7 +425,7 @@
       "requirement_id": "MSTUD-001",
       "engine_path": "casino/games/mississippi_stud/engine.py",
       "settlement_path": "casino/games/mississippi_stud/service.py",
-      "production_sha256": "5df93145edaf2c99ae019bb04afa9e147debbccd1fb43e8a11d43a7cfb67ecda",
+      "production_sha256": "08732daf921868a4d653956f28851c352b1b9c85b471e4256a3417a8d2c65a44",
       "proof_tests": ["tests.mississippi_stud_tests:MississippiStudTests.test_house_edge_is_positive"],
       "rationale": "The production street choices, total committed wager, pushes, and paytable are exercised by the deterministic house-edge simulation."
     },
@@ -439,7 +439,7 @@
       "requirement_id": "JP-001",
       "engine_path": "casino/games/joker_poker/engine.py",
       "settlement_path": "casino/games/joker_poker/service.py",
-      "production_sha256": "ea30aa005cfff3d6efac497927baad4a965286d07a701e6367fb757497f3e07f",
+      "production_sha256": "8f2a5cf52f4013bae31a91cd90a1c752519e73536d7f84b7ec9e1e54cc9f8888",
       "proof_tests": ["tests.games.joker_poker.test_engine:JokerPokerEngineTests.test_paytable_boundaries_include_wild_only_rows", "tests.games.joker_poker.test_engine:JokerPokerEngineTests.test_holds_drive_one_final_hand"],
       "rationale": "All natural and joker-substitution outcomes and the legal hold path are pinned to the production evaluator used by the accepted optimal audit."
     },
@@ -467,7 +467,7 @@
       "requirement_id": "PGP-001",
       "engine_path": "casino/games/pai_gow_poker/engine.py",
       "settlement_path": "casino/games/pai_gow_poker/service.py",
-      "production_sha256": "c2229dac72e3ecd41eb8bbea06ade8f47e009e3ee75370b1b8a6fd83e6244334",
+      "production_sha256": "2d9d3aca25fa8da43bb6ef01ff3b59fc30122afcb29ddaecc6dbeb0a958a9f0b",
       "proof_tests": ["tests.games.pai_gow_poker.test_engine:PaiGowPokerEngineTests.test_maximize_low_exploit_edge_is_negative", "tests.games.pai_gow_poker.test_engine:PaiGowPokerEngineTests.test_settlement_outcomes"],
       "rationale": "The maximal legal low-hand exploit remains negative against the source-pinned house way and five-percent win commission."
     },
@@ -481,7 +481,7 @@
       "requirement_id": "TEENP-001",
       "engine_path": "casino/games/teen_patti/engine.py",
       "settlement_path": "casino/games/teen_patti/service.py",
-      "production_sha256": "b4cf6ba7c03a05b672442ce4d625f88f6eeca08b4752d2012095d94fa5786e31",
+      "production_sha256": "6d97e15e8f85c13b5004e75cb24d8a5a79fb7818ad825ae4cf4cf42216b0586e",
       "proof_tests": ["tests.teen_patti_tests:TeenPattiTests.test_house_edge_is_positive"],
       "rationale": "The production category, dealer qualification, bonus, and fold branches remain below even return under the deterministic strategy audit."
     },
@@ -649,7 +649,7 @@
       "requirement_id": "FOURCP-001",
       "engine_path": "casino/games/four_card_poker/engine.py",
       "settlement_path": "casino/games/four_card_poker/service.py",
-      "production_sha256": "6600caa4ad4f64f9b5b405e95cc0c5e240ec6ee9398989061a869274395c88bf",
+      "production_sha256": "4da0e513dc364d0cb63c9dfcca927b4836f5018ffaa888ed5c2b0c26a77acf34",
       "proof_tests": ["tests.games.four_card_poker.test_api:FourCardPokerTests.test_house_edge_is_positive"],
       "rationale": "The production dealer edge, tie rule, ante bonus, and Aces-Up side wager remain house-side under the deterministic policy audit."
     }

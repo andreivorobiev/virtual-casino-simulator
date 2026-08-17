@@ -1,11 +1,17 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Listener-free regression tests for the issue #430 settlement-core checkpoint."""
+"""Listener-free regression tests for the issue #430 boundary and #703 alias retirement."""
 
+# Import Python syntax-tree support for repository-wide call-shape evidence.
+import ast
+# Import signature inspection for the exact canonical gateway boundary.
+import inspect
 # Import non-finite constants for money-boundary rejection cases.
 import math
 # Import unittest for the standalone focused suite.
 import unittest
+# Import portable repository paths for source-derived mutation-call validation.
+from pathlib import Path
 
 # Import the new route-free adapter under direct test.
 from casino.core.settlement import GameSettlementGateway, LEGACY_PROOF_FALLBACK_LIMIT, SettlementAdapter
@@ -349,7 +355,7 @@ class SettlementAdapterTests(unittest.TestCase):
         self.assertEqual(seam.read_calls, [("player-a", LEGACY_PROOF_FALLBACK_LIMIT)])
 
 
-# Prove the transitional game-call shapes all resolve through the one canonical adapter. (LEDGER-032)
+# Prove the gateway exposes one canonical mutation shape with historical read compatibility. (LEDGER-032, GAMECORE-008, TEST-241)
 class GameSettlementGatewayTests(unittest.TestCase):
     # Build one compatibility gateway over listener-free storage-atomic seams.
     def _gateway(self):
@@ -360,24 +366,122 @@ class GameSettlementGatewayTests(unittest.TestCase):
         # Return both objects so tests can inspect calls without private adapter access.
         return gateway, seam
 
-    # Prove a legacy call receives canonical string evidence without losing its old fields.
-    def test_legacy_call_shape_adds_canonical_and_compatibility_evidence(self):
-        # Build isolated seams for one converted game call.
+    # Prove the canonical call writes universal identity plus its configured historical audit field.
+    def test_canonical_call_writes_canonical_and_configured_audit_evidence(self):
+        # Build isolated seams for one canonical game call.
         gateway, seam = self._gateway()
-        # Apply a legacy signed-amount action with a structured historical fingerprint.
-        gateway.apply_once(player_id="player-a", amount=-5, transaction_type="wager", round_id="round-1", action_id="action-1", fingerprint={"wager": "5.00"}, details={"bet": "red"})
+        # Apply one complete canonical signed action.
+        gateway.apply_once(player_id="player-a", signed_amount=-5, transaction_type="wager", round_id="round-1", action_key="action-1", request_fingerprint="fingerprint-1", details={"bet": "red"})
         # Read the exact provider details emitted by the canonical adapter.
         details = seam.debit_calls[0]["details"]
-        # Preserve the game-specific compatibility action field for one release.
+        # Preserve the configured historical audit field without accepting it as a method argument alias.
         self.assertEqual(details["legacy_action_id"], "action-1")
         # Publish the same action identity under the universal key.
         self.assertEqual(details["game_action_key"], "action-1")
-        # Preserve the structured old semantics without occupying the canonical string field.
-        self.assertEqual(details["legacy_request_fingerprint"], {"wager": "5.00"})
-        # Require one portable deterministic fingerprint for storage conflict proof.
-        self.assertRegex(details["request_fingerprint"], r"^[0-9a-f]{64}$")
+        # Preserve the explicit caller-owned semantic fingerprint unchanged.
+        self.assertEqual(details["request_fingerprint"], "fingerprint-1")
         # Preserve unrelated game-owned audit detail.
         self.assertEqual(details["bet"], "red")
+
+    # Prove every retired mutation keyword fails at the Python call boundary.
+    def test_retired_mutation_alias_keywords_are_rejected(self):
+        # Build one gateway without opening a provider seam for invalid calls.
+        gateway, seam = self._gateway()
+        # Enumerate each retired keyword beside otherwise complete canonical dimensions.
+        aliases = {
+            # Reject the historical signed movement alias.
+            "amount": -5,
+            # Reject the Plinko entity alias.
+            "drop_id": "round-1",
+            # Reject the Scratch Card entity alias.
+            "card_id": "round-1",
+            # Reject the bespoke action identity alias.
+            "ledger_action_id": "action-1",
+            # Reject the public action identity alias.
+            "action_id": "action-1",
+            # Reject the historical fingerprint alias.
+            "fingerprint": "fingerprint-1",
+        }
+        # Exercise every alias independently so no partial compatibility surface can return.
+        for name, value in aliases.items():
+            # Keep the focused failure labeled only by the internal keyword name.
+            with self.subTest(name=name):
+                # Build a complete canonical call and append the forbidden alias.
+                arguments = {"player_id": "player-a", "signed_amount": -5, "transaction_type": "wager", "round_id": "round-1", "action_key": "action-1", "request_fingerprint": "fingerprint-1", "details": {"bet": "red"}, name: value}
+                # Require Python to reject the unsupported keyword before ledger access.
+                with self.assertRaises(TypeError):
+                    # Attempt the forbidden compatibility call.
+                    gateway.apply_once(**arguments)
+        # Prove every rejected alias left both money seams untouched.
+        self.assertEqual((seam.debit_calls, seam.credit_calls), ([], []))
+
+    # Pin the exact public Python signature after retiring every mutation alias.
+    def test_apply_once_signature_is_canonical_and_keyword_only(self):
+        # Read the bound function signature without constructing provider seams.
+        parameters = inspect.signature(GameSettlementGateway.apply_once).parameters
+        # Require one receiver followed by the single documented mutation vocabulary.
+        self.assertEqual(tuple(parameters), ("self", "player_id", "signed_amount", "transaction_type", "round_id", "action_key", "request_fingerprint", "details"))
+        # Require every caller-controlled movement dimension to remain keyword-only.
+        self.assertTrue(all(parameter.kind is inspect.Parameter.KEYWORD_ONLY for name, parameter in parameters.items() if name != "self"))
+
+    # Require callers to own one explicit string fingerprint instead of gateway synthesis.
+    def test_apply_once_does_not_derive_missing_or_structured_fingerprints(self):
+        # Build one gateway whose provider seams expose any accidental movement.
+        gateway, seam = self._gateway()
+        # Exercise every formerly derived empty or structured fingerprint shape.
+        for request_fingerprint in (None, "", {"wager": "5.00"}):
+            # Label failures by type without reflecting potentially sensitive content.
+            with self.subTest(value_type=type(request_fingerprint).__name__):
+                # Require canonical validation to reject the supplied non-identity.
+                with self.assertRaises(ValidationError):
+                    # Attempt one otherwise complete movement.
+                    gateway.apply_once(player_id="player-a", signed_amount=-5, transaction_type="wager", round_id="round-1", action_key="action-1", request_fingerprint=request_fingerprint, details={"bet": "red"})
+        # Prove no rejected fingerprint reached a debit or credit provider seam.
+        self.assertEqual((seam.debit_calls, seam.credit_calls), ([], []))
+
+    # Reject retired keyword conventions in every checked-in production gateway call.
+    def test_production_apply_once_calls_use_no_retired_aliases(self):
+        # Resolve the repository root from this focused test module.
+        repository_root = Path(__file__).resolve().parents[1]
+        # Include the shared helper plus every registered or future game source file.
+        sources = [repository_root / "casino" / "core" / "simple_game.py", *(repository_root / "casino" / "games").rglob("*.py")]
+        # Enumerate the exact retired mutation keywords that may never return.
+        retired = {"amount", "drop_id", "card_id", "ledger_action_id", "action_id", "fingerprint"}
+        # Retain file, line, and keyword diagnostics for one actionable assertion.
+        violations = []
+        # Parse each production source file instead of relying on formatting-sensitive grep.
+        for source_path in sources:
+            # Build one syntax tree from the checked-in UTF-8 source.
+            tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+            # Inspect every call expression in the source tree.
+            for node in ast.walk(tree):
+                # Ignore calls whose target is not an attribute named apply_once.
+                if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute) or node.func.attr != "apply_once":
+                    # Continue to the next syntax node without inferring dynamic behavior.
+                    continue
+                # Record only explicit retired keywords; canonical double-star movement dictionaries stay runtime-tested.
+                for keyword in node.keywords:
+                    # Reject a retired explicit spelling while ignoring double-star entries whose name is dynamic.
+                    if keyword.arg in retired:
+                        # Publish a stable repository-relative diagnostic for correction.
+                        violations.append(f"{source_path.relative_to(repository_root).as_posix()}:{node.lineno}:{keyword.arg}")
+        # Require one canonical explicit calling convention across all production game code.
+        self.assertEqual(violations, [])
+
+    # Prove historical rows remain readable through the configured audit field.
+    def test_historical_detail_alias_remains_read_compatible(self):
+        # Build isolated seams with the configured predecessor detail key.
+        gateway, seam = self._gateway()
+        # Build a predecessor row whose canonical action key predates the shared field.
+        historical = _event(extra_details={"legacy_action_id": "historical-action"})
+        # Remove only the canonical action identity to model the immutable predecessor row.
+        historical["details"].pop("game_action_key")
+        # Return the predecessor row from the bounded historical reader.
+        seam.rows = [historical]
+        # Rebuild a gateway without the indexed seam so historical detail lookup is exercised.
+        gateway = GameSettlementGateway("example-game", "legacy_action_id", debit_once=seam.debit_once, credit_once=seam.credit_once, read_recent=seam.read_recent)
+        # Resolve the exact immutable predecessor event through its retired detail key.
+        self.assertIs(gateway.find("player-a", "historical-action"), historical)
 
     # Prove the shared gateway routes prepared intent controllers through the same adapter.
     def test_prepared_intent_routes_through_storage_atomic_adapter(self):
