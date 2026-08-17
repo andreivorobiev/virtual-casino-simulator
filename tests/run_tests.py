@@ -70,6 +70,8 @@ from tests.cases.api import admin_policy as api_admin_policy
 from tests.cases.api import game_lifecycle as api_game_lifecycle
 # Import listener-free delivery-infrastructure ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import delivery_infrastructure as api_delivery_infrastructure
+# Import frontend-presentation registration ownership while execution stays in the runner. (TEST-242)
+from tests.cases.api import frontend_presentation as api_frontend_presentation
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -1372,8 +1374,6 @@ def run_api_tests():
         if not result.wasSuccessful():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('roulette motion compatibility suite failed')
-    # Record the listener-free anti-strobe, whole-turn, and reduced-motion proof.
-    run_case('UI-ROU-MOTION-001',['ROU-063','ROU-064','ROU-065','ROU-066','ROU-067','ROU-068','ROU-069','ROU-070','TEST-102'],run_roulette_motion_tests)
     # Execute one dependency-light Node frontend suite without opening a listener or browser.
     def run_game_frontend_node_test(relative_path, failure_message):
         # Let controlled local environments point at the bundled runtime while hosted CI uses its ordinary node command.
@@ -1382,12 +1382,8 @@ def run_api_tests():
         result=subprocess.run([node_binary,'--test',str(ROOT/relative_path)],cwd=str(ROOT),capture_output=True,text=True,timeout=120)
         # Fail the named central case with a bounded diagnostic tail when focused behavior regresses.
         if result.returncode!=0: raise AssertionError(f'{failure_message}: {(result.stdout+result.stderr)[-1800:]}')
-    # Record deterministic landing, API/timer teardown, exactly-once completion, and clean-remount Roulette proof.
-    run_case('UI-ROU-PRESENTATION-001',['ROU-063','ROU-064','ROU-065','ROU-066','ROU-067','ROU-068','ROU-072'],lambda: run_game_frontend_node_test(Path('tests/games/roulette/test_frontend.mjs'),'Roulette presentation suite failed'))
-    # Record deterministic strips, stagger/anticipation, API/landing teardown, and clean-remount Slots proof.
-    run_case('UI-SLOT-PRESENTATION-001',['SLOT-030','SLOT-031','SLOT-032','SLOT-033','SLOT-034','SLOT-035','SLOT-037'],lambda: run_game_frontend_node_test(Path('tests/games/slots/test_frontend.mjs'),'Slots presentation suite failed'))
-    # Record the shared committed-debit renderer and catalog-wide presentation-order proof.
-    run_case('UI-WALLET-TIMING-001',['LEDGER-031','TEST-151'],lambda: run_game_frontend_node_test(Path('tests/wallet_timing.mjs'),'wallet timing suite failed'))
+    # Delegate the complete frontend-presentation area while the runner retains process execution. (TEST-242)
+    api_frontend_presentation.run_cases(run_case,run_roulette_motion_tests,run_game_frontend_node_test)
     # Execute the complete same-origin Swagger inventory and adapter contract without a listener.
     def run_api_docs_tests():
         # Import the focused suite only when its mapped API case runs.
