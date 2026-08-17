@@ -734,9 +734,56 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertEqual(runner_source.count(delegation), 1)
         # Preserve the historical boundary after self-service foundation.
         self.assertLess(runner_source.index("api_self_service_foundation.run_cases("), runner_source.index(delegation))
-        # Keep wellness and its runner-owned Node callback outside this listener-free slice.
-        self.assertLess(runner_source.index(delegation), runner_source.index("API-WELLNESS-001"))
+        # Keep the following player-foundation area after specialized-game acceptance.
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_player_foundation.run_cases("))
         # Keep subprocess construction and every listener owner outside the extracted area.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+
+    # Prove player-experience and account-foundation registrations moved as one listener-free area.
+    def test_api_player_foundation_area_registration_ownership_is_exact(self):
+        # Define exact case and requirement order from wellness through static marketing.
+        expected_cases = (
+            ("API-WELLNESS-001", ["WELL-001", "WELL-002", "TEST-105"]),
+            ("API-TOUR-001", ["TOUR-001", "TOUR-002", "TEST-106"]),
+            ("API-SELF-SERVICE-BATCH-001", ["REPLAY-001", "REPLAY-002", "PROFILE-001", "PROFILE-002", "COMPARE-001", "TEST-108", "TEST-109", "TEST-110"]),
+            ("API-CONVERT-001", ["CONVERT-001", "CONVERT-002", "CONVERT-003", "GUEST-007", "TEST-111", "TEST-158", "TEST-195"]),
+            ("API-ADMIN-GUEST-CONVERT-001", ["ADMIN-035", "GUEST-007", "TEST-193", "TEST-195"]),
+            ("API-ACCOUNT-SPINE-001", ["AUTH-010", "AUTH-012", "AUTH-015", "AUTH-016", "ADMIN-028", "ADMIN-033", "OAUTH-011", "OAUTH-012", "RESET-004", "FEEDBACK-005", "I18N-009", "TEST-112", "TEST-138", "TEST-158", "TEST-167"]),
+            ("API-ADMIN-SESSIONS-001", ["SESSION-006", "SESSION-007", "SESSION-008", "ADMIN-028", "TEST-143"]),
+            ("STATIC-MARKETING-001", ["MARKETING-001", "MARKETING-002", "MARKETING-003", "TEST-107"]),
+        )
+        # Read the compatibility runner and the extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "player_foundation.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the registration owner so callbacks can be inspected without execution.
+        spec = importlib.util.spec_from_file_location("player_foundation_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture registrations while retaining Node execution ownership in the runner callback.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Retain immutable evidence without invoking a focused suite.
+            captured.append((case_id, requirements, callback.__name__))
+        module.run_cases(capture, lambda *_args: None)
+        # Bind exact case, requirement, and callback ownership in historical order.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        self.assertEqual(tuple(callback for _, _, callback in captured), (
+            "run_wellness_tests", "run_whats_new_tests", "run_self_service_batch_tests", "run_guest_conversion_tests",
+            "run_admin_guest_conversion_tests", "run_account_spine_tests", "run_admin_session_control_tests", "run_marketing_site_tests",
+        ))
+        # Reject duplicate registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation through the runner-owned recorder and Node executor.
+        delegation = "api_player_foundation.run_cases(run_case,run_game_frontend_node_test)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the boundary after specialized-game acceptance and before settlement-core cases.
+        self.assertLess(runner_source.index("api_specialized_game_acceptance.run_cases("), runner_source.index(delegation))
+        self.assertLess(runner_source.index(delegation), runner_source.index("def run_simple_game_core_tests"))
+        # Keep subprocess and listener construction outside the extracted registration owner.
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("ServerThread", area_source)
 
