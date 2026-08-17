@@ -409,6 +409,37 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one explicit area delegation at the historical registration point.
         self.assertEqual(runner_source.count("api_governance.run_cases(run_case,run_unit_module,ROOT)"), 1)
 
+    # Prove the atomic game-state registrations moved as one exact ordered area.
+    def test_api_game_atomic_area_registration_ownership_is_exact(self):
+        # Define the complete reviewed atomic case order from Casino War through Pai Gow Poker.
+        expected_ids = (
+            "API-CW-ATOMIC-001", "API-KENO-ATOMIC-001", "API-BAC-ATOMIC-001", "API-BJ-ATOMIC-001",
+            "API-MHVP-ATOMIC-001", "API-ROU-ATOMIC-001", "API-BINGO-ATOMIC-001", "API-CS-ATOMIC-001",
+            "API-FOUR-CARD-POKER-ATOMIC-001", "API-TCP-ATOMIC-001", "API-CH-ATOMIC-001", "API-PGP-ATOMIC-001",
+        )
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit atomic game-state area module.
+        area_source = (API_CASES_ROOT / "game_atomic.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", area_source))
+        # Require the whole reviewed area to move in its original order.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id in expected_ids:
+            # Reject duplicated ownership that could execute an atomic game suite twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit area delegation through the established fresh-process helper.
+        delegation = "api_game_atomic.run_cases(run_case,run_unit_module)"
+        # Reject missing or duplicated delegation in the compatibility runner.
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the historical boundary after governance and before the ledger-cache registration.
+        self.assertLess(runner_source.index("api_governance.run_cases("), runner_source.index(delegation))
+        # Keep the next inline case after the complete atomic area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("STORAGE-LEDGER-CACHE-001"))
+        # Keep process construction and execution in the compatibility runner rather than the area owner.
+        self.assertNotIn("subprocess.run", area_source)
+
     # Prove listener-free authentication infrastructure moved as one exact ordered area.
     def test_api_auth_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
