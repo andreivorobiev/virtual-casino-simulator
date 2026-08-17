@@ -431,6 +431,28 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one explicit area delegation at the historical registration point.
         self.assertEqual(runner_source.count("api_auth.run_cases(run_case,run_oauth_mock_tests,validate_deployment_bootstrap,run_server_authority_tests)"), 1)
 
+    # Prove the listener-free feedback registration moved to one exact area owner.
+    def test_api_feedback_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed registration moved by this slice.
+        expected_ids = ("API-FEEDBACK-001",)
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit feedback area module.
+        feedback_source = (API_CASES_ROOT / "feedback.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", feedback_source))
+        # Require the complete reviewed area to move without adding or dropping an ID.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Reject duplicated ownership that could execute the feedback gate twice.
+        self.assertNotRegex(runner_source, r"\brun_case\(\s*['\"]API\-FEEDBACK\-001['\"]")
+        # Require one explicit area delegation at the historical registration point.
+        self.assertEqual(runner_source.count("api_feedback.run_cases(run_case)"), 1)
+
+        # Prove delegation remains between the adjacent authentication and Guest Trial areas.
+        self.assertLess(runner_source.index("api_auth.run_cases("), runner_source.index("api_feedback.run_cases("))
+        # Reject ordering drift that would change the historical API-lane execution sequence.
+        self.assertLess(runner_source.index("api_feedback.run_cases("), runner_source.index("api_guest.run_cases("))
+
     # Prove listener-free Guest Trial registrations moved as one exact ordered area.
     def test_api_guest_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
