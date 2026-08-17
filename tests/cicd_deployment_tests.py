@@ -787,6 +787,58 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("ServerThread", area_source)
 
+    # Prove catalog-expansion registrations moved as one exact listener-free area.
+    def test_api_catalog_expansion_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed cases and requirement mappings in historical order.
+        expected_cases = (
+            ("API-COLOR-WHEEL-001", ["CWHEEL-001", "CWHEEL-002", "TEST-128"]),
+            ("API-POKER-DICE-001", ["PDICE-001", "PDICE-002", "TEST-129"]),
+            ("API-BOULE-001", ["BOULE-001", "BOULE-002", "TEST-130"]),
+            ("API-FARO-001", ["FARO-001", "FARO-002", "TEST-131"]),
+            ("API-TRENTE-ET-QUARANTE-001", ["TEQ-001", "TEQ-002", "TEST-119"]),
+            ("API-PACHINKO-001", ["PACH-001", "PACH-002", "TEST-120"]),
+            ("API-COIN-PUSHER-001", ["COINP-001", "COINP-002", "TEST-121"]),
+            ("API-MARBLE-RACE-001", ["MARBLE-001", "MARBLE-002", "TEST-122"]),
+            ("API-PATTERN-DRAW-001", ["PATTERN-001", "PATTERN-002", "TEST-123"]),
+            ("API-LUCKY-GRID-001", ["LGRID-001", "LGRID-002", "TEST-124"]),
+            ("API-DAILY-DRAW-LAB-001", ["DDLAB-001", "DDLAB-002", "TEST-125"]),
+            ("API-FOUR-CARD-POKER-001", ["FOURCP-001", "FOURCP-002", "TEST-126"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "catalog_expansion.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the registration owner so callbacks can be inspected without execution.
+        spec = importlib.util.spec_from_file_location("catalog_expansion_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture exact registration identity without running any focused game suite.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Preserve all ownership dimensions for one fail-closed equality proof.
+            captured.append((case_id, requirements, callback.__name__))
+        module.run_cases(capture)
+        # Bind permanent IDs, requirement mappings, order, and focused callback ownership.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        self.assertEqual(tuple(callback for _, _, callback in captured), (
+            "_run_color_wheel_tests", "_run_poker_dice_tests", "_run_boule_tests", "_run_faro_tests",
+            "_run_trente_et_quarante_tests", "_run_pachinko_tests", "_run_coin_pusher_tests",
+            "_run_marble_race_tests", "_run_pattern_draw_tests", "_run_lucky_grid_tests",
+            "_run_daily_draw_lab_tests", "_run_four_card_poker_tests",
+        ))
+        # Reject duplicate registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the original mobile-core to Keno-rail boundary.
+        delegation = "api_catalog_expansion.run_cases(run_case)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        self.assertLess(runner_source.index("API-MOBILE-CORE-001"), runner_source.index(delegation))
+        self.assertLess(runner_source.index(delegation), runner_source.index("def run_keno_ball_rail_tests"))
+        # Keep subprocess and listener lifecycle out of this extracted registration owner.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+
     # Prove listener-free authentication infrastructure moved as one exact ordered area.
     def test_api_auth_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
