@@ -1725,12 +1725,14 @@
         ".github/workflows/docs.yml",
         ".github/workflows/module-boundaries.yml",
         "tests/cicd_deployment_tests.py",
+        "tests/browser_sharding.py",
+        "tests/browser_case_inventory.json",
         "tests/run_tests.py",
         "docs/long_test_suites.md"
       ],
       "introduced_in": "9.1.2",
-      "changed_in": "issue-468-ci-speed-quick-wins",
-      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Browser pull requests may omit only dedicated cases owned by unaffected games; shared or unknown changes, protected-main pushes, and authorized manual profiles run complete coverage. The Browser aggregate independently receives the detector selection and rejects missing, duplicate, failing, unexpected, or selection-mismatched shard evidence. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
+      "changed_in": "issue-727-browser-sharding-extraction",
+      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Browser pull requests may omit only dedicated cases owned by unaffected games; shared or unknown changes, protected-main pushes, and authorized manual profiles run complete coverage. Pure Browser discovery, affinity data, duration packing, affected-game selection, and aggregate ownership verification live in tests/browser_sharding.py while tests/run_tests.py retains the compatibility CLI and active execution state. A checked-in count plus sorted case-ID baseline must match current source before any Browser listener starts, so every #727 slice proves exact inventory equality. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
     },
     {
       "id": "TOOL-003",
@@ -13000,6 +13002,27 @@
       "introduced_in": "issue-703-settlement-alias-retirement",
       "changed_in": "issue-703-settlement-alias-retirement",
       "notes": "The syntax-tree gate is formatting-independent and supplements the catalog-derived direct-ledger boundary without accepting dynamic legacy keyword aliases."
+    },
+    {
+      "id": "TEST-242",
+      "module": "Tests",
+      "description": "Every tests/run_tests.py extraction slice preserves the exact reviewed Browser case count and sorted permanent ID list; pure affinity packing, affected-game selection, duration validation, and fail-closed shard-union verification execute through tests/browser_sharding.py while the historical tests/run_tests.py CLI remains the compatibility entrypoint.",
+      "status": "PASS",
+      "api_tests": [
+        "CI-QUALIFICATION-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/browser_case_inventory.json",
+        "tests/browser_sharding.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/newest_game_browser_coverage_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-727-browser-sharding-extraction",
+      "changed_in": "issue-727-browser-sharding-extraction",
+      "notes": "The baseline records both count and sorted IDs rather than a set-only digest, the runtime validates it before Browser startup, and the listener-free CI policy suite independently parses source registrations and compares both dimensions. Later #727 slices must update neither baseline dimension unless their own ticket explicitly authorizes a Browser inventory change."
     },
     {
       "id": "ROU-001",

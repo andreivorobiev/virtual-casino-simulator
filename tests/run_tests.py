@@ -2,11 +2,9 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
 # Run the repository's API, Browser, Long, governance, and focused test inventories.
-import argparse, base64, hashlib, importlib, io, json, math, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
+import argparse, base64, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
 # Import date arithmetic for fixed-window Guest Trials retention tests.
 from datetime import datetime, timedelta, timezone
-# Import source inspection so browser progress totals follow declared run_case calls automatically.
-import inspect
 from pathlib import Path
 # Set ROOT to the value needed for the next operation.
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +60,8 @@ from tests import recovery_tests
 from tests import edge_gate_tests
 # Import the focused deployment build-provenance suite.
 from tests import release_env_tests
+# Import pure Browser discovery, affinity packing, and shard verification outside the compatibility runner. (TEST-242)
+from tests import browser_sharding
 # Import the listener-free host-poller proof for protected-main delivery ownership.
 from tests import release_poller_tests
 # Import listener-free compatibility-owned predecessor tests for protected publication.
@@ -94,19 +94,8 @@ BROWSER_SHARD_CASES=None
 BROWSER_CASE_SEQ=0
 # Restrict browser execution to specific games' dedicated acceptance cases, or None for every game. (issue #468 item 4)
 BROWSER_AFFECTED_GAMES=None
-# Declare producer/consumer case groups whose inline browser state must stay on one shard.
-BROWSER_CASE_AFFINITY_GROUPS={
-    # Keep the real backend login and service-worker lifecycle in one isolated context.
-    'auth_backend_pwa':('BR-AUTH-BACKEND-001','BR-PWA-001','BR-PWA-UPDATE-001'),
-    # Keep the disposable guest lifecycle and closed-session refresh proof together.
-    'guest_lifecycle':('BR-GUEST-TRIAL-001','BR-GUEST-REFRESH-001','BR-GUEST-CONVERT-ANALYTICS-001'),
-    # Keep login, terms, wallet, shell, catalog, and responsive lobby state on shard zero.
-    'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-OAUTH-SIGNUP-001','BR-VERIFIED-EMAIL-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
-    # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
-    'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
-    # Keep Bingo, Blackjack, Baccarat, feedback, Admin, audio, and i18n state on shard three.
-    'bingo_admin':('BR-BINGO-PURCHASE-001','BR-BINGO-001','BR-BJ-NATURAL-PAYOUT-001','BR-BJ-001','BR-BJ-I18N-001','BR-BJ-INSURANCE-NET-001','BR-BAC-COPY-001','BR-BAC-FRESH-SHOE-001','BR-BAC-MUTATION-001','BR-BAC-001','BR-I18N-ROUTES-001','BR-WELLNESS-001','BR-FEEDBACK-001','BR-ADMIN-NAV-AUTH-001','BR-ADMIN-001','BR-ADMIN-DIAGNOSTICS-001','BR-ADMIN-ECONOMICS-001','BR-ADMIN-SESSION-POLICY-001','BR-ADMIN-LEDGER-LABELS-001','BR-ADMIN-FEEDBACK-001','BR-ADMIN-OAUTH-001','BR-ADMIN-MAIL-001','BR-INVITE-001','BR-OPS-001','BR-ADMIN-PRACTICE-OPPONENT-001','BR-ADMIN-USERS-001','BR-ADMIN-GUEST-001','BR-AUDIO-001','BR-I18N-FOUNDATION-001','BR-I18N-ADMIN-001'),
-}
+# Re-export the reviewed groups while pure ownership data lives in browser_sharding.py. (TEST-242)
+BROWSER_CASE_AFFINITY_GROUPS=browser_sharding.BROWSER_CASE_AFFINITY_GROUPS
 # Set SESSION_TOKEN to the value needed for the next operation.
 SESSION_TOKEN=None
 # Set DEFAULT_AUTH_EMAIL to the value needed for the next operation.
@@ -300,78 +289,31 @@ def run_case(test_id, reqs, fn):
 
 # List literal BR-prefixed case ids from the browser runner in deterministic source order.
 def browser_case_ids():
-    # Read only the browser runner source from this checkout.
-    source=inspect.getsource(run_browser_tests)
-    # Extract every literal named browser run_case id without maintaining another allowlist.
-    return re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]",source)
+    # Discover literal registrations through the extracted listener-free helper.
+    case_ids=browser_sharding.discover_browser_case_ids(run_browser_tests)
+    # Require exact pre-slice count and sorted-ID equality before any Browser startup. (TEST-242)
+    return browser_sharding.validate_browser_case_inventory(case_ids,BROWSER_CASE_INVENTORY_PATH)
 
 # Count literal BR-prefixed cases from the browser runner so totals cannot drift from discovery.
 def browser_case_total():
     # Count the deterministic literal id list so counting and listing can never disagree.
     return len(browser_case_ids())
 
+# Point at the reviewed pre-slice identity packet required by every #727 extraction. (TEST-242)
+BROWSER_CASE_INVENTORY_PATH=Path(__file__).resolve().parent/'browser_case_inventory.json'
 # Point at the reviewed per-case duration profile used by deterministic shard packing. (issue #502)
 BROWSER_DURATION_PROFILE_PATH=Path(__file__).resolve().parent/'browser_case_durations.json'
-# Bound the reviewed profile so malformed evidence cannot consume unbounded memory.
-BROWSER_DURATION_PROFILE_MAX_BYTES=64*1024
-# Bound one ordinary Browser case to the existing suite timeout budget.
-BROWSER_DURATION_MAX_SECONDS=3600
-# Keep every hostile profile failure value-free and independent of caller-controlled content.
-BROWSER_DURATION_PROFILE_ERROR='browser duration profile is invalid'
-
-# Reject duplicate JSON object keys instead of accepting last-value-wins profile weights.
-def _unique_browser_duration_object(pairs):
-    # Build one object only while every key remains unique.
-    result={}
-    # Inspect each decoded key/value pair without reflecting it in diagnostics.
-    for key,value in pairs:
-        # Reject a duplicate key before it can overwrite a reviewed weight.
-        if key in result: raise ValueError(BROWSER_DURATION_PROFILE_ERROR)
-        # Retain the unique pair for structural validation.
-        result[key]=value
-    # Return the uniquely keyed object.
-    return result
+# Re-export strict profile constants so focused hostile tests keep their historical seam.
+BROWSER_DURATION_PROFILE_MAX_BYTES=browser_sharding.BROWSER_DURATION_PROFILE_MAX_BYTES
+# Preserve the existing maximum duration identity at the compatibility runner boundary.
+BROWSER_DURATION_MAX_SECONDS=browser_sharding.BROWSER_DURATION_MAX_SECONDS
+# Preserve the fixed hostile-profile diagnostic at the compatibility runner boundary.
+BROWSER_DURATION_PROFILE_ERROR=browser_sharding.BROWSER_DURATION_PROFILE_ERROR
 
 # Load and strictly validate the tracked profile before any Browser listener can start.
 def browser_case_durations():
-    # Read bounded raw bytes so oversized or unreadable input fails with one fixed error.
-    try: raw=BROWSER_DURATION_PROFILE_PATH.read_bytes()
-    # Normalize every filesystem failure without disclosing a path or host detail.
-    except OSError: raise AssertionError(BROWSER_DURATION_PROFILE_ERROR) from None
-    # Reject an empty or oversized profile before decoding or parsing it.
-    if not raw or len(raw)>BROWSER_DURATION_PROFILE_MAX_BYTES: raise AssertionError(BROWSER_DURATION_PROFILE_ERROR)
-    # Decode and parse with duplicate-key and non-finite constant rejection.
-    try:
-        # Reject NaN and Infinity tokens before numeric validation.
-        reject_constant=lambda _token: (_ for _ in ()).throw(ValueError(BROWSER_DURATION_PROFILE_ERROR))
-        # Parse only the tracked UTF-8 JSON object.
-        profile=json.loads(raw.decode('utf-8'),object_pairs_hook=_unique_browser_duration_object,parse_constant=reject_constant)
-    # Normalize every syntax, Unicode, recursion, or duplicate-key failure.
-    except (UnicodeDecodeError,ValueError,RecursionError): raise AssertionError(BROWSER_DURATION_PROFILE_ERROR) from None
-    # Require one bounded object instead of accepting lists, scalars, or excessive rows.
-    if not isinstance(profile,dict) or len(profile)>browser_case_total(): raise AssertionError(BROWSER_DURATION_PROFILE_ERROR)
-    # Resolve the current literal inventory so stale or invented keys cannot bias the median.
-    known_cases=set(browser_case_ids())
-    # Build the normalized whole-second weights only after every row passes.
-    durations={}
-    # Validate each profile row without reflecting its key or value.
-    for case_id,value in profile.items():
-        # Require a bounded literal case identifier from this exact checkout.
-        if not isinstance(case_id,str) or case_id not in known_cases: raise AssertionError(BROWSER_DURATION_PROFILE_ERROR)
-        # Bound arbitrary-precision integers without coercing them through a float.
-        if type(value) is int:
-            # Reject nonpositive and overflow integer weights rather than clamping them.
-            if value<1 or value>BROWSER_DURATION_MAX_SECONDS: raise AssertionError(BROWSER_DURATION_PROFILE_ERROR)
-        # Validate exact floats separately so only finite values reach numeric bounds.
-        elif type(value) is float:
-            # Reject non-finite, nonpositive, and overflow float weights.
-            if not math.isfinite(value) or value<1 or value>BROWSER_DURATION_MAX_SECONDS: raise AssertionError(BROWSER_DURATION_PROFILE_ERROR)
-        # Reject booleans, strings, containers, and every other JSON value type.
-        else: raise AssertionError(BROWSER_DURATION_PROFILE_ERROR)
-        # Retain one deterministic rounded whole-second weight.
-        durations[case_id]=round(value)
-    # Return the validated partial profile; unmeasured current cases use the median below.
-    return durations
+    # Delegate strict parsing while retaining the runner's monkeypatchable path seam.
+    return browser_sharding.load_browser_case_durations(BROWSER_DURATION_PROFILE_PATH,browser_case_ids())
 
 # Compute one deterministic duration-balanced case-id set per shard. (issue #502)
 def browser_shard_case_sets(shard_count):
@@ -379,61 +321,27 @@ def browser_shard_case_sets(shard_count):
     case_ids=browser_case_ids()
     # Load the strictly validated tracked weights.
     durations=browser_case_durations()
-    # Weigh unmeasured cases at the reviewed profile median until new evidence is generated.
-    default=sorted(durations.values())[len(durations)//2] if durations else 1
-    # Collect every producer/consumer case whose stateful group must remain indivisible.
-    grouped={case_id for group_case_ids in BROWSER_CASE_AFFINITY_GROUPS.values() for case_id in group_case_ids}
-    # Build each declared affinity group as one atomic weighted pack item.
-    items=[(tuple(group_case_ids),sum(durations.get(case_id,default) for case_id in group_case_ids)) for group_case_ids in BROWSER_CASE_AFFINITY_GROUPS.values()]
-    # Append every ungrouped literal case as its own weighted item.
-    items+=[((case_id,),durations.get(case_id,default)) for case_id in case_ids if case_id not in grouped]
-    # Start every requested shard with an empty owned set and zero load.
-    loads=[0]*shard_count; owned=[set() for _ in range(shard_count)]
-    # Assign heaviest items first, with case id and shard index as deterministic tie breakers.
-    for members,weight in sorted(items,key=lambda item:(-item[1],item[0][0])):
-        # Select the currently lightest shard deterministically.
-        target=min(range(shard_count),key=lambda index:(loads[index],index))
-        # Add this indivisible item's reviewed weight to its owner.
-        loads[target]+=weight
-        # Record every grouped member under the same owner.
-        owned[target].update(members)
-    # Return immutable owned-case declarations for execution and aggregate evidence.
-    return [frozenset(shard_cases) for shard_cases in owned]
+    # Delegate pure deterministic packing to the extracted module. (TEST-242)
+    return browser_sharding.pack_browser_shards(case_ids,durations,shard_count)
 
 # Report whether this shard executes the named literal case so inline handoffs can compensate.
 def browser_shard_owns(case_id):
-    # Treat unsharded runs as owning every case.
-    if BROWSER_SHARD_CASES is None: return True
-    # Report membership in this shard's validated packed ownership.
-    return case_id in BROWSER_SHARD_CASES
+    # Delegate the pure ownership predicate while the runner retains active state.
+    return browser_sharding.shard_owns(BROWSER_SHARD_CASES,case_id)
 
 # Report whether the active shard owns every producer and consumer in one declared group.
 def browser_shard_owns_group(group_name):
-    # Treat unsharded runs as owning every affinity group.
-    if BROWSER_SHARD_CASES is None: return True
-    # Resolve the declared group and fail closed on an unknown ownership label.
-    case_ids=BROWSER_CASE_AFFINITY_GROUPS[group_name]
-    # Require the active packed shard to own every case that shares inline state.
-    return all(browser_shard_owns(case_id) for case_id in case_ids)
+    # Delegate the pure group predicate while the runner retains active state.
+    return browser_sharding.shard_owns_group(BROWSER_SHARD_CASES,group_name)
 
 # Validate every declared affinity group against the deterministic startup partition.
 def validate_browser_shard_affinity(shard_count):
     # Read the exact literal browser case inventory from this checkout.
     case_ids=browser_case_ids()
-    # Reject duplicated case IDs because packed ownership would otherwise be ambiguous.
-    if len(case_ids)!=len(set(case_ids)): raise AssertionError('duplicate browser case ids prevent deterministic sharding')
     # Compute the same strict deterministic partition used by worker execution.
     shard_sets=browser_shard_case_sets(shard_count)
-    # Require exact union and nonduplication before any listener or Browser process starts.
-    if sorted(case_id for shard_cases in shard_sets for case_id in shard_cases)!=sorted(case_ids): raise AssertionError('browser shard packing does not partition the literal case inventory')
-    # Validate each named producer/consumer group before any listener or browser starts.
-    for group_name,group_case_ids in BROWSER_CASE_AFFINITY_GROUPS.items():
-        # Reject missing or repeated group members rather than silently weakening affinity.
-        if len(group_case_ids)!=len(set(group_case_ids)) or any(case_id not in case_ids for case_id in group_case_ids): raise AssertionError(f'invalid browser affinity group {group_name}')
-        # Resolve the one deterministic packed owner for every group member.
-        owners={index for index,shard_cases in enumerate(shard_sets) for case_id in group_case_ids if case_id in shard_cases}
-        # Fail startup when a producer/consumer group would cross a shard boundary.
-        if len(owners)!=1: raise AssertionError(f'browser affinity group {group_name} crosses shards {sorted(owners)}')
+    # Delegate fail-closed partition and producer/consumer validation. (TEST-242)
+    browser_sharding.validate_browser_shard_affinity(case_ids,shard_sets)
 
 # Advance literal case accounting when an unowned shard skips one guarded affinity body.
 def skip_browser_affinity(group_name):
@@ -449,114 +357,42 @@ def skip_browser_affinity(group_name):
     BROWSER_CASE_SEQ+=len(group_case_ids)
 
 # Map each game to its one dedicated deep browser acceptance case so unaffected games can be skipped. (issue #468 item 4)
-BROWSER_GAME_ACCEPTANCE_CASES={'acey_deucey':'BR-AD-001', 'andar_bahar':'BR-AB-001', 'big_six_wheel':'BR-BIG-SIX-001', 'caribbean_stud':'BR-CS-001', 'casino_holdem':'BR-CH-001', 'casino_war':'BR-CW-001', 'chuck_a_luck':'BR-CHUCK-001', 'craps':'BR-CRAPS-001', 'crown_and_anchor':'BR-CAA-001', 'daily_draw_lab':'BR-DAILY-DRAW-LAB-001', 'deuces_wild_video_poker':'BR-DWVP-001', 'double_bonus_video_poker':'BR-DBVP-001', 'dragon_tiger':'BR-DT-001', 'fan_tan':'BR-FAN-TAN-001', 'faro':'BR-FARO-001', 'four_card_poker':'BR-FOUR-CARD-POKER-001', 'hi_lo':'BR-HILO-001', 'jacks_or_better_video_poker':'BR-JOBVP-001', 'joker_poker':'BR-JP-001', 'let_it_ride':'BR-LIR-001', 'mississippi_stud':'BR-MSTUD-001', 'multi_hand_video_poker':'BR-MHVP-001', 'over_under_7':'BR-OU7-001', 'pachinko':'BR-PACHINKO-001', 'pai_gow_poker':'BR-PGP-001', 'plinko':'BR-PLINKO-001', 'red_dog':'BR-RD-001', 'scratch_cards':'BR-SCRATCH-001', 'sic_bo':'BR-SIC-BO-001', 'teen_patti':'BR-TEEN-PATTI-001', 'texas_holdem_practice_table':'BR-THPT-001', 'three_card_poker':'BR-TCP-001', 'trente_et_quarante':'BR-TEQ-001'}
+BROWSER_GAME_ACCEPTANCE_CASES=browser_sharding.BROWSER_GAME_ACCEPTANCE_CASES
 # Invert the map once so run_case can resolve a dedicated case's owning game in constant time.
-_BROWSER_ACCEPTANCE_CASE_GAME={case_id:game_id for game_id,case_id in BROWSER_GAME_ACCEPTANCE_CASES.items()}
+_BROWSER_ACCEPTANCE_CASE_GAME=browser_sharding.BROWSER_ACCEPTANCE_CASE_GAME
 
 # Validate the game->case acceptance map against the exact catalog and literal case inventory before any use.
 def validate_browser_affected_games():
     # Read the deterministic literal browser case inventory and the current catalog once.
     case_ids=set(browser_case_ids()); catalog_ids={game['id'] for game in casino_config.GAMES}
-    # Flatten declared affinity cases so dedicated deselection can never bypass a producer/consumer group.
-    affinity_case_ids={case_id for group_case_ids in BROWSER_CASE_AFFINITY_GROUPS.values() for case_id in group_case_ids}
-    # Reject a map that pairs two games with one case because deselection would then be ambiguous.
-    if len(set(BROWSER_GAME_ACCEPTANCE_CASES.values()))!=len(BROWSER_GAME_ACCEPTANCE_CASES): raise AssertionError('duplicate dedicated acceptance case in affected-game map')
-    # Reject any dedicated case that is also affinity-owned because partial group deselection would break state ownership.
-    if set(BROWSER_GAME_ACCEPTANCE_CASES.values())&affinity_case_ids: raise AssertionError('affected-game map contains an affinity-owned browser case')
-    # Require every mapped game and case to still exist so a stale map fails startup instead of under-testing.
-    for game_id,case_id in BROWSER_GAME_ACCEPTANCE_CASES.items():
-        # Fail closed on an unknown catalog game id.
-        if game_id not in catalog_ids: raise AssertionError(f'affected-game map references unknown game {game_id}')
-        # Fail closed when a mapped dedicated case is absent from the literal inventory.
-        if case_id not in case_ids: raise AssertionError(f'affected-game case {case_id} absent from browser inventory')
+    # Delegate pure mapping, affinity, and catalog consistency checks. (TEST-242)
+    browser_sharding.validate_browser_affected_games(case_ids,catalog_ids)
 
 # Report whether a case is a dedicated per-game acceptance case excluded by the active affected-game set.
 def browser_case_deselected(case_id):
-    # Keep every case when no affected-game restriction is active.
-    if BROWSER_AFFECTED_GAMES is None: return False
-    # Skip only dedicated per-game acceptance cases whose game is not among the affected games.
-    return case_id in _BROWSER_ACCEPTANCE_CASE_GAME and _BROWSER_ACCEPTANCE_CASE_GAME[case_id] not in BROWSER_AFFECTED_GAMES
+    # Delegate pure detector-owned selection while retaining active runner state.
+    return browser_sharding.case_deselected(case_id,BROWSER_AFFECTED_GAMES)
 
 # List the case ids one packed shard actually executes after affected-game deselection.
 def browser_selected_case_ids(owned_cases):
     # Read the deterministic literal inventory once.
     case_ids=browser_case_ids()
-    # Keep owned cases that survive affected-game deselection in source order.
-    return [case_id for case_id in case_ids if (owned_cases is None or case_id in owned_cases) and not browser_case_deselected(case_id)]
+    # Delegate source-order ownership and detector selection.
+    return browser_sharding.selected_case_ids(case_ids,owned_cases,BROWSER_AFFECTED_GAMES)
 
 # Compute the exact case ids expected across shards for an affected-game selection, independent of process state.
 def browser_expected_case_ids(affected_games):
-    # Return the full literal inventory when no affected-game restriction applies.
-    if affected_games is None: return browser_case_ids()
-    # Otherwise drop each dedicated per-game acceptance case whose game is not among the affected games.
-    return [case_id for case_id in browser_case_ids() if not (case_id in _BROWSER_ACCEPTANCE_CASE_GAME and _BROWSER_ACCEPTANCE_CASE_GAME[case_id] not in affected_games)]
+    # Delegate source-order expected coverage to the extracted pure helper.
+    return browser_sharding.expected_case_ids(browser_case_ids(),affected_games)
 
 # Verify aggregated browser shard results cover the independently expected selection exactly once and pass.
 def verify_browser_shards(results_dir, shard_count, affected_games=None):
-    # Track every observed browser case id and the shard that executed it.
-    seen={}
-    # Compute the exact governed ownership expected from this checkout and profile.
+    # Discover and baseline-check the exact literal inventory before reading shard evidence.
+    case_ids=browser_case_ids()
+    # Compute deterministic ownership through the same strict duration inputs used by workers.
     expected_owned=browser_shard_case_sets(shard_count)
-    # Track every shard declaration for final exact-union and nonduplication proof.
-    declared_owned={}
-    # Canonicalize the detector-owned selection so shard self-descriptions can be checked rather than trusted.
-    expected_declaration=sorted(affected_games) if affected_games else None
-    # Derive the expected case set only from the workflow-supplied detector selection.
-    expected=browser_expected_case_ids(affected_games)
-    # Read each shard's unique result file and fail on any missing shard evidence.
-    for index in range(shard_count):
-        # Resolve the exact per-shard result file created by the sharded browser runner.
-        path=Path(results_dir)/f'browser_results_shard_{index}_of_{shard_count}.json'
-        # Fail closed when a shard finished without leaving its retained result evidence.
-        if not path.exists(): print(f'BROWSER_SHARDS FAIL missing shard result file {path}'); return 1
-        # Parse this shard's retained result records with a bounded failure diagnostic.
-        try: data=json.loads(path.read_text(encoding='utf-8'))
-        # Reject unreadable or malformed evidence without accepting partial coverage.
-        except (OSError,UnicodeDecodeError,ValueError): print(f'BROWSER_SHARDS FAIL malformed shard result {index}'); return 1
-        # Require the top-level result packet shape before reading any declaration.
-        if not isinstance(data,dict): print(f'BROWSER_SHARDS FAIL malformed shard result {index}'); return 1
-        # Bind the artifact to its filename, requested matrix, and exact worker identity.
-        if type(data.get('shard_index')) is not int or data.get('shard_index')!=index or type(data.get('shard_count')) is not int or data.get('shard_count')!=shard_count: print(f'BROWSER_SHARDS FAIL shard {index} identity mismatch'); return 1
-        # Reject a shard whose self-description does not match the detector-owned aggregate selection.
-        if data.get('affected_games')!=expected_declaration: print(f'BROWSER_SHARDS FAIL shard {index} affected games {data.get("affected_games")} != expected {expected_declaration}'); return 1
-        # Require each shard to declare its sorted literal ownership without duplicates.
-        owned=data.get('owned_cases')
-        # Fail closed when the declaration is absent, malformed, duplicated, or reordered.
-        if not isinstance(owned,list) or not all(isinstance(case_id,str) for case_id in owned) or len(owned)!=len(set(owned)) or owned!=sorted(owned): print(f'BROWSER_SHARDS FAIL shard {index} has invalid owned_cases'); return 1
-        # Require this shard's declaration to equal the deterministic governed pack exactly.
-        if owned!=sorted(expected_owned[index]): print(f'BROWSER_SHARDS FAIL shard {index} owned_cases mismatch'); return 1
-        # Retain the exact declaration for cross-shard union checks.
-        declared_owned[index]=set(owned)
-        # Require the result collection before inspecting its Browser rows.
-        if not isinstance(data.get('results'),list): print(f'BROWSER_SHARDS FAIL malformed shard result {index}'); return 1
-        # Examine only browser-suite records so mixed local suite runs cannot confuse coverage.
-        for result in data['results']:
-            # Require every retained row to be an object with string identity and status.
-            if not isinstance(result,dict) or not isinstance(result.get('test_id'),str) or not isinstance(result.get('status'),str): print(f'BROWSER_SHARDS FAIL malformed row in shard {index}'); return 1
-            # Skip non-browser records defensively without counting them as coverage.
-            if not str(result['test_id']).startswith('BR-'): continue
-            # Reject a Browser row that its producing shard does not own.
-            if result['test_id'] not in declared_owned[index]: print(f'BROWSER_SHARDS FAIL shard {index} reported unowned case {result["test_id"]}'); return 1
-            # Fail closed when any shard retained a non-passing browser case.
-            if result['status']!='PASS': print(f'BROWSER_SHARDS FAIL non-passing case {result["test_id"]} in shard {index}'); return 1
-            # Fail closed when two shards both claim one case.
-            if result['test_id'] in seen: print(f'BROWSER_SHARDS FAIL duplicate case {result["test_id"]} in shards {seen[result["test_id"]]} and {index}'); return 1
-            # Record this case's owning shard for duplicate detection.
-            seen[result['test_id']]=index
-    # Require pairwise-disjoint declarations so no literal case has two owners.
-    if sum(len(shard_cases) for shard_cases in declared_owned.values())!=len(set().union(*declared_owned.values())): print('BROWSER_SHARDS FAIL declared shard ownerships overlap'); return 1
-    # Require the declared union to equal the exact literal Browser inventory.
-    if set().union(*declared_owned.values())!=set(browser_case_ids()): print('BROWSER_SHARDS FAIL declared shard ownerships do not partition the case inventory'); return 1
-    # Collect every literal case that never executed on any shard.
-    missing=[case_id for case_id in expected if case_id not in seen]
-    # Fail closed when the shard union leaves any literal case unexecuted.
-    if missing: print(f'BROWSER_SHARDS FAIL missing cases {missing}'); return 1
-    # Collect executed ids that no longer exist in this checkout's literal case list.
-    extra=sorted(set(seen)-set(expected))
-    # Fail closed when shards executed ids the current source does not declare.
-    if extra: print(f'BROWSER_SHARDS FAIL unexpected cases {extra}'); return 1
-    # Print the exact verified aggregate so workflow logs retain the coverage evidence.
-    print(f'BROWSER_SHARDS VERIFIED cases={len(expected)} shards={shard_count}'); return 0
+    # Delegate fail-closed packet, ownership, selection, and exact-union verification. (TEST-242)
+    return browser_sharding.verify_browser_shards(results_dir,shard_count,affected_games,case_ids,expected_owned)
 
 # Define assert_condition so concise mapped checks still fail when their predicate is false.
 def assert_condition(value, message):
@@ -1715,7 +1551,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('qualification acceleration policy suite failed')
     # Record safe PR cancellation, exhaustive shards, audio ownership, artifacts, and aggregate behavior.
-    run_case('CI-QUALIFICATION-001',['TOOL-002','TEST-036'],run_ci_qualification_tests)
+    run_case('CI-QUALIFICATION-001',['TOOL-002','TEST-036','TEST-242'],run_ci_qualification_tests)
     # Execute the bounded Roulette anti-strobe proof without opening a listener or browser.
     def run_roulette_motion_tests():
         # Import the focused suite only when its mapped API case runs.
