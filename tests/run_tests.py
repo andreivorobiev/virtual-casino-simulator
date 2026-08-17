@@ -66,6 +66,8 @@ from tests import browser_sharding
 from tests import api_case_inventory
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
+# Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
+from tests.cases.api import admin_guest as api_admin_guest
 # Import listener-free authentication infrastructure ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import auth as api_auth
 # Import listener-free feedback registration ownership behind the compatibility runner. (TEST-242)
@@ -2148,8 +2150,8 @@ def run_api_tests():
     try:
         # Call an asynchronous API/helper and wait for the result before continuing.
         login_default_user(base)
-        # Record live guest protected-route, Admin denial, Admin reporting, detail, cleanup, and no-resumption proof.
-        run_case('API-ADMIN-GUEST-001',['GUEST-001','GUEST-003','GUEST-004','GUEST-006','TEST-080','TEST-088'],lambda: validate_guest_admin_api(base))
+        # Delegate the live Guest/Admin registration without transferring server lifecycle ownership. (TEST-242)
+        api_admin_guest.run_cases(run_case,base,validate_guest_admin_api)
         # Prove every affected game route rejects decoded and string non-finite wagers without mutation.
         def nonfinite_money_api():
             # Read the authenticated wallet identity and finite baseline.
