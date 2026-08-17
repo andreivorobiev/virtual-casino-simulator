@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the first six settlement-alias retirement slices to total exactly 1089 permanent rows.
-        self.assertEqual(len(requirements), 1089)
+        # Require all seven game-specific settlement-alias retirement slices to total exactly 1091 permanent rows.
+        self.assertEqual(len(requirements), 1091)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1522,6 +1522,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-238": "Tests",  # Bind Crown and Anchor lifecycle, recovery, history, and process evidence.
             "FAN-TAN-007": "Fan-Tan",  # Bind Fan-Tan orchestration to one SimpleWagerGame coordinator.
             "TEST-239": "Tests",  # Bind Fan-Tan lifecycle, recovery, history, and process evidence.
+            "DT-007": "Dragon Tiger",  # Bind Dragon Tiger orchestration to one SimpleWagerGame coordinator.
+            "TEST-240": "Tests",  # Bind Dragon Tiger lifecycle, recovery, history, and process evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

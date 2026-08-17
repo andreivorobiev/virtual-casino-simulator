@@ -132,8 +132,32 @@
         "tests/unit/request_latency_benchmark_tests.py"
       ],
       "introduced_in": "issue-833-dragon-tiger-atomic-state",
-      "changed_in": "issue-833-dragon-tiger-atomic-state",
-      "notes": "The frozen v1 contract, standard-8d shoe, card ordering, payout math, ledger transaction types, and action keys remain unchanged. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+      "changed_in": "issue-871-dragon-tiger-simple-wager",
+      "notes": "The SimpleWagerGame lifecycle adapter owns each provider-current transition without a detached whole-document saver. Production multiworker activation stays blocked because wallet and game-state publication remain separate durable boundaries."
+    },
+    {
+      "id": "DT-007",
+      "module": "Dragon Tiger",
+      "description": "Dragon Tiger delegates prepared shoe state, committed card recovery, optional returned-credit movement, replay lookup, lifecycle finalization, and provider-current archival to one SimpleWagerGame coordinator while preserving the frozen v1 action_id, dt_ round identity, standard-8d shoe, direct oldest-to-newest fifty-round visible history, unbounded durable action index, private-card boundary, paytable, and historical ledger evidence semantics.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DT-001",
+        "API-DT-ATOMIC-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [
+        "BR-DT-001"
+      ],
+      "implementation_files": [
+        "casino/games/dragon_tiger/service.py",
+        "casino/core/simple_game.py",
+        "tests/games/dragon_tiger/test_api.py",
+        "tests/games/dragon_tiger/test_atomic_state.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-871-dragon-tiger-simple-wager",
+      "changed_in": "issue-871-dragon-tiger-simple-wager",
+      "notes": "The game service contains exactly one SimpleWagerGame construction and no direct GameSettlementGateway, CoreLedgerGateway, apply_once call, game-local settlement lock, or detached atomic baseline. Canonical proof fields remain beside the legacy idempotency_key compatibility field without changing the frozen v1 contract."
     }
   ]
 }

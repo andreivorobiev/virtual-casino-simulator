@@ -1,24 +1,26 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Focused Dragon Tiger session, persistence, and ledger-replay tests."""
+"""Shared-settlement, recovery, and frozen API tests for issue #871."""
 
-# Import deep-copy support so fake persistence matches JSON document boundaries.
+# Import deep-copy support so fake persistence models JSON boundaries.
 import copy
 # Import a bounded thread pool for duplicate-request serialization coverage.
 from concurrent.futures import ThreadPoolExecutor
+# Import filesystem paths for structural source assertions.
+from pathlib import Path
 # Import standard unit-test support.
 import unittest
 
 # Import shared cards for valid deterministic shoe fixtures.
 from casino.core.cards import create_deck
-# Import insufficient-funds behavior used by the shared ledger boundary.
+# Import public money and validation errors asserted at service boundaries.
 from casino.errors import ConflictError, InsufficientFundsError, ValidationError
-# Import the isolated router used by focused registration tests.
-from casino.router import Router
-# Import Dragon Tiger routes, engine, and service under test.
+# Import Dragon Tiger routes, rules, and shared-backed service.
 from casino.games.dragon_tiger import api, engine
-# Import service orchestration separately for injected-port tests.
+# Import the service class explicitly for focused dependency injection.
 from casino.games.dragon_tiger.service import DragonTigerService
+# Import the isolated router used by frozen registration tests.
+from casino.router import Router
 
 
 # Build a complete standard-8d fixture with controlled deal cards.
@@ -27,7 +29,7 @@ def rigged_shoe(dragon_card="KS", tiger_card="QH"):
     cards = [card.code for card in create_deck(engine.DECK_COUNT)]
     # Control burns followed by Dragon-first and Tiger-second cards.
     pop_order = ["2C", "3D", "4H", dragon_card, tiger_card]
-    # Relocate one occurrence of each controlled card.
+    # Relocate one occurrence of every controlled card.
     for card in pop_order:
         # Preserve the exact eight-deck multiset.
         cards.remove(card)
@@ -37,217 +39,160 @@ def rigged_shoe(dragon_card="KS", tiger_card="QH"):
     return cards
 
 
-# Provide deep-copy player state with injectable provider-update failures.
+# Simulate player-scoped state documents with provider-current callbacks.
 class MemoryRepository:
-    # Initialize empty player documents and failure controls.
+    # Start with no persisted game documents.
     def __init__(self):
-        # Store committed state by authenticated player.
-        self.states = {}
-        # Count attempted publications for crash seam selection.
-        self.save_count = 0
-        # Fail selected save numbers once.
-        self.fail_on = set()
+        # Store detached documents by authenticated player id.
+        self.documents = {}
 
-    # Load a detached player document.
+    # Load one detached state document or a fresh default.
     def load(self, player_id):
-        # Return committed state or a new default.
-        return copy.deepcopy(self.states.get(player_id, engine.default_state()))
+        # Copy state so every mutation requires an explicit provider callback.
+        return copy.deepcopy(self.documents.get(player_id, engine.default_state()))
 
-    # Update the provider-current document or simulate interruption.
+    # Update one player document through the production-shaped callback seam.
     def update(self, player_id, mutator):
-        # Load the authoritative document inside the fake provider boundary.
-        current = copy.deepcopy(self.states.get(player_id, engine.default_state()))
-        # Apply the production callback before publication.
-        desired = mutator(current)
-        # Advance the deterministic publication counter.
-        self.save_count += 1
-        # Simulate one configured provider interruption.
-        if self.save_count in self.fail_on:
-            # Consume the one-shot failure.
-            self.fail_on.remove(self.save_count)
-            # Raise after prior ledger work can already be durable.
-            raise RuntimeError("simulated state save failure")
-        # Persist a detached copy like JSON storage.
-        self.states[player_id] = copy.deepcopy(desired)
-        # Return provider-authoritative state like the shared updater.
-        return copy.deepcopy(self.states[player_id])
+        # Load provider-current state inside the fake atomic boundary.
+        current = copy.deepcopy(self.documents.get(player_id, engine.default_state()))
+        # Apply one game-owned mutation against current authority.
+        updated = mutator(current)
+        # Persist detached bytes like JSON storage.
+        self.documents[player_id] = copy.deepcopy(updated)
+        # Return detached provider authority.
+        return copy.deepcopy(updated)
 
 
-# Provide append-only apply-once ledger behavior without real balances/files.
-class MemoryLedger:
-    # Initialize fake balances and event history.
-    def __init__(self):
-        # Start the focused player with ample tokens.
-        self.balances = {"session-player": 1000.0}
-        # Retain committed events chronologically.
-        self.events = []
-        # Fail selected movements after mutating balance but before appending evidence.
-        self.fail_without_event = set()
+# Persist one selected provider transition and then simulate a lost response.
+class PersistThenFailRepository(MemoryRepository):
+    # Capture the exact state predicate for one crash boundary.
+    def __init__(self, predicate):
+        # Initialize ordinary detached provider storage first.
+        super().__init__()
+        # Retain the bounded state predicate supplied by the focused test.
+        self._predicate = predicate
+        # Arm exactly one post-persistence response failure.
+        self._armed = True
 
-    # Find one stable action event.
-    def find(self, player_id, action_key):
-        # Search newest-first within the requested player's events.
-        return next((event for event in reversed(self.events) if event["player_id"] == player_id and event["details"].get("idempotency_key") == action_key), None)
+    # Commit provider-current mutation before optionally losing its response.
+    def update(self, player_id, mutator):
+        # Persist through the ordinary fake provider boundary.
+        authoritative = super().update(player_id, mutator)
+        # Fail once only when the requested crash state is durable.
+        if self._armed and self._predicate(authoritative):
+            # Consume the one-shot fault before surfacing it.
+            self._armed = False
+            # Model a provider write whose response is lost after commit.
+            raise RuntimeError("simulated lost provider response")
+        # Return normal detached authority for every other transition.
+        return authoritative
 
-    # Validate replay compatibility like the production gateway.
-    def validate_existing(self, event, *, amount, transaction_type, round_id, fingerprint):
-        # Reject any differing amount, type, round, game, or fingerprint.
-        if round(event["amount"], 2) != round(amount, 2) or event["transaction_type"] != transaction_type or event["round_id"] != round_id or event["game"] != engine.GAME_ID or event["details"].get("request_fingerprint") != fingerprint:
-            # Match the production fail-closed conflict class.
-            raise ConflictError("fake ledger conflict")
 
-    # Commit or replay one signed movement.
-    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, fingerprint, details):
-        # Resolve a prior stable action first.
-        existing = self.find(player_id, action_key)
-        # Replay only compatible proof.
-        if existing:
-            # Validate semantic identity.
-            self.validate_existing(existing, amount=amount, transaction_type=transaction_type, round_id=round_id, fingerprint=fingerprint)
-            # Return original proof and replay status.
-            return existing, True
-        # Calculate the resulting balance.
-        after = round(self.balances[player_id] + amount, 2)
-        # Reject overdrafts like shared ledger storage.
-        if after < 0:
-            # Surface the shared insufficient-funds error.
+# Provide an in-memory apply-once gateway with production-shaped evidence.
+class FakeLedgerGateway:
+    # Initialize balances, immutable events, and failure controls.
+    def __init__(self, balances=None):
+        # Store deterministic fake wallets without shared player data.
+        self.balances = balances or {"session-player": 1000.0, "other-player": 100.0, "player-a": 1000.0, "player-b": 100.0}
+        # Store events by deterministic action key.
+        self.events = {}
+        # Retain every apply-once call, including safe replays.
+        self.calls = []
+        # Hold one-shot failures before immutable publication.
+        self.fail_before = set()
+        # Hold one-shot lost responses after immutable publication.
+        self.fail_after = set()
+
+    # Commit or recover one signed game action.
+    def apply_once(self, *, player_id, amount, transaction_type, round_id, action_key, request_fingerprint, details):
+        # Record every helper-owned movement request for count assertions.
+        self.calls.append({"player_id": player_id, "amount": amount, "transaction_type": transaction_type, "round_id": round_id, "action_key": action_key, "request_fingerprint": request_fingerprint, "details": copy.deepcopy(details)})
+        # Resolve the bounded movement role once for failure injection.
+        suffix = action_key.rsplit(":", 1)[-1]
+        # Fail once before publication when the test arms this role.
+        if suffix in self.fail_before:
+            # Consume the one-shot failure so explicit retry may proceed.
+            self.fail_before.remove(suffix)
+            # Model a definitive provider rejection with no movement.
+            raise RuntimeError("simulated pre-commit ledger failure")
+        # Return original proof when this action already committed.
+        if action_key in self.events:
+            # Read immutable proof once for exact conflict checks.
+            existing = self.events[action_key]
+            # Reject one identity reused with different money or meaning.
+            if existing["player_id"] != player_id or existing["round_id"] != round_id or existing["transaction_type"] != transaction_type or existing["amount"] != amount or existing["details"]["request_fingerprint"] != request_fingerprint:
+                # Match the production gateway conflict boundary.
+                raise ConflictError("Fake Dragon Tiger ledger dimensions conflict")
+            # Preserve the same event identity and report recovery.
+            return copy.deepcopy(existing), True
+        # Calculate candidate wallet balance before committing evidence.
+        candidate = round(self.balances[player_id] + amount, 2)
+        # Reject an aggregate wager that would overdraw the fake wallet.
+        if candidate < 0:
+            # Preserve provider state and ledger bytes on rejection.
             raise InsufficientFundsError()
-        # Build the public ledger subset used by service recovery.
-        event = {"ledger_id": f"led-{len(self.events) + 1}", "ts": "2026-07-14T00:00:00Z", "player_id": player_id, "game": engine.GAME_ID, "round_id": round_id, "transaction_type": transaction_type, "amount": amount, "details": {**details, "idempotency_key": action_key, "request_fingerprint": fingerprint}}
-        # Commit the fake balance.
-        self.balances[player_id] = after
-        # Simulate the shared JSON provider's balance-before-event failure gap.
-        if action_key in self.fail_without_event:
-            # Consume the one-shot ambiguous failure.
-            self.fail_without_event.remove(action_key)
-            # Raise without append-only proof after the balance already changed.
-            raise RuntimeError("simulated balance/event gap")
-        # Append immutable-by-convention proof.
-        self.events.append(event)
-        # Return new proof and non-replay status.
-        return event, False
+        # Commit the fake wallet movement exactly once.
+        self.balances[player_id] = candidate
+        # Build one production-shaped immutable ledger event.
+        event = {"ledger_id": f"ledger-{len(self.events) + 1}", "player_id": player_id, "game": engine.GAME_ID, "round_id": round_id, "transaction_type": transaction_type, "amount": amount, "ts": "2026-07-14T00:00:00Z", "details": {**copy.deepcopy(details), "idempotency_key": action_key, "request_fingerprint": request_fingerprint}}
+        # Persist the committed event under its unique action identity.
+        self.events[action_key] = event
+        # Lose one response only after the immutable event exists.
+        if suffix in self.fail_after:
+            # Consume the one-shot fault before surfacing it.
+            self.fail_after.remove(suffix)
+            # Force caller recovery from exact committed proof.
+            raise RuntimeError("simulated lost ledger response")
+        # Report that this call created the event.
+        return copy.deepcopy(event), False
+
+    # Find one committed event through every immutable proof dimension.
+    def find(self, *, player_id, round_id, transaction_type, action_key, request_fingerprint):
+        # Read the event addressed by deterministic action key.
+        event = self.events.get(action_key)
+        # Return no proof when this action never committed.
+        if event is None:
+            # Preserve production gateway optional-result behavior.
+            return None
+        # Require player, round, type, and meaning to match.
+        if event["player_id"] != player_id or event["round_id"] != round_id or event["transaction_type"] != transaction_type or event["details"]["request_fingerprint"] != request_fingerprint:
+            # Surface conflict instead of satisfying proof with unrelated data.
+            raise ConflictError("Fake Dragon Tiger proof dimensions conflict")
+        # Return detached immutable proof like the production adapter.
+        return copy.deepcopy(event)
 
 
-# Verify session-bound exactly-once service behavior.
+# Verify retries, private shoe lifecycle, frozen response, and exactly-once recovery.
 class DragonTigerServiceTests(unittest.TestCase):
-    # Build fresh deterministic ports before each test.
+    # Build isolated provider, wallet, and deterministic cards before each test.
     def setUp(self):
-        # Create isolated persistent state.
+        # Create fresh player-scoped storage.
         self.repository = MemoryRepository()
-        # Create isolated append-only ledger state.
-        self.ledger = MemoryLedger()
-        # Construct the service with fixed cards and time.
+        # Create fresh fake balances and immutable ledger events.
+        self.ledger = FakeLedgerGateway()
+        # Build deterministic Dragon-winning service without files or ambient entropy.
         self.service = DragonTigerService(repository=self.repository, ledger_gateway=self.ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, shoe_factory=lambda: rigged_shoe(), clock=lambda: "2026-07-14T00:00:00Z")
 
-    # Preserve unrelated provider state across an idempotent publication.
-    def test_atomic_publication_is_idempotent_and_preserves_sibling(self):
-        # Load one tracked provider document.
-        state = self.service._load("session-player")
-        # Add one durable game-owned marker to the desired state.
-        state["prepared_order"] = ["atomic-same"]
-        # Publish the tracked transition through provider-current comparison.
-        self.service._save("session-player", state)
-        # Add unrelated metadata after the game publication.
-        self.repository.states["session-player"]["atomic_markers"] = ["sibling"]
-        # Repeat the identical desired state from the advanced baseline.
-        self.service._save("session-player", state)
-        # Read the final provider-authoritative document.
-        persisted = self.repository.load("session-player")
-        # Verify the sibling survives and operation metadata never persists.
-        self.assertEqual(["sibling"], persisted["atomic_markers"])
-        # Keep the optimistic snapshot outside durable player state.
-        self.assertNotIn("_dragon_tiger_atomic_baseline", persisted)
-
-    # Reject fabricated detached state before entering the provider updater.
-    def test_missing_atomic_baseline_fails_before_update(self):
-        # Retain a call list that must stay empty on fail-closed input.
-        updates = []
-
-        # Expose a repository seam whose update would reveal accidental entry.
-        class RejectingRepository:
-            # Record forbidden writes without mutating any storage.
-            def update(self, player_id, mutator):
-                # Retain exact attempted arguments for the final assertion.
-                updates.append((player_id, mutator))
-
-        # Build a service whose write seam must remain untouched.
-        dragon_tiger = DragonTigerService(repository=RejectingRepository())
-        # Reject an untracked default document as a stale publication.
-        with self.assertRaisesRegex(ConflictError, "missing its atomic baseline"):
-            # Attempt publication without the required provider-read baseline.
-            dragon_tiger._save("session-player", engine.default_state())
-        # Prove storage was never reached.
-        self.assertEqual([], updates)
-
-    # Reject one stale game-owned publication without losing a newer sibling.
-    def test_atomic_publication_rejects_stale_game_state(self):
-        # Load two independent copies of the same provider baseline.
-        winner = self.service._load("session-player")
-        # Capture the stale contender before the winner commits.
-        stale = self.service._load("session-player")
-        # Give the winning transition one durable prepared identity.
-        winner["prepared_order"] = ["atomic-winner"]
-        # Publish the winner against the common baseline.
-        self.service._save("session-player", winner)
-        # Add unrelated provider metadata after the winner.
-        self.repository.states["session-player"]["atomic_markers"] = ["sibling"]
-        # Give the stale transition a different owned result.
-        stale["prepared_order"] = ["atomic-loser"]
-        # Reject the stale result before replacement.
-        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
-            # Attempt the stale provider-current publication.
-            self.service._save("session-player", stale)
-        # Require only the winning game state and sibling to remain.
-        self.assertEqual((["atomic-winner"], ["sibling"]), (self.repository.states["session-player"]["prepared_order"], self.repository.states["session-player"]["atomic_markers"]))
-
-    # Prove rejected-debit rollback cannot erase a provider-winning round.
-    def test_rejected_debit_rollback_preserves_concurrent_winner(self):
-        # Extend memory storage with one deterministic winner scheduled during cleanup.
-        class RacingRepository(MemoryRepository):
-            # Initialize ordinary storage and a publication counter.
-            def __init__(self):
-                # Initialize base in-memory state.
-                super().__init__()
-                # Count provider updates so rollback alone loses the race.
-                self.update_calls = 0
-
-            # Publish preparation normally, then expose a concurrent winner.
-            def update(self, player_id, mutator):
-                # Count this provider-current publication attempt.
-                self.update_calls += 1
-                # Delegate all preparation and intent markers normally.
-                if self.update_calls < 3:
-                    # Preserve exact fake-provider behavior before rollback.
-                    return super().update(player_id, mutator)
-                # Build the provider winner from current game state.
-                winner = copy.deepcopy(self.states[player_id])
-                # Retire the stale prepared action as a concurrent terminal result.
-                winner["prepared_actions"] = {}
-                # Clear recovery order so stale rollback would resurrect it.
-                winner["prepared_order"] = []
-                # Publish an unrelated provider sibling beside the winning result.
-                winner["atomic_markers"] = ["provider-winner"]
-                # Replace authoritative state before stale cleanup enters.
-                self.states[player_id] = winner
-                # Present that provider-current winner to the stale callback.
-                return mutator(copy.deepcopy(winner))
-
-        # Create one race-aware provider and an underfunded wallet.
-        repository, ledger = RacingRepository(), MemoryLedger()
-        # Keep the attempted wager above the available balance.
-        ledger.balances["session-player"] = 1.0
-        # Build the real service around deterministic fakes.
-        dragon_tiger = DragonTigerService(repository=repository, ledger_gateway=ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]}, shoe_factory=lambda: rigged_shoe(), clock=lambda: "2026-07-14T00:00:00Z")
-        # Require stale rollback to surface a provider conflict.
-        with self.assertRaisesRegex(ConflictError, "state changed during this action"):
-            # Attempt an unaffordable round whose cleanup loses the state race.
-            dragon_tiger.play("session-player", {"action_id": "atomic-rollback-race", "bet": "dragon", "wager": 2})
-        # Read the authoritative concurrent winner after failed cleanup.
-        persisted = repository.load("session-player")
-        # Verify the winner and unrelated sibling remain intact.
-        self.assertEqual(([], ["provider-winner"]), (persisted["prepared_order"], persisted["atomic_markers"]))
-        # Verify rejected debit created no wallet movement.
-        self.assertEqual((1.0, []), (ledger.balances["session-player"], ledger.events))
+    # Confirm provider-current preparation is idempotent and preserves siblings.
+    def test_preparation_preserves_sibling_and_never_redeals(self):
+        # Seed unrelated provider-owned metadata before private preparation.
+        self.repository.documents["player-a"] = {**engine.default_state(), "atomic_markers": ["sibling"]}
+        # Count complete shoe installations across identical preparations.
+        draws = []
+        # Build a service whose shoe seam records every invocation.
+        service = DragonTigerService(repository=self.repository, ledger_gateway=self.ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, shoe_factory=lambda: draws.append("shoe") or rigged_shoe(), clock=lambda: "2026-08-16T01:00:00Z")
+        # Bind one exact normalized request and its stable identities.
+        wager = {"bet": "dragon", "wager": 2.0}
+        # Derive exact semantic conflict proof once.
+        fingerprint = engine.request_fingerprint(wager["bet"], wager["wager"])
+        # Prepare the same action twice through provider authority.
+        first = service.prepare(player_id="player-a", request_id="prepared-action", round_id=engine.round_id_for("player-a", "prepared-action"), fingerprint=fingerprint, wager=wager)
+        # Repeat without permitting another shoe installation or deal.
+        second = service.prepare(player_id="player-a", request_id="prepared-action", round_id=engine.round_id_for("player-a", "prepared-action"), fingerprint=fingerprint, wager=wager)
+        # Require one deal, identical cards, replay evidence, and sibling preservation.
+        self.assertEqual((["shoe"], "KS", "KS", False, True, ["sibling"]), (draws, first["entropy"]["dragon_card"], second["entropy"]["dragon_card"], first["replayed"], second["replayed"], self.repository.documents["player-a"]["atomic_markers"]))
+        # Keep private dealt cards out of the frozen public state payload.
+        self.assertEqual([], service._payload("player-a")["state"]["recent_rounds"])
 
     # Confirm exact retries do not deal or move balances twice.
     def test_exact_retry_replays_one_debit_and_credit(self):
@@ -255,204 +200,183 @@ class DragonTigerServiceTests(unittest.TestCase):
         first = self.service.play("session-player", {"action_id": "action-001", "bet": "dragon", "wager": 10})
         # Replay identical normalized input.
         second = self.service.play("session-player", {"action_id": "action-001", "bet": "dragon", "wager": 10})
-        # Verify the same public round is returned.
-        self.assertEqual(first["round"], second["round"])
-        # Verify the duplicate is reported as replayed.
-        self.assertTrue(second["replayed"])
-        # Verify one wager and one settlement event exist.
-        self.assertEqual(["DRAGON_TIGER_WAGER_DEBIT", "DRAGON_TIGER_SETTLEMENT_CREDIT"], [event["transaction_type"] for event in self.ledger.events])
-        # Verify the net 1:1 result changed balance by ten.
-        self.assertEqual(1010.0, self.ledger.balances["session-player"])
+        # Verify identical round, explicit replay, two events, and one net win.
+        self.assertEqual((first["round"], True, 2, 1010.0), (second["round"], second["replayed"], len(self.ledger.events), self.ledger.balances["session-player"]))
 
-    # Confirm service response keys remain aligned with the game-owned OpenAPI schemas.
+    # Confirm service response keys remain aligned with frozen OpenAPI schemas.
     def test_round_response_shape_matches_contract(self):
         # Execute one complete deterministic round.
         result = self.service.play("session-player", {"action_id": "action-shape", "bet": "dragon", "wager": 5})
-        # Require exactly the documented round-response data fields.
-        self.assertEqual({"game", "state", "player", "rules", "round", "ledger", "replayed"}, set(result))
-        # Require exactly the documented public state fields.
-        self.assertEqual({"shoe", "recent_rounds"}, set(result["state"]))
-        # Require exactly the documented private-shoe summary fields.
-        self.assertEqual({"shoe_number", "cards_remaining", "shuffle_pending"}, set(result["state"]["shoe"]))
-        # Require exactly the documented immutable rules fields.
-        self.assertEqual({"profile", "deck_count", "burn_count", "cut_cards", "bets"}, set(result["rules"]))
-        # Require exactly the documented settled-round fields.
-        self.assertEqual({"round_id", "action_id", "player_id", "status", "bet", "wager", "dragon_card", "tiger_card", "winner", "outcome", "total_return", "net", "settled_at", "shoe_number"}, set(result["round"]))
-        # Verify returned state already contains the same settled round once.
+        # Require exact top-level, state, shoe, rules, and round key inventories.
+        self.assertEqual(({"game", "state", "player", "rules", "round", "ledger", "replayed"}, {"shoe", "recent_rounds"}, {"shoe_number", "cards_remaining", "shuffle_pending"}, {"profile", "deck_count", "burn_count", "cut_cards", "bets"}, {"round_id", "action_id", "player_id", "status", "bet", "wager", "dragon_card", "tiger_card", "winner", "outcome", "total_return", "net", "settled_at", "shoe_number"}), (set(result), set(result["state"]), set(result["state"]["shoe"]), set(result["rules"]), set(result["round"])))
+        # Require current state to contain the exact settled round once.
         self.assertEqual([result["round"]], result["state"]["recent_rounds"])
 
-    # Confirm simultaneous duplicate requests share one atomic ledger result.
+    # Confirm simultaneous duplicates share one atomic result.
     def test_concurrent_duplicate_replays_one_debit_and_credit(self):
         # Build the identical retry-safe request for both workers.
         request = {"action_id": "action-concurrent", "bet": "dragon", "wager": 10}
-        # Run two callers against the process-local action boundary.
+        # Run two callers against shared helper serialization.
         with ThreadPoolExecutor(max_workers=2) as executor:
-            # Collect both terminal responses after the duplicate race.
+            # Collect both terminal responses.
             results = list(executor.map(lambda _index: self.service.play("session-player", request), range(2)))
-        # Verify one caller committed and the other replayed.
-        self.assertEqual([False, True], sorted(result["replayed"] for result in results))
-        # Verify both callers received the identical public round.
-        self.assertEqual(results[0]["round"], results[1]["round"])
-        # Verify concurrency still produced exactly one debit and one credit.
-        self.assertEqual(2, len(self.ledger.events))
-        # Verify the player received only one net win.
-        self.assertEqual(1010.0, self.ledger.balances["session-player"])
+        # Require one commit, one replay, identical round, and exactly two movements.
+        self.assertEqual(([False, True], results[0]["round"], 2), (sorted(result["replayed"] for result in results), results[1]["round"], len(self.ledger.events)))
 
-    # Confirm idempotency and chronology survive beyond visible-history retention.
+    # Confirm durable action replay survives beyond visible history and provider ledger pruning.
     def test_delayed_replay_uses_durable_action_index_without_reordering_history(self):
-        # Execute one more action than the visible recent-round limit.
+        # Provide enough fake tokens for the complete bounded-history exercise.
+        self.ledger.balances["session-player"] = 1000000.0
+        # Execute one more action than the exact fifty-row visible limit.
         for index in range(engine.RECENT_ROUND_LIMIT + 1):
             # Use a stable unique identity for every settled round.
-            self.service.play("session-player", {"action_id": f"action-history-{index:03d}", "bet": "dragon", "wager": 1})
-        # Snapshot the bounded chronology before replaying the evicted first round.
-        recent_before = copy.deepcopy(self.repository.load("session-player")["recent_rounds"])
-        # Remove the old action's provider events to prove replay no longer depends on a scan horizon.
+            self.service.play("session-player", {"action_id": f"action-history-{index:03d}", "bet": "tiger", "wager": 1})
+        # Snapshot bounded chronology before replaying the evicted first round.
+        recent_before = copy.deepcopy(self.repository.documents["session-player"]["recent_rounds"])
+        # Remove old provider evidence to prove durable state no longer needs a scan horizon.
         old_round_id = engine.round_id_for("session-player", "action-history-000")
-        # Retain only unrelated fake ledger rows.
-        self.ledger.events = [event for event in self.ledger.events if event["round_id"] != old_round_id]
-        # Snapshot balance and surviving event count before delayed replay.
+        # Delete only fake old-round ledger rows.
+        self.ledger.events = {key: event for key, event in self.ledger.events.items() if event["round_id"] != old_round_id}
+        # Snapshot wallet and event count before delayed replay.
         before = (self.ledger.balances["session-player"], len(self.ledger.events))
-        # Replay the first action after it has left visible history and provider evidence.
-        replay = self.service.play("session-player", {"action_id": "action-history-000", "bet": "dragon", "wager": 1})
-        # Verify durable state still returns the original action safely.
-        self.assertTrue(replay["replayed"])
-        # Verify the old action did not become the newest visible round.
-        self.assertEqual(recent_before, self.repository.load("session-player")["recent_rounds"])
-        # Verify delayed replay made no wallet movement or new ledger event.
-        self.assertEqual(before, (self.ledger.balances["session-player"], len(self.ledger.events)))
-        # Verify durable state retained original wager evidence for the response.
-        self.assertEqual(old_round_id, replay["ledger"]["wager"]["round_id"])
+        # Replay the first action after visible history and provider proof eviction.
+        replay = self.service.play("session-player", {"action_id": "action-history-000", "bet": "tiger", "wager": 1})
+        # Require durable replay without chronology or money movement changes.
+        self.assertEqual((True, old_round_id, recent_before, before), (replay["replayed"], replay["ledger"]["wager"]["round_id"], self.repository.documents["session-player"]["recent_rounds"], (self.ledger.balances["session-player"], len(self.ledger.events))))
 
     # Confirm one action identity cannot represent another bet.
     def test_conflicting_retry_fails_closed(self):
         # Commit one Dragon request.
         self.service.play("session-player", {"action_id": "action-002", "bet": "dragon", "wager": 2})
-        # Reject the same action identity with Tiger input.
+        # Reject the same action identity with Tiger meaning.
         with self.assertRaises(ConflictError):
             # Exercise semantic fingerprint conflict handling.
             self.service.play("session-player", {"action_id": "action-002", "bet": "tiger", "wager": 2})
-        # Verify conflict did not add ledger events.
+        # Require no extra movement on conflict.
         self.assertEqual(2, len(self.ledger.events))
 
-    # Confirm retry recovers a debit committed before its marker save.
-    def test_post_debit_save_failure_recovers_without_duplicate(self):
-        # Fail the canonical prepared-state save after the debit.
-        self.repository.fail_on.add(3)
-        # Observe the simulated interruption.
-        with self.assertRaises(RuntimeError):
-            # Begin one winning round.
-            self.service.play("session-player", {"action_id": "action-003", "bet": "dragon", "wager": 4})
-        # Verify only the wager committed before the interruption.
-        self.assertEqual(1, len(self.ledger.events))
-        # Retry from persisted prepared cards and ledger proof.
-        recovered = self.service.play("session-player", {"action_id": "action-003", "bet": "dragon", "wager": 4})
-        # Verify recovery is explicit.
-        self.assertTrue(recovered["replayed"])
-        # Verify exactly one debit and one credit remain.
-        self.assertEqual(2, len(self.ledger.events))
+    # Confirm definitive pre-commit wager failure restores shoe state.
+    def test_precommit_wager_failure_restores_shoe_and_preparation(self):
+        # Arm one rejection before the wager action becomes immutable.
+        self.ledger.fail_before.add("wager")
+        # Preserve the exact default state expected after rollback.
+        expected = engine.default_state()
+        # Surface the original provider failure.
+        with self.assertRaisesRegex(RuntimeError, "pre-commit"):
+            # Attempt one valid round whose deal must be rolled back.
+            self.service.play("session-player", {"action_id": "precommit-action", "bet": "dragon", "wager": 2})
+        # Require no money, shoe, preparation, or history mutation.
+        self.assertEqual((expected, {}, 1000.0), (self.repository.documents["session-player"], self.ledger.events, self.ledger.balances["session-player"]))
 
-    # Confirm retry recovers a credit committed before terminal state save.
-    def test_post_credit_save_failure_recovers_without_duplicate(self):
-        # Fail the terminal save after wager and settlement proof.
-        self.repository.fail_on.add(5)
-        # Observe the simulated interruption.
-        with self.assertRaises(RuntimeError):
-            # Begin one winning round.
-            self.service.play("session-player", {"action_id": "action-004", "bet": "dragon", "wager": 6})
-        # Verify both required movements committed once.
-        self.assertEqual(2, len(self.ledger.events))
-        # Retry from canonical prepared state and both ledger proofs.
-        recovered = self.service.play("session-player", {"action_id": "action-004", "bet": "dragon", "wager": 6})
-        # Verify recovery is explicit.
-        self.assertTrue(recovered["replayed"])
-        # Verify no third ledger event was created.
-        self.assertEqual(2, len(self.ledger.events))
+    # Confirm a lost wager response retains committed cards for recovery.
+    def test_lost_wager_response_recovers_exact_committed_result(self):
+        # Arm one response loss after debit evidence publication.
+        self.ledger.fail_after.add("wager")
+        # Execute a round whose first response is lost.
+        with self.assertRaisesRegex(RuntimeError, "lost ledger response"):
+            # Preserve original transport-style error for caller retry.
+            self.service.play("session-player", {"action_id": "lost-wager-action", "bet": "dragon", "wager": 2})
+        # Require prepared cards and exactly one immutable debit.
+        self.assertEqual(("KS", 1), (self.repository.documents["session-player"]["prepared_actions"]["lost-wager-action"]["dragon_card"], len(self.ledger.events)))
+        # Recover with a shoe that would visibly differ if redrawn.
+        recovering = DragonTigerService(repository=self.repository, ledger_gateway=self.ledger, player_reader=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, shoe_factory=lambda: rigged_shoe("2S", "AH"), clock=lambda: "later")
+        # Retry the exact public action once.
+        result = recovering.play("session-player", {"action_id": "lost-wager-action", "bet": "dragon", "wager": 2})
+        # Require original cards, replay evidence, and only one debit plus credit.
+        self.assertEqual(("KS", True, 2), (result["round"]["dragon_card"], result["replayed"], len(self.ledger.events)))
+
+    # Confirm a lost settlement response recovers one immutable credit.
+    def test_lost_settlement_response_recovers_without_duplicate_credit(self):
+        # Arm one response loss after positive credit publication.
+        self.ledger.fail_after.add("settlement")
+        # Execute one deterministic Dragon win.
+        with self.assertRaisesRegex(RuntimeError, "lost ledger response"):
+            # Preserve first failed response while both events stay durable.
+            self.service.play("session-player", {"action_id": "lost-credit-action", "bet": "dragon", "wager": 2})
+        # Retry identical action to reconstruct terminal state and response.
+        result = self.service.play("session-player", {"action_id": "lost-credit-action", "bet": "dragon", "wager": 2})
+        # Require one terminal round, explicit replay, and exactly two events.
+        self.assertEqual((4.0, True, 2, 1), (result["round"]["total_return"], result["replayed"], len(self.ledger.events), len(result["state"]["recent_rounds"])))
+
+    # Confirm every durable lifecycle write can lose its response and recover once.
+    def test_provider_write_crash_boundaries_converge(self):
+        # Name provider states after debit, result, credit, finalization, and archival.
+        boundaries = {
+            "post-debit": lambda state: state.get("prepared_actions", {}).get("post-debit", {}).get("status") == "wager_committed",
+            "post-result": lambda state: state.get("prepared_actions", {}).get("post-result", {}).get("status") == "settlement_attempting" and "settlement_ledger" not in state["prepared_actions"]["post-result"],
+            "post-credit": lambda state: bool(state.get("prepared_actions", {}).get("post-credit", {}).get("settlement_ledger")),
+            "post-finalize": lambda state: state.get("prepared_actions", {}).get("post-finalize", {}).get("status") == "settled",
+            "post-archive": lambda state: "post-archive" in state.get("settled_actions", {}) and "post-archive" not in state.get("prepared_actions", {}),
+        }
+        # Exercise every durable boundary independently.
+        for boundary, predicate in boundaries.items():
+            # Label failures by exact crash schedule.
+            with self.subTest(boundary=boundary):
+                # Create isolated provider and ledger authority.
+                repository, ledger = PersistThenFailRepository(predicate), FakeLedgerGateway({"player-a": 100.0})
+                # Build one deterministic service for the selected schedule.
+                service = DragonTigerService(repository=repository, ledger_gateway=ledger, shoe_factory=lambda: rigged_shoe(), clock=lambda: "2026-08-16T01:00:00Z", player_reader=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]})
+                # Require the selected persisted transition to lose its response.
+                with self.assertRaisesRegex(RuntimeError, "lost provider response"):
+                    # Execute one stable action identity per isolated schedule.
+                    service.play("player-a", {"action_id": boundary, "bet": "dragon", "wager": 1})
+                # Resume with cards that would reveal an illegal redraw.
+                recovering = DragonTigerService(repository=repository, ledger_gateway=ledger, shoe_factory=lambda: rigged_shoe("2S", "AH"), clock=lambda: "later", player_reader=lambda player_id: {"player_id": player_id, "balance": ledger.balances[player_id]})
+                # Recover the exact interrupted public action.
+                result = recovering.play("player-a", {"action_id": boundary, "bet": "dragon", "wager": 1})
+                # Require original cards, one row, no private action, and no duplicate money.
+                self.assertEqual(("KS", 1, False, 2), (result["round"]["dragon_card"], len(repository.documents["player-a"]["recent_rounds"]), boundary in repository.documents["player-a"]["prepared_actions"], len(ledger.events)))
+
+    # Confirm a historical debit proof recovers without canonical helper fields or shoe consumption.
+    def test_legacy_debit_proof_recovery_preserves_empty_shoe(self):
+        # Define stable historical request and normalized meaning.
+        request = {"action_id": "legacy-proof", "bet": "dragon", "wager": 1}
+        # Derive established round and request fingerprint.
+        round_id = engine.round_id_for("player-a", request["action_id"])
+        # Bind immutable semantic identity once.
+        fingerprint = engine.request_fingerprint(request["bet"], request["wager"])
+        # Build historical proof fields without canonical entropy or request_id.
+        details = {"action_id": request["action_id"], "request_fingerprint": fingerprint, "bet": "dragon", "wager": 1.0, "dragon_card": "KS", "tiger_card": "QH", "winner": "dragon", "outcome": "win", "total_return": 2.0, "net": 1.0, "created_at": "2026-07-14T00:00:00Z", "shoe_number": 0, "profile": engine.PROFILE_ID}
+        # Commit the pre-migration debit exactly once.
+        self.ledger.apply_once(player_id="player-a", amount=-1.0, transaction_type="DRAGON_TIGER_WAGER_DEBIT", round_id=round_id, action_key=f"{round_id}:wager", request_fingerprint=fingerprint, details=details)
+        # Recover through ordinary service with a shoe seam that must remain unused.
+        recovering = DragonTigerService(repository=self.repository, ledger_gateway=self.ledger, shoe_factory=lambda: (_ for _ in ()).throw(AssertionError("ledger-only recovery consumed a shoe")), clock=lambda: "later", player_reader=lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]})
+        # Recover the historical action through frozen public input.
+        result = recovering.play("player-a", request)
+        # Require committed cards/time, replay, one new credit, empty shoe, and no visible history promotion.
+        self.assertEqual(("KS", "2026-07-14T00:00:00Z", True, 2, [], 0), (result["round"]["dragon_card"], result["round"]["settled_at"], result["replayed"], len(self.ledger.events), result["state"]["recent_rounds"], result["state"]["shoe"]["cards_remaining"]))
+
+    # Confirm terminal history stays direct, oldest-to-newest, and bounded to fifty.
+    def test_history_retains_newest_fifty_direct_rounds(self):
+        # Give fake wallet enough tokens for complete history exercise.
+        self.ledger.balances["session-player"] = 1000000.0
+        # Publish five more rounds than exact game history bound.
+        for index in range(engine.RECENT_ROUND_LIMIT + 5):
+            # Use one stable caller identity per completed action.
+            self.service.play("session-player", {"action_id": f"history-{index:03d}", "bet": "tiger", "wager": 1})
+        # Read exact direct provider rows after bounded archival.
+        state = self.repository.documents["session-player"]
+        # Require newest fifty visible, every durable action, and no helper wrapper leakage.
+        self.assertEqual((50, "history-005", "history-054", 55, False), (len(state["recent_rounds"]), state["recent_rounds"][0]["action_id"], state["recent_rounds"][-1]["action_id"], len(state["settled_actions"]), any("public" in row for row in state["recent_rounds"])))
 
     # Confirm losing rounds create no zero-value settlement credit.
     def test_loss_uses_one_debit_and_no_credit(self):
-        # Bet Tiger against the deterministic Dragon-winning cards.
-        result = self.service.play("session-player", {"action_id": "action-005", "bet": "tiger", "wager": 3})
-        # Verify the public loss classification.
-        self.assertEqual("loss", result["round"]["outcome"])
-        # Verify only the wager event exists.
-        self.assertEqual(1, len(self.ledger.events))
-        # Verify the settlement proof is explicitly absent.
-        self.assertIsNone(result["ledger"]["settlement"])
+        # Bet Tiger against deterministic Dragon-winning cards.
+        result = self.service.play("session-player", {"action_id": "action-loss", "bet": "tiger", "wager": 3})
+        # Require loss, absent settlement proof, and only one debit.
+        self.assertEqual(("loss", None, 1), (result["round"]["outcome"], result["ledger"]["settlement"], len(self.ledger.events)))
 
-    # Confirm rejected wagers restore the private shoe and prepared state.
-    def test_insufficient_funds_rolls_back_uncommitted_action(self):
-        # Lower the authenticated player's balance below the requested wager.
-        self.ledger.balances["session-player"] = 1.0
-        # Snapshot the state expected after a rejected debit.
-        initial_state = engine.default_state()
-        # Reject the wager at the shared ledger boundary.
-        with self.assertRaises(InsufficientFundsError):
-            # Attempt one otherwise valid deterministic action.
-            self.service.play("session-player", {"action_id": "action-insufficient", "bet": "dragon", "wager": 2})
-        # Verify no wallet movement survived the rejection.
-        self.assertEqual([], self.ledger.events)
-        # Verify the failed action did not consume shoe cards or persist a marker.
-        self.assertEqual(initial_state, self.repository.load("session-player"))
-        # Verify the unchanged wallet remains authoritative.
-        self.assertEqual(1.0, self.ledger.balances["session-player"])
-
-    # Confirm an ambiguous debit gap blocks retry instead of charging twice.
-    def test_missing_wager_evidence_fails_closed_without_second_debit(self):
-        # Derive the exact player-scoped wager action key.
-        round_id = engine.round_id_for("session-player", "action-gap-wager")
-        # Fail after balance mutation but before fake evidence append.
-        self.ledger.fail_without_event.add(f"{round_id}:wager")
-        # Observe the simulated shared-provider ambiguity.
-        with self.assertRaises(RuntimeError):
-            # Start one otherwise valid winning request.
-            self.service.play("session-player", {"action_id": "action-gap-wager", "bet": "dragon", "wager": 10})
-        # Verify the first hidden movement changed balance without evidence.
-        self.assertEqual(990.0, self.ledger.balances["session-player"])
-        # Verify no append-only event can prove the outcome.
-        self.assertEqual([], self.ledger.events)
-        # Verify the durable pre-movement marker survived for safe recovery.
-        self.assertEqual("wager_attempting", self.repository.load("session-player")["prepared_actions"]["action-gap-wager"]["status"])
-        # Fail closed rather than repeating the possibly completed debit.
-        with self.assertRaises(ConflictError):
-            # Retry the identical public action.
-            self.service.play("session-player", {"action_id": "action-gap-wager", "bet": "dragon", "wager": 10})
-        # Verify retry neither moved balance nor invented evidence.
-        self.assertEqual((990.0, 0), (self.ledger.balances["session-player"], len(self.ledger.events)))
-
-    # Confirm an ambiguous settlement gap blocks retry instead of crediting twice.
-    def test_missing_settlement_evidence_fails_closed_without_second_credit(self):
-        # Derive the exact player-scoped settlement action key.
-        round_id = engine.round_id_for("session-player", "action-gap-credit")
-        # Fail after crediting balance but before fake evidence append.
-        self.ledger.fail_without_event.add(f"{round_id}:settlement")
-        # Observe the simulated shared-provider ambiguity.
-        with self.assertRaises(RuntimeError):
-            # Start one deterministic Dragon win.
-            self.service.play("session-player", {"action_id": "action-gap-credit", "bet": "dragon", "wager": 10})
-        # Verify debit and hidden credit produced the correct one-round balance.
-        self.assertEqual(1010.0, self.ledger.balances["session-player"])
-        # Verify only the durable wager event exists.
-        self.assertEqual(["DRAGON_TIGER_WAGER_DEBIT"], [event["transaction_type"] for event in self.ledger.events])
-        # Verify the durable pre-credit marker survived for safe recovery.
-        self.assertEqual("settlement_attempting", self.repository.load("session-player")["prepared_actions"]["action-gap-credit"]["status"])
-        # Fail closed rather than repeating the possibly completed credit.
-        with self.assertRaises(ConflictError):
-            # Retry the identical public action.
-            self.service.play("session-player", {"action_id": "action-gap-credit", "bet": "dragon", "wager": 10})
-        # Verify retry neither moved balance nor appended another event.
-        self.assertEqual((1010.0, 1), (self.ledger.balances["session-player"], len(self.ledger.events)))
-
-    # Confirm runtime validation matches the strict additive OpenAPI request schema.
+    # Confirm runtime validation matches the strict frozen request schema.
     def test_round_request_rejects_contract_drift(self):
-        # Define malformed cases that older coercive parsing could have accepted.
+        # Define malformed cases that coercive parsing could accept.
         invalid_requests = [
-            {"action_id": " action-007", "bet": "dragon", "wager": 1},  # Reject trimmed action identities.
-            {"action_id": "action-007", "bet": "Dragon", "wager": 1},  # Reject non-enum bet casing.
-            {"action_id": "action-007", "bet": "dragon", "wager": "1"},  # Reject numeric strings.
-            {"action_id": "action-007", "bet": "dragon", "wager": 1.001},  # Reject non-cent precision.
-            {"action_id": "action-007", "bet": "dragon", "wager": 1, "debug": True},  # Reject extra fields.
+            {"action_id": " action-007", "bet": "dragon", "wager": 1},
+            {"action_id": "action-007", "bet": "Dragon", "wager": 1},
+            {"action_id": "action-007", "bet": "dragon", "wager": "1"},
+            {"action_id": "action-007", "bet": "dragon", "wager": 1.001},
+            {"action_id": "action-007", "bet": "dragon", "wager": 1, "debug": True},
         ]
-        # Verify every malformed contract shape fails before state or ledger mutation.
+        # Verify every malformed shape fails before money movement.
         for request in invalid_requests:
             # Identify each failing input independently.
             with self.subTest(request=request):
@@ -460,8 +384,17 @@ class DragonTigerServiceTests(unittest.TestCase):
                 with self.assertRaises(ValidationError):
                     # Exercise the complete service boundary.
                     self.service.play("session-player", request)
-        # Verify strict rejections never touched the wallet.
-        self.assertEqual([], self.ledger.events)
+        # Require strict rejection to leave ledger empty.
+        self.assertEqual({}, self.ledger.events)
+
+    # Confirm source topology contains only one shared money coordinator.
+    def test_service_source_uses_one_shared_coordinator(self):
+        # Resolve exact service bytes from this checkout.
+        source = Path(__file__).resolve().parents[3] / "casino" / "games" / "dragon_tiger" / "service.py"
+        # Read source inspected by central governance.
+        text = source.read_text(encoding="utf-8")
+        # Require one helper construction and no legacy settlement aliases or locks.
+        self.assertEqual((1, False, False, False, False, False), (text.count("SimpleWagerGame("), "GameSettlementGateway" in text, "CoreLedgerGateway" in text, ".apply_once(" in text, "_ACTION_LOCK" in text, "_ATOMIC_BASELINE_KEY" in text))
 
 
 # Provide a route fake that records resolved players.
@@ -493,35 +426,29 @@ class DragonTigerApiTests(unittest.TestCase):
     # Confirm hostile caller IDs cannot override authenticated ownership.
     def test_bound_player_overrides_body_and_query_ids(self):
         # Create a focused router and recording service.
-        router = Router()
-        # Register only Dragon Tiger routes.
-        recording = RecordingService()
+        router, recording = Router(), RecordingService()
         # Attach injected route handlers.
         api.register(router, service=recording)
-        # Build the authenticated request context.
+        # Build authenticated request context.
         context = {"bound_player_id": "session-player", "user": {"player_id": "session-player"}}
-        # Dispatch a state request with a hostile query identity.
+        # Dispatch state with hostile query identity.
         router.dispatch("GET", "/api/v1/games/dragon-tiger/state?player_id=attacker", {}, context=dict(context))
-        # Dispatch a round request with a hostile body identity.
+        # Dispatch round with hostile body identity.
         router.dispatch("POST", "/api/v1/games/dragon-tiger/rounds", {"player_id": "attacker", "action_id": "action-006", "bet": "dragon", "wager": 1}, context=dict(context))
-        # Verify both handlers received only the bound player.
-        self.assertEqual(["session-player"], recording.state_players)
-        # Verify the action also received only the bound player.
-        self.assertEqual("session-player", recording.play_calls[0][0])
+        # Require both handlers to receive only bound player identity.
+        self.assertEqual((["session-player"], "session-player"), (recording.state_players, recording.play_calls[0][0]))
 
-    # Confirm authenticated Admin identity also overrides compatibility inputs.
+    # Confirm authenticated Admin identity overrides compatibility input.
     def test_admin_player_overrides_body_and_resolver_ids(self):
-        # Create a focused router and recording service.
-        router = Router()
-        # Register only Dragon Tiger routes.
-        recording = RecordingService()
+        # Create focused router and recording service.
+        router, recording = Router(), RecordingService()
         # Attach injected route handlers.
         api.register(router, service=recording)
-        # Build an authenticated Admin-like context without a non-Admin binding.
+        # Build authenticated Admin-like context without non-Admin binding.
         context = {"user": {"player_id": "admin-player", "role": "admin", "status": "active"}}
-        # Dispatch a hostile body identity through the shared compatibility resolver.
+        # Dispatch hostile body identity through compatibility resolver.
         router.dispatch("POST", "/api/v1/games/dragon-tiger/rounds", {"player_id": "victim-player", "action_id": "action-admin", "bet": "dragon", "wager": 1}, context=dict(context))
-        # Verify the game-local boundary restored the authenticated Admin's player.
+        # Require game boundary to restore authenticated Admin player.
         self.assertEqual("admin-player", recording.play_calls[0][0])
 
 

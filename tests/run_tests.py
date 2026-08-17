@@ -1603,7 +1603,7 @@ def run_api_tests():
     # Execute fresh-process Double Bonus terminal ordering plus sibling-state and recovery proof. (issue #830)
     run_case('API-DBVP-ATOMIC-001',['DBVP-003','TEST-219'],lambda: run_unit_module('tests.games.double_bonus_video_poker.test_atomic_state','Double Bonus atomic state suite failed'))
     # Execute fresh-process Dragon Tiger terminal ordering plus sibling-state and recovery proof. (issue #833)
-    run_case('API-DT-ATOMIC-001',['DT-006','TEST-221'],lambda: run_unit_module('tests.games.dragon_tiger.test_atomic_state','Dragon Tiger atomic state suite failed'))
+    run_case('API-DT-ATOMIC-001',['DT-006','DT-007','GAMECORE-007','TEST-221','TEST-240'],lambda: (run_unit_module('tests.games.dragon_tiger.test_api','Dragon Tiger lifecycle and shared-helper suite failed'),run_unit_module('tests.games.dragon_tiger.test_atomic_state','Dragon Tiger atomic preparation suite failed')))
     # Execute fresh-process Joker Poker terminal ordering plus sibling-state and recovery proof. (issue #835)
     run_case('API-JP-ATOMIC-001',['JP-006','TEST-222'],lambda: run_unit_module('tests.games.joker_poker.test_atomic_state','Joker Poker atomic state suite failed'))
     # Prove Hi-Lo stale terminal guesses publish through one provider-owned state boundary.
@@ -1982,7 +1982,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
-    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','GAMECORE-007','TEST-127','TEST-235','TEST-236','TEST-237','TEST-238','TEST-239'],run_simple_game_core_tests)
+    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','GAMECORE-007','TEST-127','TEST-235','TEST-236','TEST-237','TEST-238','TEST-239','TEST-240'],run_simple_game_core_tests)
     # Execute the shared helper's real cross-process provider-current publication proof.
     def run_simple_game_atomic_tests():
         # Import the dedicated fresh-process suite only when its named case runs.
@@ -1996,7 +1996,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('simple-game provider-atomic suite failed')
     # Record provider-current merge, fresh-process concurrency, and complete catalog adoption evidence.
-    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','GAMECORE-007','TEST-233','TEST-234','TEST-235','TEST-236','TEST-237','TEST-238','TEST-239'],run_simple_game_atomic_tests)
+    run_case('API-GAMECORE-005',['GAMECORE-005','GAMECORE-006','GAMECORE-007','TEST-233','TEST-234','TEST-235','TEST-236','TEST-237','TEST-238','TEST-239','TEST-240'],run_simple_game_atomic_tests)
     # Execute the route-free signed-action settlement-adapter proof without opening a listener.
     def run_settlement_adapter_tests():
         # Load only the focused storage-atomic adapter class.
@@ -3268,7 +3268,7 @@ def run_api_tests():
         # Record Red Dog session, ledger, conflict, and retry coverage under its permanent test id.
         run_case('API-RD-001',['RD-001','RD-002','RD-003'],lambda: assert_condition(integrity_state['red_dog_verified'],'Red Dog integration evidence missing'))
         # Record Dragon Tiger session, ledger, conflict, and retry coverage under its permanent test id.
-        run_case('API-DT-001',['DT-001','DT-002','DT-003'],lambda: assert_condition(integrity_state['dragon_tiger_verified'],'Dragon Tiger integration evidence missing'))
+        run_case('API-DT-001',['DT-001','DT-002','DT-003','DT-007'],lambda: assert_condition(integrity_state['dragon_tiger_verified'],'Dragon Tiger integration evidence missing'))
         # Record Hi-Lo session, ledger, conflict, and retry coverage under its permanent test id.
         run_case('API-HILO-001',['HILO-001','HILO-002','HILO-003'],lambda: assert_condition(integrity_state['hi_lo_verified'],'Hi-Lo integration evidence missing'))
         # Build one reusable evidence predicate proving both players hold distinct server-issued ids for a game. (issue #414)
