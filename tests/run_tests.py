@@ -66,6 +66,8 @@ from tests import browser_sharding
 from tests import api_case_inventory
 # Import listener-free atomic game-state registration ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import game_atomic as api_game_atomic
+# Import listener-free storage and settlement integrity ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import money_integrity as api_money_integrity
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -1356,14 +1358,8 @@ def run_api_tests():
     api_governance.run_cases(run_case,run_unit_module,ROOT)
     # Delegate the complete listener-free atomic game-state area at its historical point. (TEST-242)
     api_game_atomic.run_cases(run_case,run_unit_module)
-    # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
-    run_case('STORAGE-LEDGER-CACHE-001',['LEDGER-034','STORAGE-009','TEST-135','TEST-169'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache, action journal, and bootstrap race suite failed'))
-    # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
-    run_case('API-LEGACY-SETTLE-001',['LEDGER-030','SEC-012'],lambda: run_unit_module('tests.legacy_settlement_tests','blackjack and baccarat settlement suite failed'))
-    # Record the roulette and keno exactly-once settlement, layout, and entropy proof. (issues #403, #222, #420)
-    run_case('API-LEGACY-SETTLE-002',['LEDGER-030','ROU-071','SEC-012'],lambda: run_unit_module('tests.roulette_keno_settlement_tests','roulette and keno settlement suite failed'))
-    # Record the competitive bounded bingo economics proof. (issue #405)
-    run_case('API-BINGO-ECONOMICS-001',['BINGO-025','BINGO-026'],lambda: run_unit_module('tests.bingo_economics_tests','bingo economics suite failed'))
+    # Delegate the complete listener-free money-integrity area at its historical point. (TEST-242)
+    api_money_integrity.run_cases(run_case,run_unit_module)
     # Record recursive nested/legacy Admin state discovery and empty-state safety. (ADMIN-029, TEST-145)
     run_case('API-ADMIN-GAME-STATES-001',['ADMIN-029','TEST-145'],lambda: run_unit_module('tests.admin_game_states_tests.AdminGameStatesTests','Admin diagnostics suite failed'))
     # Record bounded payout-rate arithmetic, exclusion, malformed-row, and detail evidence. (ADMIN-030, TEST-146)
