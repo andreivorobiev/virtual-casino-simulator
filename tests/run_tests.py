@@ -78,6 +78,8 @@ from tests.cases.api import self_service_foundation as api_self_service_foundati
 from tests.cases.api import specialized_game_acceptance as api_specialized_game_acceptance
 # Import listener-free player-foundation ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import player_foundation as api_player_foundation
+# Import listener-free catalog-expansion ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import catalog_expansion as api_catalog_expansion
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -1483,162 +1485,8 @@ def run_api_tests():
             raise AssertionError('mobile core security suite failed')
     # Record the additive native transport, session, lifecycle, deep-link, and source-policy proof.
     run_case('API-MOBILE-CORE-001',['CORE-032','AUTH-019','SEC-016','SESSION-013','TEST-172'],run_mobile_core_security_tests)
-    # Execute the Color Wheel rules and settlement proof without opening a listener.
-    def run_color_wheel_tests():
-        # Load only the focused Color Wheel class.
-        from tests import color_wheel_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(color_wheel_tests.ColorWheelTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Color Wheel proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('color wheel suite failed')
-    # Record the listener-free Color Wheel payout, retry, and house-edge proof.
-    run_case('API-COLOR-WHEEL-001',['CWHEEL-001','CWHEEL-002','TEST-128'],run_color_wheel_tests)
-    # Execute the Poker Dice rules and settlement proof without opening a listener.
-    def run_poker_dice_tests():
-        # Load only the focused Poker Dice class.
-        from tests import poker_dice_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(poker_dice_tests.PokerDiceTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Poker Dice proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('poker dice suite failed')
-    # Record the listener-free Poker Dice payout, retry, and house-edge proof.
-    run_case('API-POKER-DICE-001',['PDICE-001','PDICE-002','TEST-129'],run_poker_dice_tests)
-    # Execute the Boule rules and settlement proof without opening a listener.
-    def run_boule_tests():
-        # Load only the focused Boule class.
-        from tests import boule_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(boule_tests.BouleTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Boule proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('boule suite failed')
-    # Record the listener-free Boule payout, house-number, retry, and house-edge proof.
-    run_case('API-BOULE-001',['BOULE-001','BOULE-002','TEST-130'],run_boule_tests)
-    # Execute the Faro rules and settlement proof without opening a listener.
-    def run_faro_tests():
-        # Load only the focused Faro class.
-        from tests.games.faro import test_api as faro_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(faro_tests.FaroTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Faro proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('faro suite failed')
-    # Record the listener-free Faro win, lose, push, split, retry, and house-edge proof.
-    run_case('API-FARO-001',['FARO-001','FARO-002','TEST-131'],run_faro_tests)
-    # Execute the Trente et Quarante rules and settlement proof without opening a listener.
-    def run_trente_et_quarante_tests():
-        # Load only the focused Trente et Quarante class.
-        from tests.games.trente_et_quarante import test_api as trente_et_quarante_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(trente_et_quarante_tests.TrenteEtQuaranteTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Trente et Quarante proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('trente et quarante suite failed')
-    # Record the listener-free Trente et Quarante row, colour, refait, push, retry, and house-edge proof.
-    run_case('API-TRENTE-ET-QUARANTE-001',['TEQ-001','TEQ-002','TEST-119'],run_trente_et_quarante_tests)
-    # Execute the Pachinko rules and settlement proof without opening a listener.
-    def run_pachinko_tests():
-        # Load only the focused Pachinko class.
-        from tests.games.pachinko import test_api as pachinko_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(pachinko_tests.PachinkoTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Pachinko proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('pachinko suite failed')
-    # Record the listener-free Pachinko pocket, push, retry, and house-edge proof.
-    run_case('API-PACHINKO-001',['PACH-001','PACH-002','TEST-120'],run_pachinko_tests)
-    # Execute the Coin Pusher rules and settlement proof without opening a listener.
-    def run_coin_pusher_tests():
-        # Load only the focused Coin Pusher class.
-        from tests import coin_pusher_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(coin_pusher_tests.CoinPusherTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Coin Pusher proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('coin pusher suite failed')
-    # Record the listener-free Coin Pusher cascade, hold, retry, and house-edge proof.
-    run_case('API-COIN-PUSHER-001',['COINP-001','COINP-002','TEST-121'],run_coin_pusher_tests)
-    # Execute the Marble Race rules and settlement proof without opening a listener.
-    def run_marble_race_tests():
-        # Load only the focused Marble Race class.
-        from tests import marble_race_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(marble_race_tests.MarbleRaceTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Marble Race proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('marble race suite failed')
-    # Record the listener-free Marble Race win, podium, retry, and house-edge proof.
-    run_case('API-MARBLE-RACE-001',['MARBLE-001','MARBLE-002','TEST-122'],run_marble_race_tests)
-    # Execute the Pattern Draw rules and settlement proof without opening a listener.
-    def run_pattern_draw_tests():
-        # Load only the focused Pattern Draw class.
-        from tests import pattern_draw_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(pattern_draw_tests.PatternDrawTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Pattern Draw proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('pattern draw suite failed')
-    # Record the listener-free Pattern Draw line, cross, full, retry, and house-edge proof.
-    run_case('API-PATTERN-DRAW-001',['PATTERN-001','PATTERN-002','TEST-123'],run_pattern_draw_tests)
-    # Execute the Lucky Grid rules and settlement proof without opening a listener.
-    def run_lucky_grid_tests():
-        # Load only the focused Lucky Grid class.
-        from tests import lucky_grid_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(lucky_grid_tests.LuckyGridTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Lucky Grid proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('lucky grid suite failed')
-    # Record the listener-free Lucky Grid match, retry, and house-edge proof.
-    run_case('API-LUCKY-GRID-001',['LGRID-001','LGRID-002','TEST-124'],run_lucky_grid_tests)
-    # Execute the Daily Draw Lab rules and settlement proof without opening a listener.
-    def run_daily_draw_lab_tests():
-        # Load only the focused Daily Draw Lab class.
-        from tests.games.daily_draw_lab import test_api as daily_draw_lab_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(daily_draw_lab_tests.DailyDrawLabTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Daily Draw Lab proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('daily draw lab suite failed')
-    # Record the listener-free Daily Draw Lab pick, hit, retry, and house-edge proof.
-    run_case('API-DAILY-DRAW-LAB-001',['DDLAB-001','DDLAB-002','TEST-125'],run_daily_draw_lab_tests)
-    # Execute the Four Card Poker engine and settlement proof without opening a listener.
-    def run_four_card_poker_tests():
-        # Load only the focused Four Card Poker class.
-        from tests.games.four_card_poker import test_api as four_card_poker_tests
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(four_card_poker_tests.FourCardPokerTests)
-        # Execute the suite with concise in-process reporting.
-        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused Four Card Poker proof failed or errored.
-        if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
-            raise AssertionError('four card poker suite failed')
-    # Record the listener-free Four Card Poker ranking, settlement, replay, recovery, and house-edge proof.
-    run_case('API-FOUR-CARD-POKER-001',['FOURCP-001','FOURCP-002','TEST-126'],run_four_card_poker_tests)
+    # Delegate the listener-free catalog-expansion block at its exact historical point. (TEST-242)
+    api_catalog_expansion.run_cases(run_case)
     # Execute the Keno drawn-ball rail layout regression without opening a listener.
     def run_keno_ball_rail_tests():
         # Load only the focused Keno ball-rail class.
