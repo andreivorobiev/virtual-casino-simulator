@@ -463,10 +463,40 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         delegation = "api_money_integrity.run_cases(run_case,run_unit_module)"
         # Reject missing or duplicated delegation in the compatibility runner.
         self.assertEqual(runner_source.count(delegation), 1)
-        # Preserve the historical boundary after atomic game-state and before Admin diagnostics.
+        # Preserve the historical boundary after atomic game-state and before the Admin policy area.
         self.assertLess(runner_source.index("api_game_atomic.run_cases("), runner_source.index(delegation))
-        # Keep the next inline Admin case after the complete money-integrity area.
-        self.assertLess(runner_source.index(delegation), runner_source.index("API-ADMIN-GAME-STATES-001"))
+        # Keep the next extracted area after the complete money-integrity area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_admin_policy.run_cases("))
+        # Keep process construction and execution in the compatibility runner rather than the area owner.
+        self.assertNotIn("subprocess.run", area_source)
+
+    # Prove the Admin diagnostics and policy registrations moved as one exact ordered area.
+    def test_api_admin_policy_area_registration_ownership_is_exact(self):
+        # Define the reviewed order from state diagnostics through Guest admission policy.
+        expected_ids = (
+            "API-ADMIN-GAME-STATES-001", "API-ADMIN-ECONOMICS-001", "API-ADMIN-SESSION-POLICY-001",
+            "API-ADMIN-RATE-LIMITS-001", "API-GUEST-ADMISSION-001",
+        )
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit Admin policy area module.
+        area_source = (API_CASES_ROOT / "admin_policy.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", area_source))
+        # Require the whole reviewed area to move in its original order.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id in expected_ids:
+            # Reject duplicated ownership that could execute a policy gate twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit area delegation through the established fresh-process helper.
+        delegation = "api_admin_policy.run_cases(run_case,run_unit_module)"
+        # Reject missing or duplicated delegation in the compatibility runner.
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the historical boundary after money integrity and before practice-table escrow.
+        self.assertLess(runner_source.index("api_money_integrity.run_cases("), runner_source.index(delegation))
+        # Keep the next inline practice-table case after the complete Admin policy area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("API-THPT-ESCROW-001"))
         # Keep process construction and execution in the compatibility runner rather than the area owner.
         self.assertNotIn("subprocess.run", area_source)
 
