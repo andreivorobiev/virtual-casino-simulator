@@ -68,6 +68,8 @@ from tests import api_case_inventory
 from tests.cases.api import game_atomic as api_game_atomic
 # Import listener-free storage and settlement integrity ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import money_integrity as api_money_integrity
+# Import listener-free Admin policy ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import admin_policy as api_admin_policy
 # Import the first area-owned API registration group behind the compatibility runner. (TEST-242)
 from tests.cases.api import governance as api_governance
 # Import live Guest/Admin registration ownership while the runner retains server state. (TEST-242)
@@ -1360,16 +1362,8 @@ def run_api_tests():
     api_game_atomic.run_cases(run_case,run_unit_module)
     # Delegate the complete listener-free money-integrity area at its historical point. (TEST-242)
     api_money_integrity.run_cases(run_case,run_unit_module)
-    # Record recursive nested/legacy Admin state discovery and empty-state safety. (ADMIN-029, TEST-145)
-    run_case('API-ADMIN-GAME-STATES-001',['ADMIN-029','TEST-145'],lambda: run_unit_module('tests.admin_game_states_tests.AdminGameStatesTests','Admin diagnostics suite failed'))
-    # Record bounded payout-rate arithmetic, exclusion, malformed-row, and detail evidence. (ADMIN-030, TEST-146)
-    run_case('API-ADMIN-ECONOMICS-001',['ADMIN-030','TEST-146'],lambda: run_unit_module('tests.admin_economics_tests','Admin economics suite failed'))
-    # Record owner-only clamped provider-backed session-policy routes and persistence. (SESSION-009, ADMIN-031, TEST-150)
-    run_case('API-ADMIN-SESSION-POLICY-001',['SESSION-009','SESSION-010','SESSION-011','SESSION-012','ADMIN-031','ADMIN-034','TEST-150','TEST-158'],lambda: run_unit_module('tests.admin_game_states_tests.AdminSessionSettingsTests','Admin session policy suite failed'))
-    # Run the owner-only live rate-policy provider and route contract. (SEC-015, ADMIN-032, TEST-156)
-    run_case('API-ADMIN-RATE-LIMITS-001',['SEC-015','ADMIN-032','TEST-156'],lambda: run_unit_module('tests.admin_game_states_tests.AdminRateLimitSettingsTests','Admin rate-limit policy suite failed'))
-    # Prove 10,000-token guest grants plus owner pause/resume enforcement without restart. (GUEST-001)
-    run_case('API-GUEST-ADMISSION-001',['GUEST-001','GUEST-004','GUEST-005','TEST-080'],lambda: run_unit_module('tests.admin_game_states_tests.AdminGuestTrialSettingsTests','Guest admission policy suite failed'))
+    # Delegate the complete listener-free Admin policy area at its historical point. (TEST-242)
+    api_admin_policy.run_cases(run_case,run_unit_module)
     # Record the practice-table solvency, compensation, and self-heal proof. (issue #411)
     run_case('API-THPT-ESCROW-001',['THPT-006'],lambda: run_unit_module('tests.thpt_escrow_tests','practice-table escrow suite failed'))
     # Execute fresh-process practice-table ordering plus escrow rollback and lost-response recovery. (issue #795)
