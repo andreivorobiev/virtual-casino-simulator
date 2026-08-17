@@ -296,7 +296,7 @@
       "requirement_id": "OU7-001",
       "engine_path": "casino/games/over_under_7/engine.py",
       "settlement_path": "casino/games/over_under_7/service.py",
-      "production_sha256": "29b229923480c45ea348bb004fde3d92c76af5069de2dd0d6aa93ba5323b92b1",
+      "production_sha256": "45305db5b37906df68709b3c607d35dd8755e4179ed6d212a05acff268978db0",
       "proof_tests": ["tests.games.over_under_7.test_engine:OverUnder7EngineTests.test_settlement_profile", "tests.games.over_under_7.test_engine:OverUnder7EngineTests.test_multiple_wagers_disclose_each_row"],
       "rationale": "All three published rows are enumerated over the exact two-die space and remain below fair return."
     },

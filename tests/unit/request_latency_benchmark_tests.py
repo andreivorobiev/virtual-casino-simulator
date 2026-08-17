@@ -1375,8 +1375,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the first two settlement-alias retirement slices to total exactly 1081 permanent rows.
-        self.assertEqual(len(requirements), 1083)
+        # Require the first four settlement-alias retirement slices to total exactly 1085 permanent rows.
+        self.assertEqual(len(requirements), 1085)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1466,6 +1466,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "AB-006": "Andar Bahar",  # Bind every Andar Bahar action-state publication to provider-current callbacks.
             "TEST-211": "Tests",  # Bind real Andar Bahar ordering, rollback, and recovery evidence.
             "OU7-007": "Over/Under 7",  # Bind settled-history publication to provider-current callbacks.
+            "OU7-008": "Over/Under 7",  # Bind prepared settlement orchestration to the shared helper.
             "TEST-212": "Tests",  # Bind real Over/Under 7 ordering, sibling, and recovery evidence.
             "BIG-SIX-007": "Big Six Wheel",  # Bind settled-history publication to provider-current callbacks.
             "TEST-213": "Tests",  # Bind real Big Six Wheel ordering and sibling-state evidence.
@@ -1516,6 +1517,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "SIC-BO-007": "Sic Bo",  # Bind Sic Bo orchestration to one SimpleWagerGame coordinator.
             "TEST-235": "Tests",  # Bind lifecycle, recovery, history, source, and process evidence.
             "TEST-236": "Tests",  # Bind Chuck-a-Luck lifecycle, recovery, history, and process evidence.
+            "TEST-237": "Tests",  # Bind Over/Under 7 lifecycle, recovery, history, and process evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
