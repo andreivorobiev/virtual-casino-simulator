@@ -386,6 +386,51 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Preserve sorted immutable identities on successful validation.
             self.assertEqual(api_case_inventory.validate_api_case_inventory(current, inventory_path), current)
 
+    # Prove harness-foundation registrations moved as one exact listener-free area.
+    def test_api_harness_foundation_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed cases and requirement mappings in historical order.
+        expected_cases = (
+            ("REQUEST-LATENCY-UNIT-001", ["TEST-148"]),
+            ("BROWSER-138-HARNESS-001", ["AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-039", "TEST-042", "TEST-142", "CORE-021"]),
+            ("UI-50000-HARNESS-001", ["TEST-042", "TEST-047", "TEST-092"]),
+            ("MONEY-NONFINITE-UNIT-001", ["CORE-025", "LEDGER-027", "MHVP-006", "TEST-055"]),
+            ("API-GUEST-TEARDOWN-LEDGER-001", ["LEDGER-035", "AUTH-020", "LEDGER-037", "TEST-188", "TEST-194"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "harness_foundation.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the registration owner so callbacks can be inspected without execution.
+        spec = importlib.util.spec_from_file_location("harness_foundation_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture exact registration identity without running any focused suite.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Preserve all ownership dimensions for one fail-closed equality proof.
+            captured.append((case_id, requirements, callback.__name__))
+        module.run_cases(capture)
+        # Bind permanent IDs, requirement mappings, order, and focused callback ownership.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        self.assertEqual(tuple(callback for _, _, callback in captured), (
+            "_run_request_latency_unit_tests", "_run_concurrent_browser_138_harness_tests",
+            "_run_ui_50000_harness_tests", "_run_nonfinite_money_unit_tests",
+            "_run_guest_teardown_ledger_tests",
+        ))
+        # Reject duplicate registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation after inventory validation and before runner process helpers.
+        delegation = "api_harness_foundation.run_cases(run_case)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        self.assertLess(runner_source.index("validate_api_case_inventory(current_api_case_ids,API_CASE_INVENTORY_PATH)"), runner_source.index(delegation))
+        self.assertLess(runner_source.index(delegation), runner_source.index("def run_unit_module"))
+        # Keep process, listener, and server lifecycle out of the extracted owner.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
+        self.assertNotIn("start_server", area_source)
+
     # Prove the first API area moved as one exact registration group without duplication in the shim.
     def test_api_governance_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.

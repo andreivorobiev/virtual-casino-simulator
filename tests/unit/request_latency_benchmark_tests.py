@@ -1307,8 +1307,14 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_run_tests_keeps_benchmark_behind_explicit_selector(self) -> None:
         # Read the central runner as policy.
         source = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
-        # Require ordinary API registration of only the listener-free unit case.
-        self.assertIn("REQUEST-LATENCY-UNIT-001", source)
+        # Read the extracted harness-foundation owner without executing its focused suites.
+        harness_source = (ROOT / "tests" / "cases" / "api" / "harness_foundation.py").read_text(encoding="utf-8")
+        # Require ordinary API registration of only the listener-free unit case in its area owner.
+        self.assertIn("REQUEST-LATENCY-UNIT-001", harness_source)
+        # Reject duplicate literal ownership in the compatibility runner.
+        self.assertNotIn("run_case('REQUEST-LATENCY-UNIT-001'", source)
+        # Require one delegation before the runner's explicit benchmark selector remains available.
+        self.assertEqual(source.count("api_harness_foundation.run_cases(run_case)"), 1)
         # Require the explicit provider selector.
         self.assertIn("ap.add_argument('--request-latency',choices=('json','mysql'),default=None)", source)
         # Require the explicit output selector.
