@@ -70,6 +70,8 @@ from tests.cases.api import admin_policy as api_admin_policy
 from tests.cases.api import game_lifecycle as api_game_lifecycle
 # Import listener-free delivery-infrastructure ownership behind the compatibility runner. (TEST-242)
 from tests.cases.api import delivery_infrastructure as api_delivery_infrastructure
+# Import listener-free harness-foundation ownership behind the compatibility runner. (TEST-242)
+from tests.cases.api import harness_foundation as api_harness_foundation
 # Import frontend-presentation registration ownership while execution stays in the runner. (TEST-242)
 from tests.cases.api import frontend_presentation as api_frontend_presentation
 # Import listener-free self-service foundation ownership behind the compatibility runner. (TEST-242)
@@ -98,12 +100,6 @@ from tests.cases.api import feedback as api_feedback
 from tests.cases.api import guest as api_guest
 # Import the catalog-derived economics registry for listener-free API-suite governance. (TEST-175)
 from tests import game_economics_registry_tests
-# Import focused non-finite validation and persistence tests for TEST-055.
-from tests import nonfinite_money_tests
-# Import exact-source 50,000-cycle harness proofs for TEST-092.
-from tests.unit import ui_50000_tests
-# Import listener-free exact-138 concurrency harness proofs for TEST-142.
-from tests.unit import concurrent_browser_138_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -1304,60 +1300,8 @@ def run_api_tests():
     runner_source='\n'.join(source_path.read_text(encoding='utf-8') for source_path in api_source_paths)
     # Fail the whole lane immediately when a tautological mapped predicate reappears anywhere in API case source.
     assert re.search(r"assert_condition\(\s*True\s*,",runner_source) is None, 'tautological always-true mapped predicate found in API case source'
-    # Execute only listener-free benchmark policy and scheduler unit proof on the ordinary API path.
-    def run_request_latency_unit_tests():
-        # Import the focused TEST-148 suite lazily so no benchmark or WSGI application starts during runner import.
-        from tests.unit import request_latency_benchmark_tests
-        # Load exactly the bounded request-latency unit class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(request_latency_benchmark_tests.RequestLatencyBenchmarkTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any policy, privacy, callback, or scheduler assertion failed.
-        if not result.wasSuccessful(): raise AssertionError('request-latency baseline unit suite failed')
-    # Map the ordinary listener-free unit proof without executing either provider benchmark.
-    run_case('REQUEST-LATENCY-UNIT-001',['TEST-148'],run_request_latency_unit_tests)
-    # Execute the exact-138 planner, barrier, aggregate, and workflow proofs without a listener or browser.
-    def run_concurrent_browser_138_harness_tests():
-        # Load only the focused issue #225 harness test class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(concurrent_browser_138_tests.ConcurrentBrowser138Tests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any focused assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('138-context browser qualification harness unit suite failed')
-    # Record exact-user allocation, source-bound pool evidence, synchronization, privacy, and cleanup policy.
-    run_case('BROWSER-138-HARNESS-001',['AUTH-001','AUTH-002','SESSION-001','SESSION-005','TEST-039','TEST-042','TEST-142','CORE-021'],run_concurrent_browser_138_harness_tests)
-    # Execute the listener-free TEST-092 allocation, classification, and resume-policy proofs.
-    def run_ui_50000_harness_tests():
-        # Load only the focused #227 harness test class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(ui_50000_tests.UI50000HarnessTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any focused assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('50,000-cycle UI harness unit suite failed')
-    # Record the exact-source allocation, control-classification, and safe-resume proof.
-    run_case('UI-50000-HARNESS-001',['TEST-042','TEST-047','TEST-092'],run_ui_50000_harness_tests)
-    # Run service-free shared validation, ledger, MHVP, and strict JSON persistence evidence.
-    def run_nonfinite_money_unit_tests():
-        # Load only the focused TEST-055 unit-test class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(nonfinite_money_tests.NonfiniteMoneyTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any focused assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('non-finite money boundary unit suite failed')
-    # Record the listener-free finite validation and persistence proof.
-    run_case('MONEY-NONFINITE-UNIT-001',['CORE-025','LEDGER-027','MHVP-006','TEST-055'],run_nonfinite_money_unit_tests)
-    # Execute exact Guest Trial terminal-ledger evidence without opening a listener.
-    def run_guest_teardown_ledger_tests():
-        # Import the focused money-lifecycle suite only for its permanent gate.
-        from tests import guest_teardown_ledger_tests
-        # Load the exact replay, reconstruction, and economics-isolation test class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(guest_teardown_ledger_tests.GuestTeardownLedgerTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the mapped gate when any wallet-lifecycle assertion failed.
-        if not result.wasSuccessful(): raise AssertionError('Guest Trial terminal-ledger suite failed')
-    # Record exactly-once terminal debit, conversion-safe ownership, provider parity, replay, and reconstruction.
-    run_case('API-GUEST-TEARDOWN-LEDGER-001',['LEDGER-035','AUTH-020','LEDGER-037','TEST-188','TEST-194'],run_guest_teardown_ledger_tests)
+    # Delegate listener-free harness-foundation registrations at the pre-listener boundary. (TEST-242)
+    api_harness_foundation.run_cases(run_case)
     # Build one reusable subprocess host so bundle suites that redirect data directories at import can never pollute this process or the shared API server environment. (issues #403, #405, #411, #412)
     def run_unit_module(module_name, failure_message):
         # Execute the focused suite with a fresh interpreter exactly like the security probe host.
