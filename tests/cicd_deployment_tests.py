@@ -433,10 +433,40 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         delegation = "api_game_atomic.run_cases(run_case,run_unit_module)"
         # Reject missing or duplicated delegation in the compatibility runner.
         self.assertEqual(runner_source.count(delegation), 1)
-        # Preserve the historical boundary after governance and before the ledger-cache registration.
+        # Preserve the historical boundary after governance and before the money-integrity area.
         self.assertLess(runner_source.index("api_governance.run_cases("), runner_source.index(delegation))
-        # Keep the next inline case after the complete atomic area.
-        self.assertLess(runner_source.index(delegation), runner_source.index("STORAGE-LEDGER-CACHE-001"))
+        # Keep the next extracted area after the complete atomic area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_money_integrity.run_cases("))
+        # Keep process construction and execution in the compatibility runner rather than the area owner.
+        self.assertNotIn("subprocess.run", area_source)
+
+    # Prove the storage and legacy-settlement registrations moved as one exact ordered area.
+    def test_api_money_integrity_area_registration_ownership_is_exact(self):
+        # Define the reviewed order from ledger-cache safety through bounded Bingo economics.
+        expected_ids = (
+            "STORAGE-LEDGER-CACHE-001", "API-LEGACY-SETTLE-001",
+            "API-LEGACY-SETTLE-002", "API-BINGO-ECONOMICS-001",
+        )
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit money-integrity area module.
+        area_source = (API_CASES_ROOT / "money_integrity.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", area_source))
+        # Require the whole reviewed area to move in its original order.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id in expected_ids:
+            # Reject duplicated ownership that could execute money evidence twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit area delegation through the established fresh-process helper.
+        delegation = "api_money_integrity.run_cases(run_case,run_unit_module)"
+        # Reject missing or duplicated delegation in the compatibility runner.
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the historical boundary after atomic game-state and before Admin diagnostics.
+        self.assertLess(runner_source.index("api_game_atomic.run_cases("), runner_source.index(delegation))
+        # Keep the next inline Admin case after the complete money-integrity area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("API-ADMIN-GAME-STATES-001"))
         # Keep process construction and execution in the compatibility runner rather than the area owner.
         self.assertNotIn("subprocess.run", area_source)
 
