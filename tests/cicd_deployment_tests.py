@@ -493,12 +493,47 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         delegation = "api_admin_policy.run_cases(run_case,run_unit_module)"
         # Reject missing or duplicated delegation in the compatibility runner.
         self.assertEqual(runner_source.count(delegation), 1)
-        # Preserve the historical boundary after money integrity and before practice-table escrow.
+        # Preserve the historical boundary after money integrity and before game lifecycle evidence.
         self.assertLess(runner_source.index("api_money_integrity.run_cases("), runner_source.index(delegation))
-        # Keep the next inline practice-table case after the complete Admin policy area.
-        self.assertLess(runner_source.index(delegation), runner_source.index("API-THPT-ESCROW-001"))
+        # Keep the next extracted game lifecycle area after the complete Admin policy area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_game_lifecycle.run_cases("))
         # Keep process construction and execution in the compatibility runner rather than the area owner.
         self.assertNotIn("subprocess.run", area_source)
+
+    # Prove the game lifecycle registrations moved as one exact ordered area.
+    def test_api_game_lifecycle_area_registration_ownership_is_exact(self):
+        # Define the complete reviewed order from practice-table escrow through Teen Patti state publication.
+        expected_ids = (
+            "API-THPT-ESCROW-001", "API-THPT-ATOMIC-001", "API-CRAPS-ATOMIC-001", "API-AB-ATOMIC-001",
+            "API-OU7-ATOMIC-001", "API-BIG-SIX-ATOMIC-001", "API-CAA-ATOMIC-001", "API-FAN-TAN-ATOMIC-001",
+            "API-AD-ATOMIC-001", "API-CHUCK-ATOMIC-001", "API-DWVP-ATOMIC-001", "API-DBVP-ATOMIC-001",
+            "API-DT-ATOMIC-001", "API-JP-ATOMIC-001", "API-HILO-ATOMIC-001", "API-JOBVP-ATOMIC-001",
+            "API-LIR-ATOMIC-001", "API-MSTUD-ATOMIC-001", "API-PLINKO-ATOMIC-001", "API-RD-ATOMIC-001",
+            "API-SCRATCH-ATOMIC-001", "API-SIC-BO-ATOMIC-001", "API-SLOT-ATOMIC-001", "API-TEEN-PATTI-ATOMIC-001",
+        )
+        # Read the compatibility runner and extracted area as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        # Bind ownership to the one explicit game lifecycle area module.
+        area_source = (API_CASES_ROOT / "game_lifecycle.py").read_text(encoding="utf-8")
+        # Extract exact literal registration order from the new area module.
+        extracted_ids = tuple(re.findall(r"\brun_case\(\s*['\"]([^'\"]+)['\"]", area_source))
+        # Require the whole reviewed area to move in its original order.
+        self.assertEqual(extracted_ids, expected_ids)
+        # Require every moved registration to be absent from the compatibility runner.
+        for case_id in expected_ids:
+            # Reject duplicated ownership that could execute a lifecycle suite twice.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one explicit area delegation through the established fresh-process helper.
+        delegation = "api_game_lifecycle.run_cases(run_case,run_unit_module)"
+        # Reject missing or duplicated delegation in the compatibility runner.
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the historical boundary after Admin policy and before inline edge preparation.
+        self.assertLess(runner_source.index("api_admin_policy.run_cases("), runner_source.index(delegation))
+        # Keep the next inline edge preparation case after the complete lifecycle area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("EDGE-PREPARATION-001"))
+        # Keep process construction, execution, and listener ownership in the compatibility runner.
+        self.assertNotIn("subprocess.run", area_source)
+        self.assertNotIn("ServerThread", area_source)
 
     # Prove listener-free authentication infrastructure moved as one exact ordered area.
     def test_api_auth_area_registration_ownership_is_exact(self):
