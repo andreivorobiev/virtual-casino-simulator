@@ -40,6 +40,8 @@ import { createEnrollmentTab } from './admin/enrollment.js';
 import { createInvitationsTab } from './admin/invitations.js';
 // Import Audio & Voice settings so global sound controls leave the dispatcher monolith. (AUDIO-001, AUDIO-007)
 import { createAudioTab } from './admin/audio.js';
+// Import session and request-rate policy controls so owner settings leave the dispatcher monolith. (SESSION-009, ADMIN-031, ADMIN-032)
+import { createSessionsTab } from './admin/sessions.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -237,6 +239,8 @@ const audio = createAudioTab({
   toast,
   view,
 });
+// Bind Sessions to its two independently persisted owner-only policy routes.
+const sessions = createSessionsTab({ api, html, safe, setTitle, t, toast, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -571,44 +575,6 @@ async function operations() {
     // Render a clear symbol and recovery instruction so color is not the only status signal.
     view.innerHTML = html`<section class="admin-card danger" data-testid="admin-operations-down"><h2>${safe(t('operations.symbol.down', {}, 'admin'))} ${safe(t('operations.state.down', {}, 'admin'))}</h2><p>${safe(t('operations.detail.down', {}, 'admin'))}</p></section>`;
   }
-}
-
-// Render the owner-facing registered-session timeout policy. (SESSION-009, ADMIN-031)
-async function sessions() {
-  // Set the localized session-policy title and helper text.
-  setTitle(t('sessions.title', {}, 'admin'), t('sessions.subtitle', {}, 'admin'));
-  // Load the current owner-gated policy document.
-  const [data, rateData] = await Promise.all([api('/api/v2/admin/session-settings'), api('/api/v2/admin/rate-limits')]);
-  // Read the settings under a safe empty fallback for error-boundary rendering.
-  const s = data.settings || {};
-  // Read the separately persisted live request policy under the same owner-facing security workspace.
-  const r = rateData.settings || {};
-  // Render the timeout and live request-rate controls as distinct bounded policy cards.
-  view.innerHTML = html`<section class="admin-card" data-testid="admin-sessions-policy"><h3>${safe(t('sessions.heading', {}, 'admin'))}</h3><label class="check-row"><input id="sessions_enabled" type="checkbox" ${s.enabled ? 'checked' : ''} data-testid="admin-sessions-enabled"><span>${safe(t('sessions.enabled', {}, 'admin'))}</span></label><div class="grid3"><label>${safe(t('sessions.idle', {}, 'admin'))}<input id="idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.idle_timeout_minutes)}" data-testid="admin-sessions-idle"></label><label>${safe(t('sessions.absolute', {}, 'admin'))}<input id="absolute_timeout_hours" type="number" min="1" max="24" value="${safe(s.absolute_timeout_hours)}" data-testid="admin-sessions-absolute"></label><label>${safe(t('sessions.warning', {}, 'admin'))}<input id="warning_minutes" type="number" min="0" max="10" value="${safe(s.warning_minutes)}" data-testid="admin-sessions-warning"></label><label>${safe(t('sessions.adminIdle', {}, 'admin'))}<input id="admin_idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.admin_idle_timeout_minutes)}" data-testid="admin-sessions-admin-idle"></label></div><label><input id="admin_stricter" type="checkbox" ${s.admin_stricter ? 'checked' : ''} data-testid="admin-sessions-admin-stricter"> ${safe(t('sessions.adminStricter', {}, 'admin'))}</label><p class="muted">${safe(t('sessions.help', {}, 'admin'))}</p><p class="muted" data-testid="admin-sessions-provenance">${safe(t('sessions.provenance', { time: s.updated_at || '—', actor: s.updated_by || '—' }, 'admin'))}</p><div class="row"><button id="saveSessions" data-testid="admin-save-sessions" class="gold">${safe(t('sessions.save', {}, 'admin'))}</button></div></section><section class="admin-card" data-testid="admin-rate-limits"><h3>${safe(t('rateLimits.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('rateLimits.requests', {}, 'admin'))}<input id="requests_per_window" type="number" min="60" max="10000" value="${safe(r.requests_per_window)}" data-testid="admin-rate-limit-requests"></label><label>${safe(t('rateLimits.window', {}, 'admin'))}<input id="window_seconds" type="number" min="1" max="3600" value="${safe(r.window_seconds)}" data-testid="admin-rate-limit-window"></label></div><p class="muted">${safe(t('rateLimits.help', {}, 'admin'))}</p><div class="row"><button id="saveRateLimits" data-testid="admin-save-rate-limits" class="gold">${safe(t('rateLimits.save', {}, 'admin'))}</button></div></section>`;
-  // Bind the owner save action after rendering.
-  view.querySelector('#saveSessions').onclick = saveSessions;
-  // Bind the independent live rate-policy save action after rendering.
-  view.querySelector('#saveRateLimits').onclick = saveRateLimits;
-}
-
-// Persist the owner-authored session policy through the additive v2 contract.
-async function saveSessions() {
-  // Build the policy payload from enforcement, warning, bounded lifetime, and stricter-Admin controls.
-  const payload = { enabled: view.querySelector('#sessions_enabled').checked, idle_timeout_minutes: Number(view.querySelector('#idle_timeout_minutes').value), absolute_timeout_hours: Number(view.querySelector('#absolute_timeout_hours').value), warning_minutes: Number(view.querySelector('#warning_minutes').value), admin_idle_timeout_minutes: Number(view.querySelector('#admin_idle_timeout_minutes').value), admin_stricter: view.querySelector('#admin_stricter').checked };
-  // Persist the bounded settings through the owner-only route.
-  await api('/api/v2/admin/session-settings', { method: 'POST', body: payload });
-  // Confirm the save without exposing policy internals.
-  toast(t('sessions.saved', {}, 'admin'), true);
-}
-
-// Persist the owner-authored live application request policy without restarting the service. (SEC-015, ADMIN-032)
-async function saveRateLimits() {
-  // Build the sparse bounded policy from the two operational number fields.
-  const payload = { requests_per_window: Number(view.querySelector('#requests_per_window').value), window_seconds: Number(view.querySelector('#window_seconds').value) };
-  // Persist the validated policy through the recovery-safe owner route.
-  await api('/api/v2/admin/rate-limits', { method: 'POST', body: payload });
-  // Confirm activation without exposing any per-client limiter state.
-  toast(t('rateLimits.saved', {}, 'admin'), true);
 }
 
 // Define localeOptions to render installed locale options.
