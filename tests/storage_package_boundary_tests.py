@@ -19,6 +19,8 @@ from casino.core import storage_base
 from casino.core import storage_reset
 # Import the extracted JSON game-action lifecycle owner for exact mixin checks.
 from casino.core import storage_game_actions_json
+# Import the extracted MySQL game-action lifecycle owner for exact mixin checks.
+from casino.core import storage_game_actions_mysql
 
 
 # Resolve the repository root from this tracked test module.
@@ -31,6 +33,8 @@ BASE_SOURCE = ROOT / "casino" / "core" / "storage_base.py"
 RESET_SOURCE = ROOT / "casino" / "core" / "storage_reset.py"
 # Point at the extracted package-ready JSON game-action lifecycle owner.
 JSON_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_json.py"
+# Point at the extracted package-ready MySQL game-action lifecycle owner.
+MYSQL_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_mysql.py"
 # Bind every moved compatibility name that the historical module must re-export.
 MOVED_NAMES = (
     "MySQLConfig",
@@ -111,6 +115,21 @@ JSON_ACTION_METHOD_NAMES = (
     "_apply_game_action_ledger",
     "_recover_game_action_journal_locked",
     "_recover_all_json_actions_locked",
+    "execute_game_action_once",
+    "resolve_game_action",
+)
+# Bind every MySQL game-action method now single-owned by its lifecycle mixin.
+MYSQL_ACTION_METHOD_NAMES = (
+    "_runtime_schema_state",
+    "_require_game_action_schema",
+    "_mysql_game_action_epoch",
+    "_mysql_game_action_cents",
+    "_decode_mysql_game_action_json",
+    "_mysql_game_action_receipt",
+    "_select_mysql_game_action_receipt",
+    "_claim_mysql_game_action",
+    "_capture_mysql_game_action_snapshot",
+    "_insert_mysql_game_action_ledger",
     "execute_game_action_once",
     "resolve_game_action",
 )
@@ -282,6 +301,36 @@ class StoragePackageBoundaryTests(unittest.TestCase):
     def test_json_game_action_owner_preserves_stage_constant_identity(self):
         # Preserve the historical private import without duplicating its mutable set.
         self.assertIs(storage._GAME_ACTION_STAGES, storage_game_actions_json._GAME_ACTION_STAGES)
+
+    # Require the fourth #728 seam to single-own the MySQL game-action lifecycle.
+    def test_mysql_game_action_owner_is_bounded_and_single_owned(self):
+        # Read both owners as inert UTF-8 source.
+        action_source = MYSQL_ACTION_SOURCE.read_text(encoding="utf-8")
+        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        # Keep the complete extracted lifecycle below the permanent module ceiling.
+        self.assertLess(len(action_source.splitlines()), 1200)
+        # Parse both modules without constructing a provider or opening MySQL.
+        action_tree = ast.parse(action_source)
+        storage_tree = ast.parse(storage_source)
+        # Locate the sole action mixin and concrete MySQL provider declarations.
+        action_class = next(node for node in action_tree.body if isinstance(node, ast.ClassDef) and node.name == "MySQLGameActionMixin")
+        provider_class = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "MySQLStorageProvider")
+        # Require the complete reviewed game-action method inventory in its new owner.
+        owned_methods = {node.name for node in action_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertEqual(owned_methods, set(MYSQL_ACTION_METHOD_NAMES))
+        # Reject duplicate lifecycle declarations from the remaining concrete provider.
+        provider_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertTrue(set(MYSQL_ACTION_METHOD_NAMES).isdisjoint(provider_methods))
+        # Require lifecycle ownership to precede the provider contracts in the exact MRO.
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["MySQLGameActionMixin", "StorageProvider", "GameActionExecutor"])
+        # Require every inherited implementation to be the exact mixin object.
+        for method_name in MYSQL_ACTION_METHOD_NAMES:
+            # Compare descriptor identity without constructing a provider or checking out a connection.
+            self.assertIs(getattr(storage.MySQLStorageProvider, method_name), getattr(storage_game_actions_mysql.MySQLGameActionMixin, method_name), method_name)
+        # Keep pool, reset, ordinary ledger/document, and JSON implementations outside action ownership.
+        for forbidden in ("connect", "reset_transaction", "transact_ledger", "read_document", "_read_game_action_journal"):
+            # Name any accidentally broadened lifecycle ownership precisely.
+            self.assertNotIn(forbidden, owned_methods)
 
 
 # Run the focused seam directly when a developer invokes this file.
