@@ -22,6 +22,8 @@ import { createWellnessController } from './core/wellness.js';
 import { createTermsView } from './views/terms.js';
 // Import invitation redemption so bearer handling leaves the application monolith. (INVITE-003, INVITE-005)
 import { createInvitationView } from './views/invitation.js';
+// Import password recovery so transient reset bearer state leaves the application monolith. (RESET-004, SEC-016)
+import { createPasswordResetView } from './views/reset.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -41,8 +43,6 @@ const shellNavigationOwnership = createNavigationOwnership();
 let pendingEnrollmentEmail = '';
 // Retain an arrived verification bearer only in module memory after scrubbing browser history. (AUTH-018)
 let emailVerificationBearer = '';
-// Retain an arrived password-reset bearer only in module memory across locale and route rerenders. (SEC-016)
-let passwordResetBearerToken = '';
 // Invalidate asynchronous logged-out capability reads whenever locale or route rendering replaces the login gate. (UX-028)
 let loginGateGeneration = 0;
 // Hold the current pre-expiration warning timer so session replacement cannot leave a stale alert. (SESSION-012)
@@ -97,6 +97,22 @@ const renderInvitationGate = createInvitationView({
   t,
   transientRouteBearer,
   wireLocaleSelect,
+  windowRef: window,
+});
+// Bind enumeration-safe password recovery to the existing public-route and login seams.
+const renderPasswordResetGate = createPasswordResetView({
+  api,
+  cryptoRef: crypto,
+  documentRef: document,
+  getLocaleState,
+  historyRef: history,
+  holdTransientBearer,
+  renderLoginGate: message => renderLoginGate(message),
+  safe,
+  setSession: session => { currentSession = session; },
+  syncFeedbackReporter,
+  t,
+  transientRouteBearer,
   windowRef: window,
 });
 
@@ -730,63 +746,6 @@ function transientRouteBearer(path) {
   const nativeBearer = window.CasinoMobileDeepLink?.consumeBearer?.(path) || '';
   // Preserve the established browser route when no native bearer exists.
   return nativeBearer || new URL(location.href).searchParams.get('token') || '';
-}
-
-// Render enumeration-safe recovery initiation or bearer completion without mounting casino routes. (RESET-004)
-function renderPasswordResetGate(message = '', success = false) {
-  // Clear any stale authenticated shell state before exposing the public recovery form.
-  currentSession = null; window.CasinoCurrentUser = null; syncFeedbackReporter(null);
-  // Keep protected chrome hidden throughout recovery.
-  document.body.classList.remove('lobby-active'); document.body.classList.add('auth-locked');
-  // Read the route outlet reserved by the public shell.
-  const view = document.getElementById('view');
-  // Apply the shared auth layout and remove protected-region semantics.
-  view.className = 'screen auth-screen'; view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
-  // Read a newly arrived transient bearer once without discarding a value held across rerenders.
-  const arrivalToken = transientRouteBearer('/account/reset');
-  // Capture a new bearer only in module memory after native or browser route validation.
-  passwordResetBearerToken = holdTransientBearer(passwordResetBearerToken, arrivalToken);
-  // Use the held bearer for locale rerenders and lost-response retry without restoring URL state.
-  const token = passwordResetBearerToken;
-  // Strip browser password-reset bearer material before the form paints or any later log can observe it. (SEC-016)
-  if (token && new URL(location.href).searchParams.has('token')) history.replaceState({}, '', '/account/reset');
-  // Render initiation when no bearer is present and completion when the mail link supplied one.
-  view.innerHTML = token ? `<section class="auth-panel" data-testid="password-reset-complete"><p class="eyebrow">${safe(t('recovery.eyebrow', {}, 'shell'))}</p><h1>${safe(t('recovery.completeTitle', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('recovery.completeCopy', {}, 'shell'))}</p><form id="password-reset-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="reset-email" type="email" autocomplete="email" required></label><label>${safe(t('recovery.newPassword', {}, 'shell'))}<input id="reset-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><button class="primary" type="submit">${safe(t('recovery.complete', {}, 'shell'))}</button><p id="reset-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/">${safe(t('recovery.back', {}, 'shell'))}</a></section>` : `<section class="auth-panel" data-testid="password-reset-initiate"><p class="eyebrow">${safe(t('recovery.eyebrow', {}, 'shell'))}</p><h1>${safe(t('recovery.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('recovery.copy', {}, 'shell'))}</p><form id="password-reset-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="reset-email" type="email" autocomplete="email" required></label><button class="primary" type="submit">${safe(t('recovery.send', {}, 'shell'))}</button><p id="reset-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/">${safe(t('recovery.back', {}, 'shell'))}</a></section>`;
-  // Submit the currently rendered initiation or completion form through one bounded handler.
-  document.getElementById('password-reset-form').onsubmit = async event => {
-    // Prevent navigation while the enumeration-safe request is active.
-    event.preventDefault();
-    // Read the status outlet and submit control for deterministic in-flight behavior.
-    const status = document.getElementById('reset-message'); const submit = event.currentTarget.querySelector('button[type="submit"]'); submit.disabled = true;
-    // Start protected recovery so public error details never replace generic copy.
-    try {
-      // Complete the bearer flow when a token is present.
-      if (token) {
-        // Submit the exact transient bearer, mailbox, replacement, and caller key.
-        await api('/api/v2/auth/password-reset/complete', { method: 'POST', body: { token, email: document.getElementById('reset-email').value.trim(), new_password: document.getElementById('reset-password').value, idempotency_key: crypto.randomUUID() } });
-        // Drop the module-only bearer after the terminal server acknowledgement.
-        passwordResetBearerToken = '';
-        // Remove the bearer from browser history immediately after terminal success.
-        history.replaceState({}, '', '/');
-        // Return to sign-in with a privacy-safe completion acknowledgement.
-        renderLoginGate(t('recovery.completed', {}, 'shell'));
-        // Stop this handler after route replacement.
-        return;
-      }
-      // Initiate or reissue recovery with one identical public acknowledgement.
-      await api('/api/v2/auth/password-reset/initiate', { method: 'POST', body: { email: document.getElementById('reset-email').value.trim(), locale: getLocaleState().locale, idempotency_key: crypto.randomUUID() } });
-      // Publish the identical success copy regardless of account existence or delivery state.
-      if (status) { status.textContent = t('recovery.accepted', {}, 'shell'); status.dataset.success = 'true'; }
-    // Collapse disabled, malformed, expired, and provider failures into one retry-safe message.
-    } catch (_) {
-      // Publish one generic recovery failure without reflecting server internals.
-      if (status) status.textContent = t('recovery.unavailable', {}, 'shell');
-    // Re-enable the still-mounted form after a recoverable request.
-    } finally {
-      // Avoid touching a control removed by successful completion navigation.
-      if (submit.isConnected) submit.disabled = false;
-    }
-  };
 }
 
 // Render the full-account enrollment form while honoring the server-published signup gate.
