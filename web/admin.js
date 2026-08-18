@@ -12,6 +12,8 @@ import { createLedgerTab } from './admin/ledger.js';
 import { createHistoryTab } from './admin/history.js';
 // Import the Tests renderer so latest-result diagnostics retain exact output behind a reviewable per-tab boundary. (ADMIN-011, ADMIN-029)
 import { createTestsTab } from './admin/tests.js';
+// Import the Requirements renderer so coverage rows retain exact localized output behind a reviewable per-tab boundary. (ADMIN-010, ADMIN-021)
+import { createRequirementsTab } from './admin/requirements.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -82,6 +84,8 @@ const ledger = createLedgerTab({ api, emptyState, formatMoney, html, humanLabel,
 const history = createHistoryTab({ api, emptyState, formatMoney, html, humanLabel, safe, setTitle, t, table, view });
 // Bind the Tests renderer to the same Admin-shell helpers used by the accepted monolith implementation. (ADMIN-011, ADMIN-029)
 const tests = createTestsTab({ api, emptyState, html, pre, safe, setTitle, t, view });
+// Bind the Requirements renderer to the accepted locale, table, and Admin-shell boundaries. (ADMIN-010, ADMIN-021, I18N-014)
+const requirements = createRequirementsTab({ api, html, safe, setTitle, t, table, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -981,16 +985,6 @@ async function autoplay() {
   view.innerHTML = html`<section class="admin-card"><div class="row"><h3 style="margin-right:auto">${safe(t('autoplay.sessions', {}, 'admin'))}</h3><button id="stopAllAuto" data-testid="admin-stop-all-auto" class="danger">${safe(t('autoplay.stopAll', {}, 'admin'))}</button></div>${table([t('autoplay.id', {}, 'admin'), t('autoplay.game', {}, 'admin'), t('autoplay.player', {}, 'admin'), t('autoplay.status', {}, 'admin'), t('autoplay.speed', {}, 'admin'), t('autoplay.completed', {}, 'admin'), t('autoplay.limit', {}, 'admin'), t('autoplay.updated', {}, 'admin')], (data.sessions || []).slice().reverse().map(session => html`<tr><td>${safe(session.autoplay_id)}</td><td>${safe(session.game_id)}</td><td>${safe(session.player_id)}</td><td>${safe(session.status)}</td><td>${safe(session.speed)}</td><td>${safe(session.rounds_completed)}</td><td>${safe(session.round_limit)}</td><td>${safe(session.updated_at)}</td></tr>`))}</section>`;
   // Bind Stop All after rendering.
   view.querySelector('#stopAllAuto').onclick = async () => { await post('/api/v1/admin/autoplay/stop-all', {}); toast(t('autoplay.stopRequested', {}, 'admin'), true); autoplay(); };
-}
-
-// Define requirements to show requirement coverage.
-async function requirements() {
-  // Set the existing requirements title and subtitle.
-  setTitle(t('nav.requirements', {}, 'admin'), t('requirements.subtitle', {}, 'admin'));
-  // Load requirements through the existing Admin endpoint.
-  const data = await api('/api/v1/admin/requirements');
-  // Render requirement rows.
-  view.innerHTML = html`<section class="admin-card"><h3>${safe(t('nav.requirements', {}, 'admin'))}</h3>${table([t('requirements.id', {}, 'admin'), t('requirements.module', {}, 'admin'), t('requirements.description', {}, 'admin'), t('requirements.status', {}, 'admin'), t('requirements.tests', {}, 'admin')], (data.requirements || []).map(req => html`<tr><td>${safe(req.id)}</td><td>${safe(req.module)}</td><td>${safe(req.description)}</td><td>${safe(req.status)}</td><td>${safe([...(req.api_tests || []), ...(req.browser_tests || [])].join(', '))}</td></tr>`))}</section>`;
 }
 
 // Define system to show module revisions and raw overview data.
