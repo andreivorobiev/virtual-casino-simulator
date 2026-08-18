@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 HELPER_PATH = ROOT / "web" / "core" / "admin_labels.js"
 # Name the exact Admin surface source.
 ADMIN_PATH = ROOT / "web" / "admin.js"
+# Name the extracted Ledger-tab module source.
+LEDGER_PATH = ROOT / "web" / "admin" / "ledger.js"
 
 
 # Verify ADMIN-027 and TEST-132 without opening a listener or browser.
@@ -30,6 +32,10 @@ class AdminLedgerLabelTests(unittest.TestCase):
         cls.helper_source = HELPER_PATH.read_text(encoding="utf-8")
         # Read the Admin renderer source.
         cls.admin_source = ADMIN_PATH.read_text(encoding="utf-8")
+        # Read the extracted Ledger renderer source.
+        cls.ledger_source = LEDGER_PATH.read_text(encoding="utf-8")
+        # Join both Admin-owned sources for behavior-level occurrence checks.
+        cls.surface_source = f"{cls.admin_source}\n{cls.ledger_source}"
         # Extract the ordered suffix-to-resource table from production JavaScript.
         cls.rules = re.findall(r"\['([^']+)', '(ledger\.events\.[^']+)'\]", cls.helper_source)
         # Load the canonical English Admin resources.
@@ -83,13 +89,24 @@ class AdminLedgerLabelTests(unittest.TestCase):
     # Require Dashboard and full Ledger to use the shared locale-backed path.
     def test_dashboard_and_ledger_wiring(self):
         # Require exactly two stable event-cell evidence hooks, one per Admin surface.
-        self.assertEqual(self.admin_source.count('data-testid="admin-ledger-event"'), 2)
+        self.assertEqual(self.surface_source.count('data-testid="admin-ledger-event"'), 2)
         # Require both surfaces to call the locale-bound shared helper.
-        self.assertEqual(self.admin_source.count("ledgerEventLabel(row.transaction_type, row.game)"), 2)
+        self.assertEqual(self.surface_source.count("ledgerEventLabel(row.transaction_type, row.game)"), 2)
         # Leave only the separately mapped practice-opponent fallback outside the two governed ledger surfaces.
-        self.assertEqual(self.admin_source.count("humanLabel(row.transaction_type)"), 1)
+        self.assertEqual(self.surface_source.count("humanLabel(row.transaction_type)"), 1)
         # Require the listener-free helper to be imported from the application-owned shared path.
         self.assertIn("from './core/admin_labels.js'", self.admin_source)
+
+    # Require the first Admin split to keep one small dispatcher binding and readable module source.
+    def test_ledger_tab_module_boundary(self):
+        # Require the dispatcher to import the extracted Ledger factory exactly once.
+        self.assertEqual(self.admin_source.count("from './admin/ledger.js'"), 1)
+        # Reject the retired monolith-owned renderer implementation.
+        self.assertNotIn("async function ledger()", self.admin_source)
+        # Require the extracted module to own the frozen Ledger API call exactly once.
+        self.assertEqual(self.ledger_source.count("/api/v1/admin/ledger?limit=500"), 1)
+        # Keep every Ledger module source line within the governed review-width ceiling.
+        self.assertLessEqual(max(map(len, self.ledger_source.splitlines())), 200)
 
 
 # Support direct focused execution outside the central runner.

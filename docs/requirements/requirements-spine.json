@@ -8522,7 +8522,7 @@
     {
       "id": "ADMIN-027",
       "module": "Admin",
-      "description": "Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances.",
+      "description": "Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances. The Ledger renderer is the first independently owned module under web/admin/, while the small dispatcher preserves the existing route and byte-identical compact DOM output.",
       "status": "PASS",
       "api_tests": [
         "UI-ADMIN-LEDGER-LABELS-001"
@@ -8532,6 +8532,7 @@
       ],
       "implementation_files": [
         "web/admin.js",
+        "web/admin/ledger.js",
         "web/core/admin_labels.js",
         "web/i18n/en-US/admin.json",
         "web/i18n/ru-RU/admin.json",
@@ -8541,13 +8542,13 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-74-admin-ledger-labels",
-      "changed_in": "issue-74-admin-ledger-labels",
-      "notes": "This closes only the released, reproducible P2 Admin event-label remainder recorded under umbrella issue #74. It does not claim the separate responsive-Admin, legacy reduced-motion, Roulette/Baccarat touch-target, or game-motion programs."
+      "changed_in": "issue-955-admin-ledger-module",
+      "notes": "Issue #955 extracts only the Ledger renderer as the first independently reviewable child of parent monolith issue #729. It preserves the released label behavior and does not claim the remaining Admin tabs or the separate responsive-Admin, legacy reduced-motion, Roulette/Baccarat touch-target, or game-motion programs."
     },
     {
       "id": "TEST-132",
       "module": "Tests",
-      "description": "Listener-free Python and Node evidence inspects or executes the exact production Admin label helper module and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, and Dashboard/full-Ledger helper wiring. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.",
+      "description": "Listener-free Python and Node evidence inspects or executes the exact production Admin label helper and extracted Ledger modules and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, dispatcher ownership, a 200-character source-line ceiling, and byte-identical populated Ledger DOM output. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.",
       "status": "PASS",
       "api_tests": [
         "UI-ADMIN-LEDGER-LABELS-001"
@@ -8562,8 +8563,8 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-74-admin-ledger-labels",
-      "changed_in": "issue-74-admin-ledger-labels",
-      "notes": "TEST-132 is the live next-free identifier after the active game-catalog PR reserved TEST-119 through TEST-131. Browser evidence is hosted only; local Playwright or Chromium is not part of this repair."
+      "changed_in": "issue-955-admin-ledger-module",
+      "notes": "Issue #955 extends the existing Admin Ledger evidence without allocating a new permanent requirement ID. Browser evidence remains hosted; local Playwright or Chromium is not part of this structural slice."
     },
     {
       "id": "SEC-013",

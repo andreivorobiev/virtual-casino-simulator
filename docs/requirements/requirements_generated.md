@@ -14,7 +14,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.20.0
+- admin: 1.20.1
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.5
 - teen_patti: 1.1.5
-- tests: 1.108.0
-- docs: 1.104.0
+- tests: 1.108.1
+- docs: 1.104.1
 - contracts: 1.62.4
 - tooling: 1.41.2
 - commenting_policy: 2.0.0
@@ -533,8 +533,8 @@ Historical source baseline: 9.1.0
 - **MAGIC-002** (Core) - PASS: Magic-link initiation is enumeration-safe: existing, unknown, malformed, and inactive mailboxes all receive one byte-identical acknowledgement, and a link is delivered only for an active local account. Reissue keeps at most one login bearer valid per mailbox, a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable, and per-recipient send throttling remains in the mail foundation. No response, error, or audit event discloses account existence.
 - **MAGIC-003** (Core) - PASS: Magic-link completion consumes a purpose-bound bearer atomically and only then creates a session for the active local account; disabled login, malformed input, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive between initiation and completion all fail closed with one identical generic error. Audit events carry only a keyed recipient digest, token id, user id, session id, outcome, and reason, and never a raw bearer, mailbox, or credential.
 - **TEST-118** (Tests) - PASS: Listener-free evidence verifies the disabled passwordless magic-link lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation across existing, unknown, and malformed mailboxes with mail only for the eligible local account, session creation on completion verified through token authentication, replay and wrong-subject rejection, cross-purpose bearer isolation against password-reset consumption, silent ineligibility of inactive and credential-free social-only accounts, and a rejected delivery leaving no usable bearer behind. Suite emails are uniquely namespaced under a magic-link-only domain so repeated and full-suite runs never collide.
-- **ADMIN-027** (Admin) - PASS: Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances.
-- **TEST-132** (Tests) - PASS: Listener-free Python and Node evidence inspects or executes the exact production Admin label helper module and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, and Dashboard/full-Ledger helper wiring. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.
+- **ADMIN-027** (Admin) - PASS: Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances. The Ledger renderer is the first independently owned module under web/admin/, while the small dispatcher preserves the existing route and byte-identical compact DOM output.
+- **TEST-132** (Tests) - PASS: Listener-free Python and Node evidence inspects or executes the exact production Admin label helper and extracted Ledger modules and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, dispatcher ownership, a 200-character source-line ceiling, and byte-identical populated Ledger DOM output. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.
 - **SEC-013** (Application) - PASS: Client error telemetry reduces the current address to origin and path before submission, so invitation, OAuth, password-reset, and other query or fragment bearers can never enter Admin-visible client logs; malformed addresses fail closed to a fixed non-sensitive marker.
 - **SEC-014** (Core) - PASS: Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine-owned defaults drive central pre-handler coercion, persisted-state repair, generated request contracts, and compatibility evidence while undeclared paths remain inert.
 - **CORE-028** (Application) - PASS: Mutable players, ledger, history, sessions, per-game state, and other generated runtime outputs remain under the ignored data/ root and are initialized from source defaults, never tracked as repository state or admitted by a broad source add.

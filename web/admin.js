@@ -6,6 +6,8 @@ import { api, post } from './core/api.js';
 import { escaped as safe, html, raw, toast } from './core/ui.js';
 // Import listener-free label helpers so Admin never renders raw all-caps ledger enums.
 import { humanLabel, ledgerEventLabel as localizedLedgerEventLabel } from './core/admin_labels.js';
+// Import the first per-tab renderer so the Admin dispatcher can stay behaviorally stable while the monolith is split. (ADMIN-027)
+import { createLedgerTab } from './admin/ledger.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -69,6 +71,9 @@ function setTitle(text, helper = '') {
   // Set the helper text to the localized tab subtitle.
   subtitle.textContent = helper;
 }
+
+// Bind the Ledger renderer to the shared Admin-shell helpers without exposing mutable globals to the per-tab module. (ADMIN-027)
+const ledger = createLedgerTab({ api, emptyState, formatMoney, html, humanLabel, ledgerEventLabel, safe, setTitle, t, table, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -625,16 +630,6 @@ async function saveBot(button) {
   toast('Bot settings saved.', true);
   // Rerender players/bots so server-normalized values are visible.
   playersBots();
-}
-
-// Define ledger to show the transaction audit log.
-async function ledger() {
-  // Set the localized ledger title and subtitle.
-  setTitle(t('ledger.title', {}, 'admin'), t('ledger.subtitle', {}, 'admin'));
-  // Load ledger rows through the existing Admin endpoint.
-  const data = await api('/api/v1/admin/ledger?limit=500');
-  // Render ledger rows using the active locale's money formatter.
-  view.innerHTML = html`<section class="admin-card"><h3>${safe(t('ledger.title', {}, 'admin'))}</h3>${(data.ledger || []).length ? table([t('ledger.columns.time', {}, 'admin'), t('ledger.columns.player', {}, 'admin'), t('ledger.columns.game', {}, 'admin'), t('ledger.columns.round', {}, 'admin'), t('ledger.columns.type', {}, 'admin'), t('ledger.columns.amount', {}, 'admin'), t('ledger.columns.before', {}, 'admin'), t('ledger.columns.after', {}, 'admin')], data.ledger.slice().reverse().map(row => html`<tr><td>${safe(row.ts)}</td><td>${safe(row.player_id)}</td><td>${safe(humanLabel(row.game))}</td><td>${safe(row.round_id)}</td><td data-testid="admin-ledger-event">${safe(ledgerEventLabel(row.transaction_type, row.game))}</td><td>${formatMoney(row.amount)}</td><td>${formatMoney(row.balance_before)}</td><td>${formatMoney(row.balance_after)}</td></tr>`)) : emptyState(t('ledger.emptyTitle', {}, 'admin'), t('ledger.emptyDetail', {}, 'admin'), 'admin-ledger-empty')}</section>`;
 }
 
 // Define history to show cross-game history rows.
