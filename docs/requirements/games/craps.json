@@ -106,8 +106,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-craps",
-      "changed_in": "game-expansion-craps",
-      "notes": "Descriptor sort order 160 and the catalog-discovered long driver are canonical."
+      "changed_in": "issue-919-craps-browser-durable-roll-wait",
+      "notes": "Descriptor sort order 160 and the catalog-discovered long driver are canonical. BR-CRAPS-001 waits for the committed roll count to advance before requiring decorative presentation to settle, so evidence cannot depend on observing a transient animation class."
     },
     {
       "id": "CRAPS-006",
