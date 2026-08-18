@@ -1382,7 +1382,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
         # Require the seven game ports, alias retirement, and first #727 extraction to total 1094 rows.
-        self.assertEqual(len(requirements), 1094)
+        self.assertEqual(len(requirements), 1096)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1434,6 +1434,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "CW-007": "Casino War",  # Bind round and decision preparation plus bounded rollback to atomic state.
             "TEST-199": "Tests",  # Bind two-process preparation, contention, rollback, and lost-response evidence.
             "STORAGE-015": "Core",  # Bind explicit provider-owned wallet residue normalization.
+            "STORAGE-016": "Core",  # Bind provider-neutral storage ownership and exact compatibility exports.
             "LEDGER-036": "Core",  # Bind every durable wallet writer to canonical integer cents.
             "TOOL-019": "Tooling",  # Bind the packaged check/apply operator command.
             "TEST-190": "Tests",  # Bind JSON and MySQL normalization and rollback evidence.
@@ -1533,6 +1534,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-240": "Tests",  # Bind Dragon Tiger lifecycle, recovery, history, and process evidence.
             "TEST-241": "Tests",  # Bind alias rejection, canonical call shape, and historical-read evidence.
             "TEST-242": "Tests",  # Bind exact Browser and API-lane inventory equality across every runner extraction.
+            "TEST-243": "Tests",  # Bind storage package ownership, signatures, and provider parity evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.
