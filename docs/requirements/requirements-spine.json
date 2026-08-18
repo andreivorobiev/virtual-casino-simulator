@@ -955,9 +955,12 @@
         "casino/module_versions.py",
         "modules/module-manifest.json",
         "web/admin.html",
-        "web/admin.js"
+        "web/admin.js",
+        "web/admin/dashboard.js",
+        "tests/unit/admin_dashboard_module.test.mjs"
       ],
-      "notes": ""
+      "changed_in": "issue-973-admin-dashboard-module",
+      "notes": "Issue #973 extracts the Dashboard renderer behind an explicit dependency boundary while listener-free parity preserves the frozen route, six metrics, active-session set, requirement total, bounded newest-first ledger, error delegation, escaping, stale-response guard, and exact compact DOM."
     },
     {
       "id": "ADMIN-004",
@@ -2496,13 +2499,15 @@
         "modules/module-manifest.json",
         "web/admin.html",
         "web/admin.js",
+        "web/admin/dashboard.js",
         "web/admin/system.js",
+        "tests/unit/admin_dashboard_module.test.mjs",
         "tests/unit/admin_system_module.test.mjs",
         "web/styles.css"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "issue-967-admin-system-module",
-      "notes": "Introduced in v9.1.0. The extracted System renderer preserves the frozen dashboard request, immediate localized title, stale-tab suppression, canonical module rows, and raw overview bytes."
+      "changed_in": "issue-973-admin-dashboard-module",
+      "notes": "Introduced in v9.1.0. Issue #973 extracts the overview renderer while preserving six summary metrics, the exact active-Autoplay status set, requirement totals, bounded recent-ledger ordering and labels, privacy-safe recent errors, the frozen dashboard route, stale-response suppression, escaping, and compact DOM. The extracted System renderer remains the canonical module-revision and raw-overview boundary."
     },
     {
       "id": "ADMIN-015",

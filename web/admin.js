@@ -24,6 +24,8 @@ import { createSystemTab } from './admin/system.js';
 import { createEconomicsTab } from './admin/economics.js';
 // Import the Launch Readiness renderer so its held-only visibility contract stays behind a reviewable per-tab boundary. (AUTH-016)
 import { createLaunchReadinessTab } from './admin/launch-readiness.js';
+// Import the Dashboard renderer so summary metrics and diagnostics stay behind a reviewable per-tab boundary. (ADMIN-003, ADMIN-014)
+import { createDashboardTab } from './admin/dashboard.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -106,6 +108,23 @@ const system = createSystemTab({ api, html, isActiveTab, pre, safe, setTitle, t,
 const economics = createEconomicsTab({ api, emptyState, html, humanLabel, safe, setTitle, t, table, view });
 // Bind the Launch Readiness renderer to the accepted read-only route, stale-tab guard, and compact card boundary. (AUTH-016)
 const launchReadiness = createLaunchReadinessTab({ api, html, humanLabel, isActiveTab, safe, setTitle, t, table, view });
+// Bind the Dashboard renderer to the accepted metric, ledger, diagnostic, and stale-response boundaries. (ADMIN-003, ADMIN-014)
+const dashboard = createDashboardTab({
+  api,
+  emptyState,
+  eventList,
+  formatMoney,
+  formatNumber,
+  html,
+  humanLabel,
+  isActiveTab,
+  ledgerEventLabel,
+  safe,
+  setTitle,
+  t,
+  table,
+  view,
+});
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -230,20 +249,6 @@ async function feedbackDetail(reportId) {
   view.querySelector('#feedback-export').onclick = async () => { const exported = await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}/export`); const blob = new Blob([JSON.stringify(exported.export || {}, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${report.reference || 'feedback-report'}.json`; link.click(); URL.revokeObjectURL(link.href); toast(t('feedback.admin.exported', {}, 'feedback'), true); };
   // Require explicit confirmation before starting the recoverable privacy-deletion saga.
   view.querySelector('#feedback-delete').onclick = async () => { if (!window.confirm(t('feedback.admin.deleteConfirm', {}, 'feedback'))) return; await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}`, { method: 'DELETE', body: { idempotency_key: feedbackActionKey() } }); toast(t('feedback.admin.deleted', {}, 'feedback'), true); feedbackReports(); };
-}
-
-// Define dashboard to show the existing Admin overview cards and recent diagnostics.
-async function dashboard() {
-  // Set the localized dashboard title and subtitle.
-  setTitle(t('dashboard.title', {}, 'admin'), t('dashboard.subtitle', {}, 'admin'));
-  // Load the dashboard envelope data through the frozen Admin endpoint.
-  const data = await api('/api/v1/admin/dashboard');
-  // Stop stale dashboard responses from overwriting a newer active tab.
-  if (!isActiveTab('dashboard')) return;
-  // Store active autoplay sessions using the existing status set.
-  const active = (data.autoplay_sessions || []).filter(session => ['running', 'stop_requested', 'paused', 'starting'].includes(session.status));
-  // Render the dashboard without changing the existing API shape.
-  view.innerHTML = html`<div class="admin-card-grid"><div class="admin-card"><b>App</b><h2>${safe(data.app_version)}</h2></div><div class="admin-card"><b>${safe(t('nav.players', {}, 'admin'))}</b><h2>${formatNumber(data.players.length)}</h2></div><div class="admin-card"><b>Bots</b><h2>${formatNumber(data.bots.length)}</h2></div><div class="admin-card"><b>${safe(t('dashboard.activeAutoplay', {}, 'admin'))}</b><h2>${formatNumber(active.length)}</h2></div><div class="admin-card"><b>${safe(t('dashboard.errorsToday', {}, 'admin'))}</b><h2>${formatNumber((data.logs.errors || []).length)}</h2></div><div class="admin-card"><b>${safe(t('nav.requirements', {}, 'admin'))}</b><h2>${formatNumber(Object.values(data.requirement_counts || {}).reduce((sum, count) => sum + count, 0))}</h2></div></div><div class="admin-split"><section class="admin-card"><h3>${safe(t('dashboard.recentLedger', {}, 'admin'))}</h3>${(data.recent_ledger || []).length ? table([t('ledger.columns.time', {}, 'admin'), t('ledger.columns.player', {}, 'admin'), t('ledger.columns.game', {}, 'admin'), t('ledger.columns.type', {}, 'admin'), t('ledger.columns.amount', {}, 'admin')], data.recent_ledger.slice(-12).reverse().map(row => html`<tr><td>${safe(row.ts)}</td><td>${safe(row.player_id)}</td><td>${safe(humanLabel(row.game))}</td><td data-testid="admin-ledger-event">${safe(ledgerEventLabel(row.transaction_type, row.game))}</td><td>${formatMoney(row.amount)}</td></tr>`)) : emptyState(t('ledger.emptyTitle', {}, 'admin'), t('ledger.emptyDetail', {}, 'admin'), 'admin-ledger-empty')}</section><section class="admin-card"><h3>${safe(t('dashboard.recentErrors', {}, 'admin'))}</h3>${eventList(data.logs.errors, 'No recent errors', 'The local casino has not recorded any application errors today.', 'admin-errors-empty', true)}</section></div>`;
 }
 
 // Define playersBots to preserve bot controller editing in Admin.
