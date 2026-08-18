@@ -26,6 +26,8 @@ import { createEconomicsTab } from './admin/economics.js';
 import { createLaunchReadinessTab } from './admin/launch-readiness.js';
 // Import the Dashboard renderer so summary metrics and diagnostics stay behind a reviewable per-tab boundary. (ADMIN-003, ADMIN-014)
 import { createDashboardTab } from './admin/dashboard.js';
+// Import the Telemetry renderer so privacy-safe diagnostic panes stay behind a reviewable per-tab boundary. (ADMIN-008, ADMIN-017)
+import { createTelemetryTab } from './admin/telemetry.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -125,6 +127,8 @@ const dashboard = createDashboardTab({
   table,
   view,
 });
+// Bind the Telemetry renderer to the accepted read-only log and event-list boundaries. (ADMIN-008, ADMIN-017)
+const telemetry = createTelemetryTab({ api, eventList, html, setTitle, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -655,20 +659,6 @@ async function saveBot(button) {
   toast('Bot settings saved.', true);
   // Rerender players/bots so server-normalized values are visible.
   playersBots();
-}
-
-// Define telemetry to show server and client logs.
-async function telemetry() {
-  // Set the existing telemetry title and subtitle.
-  setTitle('Telemetry', 'Application, error, and browser-client logs.');
-  // Load app logs through the existing Admin endpoint.
-  const app = await api('/api/v1/admin/logs?kind=app&limit=200');
-  // Load error logs through the existing Admin endpoint.
-  const errors = await api('/api/v1/admin/logs?kind=errors&limit=200');
-  // Load browser client logs through the existing Admin endpoint.
-  const client = await api('/api/v1/admin/logs?kind=client&limit=200');
-  // Render the three log panes.
-  view.innerHTML = html`<div class="admin-split"><section class="admin-card"><h3>Application events</h3>${eventList(app.logs, 'No application events', 'Application activity will appear here as the local service is used.', 'admin-app-events')}</section><section class="admin-card"><h3>Error events</h3>${eventList(errors.logs, 'No error events', 'No server errors have been recorded for the current day.', 'admin-error-events', true)}</section></div><section class="admin-card"><h3>Browser events</h3>${eventList(client.logs, 'No browser events', 'Browser activity will appear here after a client sends telemetry.', 'admin-client-events')}</section>`;
 }
 
 // Render OAuth diagnostics separately so provider configuration cannot change Operations health.
