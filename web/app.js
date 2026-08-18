@@ -28,6 +28,8 @@ import { createPasswordResetView } from './views/reset.js';
 import { createVerificationView } from './views/verification.js';
 // Import full-account enrollment so policy and provider actions leave the application monolith. (AUTH-018, OAUTH-013)
 import { createSignupView } from './views/signup.js';
+// Import personal settings so preference, history, and guest conversion rendering leave the monolith. (USER-009, CONVERT-003)
+import { createSettingsView } from './views/settings.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -150,6 +152,22 @@ const renderSignupGate = createSignupView({
   t,
   wireLocaleSelect,
   windowRef: window,
+});
+// Bind personal Settings to existing session and logged-out handoff seams.
+const renderMySettings = createSettingsView({
+  api,
+  clearAuthenticatedShellState,
+  cryptoRef: crypto,
+  documentRef: document,
+  getActive: () => active,
+  getLocaleState,
+  isGuestSession,
+  localeOptionsHtml,
+  renderLoginGate: message => renderLoginGate(message),
+  safe,
+  setLocale,
+  setPersonalSoundEnabled,
+  t,
 });
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
@@ -944,60 +962,6 @@ function revealActiveNav() {
   const itemBounds = activeItem.getBoundingClientRect();
   // Center the active route by applying its rendered displacement to the current horizontal scroll position.
   nav.scrollLeft += itemBounds.left - navBounds.left - ((navBounds.width - itemBounds.width) / 2);
-}
-
-// Render the premium top navigation from the route registry.
-async function renderMySettings(view) {
-  // Load the caller's durable preferences and account-owned history in parallel when applicable. (USER-009)
-  const preferenceData = await api('/api/v2/me/settings');
-  // Read the settings under the documented defaults for a newly created account.
-  const settings = preferenceData.settings || { locale: 'en-US', sound_enabled: false, revision: 0 };
-  // Keep disposable guests out of durable history while still exposing session-local preferences and conversion.
-  const historyData = isGuestSession() ? { events: [] } : await api('/api/v2/me/history?page=1&page_size=25');
-  // Stop a stale request from replacing a newer route.
-  if (active !== 'settings') return;
-  // Render one personal surface distinct from owner-only Admin controls.
-  view.innerHTML = `<section class="panel settings-panel" data-testid="my-settings"><p class="eyebrow">${safe(t('settings.eyebrow', {}, 'shell'))}</p><h1>${safe(t('settings.title', {}, 'shell'))}</h1><p>${safe(t('settings.copy', {}, 'shell'))}</p><form id="personal-settings-form" class="auth-form"><label>${safe(t('settings.language', {}, 'shell'))}<select id="personal-settings-locale" data-testid="personal-settings-locale"></select></label><label class="check-row"><input id="personal-settings-sound" data-testid="personal-settings-sound" type="checkbox" ${settings.sound_enabled === true ? 'checked' : ''}><span>${safe(t('settings.sound', {}, 'shell'))}</span></label><button class="primary" data-testid="personal-settings-save" type="submit">${safe(t('settings.save', {}, 'shell'))}</button><p id="personal-settings-message" class="auth-message" role="status"></p></form></section>${isGuestSession() ? `<section class="panel settings-panel" data-testid="guest-conversion"><h2>${safe(t('conversion.title', {}, 'shell'))}</h2><p>${safe(t('conversion.copy', {}, 'shell'))}</p><form id="guest-conversion-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="conversion-email" type="email" maxlength="254" required></label><label>${safe(t('conversion.displayName', {}, 'shell'))}<input id="conversion-display-name" maxlength="80" required></label><label>${safe(t('conversion.password', {}, 'shell'))}<input id="conversion-password" type="password" minlength="12" maxlength="128" required></label><label class="check-row"><input id="conversion-terms" type="checkbox" required><span>${safe(t('conversion.terms', {}, 'shell'))}</span></label><button class="primary" data-testid="guest-conversion-submit" type="submit">${safe(t('conversion.submit', {}, 'shell'))}</button><p id="guest-conversion-message" class="auth-message" role="status"></p></form></section>` : `<section class="panel settings-panel" data-testid="my-history"><h2>${safe(t('settings.history', {}, 'shell'))}</h2>${(historyData.events || []).length ? `<div class="table-scroll" tabindex="0" role="region" aria-label="${safe(t('settings.history', {}, 'shell'))}"><table class="mini-table"><thead><tr><th>${safe(t('settings.time', {}, 'shell'))}</th><th>${safe(t('settings.game', {}, 'shell'))}</th><th>${safe(t('settings.event', {}, 'shell'))}</th><th>${safe(t('settings.amount', {}, 'shell'))}</th><th>${safe(t('settings.balance', {}, 'shell'))}</th><th>${safe(t('settings.reference', {}, 'shell'))}</th></tr></thead><tbody>${historyData.events.map(event => `<tr><td>${safe(event.ts || '')}</td><td>${safe(event.game || '')}</td><td>${safe(event.transaction_type || '')}</td><td>${safe(event.amount)}</td><td>${safe(event.balance_after)}</td><td>${safe(event.reference || '')}</td></tr>`).join('')}</tbody></table></div>` : `<p class="status">${safe(t('settings.historyEmpty', {}, 'shell'))}</p>`}</section>`}`;
-  // Fill the locale select from the governed locale manifest.
-  const localeSelect = view.querySelector('#personal-settings-locale');
-  // Reuse the shared option renderer before selecting the server-authored value.
-  localeSelect.innerHTML = localeOptionsHtml();
-  // Preserve the active login/browser locale until a real durable settings write establishes a preference.
-  localeSelect.value = settings.updated_at ? settings.locale : getLocaleState().locale;
-  // Save one optimistic personal preference revision without touching Admin policy.
-  view.querySelector('#personal-settings-form').onsubmit = async event => {
-    // Keep the browser on the personal settings route.
-    event.preventDefault();
-    // Persist only the published locale, sound flag, and current optimistic revision.
-    const result = await api('/api/v2/me/settings', { method: 'PATCH', body: { locale: localeSelect.value, sound_enabled: view.querySelector('#personal-settings-sound').checked, revision: settings.revision } });
-    // Advance the in-memory optimistic revision so repeated saves cannot reuse a stale token.
-    settings.revision = result.settings?.revision ?? settings.revision;
-    // Apply the accepted sound preference to the current browser immediately.
-    setPersonalSoundEnabled(result.settings?.sound_enabled === true);
-    // Apply the accepted locale after the server confirms persistence.
-    if (result.settings?.locale) await setLocale(result.settings.locale, { persistLocal: false });
-    // Confirm the authoritative save in the still-mounted surface.
-    const message = document.getElementById('personal-settings-message');
-    // Publish localized success copy when the locale rerender did not replace the node.
-    if (message) message.textContent = t('settings.saved', {}, 'shell');
-  };
-  // Bind explicit guest conversion only for a live disposable guest surface.
-  const conversionForm = view.querySelector('#guest-conversion-form');
-  // Submit the conversion through its recovery-safe additive v2 route.
-  if (conversionForm) conversionForm.onsubmit = async event => {
-    // Keep the guest on this surface until the server commits conversion.
-    event.preventDefault();
-    // Read the stable live result outlet before starting the request.
-    const message = view.querySelector('#guest-conversion-message');
-    // Submit canonical account identity while preserving the existing guest player and wallet.
-    await api('/api/v2/me/convert-guest', { method: 'POST', body: { email: view.querySelector('#conversion-email').value.trim(), display_name: view.querySelector('#conversion-display-name').value.trim(), password: view.querySelector('#conversion-password').value, terms_version: 'private-beta-1', accepted: view.querySelector('#conversion-terms').checked, locale: localeSelect.value, idempotency_key: crypto.randomUUID() } });
-    // Report terminal completion before clearing the now-revoked guest shell.
-    message.textContent = t('conversion.completed', {}, 'shell');
-    // Clear the disposable session and return to login for the durable account.
-    clearAuthenticatedShellState();
-    // Render an explicit sign-in handoff without retaining form secrets.
-    renderLoginGate(t('conversion.completed', {}, 'shell'));
-  };
 }
 
 // Render the premium top navigation from the route registry.
