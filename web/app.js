@@ -24,6 +24,8 @@ import { createTermsView } from './views/terms.js';
 import { createInvitationView } from './views/invitation.js';
 // Import password recovery so transient reset bearer state leaves the application monolith. (RESET-004, SEC-016)
 import { createPasswordResetView } from './views/reset.js';
+// Import pending-email verification so transient bearer and mailbox state leave the application monolith. (AUTH-018, USER-010)
+import { createVerificationView } from './views/verification.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -39,10 +41,6 @@ let shellConnected = false;
 let currentSession = null;
 // Own every asynchronous shell route so public-account navigation can invalidate stale game work. (SESSION-013)
 const shellNavigationOwnership = createNavigationOwnership();
-// Retain a just-submitted signup mailbox only in module memory for the pending verification screen. (AUTH-018)
-let pendingEnrollmentEmail = '';
-// Retain an arrived verification bearer only in module memory after scrubbing browser history. (AUTH-018)
-let emailVerificationBearer = '';
 // Invalidate asynchronous logged-out capability reads whenever locale or route rendering replaces the login gate. (UX-028)
 let loginGateGeneration = 0;
 // Hold the current pre-expiration warning timer so session replacement cannot leave a stale alert. (SESSION-012)
@@ -113,6 +111,23 @@ const renderPasswordResetGate = createPasswordResetView({
   syncFeedbackReporter,
   t,
   transientRouteBearer,
+  windowRef: window,
+});
+// Bind verified-email pending flows to the existing public-route and login composition seams.
+const { renderEmailVerificationGate, setPendingEnrollmentEmail } = createVerificationView({
+  api,
+  cryptoRef: crypto,
+  documentRef: document,
+  getLocaleState,
+  historyRef: history,
+  renderLoginGate: message => renderLoginGate(message),
+  safe,
+  sessionStorageRef: sessionStorage,
+  setSession: session => { currentSession = session; },
+  syncFeedbackReporter,
+  t,
+  transientRouteBearer,
+  wireLocaleSelect,
   windowRef: window,
 });
 
@@ -787,9 +802,11 @@ async function renderSignupGate(message = '', success = false) {
       // Require every browser-owned acknowledgement before pending credential creation.
       if (!document.getElementById('signup-terms').checked || !document.getElementById('signup-privacy').checked || !document.getElementById('signup-play-token').checked) throw new Error('signup consent required');
       // Hold the transient mailbox only for the immediate pending-screen prefill.
-      pendingEnrollmentEmail = document.getElementById('signup-email').value.trim();
+      const pendingEmail = document.getElementById('signup-email').value.trim();
+      // Hand off the transient mailbox through the Verification module's narrow memory-only seam.
+      setPendingEnrollmentEmail(pendingEmail);
       // Submit the account-free pending request with one caller-owned replay key.
-      await api('/api/v2/auth/signup', { method: 'POST', body: { email: pendingEnrollmentEmail, password: document.getElementById('signup-password').value, display_name: document.getElementById('signup-display-name').value, locale: document.getElementById('signup-locale').value, terms_version: 'private-beta-1', accepted: true, idempotency_key: crypto.randomUUID() } });
+      await api('/api/v2/auth/signup', { method: 'POST', body: { email: pendingEmail, password: document.getElementById('signup-password').value, display_name: document.getElementById('signup-display-name').value, locale: document.getElementById('signup-locale').value, terms_version: 'private-beta-1', accepted: true, idempotency_key: crypto.randomUUID() } });
       // Move to the verification surface without creating or assuming a session.
       history.replaceState({}, '', '/enroll/verify');
       // Render the account-free pending state immediately.
@@ -802,126 +819,6 @@ async function renderSignupGate(message = '', success = false) {
   };
   // Resolve provider-specific signup readiness only after the local form is usable.
   void enableAvailableOAuthSignup();
-}
-
-
-// Derive one domain-separated session lookup key without persisting the verification bearer. (AUTH-018)
-async function emailVerificationStorageKey(token, action = 'verify') {
-  // Hash the transient bearer with the browser crypto implementation.
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
-  // Restrict the action domain to the two bearer-owned mutations.
-  const domain = action === 'cancel' ? 'cancel' : 'verify';
-  // Encode only a non-secret digest prefix for the session-scoped lookup key.
-  const key = `casino.email-verification.${domain}.idempotency.${Array.from(new Uint8Array(digest).slice(0, 12)).map(value => value.toString(16).padStart(2, '0')).join('')}`;
-  // Return no bearer material in the browser storage key.
-  return key;
-}
-
-
-// Derive one reload-safe caller key without persisting the verification bearer. (AUTH-018)
-async function emailVerificationIdempotency(token, action = 'verify') {
-  // Resolve the action-specific digest lookup key.
-  const key = await emailVerificationStorageKey(token, action);
-  // Reuse the caller key after a lost response in this browser session.
-  const existing = sessionStorage.getItem(key);
-  // Return the stable replay value when one already exists.
-  if (existing) return existing;
-  // Create one random caller-owned replay identity.
-  const created = crypto.randomUUID();
-  // Persist only the random value under the non-secret digest lookup.
-  sessionStorage.setItem(key, created);
-  // Return the new key to the exact bearer flow.
-  return created;
-}
-
-
-// Render verified-email pending, resend, cancellation, and completion controls. (AUTH-018, USER-010)
-function renderEmailVerificationGate(message = '', success = false) {
-  // Capture a newly arrived bearer exactly once before removing it from browser history.
-  const arrivalToken = transientRouteBearer('/enroll/verify');
-  // Retain only current-arrival bearer material in module memory.
-  if (arrivalToken) {
-    // Hold the bearer for the pending verification request only.
-    emailVerificationBearer = arrivalToken;
-    // Remove bearer material from the address bar, history entry, and later referrers.
-    history.replaceState({}, '', '/enroll/verify');
-  }
-  // Clear stale authenticated shell identity while the account-free route is mounted.
-  currentSession = null; window.CasinoCurrentUser = null; syncFeedbackReporter(null);
-  // Keep all protected casino chrome locked until an explicit later login.
-  document.body.classList.remove('lobby-active', 'guest-trial-active'); document.body.classList.add('auth-locked');
-  // Remove authenticated semantics and apply the shared public auth layout.
-  view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid'); view.className = 'screen auth-screen';
-  // Render an email field because mail links intentionally carry no recipient identity.
-  view.innerHTML = `<section class="auth-panel" data-testid="email-verification-pending"><p class="eyebrow">${safe(t('signup.verifyEyebrow', {}, 'shell'))}</p><h1>${safe(t('signup.verifyTitle', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('signup.verifyCopy', {}, 'shell'))}</p><form id="email-verification-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="email-verification-email" data-testid="email-verification-email" type="email" autocomplete="email" maxlength="254" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="email-verification-locale" data-testid="email-verification-locale"></select></label><button class="primary" data-testid="email-verification-submit" type="submit" ${emailVerificationBearer ? '' : 'disabled'}>${safe(t('signup.verifySubmit', {}, 'shell'))}</button><button class="secondary" data-testid="email-verification-resend" type="button">${safe(t('signup.resend', {}, 'shell'))}</button><button class="secondary" data-testid="email-verification-cancel" type="button" ${emailVerificationBearer ? '' : 'disabled'}>${safe(t('signup.cancel', {}, 'shell'))}</button><p id="email-verification-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/" data-testid="email-verification-login-link">${safe(t('invitation.back', {}, 'shell'))}</a></section>`;
-  // Prefill only the current module-memory mailbox without interpolating it into markup.
-  document.getElementById('email-verification-email').value = pendingEnrollmentEmail;
-  // Populate the governed locale options and preserve generic status on locale changes.
-  wireLocaleSelect(document.getElementById('email-verification-locale'), () => renderEmailVerificationGate(message, success));
-  // Bind the exact purpose-bound verification request.
-  document.getElementById('email-verification-form').onsubmit = async event => {
-    // Prevent a navigation that could repeat or expose bearer state.
-    event.preventDefault();
-    // Resolve and disable the mutation control while the exact request is active.
-    const submit = document.getElementById('email-verification-submit'); submit.disabled = true;
-    // Resolve the shared non-enumerating status outlet.
-    const status = document.getElementById('email-verification-message');
-    // Start protected completion so every rejection uses one localized result.
-    try {
-      // Submit the transient bearer, recipient, and reload-stable caller key only.
-      await api('/api/v2/auth/signup/verify', { method: 'POST', body: { token: emailVerificationBearer, email: document.getElementById('email-verification-email').value.trim(), idempotency_key: await emailVerificationIdempotency(emailVerificationBearer) } });
-      // Remove only the acknowledged terminal verification replay key.
-      sessionStorage.removeItem(await emailVerificationStorageKey(emailVerificationBearer, 'verify'));
-      // Drop all pending signup transient values after terminal activation.
-      emailVerificationBearer = ''; pendingEnrollmentEmail = '';
-      // Return to login explicitly; verification never creates a session.
-      history.replaceState({}, '', '/'); renderLoginGate(t('signup.verified', {}, 'shell'));
-    // Collapse malformed, expired, consumed, cancelled, and raced results.
-    } catch (_) {
-      // Publish one generic localized verification failure.
-      status.textContent = t('signup.verifyUnavailable', {}, 'shell');
-      // Re-enable exact-key retry while the form remains mounted.
-      submit.disabled = false;
-    }
-  };
-  // Bind enumeration-safe replacement delivery.
-  view.querySelector('[data-testid="email-verification-resend"]').onclick = async () => {
-    // Resolve the generic status outlet.
-    const status = document.getElementById('email-verification-message');
-    // Start protected resend without exposing recipient existence or delivery state.
-    try {
-      // Request one replacement generation under a caller-owned action key.
-      await api('/api/v2/auth/signup/resend', { method: 'POST', body: { email: document.getElementById('email-verification-email').value.trim(), locale: document.getElementById('email-verification-locale').value, idempotency_key: crypto.randomUUID() } });
-      // Drop the now-stale module bearer so verify and cancel require the replacement email.
-      emailVerificationBearer = '';
-      // Re-render with both ownership-bearing controls disabled until the replacement link arrives.
-      renderEmailVerificationGate(t('signup.resent', {}, 'shell'), true);
-    // Collapse provider and policy failures into one retry-safe message.
-    } catch (_) {
-      // Publish no recipient or provider state.
-      status.textContent = t('signup.verifyUnavailable', {}, 'shell');
-    }
-  };
-  // Bind terminal cancellation without exposing pending-recipient existence.
-  view.querySelector('[data-testid="email-verification-cancel"]').onclick = async () => {
-    // Resolve the generic status outlet.
-    const status = document.getElementById('email-verification-message');
-    // Start protected cancellation under one caller-owned action key.
-    try {
-      // Revoke only the current pending recipient generation after bearer ownership proof.
-      await api('/api/v2/auth/signup/cancel', { method: 'POST', body: { token: emailVerificationBearer, email: document.getElementById('email-verification-email').value.trim(), idempotency_key: await emailVerificationIdempotency(emailVerificationBearer, 'cancel') } });
-      // Remove only the acknowledged terminal cancellation replay key.
-      sessionStorage.removeItem(await emailVerificationStorageKey(emailVerificationBearer, 'cancel'));
-      // Drop module-local pending values after cancellation.
-      emailVerificationBearer = ''; pendingEnrollmentEmail = '';
-      // Return to login with a generic completion acknowledgement.
-      history.replaceState({}, '', '/'); renderLoginGate(t('signup.cancelled', {}, 'shell'));
-    // Preserve one generic failure without changing route state.
-    } catch (_) {
-      // Publish the same availability result used by verification.
-      status.textContent = t('signup.verifyUnavailable', {}, 'shell');
-    }
-  };
 }
 
 
