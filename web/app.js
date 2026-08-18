@@ -1,21 +1,19 @@
 // Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 // SPDX-License-Identifier: Apache-2.0
 // Import required dependency so this module can call the frozen API envelope safely.
-import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, holdTransientBearer, logClient, login, logout, oauthLinks, oauthProviders, publicAuthRouteKind, redeemInvitation, startOAuth, unlinkOAuth } from './core/api.js';
+import { acceptTerms, api, currentUser, guestTrial, holdTransientBearer, logClient, login, oauthLinks, oauthProviders, publicAuthRouteKind, redeemInvitation, startOAuth, unlinkOAuth } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
-import { renderTokenBalance, toast, tokens, safe, renderPremiumTag, installStableRouteRenders, auditLayoutContainment, createNavigationOwnership, mountOwnedRoute, awaitOwnedRouteEffect } from './core/ui.js';
+import { renderTokenBalance, toast, tokens, safe, renderPremiumTag, createNavigationOwnership } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
-import { getLocaleState, initI18n, onLocaleChange, registerI18nDomains, setLocale, t } from './core/i18n.js';
-// Import the offline-safe shell controller for exact-version updates and authoritative reconnects. (PWA-001, PWA-002)
-import { initPwa } from './core/pwa.js';
+import { getLocaleState, registerI18nDomains, setLocale, t } from './core/i18n.js';
 // Import the active brand and its runtime token applier so one config skins the app.
-import { activeBrand, applyBrand } from './core/brand.js';
+import { activeBrand } from './core/brand.js';
 // Import the session-owned wallet celebration controller without adding game or API authority. (UX-023)
 import { createWalletCelebration, createWalletCelebrationLifecycle } from './core/celebrate.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings, setPersonalSoundEnabled } from './core/voice.js';
 // Import the registered-user problem-report dialog without adding feedback code to the shared shell.
-import { bindFeedbackDialog, localizeFeedback, syncFeedbackReporter } from './core/feedback.js';
+import { syncFeedbackReporter } from './core/feedback.js';
 // Import the persistent every-game wellness controller for opt-in session reminders. (WELL-001, WELL-002)
 import { createWellnessController } from './core/wellness.js';
 // Import the terms gate so required consent leaves the application monolith. (AUTH-011)
@@ -34,11 +32,13 @@ import { createSettingsView } from './views/settings.js';
 import { createLobbyView } from './views/lobby.js';
 // Import logged-out entry and provider account controls so auth rendering leaves the monolith. (UX-028, OAUTH-007)
 import { createLoginView } from './views/login.js';
+// Import the catalog router so app.js remains shell and view composition. (CORE-007, SESSION-013)
+import { createAppRouter } from './core/app_router.js';
+// Import browser lifecycle startup and compatible session normalization. (PWA-002, UX-026)
+import { currentTokenBalance, normalizeCurrentUser, startApplication } from './core/app_bootstrap.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
-// Store loaded game modules so repeated route changes do not re-import the same module.
-const loadedGames = new Map();
 // Track the active route so navigation can show the selected shell item.
 let active = null;
 // Cache the latest casino state so lobby and status rail values render without extra calls.
@@ -64,8 +64,8 @@ const walletCelebrationLifecycle = createWalletCelebrationLifecycle({
   // Remount only while an authenticated, terms-complete session still owns the shell.
   shouldMount: () => Boolean(currentSession && !currentSession.terms?.required),
 });
-// Track the active game-rail observer so navigation never leaves duplicate mutation listeners.
-let gameRailObserver = null;
+// Hold the router after extracted views have supplied their render callbacks.
+let appRouter = null;
 // Own one document-lifetime wellness controller while authenticated sessions replace its timer generation.
 const wellnessController = createWellnessController({ apiClient: api, documentRef: document, windowRef: window, translate: (key, values) => t(key, values, 'shell'), formatTokens: tokens });
 // Bind login, guest entry, OAuth completion, and provider account controls to shell composition seams.
@@ -198,198 +198,47 @@ const renderLobby = createLobbyView({
   safe,
   t,
 });
-
-// Relay game/autoplay toast events through the shell-level toast outlet.
-window.addEventListener('casino-toast', event => toast(event.detail?.message || t('autoplay.stopped', {}, 'shell')));
-// Keep the shell's private session cache synchronized when game helpers refresh current-user state.
-window.addEventListener('casino-current-user', event => {
-  // Normalize the exact current-user payload published by the shared wallet helper.
-  const nextSession = normalizeCurrentUser(event.detail);
-  // Adopt the refreshed session before any queued wallet presentation work can run.
-  currentSession = nextSession;
-  // Run after refreshBalance performs its single synchronous authoritative wallet render.
-  queueMicrotask(() => {
-    // Ignore a stale event after logout, another refresh, or authenticated-session replacement.
-    if (currentSession !== nextSession) return;
-    // Decorate only the exact latest server-settled amount without writing wallet text again.
-    walletCelebrationLifecycle.update(currentTokenBalance(nextSession));
-  });
+// Bind the catalog router to shell-owned state and extracted view renderers.
+appRouter = createAppRouter({
+  documentRef: document,
+  getActive: () => active,
+  getCurrentSession: () => currentSession,
+  getGameDescriptors: () => gameDescriptors,
+  getLocaleState,
+  historyRef: history,
+  isInvitationRoute,
+  locationRef: location,
+  logClient,
+  navigationOwnership: shellNavigationOwnership,
+  renderExpiredSessionGate,
+  renderLobby,
+  renderMySettings,
+  renderPublicAuthRoute,
+  safe,
+  setActive: route => { active = route; },
+  setLocale,
+  t,
+  updateCurrentUserShell,
+  walletLifecycle: walletCelebrationLifecycle,
+  windowRef: window,
 });
-// Report top-level browser errors through the client log API for admin visibility.
-window.addEventListener('error', event => logClient('window_error', { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno }));
-// Report unhandled promise rejections through the client log API for admin visibility.
-window.addEventListener('unhandledrejection', event => logClient('unhandled_rejection', { reason: String(event.reason?.message || event.reason) }));
-// Mark a guest page departure so lifecycle cleanup stays observable without ending same-context reloads.
-window.addEventListener('pagehide', () => { if (isGuestSession()) void departGuestTrial().catch(() => {}); });
-// Reset stale authenticated chrome only while an authenticated shell is mounted, leaving public enrollment pages intact.
-window.addEventListener('casino-session-expired', () => { if (currentSession) renderExpiredSessionGate(); });
 
-// Normalize the draft v2 current-user payloads without committing to backend internals.
-function normalizeCurrentUser(payload) {
-  // Store data so standard API envelopes and direct payloads both work.
-  const data = payload?.current_user || payload || {};
-  // Store user so profile fields can be read from one place.
-  const user = data.user || {};
-  // Store player so token fields can be read from one place.
-  const player = data.player || {};
-  // Store terms so terms-required flags can be read from one place.
-  const terms = data.terms || user.terms || {};
-  // Store termsRequired so early backend payload drafts remain compatible.
-  const termsRequired = typeof terms.required === 'boolean' ? terms.required : user.terms_required === true || data.terms_required === true || terms.accepted === false;
-  // Return a normalized current-user session object for shell rendering.
-  return { ...data, user, player, terms: { ...terms, required: termsRequired } };
-}
-
-// Resolve the same current-user play-token field precedence used by the shared wallet renderer.
-function currentTokenBalance(session) {
-  // Read the normalized player payload when the current contract supplies one.
-  const player = session?.player || {};
-  // Read the normalized user payload for compatible early contract shapes.
-  const user = session?.user || {};
-  // Resolve the established compatible token fields without reading rendered DOM text.
-  const value = player.token_balance ?? player.tokens ?? user.token_balance ?? user.tokens ?? session?.token_balance ?? session?.tokens?.balance ?? 0;
-  // Return the numeric value consumed by renderTokenBalance and the decoration controller.
-  return Number(value || 0);
-}
-
-// Convert one public API catalog row into the shell's route and presentation descriptor.
-function descriptorFromCatalog(game) {
-  // Read locale-owned metadata from the independently owned game descriptor.
-  const localized = game.translations?.[getLocaleState().locale] || {};
-  // Read nested lobby metadata while tolerating additive future fields.
-  const lobby = game.lobby || {};
-  // Return the exact shape consumed by navigation, search, cards, and lazy imports.
-  return { id: game.id, route: game.route || `/games/${game.id}`, label: localized.label || game.label, category: game.category, categories: game.categories || [game.category], path: game.frontend?.module, exportName: game.frontend?.export, readyTestId: game.frontend?.ready_testid, i18nDomain: game.frontend?.i18n_domain, i18nProbe: game.frontend?.i18n_probe, featured: lobby.featured === true, wide: lobby.wide === true, artClass: lobby.art_class || '', symbol: lobby.symbol || '', kicker: localized.kicker || lobby.kicker || game.category, description: localized.description || lobby.description || '', tags: localized.tags || lobby.tags || [] };
-}
-
-// Resolve a human-readable game title for status panels, falling back to the raw route. (issue #254)
-function routeLabel(route) {
-  // Return the catalog display label when the route names a known game, else the raw route slug.
-  return gameDescriptors.find(game => game.id === route)?.label || route;
-}
-
-// Resolve a route label before the casino catalog has finished hydrating during startup. (PWA-002)
-function routeFallbackLabel(route) {
-  // Prefer the live catalog label once casino state has populated game descriptors.
-  const catalogLabel = routeLabel(route);
-  // Return the catalog label when it has resolved beyond the raw route id.
-  if (catalogLabel !== route) return catalogLabel;
-  // Build the static shell resource key used by reviewed core game labels.
-  const labelKey = `games.${route}.label`;
-  // Resolve the already-loaded shell translation domain without waiting for casino state.
-  const resourceLabel = t(labelKey, {}, 'shell');
-  // Return the localized static label when a resource exists for this game route.
-  if (resourceLabel !== labelKey) return resourceLabel;
-  // Convert future route slugs into readable fallback words instead of showing a raw identifier.
-  return route.split(/[_-]+/).filter(Boolean).map(part => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(' ') || route;
-}
-
-// Resolve the route represented by the current browser location for reload and history restoration.
-function routeFromLocation() {
-  // Restore the distinct authenticated My Settings destination independently from games and Admin.
-  if (location.pathname.replace(/\/$/, '') === '/settings') return 'settings';
-  // Match canonical reloadable game paths without accepting nested or ambiguous segments.
-  const match = location.pathname.match(/^\/games\/([^/]+)\/?$/);
-  // Decode the matched id so route comparison uses catalog identifiers.
-  if (match) return decodeURIComponent(match[1]);
-  // Preserve a compatible hash deep link for older bookmarks when it names a catalog game.
-  const hashRoute = location.hash.replace(/^#\/?/, '');
-  // Return the hash game only when the loaded catalog recognizes it.
-  if (gameDescriptors.some(game => game.id === hashRoute)) return hashRoute;
-  // Treat every non-game static path as the lobby shell route.
-  return 'lobby';
-}
-
-// Show a real game-route restoration surface before slow current-user and casino-state calls complete. (issue #317, PWA-002)
-function renderInitialRouteRestore() {
-  // Read the browser-owned route before authenticated state can hydrate the game catalog.
-  const restoredRoute = routeFromLocation();
-  // Leave lobby and the separate invitation enrollment surface on their existing startup paths.
-  if (restoredRoute === 'lobby' || isInvitationRoute()) return;
-  // Read the route outlet that can otherwise sit visually blank during session revalidation.
-  const view = document.getElementById('view');
-  // Stop when the shell outlet is unavailable during a malformed static load.
-  if (!view) return;
-  // Resolve a player-facing game label without depending on the delayed casino-state catalog.
-  const gameLabel = routeFallbackLabel(restoredRoute);
-  // Keep the authenticated route outlet out of the lobby-only flex containment contract.
-  document.body.classList.remove('lobby-active');
-  // Apply the same game-screen class used by authoritative navigation.
-  view.className = 'screen game-screen';
-  // Remove lobby-specific testing identity before rendering the restoration placeholder.
-  view.removeAttribute('data-testid');
-  // Include the bounded game outlet in keyboard flow while the route is restoring.
-  view.tabIndex = 0;
-  // Expose the startup placeholder as the same named game region used after navigation.
-  view.setAttribute('role', 'region');
-  // Name the region consistently with mounted game routes.
-  view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
-  // Render immediate, localized progress instead of a blank route while trial/session state hydrates.
-  view.innerHTML = `<div class="panel loading-panel" data-testid="route-restore-loading"><p class="eyebrow">${safe(t('routeRestore.eyebrow', {}, 'shell'))}</p><h2>${safe(t('routeRestore.title', { game: gameLabel }, 'shell'))}</h2><p class="status">${safe(t('routeRestore.copy', {}, 'shell'))}</p></div>`;
-}
-
-// Synchronize browser history with one resolved catalog route.
-function updateRouteHistory(route, mode = 'push') {
-  // Resolve the canonical path from the dedicated settings route, catalog metadata, or lobby root.
-  const path = route === 'settings' ? '/settings' : route === 'lobby' ? '/' : gameDescriptors.find(game => game.id === route)?.route || '/';
-  // Preserve locale and test query parameters while removing legacy route hashes.
-  const url = new URL(location.href);
-  // Apply the canonical route path to the current URL.
-  url.pathname = path;
-  // Clear only the legacy route hash after restoration.
-  url.hash = '';
-  // Avoid duplicate history entries when navigation resolves to the current URL.
-  if (location.pathname === url.pathname && location.hash === url.hash) return;
-  // Replace initial or invalid routes and push normal user navigation.
-  history[mode === 'replace' ? 'replaceState' : 'pushState']({ route }, '', `${url.pathname}${url.search}`);
-}
-
-// Render the locale selector options from the loaded manifest.
-function localeOptionsHtml() {
-  // Store locales so the selector follows the manifest rather than hard-coded values.
-  const locales = getLocaleState().locales || [];
-  // Return option markup for every enabled UI locale.
-  return locales.map(locale => `<option value="${safe(locale.id)}">${safe(locale.nativeLabel || locale.label || locale.id)}</option>`).join('');
-}
-
-// Wire a locale selector while preserving the current auth or route state.
-function wireLocaleSelect(select, afterChange) {
-  // Stop when the requested selector is not present in the current screen.
-  if (!select) return;
-  // Fill the selector with manifest locales before setting the active option.
-  select.innerHTML = localeOptionsHtml();
-  // Select the active locale so refreshes preserve the user's choice.
-  select.value = getLocaleState().locale;
-  // Switch language in place without resetting the active route or auth step.
-  select.onchange = async () => { await setLocale(select.value); afterChange?.(); };
-}
-
-// Make intentional game-rail scrolling discoverable to keyboard and assistive-technology users.
-function prepareGameScrollRegions(view) {
-  // Find the shared control and data rails rendered by the active game module.
-  view.querySelectorAll('.control-rail, .details-drawer').forEach(region => {
-    // Include the intentional scroll region in the natural keyboard tab order.
-    region.tabIndex = 0;
-    // Identify each rail as a navigable document region.
-    region.setAttribute('role', 'region');
-    // Read the first visible heading so the region has a useful accessible name.
-    const heading = region.querySelector('h1, h2, h3');
-    // Label the region from its own content while retaining a safe fallback.
-    region.setAttribute('aria-label', heading?.textContent?.trim() || 'Game panel');
-  });
-}
-
-// Preserve scroll-region semantics when a game replaces its render tree during phase updates.
-function observeGameScrollRegions(view) {
-  // Disconnect the previous route observer before watching the newly mounted game.
-  gameRailObserver?.disconnect();
-  // Apply semantics immediately to the first completed game render.
-  prepareGameScrollRegions(view);
-  // Reapply semantics after game-owned rerenders replace rail elements.
-  gameRailObserver = new MutationObserver(() => prepareGameScrollRegions(view));
-  // Watch structural replacements without observing the attributes this helper sets.
-  gameRailObserver.observe(view, { childList: true, subtree: true });
-}
+// Convert one public catalog row through the extracted router.
+function descriptorFromCatalog(game) { return appRouter.descriptorFromCatalog(game); }
+// Resolve the current browser route through the extracted router.
+function routeFromLocation() { return appRouter.routeFromLocation(); }
+// Render startup route restoration through the extracted router.
+function renderInitialRouteRestore() { return appRouter.renderInitialRouteRestore(); }
+// Render manifest locale options through the extracted router.
+function localeOptionsHtml() { return appRouter.localeOptionsHtml(); }
+// Wire a locale selector through the extracted router.
+function wireLocaleSelect(select, afterChange) { return appRouter.wireLocaleSelect(select, afterChange); }
+// Render current navigation through the extracted router.
+function renderNav() { return appRouter.renderNav(); }
+// Reveal the active route through the extracted router.
+function revealActiveNav() { return appRouter.revealActiveNav(); }
+// Preserve the public navigation export while delegating to the extracted router.
+export async function navigate(route, options = {}) { return appRouter.navigate(route, options); }
 
 // Report whether the current authenticated principal is a disposable guest trial. (issue #317)
 function isGuestSession() {
@@ -410,9 +259,9 @@ function clearAuthenticatedShellState(options = {}) {
   // Dispose the session-owned celebration before a game or logged-out surface can remount.
   walletCelebrationLifecycle.unmount('session-cleared');
   // Stop observing game-only rails before the authenticated route outlet is replaced.
-  gameRailObserver?.disconnect();
+  appRouter.disconnectGameObserver();
   // Unmount the active game when its lifecycle hook exists so stale rerenders cannot survive sign-out.
-  if (active && loadedGames.has(active)) loadedGames.get(active).unmount?.();
+  if (active && appRouter.loadedGames.has(active)) appRouter.loadedGames.get(active).unmount?.();
   // Clear the cached current-user payload so wallet and guest affordances cannot remain visible.
   currentSession = null;
   // Clear the public current-user hook used by game helpers and the wallet renderer.
@@ -635,90 +484,6 @@ async function refreshCurrentSession() {
   }
 }
 
-// Load a game module lazily while preserving one module boundary per game.
-async function loadGame(desc) {
-  // Return a cached module export when this route has already been loaded.
-  if (loadedGames.has(desc.id)) return loadedGames.get(desc.id);
-  // Start protected import logic so load failures are captured in client logs.
-  try {
-    // Import the owned game frontend module by its documented route path.
-    const mod = await import(desc.path);
-    // Read the known game class export from the module namespace.
-    const game = mod[desc.exportName];
-    // Cache the class so later navigations can mount without importing again.
-    loadedGames.set(desc.id, game);
-    // Return the game class to the navigation flow.
-    return game;
-  // Handle dynamic import failures with diagnostics for Admin telemetry.
-  } catch (err) {
-    // Record the module load error with route context.
-    await logClient('game_module_load_error', { game: desc.id, message: err.message, stack: err.stack });
-    // Re-throw so navigation can render its friendly failure panel.
-    throw err;
-  }
-}
-
-// Center the active catalog route inside the current navigation viewport.
-function revealActiveNav() {
-  // Read the navigation outlet that index.html reserves for route buttons.
-  const nav = document.getElementById('main-nav');
-  // Stop when authentication has not yet exposed the shared navigation.
-  if (!nav) return;
-  // Read the active catalog route after the navigation layout is measurable.
-  const activeItem = nav.querySelector('.nav-item.active');
-  // Stop when the current surface has no active game route to reveal.
-  if (!activeItem) return;
-  // Measure rendered coordinates so topbar columns and localized widths cannot skew offset-based centering.
-  const navBounds = nav.getBoundingClientRect();
-  // Measure the active route in the same viewport coordinate system as its navigation container.
-  const itemBounds = activeItem.getBoundingClientRect();
-  // Center the active route by applying its rendered displacement to the current horizontal scroll position.
-  nav.scrollLeft += itemBounds.left - navBounds.left - ((navBounds.width - itemBounds.width) / 2);
-}
-
-// Render the premium top navigation from the route registry.
-function renderNav() {
-  // Read the navigation outlet that index.html reserves for route buttons.
-  const nav = document.getElementById('main-nav');
-  // Build the lobby button with the active shell class when selected.
-  const items = [`<button data-route="lobby" class="nav-item ${active === 'lobby' ? 'active' : ''}" data-testid="nav-lobby"><span class="nav-icon" aria-hidden="true">&#8962;</span>${safe(t('nav.lobby', {}, 'shell'))}</button>`];
-  // Keep personal preferences separate from privileged Admin policy for every authenticated principal.
-  items.push(`<button data-route="settings" class="nav-item ${active === 'settings' ? 'active' : ''}" data-testid="nav-settings">${safe(t('settings.title', {}, 'shell'))}</button>`);
-  // Add one button per game so every game remains equally reachable.
-  gameDescriptors.forEach(game => items.push(`<button data-route="${game.id}" class="nav-item ${active === game.id ? 'active' : ''}" data-testid="nav-${game.id}">${safe(game.label)}</button>`));
-  // Expose the Admin affordance only when the authenticated current-user contract carries the Admin role. (AUTH-008)
-  if (currentSession?.user?.role === 'admin') items.push(`<button data-admin="true" class="nav-item admin" data-testid="nav-admin">${safe(t('nav.admin', {}, 'shell'))}</button>`);
-  // Replace the nav contents atomically so active state cannot drift.
-  nav.innerHTML = items.join('');
-  // Expose the bounded menu as one keyboard-focusable horizontal scroll region. (issue #221, CORE-006)
-  nav.tabIndex = 0;
-  // Identify the menu as a navigable group with a localized accessible name.
-  nav.setAttribute('role', 'group');
-  // Name the menu so assistive technology announces the bounded games navigation.
-  nav.setAttribute('aria-label', safe(t('nav.primaryAria', {}, 'shell') || 'Games navigation'));
-  // Let keyboard users pan the bounded menu without a pointer using arrow and edge keys.
-  nav.onkeydown = event => {
-    // Read the current bounded-menu viewport width for one-page horizontal steps.
-    const step = Math.max(160, nav.clientWidth * 0.8);
-    // Scroll one step right on ArrowRight so later games become visible.
-    if (event.key === 'ArrowRight') { nav.scrollLeft += step; event.preventDefault(); }
-    // Scroll one step left on ArrowLeft so earlier games become visible.
-    else if (event.key === 'ArrowLeft') { nav.scrollLeft -= step; event.preventDefault(); }
-    // Jump to the first route on Home for fast reachability.
-    else if (event.key === 'Home') { nav.scrollLeft = 0; event.preventDefault(); }
-    // Jump to the last route on End for fast reachability.
-    else if (event.key === 'End') { nav.scrollLeft = nav.scrollWidth; event.preventDefault(); }
-  };
-  // Reveal the active route immediately after each catalog or locale render.
-  revealActiveNav();
-  // Wire every app route button to the shared navigate function.
-  nav.querySelectorAll('[data-route]').forEach(button => { button.onclick = () => navigate(button.dataset.route); });
-  // Read the optional Admin button after role-aware navigation rendering.
-  const adminButton = nav.querySelector('[data-admin]');
-  // Wire the protected Admin page only when the authenticated role exposed its affordance. (AUTH-008)
-  if (adminButton) adminButton.onclick = () => { location.href = '/admin'; };
-}
-
 // Update one status text node if that node exists in the current document.
 function setStatusText(id, text) {
   // Read the target status element by id.
@@ -802,277 +567,39 @@ async function refreshAfterReconnect() {
   return { status: restoredRoute === 'lobby' ? 'online' : 'route-restored' };
 }
 
-// Navigate between lobby and game routes while keeping one mounted game at a time.
-export async function navigate(route, options = {}) {
-  // Branch when an unauthenticated browser tries to navigate before the auth gate is complete.
-  if (!currentSession || currentSession.terms?.required) return;
-  // Claim a fresh epoch so this navigation supersedes every earlier pending route operation.
-  const navigationTicket = shellNavigationOwnership.claim();
-  // Store the requested route for error reporting.
-  let targetRoute = route;
-  // End any in-flight shell celebration before game teardown or route remount can replace content.
-  walletCelebrationLifecycle.interrupt('navigation');
-  // Start protected navigation so failures render inside the route outlet.
-  try {
-    // Store the previous route so mounted games can unmount before route changes.
-    const previous = active;
-    // Check whether the requested route is one of the registered games.
-    const knownGame = gameDescriptors.some(game => game.id === route);
-    // Recognize the separate authenticated personal-settings destination.
-    const knownSettings = route === 'settings';
-    // Fall back to lobby for unknown routes.
-    targetRoute = route === 'lobby' || knownSettings || knownGame ? route : 'lobby';
-    // Synchronize normal navigation, initial restoration, or invalid-route replacement with browser history.
-    if (options.history !== 'none') updateRouteHistory(targetRoute, options.history || (knownGame || knownSettings || route === 'lobby' ? 'push' : 'replace'));
-    // Unmount the previously active game when that game supplied cleanup.
-    if (previous && loadedGames.has(previous)) loadedGames.get(previous).unmount?.();
-    // Store the active route for nav rendering.
-    active = targetRoute;
-    // Re-render navigation after active route changes.
-    renderNav();
-    // Read the main route outlet from the document.
-    const view = document.getElementById('view');
-    // Render the lobby when the target route is lobby.
-    if (targetRoute === 'lobby') {
-      // Stop observing game-only rails before rendering the lobby surface.
-      gameRailObserver?.disconnect();
-      // Let the authenticated shell allocate its remaining viewport height to one bounded lobby scroll region. (issue #318)
-      document.body.classList.add('lobby-active');
-      // Apply the lobby screen class contract for responsive shell styling.
-      view.className = 'screen lobby-screen';
-      // Include the intentional lobby scroll region in the natural keyboard tab order.
-      view.tabIndex = 0;
-      // Expose the bounded outlet as an assistive-technology region instead of an unlabeled generic main element.
-      view.setAttribute('role', 'region');
-      // Localize the scroll region's accessible name whenever the active shell locale rerenders the lobby.
-      view.setAttribute('aria-label', safe(t('nav.lobby', {}, 'shell') || 'Lobby'));
-      // Give browser acceptance tests a stable selector without coupling them to presentation classes.
-      view.setAttribute('data-testid', 'lobby-scroll-region');
-      // Render lobby markup and catalog controls from the cached API state.
-      renderLobby(view);
-      // Stop after lobby render because no game module is mounted.
-      return;
-    }
-    // Render personal settings without importing or mounting a game module.
-    if (targetRoute === 'settings') {
-      // Stop observing game-owned scroll rails before the personal surface replaces them.
-      gameRailObserver?.disconnect();
-      // Keep settings out of the lobby-only containment contract.
-      document.body.classList.remove('lobby-active');
-      // Apply a bounded normal screen class for responsive personal cards.
-      view.className = 'screen settings-screen';
-      // Identify the settings surface for browser acceptance without presentation coupling.
-      view.setAttribute('data-testid', 'settings-screen');
-      // Keep the personal surface in the keyboard flow.
-      view.tabIndex = 0;
-      // Publish a localized accessible region name.
-      view.setAttribute('role', 'region'); view.setAttribute('aria-label', safe(t('settings.title', {}, 'shell')));
-      // Render caller-owned preferences, history, or guest conversion.
-      await renderMySettings(view);
-      // Restore a newer public route when settings completed after losing navigation ownership.
-      if (!shellNavigationOwnership.owns(navigationTicket)) { renderPublicAuthRoute(); return; }
-      // Stop before the game-loader branch.
-      return;
-    }
-    // Restore the regular game shell flow before mounting any non-lobby route.
-    document.body.classList.remove('lobby-active');
-    // Apply the game screen class contract before mounting a game module.
-    view.className = 'screen game-screen';
-    // Remove the lobby-only test identity while preserving the shared route-outlet element.
-    view.removeAttribute('data-testid');
-    // Make the bounded game outlet a keyboard-focusable scroll region so every control stays reachable. (issue #221)
-    view.tabIndex = 0; view.setAttribute('role', 'region'); view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
-    // Render a premium loading panel while the dynamic game module loads.
-    view.innerHTML = `<div class="panel loading-panel"><h2>${safe(t('routeRestore.title', { game: routeLabel(targetRoute) }, 'shell'))}</h2></div>`;
-    // Resolve the descriptor for the selected game route.
-    const desc = gameDescriptors.find(game => game.id === targetRoute);
-    // Load and mount the game only while this navigation keeps exact ownership across both awaits.
-    const mountedRoute = await mountOwnedRoute({
-      // Resolve the selected module through the established cached dynamic loader.
-      load: () => loadGame(desc),
-      // Mount the resolved game into the same route outlet used by the original app.
-      mount: game => game.mount(view),
-      // Recheck the captured shell ticket after import, mount, and failure boundaries.
-      owns: () => shellNavigationOwnership.owns(navigationTicket),
-      // Unmount stale post-mount work and restore only the exact newer public-account route.
-      onStale: (game, mountStarted) => { if (mountStarted) game?.unmount?.(); renderPublicAuthRoute(); },
-    });
-    // Stop before observers or wallet repaint when a newer route invalidated this game navigation.
-    if (mountedRoute.stale) return;
-    // Prepare shared game rails for intentional keyboard and touch scrolling.
-    observeGameScrollRegions(view);
-    // Refresh the authenticated token wallet after route mount.
-    updateCurrentUserShell();
-  // Handle navigation errors with a route-local recovery panel.
-  } catch (err) {
-    // Never replace a newer public gate with an error produced by stale asynchronous route work.
-    if (!shellNavigationOwnership.owns(navigationTicket)) { renderPublicAuthRoute(); return; }
-    // Convert any protected-route auth failure into the logged-out recovery gate instead of a stale game error panel.
-    if (err?.code === 'UNAUTHORIZED') { renderExpiredSessionGate(); return; }
-    // Write diagnostic output so the current operation can be inspected.
-    console.error(err);
-    // Record the failure while requiring ownership again after diagnostic I/O before any fallback repaint.
-    const ownsAfterLog = await awaitOwnedRouteEffect({
-      // Publish only the bounded route and error diagnostics used by the existing Admin signal.
-      run: () => logClient('navigation_error', { route: targetRoute, message: err.message, stack: err.stack }),
-      // Recheck the exact captured ticket after the asynchronous diagnostic completes.
-      owns: () => shellNavigationOwnership.owns(navigationTicket),
-      // Restore a warm public-account route without painting the stale game error surface.
-      onStale: () => renderPublicAuthRoute(),
-    });
-    // Stop before the route outlet changes when diagnostic completion was stale.
-    if (!ownsAfterLog) return;
-    // Read the route outlet for the fallback panel.
-    const view = document.getElementById('view');
-    // Keep a failed game route out of the lobby-only flex containment contract.
-    document.body.classList.remove('lobby-active');
-    // Remove the lobby-only test identity from the game error surface.
-    view.removeAttribute('data-testid');
-    // Keep the route outlet in game-screen mode so the error panel has premium shell padding.
-    view.className = 'screen game-screen';
-    // Render a friendly error state with a lobby recovery action.
-    view.innerHTML = `<div class="panel loading-panel"><h2>${safe(t('route.loadFailed', { route: routeLabel(targetRoute) }, 'shell'))}</h2><p class="status">${safe(err.message)}</p><button data-route="lobby">${safe(t('route.backToLobby', {}, 'shell'))}</button></div>`;
-    // Wire the fallback button without relying on the top navigation.
-    view.querySelector('[data-route="lobby"]')?.addEventListener('click', () => navigate('lobby'));
-  }
-}
-
-// Initialize shell state, wallet behavior, and the first lobby route.
-async function init() {
-  // Apply the active brand's design tokens and theme colour before first paint.
-  applyBrand(activeBrand);
-  // Initialize i18n before any auth or shell markup renders.
-  await initI18n({ domains: ['shell', 'feedback'] });
-  // Bind the native problem-report dialog after its translation domain is ready.
-  bindFeedbackDialog();
-  // Register the offline-safe shell and keep server actions locked until reconnect refresh completes.
-  initPwa({ onReconnect: refreshAfterReconnect });
-  // Publish reusable controller construction separately from authoritative initial data readiness.
-  window.dispatchEvent(new CustomEvent('casino:shared-app-controller-ready'));
-  // Render an immediate restored-game placeholder before slow session and casino-state calls finish.
-  renderInitialRouteRestore();
-  // Recalculate active-route visibility whenever responsive navigation layout changes.
-  window.addEventListener('resize', revealActiveNav);
-  // Read the persistent route outlet once for render-stability and containment wiring. (UX-026, UX-027)
-  const routeOutlet = document.getElementById('view');
-  // Remember which route/viewport cells already reported overflow so telemetry stays bounded per session. (UX-026)
-  const reportedOverflowCells = new Set();
-  // Hold the last measurement so only overflow confirmed across two settled audits is reported. (UX-026)
-  let pendingOverflowKey = null;
-  // Hold the debounce timer that lets animations settle before containment is measured.
-  let layoutAuditTimer = null;
-  // Measure containment after renders settle, and report confirmed loss through the frozen client-log route. (UX-026)
-  const runLayoutAudit = () => {
-    // Measure the live route content through the shared bounded auditor.
-    const audit = auditLayoutContainment(routeOutlet);
-    // Build the route-and-viewport cell identity for dedupe and confirmation.
-    const cellKey = `${active || 'none'}|${window.innerWidth}x${window.innerHeight}`;
-    // Clear the pending confirmation when the settled DOM is fully contained.
-    if (audit.docOverflow <= 4 && !audit.offenders.length) { pendingOverflowKey = null; return; }
-    // Arm the confirmation on first sight so one transient animation frame cannot page the owner.
-    if (pendingOverflowKey !== cellKey) { pendingOverflowKey = cellKey; layoutAuditTimer = setTimeout(runLayoutAudit, 1200); return; }
-    // Report each confirmed cell at most once per session so diagnostics stay low-volume.
-    if (reportedOverflowCells.has(cellKey) || reportedOverflowCells.size >= 20) return;
-    // Record the confirmed cell before the asynchronous log write.
-    reportedOverflowCells.add(cellKey);
-    // Publish the bounded overflow evidence to Admin telemetry through the frozen v1 client log.
-    void logClient('layout_overflow', { route: active || 'none', viewport: `${window.innerWidth}x${window.innerHeight}`, doc_overflow: audit.docOverflow, offenders: audit.offenders, app_version: latestState?.version || 'unknown' });
-  };
-  // Schedule one settled containment audit after the latest render or resize. (UX-026)
-  const scheduleLayoutAudit = () => { clearTimeout(layoutAuditTimer); layoutAuditTimer = setTimeout(runLayoutAudit, 700); };
-  // Preserve player scroll and focus across every same-route rerender in all games and the lobby. (UX-027)
-  installStableRouteRenders(routeOutlet, () => active, scheduleLayoutAudit);
-  // Re-measure containment when the viewport itself changes size. (UX-026)
-  window.addEventListener('resize', scheduleLayoutAudit);
-  // Repaint persistent shell text when the locale changes.
-  onLocaleChange(() => { localizeFeedback(); wellnessController.localize(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
-  // Restore game routes through browser Back and Forward without remounting stale history entries.
-  window.addEventListener('popstate', () => { if (renderPublicAuthRoute()) return; if (currentSession && !currentSession.terms?.required) { document.body.classList.remove('auth-locked'); void navigate(routeFromLocation(), { history: 'none' }); } else renderLoginGate(); });
-  // Read the add-token button from the wallet popover.
-  const addButton = document.getElementById('add-token-btn');
-  // Wire token addition through the planned ledger-backed current-user endpoint.
-  addButton.onclick = async () => {
-    // Start protected token mutation so validation errors become toasts.
-    try {
-      // Read the requested play-token amount from the wallet input.
-      const amount = Number(document.getElementById('add-token-amount').value || 0);
-      // Call the current-user token helper, which returns the updated contract player summary.
-      const player = await addUserTokens({ amount });
-      // Replace only the canonical player summary while preserving identity and session metadata.
-      currentSession = normalizeCurrentUser({ ...currentSession, player });
-      // Refresh the token wallet from the updated current-user payload.
-      updateCurrentUserShell();
-      // Clear the amount before any secondary refresh can race a repeated click. (TOKEN-007)
-      document.getElementById('add-token-amount').value = '';
-      // Close the wallet immediately after the authoritative mutation succeeds. (TOKEN-007)
-      document.querySelector('.wallet-menu')?.removeAttribute('open');
-      // Refresh shell state so status rail counts stay current.
-      await refreshShellState({ quiet: true });
-      // Show positive feedback for the completed token action.
-      toast(t('toast.tokensAdded', { amount: tokens(amount) }, 'shell'), true);
-    // Handle validation or API errors from the wallet action.
-    } catch (err) {
-      // Show the error message without interrupting the current route.
-      toast(err.message);
-    }
-  };
-  // Read the logout button from the persistent topbar.
-  const logoutButton = document.getElementById('logout-btn');
-  // Wire logout, or the disposable guest End-trial, through the planned v2 auth endpoints. (issue #317)
-  logoutButton.onclick = async () => {
-    // Detect a guest so the persistent control ends the trial with no recovery instead of logging out.
-    const guestSession = isGuestSession();
-    // Resolve the localized success message before teardown clears guest identity.
-    const loggedOutMessage = t(guestSession ? 'auth.guestEnded' : 'auth.loggedOut', {}, 'shell');
-    // Start protected teardown so the UI only claims logout after the backend session is gone.
-    try {
-      // Revoke the durable session or disposable guest trial through the backend-owned endpoint.
-      await (guestSession ? endGuestTrial() : logout());
-      // Clear the complete authenticated shell after successful server-side teardown.
-      clearAuthenticatedShellState();
-      // Return to the login gate, noting the ended guest trial where applicable.
-      renderLoginGate(loggedOutMessage);
-    // Keep the authenticated shell honest when the backend did not confirm session teardown.
-    } catch (err) {
-      // Treat an already-expired session as logged out because there is no live cookie to preserve.
-      if (err?.code === 'UNAUTHORIZED') {
-        // Clear authenticated chrome because the server has already rejected the old session.
-        clearAuthenticatedShellState();
-        // Return to the logged-out gate with the normal logout acknowledgement.
-        renderLoginGate(loggedOutMessage);
-        // Stop before recording a false logout failure.
-        return;
-      }
-      // Show one localized failure instead of pretending the cookie was revoked.
-      toast(t('auth.logoutFailed', {}, 'shell'));
-      // Record the low-cardinality logout failure for Admin diagnostics without leaking cookie data.
-      await logClient('logout_error', { code: err?.code || 'UNKNOWN', message: err?.message || 'Logout failed' });
-      // Revalidate the session so the user sees the real state after a failed logout attempt.
-      await refreshCurrentSession();
-    }
-  };
-  // Start protected bootstrapping so the app can still show a friendly error toast.
-  try {
-    // Resolve the current-user session before any casino route can mount.
-    await refreshCurrentSession();
-  // Handle initial state failures with a visible toast and client log.
-  } catch (err) {
-    // Show the startup error in the shell toast.
-    toast(t('startup.loadFailed', { message: err.message }, 'shell'));
-    // Attempt bounded Admin telemetry without replacing the original authority failure.
-    try { await logClient('initial_state_error', { message: err.message }); } catch (_) { /* Preserve the original startup failure. */ }
-    // Reject readiness so native bootstrap cannot mark a failed current-user refresh green.
-    throw err;
-  }
-  // Poll shell state periodically for connection and player-count status.
-  setInterval(() => { if (currentSession && !currentSession.terms?.required) refreshShellState({ quiet: true }); }, 30000);
-}
-
-// Start the premium shell controller and publish an explicit native readiness handshake.
-void init().then(() => {
-  // Release native recovery only after the shared shell and authoritative controller are initialized.
+// Start browser lifecycle wiring and publish the native readiness handshake.
+void startApplication({
+  clearAuthenticatedShellState,
+  descriptorFromCatalog,
+  documentRef: document,
+  getActive: () => active,
+  getCurrentSession: () => currentSession,
+  getGameDescriptors: () => gameDescriptors,
+  getLatestState: () => latestState,
+  getShellConnected: () => shellConnected,
+  isGuestSession,
+  navigate,
+  refreshAfterReconnect,
+  refreshCurrentSession,
+  refreshShellState,
+  renderExpiredSessionGate,
+  renderInitialRouteRestore,
+  renderLoginGate,
+  renderNav,
+  renderPublicAuthRoute,
+  revealActiveNav,
+  routeFromLocation,
+  setCurrentSession: session => { currentSession = session; },
+  setGameDescriptors: descriptors => { gameDescriptors = descriptors; },
+  updateCurrentUserShell,
+  updateShellStatus,
+  walletLifecycle: walletCelebrationLifecycle,
+  wellnessController,
+  windowRef: window,
+}).then(() => {
+  // Release native recovery only after authoritative startup completes.
   window.dispatchEvent(new CustomEvent('casino:shared-app-ready'));
 }).catch(() => {
-  // Signal a bounded initialization failure without exposing configuration or state details.
+  // Signal bounded initialization failure without exposing state details.
   window.dispatchEvent(new CustomEvent('casino:shared-app-error'));
 });
