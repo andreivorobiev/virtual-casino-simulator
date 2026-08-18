@@ -1552,6 +1552,39 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one atomic skip for the exact complete affinity group.
         self.assertEqual(skipped_groups, ["auth_backend_pwa"])
 
+    # Prove the complete disposable guest-lifecycle affinity family has one external owner and one runner delegation.
+    def test_browser_guest_lifecycle_affinity_registration_ownership_is_exact(self):
+        # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
+        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        # Read the complete guest owner independently of its import path.
+        owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "guest_lifecycle.py")
+        # Bind the exact permanent guest lifecycle identities declared by browser_sharding.py.
+        expected_ids = ("BR-GUEST-TRIAL-001", "BR-GUEST-REFRESH-001", "BR-GUEST-CONVERT-ANALYTICS-001")
+        # Extract only literal permanent registrations from the new owner.
+        owner_ids = tuple(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
+        # Require exact identity and historical order without invented or duplicate cases.
+        self.assertEqual(owner_ids, expected_ids)
+        # Reject any remaining inline registration in the compatibility runner.
+        for case_id in expected_ids:
+            # Keep each permanent identity under exactly one executable source owner.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the group's exact historical position.
+        self.assertEqual(runner_source.count("browser_guest_lifecycle.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser,base,screenshots,ROOT,read_i18n_json,auth_core,guest_analytics)"), 1)
+        # Require one owner-level guard without repeated partial setup checks.
+        self.assertEqual(owner_source.count("browser_shard_owns_group('guest_lifecycle')"), 1)
+        # Require the extracted owner to advance all three source positions on non-owning shards.
+        self.assertEqual(owner_source.count("skip_browser_affinity('guest_lifecycle')"), 1)
+        # Import the extracted owner without starting the compatibility runner.
+        from tests.cases.browser import guest_lifecycle
+        # Retain the exact skip identity emitted by a non-owning shard.
+        skipped_groups = []
+        # Reject any accidental case execution on a shard that does not own the complete group.
+        reject_case = lambda *_args: self.fail("non-owner executed a guest-lifecycle case")
+        # Execute the non-owner path with every Browser dependency absent so setup access fails the test immediately.
+        guest_lifecycle.run_cases(reject_case, lambda group_name: False, skipped_groups.append, None, None, None, None, None, None, None)
+        # Require one atomic skip for the exact complete affinity group.
+        self.assertEqual(skipped_groups, ["guest_lifecycle"])
+
     # Prove declared producer/consumer groups fit one deterministic shard and guard their bodies.
     def test_browser_shard_affinity_groups_are_contiguous_and_guarded(self):
         # Parse the exact browser runner source without importing it.
@@ -1566,6 +1599,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertEqual(len(case_ids), 123)
         # Read the first extracted Browser affinity owner for guard-location checks below.
         auth_backend_pwa_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
+        # Read the extracted disposable guest-lifecycle owner for guard-location checks below.
+        guest_lifecycle_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "guest_lifecycle.py")
         # Compute the same deterministic six-runner partition used by the workflow.
         shard_sets = browser_runner_module.browser_shard_case_sets(6)
         # Recompute from identical inputs to prove packing replay is deterministic.
@@ -1632,18 +1667,16 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             owners = {index for index, shard_cases in enumerate(shard_sets) for case_id in group_case_ids if case_id in shard_cases}
             # Require all producers and consumers to execute on one shard.
             self.assertEqual(len(owners), 1, group_name)
-            # Guest loops retain unconditional run_case accounting through owner-conditioned iterables.
-            if group_name == "guest_lifecycle":
-                # Require both disposable lifecycle loops to test the declared owner before any setup.
-                self.assertGreaterEqual(source.count("browser_shard_owns_group('guest_lifecycle')"), 2)
-            # The first extracted Browser affinity owns its guard and skip outside the compatibility runner.
-            elif group_name == "auth_backend_pwa":
+            # Extracted Browser affinities own their guard and skip outside the compatibility runner.
+            if group_name in {"auth_backend_pwa", "guest_lifecycle"}:
+                # Bind the exact source-level delegation alias and external owner for this family.
+                delegation_alias, owner_source = ("browser_auth_backend_pwa", auth_backend_pwa_source) if group_name == "auth_backend_pwa" else ("browser_guest_lifecycle", guest_lifecycle_source)
                 # Require one source-level delegation so cross-file discovery preserves the group's exact position.
-                self.assertEqual(source.count("browser_auth_backend_pwa.run_cases("), 1)
+                self.assertEqual(source.count(f"{delegation_alias}.run_cases("), 1)
                 # Require the complete extracted body to remain beneath its declared group owner.
-                self.assertIn("if browser_shard_owns_group('auth_backend_pwa'):", auth_backend_pwa_source)
-                # Require non-owning shards to advance the complete three-case range atomically.
-                self.assertIn("skip_browser_affinity('auth_backend_pwa')", auth_backend_pwa_source)
+                self.assertIn(f"if browser_shard_owns_group('{group_name}'):", owner_source)
+                # Require non-owning shards to advance the complete family atomically.
+                self.assertIn(f"skip_browser_affinity('{group_name}')", owner_source)
             # Guarded bulk ranges require both an execution guard and explicit unowned accounting.
             else:
                 # Require the complete inline body to sit beneath its declared group owner.
