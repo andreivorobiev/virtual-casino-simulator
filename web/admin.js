@@ -28,6 +28,8 @@ import { createLaunchReadinessTab } from './admin/launch-readiness.js';
 import { createDashboardTab } from './admin/dashboard.js';
 // Import the Telemetry renderer so privacy-safe diagnostic panes stay behind a reviewable per-tab boundary. (ADMIN-008, ADMIN-017)
 import { createTelemetryTab } from './admin/telemetry.js';
+// Import the Players & Bots renderer so wallet and controller operations leave the dispatcher monolith. (ADMIN-005, ADMIN-015)
+import { createPlayersTab } from './admin/players.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -129,6 +131,22 @@ const dashboard = createDashboardTab({
 });
 // Bind the Telemetry renderer to the accepted read-only log and event-list boundaries. (ADMIN-008, ADMIN-017)
 const telemetry = createTelemetryTab({ api, eventList, html, setTitle, view });
+// Bind the Players & Bots renderer to the accepted dashboard, bot-mutation, locale, and ledger presentation boundaries.
+const playersBots = createPlayersTab({
+  api,
+  emptyState,
+  formatMoney,
+  formatNumber,
+  html,
+  humanLabel,
+  post,
+  safe,
+  setTitle,
+  t,
+  table,
+  toast,
+  view,
+});
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -253,45 +271,6 @@ async function feedbackDetail(reportId) {
   view.querySelector('#feedback-export').onclick = async () => { const exported = await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}/export`); const blob = new Blob([JSON.stringify(exported.export || {}, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${report.reference || 'feedback-report'}.json`; link.click(); URL.revokeObjectURL(link.href); toast(t('feedback.admin.exported', {}, 'feedback'), true); };
   // Require explicit confirmation before starting the recoverable privacy-deletion saga.
   view.querySelector('#feedback-delete').onclick = async () => { if (!window.confirm(t('feedback.admin.deleteConfirm', {}, 'feedback'))) return; await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}`, { method: 'DELETE', body: { idempotency_key: feedbackActionKey() } }); toast(t('feedback.admin.deleted', {}, 'feedback'), true); feedbackReports(); };
-}
-
-// Define playersBots to preserve bot controller editing in Admin.
-async function playersBots() {
-  // Set the localized players/bots title and subtitle.
-  setTitle(t('players.title', {}, 'admin'), t('players.subtitle', {}, 'admin'));
-  // Load the same dashboard payload used by the prior implementation.
-  const data = await api('/api/v1/admin/dashboard');
-  // Store capabilities so only bot-compatible games render strategy controls.
-  const capabilities = data.bot_capabilities || {};
-  // Store game options by filtering for bot-supported games.
-  const gameOptions = Object.keys(capabilities).filter(game => capabilities[game].supports_bots);
-  // Read the fixed funded-account allocation published by the Admin service.
-  const practiceAccounts = data.practice_opponents || [];
-  // Read append-only practice-opponent ledger activity for audit presentation.
-  const practiceActivity = data.practice_opponent_activity || [];
-  // Map stable controller action ids to localized Admin audit labels.
-  const practiceActionLabels = {
-    fund_account: t('players.actionFund', {}, 'admin'), // Localize one-time account seeding.
-    reserve_stack: t('players.actionReserve', {}, 'admin'), // Localize the maximum hand escrow debit.
-    refund_stack: t('players.actionRefund', {}, 'admin'), // Localize unused escrow return.
-    settle_payout: t('players.actionPayout', {}, 'admin'), // Localize terminal opponent winnings.
-  };
-  // Render players and editable bot controller settings.
-  view.innerHTML = html`<section class="admin-card"><h3>${safe(t('nav.players', {}, 'admin'))}</h3>${table([t('players.id', {}, 'admin'), t('players.name', {}, 'admin'), t('players.type', {}, 'admin'), t('players.balance', {}, 'admin')], (data.players || []).map(player => html`<tr><td>${safe(player.player_id)}</td><td>${safe(player.display_name)}</td><td>${safe(player.type)}</td><td>${formatMoney(player.balance)}</td></tr>`))}</section><section class="admin-card"><h3>${safe(t('bots.controllers', {}, 'admin'))}</h3>${(data.bots || []).map(bot => html`<div class="bot-edit" data-bot="${safe(bot.bot_id)}"><div class="row"><b>${safe(bot.display_name)}</b><label><input type="checkbox" class="bot-enabled" ${bot.enabled ? 'checked' : ''}>${safe(t('bots.enabled', {}, 'admin'))}</label><span class="badge">${formatMoney(bot.balance)}</span></div>${gameOptions.map(game => html`<div class="row"><label>${safe(t('bots.strategy', { game }, 'admin'))} <select class="bot-strategy" data-game="${safe(game)}">${capabilities[game].strategies.map(strategy => html`<option value="${safe(strategy.id)}" ${bot.strategies?.[game] === strategy.id ? 'selected' : ''}>${safe(strategy.label)}</option>`)}</select></label><label>${safe(t('bots.stake', {}, 'admin'))} <input class="bot-stake" data-game="${safe(game)}" type="number" min="1" value="${safe(bot.stakes?.[game] || 5)}"></label></div>`)}<button class="save-bot" data-bot="${safe(bot.bot_id)}">${safe(t('bots.save', { name: bot.display_name }, 'admin'))}</button></div>`)}</section><section class="admin-card" data-testid="practice-opponent-admin"><div class="row"><div><h3>${safe(t('players.practiceTitle', {}, 'admin'))}</h3><p>${safe(t('players.practiceSubtitle', {}, 'admin'))}</p></div><button id="fund_practice_opponents" data-testid="fund-practice-opponents">${safe(t('players.fundPractice', {}, 'admin'))}</button></div>${table([t('players.seat', {}, 'admin'), t('players.account', {}, 'admin'), t('players.policy', {}, 'admin'), t('players.balance', {}, 'admin')], practiceAccounts.map(account => html`<tr data-testid="practice-opponent-account"><td>${safe(t('players.opponentSeat', { number: account.seat_id.split('_').pop() }, 'admin'))}</td><td>${safe(account.display_name)} (${safe(account.player_id)})</td><td>${safe(t('players.automaticCaller', {}, 'admin'))}</td><td>${formatNumber(account.balance)} ${safe(t('players.playTokens', {}, 'admin'))}</td></tr>`))}<h3>${safe(t('players.practiceActivity', {}, 'admin'))}</h3>${practiceActivity.length ? table([t('players.time', {}, 'admin'), t('players.account', {}, 'admin'), t('players.round', {}, 'admin'), t('players.action', {}, 'admin'), t('players.amount', {}, 'admin')], practiceActivity.slice().reverse().map(row => html`<tr data-testid="practice-opponent-activity"><td>${safe(row.ts)}</td><td>${safe(row.player_id)}</td><td>${safe(row.round_id || '—')}</td><td>${safe(practiceActionLabels[row.details?.controller_action] || humanLabel(row.transaction_type))}</td><td>${formatNumber(row.amount)} ${safe(t('players.playTokens', {}, 'admin'))}</td></tr>`)) : emptyState(t('players.noPracticeActivity', {}, 'admin'), t('players.noPracticeActivityDetail', {}, 'admin'), 'practice-opponent-empty')}</section>`;
-  // Bind save buttons after rendering each bot edit card.
-  view.querySelectorAll('.save-bot').forEach(button => button.onclick = async () => saveBot(button));
-  // Bind the explicit idempotent funding action after the practice section renders.
-  view.querySelector('#fund_practice_opponents').onclick = fundPracticeOpponents;
-}
-
-// Define fundPracticeOpponents to seed every server-managed wallet through the ledger.
-async function fundPracticeOpponents() {
-  // Submit the fixed issue-scoped game allocation to the protected Admin route.
-  await post('/api/v1/admin/bots/practice-opponents/fund', { game_id: 'texas_holdem_practice_table' });
-  // Show localized completion feedback without exposing ledger internals.
-  toast(t('players.practiceFunded', {}, 'admin'), true);
-  // Reload balances and append-only activity from the backend.
-  await playersBots();
 }
 
 // Define userRows to render Admin user-management rows.
@@ -637,28 +616,6 @@ async function saveUserLocale(button) {
   toast('User locale saved.', true);
   // Refresh the users table after the change.
   await users();
-}
-
-// Define saveBot to submit one bot controller edit through the existing public endpoint.
-async function saveBot(button) {
-  // Store the nearest bot edit form for value collection.
-  const box = button.closest('.bot-edit');
-  // Store the bot id from the button dataset.
-  const id = button.dataset.bot;
-  // Store strategies so each game strategy selection can be submitted together.
-  const strategies = {};
-  // Store stakes so each game stake can be submitted together.
-  const stakes = {};
-  // Collect selected strategy ids by game.
-  box.querySelectorAll('.bot-strategy').forEach(select => strategies[select.dataset.game] = select.value);
-  // Collect numeric stake values by game.
-  box.querySelectorAll('.bot-stake').forEach(input => stakes[input.dataset.game] = Number(input.value || 1));
-  // Save the bot settings through the existing bot API.
-  await post(`/api/v1/bots/${id}`, { enabled: box.querySelector('.bot-enabled').checked, strategies, stakes });
-  // Show the existing success feedback.
-  toast('Bot settings saved.', true);
-  // Rerender players/bots so server-normalized values are visible.
-  playersBots();
 }
 
 // Render OAuth diagnostics separately so provider configuration cannot change Operations health.
