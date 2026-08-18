@@ -571,6 +571,97 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertNotIn("ServerThread", area_source)
         self.assertNotIn("subprocess.run", area_source)
 
+    # Prove the shared session/wallet-integrity registrations moved as one exact ordered area.
+    def test_api_session_integrity_area_registration_ownership_is_exact(self):
+        # Define every permanent ID and requirement mapping in historical execution order.
+        expected_cases = (
+            ("API-PRIVATE-SESSION-001", ["SESSION-003", "USER-001", "USER-003", "USER-005", "TOKEN-004", "TEST-039"]),
+            ("API-MHVP-001", ["MHVP-001", "MHVP-002", "MHVP-003"]),
+            ("API-CW-001", ["CW-001", "CW-002", "CW-003"]),
+            ("API-BIG-SIX-001", ["BIG-SIX-001", "BIG-SIX-002", "BIG-SIX-003", "BIG-SIX-008"]),
+            ("API-RD-001", ["RD-001", "RD-002", "RD-003"]),
+            ("API-DT-001", ["DT-001", "DT-002", "DT-003", "DT-007"]),
+            ("API-HILO-001", ["HILO-001", "HILO-002", "HILO-003"]),
+            ("API-TCP-001", ["TCP-001", "TCP-002", "TCP-003"]),
+            ("API-JOBVP-001", ["JOBVP-001", "JOBVP-002", "JOBVP-003"]),
+            ("API-DWVP-001", ["DWVP-001", "DWVP-002", "DWVP-003"]),
+            ("API-SCRATCH-001", ["SCRATCH-001", "SCRATCH-002", "SCRATCH-003"]),
+            ("API-SIC-BO-001", ["SIC-BO-001", "SIC-BO-002", "SIC-BO-003", "SIC-BO-007"]),
+            ("API-CHUCK-001", ["CHUCK-001", "CHUCK-002", "CHUCK-003", "CHUCK-007"]),
+            ("API-CRAPS-001", ["CRAPS-001", "CRAPS-002", "CRAPS-003"]),
+            ("API-CAA-001", ["CAA-001", "CAA-002", "CAA-003", "CAA-007"]),
+            ("API-OU7-001", ["OU7-001", "OU7-002", "OU7-003", "OU7-008"]),
+            ("API-PLINKO-001", ["PLINKO-001", "PLINKO-002", "PLINKO-003"]),
+            ("API-FAN-TAN-001", ["FAN-TAN-001", "FAN-TAN-002", "FAN-TAN-003", "FAN-TAN-007"]),
+            ("API-AB-001", ["AB-001", "AB-002", "AB-003"]),
+            ("API-AD-001", ["AD-001", "AD-002", "AD-003"]),
+            ("API-CS-001", ["CS-001", "CS-002", "CS-003"]),
+            ("API-LIR-001", ["LIR-001", "LIR-002", "LIR-003"]),
+            ("API-CH-001", ["CH-001", "CH-002", "CH-003"]),
+            ("API-PGP-001", ["PGP-001", "PGP-002", "PGP-003"]),
+            ("API-JP-001", ["JP-001", "JP-002", "JP-003"]),
+            ("API-THPT-001", ["THPT-001", "THPT-002", "THPT-003", "THPT-005", "BOT-009", "BOT-010", "BOT-011", "LEDGER-026", "SEC-001", "SEC-002", "SEC-003", "SEC-004", "SEC-005", "SEC-006", "SEC-008", "SEC-009"]),
+            ("API-TOKEN-001", ["TOKEN-003", "TOKEN-004"]),
+            ("API-ADMIN-USERS-001", ["AUTH-005", "AUTH-008", "USER-002", "USER-004", "TEST-060"]),
+            ("API-CONTRACT-V2-001", ["API-001", "API-002", "TOKEN-002"]),
+            ("API-TERMS-001", ["TERMS-001", "TERMS-002", "TERMS-003"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "session_integrity.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the listener-free registration owner for callback capture.
+        spec = importlib.util.spec_from_file_location("session_integrity_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture exact registrations without invoking live HTTP or backend lifecycle.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Retain identity, mapping, order, and callback for semantic checks.
+            captured.append((case_id, requirements, callback))
+        # Build two authenticated identities for every extracted per-game predicate.
+        users = [{"player_id": "player-a"}, {"player_id": "player-b"}]
+        # Define the complete state keys consumed by the extracted per-game callbacks.
+        game_keys = (
+            "three_card_poker_rounds", "jacks_or_better_rounds", "deuces_wild_rounds", "scratch_cards", "sic_bo_rounds", "chuck_a_luck_rounds", "craps_rounds", "crown_and_anchor_rounds", "over_under_7_rounds", "plinko_drops", "fan_tan_rounds", "andar_bahar_rounds", "acey_deucey_rounds", "caribbean_stud_rounds", "let_it_ride_rounds", "casino_holdem_rounds", "pai_gow_poker_rounds", "joker_poker_rounds", "texas_holdem_practice_hands",
+        )
+        # Seed a valid callback packet without using any production player or game state.
+        state = {key: {"player-a": f"{key}-a", "player-b": f"{key}-b"} for key in game_keys}
+        # Add the direct predicates consumed before and after the per-game block.
+        state.update({"users": users, "mhvp_verified": True, "casino_war_verified": True, "big_six_verified": True, "red_dog_verified": True, "dragon_tiger_verified": True, "hi_lo_verified": True, "token_credit_count": 1, "contract_player": {"player_id": "player-a", "token_balance": 250, "token_label": "Play Tokens"}, "admin_blocked": 21, "email": "wallet-a@example.local"})
+        # Preserve the historical private-session callback identity with an inert focused seam.
+        wallet_calls = []
+        def wallet_auth_integrity():
+            # Record the callback invocation without contacting a listener.
+            wallet_calls.append("called")
+        # Fail the focused test if any extracted assertion predicate is false.
+        def assert_condition(value, message):
+            # Preserve the runner helper's boolean assertion semantics.
+            if not value:
+                raise AssertionError(message)
+        # Register every callback through the exact explicit dependency boundary.
+        module.run_cases(capture, wallet_auth_integrity, state, assert_condition)
+        # Bind every permanent ID, requirement mapping, and historical position.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        # Execute each captured callback once against the valid synthetic state.
+        for _, _, callback in captured:
+            # Prove extracted closure semantics without network or process ownership.
+            callback()
+        # Require the private-session callback to execute exactly once in the focused model.
+        self.assertEqual(wallet_calls, ["called"])
+        # Reject duplicate literal registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one exact dependency-forwarding delegation at the historical boundary.
+        delegation = "api_session_integrity.run_cases(run_case,wallet_auth_integrity,integrity_state,assert_condition)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the process-restart boundary immediately after the complete area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("# Stop and verify the live backend before persistence is tested across a process boundary."))
+        # Keep server, transport, process, and persistence-reset ownership out of the area.
+        for forbidden in ("start_server", "stop_server", "ServerThread", "subprocess.run", "reset_data"):
+            self.assertNotIn(forbidden, area_source)
+
     # Prove the first API area moved as one exact registration group without duplication in the shim.
     def test_api_governance_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
