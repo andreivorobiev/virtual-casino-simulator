@@ -108,12 +108,12 @@ test('Baccarat publishes settlement only from the reveal-completion callback', a
 
 // Prove wallet success clears and closes before any secondary refresh can race another click. (TOKEN-007)
 test('wallet top-up clears and closes before secondary shell refresh', async () => {
-  // Read the exact application shell source.
-  const source = await readFile(path.join(ROOT, 'web', 'app.js'), 'utf8');
+  // Read the extracted application lifecycle source that owns persistent wallet controls.
+  const source = await readFile(path.join(ROOT, 'web', 'core', 'app_bootstrap.js'), 'utf8');
   // Isolate the top-up handler before logout wiring.
   const start = source.indexOf('addButton.onclick = async () =>'); const handler = source.slice(start, source.indexOf('// Read the logout button', start));
   // Locate the committed render, local clear, popover close, and secondary refresh.
-  const committed = handler.indexOf('updateCurrentUserShell()'); const cleared = handler.indexOf("getElementById('add-token-amount').value = ''"); const closed = handler.indexOf("querySelector('.wallet-menu')?.removeAttribute('open')"); const refreshed = handler.indexOf('await refreshShellState({ quiet: true })');
+  const committed = handler.indexOf('updateCurrentUserShell()'); const cleared = handler.indexOf("amountInput.value = ''"); const closed = handler.indexOf("querySelector('.wallet-menu')?.removeAttribute('open')"); const refreshed = handler.indexOf('await refreshShellState({ quiet: true })');
   // Require all four boundaries in the exact safe order.
   assert.ok(committed >= 0 && cleared > committed && closed > cleared && refreshed > closed);
 });
