@@ -10946,6 +10946,7 @@
       "browser_tests": [],
       "implementation_files": [
         "casino/core/game_action.py",
+        "casino/core/storage_game_actions_mysql.py",
         "casino/core/storage.py",
         "tests/game_action_contract_tests.py",
         "tests/json_game_action_provider_tests.py",
@@ -10953,8 +10954,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-683-game-action-lifecycle-bridge",
-      "changed_in": "issue-683-game-action-lifecycle-bridge",
-      "notes": "The bridge is inert: no route, game, public API, contract, migration application, or production activation uses it. JSON holds its existing global provider gate across reset and caller bootstrap, retains epoch-scoped immutable history, and restores exact prior bytes on body or finalization failure. MySQL lifecycle DML requires exact clean schema four and a ready singleton epoch."
+      "changed_in": "issue-946-mysql-game-action-lifecycle",
+      "notes": "The bridge is inert: no route, game, public API, contract, migration application, or production activation uses it. JSON holds its existing global provider gate across reset and caller bootstrap, retains epoch-scoped immutable history, and restores exact prior bytes on body or finalization failure. MySQL lifecycle DML requires exact clean schema four and a ready singleton epoch. Issue #946 moves the exact twelve-method MySQL lifecycle implementation into a bounded owner without changing behavior, schema eligibility, transaction ordering, grants, or activation policy."
     },
     {
       "id": "MYSQL-009",
@@ -10968,6 +10969,7 @@
       ],
       "browser_tests": [],
       "implementation_files": [
+        "casino/core/storage_game_actions_mysql.py",
         "casino/core/storage.py",
         "migrations/mysql/0004_game_action_claims.json",
         "migrations/mysql/catalog.json",
@@ -10977,8 +10979,8 @@
         "tests/mysql_migration_live.py"
       ],
       "introduced_in": "issue-683-game-action-lifecycle-bridge",
-      "changed_in": "issue-683-game-action-lifecycle-bridge",
-      "notes": "Catalog policy remains held with minimum runtime schema two and expected schema four. Application runtime accepts clean schemas two, three, and four, but lifecycle executor/resolver methods reject schemas two and three before DML. A failed schema-four reset remains durably resetting until a later explicitly authorized reset acquires the same named lock, advances again, and completes bootstrap; action planning never runs in that gap. No production migration or grant mutation is included."
+      "changed_in": "issue-946-mysql-game-action-lifecycle",
+      "notes": "Catalog policy remains held with minimum runtime schema two and expected schema four. Application runtime accepts clean schemas two, three, and four, but lifecycle executor/resolver methods reject schemas two and three before DML. A failed schema-four reset remains durably resetting until a later explicitly authorized reset acquires the same named lock, advances again, and completes bootstrap; action planning never runs in that gap. Issue #946 changes only the bounded Python owner of the exact lifecycle method bytes; no production migration, grant mutation, or activation is included."
     },
     {
       "id": "TEST-174",
@@ -11586,7 +11588,7 @@
     {
       "id": "STORAGE-016",
       "module": "Core",
-      "description": "The storage subsystem exposes provider-neutral configuration, contract, validation, replay, and event-helper ownership plus bounded JSON reset/rollback/visibility and game-action serialization/recovery/execution/resolution lifecycle owners while preserving the historical casino.core.storage import surface by exact object identity. Incremental package slices retain concrete JSON and MySQL provider behavior and move each reviewed boundary without caller churn.",
+      "description": "The storage subsystem exposes provider-neutral configuration, contract, validation, replay, and event-helper ownership plus bounded JSON reset/rollback/visibility and bounded JSON and MySQL game-action serialization/recovery/execution/resolution lifecycle owners while preserving the historical casino.core.storage import surface by exact object identity. Incremental package slices retain concrete JSON and MySQL provider behavior and move each reviewed boundary without caller churn.",
       "status": "PASS",
       "api_tests": [
         "STORAGE-JSON-001"
@@ -11596,11 +11598,12 @@
         "casino/core/storage_base.py",
         "casino/core/storage_reset.py",
         "casino/core/storage_game_actions_json.py",
+        "casino/core/storage_game_actions_mysql.py",
         "casino/core/storage.py"
       ],
       "introduced_in": "issue-940-storage-provider-base",
-      "changed_in": "issue-944-json-game-action-lifecycle",
-      "notes": "The #940 base seam, #942 reset seam, and #944 JSON action seam use transitional storage_*.py modules because Python cannot safely load casino/core/storage.py and casino/core/storage/ as the same import during incremental cutover. JSON reset keeps its accepted lock ordering, recovery archive, epoch transitions, and #412/#432 ledger-then-action cache invalidation order. The action owner keeps exact immutable registry, journal recovery, projection, executor, and resolver method bytes. The final package slice will move these owners into casino/core/storage/ without caller churn."
+      "changed_in": "issue-946-mysql-game-action-lifecycle",
+      "notes": "The #940 base seam, #942 reset seam, #944 JSON action seam, and #946 MySQL action seam use transitional storage_*.py modules because Python cannot safely load casino/core/storage.py and casino/core/storage/ as the same import during incremental cutover. JSON reset keeps its accepted lock ordering, recovery archive, epoch transitions, and #412/#432 ledger-then-action cache invalidation order. The action owners keep the exact accepted JSON lifecycle and twelve-method MySQL lifecycle bytes, including schema eligibility, locking, transaction, claim, receipt, ledger, snapshot, executor, and resolver behavior. The final package slice will move these owners into casino/core/storage/ without caller churn."
     },
     {
       "id": "LEDGER-036",
@@ -11721,7 +11724,7 @@
     {
       "id": "TEST-243",
       "module": "Tests",
-      "description": "Storage package extraction evidence binds provider-neutral, JSON reset, and JSON game-action ownership, the 1,200-line module ceiling, exact historical re-export identity, unchanged provider-contract signatures, absence of duplicate declarations, exact mixin method identity, and the #412/#432 ledger-then-action cache invalidation order before executing established provider suites.",
+      "description": "Storage package extraction evidence binds provider-neutral, JSON reset, JSON game-action, and MySQL game-action ownership, the 1,200-line module ceiling, exact historical re-export identity, unchanged provider-contract signatures, absence of duplicate declarations, exact mixin method identity, and the #412/#432 ledger-then-action cache invalidation order before executing established provider suites.",
       "status": "PASS",
       "api_tests": [
         "STORAGE-JSON-001"
@@ -11734,8 +11737,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-940-storage-provider-base",
-      "changed_in": "issue-944-json-game-action-lifecycle",
-      "notes": "The #940, #942, and #944 slices keep the existing STORAGE-JSON-001 registration and permanent case inventory unchanged while running listener-free ownership proof before accepted provider parity. The reset gate proves exact lifecycle constants and both cache invalidation sequences; the action gate proves the exact 35-method inventory, no duplicates, descriptor identity, stage-constant identity, and exclusion of ordinary provider/MySQL responsibilities. Later package slices will amend this requirement with the parent issue's named cross-provider settlement-parity gate."
+      "changed_in": "issue-946-mysql-game-action-lifecycle",
+      "notes": "The #940, #942, #944, and #946 slices keep the existing STORAGE-JSON-001 registration and permanent case inventory unchanged while running listener-free ownership proof before accepted provider parity. The reset gate proves exact lifecycle constants and both cache invalidation sequences; the JSON action gate proves the exact 35-method inventory, no duplicates, descriptor identity, stage-constant identity, and exclusion of ordinary provider/MySQL responsibilities. The MySQL action gate proves the exact twelve-method inventory and descriptor identity while excluding pool, reset, ordinary document, ledger, and JSON journal ownership. Later package slices will amend this requirement with the parent issue's named cross-provider settlement-parity gate."
     },
     {
       "id": "TEST-175",
