@@ -32,6 +32,8 @@ import { createTelemetryTab } from './admin/telemetry.js';
 import { createPlayersTab } from './admin/players.js';
 // Import the Users renderer so account lifecycle and stale-response state leave the dispatcher monolith. (ADMIN-034)
 import { createUsersTab } from './admin/users.js';
+// Import owner-only role delegation so privilege changes leave the dispatcher monolith. (ADMIN-033)
+import { createAdministratorsTab } from './admin/administrators.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -166,6 +168,22 @@ const users = createUsersTab({
   toast,
   view,
 });
+// Bind the Administrators renderer to the accepted owner-only role-management boundaries.
+const administrators = createAdministratorsTab({
+  api,
+  emptyState,
+  html,
+  humanLabel,
+  isActiveTab,
+  option,
+  post,
+  safe,
+  setTitle,
+  t,
+  table,
+  toast,
+  view,
+});
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -290,37 +308,6 @@ async function feedbackDetail(reportId) {
   view.querySelector('#feedback-export').onclick = async () => { const exported = await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}/export`); const blob = new Blob([JSON.stringify(exported.export || {}, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${report.reference || 'feedback-report'}.json`; link.click(); URL.revokeObjectURL(link.href); toast(t('feedback.admin.exported', {}, 'feedback'), true); };
   // Require explicit confirmation before starting the recoverable privacy-deletion saga.
   view.querySelector('#feedback-delete').onclick = async () => { if (!window.confirm(t('feedback.admin.deleteConfirm', {}, 'feedback'))) return; await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}`, { method: 'DELETE', body: { idempotency_key: feedbackActionKey() } }); toast(t('feedback.admin.deleted', {}, 'feedback'), true); feedbackReports(); };
-}
-
-// Render owner-only ordinary-Admin delegation separately from general account lifecycle. (ADMIN-033)
-async function administrators() {
-  // Set an explicit privilege-management boundary in the Admin shell.
-  setTitle(t('administrators.title', {}, 'admin'), t('administrators.subtitle', {}, 'admin'));
-  // Read the current role revision and immutable audit together.
-  const [data, historyData] = await Promise.all([api('/api/v2/admin/administrators'), api('/api/v2/admin/administrators/audit?limit=100')]);
-  // Stop a stale role response from replacing another selected tab.
-  if (!isActiveTab('administrators')) return;
-  // Render eligible grants, current ordinary Admins, protected owners, and bounded audit evidence.
-  view.innerHTML = html`<section class="admin-card" data-testid="admin-administrator-grant"><h3>${safe(t('administrators.grantTitle', {}, 'admin'))}</h3><label>${safe(t('administrators.account', {}, 'admin'))}<select id="administrator-target">${(data.eligible_accounts || []).map(account => option(account.user_id, `${account.display_name} (${account.email})`, ''))}</select></label><label>${safe(t('administrators.password', {}, 'admin'))}<input id="administrator-password" type="password" autocomplete="current-password"></label><label>${safe(t('administrators.reason', {}, 'admin'))}<input id="administrator-reason" maxlength="256"></label><button id="administrator-grant" type="button" data-testid="administrator-grant" ${(data.eligible_accounts || []).length ? '' : 'disabled'}>${safe(t('administrators.grant', {}, 'admin'))}</button></section><section class="admin-card" data-testid="admin-administrator-list"><h3>${safe(t('administrators.currentTitle', {}, 'admin'))}</h3>${(data.administrators || []).length ? table([t('administrators.account', {}, 'admin'), t('administrators.role', {}, 'admin'), t('administrators.action', {}, 'admin')], data.administrators.map(account => html`<tr><td>${safe(account.display_name)} (${safe(account.email)})</td><td>${safe((account.roles || []).join(', '))}</td><td>${account.protected_owner ? safe(t('administrators.protected', {}, 'admin')) : html`<button type="button" class="administrator-revoke" data-user="${safe(account.user_id)}">${safe(t('administrators.revoke', {}, 'admin'))}</button>`}</td></tr>`)) : emptyState(t('administrators.empty', {}, 'admin'), t('administrators.emptyDetail', {}, 'admin'))}</section><section class="admin-card" data-testid="admin-administrator-audit"><h3>${safe(t('administrators.auditTitle', {}, 'admin'))}</h3>${(historyData.audit || []).length ? table([t('administrators.time', {}, 'admin'), t('administrators.action', {}, 'admin'), t('administrators.target', {}, 'admin'), t('administrators.reason', {}, 'admin')], historyData.audit.map(row => html`<tr><td>${safe(row.at)}</td><td>${safe(humanLabel(row.action))}</td><td>${safe(row.target_user_id)}</td><td>${safe(row.reason)}</td></tr>`)) : emptyState(t('administrators.auditEmpty', {}, 'admin'), t('administrators.auditEmptyDetail', {}, 'admin'))}</section>`;
-  // Apply one reauthenticated role transition and scrub the password immediately afterward.
-  const changeRole = async (target, action) => {
-    // Read the transient owner step-up and reason at explicit action time only.
-    const password = view.querySelector('#administrator-password').value;
-    // Read and trim the bounded audit reason.
-    const reason = view.querySelector('#administrator-reason').value.trim();
-    // Clear the password before awaiting network work so rerenders or evidence cannot retain it.
-    view.querySelector('#administrator-password').value = '';
-    // Commit through the exact owner-only action endpoint with optimistic revision and replay key.
-    await post(`/api/v2/admin/administrators/${encodeURIComponent(target)}/${action}`, { password, reason, revision: data.revision, idempotency_key: crypto.randomUUID() });
-    // Confirm the committed transition without reflecting sensitive request content.
-    toast(t('administrators.saved', {}, 'admin'), true);
-    // Reload from durable identity and audit state.
-    await administrators();
-  };
-  // Bind the selected eligible account grant.
-  view.querySelector('#administrator-grant').onclick = () => changeRole(view.querySelector('#administrator-target').value, 'grant');
-  // Bind each non-owner revoke to the same reauthentication fields.
-  view.querySelectorAll('.administrator-revoke').forEach(button => { button.onclick = () => changeRole(button.dataset.user, 'revoke'); });
 }
 
 // Render owner policy, readiness, preview, rollback inputs, and immutable change evidence. (AUTH-015)
