@@ -48,6 +48,8 @@ import { createOperationsTab } from './admin/operations.js';
 import { createLanguageTab, createLocaleOptionHelpers } from './admin/language.js';
 // Import privacy-bounded report triage so Feedback leaves the dispatcher monolith. (ADMIN-025)
 import { createFeedbackTab } from './admin/feedback.js';
+// Import Guest Trials policy and telemetry so account-free analytics leave the dispatcher monolith. (CONVERT-003, ADMIN-031)
+import { createGuestsTab } from './admin/guests.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -55,8 +57,6 @@ import { applyTranslations, formatDate, formatMoney, formatNumber, getLocaleSett
 
 // Store current so refresh and locale rerendering preserve the active Admin tab.
 let current = 'dashboard';
-// Preserve low-cardinality Guest Trials filters across locale rerenders and refreshes.
-let guestFilters = { locale: '', device: '', status: '', game: '', completed: '', error_category: '', range: '' };
 // Store view so tab renderers share the same Admin content target.
 const view = document.getElementById('adminView');
 // Store title so tab renderers can update the current heading.
@@ -286,6 +286,25 @@ const feedbackReports = createFeedbackTab({
   toast,
   view,
 });
+// Bind Guest Trials to its de-identified telemetry, owner policy, conversion, and retention routes.
+const guests = createGuestsTab({
+  api,
+  emptyState,
+  formatMoney,
+  formatNumber,
+  html,
+  humanLabel,
+  isActiveTab,
+  localeOptions,
+  option,
+  post,
+  safe,
+  setTitle,
+  t,
+  table,
+  toast,
+  view,
+});
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -350,124 +369,6 @@ async function load(tab = 'dashboard') {
     // Render a human recovery state without exposing raw transport or server diagnostics.
     view.innerHTML = html`<section class="admin-card danger" data-testid="admin-load-error"><h2>${safe(t('common.loadErrorTitle', {}, 'admin'))}</h2><p>${safe(t('common.loadErrorDetail', {}, 'admin'))}</p></section>`;
   }
-}
-
-// Render the de-identified Guest Trials telemetry section for account-free visitors. (issue #317)
-async function guests() {
-  // Set the localized Guest Trials heading and its measurement helper line.
-  setTitle(t('nav.guests', {}, 'admin'), t('guests.subtitle', {}, 'admin'));
-  // Announce an explicit localized loading state before the Admin-only request resolves.
-  view.innerHTML = html`<section class="admin-card loading-panel" data-testid="admin-guest-loading" role="status"><h2>${safe(t('guests.loadingTitle', {}, 'admin'))}</h2><p>${safe(t('guests.loadingDetail', {}, 'admin'))}</p></section>`;
-  // Encode only published filters while keeping the UI-only range shortcut out of the request.
-  const params = new URLSearchParams(Object.entries(guestFilters).filter(([name, value]) => name !== 'range' && value));
-  // Convert the selected bounded time window into the contract's inclusive UTC lower bound.
-  if (guestFilters.range) params.set('since', new Date(Date.now() - Number(guestFilters.range) * 86400000).toISOString());
-  // Load telemetry and the current admission control together so the Admin view is one coherent snapshot.
-  const [data, settingsData] = await Promise.all([api(`/api/v2/admin/guest-trials?${params.toString()}`), api('/api/v2/admin/guest-trials/settings')]);
-  // Stop when another tab took over during the async load.
-  if (!isActiveTab('guests')) return;
-  // Read the summary totals used by the funnel tiles.
-  const summary = data.guest_trials || {};
-  // Read the milestone funnel and cleanup health with safe defaults.
-  const funnel = summary.funnel || {};
-  // Read de-identified per-game aggregate rows.
-  const games = summary.games || [];
-  // Read retention health without exposing runtime paths or exception text.
-  const cleanup = summary.cleanup || {};
-  // Read the owner-governed admission switch and fixed current token grant.
-  const guestPolicy = settingsData.settings || { enabled: false, starting_balance: 10000 };
-  // Render filters, funnel, game aggregates, recent rows, detail, and retention health without identity columns.
-  view.innerHTML = html`<section class="admin-card guest-filter-card" data-testid="admin-guest-filters"><div class="guest-filter-grid"><label>${safe(t('guests.filterLocale', {}, 'admin'))}<select id="guest-filter-locale">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.locale)}${localeOptions(guestFilters.locale)}</select></label><label>${safe(t('guests.filterDevice', {}, 'admin'))}<select id="guest-filter-device">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.device)}${option('desktop', t('guests.deviceDesktop', {}, 'admin'), guestFilters.device)}${option('tablet', t('guests.deviceTablet', {}, 'admin'), guestFilters.device)}${option('mobile', t('guests.deviceMobile', {}, 'admin'), guestFilters.device)}</select></label><label>${safe(t('guests.filterStatus', {}, 'admin'))}<select id="guest-filter-status">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.status)}${option('active', t('guests.statusActive', {}, 'admin'), guestFilters.status)}${option('ended', t('guests.statusEnded', {}, 'admin'), guestFilters.status)}</select></label><button id="guest-cleanup" type="button" data-testid="admin-guest-cleanup">${safe(t('guests.cleanupRun', {}, 'admin'))}</button></div></section><div class="admin-card-grid" data-testid="admin-guest-summary"><div class="admin-card"><b>${safe(t('guests.started', {}, 'admin'))}</b><h2 data-testid="admin-guest-started">${formatNumber(funnel.started || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.engaged', {}, 'admin'))}</b><h2 data-testid="admin-guest-engaged">${formatNumber(funnel.engaged || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.completed', {}, 'admin'))}</b><h2 data-testid="admin-guest-completed">${formatNumber(funnel.completed_round || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.activeNow', {}, 'admin'))}</b><h2 data-testid="admin-guest-active">${formatNumber(summary.active_now || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.ended', {}, 'admin'))}</b><h2 data-testid="admin-guest-ended">${formatNumber(summary.ended_total || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.expired', {}, 'admin'))}</b><h2 data-testid="admin-guest-expired">${formatNumber(summary.expired_total || 0)}</h2></div></div><section class="admin-card" data-testid="admin-guest-games"><h3>${safe(t('guests.gamesTitle', {}, 'admin'))}</h3>${games.length ? table([t('guests.colGame', {}, 'admin'), t('guests.colTrials', {}, 'admin'), t('guests.colOpens', {}, 'admin'), t('guests.colActions', {}, 'admin'), t('guests.colRounds', {}, 'admin')], games.map(row => html`<tr><td>${safe(humanLabel(row.game))}</td><td>${formatNumber(row.trials)}</td><td>${formatNumber(row.opens)}</td><td>${formatNumber(row.actions)}</td><td>${formatNumber(row.rounds_completed)}</td></tr>`)) : emptyState(t('guests.gamesEmpty', {}, 'admin'), t('guests.gamesEmptyDetail', {}, 'admin'), 'admin-guest-games-empty')}</section><section class="admin-card" data-testid="admin-guest-recent"><h3>${safe(t('guests.recentTitle', {}, 'admin'))}</h3>${(summary.recent || []).length ? table([t('guests.colId', {}, 'admin'), t('guests.colStarted', {}, 'admin'), t('guests.colLocale', {}, 'admin'), t('guests.colDevice', {}, 'admin'), t('guests.colReason', {}, 'admin'), t('guests.colActions', {}, 'admin'), t('guests.colRounds', {}, 'admin'), t('guests.colDetail', {}, 'admin')], summary.recent.map(row => html`<tr data-testid="admin-guest-row"><td>${safe(row.analytics_id)}</td><td>${safe(row.started_at)}</td><td>${safe(row.locale)}</td><td>${safe(row.device)}</td><td>${safe(row.end_reason || t('guests.statusActive', {}, 'admin'))}</td><td>${formatNumber(row.actions || 0)}</td><td>${formatNumber(row.rounds_completed || 0)}</td><td><button class="guest-detail-button" data-id="${safe(row.analytics_id)}" type="button">${safe(t('guests.viewDetail', {}, 'admin'))}</button>${row.end_reason ? '' : html`<button class="guest-convert-button" data-id="${safe(row.analytics_id)}" type="button">${safe(t('guests.convertSelect', {}, 'admin'))}</button>`}</td></tr>`)) : emptyState(t('guests.empty', {}, 'admin'), t('guests.emptyDetail', {}, 'admin'), 'admin-guest-empty')}</section><section id="guest-detail" class="admin-card" data-testid="admin-guest-detail" aria-live="polite"><h3>${safe(t('guests.detailTitle', {}, 'admin'))}</h3><p>${safe(t('guests.detailPrompt', {}, 'admin'))}</p></section><section class="admin-card" data-testid="admin-guest-cleanup-status" data-cleanup-failed="${cleanup.last_error === 'cleanup_failed'}"><h3>${safe(t('guests.cleanupTitle', {}, 'admin'))}</h3><p>${safe(t('guests.cleanupStatus', { raw: cleanup.raw_retention_days || 30, aggregate: cleanup.aggregate_retention_days || 400, time: cleanup.last_success_at || t('guests.cleanupNever', {}, 'admin'), failure: cleanup.last_failure_at || t('guests.cleanupNever', {}, 'admin') }, 'admin'))}</p></section>`;
-  // Insert the owner control before analytics so admission status is immediately visible.
-  view.querySelector('[data-testid="admin-guest-filters"]').insertAdjacentHTML('beforebegin', html`<section class="admin-card" data-testid="admin-guest-policy"><h3>${safe(t('guests.policyTitle', {}, 'admin'))}</h3><p>${safe(t('guests.policyCopy', { tokens: formatNumber(guestPolicy.starting_balance || 10000) }, 'admin'))}</p><label class="check-row"><input id="guest-trials-enabled" data-testid="admin-guest-trials-enabled" type="checkbox" ${guestPolicy.enabled ? 'checked' : ''}><span>${safe(t('guests.policyEnabled', {}, 'admin'))}</span></label><button id="guest-policy-save" data-testid="admin-save-guest-policy" type="button">${safe(t('guests.policySave', {}, 'admin'))}</button></section>`);
-  // Insert the explicitly confirmed support conversion form after admission policy and before analytics filters.
-  view.querySelector('[data-testid="admin-guest-filters"]').insertAdjacentHTML('beforebegin', html`<section class="admin-card" data-testid="admin-guest-conversion"><h3>${safe(t('guests.convertTitle', {}, 'admin'))}</h3><p>${safe(t('guests.convertCopy', {}, 'admin'))}</p><form id="admin-guest-conversion-form" class="grid3"><label>${safe(t('guests.convertIdentity', {}, 'admin'))}<input id="guest-conversion-identity" data-testid="admin-guest-conversion-identity" autocomplete="off" maxlength="191" required></label><label>${safe(t('guests.convertEmail', {}, 'admin'))}<input id="guest-conversion-email" data-testid="admin-guest-conversion-email" type="email" autocomplete="off" maxlength="254" required></label><label>${safe(t('guests.convertDisplayName', {}, 'admin'))}<input id="guest-conversion-display-name" data-testid="admin-guest-conversion-display-name" maxlength="80" required></label><label>${safe(t('guests.convertPassword', {}, 'admin'))}<input id="guest-conversion-password" data-testid="admin-guest-conversion-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><label class="check-row"><input id="guest-conversion-confirm" data-testid="admin-guest-conversion-confirm" type="checkbox" required><span>${safe(t('guests.convertConfirm', {}, 'admin'))}</span></label><button id="guest-conversion-submit" data-testid="admin-guest-conversion-submit" type="submit">${safe(t('guests.convertSubmit', {}, 'admin'))}</button></form></section>`);
-  // Allocate one caller-owned operation key per rendered form so a lost response can be retried without a second account claim.
-  const conversionIdempotencyKey = crypto.randomUUID();
-  // Read the complete product metric summary with safe defaults.
-  const metrics = summary.metrics || {};
-  // Read percentage rates for every named funnel stage.
-  const funnelRates = summary.funnel_rates || {};
-  // Find the existing filter grid before appending the complete published filters.
-  const filterGrid = view.querySelector('.guest-filter-grid');
-  // Build catalog-game options from retained aggregate rows while preserving a selected empty result.
-  const gameKeys = [...new Set([guestFilters.game, ...games.map(row => row.game)].filter(Boolean))].sort();
-  // Append time, game, completion, and sanitized error filters without replacing the basic locale/device/lifecycle controls.
-  filterGrid.insertAdjacentHTML('beforeend', html`<label>${safe(t('guests.filterRange', {}, 'admin'))}<select id="guest-filter-range">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.range)}${option('1', t('guests.rangeDay', {}, 'admin'), guestFilters.range)}${option('7', t('guests.rangeWeek', {}, 'admin'), guestFilters.range)}${option('30', t('guests.rangeMonth', {}, 'admin'), guestFilters.range)}</select></label><label>${safe(t('guests.filterGame', {}, 'admin'))}<select id="guest-filter-game">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.game)}${gameKeys.map(game => option(game, humanLabel(game), guestFilters.game))}</select></label><label>${safe(t('guests.filterCompleted', {}, 'admin'))}<select id="guest-filter-completed">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.completed)}${option('yes', t('guests.filterYes', {}, 'admin'), guestFilters.completed)}${option('no', t('guests.filterNo', {}, 'admin'), guestFilters.completed)}</select></label><label>${safe(t('guests.filterError', {}, 'admin'))}<select id="guest-filter-error_category">${option('', t('guests.filterAll', {}, 'admin'), guestFilters.error_category)}${['VALIDATION_ERROR','INSUFFICIENT_FUNDS','CONFLICT','FORBIDDEN','NOT_FOUND','RATE_LIMITED','SERVER_ERROR'].map(category => option(category, humanLabel(category), guestFilters.error_category))}</select></label>`);
-  // Find the compact summary grid before adding full product-measurement cards.
-  const summaryGrid = view.querySelector('[data-testid="admin-guest-summary"]');
-  // Append duration, breadth, error-free, and fake-token cards explicitly labelled as simulator-only values.
-  summaryGrid.insertAdjacentHTML('beforeend', html`<div class="admin-card"><b>${safe(t('guests.averageDuration', {}, 'admin'))}</b><h2>${formatNumber(metrics.average_duration_seconds || 0)}s</h2></div><div class="admin-card"><b>${safe(t('guests.medianDuration', {}, 'admin'))}</b><h2>${formatNumber(metrics.median_duration_seconds || 0)}s</h2></div><div class="admin-card"><b>${safe(t('guests.gamesPerTrial', {}, 'admin'))}</b><h2>${formatNumber(metrics.average_games_per_trial || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.roundsPerTrial', {}, 'admin'))}</b><h2>${formatNumber(metrics.average_rounds_per_trial || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.errorFreeRate', {}, 'admin'))}</b><h2>${formatNumber(metrics.error_free_rate_percent || 0)}%</h2></div><div class="admin-card"><b>${safe(t('guests.fakeWagered', {}, 'admin'))}</b><h2>${formatMoney(metrics.wagered || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.fakeReturned', {}, 'admin'))}</b><h2>${formatMoney(metrics.returned || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.fakeNet', {}, 'admin'))}</b><h2>${formatMoney(metrics.net || 0)}</h2></div>`);
-  // Define the full nine-stage funnel in the owner-approved product order.
-  const funnelStages = ['landing_viewed','trial_started','lobby_reached','first_game_opened','first_action_accepted','first_round_completed','second_game_opened','trial_terminal','account_cta_viewed','account_cta_selected'];
-  // Render the complete funnel with both counts and rates before game analytics.
-  view.querySelector('[data-testid="admin-guest-games"]').insertAdjacentHTML('beforebegin', html`<section class="admin-card" data-testid="admin-guest-funnel"><h3>${safe(t('guests.funnelTitle', {}, 'admin'))}</h3>${table([t('guests.funnelStage', {}, 'admin'), t('guests.funnelCount', {}, 'admin'), t('guests.funnelRate', {}, 'admin')], funnelStages.map(stage => html`<tr><td>${safe(t(`guests.funnel.${stage}`, {}, 'admin'))}</td><td>${formatNumber(funnel[stage] || 0)}</td><td>${formatNumber(funnelRates[stage] || 0)}%</td></tr>`))}</section>`);
-  // Render complete per-game acceptance metrics separately from the compact compatibility table.
-  view.querySelector('[data-testid="admin-guest-games"]').insertAdjacentHTML('afterend', html`<section class="admin-card" data-testid="admin-guest-game-detail"><h3>${safe(t('guests.gameMetricsTitle', {}, 'admin'))}</h3>${games.length ? table([t('guests.colGame', {}, 'admin'), t('guests.colStartedRounds', {}, 'admin'), t('guests.colRounds', {}, 'admin'), t('guests.colAbandoned', {}, 'admin'), t('guests.colErrors', {}, 'admin'), t('guests.colFirstAction', {}, 'admin'), t('guests.colWagered', {}, 'admin'), t('guests.colReturned', {}, 'admin'), t('guests.colNet', {}, 'admin'), t('guests.colCategories', {}, 'admin')], games.map(row => html`<tr><td>${safe(humanLabel(row.game))}</td><td>${formatNumber(row.rounds_started || 0)}</td><td>${formatNumber(row.rounds_completed || 0)}</td><td>${formatNumber(row.rounds_abandoned || 0)}</td><td>${formatNumber(row.errors || 0)}</td><td>${formatNumber(row.median_first_action_ms || 0)}ms</td><td>${formatMoney(row.wagered || 0)}</td><td>${formatMoney(row.returned || 0)}</td><td>${formatMoney(row.net || 0)}</td><td>${safe(Object.keys(row.action_categories || {}).map(humanLabel).join(', ') || '—')}</td></tr>`)) : emptyState(t('guests.gamesEmpty', {}, 'admin'), t('guests.gamesEmptyDetail', {}, 'admin'))}</section>`);
-  // Make wide game, funnel, metric, and session tables named keyboard-scrollable regions.
-  view.querySelectorAll('[data-testid="admin-guest-funnel"], [data-testid="admin-guest-games"], [data-testid="admin-guest-game-detail"], [data-testid="admin-guest-recent"]').forEach(region => { region.tabIndex = 0; region.setAttribute('role', 'region'); region.setAttribute('aria-label', region.querySelector('h3')?.textContent || t('nav.guests', {}, 'admin')); });
-  // Reload the section when any allowlisted filter changes.
-  ['locale', 'device', 'status', 'range', 'game', 'completed', 'error_category'].forEach(name => { view.querySelector(`#guest-filter-${name}`).onchange = event => { guestFilters[name] = event.target.value; void guests(); }; });
-  // Bind de-identified detail buttons after rendering retained rows.
-  view.querySelectorAll('.guest-detail-button').forEach(button => { button.onclick = () => showGuestDetail(button.dataset.id); });
-  // Bind active-row conversion shortcuts to the visible de-identified analytics id only.
-  view.querySelectorAll('.guest-convert-button').forEach(button => { button.onclick = () => { const identity = view.querySelector('#guest-conversion-identity'); identity.value = button.dataset.id; identity.focus(); }; });
-  // Submit one explicitly confirmed assisted conversion through the additive Admin v2 route.
-  view.querySelector('#admin-guest-conversion-form').onsubmit = async event => {
-    // Prevent form navigation so the Guest Trials tab and scroll position remain stable.
-    event.preventDefault();
-    // Capture transient credential controls only for the bounded request lifecycle.
-    const password = view.querySelector('#guest-conversion-password');
-    // Read the confirmation control independently so a missing literal true is rejected server-side.
-    const confirmation = view.querySelector('#guest-conversion-confirm');
-    // Disable the primary action while this exact idempotent request settles.
-    const submit = view.querySelector('#guest-conversion-submit'); submit.disabled = true;
-    // Start protected submission so credentials are cleared on every result.
-    try {
-      // Send exact target content plus the stable form operation identity; the server derives the guest locale.
-      await post('/api/v2/admin/guest-trials/convert', { guest_identity: view.querySelector('#guest-conversion-identity').value.trim(), email: view.querySelector('#guest-conversion-email').value.trim(), password: password.value, display_name: view.querySelector('#guest-conversion-display-name').value.trim(), terms_version: 'private-beta-1', accepted: true, confirm: confirmation.checked, idempotency_key: conversionIdempotencyKey });
-      // Announce the completed support action without repeating identity or mailbox content.
-      toast(t('guests.convertComplete', {}, 'admin'), true);
-      // Reload the canonical Guest Trials view after successful terminal conversion.
-      await guests();
-    // Keep bounded failures inside the localized Admin surface.
-    } catch (_) {
-      // Announce a generic failure without exposing whether the target identity exists.
-      toast(t('guests.convertFailed', {}, 'admin'));
-      // Re-enable the exact submit control after a failed request.
-      submit.disabled = false;
-    // Clear credential and confirmation material regardless of network or application outcome.
-    } finally {
-      // Remove the temporary password from the DOM before any evidence capture.
-      if (password.isConnected) password.value = '';
-      // Require a new explicit confirmation for any retry.
-      if (confirmation.isConnected) confirmation.checked = false;
-    }
-  };
-  // Bind the idempotent retention action through the protected v2 endpoint.
-  view.querySelector('#guest-cleanup').onclick = async () => { try { await post('/api/v2/admin/guest-trials/cleanup', {}); toast(t('guests.cleanupComplete', {}, 'admin'), true); } catch (_) { toast(t('guests.cleanupFailed', {}, 'admin')); } await guests(); };
-  // Bind the owner-only admission switch without affecting current trial principals.
-  view.querySelector('#guest-policy-save').onclick = async () => { try { await post('/api/v2/admin/guest-trials/settings', { enabled: view.querySelector('#guest-trials-enabled').checked }); toast(t('guests.policySaved', {}, 'admin'), true); } catch (_) { toast(t('guests.policyFailed', {}, 'admin')); } await guests(); };
-}
-
-// Render one de-identified Guest Trials analytics detail record. (issue #317)
-async function showGuestDetail(analyticsId) {
-  // Load only the analytics-id route published by the Admin v2 contract.
-  const data = await api(`/api/v2/admin/guest-trials/sessions/${encodeURIComponent(analyticsId)}`);
-  // Read the retained aggregate row without assuming optional milestones exist.
-  const row = data.guest_trial || {};
-  // Read the stable live-region detail outlet.
-  const detail = view.querySelector('#guest-detail');
-  // Stop if the user changed tabs while the detail request was in flight.
-  if (!detail) return;
-  // Render bounded lifecycle, locale, device, and per-game counters without identity or credential fields.
-  detail.innerHTML = html`<h3>${safe(t('guests.detailTitle', {}, 'admin'))}</h3><dl class="guest-detail-grid"><div><dt>${safe(t('guests.colId', {}, 'admin'))}</dt><dd>${safe(row.analytics_id)}</dd></div><div><dt>${safe(t('guests.colLocale', {}, 'admin'))}</dt><dd>${safe(row.locale)}</dd></div><div><dt>${safe(t('guests.colDevice', {}, 'admin'))}</dt><dd>${safe(row.device)}</dd></div><div><dt>${safe(t('guests.colDuration', {}, 'admin'))}</dt><dd>${row.duration_seconds == null ? '—' : formatNumber(row.duration_seconds)}</dd></div><div><dt>${safe(t('guests.colActions', {}, 'admin'))}</dt><dd>${formatNumber(row.actions || 0)}</dd></div><div><dt>${safe(t('guests.colRounds', {}, 'admin'))}</dt><dd>${formatNumber(row.rounds_completed || 0)}</dd></div></dl>`;
-  // Read the bounded allowlisted event timeline with a safe empty default.
-  const events = Array.isArray(row.events) ? row.events : [];
-  // Append fake-token aggregates and the allowlisted server timeline without rendering any auth identifier.
-  detail.insertAdjacentHTML('beforeend', html`<dl class="guest-detail-grid"><div><dt>${safe(t('guests.colStartingBalance', {}, 'admin'))}</dt><dd>${formatMoney(row.starting_balance || 0)}</dd></div><div><dt>${safe(t('guests.colEndingBalance', {}, 'admin'))}</dt><dd>${row.ending_balance == null ? safe(t('guests.notAvailable', {}, 'admin')) : formatMoney(row.ending_balance)}</dd></div><div><dt>${safe(t('guests.colWagered', {}, 'admin'))}</dt><dd>${formatMoney(row.wagered || 0)}</dd></div><div><dt>${safe(t('guests.colReturned', {}, 'admin'))}</dt><dd>${formatMoney(row.returned || 0)}</dd></div><div><dt>${safe(t('guests.colNet', {}, 'admin'))}</dt><dd>${formatMoney(row.net || 0)}</dd></div><div><dt>${safe(t('guests.colErrors', {}, 'admin'))}</dt><dd>${formatNumber(row.errors || 0)}</dd></div></dl><section data-testid="admin-guest-timeline"><h4>${safe(t('guests.timelineTitle', {}, 'admin'))}</h4>${events.length ? table([t('guests.timelineEvent', {}, 'admin'), t('guests.timelineTime', {}, 'admin'), t('guests.colGame', {}, 'admin'), t('guests.timelineCategory', {}, 'admin'), t('guests.filterError', {}, 'admin'), t('guests.timelineLatency', {}, 'admin')], events.map(event => html`<tr><td>${safe(humanLabel(event.event))}</td><td>${safe(event.at)}</td><td>${safe(humanLabel(event.game || ''))}</td><td>${safe(humanLabel(event.action_category || ''))}</td><td>${safe(humanLabel(event.error_category || ''))}</td><td>${safe(humanLabel(event.latency_bucket || ''))}</td></tr>`)) : emptyState(t('guests.timelineEmpty', {}, 'admin'), t('guests.timelineEmptyDetail', {}, 'admin'))}</section>`);
-  // Make the detail timeline keyboard-scrollable on narrow Admin viewports.
-  detail.querySelector('[data-testid="admin-guest-timeline"]').tabIndex = 0;
 }
 
 // Declare the nested Admin navigation so current and added surfaces remain registry-driven. (ADMIN-031)
