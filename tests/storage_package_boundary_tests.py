@@ -13,44 +13,46 @@ import unittest
 
 # Import the historical public storage module whose callers must remain unchanged.
 from casino.core import storage
-# Import the extracted provider-neutral owner for exact identity checks.
-from casino.core import storage_base
-# Import the extracted JSON reset lifecycle owner for exact mixin checks.
-from casino.core import storage_reset
-# Import the extracted JSON game-action lifecycle owner for exact mixin checks.
-from casino.core import storage_game_actions_json
-# Import the extracted JSON filesystem and concurrency substrate for exact ownership checks.
-from casino.core import storage_json_infrastructure
-# Import the extracted complete ordinary JSON provider for exact compatibility checks.
-from casino.core import storage_json_provider
-# Import the provider-neutral lifecycle codec owner for exact identity checks.
-from casino.core import storage_game_action_codecs
-# Import the extracted MySQL game-action lifecycle owner for exact mixin checks.
-from casino.core import storage_game_actions_mysql
-# Import the extracted complete MySQL provider owner for exact compatibility checks.
-from casino.core import storage_mysql_provider
+# Import the provider-neutral package owner for exact identity checks.
+from casino.core.storage import base as storage_base
+# Import the JSON reset package owner for exact mixin checks.
+from casino.core.storage import reset as storage_reset
+# Import the JSON game-action package owner for exact mixin checks.
+from casino.core.storage import game_actions_json as storage_game_actions_json
+# Import the JSON filesystem and concurrency package owner for exact ownership checks.
+from casino.core.storage import json_infrastructure as storage_json_infrastructure
+# Import the complete ordinary JSON package owner for exact compatibility checks.
+from casino.core.storage import json_provider as storage_json_provider
+# Import the provider-neutral lifecycle codec package owner for exact identity checks.
+from casino.core.storage import game_action_codecs as storage_game_action_codecs
+# Import the MySQL game-action package owner for exact mixin checks.
+from casino.core.storage import game_actions_mysql as storage_game_actions_mysql
+# Import the complete MySQL package owner for exact compatibility checks.
+from casino.core.storage import mysql_provider as storage_mysql_provider
 
 
 # Resolve the repository root from this tracked test module.
 ROOT = Path(__file__).resolve().parents[1]
-# Point at the historical provider-selection and compatibility facade.
-STORAGE_SOURCE = ROOT / "casino" / "core" / "storage.py"
-# Point at the extracted package-ready provider-neutral base owner.
-BASE_SOURCE = ROOT / "casino" / "core" / "storage_base.py"
-# Point at the extracted package-ready JSON reset lifecycle owner.
-RESET_SOURCE = ROOT / "casino" / "core" / "storage_reset.py"
-# Point at the extracted package-ready JSON game-action lifecycle owner.
-JSON_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_json.py"
-# Point at the extracted package-ready JSON filesystem and concurrency substrate.
-JSON_INFRASTRUCTURE_SOURCE = ROOT / "casino" / "core" / "storage_json_infrastructure.py"
-# Point at the extracted complete ordinary JSON provider owner.
-JSON_PROVIDER_SOURCE = ROOT / "casino" / "core" / "storage_json_provider.py"
-# Point at the extracted package-ready MySQL game-action lifecycle owner.
-MYSQL_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_mysql.py"
-# Point at the provider-neutral durable game-action codec owner.
-CODEC_SOURCE = ROOT / "casino" / "core" / "storage_game_action_codecs.py"
-# Point at the extracted complete MySQL provider owner.
-MYSQL_PROVIDER_SOURCE = ROOT / "casino" / "core" / "storage_mysql_provider.py"
+# Point at the final provider-selection and compatibility package facade.
+STORAGE_SOURCE = ROOT / "casino" / "core" / "storage" / "__init__.py"
+# Point at the final provider-neutral base owner.
+BASE_SOURCE = ROOT / "casino" / "core" / "storage" / "base.py"
+# Point at the final JSON reset lifecycle owner.
+RESET_SOURCE = ROOT / "casino" / "core" / "storage" / "reset.py"
+# Point at the final JSON game-action lifecycle owner.
+JSON_ACTION_SOURCE = ROOT / "casino" / "core" / "storage" / "game_actions_json.py"
+# Point at the final JSON filesystem and concurrency substrate.
+JSON_INFRASTRUCTURE_SOURCE = ROOT / "casino" / "core" / "storage" / "json_infrastructure.py"
+# Point at the final complete ordinary JSON provider owner.
+JSON_PROVIDER_SOURCE = ROOT / "casino" / "core" / "storage" / "json_provider.py"
+# Point at the final MySQL game-action lifecycle owner.
+MYSQL_ACTION_SOURCE = ROOT / "casino" / "core" / "storage" / "game_actions_mysql.py"
+# Point at the final provider-neutral durable game-action codec owner.
+CODEC_SOURCE = ROOT / "casino" / "core" / "storage" / "game_action_codecs.py"
+# Point at the final complete MySQL provider owner.
+MYSQL_PROVIDER_SOURCE = ROOT / "casino" / "core" / "storage" / "mysql_provider.py"
+# Bind every transitional root module that final package cutover must retire.
+TRANSITIONAL_SOURCES = tuple((ROOT / "casino" / "core" / name) for name in ("storage.py", "storage_base.py", "storage_reset.py", "storage_game_actions_json.py", "storage_game_actions_mysql.py", "storage_game_action_codecs.py", "storage_json_infrastructure.py", "storage_json_provider.py", "storage_mysql_provider.py"))
 # Bind every moved compatibility name that the historical module must re-export.
 MOVED_NAMES = (
     "MySQLConfig",
@@ -315,6 +317,17 @@ class StoragePackageBoundaryTests(unittest.TestCase):
             # Name any accidentally moved concrete responsibility precisely.
             self.assertNotIn(forbidden, source)
 
+    # Require the completed cutover to expose only the final package topology.
+    def test_final_package_retires_every_transitional_root_module(self):
+        # Require the historical import path to resolve to the package facade.
+        self.assertEqual(Path(storage.__file__).resolve(), STORAGE_SOURCE.resolve())
+        # Reject every temporary storage_*.py extraction owner after package assembly.
+        self.assertTrue(all(not path.exists() for path in TRANSITIONAL_SOURCES))
+        # Require every final owner to remain a regular bounded Python source file.
+        for source in (STORAGE_SOURCE, BASE_SOURCE, RESET_SOURCE, JSON_ACTION_SOURCE, MYSQL_ACTION_SOURCE, CODEC_SOURCE, JSON_INFRASTRUCTURE_SOURCE, JSON_PROVIDER_SOURCE, MYSQL_PROVIDER_SOURCE):
+            # Bind each final package member to the permanent 1,200-line ceiling.
+            self.assertTrue(source.is_file() and len(source.read_text(encoding="utf-8").splitlines()) < 1200, source)
+
     # Require the historical module to expose the exact extracted objects, not wrappers or copies.
     def test_historical_module_reexports_exact_base_objects(self):
         # Compare every moved name by object identity so signatures and function globals stay single-owned.
@@ -373,11 +386,11 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         # Reject duplicate helper function implementations after the move.
         self.assertTrue(set(MOVED_NAMES[2:]).isdisjoint(declared))
         # Require one explicit provider-neutral import owner.
-        self.assertEqual(source.count("from casino.core.storage_base import "), 1)
+        self.assertEqual(source.count("from casino.core.storage.base import "), 1)
         # Reject both complete concrete providers and the borrowed-session owner from the facade.
         self.assertTrue({"JsonStorageProvider", "MySQLStorageProvider", "_BorrowedMySQLConnection"}.isdisjoint(declared))
         # Require one explicit JSON-provider import owner during package cutover.
-        self.assertEqual(source.count("from casino.core.storage_json_provider import "), 1)
+        self.assertEqual(source.count("from casino.core.storage.json_provider import "), 1)
 
     # Require the second #728 seam to single-own reset and stable-visibility behavior.
     def test_reset_owner_is_bounded_and_single_owned(self):

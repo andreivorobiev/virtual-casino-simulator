@@ -28,13 +28,13 @@ from casino.core.mysql_migrations import verify_runtime_compatibility
 # Import the bounded process-local MySQL connection lifecycle.
 from casino.core.mysql_pool import MySQLConnectionPool, MySQLPoolConfig
 # Import the provider-neutral storage contract, configuration, and shared row helpers.
-from casino.core.storage_base import HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
+from casino.core.storage.base import HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
 # Import the shared bounded epoch ceiling used by reset lifecycle validation.
-from casino.core.storage_reset import _GAME_ACTION_MAX_EPOCH
+from casino.core.storage.reset import _GAME_ACTION_MAX_EPOCH
 # Import canonical JSON lifecycle codecs reused without creating a concrete-provider cycle.
-from casino.core.storage_game_actions_json import JsonGameActionMixin
+from casino.core.storage.game_actions_json import JsonGameActionMixin
 # Import the schema-four MySQL lifecycle implementation inherited by the concrete provider.
-from casino.core.storage_game_actions_mysql import MySQLGameActionMixin
+from casino.core.storage.game_actions_mysql import MySQLGameActionMixin
 # Import stable public errors preserved by the extracted provider implementation.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 

@@ -1643,7 +1643,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the owner-transaction requirement to remain Core-owned.
         self.assertEqual(auth_014[0]["module"], "Core")
         # Require strict provider code and evidence to stay inside the existing AUTH allocation.
-        self.assertEqual({"casino/core/storage.py", "tests/storage_tests.py"} <= set(auth_014[0]["implementation_files"]), True)
+        self.assertEqual({"casino/core/storage/__init__.py", "tests/storage_tests.py"} <= set(auth_014[0]["implementation_files"]), True)
         # Count the bounded Roulette presentation requirement.
         roulette_072 = [row for row in requirements if row.get("id") == "ROU-072"]
         # Require exactly one permanent Roulette allocation.

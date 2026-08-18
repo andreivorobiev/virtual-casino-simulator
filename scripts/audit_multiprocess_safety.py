@@ -64,7 +64,7 @@ KNOWN_CORE_LOCKS = {
     "casino/core/autoplay.py": ("autoplay_registry", "blocked"),  # Keep autoplay process-local.
     "casino/core/simple_game.py": ("simple_game_settlement", "blocked"),  # Keep game locks process-local.
     "casino/core/state_store.py": ("provider_document_boundary", "compatible"),  # Preserve provider serialization.
-    "casino/core/storage.py": ("provider_factory_cache", "compatible"),  # Preserve per-process factory locking.
+    "casino/core/storage/__init__.py": ("provider_factory_cache", "compatible"),  # Preserve per-process factory locking.
 }
 # Classify exact core singleton/cache symbols whose per-process ownership is intentional.
 KNOWN_CORE_SINGLETONS = {
@@ -75,8 +75,8 @@ KNOWN_CORE_SINGLETONS = {
     ("casino/games/keno/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Keno adapter.
     ("casino/games/roulette/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Roulette adapter.
     ("casino/games/slots/api.py", "SETTLEMENT"): ("stateless_settlement_adapter", "compatible"),  # Bind Slots adapter.
-    ("casino/core/storage.py", "_PROVIDER"): ("per_process_provider_cache", "compatible"),  # Bind runtime provider.
-    ("casino/core/storage.py", "_TEST_PROVIDER"): ("test_provider_injection", "compatible"),  # Bind test provider.
+    ("casino/core/storage/__init__.py", "_PROVIDER"): ("per_process_provider_cache", "compatible"),  # Bind runtime provider.
+    ("casino/core/storage/__init__.py", "_TEST_PROVIDER"): ("test_provider_injection", "compatible"),  # Bind test provider.
 }
 # Bound session proof to exact public/live mutation and compatibility entrypoints.
 AUTH_SESSION_ROOTS = {
@@ -1080,7 +1080,7 @@ def _instance_state_inventory(modules: list[dict]) -> list[dict]:
             elif module["path"] == "casino/core/security.py" and class_name == "RateLimiter":  # Bind limiter state.
                 # Block the per-worker general request allowance registry.
                 state_model, status = "process_local_rate_limit_state", "blocked"
-            elif module["path"] == "casino/core/storage.py":  # Bind provider caches and locks.
+            elif module["path"] == "casino/core/storage/__init__.py":  # Bind provider caches and locks.
                 # Conservatively block provider caches until each cross-process refresh path is proven.
                 state_model, status = "provider_instance_cache_or_lock", "blocked"
             elif module["path"].startswith("casino/games/"):  # Bind mutable game instance state.

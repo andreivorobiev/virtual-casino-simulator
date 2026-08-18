@@ -32,17 +32,17 @@ from casino.core.game_action import GameActionExecutor, GameActionMovement, Game
 # Preserve the historical pool-configuration import used by storage fixtures and live validation.
 from casino.core.mysql_pool import MySQLPoolConfig
 # Import and re-export the provider-neutral storage contract and shared helpers.
-from casino.core.storage_base import HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
+from casino.core.storage.base import HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
 # Import and re-export the JSON reset lifecycle and shared private epoch constants.
-from casino.core.storage_reset import JsonResetMixin, _GAME_ACTION_EPOCH_STORAGE_VERSION, _GAME_ACTION_MAX_EPOCH, _GAME_ACTION_STORAGE_VERSION
+from casino.core.storage.reset import JsonResetMixin, _GAME_ACTION_EPOCH_STORAGE_VERSION, _GAME_ACTION_MAX_EPOCH, _GAME_ACTION_STORAGE_VERSION
 # Import and re-export the JSON game-action lifecycle and private recovery-stage set.
-from casino.core.storage_game_actions_json import JsonGameActionMixin, _GAME_ACTION_STAGES
+from casino.core.storage.game_actions_json import JsonGameActionMixin, _GAME_ACTION_STAGES
 # Import and re-export the JSON filesystem, locking, cache, and planner infrastructure aliases.
-from casino.core.storage_json_infrastructure import JsonInfrastructureMixin, _JSON_GATE_LOCAL, _JSON_GATE_LOCKS, _JSON_GATE_REGISTRY_LOCK, _json_gate_lock
+from casino.core.storage.json_infrastructure import JsonInfrastructureMixin, _JSON_GATE_LOCAL, _JSON_GATE_LOCKS, _JSON_GATE_REGISTRY_LOCK, _json_gate_lock
 # Import and re-export the complete ordinary JSON provider from its bounded owner.
-from casino.core.storage_json_provider import JsonStorageProvider, _LEDGER_ACTION_COMPACT_BYTES
+from casino.core.storage.json_provider import JsonStorageProvider, _LEDGER_ACTION_COMPACT_BYTES
 # Import and re-export the complete MySQL provider from its bounded owner.
-from casino.core.storage_mysql_provider import MySQLStorageProvider, _BorrowedMySQLConnection
+from casino.core.storage.mysql_provider import MySQLStorageProvider, _BorrowedMySQLConnection
 # Import required dependency so the facade surfaces existing API errors.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 

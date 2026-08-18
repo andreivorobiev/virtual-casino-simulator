@@ -610,8 +610,8 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
         # Pin both lazy provider cache symbols.
         self.assertEqual(
             {
-                rows[("casino/core/storage.py", "_PROVIDER")]["state_model"],  # Read runtime provider.
-                rows[("casino/core/storage.py", "_TEST_PROVIDER")]["state_model"],  # Read test provider.
+                rows[("casino/core/storage/__init__.py", "_PROVIDER")]["state_model"],  # Read runtime provider.
+                rows[("casino/core/storage/__init__.py", "_TEST_PROVIDER")]["state_model"],  # Read test provider.
             },
             {"per_process_provider_cache", "test_provider_injection"},  # Pin both reviewed models.
         )

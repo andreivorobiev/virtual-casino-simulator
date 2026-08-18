@@ -28,13 +28,13 @@ from casino.core.clock import utc_now
 # Import the route-free executor interface required by the provider MRO.
 from casino.core.game_action import GameActionExecutor
 # Import the provider-neutral contract and exact helpers used by ordinary JSON methods.
-from casino.core.storage_base import HISTORY_FIELDS, StorageProvider, _action_details, _action_fingerprint, _action_scope, _ledger_event, _money_decimal, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
+from casino.core.storage.base import HISTORY_FIELDS, StorageProvider, _action_details, _action_fingerprint, _action_scope, _ledger_event, _money_decimal, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
 # Import the bounded JSON reset lifecycle owner.
-from casino.core.storage_reset import JsonResetMixin
+from casino.core.storage.reset import JsonResetMixin
 # Import the bounded JSON game-action lifecycle owner.
-from casino.core.storage_game_actions_json import JsonGameActionMixin
+from casino.core.storage.game_actions_json import JsonGameActionMixin
 # Import the bounded JSON filesystem, locking, cache, and planner substrate.
-from casino.core.storage_json_infrastructure import JsonInfrastructureMixin
+from casino.core.storage.json_infrastructure import JsonInfrastructureMixin
 # Import required dependency so storage providers surface existing API errors.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 

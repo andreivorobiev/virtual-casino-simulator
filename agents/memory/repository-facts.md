@@ -28,7 +28,7 @@ These facts were read from protected main at commit `b6d31cdbf980765dcb24b7dbe21
 
 ## Fact: Storage provider abstraction
 
-- Source path: `casino/core/storage.py`
+- Source path: `casino/core/storage/__init__.py`
 - Source commit: `b6d31cdbf980765dcb24b7dbe21bffb8c5034ed0`
 - Stable fact: `StorageProvider` is the persistence boundary; JSON is the default provider and MySQL is selected explicitly, with both providers preserving the same users, sessions, player, document, history, ledger, and replay-safe action semantics.
 

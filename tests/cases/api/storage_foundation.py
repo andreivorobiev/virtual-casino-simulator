@@ -21,6 +21,8 @@ from tests import state_store_atomic_tests
 from tests import storage_tests
 # Import the first #728 package-boundary ownership suite.
 from tests import storage_package_boundary_tests
+# Import the final #728 named cross-provider settlement-parity suite.
+from tests import storage_provider_parity_tests
 # Import cents-only wallet normalization coverage.
 from tests import wallet_cents_normalization_tests
 # Import fail-closed wallet-corruption coverage.
@@ -49,6 +51,16 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
         run_storage_package_boundary_tests()
         # Preserve the accepted JSON players, ledger, history, and settings scenario unchanged.
         storage_tests.run_json_provider_parity()
+    # Define the final package gate that executes one settlement on both providers.
+    def run_storage_provider_settlement_parity_tests():
+        # Load only the connector-free named JSON/MySQL settlement-parity class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(storage_provider_parity_tests.StorageProviderSettlementParityTests)
+        # Execute the focused suite with concise standard output.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named central case when provider settlement semantics diverge.
+        if not result.wasSuccessful():
+            # Preserve one fixed provider-neutral diagnostic.
+            raise AssertionError("storage provider settlement parity suite failed")
     # Define one focused unittest runner for corrupt-wallet fail-closed behavior.
     def run_wallet_corruption_tests():
         # Load only the STORAGE-014 wallet-corruption test class.
@@ -139,6 +151,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
     run_case("RECOVERY-POLICY-001", ["MYSQL-006", "MYSQL-008", "MYSQL-009", "TOOL-004", "TEST-049", "TEST-174"], run_recovery_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"], run_storage_base_and_json_parity)
+    # Execute one identical paid settlement, replay, resolve, and conflict schedule on JSON and MySQL.
+    run_case("STORAGE-PROVIDER-SETTLEMENT-PARITY-001", ["CORE-031", "STORAGE-013", "STORAGE-016", "TEST-243"], run_storage_provider_settlement_parity_tests)
     # Prove corrupt wallet state cannot seed defaults or reach a settlement on either provider.
     run_case("STORAGE-WALLET-CORRUPTION-001", ["STORAGE-014", "TEST-177"], run_wallet_corruption_tests)
     # Prove explicit residue repair, audit evidence, and cents-only writes on both providers.
