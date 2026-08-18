@@ -11586,7 +11586,7 @@
     {
       "id": "STORAGE-016",
       "module": "Core",
-      "description": "The storage subsystem exposes one provider-neutral configuration, contract, validation, replay, and event-helper owner while preserving the historical casino.core.storage import surface by exact object identity. Incremental package slices keep JSON and MySQL concrete providers, reset recovery, game-action execution, and the #412/#432 cache invalidation rules in their established owner until their separately proved moves.",
+      "description": "The storage subsystem exposes provider-neutral configuration, contract, validation, replay, and event-helper ownership plus one bounded JSON reset/rollback/visibility lifecycle owner while preserving the historical casino.core.storage import surface by exact object identity. Incremental package slices retain concrete JSON and MySQL provider behavior and move each reviewed boundary without caller churn.",
       "status": "PASS",
       "api_tests": [
         "STORAGE-JSON-001"
@@ -11594,11 +11594,12 @@
       "browser_tests": [],
       "implementation_files": [
         "casino/core/storage_base.py",
+        "casino/core/storage_reset.py",
         "casino/core/storage.py"
       ],
       "introduced_in": "issue-940-storage-provider-base",
-      "changed_in": "issue-940-storage-provider-base",
-      "notes": "This first #728 slice uses the transitional module casino.core.storage_base because Python cannot safely load casino/core/storage.py and casino/core/storage/ as the same import during incremental cutover. The final package slice will move this owner to casino/core/storage/base.py without caller churn."
+      "changed_in": "issue-942-json-reset-lifecycle",
+      "notes": "The #940 base seam and #942 reset seam use transitional storage_base.py and storage_reset.py modules because Python cannot safely load casino/core/storage.py and casino/core/storage/ as the same import during incremental cutover. JSON reset keeps its accepted lock ordering, recovery archive, epoch transitions, and #412/#432 ledger-then-action cache invalidation order. The final package slice will move these owners to storage/base.py and storage/reset.py without caller churn."
     },
     {
       "id": "LEDGER-036",
@@ -11719,7 +11720,7 @@
     {
       "id": "TEST-243",
       "module": "Tests",
-      "description": "Storage package extraction evidence binds provider-neutral ownership, the 1,200-line module ceiling, exact historical re-export identity, unchanged provider-contract signatures, and absence of duplicate base declarations before executing the established JSON and MySQL provider suites.",
+      "description": "Storage package extraction evidence binds provider-neutral and JSON reset ownership, the 1,200-line module ceiling, exact historical re-export identity, unchanged provider-contract signatures, absence of duplicate declarations, exact reset mixin ownership, and the #412/#432 ledger-then-action cache invalidation order before executing established provider suites.",
       "status": "PASS",
       "api_tests": [
         "STORAGE-JSON-001"
@@ -11732,8 +11733,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-940-storage-provider-base",
-      "changed_in": "issue-940-storage-provider-base",
-      "notes": "The first #728 slice keeps the existing STORAGE-JSON-001 registration and permanent case inventory unchanged while running the new listener-free ownership proof before accepted provider parity. Later package slices will amend this requirement with the parent issue's named cross-provider settlement-parity gate."
+      "changed_in": "issue-942-json-reset-lifecycle",
+      "notes": "The #940 and #942 slices keep the existing STORAGE-JSON-001 registration and permanent case inventory unchanged while running listener-free ownership proof before accepted provider parity. The reset gate proves exact lifecycle constants, mixin ownership, no duplicate reset methods, and both cache invalidation sequences. Later package slices will amend this requirement with the parent issue's named cross-provider settlement-parity gate."
     },
     {
       "id": "TEST-175",
