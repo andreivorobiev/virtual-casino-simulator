@@ -10,6 +10,8 @@ import { humanLabel, ledgerEventLabel as localizedLedgerEventLabel } from './cor
 import { createLedgerTab } from './admin/ledger.js';
 // Import the History renderer so diagnostics retain exact output behind a reviewable per-tab boundary. (ADMIN-029)
 import { createHistoryTab } from './admin/history.js';
+// Import the Tests renderer so latest-result diagnostics retain exact output behind a reviewable per-tab boundary. (ADMIN-011, ADMIN-029)
+import { createTestsTab } from './admin/tests.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -78,6 +80,8 @@ function setTitle(text, helper = '') {
 const ledger = createLedgerTab({ api, emptyState, formatMoney, html, humanLabel, ledgerEventLabel, safe, setTitle, t, table, view });
 // Bind the History renderer to the same Admin-shell helpers used by the accepted monolith implementation. (ADMIN-029)
 const history = createHistoryTab({ api, emptyState, formatMoney, html, humanLabel, safe, setTitle, t, table, view });
+// Bind the Tests renderer to the same Admin-shell helpers used by the accepted monolith implementation. (ADMIN-011, ADMIN-029)
+const tests = createTestsTab({ api, emptyState, html, pre, safe, setTitle, t, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -987,18 +991,6 @@ async function requirements() {
   const data = await api('/api/v1/admin/requirements');
   // Render requirement rows.
   view.innerHTML = html`<section class="admin-card"><h3>${safe(t('nav.requirements', {}, 'admin'))}</h3>${table([t('requirements.id', {}, 'admin'), t('requirements.module', {}, 'admin'), t('requirements.description', {}, 'admin'), t('requirements.status', {}, 'admin'), t('requirements.tests', {}, 'admin')], (data.requirements || []).map(req => html`<tr><td>${safe(req.id)}</td><td>${safe(req.module)}</td><td>${safe(req.description)}</td><td>${safe(req.status)}</td><td>${safe([...(req.api_tests || []), ...(req.browser_tests || [])].join(', '))}</td></tr>`))}</section>`;
-}
-
-// Define tests to show latest test results.
-async function tests() {
-  // Set the localized tests title and subtitle.
-  setTitle(t('tests.title', {}, 'admin'), t('tests.subtitle', {}, 'admin'));
-  // Load latest test results through the existing Admin endpoint.
-  const data = await api('/api/v1/admin/test-results');
-  // Normalize the recorded result document so an empty run history is explicit. (ADMIN-029)
-  const results = data.results || {};
-  // Render readable expandable evidence or a labelled empty state. (ADMIN-029)
-  view.innerHTML = html`<section class="admin-card"><h3>${safe(t('tests.heading', {}, 'admin'))}</h3>${Object.keys(results).length ? html`<details open><summary>${safe(t('tests.resultFields', { count: Object.keys(results).length }, 'admin'))}</summary>${pre(results)}</details>` : emptyState(t('tests.emptyTitle', {}, 'admin'), t('tests.emptyDetail', {}, 'admin'), 'admin-tests-empty')}</section>`;
 }
 
 // Define system to show module revisions and raw overview data.

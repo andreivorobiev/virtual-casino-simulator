@@ -909,9 +909,12 @@
       "implementation_files": [
         "casino/admin.py",
         "web/admin.html",
-        "web/admin.js"
+        "web/admin.js",
+        "web/admin/tests.js",
+        "tests/unit/admin_tests_module.test.mjs"
       ],
-      "notes": ""
+      "changed_in": "issue-959-admin-tests-module",
+      "notes": "Issue #959 extracts the latest-results renderer behind an explicit dependency boundary while listener-free parity preserves its route, localized field count, escaped structured output, and populated or empty DOM bytes."
     },
     {
       "id": "ADMIN-002",
@@ -9381,14 +9384,16 @@
         "casino/admin.py",
         "web/admin.js",
         "web/admin/history.js",
+        "web/admin/tests.js",
         "tests/admin_game_states_tests.py",
         "tests/unit/admin_history_module.test.mjs",
+        "tests/unit/admin_tests_module.test.mjs",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-457-admin-empty-pages",
-      "changed_in": "issue-957-admin-history-module",
-      "notes": "The Game States endpoint previously used a non-recursive glob that missed per-player documents. Issue #957 extracts History behind an explicit dependency boundary while listener-free parity preserves its route, newest-first order, escaping, money formatting, and populated or empty DOM output. Hosted evidence governs English and Russian presentation at all four viewports."
+      "changed_in": "issue-959-admin-tests-module",
+      "notes": "The Game States endpoint previously used a non-recursive glob that missed per-player documents. Issues #957 and #959 extract History and Tests behind explicit dependency boundaries while listener-free parity preserves routes, ordering, escaping, formatting, structured output, and populated or empty DOM bytes. Hosted evidence governs English and Russian presentation at all four viewports."
     },
     {
       "id": "TEST-145",
@@ -9404,14 +9409,16 @@
       "implementation_files": [
         "tests/admin_game_states_tests.py",
         "tests/unit/admin_history_module.test.mjs",
+        "tests/unit/admin_tests_module.test.mjs",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json",
         "web/admin.js",
-        "web/admin/history.js"
+        "web/admin/history.js",
+        "web/admin/tests.js"
       ],
       "introduced_in": "issue-457-admin-empty-pages",
-      "changed_in": "issue-957-admin-history-module",
-      "notes": "The listener-free provider test redirects the data root before importing the Admin module. Issue #957 adds dependency-injected populated and empty History DOM parity plus endpoint, dispatcher, and review-width assertions. Browser qualification is hosted-only and covers both locales at every governed viewport."
+      "changed_in": "issue-959-admin-tests-module",
+      "notes": "The listener-free provider test redirects the data root before importing the Admin module. Issues #957 and #959 add dependency-injected populated and empty History/Tests DOM parity plus endpoint, dispatcher, escaping, and review-width assertions. Browser qualification is hosted-only and covers both locales at every governed viewport."
     },
     {
       "id": "ADMIN-030",
