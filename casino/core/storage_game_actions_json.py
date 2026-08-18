@@ -15,6 +15,8 @@ from casino.config import SCHEMA_VERSION
 from casino.core.clock import utc_now
 # Import provider-neutral action values and validation helpers.
 from casino.core.game_action import GameActionIdentity, GameActionMovement, GameActionPlan, GameActionReceipt, GameActionResolution, GameActionResources, GameActionSnapshot, apply_plan_to_snapshot, validate_execution_request, validate_resolution_request
+# Import the provider-neutral codecs shared by JSON and MySQL lifecycle storage.
+from casino.core.storage_game_action_codecs import GameActionCodecMixin
 # Import the private epoch constants shared with reset lifecycle storage.
 from casino.core.storage_reset import _GAME_ACTION_EPOCH_STORAGE_VERSION, _GAME_ACTION_MAX_EPOCH, _GAME_ACTION_STORAGE_VERSION
 # Import fixed API error boundaries used by action validation and recovery.
@@ -25,7 +27,7 @@ _GAME_ACTION_STAGES = {"prepared", "planned", "wallet_applied", "ledger_applied"
 
 
 # Own the JSON game-action lifecycle while ordinary provider I/O remains in storage.py.
-class JsonGameActionMixin:
+class JsonGameActionMixin(GameActionCodecMixin):
     # Serialize one exact bounded resource declaration.
     def _serialize_game_action_resources(self, resources: GameActionResources) -> dict:
         # Return the two canonical resource arrays.
