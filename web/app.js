@@ -30,6 +30,8 @@ import { createVerificationView } from './views/verification.js';
 import { createSignupView } from './views/signup.js';
 // Import personal settings so preference, history, and guest conversion rendering leave the monolith. (USER-009, CONVERT-003)
 import { createSettingsView } from './views/settings.js';
+// Import Lobby search, categories, trust, and game cards so catalog rendering leaves the monolith. (CORE-007, CORE-012)
+import { createLobbyView } from './views/lobby.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -64,10 +66,6 @@ const walletCelebrationLifecycle = createWalletCelebrationLifecycle({
 });
 // Track the active game-rail observer so navigation never leaves duplicate mutation listeners.
 let gameRailObserver = null;
-// Track the current lobby search without encoding transient filters into game routes.
-let lobbySearch = '';
-// Track the selected scalable catalog category.
-let lobbyCategory = 'all';
 // Read one fixed provider-completion marker and immediately remove it from browser history.
 const oauthCompletion = readOAuthCompletion();
 // Own one document-lifetime wellness controller while authenticated sessions replace its timer generation.
@@ -167,6 +165,16 @@ const renderMySettings = createSettingsView({
   safe,
   setLocale,
   setPersonalSoundEnabled,
+  t,
+});
+// Bind Lobby to the current catalog, state snapshot, and shared navigation controller.
+const renderLobby = createLobbyView({
+  activeBrand,
+  getGameDescriptors: () => gameDescriptors,
+  getLatestState: () => latestState,
+  navigate: route => navigate(route),
+  renderPremiumTag,
+  safe,
   t,
 });
 
@@ -1005,81 +1013,6 @@ function renderNav() {
   const adminButton = nav.querySelector('[data-admin]');
   // Wire the protected Admin page only when the authenticated role exposed its affordance. (AUTH-008)
   if (adminButton) adminButton.onclick = () => { location.href = '/admin'; };
-}
-
-// Render one status tile for the lobby trust rail.
-function trustItemHtml(code, title, detail) {
-  // Return a compact status tile that mirrors the approved lobby prerender.
-  return `<div class="trust-item"><span class="round-icon">${safe(code)}</span><span><strong>${safe(title)}</strong><span>${safe(detail)}</span></span></div>`;
-}
-
-// Render one premium lobby game card from shared game metadata.
-function lobbyCardHtml(game) {
-  // Compute the layout modifier classes used by the approved card grid.
-  const sizeClass = `${game.featured ? ' featured' : ''}${game.wide ? ' wide' : ''}`;
-  // Render all card tags through the shared helper so later workers can reuse the tag contract.
-  const tags = game.tags.map(tag => renderPremiumTag(tag)).join('');
-  // Return the full card with deterministic art, metadata, and open-game control.
-  return `<article class="game-card${sizeClass}" data-testid="card-${game.id}"><div class="card-art ${game.artClass}" aria-hidden="true"></div><span class="game-kicker">${game.featured ? '&#9733; ' : ''}${safe(game.kicker)}</span><div class="game-card-content"><h2 class="game-heading"><span class="game-symbol">${game.symbol}</span>${safe(game.label)}</h2><p>${safe(game.description)}</p><div class="tag-row">${tags}</div><button class="play-button" data-open-game="${game.id}" data-testid="open-${game.id}"><span>${safe(t('catalog.play', {}, 'shell'))}</span><span aria-hidden="true">&#8250;</span></button></div></article>`;
-}
-
-// Return catalog descriptors matching the active search and category filters.
-function filteredGames() {
-  // Normalize user search text for stable case-insensitive matching.
-  const query = lobbySearch.trim().toLocaleLowerCase();
-  // Filter the catalog across human labels, descriptions, tags, and category metadata.
-  return gameDescriptors.filter(game => {
-    // Require membership in the selected category unless all categories are active.
-    const categoryMatch = lobbyCategory === 'all' || game.categories.includes(lobbyCategory);
-    // Build one searchable text surface from module-owned catalog metadata.
-    const searchText = [game.label, game.description, ...game.tags, ...game.categories].join(' ').toLocaleLowerCase();
-    // Keep only games satisfying both scalable navigation facets.
-    return categoryMatch && (!query || searchText.includes(query));
-  });
-}
-
-// Resolve a player-facing localized label for one internal catalog category identifier.
-function categoryLabel(category) {
-  // Use the dedicated all-games copy for the synthetic category that is not owned by a game.
-  if (category === 'all') return t('catalog.allGames', {}, 'shell');
-  // Resolve installed category identifiers through explicit shell locale resources without title-casing internal ids.
-  return t(`catalog.category.${category}`, {}, 'shell');
-}
-
-// Render the full premium lobby with hero, status rail, and all current games.
-function lobbyHtml(state = latestState) {
-  // Count the available games from API state while falling back to the frontend registry.
-  const gameCount = Array.isArray(state?.games) ? state.games.length : gameDescriptors.length;
-  // Read privacy-safe recent presence instead of counting durable player records. (issue #570)
-  const onlinePlayerCount = Number.isInteger(state?.online_player_count) ? state.online_player_count : 0;
-  // Render the filtered game card collection from the API catalog.
-  const visibleGames = filteredGames();
-  // Render a helpful empty state when no catalog entry matches both filters.
-  const cards = visibleGames.length ? visibleGames.map(game => lobbyCardHtml(game)).join('') : `<p class="catalog-empty" data-testid="catalog-empty">${safe(t('catalog.empty', {}, 'shell'))}</p>`;
-  // Derive category navigation from catalog metadata so the 20-game target needs no shell edits.
-  const categories = [...new Set(gameDescriptors.flatMap(game => game.categories))].sort();
-  // Render one accessible category control per discovered category plus the all-games view.
-  const categoryButtons = ['all', ...categories].map(category => `<button type="button" class="catalog-category${lobbyCategory === category ? ' active' : ''}" data-catalog-category="${safe(category)}" aria-pressed="${lobbyCategory === category}">${safe(categoryLabel(category))}</button>`).join('');
-  // Render the premium trust rail with play-token, bot, autoplay, and ledger cues.
-  const trustRail = [trustItemHtml('SIM', t('lobby.trust.localTitle', {}, 'shell'), t('lobby.trust.localDetail', {}, 'shell')), trustItemHtml('LIVE', t('status.online', { count: onlinePlayerCount }, 'shell'), t('lobby.presenceDetail', {}, 'shell')), trustItemHtml('AUTO', t('lobby.trust.autoplayTitle', {}, 'shell'), t('lobby.trust.autoplayDetail', {}, 'shell')), trustItemHtml('LED', t('lobby.trust.ledgerTitle', {}, 'shell'), t('lobby.trust.ledgerDetail', { count: gameCount }, 'shell'))].join('');
-  // Return the complete lobby markup as one route payload.
-  return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">${safe(t('lobby.chooseTable', {}, 'shell'))}</p><h1 class="hero-title">${safe(activeBrand.venue)}</h1><div class="hero-rule"><span>${safe(activeBrand.mark)}</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="catalog-region" data-testid="catalog-region" aria-label="${safe(t('catalog.controlsAria', {}, 'shell'))}"><section class="catalog-controls" data-testid="catalog-controls"><label class="catalog-search-label" for="catalog-search">${safe(t('catalog.searchLabel', {}, 'shell'))}</label><input id="catalog-search" data-testid="catalog-search" type="search" value="${safe(lobbySearch)}" placeholder="${safe(t('catalog.searchPlaceholder', {}, 'shell'))}"><div class="catalog-categories" data-testid="catalog-categories" aria-label="${safe(t('catalog.categoriesAria', {}, 'shell'))}">${categoryButtons}</div><p class="catalog-capacity" data-testid="catalog-capacity">${safe(t('catalog.capacity', { current: gameCount }, 'shell'))}</p></section><section class="game-gallery" data-testid="game-gallery" aria-label="${safe(t('catalog.galleryAria', {}, 'shell'))}">${cards}</section></section></section>`;
-}
-
-// Render lobby markup and wire its catalog-driven controls after every filter change.
-function renderLobby(view, focusSearch = false) {
-  // Replace the lobby atomically so card and category counts cannot drift.
-  view.innerHTML = lobbyHtml(latestState);
-  // Read the search input rendered by the current catalog state.
-  const search = view.querySelector('[data-testid="catalog-search"]');
-  // Update search state and rerender matching cards for each user edit.
-  search.oninput = () => { lobbySearch = search.value; renderLobby(view, true); };
-  // Wire every discovered category to the same filtered catalog render.
-  view.querySelectorAll('[data-catalog-category]').forEach(button => { button.onclick = () => { lobbyCategory = button.dataset.catalogCategory; renderLobby(view); }; });
-  // Wire each visible game card to its canonical route.
-  view.querySelectorAll('[data-open-game]').forEach(button => { button.onclick = () => navigate(button.dataset.openGame); });
-  // Restore search focus and caret after the filter rerender.
-  if (focusSearch) { search.focus(); search.setSelectionRange(search.value.length, search.value.length); }
 }
 
 // Update one status text node if that node exists in the current document.
