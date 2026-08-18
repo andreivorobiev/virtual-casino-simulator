@@ -289,11 +289,11 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove every #727 slice preserves the exact pre-slice count and sorted Browser identity list.
     def test_browser_case_inventory_matches_runner_exactly(self):
         # Parse the compatibility runner without importing Playwright or opening a listener.
-        source, tree = self.browser_runner_syntax()
-        # Select the one function that still owns all permanent Browser case registrations.
-        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
-        # Extract the exact source inventory in registration order.
-        case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
+        source, _tree = self.browser_runner_syntax()
+        # Import the listener-free discovery seam without starting Playwright or a listener.
+        from tests import run_tests as browser_runner_module
+        # Expand inline and reviewed area-owned registrations in exact source order.
+        case_ids = browser_runner_module.browser_case_ids()
         # Load the checked-in count and sorted-ID baseline as inert JSON.
         inventory = json.loads(BROWSER_CASE_INVENTORY.read_text(encoding="utf-8"))
         # Require the baseline to expose only the two acceptance dimensions.
@@ -1519,18 +1519,53 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Require the copied stops to remain byte-for-byte aligned with Color Wheel's production source.
             self.assertIn(f"background:{production_gradient};", color_wheel_source)
 
+    # Prove the complete auth-backend/PWA affinity family has one external owner and one runner delegation.
+    def test_browser_auth_backend_pwa_affinity_registration_ownership_is_exact(self):
+        # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
+        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        # Read the complete affinity owner independently of its import path.
+        owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
+        # Bind the exact permanent producer/consumer identities declared by browser_sharding.py.
+        expected_ids = ("BR-AUTH-BACKEND-001", "BR-PWA-001", "BR-PWA-UPDATE-001")
+        # Extract only literal permanent registrations from the new owner.
+        owner_ids = tuple(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
+        # Require exact identity and historical order without invented or duplicate cases.
+        self.assertEqual(owner_ids, expected_ids)
+        # Reject any remaining inline registration in the compatibility runner.
+        for case_id in expected_ids:
+            # Keep each permanent identity under exactly one executable source owner.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the group's exact historical position.
+        self.assertEqual(runner_source.count("browser_auth_backend_pwa.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser,base,packaged_version,screenshots,ROOT,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,PlaywrightTimeoutError)"), 1)
+        # Require the extracted owner to retain the complete owning-shard execution guard.
+        self.assertEqual(owner_source.count("if browser_shard_owns_group('auth_backend_pwa'):"), 1)
+        # Require the extracted owner to advance all three source positions on non-owning shards.
+        self.assertEqual(owner_source.count("skip_browser_affinity('auth_backend_pwa')"), 1)
+        # Import the extracted owner without starting the compatibility runner.
+        from tests.cases.browser import auth_backend_pwa
+        # Retain the exact skip identity emitted by a non-owning shard.
+        skipped_groups = []
+        # Reject any accidental case execution on a shard that does not own the complete group.
+        reject_case = lambda *_args: self.fail("non-owner executed an auth-backend/PWA case")
+        # Execute the non-owner path with every Browser dependency absent so setup access fails the test immediately.
+        auth_backend_pwa.run_cases(reject_case, lambda group_name: False, skipped_groups.append, None, None, None, None, None, None, None, None)
+        # Require one atomic skip for the exact complete affinity group.
+        self.assertEqual(skipped_groups, ["auth_backend_pwa"])
+
     # Prove declared producer/consumer groups fit one deterministic shard and guard their bodies.
     def test_browser_shard_affinity_groups_are_contiguous_and_guarded(self):
         # Parse the exact browser runner source without importing it.
         source, tree = self.browser_runner_syntax()
         # Select the one browser runner function that owns all permanent BR cases.
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
-        # Extract permanent literal IDs in deterministic source order.
-        case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Bind the complete inventory after adding real self-service conversion analytics acceptance. (TEST-195)
-        self.assertEqual(len(case_ids), 123)
         # Import the listener-free runner module so the test uses its exact reviewed packer.
         from tests import run_tests as browser_runner_module
+        # Discover inline and extracted permanent IDs at their exact cross-file source positions.
+        case_ids = browser_runner_module.browser_case_ids()
+        # Bind the complete inventory after adding real self-service conversion analytics acceptance. (TEST-195)
+        self.assertEqual(len(case_ids), 123)
+        # Read the first extracted Browser affinity owner for guard-location checks below.
+        auth_backend_pwa_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
         # Compute the same deterministic six-runner partition used by the workflow.
         shard_sets = browser_runner_module.browser_shard_case_sets(6)
         # Recompute from identical inputs to prove packing replay is deterministic.
@@ -1601,6 +1636,14 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             if group_name == "guest_lifecycle":
                 # Require both disposable lifecycle loops to test the declared owner before any setup.
                 self.assertGreaterEqual(source.count("browser_shard_owns_group('guest_lifecycle')"), 2)
+            # The first extracted Browser affinity owns its guard and skip outside the compatibility runner.
+            elif group_name == "auth_backend_pwa":
+                # Require one source-level delegation so cross-file discovery preserves the group's exact position.
+                self.assertEqual(source.count("browser_auth_backend_pwa.run_cases("), 1)
+                # Require the complete extracted body to remain beneath its declared group owner.
+                self.assertIn("if browser_shard_owns_group('auth_backend_pwa'):", auth_backend_pwa_source)
+                # Require non-owning shards to advance the complete three-case range atomically.
+                self.assertIn("skip_browser_affinity('auth_backend_pwa')", auth_backend_pwa_source)
             # Guarded bulk ranges require both an execution guard and explicit unowned accounting.
             else:
                 # Require the complete inline body to sit beneath its declared group owner.
@@ -1835,14 +1878,18 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Read only the browser function's source for stale identity checks.
         runner_source = ast.get_source_segment(source, runner)
+        # Read the extracted PWA affinity owner whose assertions now consume the runner-provided version.
+        owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
+        # Combine the delegation owner and its extracted body for stale-literal inspection.
+        complete_source = runner_source + owner_source
         # Require canonical module metadata to provide the acceptance identity.
         self.assertIn("packaged_version=json.loads((ROOT/'modules'/'module-manifest.json')", runner_source)
         # Require service-worker registration and page identity checks to use that value.
-        self.assertIn("f'{base}/sw.js?v={packaged_version}'", runner_source)
+        self.assertIn("f'{base}/sw.js?v={packaged_version}'", complete_source)
         # Reject any hard-coded packaged release in worker query strings or page-version assertions.
-        self.assertIsNone(re.search(r"sw\.js\?v=\d+\.\d+\.\d+", runner_source))
+        self.assertIsNone(re.search(r"sw\.js\?v=\d+\.\d+\.\d+", complete_source))
         # Reject the stale equality form that previously required manual release edits.
-        self.assertIsNone(re.search(r"CasinoPwa\?\.version===['\"]\d+\.\d+\.\d+", runner_source))
+        self.assertIsNone(re.search(r"CasinoPwa\?\.version===['\"]\d+\.\d+\.\d+", complete_source))
 
     # Prove isolated route-i18n coverage produces every state-dependent interpolation it consumes.
     def test_browser_route_i18n_declares_visible_state_producers(self):
@@ -1927,12 +1974,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
 
     # Prove explicit detector selection controls aggregate coverage and cannot be forged by shard artifacts.
     def test_browser_aggregate_verifies_detector_owned_selection(self):
-        # Parse the exact browser runner without importing Playwright or opening a listener.
-        source, tree = self.browser_runner_syntax()
-        # Select the browser runner and read permanent literal cases in source order.
-        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
-        # Extract the permanent browser case inventory.
-        case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
+        # Import the listener-free runner module so source discovery and synthetic declarations match real packing.
+        from tests import run_tests as browser_runner_module
+        # Expand the permanent Browser inventory across the runner and reviewed area owners.
+        case_ids = browser_runner_module.browser_case_ids()
         # Parse the extracted shard policy where affected-game ownership now lives. (TEST-242)
         _sharding_source, sharding_tree = self.browser_sharding_syntax()
         # Locate the literal affected-game acceptance map in the pure policy module.
@@ -1941,8 +1986,6 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         game_cases = ast.literal_eval(mapping_node.value)
         # Keep shared cases and the one selected game's dedicated case.
         expected = [case_id for case_id in case_ids if case_id not in set(game_cases.values()) or case_id == game_cases["acey_deucey"]]
-        # Import the listener-free runner module so synthetic declarations match real packing.
-        from tests import run_tests as browser_runner_module
         # Compute the exact six-runner governed ownership declarations.
         shard_sets = browser_runner_module.browser_shard_case_sets(6)
         # Create one disposable six-shard result packet.

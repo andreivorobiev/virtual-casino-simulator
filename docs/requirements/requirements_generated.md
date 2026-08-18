@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.5
 - teen_patti: 1.1.5
-- tests: 1.100.84
-- docs: 1.96.84
+- tests: 1.100.85
+- docs: 1.96.85
 - contracts: 1.62.4
 - tooling: 1.41.0
 - commenting_policy: 2.0.0
@@ -736,7 +736,7 @@ Historical source baseline: 9.1.0
 - **TEST-239** (Tests) - PASS: Focused SimpleWagerGame and Fan-Tan evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and nested state response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-240** (Tests) - PASS: Focused SimpleWagerGame and Dragon Tiger evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry card redraw, frozen action, shoe summary, rules, and nested response shapes, old ledger-proof recovery without shoe consumption, every shared lifecycle crash window, direct fifty-round history plus unbounded durable action replay, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-241** (Tests) - PASS: Listener-free settlement evidence pins the exact canonical keyword-only GameSettlementGateway.apply_once signature, rejects every retired alias and missing, empty, or structured fingerprints before ledger access, proves new events contain no configured historical detail-key alias, preserves reads of immutable predecessor rows, and parses every production game apply-once call to reject an explicit retired keyword spelling.
-- **TEST-242** (Tests) - PASS: Every tests/run_tests.py extraction slice preserves exact reviewed Browser and non-Browser case counts plus sorted permanent ID lists; pure Browser shard policy and area-owned API registrations execute outside the monolith while the historical tests/run_tests.py CLI remains the compatibility entrypoint.
+- **TEST-242** (Tests) - PASS: Every tests/run_tests.py extraction slice preserves exact reviewed Browser and non-Browser case counts plus sorted permanent ID lists; pure Browser shard policy, area-owned API registrations, and affinity-owned Browser registrations execute outside the monolith while the historical tests/run_tests.py CLI remains the compatibility entrypoint.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

@@ -60,12 +60,30 @@ def _unique_object(pairs, error_message):
     return result
 
 
-# List literal BR-prefixed registrations from the Browser runner in deterministic source order.
-def discover_browser_case_ids(browser_runner):
+# List literal BR-prefixed registrations from the Browser runner and extracted owners in deterministic source order.
+def discover_browser_case_ids(browser_runner, area_owners=None):
     # Read only the supplied Browser runner function from this checkout.
     source = inspect.getsource(browser_runner)
-    # Extract literal named cases without executing setup, listeners, or Browser code.
-    return re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", source)
+    # Normalize an omitted owner map without importing Browser case modules here.
+    owners = dict(area_owners or {})
+    # Build one ordered token expression for inline registrations and reviewed area-owner delegations.
+    owner_pattern = "|".join(re.escape(owner_name) for owner_name in sorted(owners, key=lambda value: (-len(value), value)))
+    # Match each literal inline registration and each exact area-owner call at its source position.
+    token_pattern = re.compile(r"\brun_case\(\s*['\"](?P<case_id>BR-[A-Za-z0-9\-]+)['\"]" + (rf"|\b(?P<owner>{owner_pattern})\.run_cases\(" if owner_pattern else ""))
+    # Retain the source-order identity stream without executing setup, listeners, or Browser code.
+    case_ids = []
+    # Expand every matched source token through exactly one controlled path.
+    for match in token_pattern.finditer(source):
+        # Append an inline permanent identity unchanged.
+        if match.group("case_id"):
+            case_ids.append(match.group("case_id"))
+            continue
+        # Read only the registered owner function source for the matched delegation alias.
+        owner_source = inspect.getsource(owners[match.group("owner")])
+        # Expand the owner's literal registrations in their exact internal source order.
+        case_ids.extend(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
+    # Return one deterministic cross-file identity stream for baseline and shard validation.
+    return case_ids
 
 
 # Load the reviewed count and sorted case-id list used by every extraction slice.
