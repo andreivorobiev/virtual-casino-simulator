@@ -662,6 +662,63 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         for forbidden in ("start_server", "stop_server", "ServerThread", "subprocess.run", "reset_data"):
             self.assertNotIn(forbidden, area_source)
 
+    # Prove the post-restart platform registrations moved as one exact ordered area.
+    def test_api_post_restart_foundation_area_registration_ownership_is_exact(self):
+        # Define every permanent ID and requirement mapping in historical execution order.
+        expected_cases = (
+            ("API-WALLET-RESTART-001", ["SESSION-003", "USER-001", "TOKEN-003", "TOKEN-004", "TEST-039", "MHVP-002", "CW-002", "BIG-SIX-002", "RD-002", "DT-002", "HILO-002", "SCRATCH-002", "SIC-BO-002", "CHUCK-002", "CRAPS-002", "CAA-002", "OU7-002", "PLINKO-002", "FAN-TAN-002", "AB-002", "AD-002", "CS-002", "LIR-002", "CH-002", "PGP-002", "JP-002", "THPT-002"]),
+            ("API-CORE-001", ["CORE-001", "CORE-016", "TEST-003"]),
+            ("API-CATALOG-001", ["CORE-021", "SESSION-005", "TEST-042"]),
+            ("ECONOMICS-REGISTRY-001", ["TEST-175"]),
+            ("API-I18N-001", ["I18N-001", "I18N-003"]),
+            ("API-I18N-FOUNDATION-001", ["I18N-006", "I18N-007", "TEST-101"]),
+            ("API-CONTROL-001", ["BOT-001", "BOT-003", "BOT-009", "BOT-010", "BOT-011", "ADMIN-023", "AUDIO-001", "AUDIO-002", "AUDIO-010", "AUTO-001", "AUTO-003"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "post_restart_foundation.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the listener-free registration owner for callback capture.
+        spec = importlib.util.spec_from_file_location("post_restart_foundation_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture exact registrations without invoking the live listener callbacks.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Retain identity, mapping, order, and callback for semantic checks.
+            captured.append((case_id, requirements, callback))
+        # Record callback execution in the same order expected from the extracted area.
+        callback_calls = []
+        def callback(name):
+            # Return a distinct inert callback that records its semantic owner.
+            return lambda: callback_calls.append(name)
+        # Preserve the shared i18n callback identity across its two registrations.
+        i18n_callback = callback("i18n")
+        # Register every callback through the exact explicit dependency boundary.
+        module.run_cases(capture, callback("wallet_restart"), callback("core"), callback("catalog"), callback("economics"), i18n_callback, callback("control"))
+        # Bind every permanent ID, requirement mapping, and historical position.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        # Require the shared i18n callback to remain identical at both historical positions.
+        self.assertIs(captured[4][2], captured[5][2])
+        # Execute each callback once to prove direct forwarding semantics.
+        for _, _, registered_callback in captured:
+            # Invoke only the inert focused seam, never live HTTP or process lifecycle.
+            registered_callback()
+        # Require exact callback execution order, including both i18n registrations.
+        self.assertEqual(callback_calls, ["wallet_restart", "core", "catalog", "economics", "i18n", "i18n", "control"])
+        # Reject duplicate literal registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one exact dependency-forwarding delegation at the historical boundary.
+        delegation = "api_post_restart_foundation.run_cases(run_case,wallet_restart_persistence,core,catalog_foundation,lambda: game_economics_registry_tests.validate_registry(game_economics_registry_tests.read_json(game_economics_registry_tests.REGISTRY_PATH)),validate_i18n_resources,bots_audio_autoplay)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the next historical game registration after the complete area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("run_case('API-ROU-001'"))
+        # Keep server, transport, process, and persistence-reset ownership out of the area.
+        for forbidden in ("start_server", "stop_server", "ServerThread", "subprocess.run", "reset_data"):
+            self.assertNotIn(forbidden, area_source)
+
     # Prove the first API area moved as one exact registration group without duplication in the shim.
     def test_api_governance_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
