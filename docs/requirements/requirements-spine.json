@@ -10163,15 +10163,17 @@
       "implementation_files": [
         "casino/admin.py",
         "web/admin.js",
+        "web/admin/launch-readiness.js",
         "web/i18n/en-US/admin.json",
         "web/i18n/ru-RU/admin.json",
         "contracts/openapi/admin-users.v2.yaml",
         "tests/account_spine_tests.py",
+        "tests/unit/admin_launch_readiness_module.test.mjs",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-209-launch-readiness-dashboard",
-      "changed_in": "issue-209-launch-readiness-dashboard",
-      "notes": "This is visibility only; #209 remains open until every launch dependency and separate owner authorization is complete."
+      "changed_in": "issue-971-admin-launch-readiness-module",
+      "notes": "This is visibility only; #209 remains open until every launch dependency and separate owner authorization is complete. Issue #971 moves the held-only renderer behind an explicit dependency-injected per-tab boundary while preserving its additive v2 route, stale-response guard, exact compact DOM, and absence of mutation controls."
     },
     {
       "id": "OAUTH-011",
