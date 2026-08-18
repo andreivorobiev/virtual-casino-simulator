@@ -38,24 +38,6 @@ from casino.core.request_player import resolve_authenticated_player
 from casino.core.state_store import save_player_game_state, write_json
 # Import stable public error classes for focused guest authorization assertions.
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
-# Import storage tests so provider parity can run without the broad API suite.
-from tests import storage_tests
-# Import the focused fail-closed wallet-corruption evidence module.
-from tests import wallet_corruption_tests
-# Import provider-parity cents normalization proof for the storage profile. (TEST-190)
-from tests import wallet_cents_normalization_tests
-# Import descriptor-governed request and persisted-state rule evidence for SEC-014.
-from tests.games import test_game_rule_schema
-# Import the durable enrollment-policy suite so the central runner owns its evidence. (AUTH-013)
-from tests import enrollment_policy_tests
-# Import the listener-free player-state atomicity suite for central storage validation.
-from tests import state_store_atomic_tests
-# Import bounded MySQL pool lifecycle and concurrency evidence.
-from tests import mysql_pool_tests
-# Import listener-free migration policy tests for every storage validation run.
-from tests import mysql_migration_tests
-# Import listener-free encrypted recovery policy tests for every storage validation run.
-from tests import recovery_tests
 # Import pure Browser discovery, affinity packing, and shard verification outside the compatibility runner. (TEST-242)
 from tests import browser_sharding
 # Import source-only API registration discovery and exact reviewed inventory validation. (TEST-242)
@@ -74,6 +56,8 @@ from tests.cases.api import delivery_infrastructure as api_delivery_infrastructu
 from tests.cases.api import harness_foundation as api_harness_foundation
 # Import live infrastructure case ownership without transferring listener or reset lifecycle. (TEST-242)
 from tests.cases.api import live_infrastructure as api_live_infrastructure
+# Import storage and MySQL registration ownership without changing explicit live selectors. (TEST-242)
+from tests.cases.api import storage_foundation as api_storage_foundation
 # Import frontend-presentation registration ownership while execution stays in the runner. (TEST-242)
 from tests.cases.api import frontend_presentation as api_frontend_presentation
 # Import listener-free self-service foundation ownership behind the compatibility runner. (TEST-242)
@@ -463,137 +447,6 @@ def run_request_latency_provider(provider,output_path):
     source_commit=request_latency_source_commit()
     # Run without passing any provider credential through the callback or child arguments.
     request_latency_benchmark.run_provider_subprocess(provider,source_commit,output_path)
-
-# Define the run_storage_tests function used by this module.
-def run_storage_tests(include_live=False, include_migration_live=False, request_latency_callback=None):
-    # Define one listener-free runner for fail-closed wallet corruption behavior.
-    def run_wallet_corruption_tests():
-        # Load the complete JSON and MySQL corruption parity test case.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(wallet_corruption_tests.WalletCorruptionTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the mapped case whenever any recovery assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('wallet corruption suite failed')
-    # Define one listener-free runner for provider-neutral cents normalization.
-    def run_wallet_cents_normalization_tests():
-        # Load the complete JSON, MySQL, command, and write-path proof class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(wallet_cents_normalization_tests.WalletCentsNormalizationTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the mapped case whenever any normalization assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('wallet cents normalization suite failed')
-    # Define one listener-free runner for the STORAGE-011 JSON game-action boundary.
-    def run_json_game_action_provider_tests():
-        # Import the provider-specific suite only when the storage profile executes.
-        from tests import json_game_action_provider_tests
-        # Load the complete recovery, reset, contention, and hostile-input test case.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(json_game_action_provider_tests.JsonGameActionProviderTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the mapped case whenever any provider-boundary assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('JSON game-action provider suite failed')
-    # Define one listener-free runner for schema-four MySQL lifecycle transactions.
-    def run_mysql_game_action_provider_tests():
-        # Import the deterministic transactional model only for its named case.
-        from tests import mysql_game_action_provider_tests
-        # Load the complete executor, resolver, rollback, and schema-gate test class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(mysql_game_action_provider_tests.MySQLGameActionProviderTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the mapped case whenever any MySQL lifecycle assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('MySQL game-action provider suite failed')
-    # Define one focused unittest runner for provider-neutral player-game-state atomicity.
-    def run_player_state_atomic_tests():
-        # Load only the CORE-030 player-state atomicity test class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(state_store_atomic_tests.PlayerGameStateAtomicTests)
-        # Execute the focused listener-free suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any concurrency or rollback assertion failed.
-        if not result.wasSuccessful(): raise AssertionError('player game-state atomicity suite failed')
-    # Define one focused unittest runner for bounded MySQL pool lifecycle behavior.
-    def run_mysql_pool_tests():
-        # Load only the STORAGE-010 and TEST-141 pool test class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(mysql_pool_tests.MySQLPoolTests)
-        # Execute the focused suite with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any lifecycle or concurrency assertion failed.
-        if not result.wasSuccessful(): raise AssertionError('MySQL connection pool lifecycle suite failed')
-    # Define one focused unittest runner for authenticated recovery and clean-target policy.
-    def run_recovery_policy_tests():
-        # Load only the #205 synthetic recovery test case.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(recovery_tests.RecoveryEvidenceTests)
-        # Execute with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any focused assertion failed.
-        if not result.wasSuccessful(): raise AssertionError('recovery policy suite failed')
-    # Define one focused unittest runner for checksum, proof, failure, and SELECT-only policy.
-    def run_mysql_migration_policy_tests():
-        # Load only the #204 migration test case.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(mysql_migration_tests.MySQLMigrationTests)
-        # Execute with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any focused assertion failed.
-        if not result.wasSuccessful(): raise AssertionError('MySQL migration policy suite failed')
-    # Map the listener-free policy suite to the permanent migration requirements.
-    run_case('MYSQL-MIGRATION-001',['MYSQL-005','MYSQL-007','MYSQL-008','MYSQL-009','STORAGE-007','TEST-048','TEST-174'],run_mysql_migration_policy_tests)
-    # Map the listener-free recovery suite to the permanent recovery requirements.
-    run_case('RECOVERY-POLICY-001',['MYSQL-006','MYSQL-008','MYSQL-009','TOOL-004','TEST-049','TEST-174'],run_recovery_policy_tests)
-    # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
-    run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','AUDIO-010','TEST-030'],storage_tests.run_json_provider_parity)
-    # Prove corrupt wallet state cannot seed defaults or reach a settlement on either provider.
-    run_case('STORAGE-WALLET-CORRUPTION-001',['STORAGE-014','TEST-177'],run_wallet_corruption_tests)
-    # Prove explicit residue repair, audit evidence, and cents-only writes on both providers.
-    run_case('STORAGE-WALLET-CENTS-001',['STORAGE-015','LEDGER-036','TOOL-019','TEST-190'],run_wallet_cents_normalization_tests)
-    # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
-    run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','LEDGER-033','LEDGER-034','STORAGE-005','STORAGE-006','TEST-043','TEST-164','TEST-169'],storage_tests.run_json_action_idempotency)
-    # Execute provider-owned journal recovery, contention, reset, and fail-closed proof. (#430)
-    run_case('STORAGE-GAME-ACTION-ONCE-001',['STORAGE-011'],run_json_game_action_provider_tests)
-    # Prove immutable JSON claims, pending resolution, restart tombstones, and late-executor refusal.
-    run_case('STORAGE-GAME-ACTION-LIFECYCLE-001',['CORE-031','STORAGE-013','TEST-174'],run_json_game_action_provider_tests)
-    # Prove schema-four MySQL claim, transaction, resolver, replay, and rollback parity.
-    run_case('MYSQL-GAME-ACTION-LIFECYCLE-001',['MYSQL-009','STORAGE-013','TEST-174'],run_mysql_game_action_provider_tests)
-    # Prove player-scoped JSON concurrency, rollback, fallback, isolation, and MySQL delegation.
-    run_case('STORAGE-PLAYER-STATE-ATOMIC-001',['CORE-030','STORAGE-001','STORAGE-002'],run_player_state_atomic_tests)
-    # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
-    run_case('STORAGE-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','LEDGER-026','STORAGE-005','STORAGE-006'],storage_tests.run_practice_opponent_accounting)
-    # Prove durable enrollment resolution, bounded decision logging, and signup/redemption enforcement. (AUTH-013)
-    def run_enrollment_policy_tests():
-        # Load the focused listener-free policy suite.
-        suite=unittest.defaultTestLoader.loadTestsFromModule(enrollment_policy_tests)
-        # Execute with concise standard output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any focused assertion failed.
-        if not result.wasSuccessful(): raise AssertionError("enrollment policy suite failed")
-    # Map the permanent requirement to its existing focused central case without allocating a generic TEST ID.
-    run_case('API-ENROLLMENT-POLICY-001',['AUTH-013','AUTH-014','AUTH-015','OAUTH-011','TEST-158'],run_enrollment_policy_tests)
-    # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
-    run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','STORAGE-012','LEDGER-001','CORE-017','TEST-162'],storage_tests.run_player_creation_preserves_ledger)
-    # Run the descriptor, router, state-repair, and catalog suite through the permanent API gate. (#433)
-    def run_game_rule_schema_tests():
-        # Load only the listener-free descriptor-governance test class.
-        suite=unittest.defaultTestLoader.loadTestsFromTestCase(test_game_rule_schema.GameRuleSchemaTests)
-        # Execute the focused suite with concise central-runner output.
-        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
-        # Fail the named central case when any descriptor or runtime-boundary assertion fails.
-        if not result.wasSuccessful(): raise AssertionError('game rule schema suite failed')
-    # Bind central request coercion, read repair, generated contracts, and catalog governance permanently.
-    run_case('API-GAME-RULES-001',['SEC-002','SEC-004','SEC-014','TEST-163'],run_game_rule_schema_tests)
-    # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)
-    run_case('STORAGE-TABLE-RULES-001',['LEDGER-029','TOKEN-006'],storage_tests.run_table_rule_authority)
-    # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
-    run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009','LEDGER-033','TEST-164'],storage_tests.run_mysql_schema_provider_path)
-    # Execute bounded capacity, cleanup, fork, observability, and 1/2/4/8 pool evidence without a service.
-    run_case('MYSQL-POOL-001',['STORAGE-010','TEST-141','TEST-220'],run_mysql_pool_tests)
-    # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
-    if include_live:
-        # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','STORAGE-010','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091','TEST-141','TEST-171','TEST-220'],storage_tests.run_mysql_live_provider_path)
-    # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
-    if include_migration_live:
-        # Import the service-dependent matrix only after the disposable selector is explicit.
-        from tests.mysql_migration_live import run_mysql_migration_live_matrix
-        # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','MYSQL-007','MYSQL-008','MYSQL-009','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141','TEST-174','TEST-220'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -6276,6 +6129,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 game_evidence(f'after-pass-craps-{prefix}-{locale.lower()}-{viewport_id}.png','craps',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
                         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Roll once and wait for durable server-owned progress before presentation settles.
+                    def roll_and_wait_for_commit():
+                        # Capture the committed roll count so the wait cannot pass on pre-click markup.
+                        prior_roll_count=int(page.locator('.craps-metrics .craps-metric').nth(3).locator('strong').inner_text().replace(',',''))
+                        # Trigger the same public roll action exercised by a player.
+                        page.get_by_test_id('craps-roll').click()
+                        # Require the rendered server-owned round to contain one additional committed roll.
+                        page.wait_for_function("prior => Number(document.querySelectorAll('.craps-metrics .craps-metric strong')[3]?.textContent.replace(/[^0-9.-]/g, '')) > prior",arg=prior_roll_count,timeout=10000)
+                        # Wait for decorative frames to finish before inspecting point or terminal state.
+                        page.wait_for_function("() => !document.querySelector('.craps-die.is-rolling')",timeout=10000)
                     # Capture the complete ready table before committing a line wager.
                     localized_evidence('ready',['ready'])
                     # Start one Pass Line round and capture its committed come-out state.
@@ -6285,7 +6148,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Use enough independent come-out attempts to make random non-establishment negligible.
                     for attempt in range(40):
                         # Roll the currently committed come-out action.
-                        page.get_by_test_id('craps-roll').click(); page.locator('.craps-die.is-rolling').first.wait_for(timeout=5000); page.wait_for_function("() => !document.querySelector('.craps-die.is-rolling')",timeout=10000)
+                        roll_and_wait_for_commit()
                         # Stop when the authoritative round exposes a point puck and remains actionable.
                         if page.locator('[data-testid="craps-point"].is-on').count() and page.get_by_test_id('craps-roll').count(): point_found=True; break
                         # Start another small round after an immediate come-out settlement.
@@ -6299,7 +6162,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Stop after the frontend returns to the next-round action.
                         if page.get_by_test_id('craps-start').count(): break
                         # Advance the active point through one server-authoritative action.
-                        page.get_by_test_id('craps-roll').click(); page.locator('.craps-die.is-rolling').first.wait_for(timeout=5000); page.wait_for_function("() => !document.querySelector('.craps-die.is-rolling')",timeout=10000)
+                        roll_and_wait_for_commit()
                     # Require a terminal settled round and capture it across both locales and all viewports.
                     page.get_by_test_id('craps-start').wait_for(timeout=5000); localized_evidence('settled',['settled'])
                     # Capture reduced-motion and canonical route restoration.
@@ -10749,7 +10612,8 @@ def main():
     try:
         # Build the credential-free MySQL callback only for the explicit benchmark selector.
         request_latency_callback=(lambda: run_case('REQUEST-LATENCY-MYSQL-001',['TEST-148'],lambda: run_request_latency_provider('mysql',args.request_latency_output))) if args.request_latency=='mysql' else None
-        if args.storage or args.mysql_live or args.mysql_migrations_live: run_storage_tests(include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback)
+        # Delegate the complete storage/MySQL area while preserving explicit live selectors and callback wiring.
+        if args.storage or args.mysql_live or args.mysql_migrations_live: api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback)
         # Run the JSON provider only through its explicit benchmark selector.
         if args.request_latency=='json': run_case('REQUEST-LATENCY-JSON-001',['TEST-148'],lambda: run_request_latency_provider('json',args.request_latency_output))
         if args.api: run_api_tests()

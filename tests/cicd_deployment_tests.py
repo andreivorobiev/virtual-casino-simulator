@@ -335,6 +335,25 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Preserve source order on successful validation.
             self.assertEqual(browser_sharding.validate_browser_case_inventory(current, inventory_path), current)
 
+    # Prove Craps Browser evidence waits on durable committed progress rather than a transient animation.
+    def test_craps_browser_roll_wait_is_durable(self):
+        # Parse the compatibility runner without importing Playwright or opening a listener.
+        source, tree = self.browser_runner_syntax()
+        # Select the Browser owner so assertions remain bounded to executable acceptance code.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Select the nested Craps acceptance function from the reviewed Browser owner.
+        craps_case = next(node for node in ast.walk(runner) if isinstance(node, ast.FunctionDef) and node.name == "craps_acceptance")
+        # Read only the exact Craps acceptance source for durable-wait assertions.
+        craps_source = ast.get_source_segment(source, craps_case)
+        # Reject the flaky requirement to observe the short-lived decorative CSS class.
+        self.assertNotIn("locator('.craps-die.is-rolling').first.wait_for", craps_source)
+        # Require both come-out and point-play loops to use the shared durable completion helper.
+        self.assertEqual(len(re.findall(r"(?m)^\s+roll_and_wait_for_commit\(\)$", craps_source)), 2)
+        # Bind completion to a strictly advanced committed roll count after the public click.
+        self.assertIn("prior => Number(document.querySelectorAll('.craps-metrics .craps-metric strong')[3]?.textContent.replace(/[^0-9.-]/g, '')) > prior", craps_source)
+        # Preserve the post-commit wait for decorative presentation to settle before state inspection.
+        self.assertIn("() => !document.querySelector('.craps-die.is-rolling')", craps_source)
+
     # Prove every #727 API slice preserves the exact reviewed non-Browser count and sorted identities.
     def test_api_case_inventory_matches_extracted_sources_exactly(self):
         # Import only the source-reading inventory helper with no runner or case execution.
@@ -487,6 +506,70 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertNotIn("subprocess.run", area_source)
         self.assertNotIn("/api/v1/casino/reset", area_source)
         self.assertNotIn("login_default_user", area_source)
+
+    # Prove storage and MySQL registrations moved without weakening explicit live selectors.
+    def test_api_storage_foundation_area_registration_ownership_is_exact(self):
+        # Define the exact reviewed cases and requirement mappings in historical order.
+        expected_cases = (
+            ("MYSQL-MIGRATION-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "TEST-048", "TEST-174"]),
+            ("RECOVERY-POLICY-001", ["MYSQL-006", "MYSQL-008", "MYSQL-009", "TOOL-004", "TEST-049", "TEST-174"]),
+            ("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "TEST-030"]),
+            ("STORAGE-WALLET-CORRUPTION-001", ["STORAGE-014", "TEST-177"]),
+            ("STORAGE-WALLET-CENTS-001", ["STORAGE-015", "LEDGER-036", "TOOL-019", "TEST-190"]),
+            ("STORAGE-JSON-IDEMPOTENCY-001", ["LEDGER-026", "LEDGER-033", "LEDGER-034", "STORAGE-005", "STORAGE-006", "TEST-043", "TEST-164", "TEST-169"]),
+            ("STORAGE-GAME-ACTION-ONCE-001", ["STORAGE-011"]),
+            ("STORAGE-GAME-ACTION-LIFECYCLE-001", ["CORE-031", "STORAGE-013", "TEST-174"]),
+            ("MYSQL-GAME-ACTION-LIFECYCLE-001", ["MYSQL-009", "STORAGE-013", "TEST-174"]),
+            ("STORAGE-PLAYER-STATE-ATOMIC-001", ["CORE-030", "STORAGE-001", "STORAGE-002"]),
+            ("STORAGE-PRACTICE-OPPONENT-001", ["BOT-009", "BOT-010", "BOT-011", "ADMIN-023", "LEDGER-026", "STORAGE-005", "STORAGE-006"]),
+            ("API-ENROLLMENT-POLICY-001", ["AUTH-013", "AUTH-014", "AUTH-015", "OAUTH-011", "TEST-158"]),
+            ("STORAGE-LEDGER-GUARD-001", ["STORAGE-008", "STORAGE-012", "LEDGER-001", "CORE-017", "TEST-162"]),
+            ("API-GAME-RULES-001", ["SEC-002", "SEC-004", "SEC-014", "TEST-163"]),
+            ("STORAGE-TABLE-RULES-001", ["LEDGER-029", "TOKEN-006"]),
+            ("STORAGE-MYSQL-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "LEDGER-009", "LEDGER-033", "TEST-164"]),
+            ("MYSQL-POOL-001", ["STORAGE-010", "TEST-141", "TEST-220"]),
+            ("STORAGE-MYSQL-LIVE-001", ["STORAGE-001", "STORAGE-002", "STORAGE-003", "STORAGE-004", "STORAGE-005", "STORAGE-006", "STORAGE-010", "MYSQL-001", "MYSQL-002", "MYSQL-003", "MYSQL-004", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "INVITE-003", "TEST-038", "TEST-043", "TEST-089", "TEST-090", "TEST-091", "TEST-141", "TEST-171", "TEST-220"]),
+            ("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "storage_foundation.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the registration owner so callbacks can be captured without execution.
+        spec = importlib.util.spec_from_file_location("storage_foundation_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture the default selection without running any provider or focused suite.
+        default_captured = []
+        def capture_default(case_id, requirements, callback):
+            # Preserve permanent ID, mapping, order, and callback identity.
+            default_captured.append((case_id, requirements, callback.__name__))
+        module.run_cases(capture_default)
+        # Require both live registrations to remain absent without explicit selectors.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in default_captured), expected_cases[:17])
+        # Capture the explicitly selected live registrations without invoking their callbacks.
+        live_captured = []
+        def capture_live(case_id, requirements, callback):
+            # Preserve the complete explicit-live registration packet.
+            live_captured.append((case_id, requirements, callback.__name__))
+        module.run_cases(capture_live, include_live=True, include_migration_live=True, request_latency_callback=object())
+        # Bind all nineteen permanent IDs, requirement mappings, and historical order.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in live_captured), expected_cases)
+        # Bind the two explicit selector cases to the final two historical positions.
+        self.assertEqual(tuple(case_id for case_id, _, _ in live_captured[-2:]), ("STORAGE-MYSQL-LIVE-001", "MYSQL-MIGRATION-LIVE-001"))
+        # Reject duplicate literal registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one exact delegation that forwards both selectors and the callback.
+        delegation = "api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        # Preserve the existing dispatch guard so default API runs never open a provider.
+        self.assertIn("if args.storage or args.mysql_live or args.mysql_migrations_live: " + delegation, runner_source)
+        # Keep listener, server, and raw subprocess lifecycle out of the extracted owner.
+        self.assertNotIn("start_server", area_source)
+        self.assertNotIn("ServerThread", area_source)
+        self.assertNotIn("subprocess.run", area_source)
 
     # Prove the first API area moved as one exact registration group without duplication in the shim.
     def test_api_governance_area_registration_ownership_is_exact(self):
