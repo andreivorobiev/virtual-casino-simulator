@@ -975,9 +975,12 @@
         "casino/module_versions.py",
         "modules/module-manifest.json",
         "web/admin.html",
-        "web/admin.js"
+        "web/admin.js",
+        "web/admin/system.js",
+        "tests/unit/admin_system_module.test.mjs"
       ],
-      "notes": ""
+      "changed_in": "issue-967-admin-system-module",
+      "notes": "The System renderer now owns the canonical module-revision table behind an explicit dependency boundary with listener-free byte-parity, escaping, order, stale-response, and frozen-route coverage."
     },
     {
       "id": "ADMIN-005",
@@ -1422,9 +1425,13 @@
         "BR-ADMIN-001"
       ],
       "implementation_files": [
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/unit/admin_system_module.test.mjs",
+        "web/admin.js",
+        "web/admin/system.js"
       ],
-      "notes": ""
+      "changed_in": "issue-967-admin-system-module",
+      "notes": "The existing authenticated Browser case still verifies canonical System module rows, while listener-free parity now binds the extracted renderer, stale-response guard, and exact dashboard route."
     },
     {
       "id": "TEST-024",
@@ -2489,11 +2496,13 @@
         "modules/module-manifest.json",
         "web/admin.html",
         "web/admin.js",
+        "web/admin/system.js",
+        "tests/unit/admin_system_module.test.mjs",
         "web/styles.css"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "issue-967-admin-system-module",
+      "notes": "Introduced in v9.1.0. The extracted System renderer preserves the frozen dashboard request, immediate localized title, stale-tab suppression, canonical module rows, and raw overview bytes."
     },
     {
       "id": "ADMIN-015",
@@ -11497,11 +11506,13 @@
         "tests/frontend_safety.mjs",
         "tests/inner_html_template_tests.py",
         "tests/inner_html_template_baseline.json",
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/unit/admin_system_module.test.mjs",
+        "web/admin/system.js"
       ],
       "introduced_in": "issue-708-escape-by-default-html",
-      "changed_in": "issue-708-escape-by-default-html",
-      "notes": "Listener-free cases use exact production helper bytes and disposable source trees; the mapped Browser case uses the existing authenticated Admin session and performs no new production mutation."
+      "changed_in": "issue-967-admin-system-module",
+      "notes": "Listener-free cases use exact production helper bytes and disposable source trees; the extracted System renderer adds hostile module-value escaping, raw-overview, nested-array, and review-width coverage while the mapped Browser case preserves canonical module topology."
     },
     {
       "id": "I18N-014",
