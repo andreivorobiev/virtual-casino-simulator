@@ -36,6 +36,8 @@ import { createUsersTab } from './admin/users.js';
 import { createAdministratorsTab } from './admin/administrators.js';
 // Import enrollment governance so signup and provider controls leave the dispatcher monolith. (AUTH-015)
 import { createEnrollmentTab } from './admin/enrollment.js';
+// Import private invitation governance so issuance and lifecycle controls leave the dispatcher monolith. (INVITE-001, INVITE-005)
+import { createInvitationsTab } from './admin/invitations.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -194,6 +196,23 @@ const enrollment = createEnrollmentTab({
   humanLabel,
   isActiveTab,
   option,
+  post,
+  safe,
+  setTitle,
+  t,
+  table,
+  toast,
+  view,
+});
+// Bind Invitations to its privacy-safe lifecycle and delivery-readiness boundaries.
+const invitations = createInvitationsTab({
+  api,
+  emptyState,
+  formatNumber,
+  html,
+  humanLabel,
+  isActiveTab,
+  localeOptions,
   post,
   safe,
   setTitle,
@@ -424,45 +443,6 @@ async function guests() {
   view.querySelector('#guest-cleanup').onclick = async () => { try { await post('/api/v2/admin/guest-trials/cleanup', {}); toast(t('guests.cleanupComplete', {}, 'admin'), true); } catch (_) { toast(t('guests.cleanupFailed', {}, 'admin')); } await guests(); };
   // Bind the owner-only admission switch without affecting current trial principals.
   view.querySelector('#guest-policy-save').onclick = async () => { try { await post('/api/v2/admin/guest-trials/settings', { enabled: view.querySelector('#guest-trials-enabled').checked }); toast(t('guests.policySaved', {}, 'admin'), true); } catch (_) { toast(t('guests.policyFailed', {}, 'admin')); } await guests(); };
-}
-
-// Render disabled-by-default private invitation readiness, issuance, and lifecycle controls. (INVITE-001, INVITE-005)
-async function invitations() {
-  // Set the localized invitation title and restricted-preview boundary.
-  setTitle(t('invitations.title', {}, 'admin'), t('invitations.subtitle', {}, 'admin'));
-  // Announce loading before the Admin-only diagnostic resolves.
-  view.innerHTML = html`<section class="admin-card loading-panel" data-testid="admin-invitation-loading" role="status"><h2>${safe(t('invitations.loadingTitle', {}, 'admin'))}</h2><p>${safe(t('invitations.loadingDetail', {}, 'admin'))}</p></section>`;
-  // Load the bounded, recipient-masked lifecycle list through the additive v2 contract.
-  const data = await api('/api/v2/admin/invitations?limit=100');
-  // Stop a stale request from overwriting a newer selected tab.
-  if (!isActiveTab('invitations')) return;
-  // Normalize invitation rows defensively before rendering.
-  const rows = Array.isArray(data.invitations) ? data.invitations : [];
-  // Select one stable status for the readiness card.
-  const readiness = !data.enabled ? 'disabled' : data.mail_status !== 'ready' ? 'release-held' : data.redemption_enabled ? 'ready' : 'redemption-held';
-  // Render one secret-free readiness card, bounded create form, and keyboard-scrollable lifecycle region.
-  view.innerHTML = html`<section class="admin-card" data-testid="admin-invitations-${safe(readiness)}"><h2>${safe(t(`invitations.states.${readiness}`, {}, 'admin'))}</h2><p>${safe(t('invitations.boundary', {}, 'admin'))}</p><dl class="guest-detail-grid"><div><dt>${safe(t('invitations.issuance', {}, 'admin'))}</dt><dd>${safe(data.enabled ? t('common.enabled', {}, 'admin') : t('common.disabled', {}, 'admin'))}</dd></div><div><dt>${safe(t('invitations.redemption', {}, 'admin'))}</dt><dd>${safe(data.redemption_enabled ? t('common.enabled', {}, 'admin') : t('common.disabled', {}, 'admin'))}</dd></div><div><dt>${safe(t('invitations.delivery', {}, 'admin'))}</dt><dd>${safe(humanLabel(data.mail_status || 'unavailable'))}</dd></div><div><dt>${safe(t('invitations.recovery', {}, 'admin'))}</dt><dd>${formatNumber(data.recovery_required || 0)}</dd></div></dl></section><section class="admin-card" data-testid="admin-invitation-create"><h3>${safe(t('invitations.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('invitations.recipient', {}, 'admin'))}<input id="invitation-recipient" type="email" autocomplete="off" maxlength="254" data-testid="admin-invitation-recipient"></label><label>${safe(t('invitations.locale', {}, 'admin'))}<select id="invitation-locale" data-testid="admin-invitation-locale">${localeOptions('en-US')}</select></label><button id="invitation-create" type="button" data-testid="admin-invitation-submit" ${data.enabled && data.mail_status === 'ready' ? '' : 'disabled'}>${safe(t('invitations.send', {}, 'admin'))}</button></div><p class="muted">${safe(t('invitations.createHelp', {}, 'admin'))}</p></section><section class="admin-card" data-testid="admin-invitation-list" tabindex="0" role="region" aria-label="${safe(t('invitations.listTitle', {}, 'admin'))}"><h3>${safe(t('invitations.listTitle', {}, 'admin'))}</h3>${rows.length ? table([t('invitations.recipient', {}, 'admin'), t('invitations.status', {}, 'admin'), t('invitations.delivery', {}, 'admin'), t('invitations.locale', {}, 'admin'), t('invitations.updated', {}, 'admin'), t('invitations.actions', {}, 'admin')], rows.map(row => html`<tr data-testid="admin-invitation-row" data-status="${safe(row.status)}"><td>${safe(row.recipient_hint || t('invitations.masked', {}, 'admin'))}</td><td>${safe(humanLabel(row.status))}</td><td>${safe(humanLabel(row.delivery_status || 'none'))}</td><td>${safe(row.locale)}</td><td>${safe(row.updated_at || '')}</td><td><button type="button" class="invitation-resend" data-id="${safe(row.invitation_id)}" ${['pending','delivery_failed'].includes(row.status) && data.enabled ? '' : 'disabled'}>${safe(t('invitations.resend', {}, 'admin'))}</button><button type="button" class="invitation-revoke" data-id="${safe(row.invitation_id)}" ${['pending','delivery_failed'].includes(row.status) ? '' : 'disabled'}>${safe(t('invitations.revoke', {}, 'admin'))}</button></td></tr>`)) : emptyState(t('invitations.empty', {}, 'admin'), t('invitations.emptyDetail', {}, 'admin'), 'admin-invitation-empty')}</section>`;
-  // Bind create only when the independently gated delivery foundation is ready.
-  view.querySelector('#invitation-create').onclick = async () => {
-    // Read the transient mailbox only at submit time.
-    const recipientInput = view.querySelector('#invitation-recipient');
-    // Build one caller-owned replay key without exposing it in the DOM.
-    const payload = { recipient: recipientInput.value, locale: view.querySelector('#invitation-locale').value, idempotency_key: crypto.randomUUID() };
-    // Disable duplicate clicks until the exact response settles.
-    view.querySelector('#invitation-create').disabled = true;
-    // Submit through the approved Admin v2 route.
-    await post('/api/v2/admin/invitations', payload);
-    // Clear the raw mailbox before any after-pass evidence can be captured.
-    recipientInput.value = '';
-    // Announce success without repeating the recipient.
-    toast(t('invitations.created', {}, 'admin'), true);
-    // Reload the privacy-safe lifecycle list.
-    await invitations();
-  };
-  // Bind every eligible resend action to one fresh caller idempotency key.
-  view.querySelectorAll('.invitation-resend').forEach(button => { button.onclick = async () => { button.disabled = true; await post(`/api/v2/admin/invitations/${encodeURIComponent(button.dataset.id)}/resend`, { idempotency_key: crypto.randomUUID() }); toast(t('invitations.resent', {}, 'admin'), true); await invitations(); }; });
-  // Bind emergency revoke independently from issuance readiness.
-  view.querySelectorAll('.invitation-revoke').forEach(button => { button.onclick = async () => { button.disabled = true; await post(`/api/v2/admin/invitations/${encodeURIComponent(button.dataset.id)}/revoke`, { idempotency_key: crypto.randomUUID() }); toast(t('invitations.revoked', {}, 'admin'), true); await invitations(); }; });
 }
 
 // Render one de-identified Guest Trials analytics detail record. (issue #317)
