@@ -38,8 +38,8 @@ class RouletteI18nDiagnosticsTests(unittest.TestCase):
 
     # Require both cumulative Roulette assertions to retain the shared actionable formatter.
     def test_both_cumulative_assertions_use_diagnostic(self) -> None:
-        # Read the exact central Browser runner once.
-        source = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Read the exact extracted Roulette Browser owner once.
+        source = (ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py").read_text(encoding="utf-8")
         # Count only assertion-message calls so the helper definition cannot satisfy the gate.
         self.assertEqual(source.count(", roulette_i18n_failure_diagnostic("), 2)
 

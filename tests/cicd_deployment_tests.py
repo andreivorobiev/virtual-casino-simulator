@@ -1625,6 +1625,45 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one atomic skip for the exact complete affinity group.
         self.assertEqual(skipped_groups, ["auth_lobby"])
 
+    # Prove the complete Roulette/Slots/Keno affinity family has one external owner and one runner delegation.
+    def test_browser_roulette_slots_keno_affinity_registration_ownership_is_exact(self):
+        # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
+        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        # Read the complete multi-game owner independently of its import path.
+        owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py")
+        # Bind the exact permanent identities in their historical source order.
+        expected_ids = (
+            "BR-ROU-HITMAP-001", "BR-ROU-REFUND-001", "BR-ROU-SLIP-AUDIT-001", "BR-ROU-PREMIUM-001",
+            "BR-I18N-GAMESTATE-ROU-001", "BR-ROU-MOTION-CURVE-001", "BR-ROU-SPINNING-COPY-001",
+            "BR-ROU-LOCKED-REMOVE-001", "BR-ROU-001", "BR-AUTO-START-FAIL-001", "BR-AUTO-ROU-001",
+            "BR-ROU-REDUCED-MOTION-001", "BR-MONEY-LABEL-001", "BR-SLOTS-PAYLINE-001",
+            "BR-SLOT-LINE-BET-001", "BR-SLOT-ECONOMICS-001", "BR-SLOT-001", "BR-KENO-EDGE-001", "BR-KENO-001",
+        )
+        # Extract only literal permanent registrations from the new owner.
+        owner_ids = tuple(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
+        # Require exact identity and historical order without invented or duplicate cases.
+        self.assertEqual(owner_ids, expected_ids)
+        # Reject any remaining inline registration in the compatibility runner.
+        for case_id in expected_ids:
+            # Keep each permanent identity under exactly one executable source owner.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the group's exact historical position.
+        self.assertEqual(runner_source.count("browser_roulette_slots_keno.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,visual_matrix,save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots)"), 1)
+        # Require one owner-level guard without repeated partial setup checks.
+        self.assertEqual(owner_source.count("browser_shard_owns_group('roulette_slots_keno')"), 1)
+        # Require the extracted owner to advance all 19 source positions atomically on non-owning shards.
+        self.assertEqual(owner_source.count("skip_browser_affinity('roulette_slots_keno')"), 1)
+        # Import the extracted owner without starting the compatibility runner.
+        from tests.cases.browser import roulette_slots_keno
+        # Retain the exact skip identity emitted by a non-owning shard.
+        skipped_groups = []
+        # Reject any accidental case execution on a shard that does not own the complete group.
+        reject_case = lambda *_args: self.fail("non-owner executed a Roulette/Slots/Keno case")
+        # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
+        roulette_slots_keno.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 18))
+        # Require one atomic skip for the exact complete affinity group.
+        self.assertEqual(skipped_groups, ["roulette_slots_keno"])
+
     # Prove declared producer/consumer groups fit one deterministic shard and guard their bodies.
     def test_browser_shard_affinity_groups_are_contiguous_and_guarded(self):
         # Parse the exact browser runner source without importing it.
@@ -1643,6 +1682,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         guest_lifecycle_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "guest_lifecycle.py")
         # Read the extracted auth/lobby owner for guard-location checks below.
         auth_lobby_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_lobby.py")
+        # Read the extracted Roulette/Slots/Keno owner for guard-location checks below.
+        roulette_slots_keno_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py")
+        # Parse the extracted game-family owner so its Keno integrity callbacks remain structurally inspected.
+        roulette_slots_keno_tree = ast.parse(roulette_slots_keno_source)
         # Compute the same deterministic six-runner partition used by the workflow.
         shard_sets = browser_runner_module.browser_shard_case_sets(6)
         # Recompute from identical inputs to prove packing replay is deterministic.
@@ -1664,7 +1707,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require exact union and nonduplication across all declared owners.
         self.assertEqual(sorted(case_id for shard_cases in shard_sets for case_id in shard_cases), sorted(case_ids))
         # Locate the one permanent Keno owner call that carries both edge and economics acceptance.
-        keno_owner_call = next(node for node in ast.walk(runner) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run_case" and ast.literal_eval(node.args[0]) == "BR-KENO-EDGE-001")
+        keno_owner_call = next(node for node in ast.walk(roulette_slots_keno_tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run_case" and ast.literal_eval(node.args[0]) == "BR-KENO-EDGE-001")
         # Read the owner call's permanent requirement mapping without executing Browser code.
         keno_owner_requirements = ast.literal_eval(keno_owner_call.args[1])
         # Require the combined owner to map both the Keno economics requirement and its test requirement.
@@ -1681,8 +1724,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertIsInstance(color_owner_call.args[2], ast.Name)
         # Pin the callback identity so the evidence body cannot be replaced by a shallow predicate.
         self.assertEqual(color_owner_call.args[2].id, "semantic_game_colors")
-        # Locate the complete callback inside the Browser runner.
-        keno_complete_callback = next(node for node in ast.walk(runner) if isinstance(node, ast.FunctionDef) and node.name == "keno_complete_acceptance")
+        # Locate the complete callback inside its extracted Browser owner.
+        keno_complete_callback = next(node for node in ast.walk(roulette_slots_keno_tree) if isinstance(node, ast.FunctionDef) and node.name == "keno_complete_acceptance")
         # Read every direct helper call from the complete callback in source order.
         keno_complete_calls = [statement.value.func.id for statement in keno_complete_callback.body if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call) and isinstance(statement.value.func, ast.Name)]
         # Require one complete 64-cell matrix pass followed by one route/restoration economics pass.
@@ -1710,12 +1753,13 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Require all producers and consumers to execute on one shard.
             self.assertEqual(len(owners), 1, group_name)
             # Extracted Browser affinities own their guard and skip outside the compatibility runner.
-            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_lobby"}:
+            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette_slots_keno"}:
                 # Bind the exact source-level delegation alias and external owner for this family.
                 delegation_alias, owner_source = {
                     "auth_backend_pwa": ("browser_auth_backend_pwa", auth_backend_pwa_source),
                     "guest_lifecycle": ("browser_guest_lifecycle", guest_lifecycle_source),
                     "auth_lobby": ("browser_auth_lobby", auth_lobby_source),
+                    "roulette_slots_keno": ("browser_roulette_slots_keno", roulette_slots_keno_source),
                 }[group_name]
                 # Require one source-level delegation so cross-file discovery preserves the group's exact position.
                 self.assertEqual(source.count(f"{delegation_alias}.run_cases("), 1)
