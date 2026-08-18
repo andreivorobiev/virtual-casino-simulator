@@ -38,6 +38,8 @@ import { createAdministratorsTab } from './admin/administrators.js';
 import { createEnrollmentTab } from './admin/enrollment.js';
 // Import private invitation governance so issuance and lifecycle controls leave the dispatcher monolith. (INVITE-001, INVITE-005)
 import { createInvitationsTab } from './admin/invitations.js';
+// Import Audio & Voice settings so global sound controls leave the dispatcher monolith. (AUDIO-001, AUDIO-007)
+import { createAudioTab } from './admin/audio.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -218,6 +220,20 @@ const invitations = createInvitationsTab({
   setTitle,
   t,
   table,
+  toast,
+  view,
+});
+// Bind Audio to the accepted voice helpers and Admin settings route.
+const audio = createAudioTab({
+  api,
+  availableVoices,
+  html,
+  loadVoiceSettings,
+  safe,
+  saveVoiceSettings,
+  setTitle,
+  speak,
+  t,
   toast,
   view,
 });
@@ -557,42 +573,6 @@ async function operations() {
   }
 }
 
-// Define audio to preserve global sound and voice settings.
-async function audio() {
-  // Set the existing audio title and subtitle.
-  setTitle(t('nav.audio', {}, 'admin'), 'Global sound settings for all games.');
-  // Load persisted audio settings through the existing Admin endpoint.
-  const data = await api('/api/v1/admin/audio-settings');
-  // Store settings with a safe empty fallback.
-  const settings = data.settings || {};
-  // Store browser voices so the voice select can show installed options.
-  const voices = availableVoices();
-  // Render the existing Audio & Voice controls.
-  view.innerHTML = html`<section class="admin-card"><h3>Sound and voice</h3><div class="grid3"><label><input id="master_enabled" type="checkbox" ${settings.master_enabled ? 'checked' : ''}> Master sound</label><label><input id="sfx_enabled" type="checkbox" ${settings.sfx_enabled ? 'checked' : ''}> SFX</label><label><input id="voice_enabled" type="checkbox" ${settings.voice_enabled ? 'checked' : ''}> Voice</label></div><div class="grid3"><label>Master volume<input id="master_volume" type="range" min="0" max="1" step="0.05" value="${safe(settings.master_volume)}"></label><label>SFX volume<input id="sfx_volume" type="range" min="0" max="1" step="0.05" value="${safe(settings.sfx_volume)}"></label><label>Voice volume<input id="voice_volume" type="range" min="0" max="1" step="0.05" value="${safe(settings.voice_volume)}"></label></div><label>Voice<select id="preferred_voice_name"><option value="">Auto nice lady</option>${voices.map(voice => html`<option value="${safe(voice.name)}" ${settings.preferred_voice_name === voice.name ? 'selected' : ''}>${safe(voice.name)} (${safe(voice.lang)})</option>`)}</select></label><div class="grid3"><label>Rate<input id="voice_rate" type="number" min="0.5" max="1.8" step="0.05" value="${safe(settings.voice_rate)}"></label><label>Pitch<input id="voice_pitch" type="number" min="0.4" max="2" step="0.05" value="${safe(settings.voice_pitch)}"></label><label><input id="auto_nice_lady" type="checkbox" ${settings.auto_nice_lady ? 'checked' : ''}> Prefer nice lady</label></div><div class="grid3"><label><input id="announce_roulette_results" type="checkbox" ${settings.announce_roulette_results ? 'checked' : ''}> Roulette announcements</label><label><input id="announce_blackjack_results" type="checkbox" ${settings.announce_blackjack_results ? 'checked' : ''}> Blackjack announcements</label><label><input id="announce_baccarat_results" type="checkbox" ${settings.announce_baccarat_results ? 'checked' : ''}> Baccarat announcements</label><label><input id="announce_bingo_calls" type="checkbox" ${settings.announce_bingo_calls ? 'checked' : ''}> Bingo calls</label><label><input id="announce_keno_results" type="checkbox" ${settings.announce_keno_results ? 'checked' : ''}> Keno results</label></div><div class="row"><button id="saveAudio" data-testid="admin-save-audio" class="gold">Save audio settings</button><button id="previewVoice" data-testid="admin-preview-voice">Preview voice</button></div></section>`;
-  // Bind the audio save action after rendering.
-  view.querySelector('#saveAudio').onclick = saveAudio;
-  // Bind the voice preview action after rendering.
-  view.querySelector('#previewVoice').onclick = previewVoice;
-}
-
-// Define saveAudio to persist the existing audio settings payload.
-async function saveAudio() {
-  // Store boolean setting keys that are read from checkboxes.
-  const keys = ['master_enabled', 'sfx_enabled', 'voice_enabled', 'auto_nice_lady', 'announce_roulette_results', 'announce_blackjack_results', 'announce_baccarat_results', 'announce_bingo_calls', 'announce_keno_results'];
-  // Store numeric setting keys that are read from ranges or number inputs.
-  const nums = ['master_volume', 'sfx_volume', 'voice_volume', 'voice_rate', 'voice_pitch'];
-  // Store payload with the selected voice name.
-  const payload = { preferred_voice_name: view.querySelector('#preferred_voice_name').value };
-  // Add checkbox values to the payload.
-  keys.forEach(key => payload[key] = view.querySelector(`#${key}`).checked);
-  // Add numeric values to the payload.
-  nums.forEach(key => payload[key] = Number(view.querySelector(`#${key}`).value));
-  // Persist settings through the existing voice helper.
-  await saveVoiceSettings(payload);
-  // Show existing save feedback.
-  toast('Audio settings saved.', true);
-}
-
 // Render the owner-facing registered-session timeout policy. (SESSION-009, ADMIN-031)
 async function sessions() {
   // Set the localized session-policy title and helper text.
@@ -629,14 +609,6 @@ async function saveRateLimits() {
   await api('/api/v2/admin/rate-limits', { method: 'POST', body: payload });
   // Confirm activation without exposing any per-client limiter state.
   toast(t('rateLimits.saved', {}, 'admin'), true);
-}
-
-// Define previewVoice to speak a short sample with the saved voice settings.
-async function previewVoice() {
-  // Load latest settings before previewing speech.
-  await loadVoiceSettings();
-  // Speak the existing Admin preview phrase.
-  speak('Welcome to your virtual casino.', 'global');
 }
 
 // Define localeOptions to render installed locale options.
