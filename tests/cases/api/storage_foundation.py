@@ -19,6 +19,8 @@ from tests import recovery_tests
 from tests import state_store_atomic_tests
 # Import JSON and modeled-MySQL provider parity helpers.
 from tests import storage_tests
+# Import the first #728 package-boundary ownership suite.
+from tests import storage_package_boundary_tests
 # Import cents-only wallet normalization coverage.
 from tests import wallet_cents_normalization_tests
 # Import fail-closed wallet-corruption coverage.
@@ -30,6 +32,23 @@ from tests.games import test_game_rule_schema
 # Register the complete storage/MySQL area at its historical CLI boundary.
 def run_cases(run_case, include_live=False, include_migration_live=False, request_latency_callback=None):
     """Run the exact default and explicitly selected live storage cases."""
+    # Define one focused runner for the extracted provider-neutral package boundary.
+    def run_storage_package_boundary_tests():
+        # Load only the STORAGE-016 and TEST-243 ownership/compatibility test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(storage_package_boundary_tests.StoragePackageBoundaryTests)
+        # Execute the listener-free suite with concise standard output.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the existing storage parity case when package ownership or imports drift.
+        if not result.wasSuccessful():
+            # Preserve one fixed diagnostic without opening a provider or listener.
+            raise AssertionError("storage package boundary suite failed")
+
+    # Run package ownership proof before the existing JSON provider scenario.
+    def run_storage_base_and_json_parity():
+        # Prove import compatibility and bounded ownership before provider behavior.
+        run_storage_package_boundary_tests()
+        # Preserve the accepted JSON players, ledger, history, and settings scenario unchanged.
+        storage_tests.run_json_provider_parity()
     # Define one focused unittest runner for corrupt-wallet fail-closed behavior.
     def run_wallet_corruption_tests():
         # Load only the STORAGE-014 wallet-corruption test class.
@@ -119,7 +138,7 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
     # Map the listener-free recovery suite to the permanent recovery requirements.
     run_case("RECOVERY-POLICY-001", ["MYSQL-006", "MYSQL-008", "MYSQL-009", "TOOL-004", "TEST-049", "TEST-174"], run_recovery_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
-    run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "TEST-030"], storage_tests.run_json_provider_parity)
+    run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"], run_storage_base_and_json_parity)
     # Prove corrupt wallet state cannot seed defaults or reach a settlement on either provider.
     run_case("STORAGE-WALLET-CORRUPTION-001", ["STORAGE-014", "TEST-177"], run_wallet_corruption_tests)
     # Prove explicit residue repair, audit evidence, and cents-only writes on both providers.

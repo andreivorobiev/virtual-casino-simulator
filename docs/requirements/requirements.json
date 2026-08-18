@@ -11584,6 +11584,23 @@
       "notes": "JSON writes deterministic audit evidence before its atomic players-file replacement so an interrupted pass resumes without a duplicate row. MySQL locks all wallet rows and commits audit plus wallet updates in one transaction."
     },
     {
+      "id": "STORAGE-016",
+      "module": "Core",
+      "description": "The storage subsystem exposes one provider-neutral configuration, contract, validation, replay, and event-helper owner while preserving the historical casino.core.storage import surface by exact object identity. Incremental package slices keep JSON and MySQL concrete providers, reset recovery, game-action execution, and the #412/#432 cache invalidation rules in their established owner until their separately proved moves.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-JSON-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/storage_base.py",
+        "casino/core/storage.py"
+      ],
+      "introduced_in": "issue-940-storage-provider-base",
+      "changed_in": "issue-940-storage-provider-base",
+      "notes": "This first #728 slice uses the transitional module casino.core.storage_base because Python cannot safely load casino/core/storage.py and casino/core/storage/ as the same import during incremental cutover. The final package slice will move this owner to casino/core/storage/base.py without caller churn."
+    },
+    {
       "id": "LEDGER-036",
       "module": "Core",
       "description": "The canonical durable wallet unit is an integer cent. Every JSON and MySQL player and ledger writer derives compatible numeric dollars through one Decimal ROUND_HALF_EVEN quantizer, exact-cent validation guards every JSON players publication, and each repaired residue produces one deterministic WALLET_CENTS_NORMALIZATION audit row with exact source, result, residue, rule, and canonical-unit details.",
@@ -11698,6 +11715,25 @@
       "introduced_in": "issue-758-blackjack-atomic-state",
       "changed_in": "issue-773-blackjack-atomic-settings",
       "notes": "Child interpreters bind one disposable JSON provider root and synchronize only after stale loads. Issue #773 removes the final direct settings save; TEST-200 owns its settings races while this evidence retains exact round serialization."
+    },
+    {
+      "id": "TEST-243",
+      "module": "Tests",
+      "description": "Storage package extraction evidence binds provider-neutral ownership, the 1,200-line module ceiling, exact historical re-export identity, unchanged provider-contract signatures, and absence of duplicate base declarations before executing the established JSON and MySQL provider suites.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-JSON-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/storage_package_boundary_tests.py",
+        "tests/cases/api/storage_foundation.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-940-storage-provider-base",
+      "changed_in": "issue-940-storage-provider-base",
+      "notes": "The first #728 slice keeps the existing STORAGE-JSON-001 registration and permanent case inventory unchanged while running the new listener-free ownership proof before accepted provider parity. Later package slices will amend this requirement with the parent issue's named cross-provider settlement-parity gate."
     },
     {
       "id": "TEST-175",
