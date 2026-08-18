@@ -2327,11 +2327,14 @@
       "browser_tests": [],
       "implementation_files": [
         "casino/core/autoplay.py",
-        "web/core/autoplay.js"
+        "web/core/autoplay.js",
+        "web/admin.js",
+        "web/admin/autoplay.js",
+        "tests/unit/admin_autoplay_module.test.mjs"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "issue-965-admin-autoplay-module",
+      "notes": "Introduced in v9.1.0. The Admin renderer now owns session visibility behind an explicit dependency boundary with listener-free byte-parity coverage for localized headings, reverse order, escaping, and the frozen list route."
     },
     {
       "id": "AUTO-008",
@@ -2344,11 +2347,14 @@
       "browser_tests": [],
       "implementation_files": [
         "casino/core/autoplay.py",
-        "web/core/autoplay.js"
+        "web/core/autoplay.js",
+        "web/admin.js",
+        "web/admin/autoplay.js",
+        "tests/unit/admin_autoplay_module.test.mjs"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "issue-965-admin-autoplay-module",
+      "notes": "Introduced in v9.1.0. The extracted Admin renderer preserves one empty-body Stop All request, localized confirmation, and one server-owned session refresh behind listener-free mutation-sequence coverage."
     },
     {
       "id": "AUTO-009",
@@ -2914,12 +2920,14 @@
       ],
       "implementation_files": [
         "tests/run_tests.py",
+        "tests/unit/admin_autoplay_module.test.mjs",
         "web/core/autoplay.js",
-        "web/admin.js"
+        "web/admin.js",
+        "web/admin/autoplay.js"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.3.0",
-      "notes": "The rejected-start regression uses current shared autoplay controls and stable selectors."
+      "changed_in": "issue-965-admin-autoplay-module",
+      "notes": "The rejected-start regression uses current shared autoplay controls and stable selectors. The extracted Admin renderer adds listener-free endpoint, Stop All hook, dispatcher, and review-width assertions without changing browser selectors."
     },
     {
       "id": "TEST-026",
@@ -11510,6 +11518,7 @@
       "implementation_files": [
         "web/app.js",
         "web/admin.js",
+        "web/admin/autoplay.js",
         "web/admin/requirements.js",
         "web/i18n/en-US/shell.json",
         "web/i18n/ru-RU/shell.json",
@@ -11526,11 +11535,12 @@
         "web/games/pattern_draw.js",
         "web/games/poker_dice.js",
         "web/games/trente_et_quarante.js",
+        "tests/unit/admin_autoplay_module.test.mjs",
         "tests/unit/admin_requirements_module.test.mjs"
       ],
       "introduced_in": "issue-709-single-source-i18n-fallbacks",
-      "changed_in": "issue-961-admin-requirements-module",
-      "notes": "Russian resources own every named visible string, and the existing shell_lobby and admin visual-matrix rows provide the two-locale rendered acceptance without changing API or contract schemas. The extracted Requirements renderer continues resolving its title, subtitle, columns, and heading only through installed Admin locale resources."
+      "changed_in": "issue-965-admin-autoplay-module",
+      "notes": "Russian resources own every named visible string, and the existing shell_lobby and Admin Browser rows provide the two-locale rendered acceptance without changing API or contract schemas. Extracted Requirements and Autoplay renderers continue resolving their title, subtitle, headings, controls, and completion copy only through installed Admin locale resources."
     },
     {
       "id": "TEST-187",
