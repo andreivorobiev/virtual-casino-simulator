@@ -5,6 +5,8 @@
 import json
 # Import pathlib so every governed artifact is resolved from the repository root.
 import pathlib
+# Import POSIX path normalization for browser-relative module URLs.
+import posixpath
 # Import regular expressions for static JavaScript policy extraction.
 import re
 # Import executable discovery for the dependency-free JavaScript lifecycle harness.
@@ -22,18 +24,51 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 EXPECTED_SHELL_ASSETS = {
     "/index.html", "/styles.css", "/app.js", "/brands/tiltseven.js", "/manifest.webmanifest", "/assets/favicon.svg",
     "/assets/pwa-icon-192.png", "/assets/pwa-icon-512.png", "/assets/pwa-maskable-192.png", "/assets/pwa-maskable-512.png",
-    "/core/api.js", "/core/brand.js", "/core/celebrate.js", "/core/feedback.js", "/core/wellness.js", "/core/i18n.js", "/core/pwa.js", "/core/ui.js", "/core/voice.js",
+    "/core/api.js", "/core/app_bootstrap.js", "/core/app_router.js", "/core/brand.js", "/core/celebrate.js", "/core/feedback.js", "/core/wellness.js", "/core/i18n.js", "/core/pwa.js", "/core/ui.js", "/core/voice.js",
+    "/views/invitation.js", "/views/lobby.js", "/views/login.js", "/views/reset.js", "/views/settings.js", "/views/signup.js", "/views/terms.js", "/views/verification.js",
     "/i18n/en-US/feedback.json", "/i18n/en-US/shell.json", "/i18n/ru-RU/feedback.json", "/i18n/ru-RU/shell.json",
 }
 # Name every governed lifecycle state required by the narrowed visual matrix.
 EXPECTED_PWA_STATES = {
     "cold_start", "warm_start", "offline", "reconnecting", "update_available", "update_failed", "stale_client", "expired_session", "route_restored",
 }
+# Match only static relative JavaScript imports that must exist before application startup.
+STATIC_IMPORT_RE = re.compile(r"(?:import\s+(?:[^'\"]+?\s+from\s+)?|export\s+[^'\"]+?\s+from\s+)[\"'](\.[^\"']+)[\"']")
 
 # Load one UTF-8 JSON document through the standard parser.
 def load_json(relative_path):
     # Read and decode the governed document in one deterministic step.
     return json.loads((ROOT / relative_path).read_text(encoding="utf-8"))
+
+
+# Resolve the complete static JavaScript import closure beneath the public web root.
+def static_javascript_closure(entry_path):
+    # Retain canonical public paths so cycles and repeated imports terminate deterministically.
+    pending = [entry_path]
+    discovered = set()
+    # Traverse every newly discovered static module exactly once.
+    while pending:
+        # Read the next canonical public path in stable stack order.
+        public_path = pending.pop()
+        if public_path in discovered:
+            # Skip modules already scanned through another import edge.
+            continue
+        discovered.add(public_path)
+        # Resolve the public URL beneath the governed web root.
+        source_path = ROOT / "web" / public_path.lstrip("/")
+        source = source_path.read_text(encoding="utf-8")
+        # Resolve every relative static import against the current module directory.
+        for relative in STATIC_IMPORT_RE.findall(source):
+            # Normalize URL separators and dot segments without accepting root escape.
+            normalized = posixpath.normpath(posixpath.join(posixpath.dirname(public_path), relative))
+            # Reject paths that escape the governed public web root after normalization.
+            if not normalized.startswith("/") or normalized.startswith("/../"):
+                raise AssertionError(f"static import escapes web root: {public_path} -> {relative}")
+            # Add only JavaScript module edges to the closure.
+            if normalized.endswith(".js") and normalized not in discovered:
+                pending.append(normalized)
+    # Return the exact discovered module set including the entrypoint.
+    return discovered
 
 
 # Read one PNG's dimensions directly from its fixed signature and IHDR fields.
@@ -107,6 +142,14 @@ class PwaFoundationTests(unittest.TestCase):
         actual_assets = set(re.findall(r"'([^']+)'", match.group(1)))
         # Reject additions, omissions, and prefix expansion.
         self.assertEqual(actual_assets, EXPECTED_SHELL_ASSETS)
+        # Require every allowlisted path to resolve to a packaged public file.
+        for public_path in actual_assets:
+            # Resolve the canonical web-root file without broad prefix inference.
+            asset_path = ROOT / "web" / public_path.lstrip("/")
+            self.assertTrue(asset_path.is_file(), public_path)
+        # Require the complete startup import graph so extracted views cannot drift out of offline cache.
+        startup_modules = static_javascript_closure("/app.js")
+        self.assertEqual(startup_modules - {"/app.js"}, {path for path in actual_assets if path.endswith(".js") and path != "/app.js"})
         # Require credential omission for installation and runtime cache fills.
         self.assertGreaterEqual(worker.count("credentials: 'omit'"), 2)
         # Reject the contributor draft's broad prefix cache discovery.
@@ -267,6 +310,12 @@ class PwaFoundationTests(unittest.TestCase):
         api_source = (ROOT / "web" / "core" / "api.js").read_text(encoding="utf-8")
         # Read the application reconnect integration source.
         app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        # Read extracted browser lifecycle wiring that owns global session-expiry listeners.
+        bootstrap = (ROOT / "web" / "core" / "app_bootstrap.js").read_text(encoding="utf-8")
+        # Read extracted route loading so protected failures remain ordered before generic diagnostics.
+        router = (ROOT / "web" / "core" / "app_router.js").read_text(encoding="utf-8")
+        # Isolate the navigation controller so earlier loading placeholders cannot satisfy ordering assertions.
+        navigation = router[router.index("async function navigate(route, options = {})"):]
         # Require Apply now to await an installing worker's bounded transition to waiting. (PWA-003)
         self.assertIn("async function resolveWaitingWorker()", client)
         # Require the click action to use the resolved worker rather than racing registration.waiting.
@@ -294,7 +343,7 @@ class PwaFoundationTests(unittest.TestCase):
         # Require protected API 401s to notify the app shell instead of leaving stale authenticated chrome mounted.
         self.assertIn("casino-session-expired", api_source)
         # Require the shell listener to ignore expected anonymous probes on public invitation/login surfaces.
-        self.assertIn("window.addEventListener('casino-session-expired', () => { if (currentSession) renderExpiredSessionGate(); });", app)
+        self.assertIn("windowRef.addEventListener('casino-session-expired', () => { if (getCurrentSession()) renderExpiredSessionGate(); });", bootstrap)
         # Require login and guest-entry failures to stay local to their public auth forms.
         self.assertIn("SESSION_EXPIRY_PUBLIC_PATHS", api_source)
         # Require the shared teardown helper to clear cached current-user state.
@@ -302,24 +351,28 @@ class PwaFoundationTests(unittest.TestCase):
         # Require the session-expired shell path to run shared teardown before rendering login.
         self.assertLess(app.index("clearAuthenticatedShellState()", app.index("function renderExpiredSessionGate()")), app.index("renderLoginGate(t('pwa.expiredSession'", app.index("function renderExpiredSessionGate()")))
         # Require protected-route authorization failure handling to precede the generic game-load error panel.
-        self.assertLess(app.index("err?.code === 'UNAUTHORIZED'"), app.index("Could not load ${safe(routeLabel(targetRoute))}"))
+        self.assertLess(navigation.index("error?.code === 'UNAUTHORIZED'"), navigation.index("const heading = html`<h2>${t('route.loadFailed'"))
 
     # Require trial deep links to show an immediate route-restoration surface before slow session hydration.
     def test_initial_game_route_restore_placeholder_precedes_session_refresh(self):
         # Read the application shell source without launching a browser.
         app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        # Read extracted startup wiring so ordering assertions follow the owning module.
+        bootstrap = (ROOT / "web" / "core" / "app_bootstrap.js").read_text(encoding="utf-8")
+        # Read extracted route restoration rendering so markup assertions follow the owning module.
+        router = (ROOT / "web" / "core" / "app_router.js").read_text(encoding="utf-8")
         # Isolate bootstrapping so the startup order cannot be satisfied by reconnect code.
-        init_block = app[app.index("async function init()"):app.index("// Poll shell state periodically")]
+        init_block = bootstrap[bootstrap.index("export async function startApplication"):bootstrap.index("// Poll shell state periodically")]
         # Require the startup placeholder helper to remain present.
         self.assertIn("function renderInitialRouteRestore()", app)
         # Require the placeholder to use the browser route rather than a stale active route.
-        self.assertIn("const restoredRoute = routeFromLocation()", app)
+        self.assertIn("const restoredRoute = routeFromLocation()", router)
         # Require the placeholder to render inside the governed game-screen outlet.
-        self.assertIn("view.className = 'screen game-screen'", app)
+        self.assertIn("view.className = 'screen game-screen'", router)
         # Require stable test identity for browser diagnostics and future acceptance evidence.
-        self.assertIn('data-testid="route-restore-loading"', app)
+        self.assertIn('data-testid="route-restore-loading"', router)
         # Require localized route-restoration copy instead of a blank or raw loading panel.
-        self.assertIn("t('routeRestore.title'", app)
+        self.assertIn("t('routeRestore.title'", router)
         # Locate i18n initialization because route copy depends on the loaded shell dictionary.
         i18n_index = init_block.index("await initI18n")
         # Locate the immediate placeholder render in the startup path.
@@ -555,6 +608,10 @@ equal([lifecycleListeners.size, timerCallbacks.size, displayWrites], [0, 0, 9], 
         controller = (ROOT / "web" / "core" / "celebrate.js").read_text(encoding="utf-8")
         # Read the current application integration without executing browser startup.
         app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        # Read the extracted route controller that owns navigation interruption and game teardown.
+        router = (ROOT / "web" / "core" / "app_router.js").read_text(encoding="utf-8")
+        # Read the extracted lifecycle controller that owns queued current-user wallet updates.
+        bootstrap = (ROOT / "web" / "core" / "app_bootstrap.js").read_text(encoding="utf-8")
         # Require the wallet controller to avoid ambient mutation observers and frame loops entirely.
         self.assertNotIn("MutationObserver", controller)
         # Require the controller not to schedule animation frames that could overwrite a newer value.
@@ -568,15 +625,15 @@ equal([lifecycleListeners.size, timerCallbacks.size, displayWrites], [0, 0, 9], 
         # Compare exact lifecycle ordering inside the shared teardown helper.
         self.assertLess(teardown.index("walletCelebrationLifecycle.unmount('session-cleared')"), teardown.index("currentSession = null"))
         # Require route navigation to interrupt decoration before previous-game unmount.
-        navigation = app[app.index("export async function navigate"):app.index("// Initialize shell state")]
+        navigation = router[router.index("async function navigate(route, options = {})"):]
         # Compare exact interruption and unmount order inside the route controller.
-        self.assertLess(navigation.index("walletCelebrationLifecycle.interrupt('navigation')"), navigation.index("loadedGames.get(previous).unmount?.()"))
+        self.assertLess(navigation.index("walletLifecycle.interrupt('navigation')"), navigation.index("loadedGames.get(previous).unmount?.()"))
         # Require refreshed game balances to decorate only after the shared helper's synchronous exact render.
-        self.assertIn("queueMicrotask", app)
+        self.assertIn("queueMicrotask", bootstrap)
         # Require the queued update to reject stale session identity before decorating.
-        self.assertIn("if (currentSession !== nextSession) return", app)
+        self.assertIn("if (getCurrentSession() !== nextSession) return", bootstrap)
         # Require the queued current-user path to call the non-throwing lifecycle manager.
-        self.assertIn("walletCelebrationLifecycle.update(currentTokenBalance(nextSession))", app)
+        self.assertIn("walletLifecycle.update(currentTokenBalance(nextSession))", bootstrap)
         # Isolate the production BFCache manager for exact teardown and remount assertions.
         lifecycle = controller[controller.index("export function createWalletCelebrationLifecycle"):]
         # Require pagehide to dispose and forget the exact controller generation.
