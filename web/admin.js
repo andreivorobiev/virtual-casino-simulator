@@ -42,6 +42,8 @@ import { createInvitationsTab } from './admin/invitations.js';
 import { createAudioTab } from './admin/audio.js';
 // Import session and request-rate policy controls so owner settings leave the dispatcher monolith. (SESSION-009, ADMIN-031, ADMIN-032)
 import { createSessionsTab } from './admin/sessions.js';
+// Import trusted Operations diagnostics so dependency, OAuth, and mail health leave the dispatcher monolith. (ADMIN-014, MAIL-003)
+import { createOperationsTab } from './admin/operations.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -241,6 +243,8 @@ const audio = createAudioTab({
 });
 // Bind Sessions to its two independently persisted owner-only policy routes.
 const sessions = createSessionsTab({ api, html, safe, setTitle, t, toast, view });
+// Bind Operations to its independent trusted diagnostic routes.
+const operations = createOperationsTab({ api, formatDate, html, isActiveTab, safe, setTitle, t, table, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -483,98 +487,6 @@ async function showGuestDetail(analyticsId) {
   detail.insertAdjacentHTML('beforeend', html`<dl class="guest-detail-grid"><div><dt>${safe(t('guests.colStartingBalance', {}, 'admin'))}</dt><dd>${formatMoney(row.starting_balance || 0)}</dd></div><div><dt>${safe(t('guests.colEndingBalance', {}, 'admin'))}</dt><dd>${row.ending_balance == null ? safe(t('guests.notAvailable', {}, 'admin')) : formatMoney(row.ending_balance)}</dd></div><div><dt>${safe(t('guests.colWagered', {}, 'admin'))}</dt><dd>${formatMoney(row.wagered || 0)}</dd></div><div><dt>${safe(t('guests.colReturned', {}, 'admin'))}</dt><dd>${formatMoney(row.returned || 0)}</dd></div><div><dt>${safe(t('guests.colNet', {}, 'admin'))}</dt><dd>${formatMoney(row.net || 0)}</dd></div><div><dt>${safe(t('guests.colErrors', {}, 'admin'))}</dt><dd>${formatNumber(row.errors || 0)}</dd></div></dl><section data-testid="admin-guest-timeline"><h4>${safe(t('guests.timelineTitle', {}, 'admin'))}</h4>${events.length ? table([t('guests.timelineEvent', {}, 'admin'), t('guests.timelineTime', {}, 'admin'), t('guests.colGame', {}, 'admin'), t('guests.timelineCategory', {}, 'admin'), t('guests.filterError', {}, 'admin'), t('guests.timelineLatency', {}, 'admin')], events.map(event => html`<tr><td>${safe(humanLabel(event.event))}</td><td>${safe(event.at)}</td><td>${safe(humanLabel(event.game || ''))}</td><td>${safe(humanLabel(event.action_category || ''))}</td><td>${safe(humanLabel(event.error_category || ''))}</td><td>${safe(humanLabel(event.latency_bucket || ''))}</td></tr>`)) : emptyState(t('guests.timelineEmpty', {}, 'admin'), t('guests.timelineEmptyDetail', {}, 'admin'))}</section>`);
   // Make the detail timeline keyboard-scrollable on narrow Admin viewports.
   detail.querySelector('[data-testid="admin-guest-timeline"]').tabIndex = 0;
-}
-
-// Render OAuth diagnostics separately so provider configuration cannot change Operations health.
-function oauthDiagnosticsCard(data) {
-  // Keep only the three provider identifiers owned by the disabled OAuth catalog.
-  const providers = Array.isArray(data?.providers) ? data.providers.filter(provider => ['local', 'google', 'facebook'].includes(provider?.provider)) : [];
-  // Render an explicit unavailable state when the independent diagnostic request fails validation.
-  if (providers.length !== 3) return html`<section class="admin-card" data-testid="admin-oauth-diagnostics-unavailable"><h2>${safe(t('oauth.title', {}, 'admin'))}</h2><p>${safe(t('oauth.unavailable', {}, 'admin'))}</p></section>`;
-  // Build one allowlisted row per provider without rendering callback URLs or environment details.
-  const rows = providers.map(provider => {
-    // Normalize configuration status so unexpected backend values never become translation keys.
-    const configurationStatus = ['ready', 'disabled', 'misconfigured'].includes(provider.status) ? provider.status : 'unknown';
-    // Derive runtime copy only from the explicit availability boolean.
-    const runtimeStatus = provider.runtime_available === true ? 'available' : 'unavailable';
-    // Return a compact localized row with stable browser-test hooks.
-    return html`<tr data-testid="admin-oauth-provider-${safe(provider.provider)}" data-runtime-available="${provider.runtime_available === true}"><td>${safe(t(`oauth.provider.${provider.provider}`, {}, 'admin'))}</td><td>${safe(t(`oauth.configuration.${configurationStatus}`, {}, 'admin'))}</td><td>${safe(t(`oauth.runtime.${runtimeStatus}`, {}, 'admin'))}</td></tr>`;
-  });
-  // Return a separate card so OAuth status never alters live, degraded, or down Operations state.
-  return html`<section class="admin-card" data-testid="admin-oauth-diagnostics"><h2>${safe(t('oauth.title', {}, 'admin'))}</h2><p>${safe(t('oauth.subtitle', {}, 'admin'))}</p>${table([t('oauth.field.provider', {}, 'admin'), t('oauth.field.configuration', {}, 'admin'), t('oauth.field.runtime', {}, 'admin')], rows)}</section>`;
-}
-
-// Replace only the independent OAuth card when its separate request settles.
-function replaceOAuthDiagnosticsCard(data) {
-  // Ignore a delayed diagnostic response after the user has left Operations.
-  if (!isActiveTab('operations')) return;
-  // Find either the loading/unavailable placeholder or the prior populated card.
-  const card = view.querySelector('[data-testid^="admin-oauth-diagnostics"]');
-  // Replace the provider card without rerendering or reclassifying Operations health.
-  if (card) card.outerHTML = oauthDiagnosticsCard(data);
-}
-
-// Render transactional-mail diagnostics independently from Operations and OAuth health. (MAIL-003)
-function mailDiagnosticsCard(data) {
-  // Constrain backend status to the five contract-published low-cardinality states.
-  const status = ['disabled', 'misconfigured', 'release_held', 'ready', 'unavailable'].includes(data?.status) ? data.status : 'unavailable';
-  // Constrain the provider label so unexpected backend values never become translation keys.
-  const provider = ['disabled', 'postmark', 'unrecognized'].includes(data?.provider) ? data.provider : 'unrecognized';
-  // Normalize aggregate lifecycle counts without accepting record identifiers or negative values.
-  const summary = data?.delivery_summary && typeof data.delivery_summary === 'object' ? data.delivery_summary : {};
-  // Convert each published aggregate to a bounded non-negative display number.
-  const count = key => Number.isInteger(summary[key]) && summary[key] >= 0 ? summary[key] : 0;
-  // Map only contract-allowlisted reason codes to localized remediation copy.
-  const reasons = Array.isArray(data?.reasons) ? data.reasons.filter(reason => ['feature_disabled', 'provider_not_configured', 'canonical_origin_invalid', 'sender_identity_invalid', 'provider_credential_missing', 'digest_key_invalid', 'network_release_held', 'state_recovery_required'].includes(reason)) : [];
-  // Normalize the de-identified suppression count independently from lifecycle rows.
-  const suppressedRecipients = Number.isInteger(data?.suppressed_recipients) && data.suppressed_recipients >= 0 ? data.suppressed_recipients : 0;
-  // Render one explicit non-color state, aggregate-only lifecycle table, and suppression summary.
-  return html`<section class="admin-card ${['misconfigured', 'unavailable'].includes(status) ? 'danger' : ''}" data-testid="admin-mail-${status}"><div class="row"><div><h2>${safe(t('mail.title', {}, 'admin'))}</h2><p>${safe(t(`mail.detail.${status}`, {}, 'admin'))}</p></div><span class="badge">${safe(t(`mail.state.${status}`, {}, 'admin'))}</span></div>${table([t('mail.field', {}, 'admin'), t('mail.value', {}, 'admin')], [html`<tr><td>${safe(t('mail.provider', {}, 'admin'))}</td><td>${safe(t(`mail.provider.${provider}`, {}, 'admin'))}</td></tr>`, html`<tr><td>${safe(t('mail.sent', {}, 'admin'))}</td><td>${count('sent')}</td></tr>`, html`<tr><td>${safe(t('mail.retryWait', {}, 'admin'))}</td><td>${count('retry_wait')}</td></tr>`, html`<tr><td>${safe(t('mail.failed', {}, 'admin'))}</td><td>${count('failed')}</td></tr>`, html`<tr><td>${safe(t('mail.uncertain', {}, 'admin'))}</td><td>${count('uncertain')}</td></tr>`])}<div data-testid="admin-mail-suppression-summary"><h3>${safe(t('mail.suppressionTitle', {}, 'admin'))}</h3><p>${safe(t('mail.suppressionCount', { count: suppressedRecipients }, 'admin'))}</p></div>${reasons.length ? html`<h3>${safe(t('mail.attention', {}, 'admin'))}</h3><ul>${reasons.map(reason => html`<li>${safe(t(`mail.reason.${reason}`, {}, 'admin'))}</li>`)}</ul>` : ''}</section>`;
-}
-
-// Replace only the independent mail diagnostic card when its request settles.
-function replaceMailDiagnosticsCard(data) {
-  // Ignore a delayed response after the user has left Operations.
-  if (!isActiveTab('operations')) return;
-  // Find the loading/unavailable or prior mail card by its stable prefix.
-  const card = view.querySelector('[data-testid^="admin-mail-"]');
-  // Replace the mail card without rerendering Operations or OAuth diagnostics.
-  if (card) card.outerHTML = mailDiagnosticsCard(data);
-}
-
-// Define operations to render trusted dependency and heartbeat telemetry for Admin users.
-async function operations() {
-  // Set localized Operations chrome before the request so transport failures retain context.
-  setTitle(t('operations.title', {}, 'admin'), t('operations.subtitle', {}, 'admin'));
-  // Start protected loading so transport failure becomes an explicit non-color state.
-  try {
-    // Load only Operations before rendering its live, degraded, or down classification.
-    const data = await api('/api/v2/admin/operations');
-    // Stop a stale response from replacing a newer Admin tab.
-    if (!isActiveTab('operations')) return;
-    // Select readable state copy and a symbol so color is never the only signal.
-    const stateKey = data.ready ? 'live' : 'degraded';
-    // Map fixed provider identifiers to localized operator-facing labels.
-    const providerLabel = t(`operations.provider.${data.storage_provider}`, {}, 'admin');
-    // Map only allowlisted reason codes to localized operator guidance.
-    const reasonLabels = (data.reasons || []).map(reason => t(`operations.reason.${reason.code}`, {}, 'admin'));
-    // Use explicit unavailable copy when optional build provenance or heartbeat state is absent.
-    const buildSha = data.build?.sha || t('operations.unavailable', {}, 'admin');
-    // Format the trusted heartbeat timestamp without exposing raw transport diagnostics.
-    const heartbeat = data.last_successful_heartbeat_at ? formatDate(new Date(data.last_successful_heartbeat_at), { dateStyle: 'medium', timeStyle: 'medium' }) : t('operations.unavailable', {}, 'admin');
-    // Render live or degraded diagnostics with stable test hooks for EN/RU visual evidence.
-    view.innerHTML = html`<section class="admin-card ${data.ready ? '' : 'danger'}" data-testid="admin-operations-${stateKey}"><div class="row"><div><h2>${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</h2><p>${safe(t(`operations.detail.${stateKey}`, {}, 'admin'))}</p></div><span class="badge" data-testid="admin-operations-state">${safe(t(`operations.symbol.${stateKey}`, {}, 'admin'))} ${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</span></div>${table([t('operations.field', {}, 'admin'), t('operations.value', {}, 'admin')], [html`<tr><td>${safe(t('operations.storage', {}, 'admin'))}</td><td>${safe(providerLabel)}</td></tr>`, html`<tr><td>${safe(t('operations.appVersion', {}, 'admin'))}</td><td>${safe(data.build.app_version)}</td></tr>`, html`<tr><td>${safe(t('operations.buildSha', {}, 'admin'))}</td><td>${safe(buildSha)}</td></tr>`, html`<tr><td>${safe(t('operations.lastHeartbeat', {}, 'admin'))}</td><td>${safe(heartbeat)}</td></tr>`])}${reasonLabels.length ? html`<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => html`<li>${safe(label)}</li>`)}</ul>` : ''}</section>${oauthDiagnosticsCard(null)}${mailDiagnosticsCard(null)}`;
-    // Start provider diagnostics only after Operations is visible and handle failure locally.
-    api('/api/v2/admin/oauth/providers').then(replaceOAuthDiagnosticsCard).catch(() => replaceOAuthDiagnosticsCard(null));
-    // Start secret-free mail diagnostics independently so failure affects only its own card.
-    api('/api/v2/admin/mail/readiness').then(replaceMailDiagnosticsCard).catch(() => replaceMailDiagnosticsCard(null));
-  // Convert network or server loss into a client-derived down state without raw error text.
-  } catch (error) {
-    // Avoid replacing a newer tab after a delayed transport failure.
-    if (!isActiveTab('operations')) return;
-    // Render a clear symbol and recovery instruction so color is not the only status signal.
-    view.innerHTML = html`<section class="admin-card danger" data-testid="admin-operations-down"><h2>${safe(t('operations.symbol.down', {}, 'admin'))} ${safe(t('operations.state.down', {}, 'admin'))}</h2><p>${safe(t('operations.detail.down', {}, 'admin'))}</p></section>`;
-  }
 }
 
 // Define localeOptions to render installed locale options.
