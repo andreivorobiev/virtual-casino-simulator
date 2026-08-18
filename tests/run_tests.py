@@ -64,6 +64,8 @@ from tests.cases.api import session_integrity as api_session_integrity
 from tests.cases.api import post_restart_foundation as api_post_restart_foundation
 # Import core live-game and Admin registration ownership behind the runner. (TEST-242)
 from tests.cases.api import core_live_games as api_core_live_games
+# Import the final live authentication registration behind the runner. (TEST-242)
+from tests.cases.api import live_authentication as api_live_authentication
 # Import frontend-presentation registration ownership while execution stays in the runner. (TEST-242)
 from tests.cases.api import frontend_presentation as api_frontend_presentation
 # Import listener-free self-service foundation ownership behind the compatibility runner. (TEST-242)
@@ -1280,7 +1282,8 @@ def run_api_tests():
             inactive=api(base,'/api/v2/auth/login','POST',{'email':inactive_email,'password':'inactive-password'},ok=False,auth_token=None); assert inactive['error']['code']=='FORBIDDEN'
             # Refresh the harness Admin session after the concurrent-session and logout proof (issue #226).
             login_default_user(base)
-        run_case('API-AUTH-001',['AUTH-001','SESSION-001','SESSION-007','SESSION-012','USER-001','TERMS-001'],auth_backend)
+        # Delegate the final live authentication registration without transferring listener or session ownership.
+        api_live_authentication.run_cases(run_case,auth_backend)
         # Store wallet integrity evidence for the later server-restart persistence check.
         integrity_state={}
         # Define wallet_auth_integrity to exercise canonical users, authorization, and token movement through the live backend.
