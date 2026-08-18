@@ -16,6 +16,8 @@ import { createTestsTab } from './admin/tests.js';
 import { createRequirementsTab } from './admin/requirements.js';
 // Import the Game States renderer so nested diagnostics retain exact output behind a reviewable per-tab boundary. (ADMIN-009, ADMIN-018, ADMIN-029)
 import { createStatesTab } from './admin/states.js';
+// Import the Autoplay renderer so session controls retain exact output behind a reviewable per-tab boundary. (AUTO-007, AUTO-008)
+import { createAutoplayTab } from './admin/autoplay.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -90,6 +92,8 @@ const tests = createTestsTab({ api, emptyState, html, pre, safe, setTitle, t, vi
 const requirements = createRequirementsTab({ api, html, safe, setTitle, t, table, view });
 // Bind the Game States renderer to the accepted diagnostics and empty-state helpers. (ADMIN-009, ADMIN-018, ADMIN-029)
 const states = createStatesTab({ api, emptyState, html, pre, safe, setTitle, t, table, view });
+// Bind the Autoplay renderer to the accepted session, mutation, locale, and toast boundaries. (AUTO-007, AUTO-008, I18N-014)
+const autoplay = createAutoplayTab({ api, html, post, safe, setTitle, t, table, toast, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -965,18 +969,6 @@ async function resetLanguage() {
   await resetLocaleSettings();
   // Show localized feedback after reset.
   toast(t('language.saved', {}, 'admin'), true);
-}
-
-// Define autoplay to preserve existing Admin autoplay controls.
-async function autoplay() {
-  // Set the localized autoplay title and subtitle.
-  setTitle(t('autoplay.title', {}, 'admin'), t('autoplay.subtitle', {}, 'admin'));
-  // Load autoplay sessions through the existing Admin endpoint.
-  const data = await api('/api/v1/admin/autoplay');
-  // Render sessions and the existing Stop All action.
-  view.innerHTML = html`<section class="admin-card"><div class="row"><h3 style="margin-right:auto">${safe(t('autoplay.sessions', {}, 'admin'))}</h3><button id="stopAllAuto" data-testid="admin-stop-all-auto" class="danger">${safe(t('autoplay.stopAll', {}, 'admin'))}</button></div>${table([t('autoplay.id', {}, 'admin'), t('autoplay.game', {}, 'admin'), t('autoplay.player', {}, 'admin'), t('autoplay.status', {}, 'admin'), t('autoplay.speed', {}, 'admin'), t('autoplay.completed', {}, 'admin'), t('autoplay.limit', {}, 'admin'), t('autoplay.updated', {}, 'admin')], (data.sessions || []).slice().reverse().map(session => html`<tr><td>${safe(session.autoplay_id)}</td><td>${safe(session.game_id)}</td><td>${safe(session.player_id)}</td><td>${safe(session.status)}</td><td>${safe(session.speed)}</td><td>${safe(session.rounds_completed)}</td><td>${safe(session.round_limit)}</td><td>${safe(session.updated_at)}</td></tr>`))}</section>`;
-  // Bind Stop All after rendering.
-  view.querySelector('#stopAllAuto').onclick = async () => { await post('/api/v1/admin/autoplay/stop-all', {}); toast(t('autoplay.stopRequested', {}, 'admin'), true); autoplay(); };
 }
 
 // Define system to show module revisions and raw overview data.
