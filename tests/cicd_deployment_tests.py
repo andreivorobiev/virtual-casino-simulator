@@ -713,10 +713,67 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one exact dependency-forwarding delegation at the historical boundary.
         delegation = "api_post_restart_foundation.run_cases(run_case,wallet_restart_persistence,core,catalog_foundation,lambda: game_economics_registry_tests.validate_registry(game_economics_registry_tests.read_json(game_economics_registry_tests.REGISTRY_PATH)),validate_i18n_resources,bots_audio_autoplay)"
         self.assertEqual(runner_source.count(delegation), 1)
-        # Preserve the next historical game registration after the complete area.
-        self.assertLess(runner_source.index(delegation), runner_source.index("run_case('API-ROU-001'"))
+        # Preserve the next historical live-game owner after the complete area.
+        self.assertLess(runner_source.index(delegation), runner_source.index("api_core_live_games.run_cases("))
         # Keep server, transport, process, and persistence-reset ownership out of the area.
         for forbidden in ("start_server", "stop_server", "ServerThread", "subprocess.run", "reset_data"):
+            self.assertNotIn(forbidden, area_source)
+
+    # Prove the core live-game and Admin registrations moved as one exact ordered area.
+    def test_api_core_live_games_area_registration_ownership_is_exact(self):
+        # Define every permanent ID and requirement mapping in historical execution order.
+        expected_cases = (
+            ("API-ROU-001", ["ROU-010", "ROU-011", "ROU-030", "ROU-032", "LEDGER-001"]),
+            ("API-SLOT-001", ["SLOT-001", "SLOT-002", "SLOT-003"]),
+            ("API-BJ-001", ["BJ-010", "BJ-011", "BJ-020", "BJ-034"]),
+            ("API-BJ-003", ["BJ-020", "LEDGER-015", "TEST-056"]),
+            ("API-BJ-002", ["BJ-002", "BJ-003", "BJ-004", "BJ-005", "BJ-006", "BJ-007", "BJ-012", "BJ-015", "BJ-016", "BJ-017", "BJ-018", "BJ-019", "BJ-026", "BJ-031", "TEST-054"]),
+            ("API-BAC-001", ["BAC-001", "BAC-010", "BAC-030"]),
+            ("API-KENO-001", ["KENO-001", "KENO-002", "KENO-010"]),
+            ("API-BINGO-001", ["BINGO-001", "BINGO-010", "BINGO-020"]),
+            ("API-GAME-STATE-ISOLATION-001", ["ROU-010", "SLOT-019", "BJ-020", "BAC-010", "KENO-008", "BINGO-020", "LEDGER-001", "AUTO-001"]),
+            ("API-ADMIN-001", ["ADMIN-001", "ADMIN-003", "ADMIN-004", "ADMIN-014", "DOC-001", "LOG-001", "ADMIN-USER-PENDING-035", "TERMS-PENDING-035", "TOKEN-PENDING-035", "I18N-003", "TEST-003"]),
+        )
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "core_live_games.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only the registration owner so the focused model cannot open a listener.
+        spec = importlib.util.spec_from_file_location("core_live_games_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture exact registrations without invoking the live HTTP callbacks.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Retain identity, mapping, order, and callback for semantic checks.
+            captured.append((case_id, requirements, callback))
+        # Build distinct inert callbacks in the same semantic order as the live runner.
+        callback_calls = []
+        def callback(name):
+            # Return one inert callback that records direct forwarding.
+            return lambda: callback_calls.append(name)
+        # Register every callback through the explicit area boundary.
+        callbacks = tuple(callback(name) for name in ("roulette", "slots", "blackjack", "blackjack_insurance", "blackjack_rules", "baccarat", "keno", "bingo", "private_sessions", "admin"))
+        module.run_cases(capture, *callbacks)
+        # Bind every permanent ID, requirement mapping, and historical position.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
+        # Execute each inert callback once to prove direct forwarding semantics.
+        for _, _, registered_callback in captured:
+            # Invoke only the inert seam, never live HTTP or process lifecycle.
+            registered_callback()
+        # Require callbacks to execute once in exact registration order.
+        self.assertEqual(callback_calls, ["roulette", "slots", "blackjack", "blackjack_insurance", "blackjack_rules", "baccarat", "keno", "bingo", "private_sessions", "admin"])
+        # Reject duplicate literal registration ownership in the compatibility runner.
+        for case_id, _ in expected_cases:
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one exact dependency-forwarding delegation before runner-owned teardown.
+        delegation = "api_core_live_games.run_cases(run_case,roulette,slots,blackjack,blackjack_insurance_phase_guard,blackjack_rule_edges,baccarat,keno,bingo,private_sessions,admin)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        self.assertLess(runner_source.index("api_post_restart_foundation.run_cases("), runner_source.index(delegation))
+        self.assertLess(runner_source.index(delegation), runner_source.index("# Stop the tracked API child and prove its loopback listener is closed."))
+        # Keep server, transport, process, and persistence-reset ownership out of the area.
+        for forbidden in ("start_server", "stop_server", "ServerThread", "subprocess.run", "reset_data", "api("):
             self.assertNotIn(forbidden, area_source)
 
     # Prove the first API area moved as one exact registration group without duplication in the shim.

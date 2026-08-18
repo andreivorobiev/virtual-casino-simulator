@@ -62,6 +62,8 @@ from tests.cases.api import storage_foundation as api_storage_foundation
 from tests.cases.api import session_integrity as api_session_integrity
 # Import post-restart platform-foundation registration ownership behind the runner. (TEST-242)
 from tests.cases.api import post_restart_foundation as api_post_restart_foundation
+# Import core live-game and Admin registration ownership behind the runner. (TEST-242)
+from tests.cases.api import core_live_games as api_core_live_games
 # Import frontend-presentation registration ownership while execution stays in the runner. (TEST-242)
 from tests.cases.api import frontend_presentation as api_frontend_presentation
 # Import listener-free self-service foundation ownership behind the compatibility runner. (TEST-242)
@@ -2028,12 +2030,10 @@ def run_api_tests():
             api(base,'/api/v1/games/roulette/bets','POST',{'player_id':'human','amount':10,'bet_type':'red','covered_numbers':['1','3','5','7','9','12','14','16','18','19','21','23','25','27','30','32','34','36']})
             # Attempt another forced result and require server-owned settlement plus persisted rules.
             spin=api(base,'/api/v1/games/roulette/spin','POST',{'force_result':'0'}); st=api(base,'/api/v1/games/roulette/state')['state']; assert str(spin['round']['result']) in {str(number) for number in range(37)}|{'00'} and st['zero_rule']=='en_prison'
-        run_case('API-ROU-001',['ROU-010','ROU-011','ROU-030','ROU-032','LEDGER-001'],roulette)
         # Define the slots function used by this module.
         def slots():
             # Set s to the value needed for the next operation.
             s=api(base,'/api/v1/games/slots/spin','POST',{'player_id':'human','active_lines':20,'line_bet':1}); assert len(s['spin']['grid'])==3; assert s['spin']['cost'] in (0,20); assert 'paytable' in s['config']
-        run_case('API-SLOT-001',['SLOT-001','SLOT-002','SLOT-003'],slots)
         # Define the blackjack function used by this module.
         def blackjack():
             # Reset before proving one successful centrally coerced settings response.
@@ -2066,7 +2066,6 @@ def run_api_tests():
             api(base,'/api/v1/games/blackjack/settings','POST',{'decks':8},ok=False)
             # Set api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id to the value needed for the next operation.
             api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':'human','bet_amount':10},ok=False)
-        run_case('API-BJ-001',['BJ-010','BJ-011','BJ-020','BJ-034'],blackjack)
         # Define blackjack_insurance_phase_guard to prove revealed rounds cannot mutate the wallet through insurance.
         def blackjack_insurance_phase_guard():
             # Start from the canonical table rules so the persisted fixture remains compatible with the public state endpoint.
@@ -2098,7 +2097,6 @@ def run_api_tests():
             # Require the valid dealer-Ace path to retain its historical one-debit behavior and persisted insurance state.
             assert legal_result['round']['insurance']['amount']==5 and legal_balance==balance_before-5 and len(legal_ledger)==len(ledger_before)+1
         # Execute the insurance phase regression under the game, ledger, and API-test requirements.
-        run_case('API-BJ-003',['BJ-020','LEDGER-015','TEST-056'],blackjack_insurance_phase_guard)
         # Define the blackjack_state_with_shoe function used by this module.
         def blackjack_state_with_shoe(*cards):
             # Set state to the default blackjack state for deterministic rule checks.
@@ -2215,7 +2213,6 @@ def run_api_tests():
             surrender_state['rounds']={'bj_surrender':{'round_id':'bj_surrender','player_id':'human','dealer':{'cards':['10C','8D'],'hole_card_hidden':True},'hands':[{'hand_id':'hand_surrender','cards':['9S','7H'],'bet':10,'status':'active','actions':[]}],'active_hand_index':0,'status':'player_turn'}}
             # Execute surrender and verify half the wager is due back.
             surrender_round=blackjack_engine.surrender(surrender_state,'bj_surrender'); assert surrender_round['hands'][0]['payout_due']==5
-        run_case('API-BJ-002',['BJ-002','BJ-003','BJ-004','BJ-005','BJ-006','BJ-007','BJ-012','BJ-015','BJ-016','BJ-017','BJ-018','BJ-019','BJ-026','BJ-031','TEST-054'],blackjack_rule_edges)
         # Define the baccarat function used by this module.
         def baccarat():
             # Call an asynchronous API/helper and wait for the result before continuing.
@@ -2224,21 +2221,18 @@ def run_api_tests():
             login_default_user(base)
             # Set api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':' to the value needed for the next operation.
             api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':'human','amount':10,'bet_type':'banker'}); d=api(base,'/api/v1/games/baccarat/deal','POST',{}); assert d['coup']['player_cards'] and d['coup']['banker_cards']; assert d['bot_bets'] is not None
-        run_case('API-BAC-001',['BAC-001','BAC-010','BAC-030'],baccarat)
         # Define the keno function used by this module.
         def keno():
             # Set p to the value needed for the next operation.
             p=api(base,'/api/v1/games/keno/state')['paytable']; assert set(map(int,p.keys()))==set(range(1,21))
             # Set api(base,'/api/v1/games/keno/tickets','POST',{'player_id':'h to the value needed for the next operation.
             api(base,'/api/v1/games/keno/tickets','POST',{'player_id':'human','amount':5,'spots':[1,2,3]}); d=api(base,'/api/v1/games/keno/draw','POST',{}); assert len(d['draw']['drawn'])==20
-        run_case('API-KENO-001',['KENO-001','KENO-002','KENO-010'],keno)
         # Define the bingo function used by this module.
         def bingo():
             # Set api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'hu to the value needed for the next operation.
             api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'human','amount':5,'pattern':'line'}); r=api(base,'/api/v1/games/bingo/reset','POST',{}); assert r['refunds']
             # Require a terminal competitive settlement rather than the removed guaranteed human win. (issue #405)
             api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'human','amount':5,'pattern':'line'}); a=api(base,'/api/v1/games/bingo/auto','POST',{'max_calls':75}); assert a['session']['status'] in ('won','no_win')
-        run_case('API-BINGO-001',['BINGO-001','BINGO-010','BINGO-020'],bingo)
         # Define the private_sessions function used by this module.
         def private_sessions():
             # Reset state so the multi-player isolation evidence is not mixed with earlier cases.
@@ -2313,7 +2307,6 @@ def run_api_tests():
             assert ledger_a and all(row['player_id']==user_a for row in ledger_a)
             # Verify user B ledger view contains only user B rows.
             assert ledger_b and all(row['player_id']==user_b for row in ledger_b)
-        run_case('API-GAME-STATE-ISOLATION-001',['ROU-010','SLOT-019','BJ-020','BAC-010','KENO-008','BINGO-020','LEDGER-001','AUTO-001'],private_sessions)
         # Define the admin function used by this module.
         def admin():
             # Load the Admin overview that publishes packaged release and module revision metadata.
@@ -2346,7 +2339,8 @@ def run_api_tests():
             terms=api(base,f'/api/v1/admin/users/{user_id}/terms','POST',{'accepted':True})['user']; assert terms['terms_status']=='accepted'
             # Set localized to the user after Admin preserves account locale settings.
             localized=api(base,f'/api/v1/admin/users/{user_id}/locale','POST',{'language':'en-US','format_locale':'en-US','use_browser_locale':False})['user']; assert localized['language']=='en-US' and localized['format_locale']=='en-US'
-        run_case('API-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-014','DOC-001','LOG-001','ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','TEST-003'],admin)
+        # Delegate the exact core live-game and Admin registrations before runner-owned teardown.
+        api_core_live_games.run_cases(run_case,roulette,slots,blackjack,blackjack_insurance_phase_guard,blackjack_rule_edges,baccarat,keno,bingo,private_sessions,admin)
     # Run cleanup logic regardless of success or failure.
     finally:
         # Stop the tracked API child and prove its loopback listener is closed.
