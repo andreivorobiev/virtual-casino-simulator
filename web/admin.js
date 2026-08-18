@@ -20,6 +20,8 @@ import { createStatesTab } from './admin/states.js';
 import { createAutoplayTab } from './admin/autoplay.js';
 // Import the System renderer so canonical module revisions retain exact output behind a reviewable per-tab boundary. (ADMIN-004, ADMIN-014)
 import { createSystemTab } from './admin/system.js';
+// Import the Economics renderer so payout-rate summary and detail output retain their exact per-tab boundary. (ADMIN-030)
+import { createEconomicsTab } from './admin/economics.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -98,6 +100,8 @@ const states = createStatesTab({ api, emptyState, html, pre, safe, setTitle, t, 
 const autoplay = createAutoplayTab({ api, html, post, safe, setTitle, t, table, toast, view });
 // Bind the System renderer to the accepted dashboard, stale-tab, module-table, and diagnostic boundaries. (ADMIN-004, ADMIN-014, TEST-186)
 const system = createSystemTab({ api, html, isActiveTab, pre, safe, setTitle, t, table, view });
+// Bind the Economics renderer to the accepted summary, drill-down, escaping, and empty-state boundaries. (ADMIN-030, TEST-146)
+const economics = createEconomicsTab({ api, emptyState, html, humanLabel, safe, setTitle, t, table, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -760,35 +764,6 @@ async function operations() {
     // Render a clear symbol and recovery instruction so color is not the only status signal.
     view.innerHTML = html`<section class="admin-card danger" data-testid="admin-operations-down"><h2>${safe(t('operations.symbol.down', {}, 'admin'))} ${safe(t('operations.state.down', {}, 'admin'))}</h2><p>${safe(t('operations.detail.down', {}, 'admin'))}</p></section>`;
   }
-}
-
-// Format a payout ratio as a readable percentage or a dash when no wagers anchor it. (ADMIN-030)
-const ratePercent = value => (value === null || value === undefined) ? '—' : `${(value * 100).toFixed(1)}%`;
-
-// Render continuous per-game payout-rate telemetry with a drill-down. (ADMIN-030)
-async function economics() {
-  // Set the localized economics title and subtitle.
-  setTitle(t('economics.title', {}, 'admin'), t('economics.subtitle', {}, 'admin'));
-  // Load aggregated payout rates from the owner-visible Admin endpoint.
-  const data = await api('/api/v1/admin/economics');
-  // Sort active games by wager volume for operator scanning.
-  const games = (data.games || []).slice().sort((a, b) => (b.wagered || 0) - (a.wagered || 0));
-  // Render summary rows, player-positive warnings, and deterministic drill-down controls.
-  view.innerHTML = html`<section class="admin-card" data-testid="admin-economics"><h3>${safe(t('economics.heading', {}, 'admin'))}</h3><p class="muted">${safe(t('economics.window', { count: data.window }, 'admin'))}</p>${games.length ? table([t('economics.game', {}, 'admin'), t('economics.wagered', {}, 'admin'), t('economics.returned', {}, 'admin'), t('economics.payoutRate', {}, 'admin'), t('economics.houseEdge', {}, 'admin'), t('economics.status', {}, 'admin'), ''], games.map(row => html`<tr${row.player_positive ? html` class="danger"` : ''}><td>${safe(humanLabel(row.game))}</td><td>${safe(row.wagered)}</td><td>${safe(row.returned)}</td><td>${safe(ratePercent(row.payout_rate))}</td><td>${safe(ratePercent(row.house_edge))}</td><td>${safe(t(row.player_positive ? 'economics.playerPositive' : 'economics.houseSide', {}, 'admin'))}</td><td><button type="button" data-economics-game="${safe(row.game)}">${safe(t('economics.drillDown', {}, 'admin'))}</button></td></tr>`)) : emptyState(t('economics.emptyTitle', {}, 'admin'), t('economics.emptyDetail', {}, 'admin'), 'admin-economics-empty')}</section>`;
-  // Bind each drill-down to the exact canonical game id published by the backend.
-  view.querySelectorAll('[data-economics-game]').forEach(button => { button.onclick = () => economicsDetail(button.dataset.economicsGame); });
-}
-
-// Render one game's payout-rate breakdown and recent bounded evidence. (ADMIN-030)
-async function economicsDetail(game) {
-  // Set the detail title while retaining the canonical game label.
-  setTitle(t('economics.title', {}, 'admin'), t('economics.detailSubtitle', { game: humanLabel(game) }, 'admin'));
-  // Load the single-game detail through the allowlisted route segment.
-  const data = await api(`/api/v1/admin/economics/${encodeURIComponent(game)}`);
-  // Render aggregate, type breakdown, and recent events with a deterministic back control.
-  view.innerHTML = html`<section class="admin-card" data-testid="admin-economics-detail"><div class="row"><button id="economics-back" type="button">${safe(t('economics.back', {}, 'admin'))}</button><span class="badge">${safe(humanLabel(game))}</span>${data.player_positive ? html`<span class="badge danger">${safe(t('economics.playerPositive', {}, 'admin'))}</span>` : ''}</div><p>${safe(t('economics.detailSummary', { rate: ratePercent(data.payout_rate), edge: ratePercent(data.house_edge), wagered: data.wagered, returned: data.returned, events: data.events }, 'admin'))}</p><h3>${safe(t('economics.byType', {}, 'admin'))}</h3>${(data.by_transaction_type || []).length ? table([t('economics.transactionType', {}, 'admin'), t('economics.count', {}, 'admin'), t('economics.netTotal', {}, 'admin')], data.by_transaction_type.map(economicsRow => html`<tr><td>${safe(humanLabel(economicsRow.transaction_type))}</td><td>${safe(economicsRow.count)}</td><td>${safe(economicsRow.total)}</td></tr>`)) : emptyState(t('economics.noActivity', {}, 'admin'), t('economics.noActivityDetail', {}, 'admin'), 'admin-economics-detail-empty')}<h3>${safe(t('economics.recent', {}, 'admin'))}</h3>${(data.recent || []).length ? table([t('economics.player', {}, 'admin'), t('economics.transactionType', {}, 'admin'), t('economics.amount', {}, 'admin')], data.recent.map(economicsRow => html`<tr><td>${safe(economicsRow.player_id)}</td><td>${safe(humanLabel(economicsRow.transaction_type))}</td><td>${safe(economicsRow.amount)}</td></tr>`)) : emptyState(t('economics.noRecent', {}, 'admin'), t('economics.noRecentDetail', {}, 'admin'), 'admin-economics-recent-empty')}</section>`;
-  // Return to the live summary when the operator activates Back.
-  view.querySelector('#economics-back').onclick = () => economics();
 }
 
 // Define audio to preserve global sound and voice settings.

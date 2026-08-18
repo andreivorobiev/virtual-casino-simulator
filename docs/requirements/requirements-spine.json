@@ -9467,6 +9467,7 @@
         "contracts/openapi/admin.v1.yaml",
         "web/admin.html",
         "web/admin.js",
+        "web/admin/economics.js",
         "web/i18n/en-US/admin.json",
         "web/i18n/ru-RU/admin.json",
         "tests/admin_economics_tests.py",
@@ -9474,8 +9475,8 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-456-admin-economics",
-      "changed_in": "issue-456-admin-economics",
-      "notes": "Ordinary Admin authorization remains sufficient for read-only economics. Zero-wager games expose no invented ratio, malformed rows are ignored, detail is bounded, and hosted evidence covers summary, player-positive, zero-wager, detail, and empty states."
+      "changed_in": "issue-969-admin-economics-module",
+      "notes": "Ordinary Admin authorization remains sufficient for read-only economics. Zero-wager games expose no invented ratio, malformed rows are ignored, detail is bounded, and hosted evidence covers summary, player-positive, zero-wager, detail, and empty states. Issue #969 moves the summary and drill-down renderer behind an explicit dependency-injected per-tab boundary while preserving its frozen routes and exact visible behavior."
     },
     {
       "id": "TEST-146",
@@ -9490,12 +9491,13 @@
       ],
       "implementation_files": [
         "tests/admin_economics_tests.py",
+        "tests/unit/admin_economics_module.test.mjs",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-456-admin-economics",
-      "changed_in": "issue-456-admin-economics",
-      "notes": "The listener-free suite drives the production aggregation over a bounded synthetic ledger and starts no HTTP listener. Browser qualification is hosted-only."
+      "changed_in": "issue-969-admin-economics-module",
+      "notes": "The listener-free suite drives the production aggregation over a bounded synthetic ledger and starts no HTTP listener. Issue #969 adds dependency-injected summary, detail, sorting, escaping, percentage, empty-state, endpoint, Back-navigation, dispatcher, and review-width parity. Browser qualification remains hosted-only."
     },
     {
       "id": "SESSION-009",
