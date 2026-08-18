@@ -776,6 +776,48 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         for forbidden in ("start_server", "stop_server", "ServerThread", "subprocess.run", "reset_data", "api("):
             self.assertNotIn(forbidden, area_source)
 
+    # Prove the final live authentication registration has one exact area owner.
+    def test_api_live_authentication_area_registration_ownership_is_exact(self):
+        # Bind the permanent ID and its exact historical requirement mapping.
+        expected_case = ("API-AUTH-001", ["AUTH-001", "SESSION-001", "SESSION-007", "SESSION-012", "USER-001", "TERMS-001"])
+        # Read the compatibility runner and extracted owner as inert source text.
+        runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
+        area_path = API_CASES_ROOT / "live_authentication.py"
+        area_source = area_path.read_text(encoding="utf-8")
+        # Load only registration metadata so the focused test cannot open a listener.
+        spec = importlib.util.spec_from_file_location("live_authentication_area", area_path)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        # Capture the registration and callback identity without live HTTP execution.
+        captured = []
+        def capture(case_id, requirements, callback):
+            # Retain the immutable packet for exact comparison.
+            captured.append((case_id, requirements, callback))
+        # Record one inert callback execution through the area boundary.
+        callback_calls = []
+        def auth_callback():
+            # Prove direct callback forwarding without session mutation.
+            callback_calls.append("auth")
+        # Register the one final API-lane case.
+        module.run_cases(capture, auth_callback)
+        # Require the exact permanent ID, mapping, and callback object.
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), (expected_case,))
+        self.assertIs(captured[0][2], auth_callback)
+        # Execute the captured callback once and prove no wrapper substitution.
+        captured[0][2]()
+        self.assertEqual(callback_calls, ["auth"])
+        # Reject duplicate literal registration ownership in the compatibility runner.
+        self.assertNotRegex(runner_source, r"\brun_case\(\s*['\"]API-AUTH-001['\"]")
+        # Require exact delegation after auth callback definition and before session-integrity state.
+        delegation = "api_live_authentication.run_cases(run_case,auth_backend)"
+        self.assertEqual(runner_source.count(delegation), 1)
+        self.assertLess(runner_source.index("def auth_backend():"), runner_source.index(delegation))
+        self.assertLess(runner_source.index(delegation), runner_source.index("# Store wallet integrity evidence for the later server-restart persistence check."))
+        # Keep HTTP, server, process, session, and storage implementation out of the owner.
+        for forbidden in ("api(", "start_server", "stop_server", "ServerThread", "subprocess.run", "auth_core", "login_default_user"):
+            self.assertNotIn(forbidden, area_source)
+
     # Prove the first API area moved as one exact registration group without duplication in the shim.
     def test_api_governance_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
