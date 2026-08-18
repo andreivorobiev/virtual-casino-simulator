@@ -15,6 +15,8 @@ from tests.browser_readiness import prepare_admin_feedback_draft, require_admin_
 ROOT = Path(__file__).resolve().parents[1]
 # Read the governed Browser runner once for bounded source slices.
 RUNNER_SOURCE = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+# Read the extracted Roulette owner so its semantic wait remains source-governed after #727 delegation.
+ROULETTE_OWNER_SOURCE = (ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py").read_text(encoding="utf-8")
 
 
 # Prove Browser acceptance waits for authoritative state instead of elapsed time.
@@ -42,7 +44,7 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
     # Require every Roulette audit wager to complete before a later clear can overtake it.
     def test_roulette_hit_target_waits_for_wager_responses(self) -> None:
         # Slice only the named Roulette case so unrelated request assertions remain unconstrained.
-        roulette_source = RUNNER_SOURCE.partition("def roulette_hit_target_integrity():")[2].partition("run_case('BR-ROU-HITMAP-001'")[0]
+        roulette_source = ROULETTE_OWNER_SOURCE.partition("def roulette_hit_target_integrity():")[2].partition("run_case('BR-ROU-HITMAP-001'")[0]
         # Reject the former request-only wait that permitted late response adoption after clear.
         self.assertNotIn("expect_request(lambda request: request.url.partition('?')[0].endswith('/api/v1/games/roulette/bets')", roulette_source)
         # Require the primary-grid, second-dozen, and zero-zone loops to await exact responses.

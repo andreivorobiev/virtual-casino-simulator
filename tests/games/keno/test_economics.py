@@ -525,8 +525,8 @@ class KenoEconomicsTests(TestCase):
         self.assertEqual(keno_surface["states"], ["selection", "drawing", "result", "edge_idle", "edge_selected_focus_visible", "edge_final_caught", "route_restored", "semantic_game_colors", "repeat_available"])
         # Require both installed locales and all four global viewports.
         self.assertEqual((keno_surface["locales"], keno_surface["viewports"]), (["en-US", "ru-RU"], ["desktop_primary", "desktop_compact", "tablet", "mobile"]))
-        # Read the hosted Browser harness as an inert policy artifact.
-        browser_source = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Read the extracted Keno Browser owner as an inert policy artifact.
+        browser_source = (ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py").read_text(encoding="utf-8")
         # Require fixtures to derive one-spot values from the authoritative table.
         self.assertIn("keno_engine.PAYTABLE[1][1]", browser_source)
         # Require a complete 64-cell evidence counter and exact numeric jackpot assertion.
