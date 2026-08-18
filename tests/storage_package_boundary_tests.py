@@ -19,8 +19,12 @@ from casino.core import storage_base
 from casino.core import storage_reset
 # Import the extracted JSON game-action lifecycle owner for exact mixin checks.
 from casino.core import storage_game_actions_json
+# Import the provider-neutral lifecycle codec owner for exact identity checks.
+from casino.core import storage_game_action_codecs
 # Import the extracted MySQL game-action lifecycle owner for exact mixin checks.
 from casino.core import storage_game_actions_mysql
+# Import the extracted complete MySQL provider owner for exact compatibility checks.
+from casino.core import storage_mysql_provider
 
 
 # Resolve the repository root from this tracked test module.
@@ -35,6 +39,10 @@ RESET_SOURCE = ROOT / "casino" / "core" / "storage_reset.py"
 JSON_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_json.py"
 # Point at the extracted package-ready MySQL game-action lifecycle owner.
 MYSQL_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_mysql.py"
+# Point at the provider-neutral durable game-action codec owner.
+CODEC_SOURCE = ROOT / "casino" / "core" / "storage_game_action_codecs.py"
+# Point at the extracted complete MySQL provider owner.
+MYSQL_PROVIDER_SOURCE = ROOT / "casino" / "core" / "storage_mysql_provider.py"
 # Bind every moved compatibility name that the historical module must re-export.
 MOVED_NAMES = (
     "MySQLConfig",
@@ -133,6 +141,50 @@ MYSQL_ACTION_METHOD_NAMES = (
     "execute_game_action_once",
     "resolve_game_action",
 )
+# Bind every provider-neutral durable codec now shared by both lifecycle implementations.
+CODEC_METHOD_NAMES = (
+    "_plain_canonical",
+    "_unique_json_object",
+    "_game_action_scope_key",
+    "_serialize_game_action_identity",
+    "_deserialize_game_action_identity",
+)
+# Bind every ordinary method now single-owned by the complete MySQL provider module.
+MYSQL_PROVIDER_METHOD_NAMES = (
+    "__init__",
+    "_connector",
+    "_open_physical_connection",
+    "connect",
+    "pool_snapshot",
+    "close_pool",
+    "_planner_key",
+    "_planner_is_active",
+    "_reset_is_active",
+    "_reject_planner_mutation",
+    "_planner_boundary",
+    "ensure_ready",
+    "_mysql_reset_lock_name",
+    "_clear_mysql_mutable_state",
+    "reset_transaction",
+    "reset",
+    "_player_from_row",
+    "load_players",
+    "normalize_wallet_balances",
+    "insert_player",
+    "bootstrap_players",
+    "update_player",
+    "ensure_player",
+    "transact_ledger",
+    "transact_ledger_once",
+    "find_ledger_action",
+    "read_ledger_recent",
+    "append_history",
+    "recent_history",
+    "read_document",
+    "read_document_strict",
+    "write_document",
+    "update_document",
+)
 
 
 # Prove the first #728 seam moves ownership without changing the public storage module.
@@ -217,8 +269,10 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         self.assertTrue(set(MOVED_NAMES[2:]).isdisjoint(declared))
         # Require one explicit provider-neutral import owner.
         self.assertEqual(source.count("from casino.core.storage_base import "), 1)
-        # Keep both concrete providers in the old source during this bounded first slice.
-        self.assertTrue({"JsonStorageProvider", "MySQLStorageProvider"}.issubset(declared))
+        # Keep only the still-unsplit JSON concrete provider in the historical facade.
+        self.assertIn("JsonStorageProvider", declared)
+        # Reject the complete MySQL provider and borrowed-session owner from the facade.
+        self.assertTrue({"MySQLStorageProvider", "_BorrowedMySQLConnection"}.isdisjoint(declared))
 
     # Require the second #728 seam to single-own reset and stable-visibility behavior.
     def test_reset_owner_is_bounded_and_single_owned(self):
@@ -302,19 +356,44 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         # Preserve the historical private import without duplicating its mutable set.
         self.assertIs(storage._GAME_ACTION_STAGES, storage_game_actions_json._GAME_ACTION_STAGES)
 
+    # Require provider-neutral lifecycle codecs to stay bounded and exact across both providers.
+    def test_game_action_codec_owner_is_bounded_and_single_owned(self):
+        # Read the codec owner and historical provider facade as inert UTF-8 source.
+        codec_source = CODEC_SOURCE.read_text(encoding="utf-8")
+        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        # Keep the shared codec seam compact rather than growing another provider monolith.
+        self.assertLess(len(codec_source.splitlines()), 200)
+        # Parse source ownership without constructing a provider.
+        codec_tree = ast.parse(codec_source)
+        storage_tree = ast.parse(storage_source)
+        # Locate the sole codec mixin and remaining JSON provider.
+        codec_class = next(node for node in codec_tree.body if isinstance(node, ast.ClassDef) and node.name == "GameActionCodecMixin")
+        json_provider = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
+        # Require the exact reviewed codec inventory and no duplicates in the facade.
+        owned_methods = {node.name for node in codec_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertEqual(owned_methods, set(CODEC_METHOD_NAMES))
+        provider_methods = {node.name for node in json_provider.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertTrue(set(CODEC_METHOD_NAMES).isdisjoint(provider_methods))
+        # Require JSON lifecycle inheritance and the complete MySQL provider aliases to share exact descriptors.
+        for method_name in CODEC_METHOD_NAMES:
+            # Compare all three access paths without touching durable storage.
+            owned_method = getattr(storage_game_action_codecs.GameActionCodecMixin, method_name)
+            self.assertIs(getattr(storage.JsonStorageProvider, method_name), owned_method, method_name)
+            self.assertIs(getattr(storage.MySQLStorageProvider, method_name), owned_method, method_name)
+
     # Require the fourth #728 seam to single-own the MySQL game-action lifecycle.
     def test_mysql_game_action_owner_is_bounded_and_single_owned(self):
         # Read both owners as inert UTF-8 source.
         action_source = MYSQL_ACTION_SOURCE.read_text(encoding="utf-8")
-        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        provider_source = MYSQL_PROVIDER_SOURCE.read_text(encoding="utf-8")
         # Keep the complete extracted lifecycle below the permanent module ceiling.
         self.assertLess(len(action_source.splitlines()), 1200)
         # Parse both modules without constructing a provider or opening MySQL.
         action_tree = ast.parse(action_source)
-        storage_tree = ast.parse(storage_source)
+        provider_tree = ast.parse(provider_source)
         # Locate the sole action mixin and concrete MySQL provider declarations.
         action_class = next(node for node in action_tree.body if isinstance(node, ast.ClassDef) and node.name == "MySQLGameActionMixin")
-        provider_class = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "MySQLStorageProvider")
+        provider_class = next(node for node in provider_tree.body if isinstance(node, ast.ClassDef) and node.name == "MySQLStorageProvider")
         # Require the complete reviewed game-action method inventory in its new owner.
         owned_methods = {node.name for node in action_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertEqual(owned_methods, set(MYSQL_ACTION_METHOD_NAMES))
@@ -331,6 +410,55 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         for forbidden in ("connect", "reset_transaction", "transact_ledger", "read_document", "_read_game_action_journal"):
             # Name any accidentally broadened lifecycle ownership precisely.
             self.assertNotIn(forbidden, owned_methods)
+
+    # Require the fifth #728 seam to single-own the complete ordinary MySQL provider.
+    def test_complete_mysql_provider_is_bounded_single_owned_and_reexported(self):
+        # Read the extracted provider and historical facade as inert UTF-8 source.
+        provider_source = MYSQL_PROVIDER_SOURCE.read_text(encoding="utf-8")
+        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        # Keep the complete provider below the parent issue's permanent module ceiling.
+        self.assertLess(len(provider_source.splitlines()), 1200)
+        # Parse both modules without constructing a pool or importing a connector.
+        provider_tree = ast.parse(provider_source)
+        storage_tree = ast.parse(storage_source)
+        # Require exactly the borrowed-session facade and complete provider as class owners.
+        provider_classes = {node.name for node in provider_tree.body if isinstance(node, ast.ClassDef)}
+        self.assertEqual(provider_classes, {"_BorrowedMySQLConnection", "MySQLStorageProvider"})
+        # Reject duplicate provider classes and MySQL thread/reset globals from the facade.
+        storage_classes = {node.name for node in storage_tree.body if isinstance(node, ast.ClassDef)}
+        self.assertTrue(provider_classes.isdisjoint(storage_classes))
+        for forbidden in ("_MYSQL_PLANNER_LOCAL", "_MYSQL_RESET_REGISTRY_LOCK", "_MYSQL_RESET_TARGETS"):
+            # Require process-local MySQL lifecycle state to move with its sole provider owner.
+            self.assertNotIn(forbidden, storage_source)
+            self.assertIn(forbidden, provider_source)
+        # Require the exact reviewed ordinary provider method inventory.
+        provider_class = next(node for node in provider_tree.body if isinstance(node, ast.ClassDef) and node.name == "MySQLStorageProvider")
+        owned_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertEqual(owned_methods, set(MYSQL_PROVIDER_METHOD_NAMES))
+        # Preserve the accepted lifecycle-first provider contract MRO.
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["MySQLGameActionMixin", "StorageProvider", "GameActionExecutor"])
+        # Require historical imports to remain exact class objects rather than wrappers.
+        self.assertIs(storage.MySQLStorageProvider, storage_mysql_provider.MySQLStorageProvider)
+        self.assertIs(storage._BorrowedMySQLConnection, storage_mysql_provider._BorrowedMySQLConnection)
+        # Require every ordinary method descriptor to remain owned by the extracted class.
+        for method_name in MYSQL_PROVIDER_METHOD_NAMES:
+            # Compare the public compatibility descriptor to the sole extracted owner.
+            self.assertIs(getattr(storage.MySQLStorageProvider, method_name), getattr(storage_mysql_provider.MySQLStorageProvider, method_name), method_name)
+        # Keep JSON cache, filesystem gate, and private journal responsibilities outside this owner.
+        for forbidden in ("_drop_ledger_cache", "_read_actions_registry", "_json_global_gate", "_read_game_action_journal"):
+            # Name any accidentally broadened provider ownership precisely.
+            self.assertNotIn(forbidden, provider_source)
+
+    # Require shared history fields to move once while preserving historical identity.
+    def test_history_fields_are_single_owned_by_base_and_reexported(self):
+        # Read both sources without executing provider construction.
+        base_source = BASE_SOURCE.read_text(encoding="utf-8")
+        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        # Require one declaration in the provider-neutral owner and no facade duplicate.
+        self.assertEqual(base_source.count("HISTORY_FIELDS = ["), 1)
+        self.assertEqual(storage_source.count("HISTORY_FIELDS = ["), 0)
+        # Preserve one exact mutable compatibility object across import paths.
+        self.assertIs(storage.HISTORY_FIELDS, storage_base.HISTORY_FIELDS)
 
 
 # Run the focused seam directly when a developer invokes this file.

@@ -515,6 +515,35 @@ def _ledger_from_row(row: dict) -> dict:
     }
 
 
+# Define the canonical history fields shared by JSON and MySQL providers.
+HISTORY_FIELDS = [
+    # Store the event timestamp column.
+    "timestamp",
+    # Store the source game column.
+    "game",
+    # Store the round or session ID column.
+    "round_id",
+    # Store the owning player ID column.
+    "player_id",
+    # Store the wager type column.
+    "bet_type",
+    # Store the human-readable wager label column.
+    "bet_label",
+    # Store the wager amount column.
+    "amount",
+    # Store the outcome column.
+    "outcome",
+    # Store the payout column.
+    "payout",
+    # Store the balance after settlement column.
+    "balance_after",
+    # Store JSON details as a string for CSV compatibility.
+    "details_json",
+    # Store the app schema version for future migrations.
+    "schema_version",
+]
+
+
 # Convert a MySQL history row into the existing CSV/API shape.
 def _history_from_row(row: dict) -> dict:
     # Return history fields with numeric values normalized for JSON responses.
