@@ -8,6 +8,8 @@ import { escaped as safe, html, raw, toast } from './core/ui.js';
 import { humanLabel, ledgerEventLabel as localizedLedgerEventLabel } from './core/admin_labels.js';
 // Import the first per-tab renderer so the Admin dispatcher can stay behaviorally stable while the monolith is split. (ADMIN-027)
 import { createLedgerTab } from './admin/ledger.js';
+// Import the History renderer so diagnostics retain exact output behind a reviewable per-tab boundary. (ADMIN-029)
+import { createHistoryTab } from './admin/history.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -74,6 +76,8 @@ function setTitle(text, helper = '') {
 
 // Bind the Ledger renderer to the shared Admin-shell helpers without exposing mutable globals to the per-tab module. (ADMIN-027)
 const ledger = createLedgerTab({ api, emptyState, formatMoney, html, humanLabel, ledgerEventLabel, safe, setTitle, t, table, view });
+// Bind the History renderer to the same Admin-shell helpers used by the accepted monolith implementation. (ADMIN-029)
+const history = createHistoryTab({ api, emptyState, formatMoney, html, humanLabel, safe, setTitle, t, table, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -630,18 +634,6 @@ async function saveBot(button) {
   toast('Bot settings saved.', true);
   // Rerender players/bots so server-normalized values are visible.
   playersBots();
-}
-
-// Define history to show cross-game history rows.
-async function history() {
-  // Set the localized history title and subtitle.
-  setTitle(t('history.title', {}, 'admin'), t('history.subtitle', {}, 'admin'));
-  // Load history rows through the existing Admin endpoint.
-  const data = await api('/api/v1/admin/history?limit=500');
-  // Normalize rows into a readable newest-first list. (ADMIN-029)
-  const rows = (data.history || []).slice().reverse();
-  // Render a table with an explicit empty state instead of a raw JSON dump. (ADMIN-029)
-  view.innerHTML = html`<section class="admin-card"><h3>${safe(t('history.heading', {}, 'admin'))}</h3>${rows.length ? table([t('history.time', {}, 'admin'), t('history.player', {}, 'admin'), t('history.game', {}, 'admin'), t('history.bet', {}, 'admin'), t('history.amount', {}, 'admin'), t('history.payout', {}, 'admin'), t('history.outcome', {}, 'admin'), t('history.balance', {}, 'admin')], rows.map(row => html`<tr><td>${safe(row.timestamp)}</td><td>${safe(row.player_id)}</td><td>${safe(humanLabel(row.game))}</td><td>${safe(row.bet_label || row.bet_type)}</td><td>${formatMoney(Number(row.amount))}</td><td>${formatMoney(Number(row.payout))}</td><td>${safe(row.outcome)}</td><td>${formatMoney(Number(row.balance_after))}</td></tr>`)) : emptyState(t('history.emptyTitle', {}, 'admin'), t('history.emptyDetail', {}, 'admin'), 'admin-history-empty')}</section>`;
 }
 
 // Define telemetry to show server and client logs.
