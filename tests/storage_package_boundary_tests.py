@@ -21,6 +21,8 @@ from casino.core import storage_reset
 from casino.core import storage_game_actions_json
 # Import the extracted JSON filesystem and concurrency substrate for exact ownership checks.
 from casino.core import storage_json_infrastructure
+# Import the extracted complete ordinary JSON provider for exact compatibility checks.
+from casino.core import storage_json_provider
 # Import the provider-neutral lifecycle codec owner for exact identity checks.
 from casino.core import storage_game_action_codecs
 # Import the extracted MySQL game-action lifecycle owner for exact mixin checks.
@@ -31,7 +33,7 @@ from casino.core import storage_mysql_provider
 
 # Resolve the repository root from this tracked test module.
 ROOT = Path(__file__).resolve().parents[1]
-# Point at the concrete-provider monolith retained during the first #728 slice.
+# Point at the historical provider-selection and compatibility facade.
 STORAGE_SOURCE = ROOT / "casino" / "core" / "storage.py"
 # Point at the extracted package-ready provider-neutral base owner.
 BASE_SOURCE = ROOT / "casino" / "core" / "storage_base.py"
@@ -41,6 +43,8 @@ RESET_SOURCE = ROOT / "casino" / "core" / "storage_reset.py"
 JSON_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_json.py"
 # Point at the extracted package-ready JSON filesystem and concurrency substrate.
 JSON_INFRASTRUCTURE_SOURCE = ROOT / "casino" / "core" / "storage_json_infrastructure.py"
+# Point at the extracted complete ordinary JSON provider owner.
+JSON_PROVIDER_SOURCE = ROOT / "casino" / "core" / "storage_json_provider.py"
 # Point at the extracted package-ready MySQL game-action lifecycle owner.
 MYSQL_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_mysql.py"
 # Point at the provider-neutral durable game-action codec owner.
@@ -189,6 +193,42 @@ MYSQL_PROVIDER_METHOD_NAMES = (
     "write_document",
     "update_document",
 )
+# Bind every ordinary method now single-owned by the complete JSON provider module.
+JSON_PROVIDER_METHOD_NAMES = (
+    "_load_players_document",
+    "_save_players_document",
+    "load_players",
+    "normalize_wallet_balances",
+    "insert_player",
+    "bootstrap_players",
+    "update_player",
+    "ensure_player",
+    "_empty_action_registry",
+    "_action_identity",
+    "_decode_ledger_line",
+    "_ledger_rows",
+    "_project_committed_action",
+    "_optional_file_stat",
+    "_normalize_actions_registry",
+    "_apply_action_journal_record",
+    "_apply_action_journal_bytes",
+    "_read_actions_registry",
+    "_append_action_journal_record",
+    "_compact_action_journal",
+    "_maybe_compact_action_journal",
+    "_recover_committed_actions",
+    "_transact_ledger_locked",
+    "transact_ledger",
+    "transact_ledger_once",
+    "find_ledger_action",
+    "read_ledger_recent",
+    "append_history",
+    "recent_history",
+    "read_document",
+    "read_document_strict",
+    "write_document",
+    "update_document",
+)
 # Bind every JSON filesystem, locking, cache, and planner method moved as one reviewed seam.
 JSON_INFRASTRUCTURE_METHOD_NAMES = (
     "__init__",
@@ -320,9 +360,9 @@ class StoragePackageBoundaryTests(unittest.TestCase):
             # Require the public parameter order to remain unchanged.
             self.assertEqual(tuple(inspect.signature(method).parameters), parameter_names, method_name)
 
-    # Reject duplicate base declarations left in the concrete-provider source.
+    # Reject duplicate base or provider declarations left in the compatibility facade.
     def test_concrete_provider_source_imports_base_without_duplicate_owners(self):
-        # Parse the remaining monolith as inert source.
+        # Parse the compatibility facade as inert source.
         source = STORAGE_SOURCE.read_text(encoding="utf-8")
         # Parse top-level ownership without importing providers a second time.
         tree = ast.parse(source)
@@ -334,24 +374,24 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         self.assertTrue(set(MOVED_NAMES[2:]).isdisjoint(declared))
         # Require one explicit provider-neutral import owner.
         self.assertEqual(source.count("from casino.core.storage_base import "), 1)
-        # Keep only the still-unsplit JSON concrete provider in the historical facade.
-        self.assertIn("JsonStorageProvider", declared)
-        # Reject the complete MySQL provider and borrowed-session owner from the facade.
-        self.assertTrue({"MySQLStorageProvider", "_BorrowedMySQLConnection"}.isdisjoint(declared))
+        # Reject both complete concrete providers and the borrowed-session owner from the facade.
+        self.assertTrue({"JsonStorageProvider", "MySQLStorageProvider", "_BorrowedMySQLConnection"}.isdisjoint(declared))
+        # Require one explicit JSON-provider import owner during package cutover.
+        self.assertEqual(source.count("from casino.core.storage_json_provider import "), 1)
 
     # Require the second #728 seam to single-own reset and stable-visibility behavior.
     def test_reset_owner_is_bounded_and_single_owned(self):
         # Read both owners as inert UTF-8 source.
         reset_source = RESET_SOURCE.read_text(encoding="utf-8")
-        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        provider_source = JSON_PROVIDER_SOURCE.read_text(encoding="utf-8")
         # Keep the reset lifecycle comfortably below the permanent module ceiling.
         self.assertLess(len(reset_source.splitlines()), 1200)
         # Parse both modules without constructing a provider or touching storage.
         reset_tree = ast.parse(reset_source)
-        storage_tree = ast.parse(storage_source)
+        provider_tree = ast.parse(provider_source)
         # Locate the sole reset mixin and concrete JSON provider declarations.
         reset_class = next(node for node in reset_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonResetMixin")
-        provider_class = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
+        provider_class = next(node for node in provider_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
         # Require the complete reviewed reset method inventory in its new owner.
         owned_methods = {node.name for node in reset_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertEqual(owned_methods, set(RESET_METHOD_NAMES))
@@ -392,15 +432,15 @@ class StoragePackageBoundaryTests(unittest.TestCase):
     def test_json_game_action_owner_is_bounded_and_single_owned(self):
         # Read both owners as inert UTF-8 source.
         action_source = JSON_ACTION_SOURCE.read_text(encoding="utf-8")
-        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        provider_source = JSON_PROVIDER_SOURCE.read_text(encoding="utf-8")
         # Keep the complete extracted lifecycle below the permanent module ceiling.
         self.assertLess(len(action_source.splitlines()), 1200)
         # Parse both modules without constructing a provider or touching storage.
         action_tree = ast.parse(action_source)
-        storage_tree = ast.parse(storage_source)
+        provider_tree = ast.parse(provider_source)
         # Locate the sole action mixin and concrete JSON provider declarations.
         action_class = next(node for node in action_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonGameActionMixin")
-        provider_class = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
+        provider_class = next(node for node in provider_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
         # Require the complete reviewed game-action method inventory in its new owner.
         owned_methods = {node.name for node in action_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertEqual(owned_methods, set(JSON_ACTION_METHOD_NAMES))
@@ -425,15 +465,15 @@ class StoragePackageBoundaryTests(unittest.TestCase):
     def test_game_action_codec_owner_is_bounded_and_single_owned(self):
         # Read the codec owner and historical provider facade as inert UTF-8 source.
         codec_source = CODEC_SOURCE.read_text(encoding="utf-8")
-        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        provider_source = JSON_PROVIDER_SOURCE.read_text(encoding="utf-8")
         # Keep the shared codec seam compact rather than growing another provider monolith.
         self.assertLess(len(codec_source.splitlines()), 200)
         # Parse source ownership without constructing a provider.
         codec_tree = ast.parse(codec_source)
-        storage_tree = ast.parse(storage_source)
+        provider_tree = ast.parse(provider_source)
         # Locate the sole codec mixin and remaining JSON provider.
         codec_class = next(node for node in codec_tree.body if isinstance(node, ast.ClassDef) and node.name == "GameActionCodecMixin")
-        json_provider = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
+        json_provider = next(node for node in provider_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
         # Require the exact reviewed codec inventory and no duplicates in the facade.
         owned_methods = {node.name for node in codec_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertEqual(owned_methods, set(CODEC_METHOD_NAMES))
@@ -519,15 +559,17 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         # Read the extracted infrastructure and historical facade as inert UTF-8 source.
         infrastructure_source = JSON_INFRASTRUCTURE_SOURCE.read_text(encoding="utf-8")
         storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        provider_source = JSON_PROVIDER_SOURCE.read_text(encoding="utf-8")
         # Keep both sides of this split below the permanent parent-issue ceiling.
         self.assertLess(len(infrastructure_source.splitlines()), 1200)
         self.assertLess(len(storage_source.splitlines()), 1200)
+        self.assertLess(len(provider_source.splitlines()), 1200)
         # Parse both modules without opening any filesystem path or provider gate.
         infrastructure_tree = ast.parse(infrastructure_source)
-        storage_tree = ast.parse(storage_source)
+        provider_tree = ast.parse(provider_source)
         # Locate the sole substrate owner and the concrete compatibility provider.
         infrastructure_class = next(node for node in infrastructure_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonInfrastructureMixin")
-        provider_class = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
+        provider_class = next(node for node in provider_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
         # Require the exact reviewed substrate inventory and no duplicate concrete declarations.
         owned_methods = {node.name for node in infrastructure_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertEqual(owned_methods, set(JSON_INFRASTRUCTURE_METHOD_NAMES))
@@ -539,6 +581,41 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         for method_name in JSON_INFRASTRUCTURE_METHOD_NAMES:
             # Compare descriptor identity without constructing a provider or touching storage.
             self.assertIs(getattr(storage.JsonStorageProvider, method_name), getattr(storage_json_infrastructure.JsonInfrastructureMixin, method_name), method_name)
+
+    # Require the seventh #728 seam to single-own the complete ordinary JSON provider.
+    def test_json_provider_is_bounded_single_owned_and_reexported(self):
+        # Read the extracted owner and facade as inert UTF-8 source.
+        provider_source = JSON_PROVIDER_SOURCE.read_text(encoding="utf-8")
+        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        # Keep the provider and facade below the permanent parent-issue ceiling.
+        self.assertLess(len(provider_source.splitlines()), 1200)
+        self.assertLess(len(storage_source.splitlines()), 1200)
+        # Parse both modules without constructing a provider or touching storage.
+        provider_tree = ast.parse(provider_source)
+        storage_tree = ast.parse(storage_source)
+        # Require one concrete JSON provider declaration in the extracted owner only.
+        provider_classes = [node for node in provider_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider"]
+        facade_classes = [node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider"]
+        self.assertEqual(len(provider_classes), 1)
+        self.assertEqual(facade_classes, [])
+        # Require the exact reviewed ordinary-method inventory in the sole owner.
+        provider_class = provider_classes[0]
+        owned_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertEqual(owned_methods, set(JSON_PROVIDER_METHOD_NAMES))
+        # Preserve the accepted substrate, action, reset, and contract MRO exactly.
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
+        # Require historical callers to receive the exact extracted class object.
+        self.assertIs(storage.JsonStorageProvider, storage_json_provider.JsonStorageProvider)
+        # Require every ordinary descriptor to resolve to the sole extracted owner.
+        for method_name in JSON_PROVIDER_METHOD_NAMES:
+            # Compare descriptors without opening any file or provider gate.
+            self.assertIs(getattr(storage.JsonStorageProvider, method_name), getattr(storage_json_provider.JsonStorageProvider, method_name), method_name)
+        # Keep provider selection, injection, cleanup, and bootstrap in the compatibility facade.
+        facade_functions = {node.name for node in storage_tree.body if isinstance(node, ast.FunctionDef)}
+        self.assertEqual(facade_functions, {"storage_provider_name", "_build_provider", "get_storage_provider", "set_provider_for_tests", "_close_cached_provider_pools", "bootstrap_players"})
+        # Reject duplicate facade/cache ownership in the extracted provider.
+        provider_functions = {node.name for node in provider_tree.body if isinstance(node, ast.FunctionDef)}
+        self.assertTrue(facade_functions.isdisjoint(provider_functions))
 
     # Require process-shared JSON gate state and #412/#432 cache invalidation to move exactly once.
     def test_json_infrastructure_preserves_gate_and_cache_ownership(self):
