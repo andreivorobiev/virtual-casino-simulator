@@ -15,10 +15,12 @@ import { createLedgerTab } from "../../web/admin/ledger.js";
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 // Read the exact Admin source once for helper extraction and wiring assertions.
 const ADMIN_SOURCE = await readFile(`${ROOT}/web/admin.js`, "utf8");
+// Read the extracted Dashboard-tab source for cross-module wiring assertions.
+const DASHBOARD_SOURCE = await readFile(`${ROOT}/web/admin/dashboard.js`, "utf8");
 // Read the extracted Ledger-tab source for cross-module wiring assertions.
 const LEDGER_SOURCE = await readFile(`${ROOT}/web/admin/ledger.js`, "utf8");
-// Join both Admin-owned sources for behavior-level occurrence checks.
-const SURFACE_SOURCE = `${ADMIN_SOURCE}\n${LEDGER_SOURCE}`;
+// Join the two governed ledger surfaces for behavior-level occurrence checks.
+const SURFACE_SOURCE = `${DASHBOARD_SOURCE}\n${LEDGER_SOURCE}`;
 // Read the exact listener-free helper source once for resource-wiring assertions.
 const HELPER_SOURCE = await readFile(`${ROOT}/web/core/admin_labels.js`, "utf8");
 // Load the source-locale Admin resource pack.
@@ -77,8 +79,10 @@ test("TEST-132 keeps locale resources and Dashboard/Ledger wiring fail-closed", 
   assert.equal((SURFACE_SOURCE.match(/data-testid="admin-ledger-event"/g) || []).length, 2);
   // Require both event cells to derive visible copy through the locale-backed helper.
   assert.equal((SURFACE_SOURCE.match(/ledgerEventLabel\(row\.transaction_type, row\.game\)/g) || []).length, 2);
-  // Leave only the separately mapped practice-opponent fallback outside the two governed ledger surfaces.
-  assert.equal((SURFACE_SOURCE.match(/humanLabel\(row\.transaction_type\)/g) || []).length, 1);
+  // Keep generic labels out of both governed ledger surfaces.
+  assert.equal((SURFACE_SOURCE.match(/humanLabel\(row\.transaction_type\)/g) || []).length, 0);
+  // Leave only the separately mapped practice-opponent fallback in the Admin dispatcher source.
+  assert.equal((ADMIN_SOURCE.match(/humanLabel\(row\.transaction_type\)/g) || []).length, 1);
 });
 
 // Verify the extracted renderer preserves the exact compact markup and dependency call order.
