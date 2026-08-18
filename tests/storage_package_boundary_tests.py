@@ -19,6 +19,8 @@ from casino.core import storage_base
 from casino.core import storage_reset
 # Import the extracted JSON game-action lifecycle owner for exact mixin checks.
 from casino.core import storage_game_actions_json
+# Import the extracted JSON filesystem and concurrency substrate for exact ownership checks.
+from casino.core import storage_json_infrastructure
 # Import the provider-neutral lifecycle codec owner for exact identity checks.
 from casino.core import storage_game_action_codecs
 # Import the extracted MySQL game-action lifecycle owner for exact mixin checks.
@@ -37,6 +39,8 @@ BASE_SOURCE = ROOT / "casino" / "core" / "storage_base.py"
 RESET_SOURCE = ROOT / "casino" / "core" / "storage_reset.py"
 # Point at the extracted package-ready JSON game-action lifecycle owner.
 JSON_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_json.py"
+# Point at the extracted package-ready JSON filesystem and concurrency substrate.
+JSON_INFRASTRUCTURE_SOURCE = ROOT / "casino" / "core" / "storage_json_infrastructure.py"
 # Point at the extracted package-ready MySQL game-action lifecycle owner.
 MYSQL_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_mysql.py"
 # Point at the provider-neutral durable game-action codec owner.
@@ -185,6 +189,67 @@ MYSQL_PROVIDER_METHOD_NAMES = (
     "write_document",
     "update_document",
 )
+# Bind every JSON filesystem, locking, cache, and planner method moved as one reviewed seam.
+JSON_INFRASTRUCTURE_METHOD_NAMES = (
+    "__init__",
+    "players_path",
+    "ledger_path",
+    "ledger_actions_path",
+    "ledger_action_journal_path",
+    "ledger_lock_path",
+    "json_gate_path",
+    "game_action_journal_path",
+    "game_action_receipts_path",
+    "game_action_claims_path",
+    "game_action_epoch_path",
+    "game_action_states_path",
+    "document_lock_path",
+    "history_path",
+    "document_path",
+    "_ensure_ready_direct",
+    "ensure_ready",
+    "_drop_ledger_cache",
+    "_drop_actions_cache",
+    "_read_json",
+    "_preserve_corrupt_players",
+    "_read_players_document",
+    "_read_normalizable_players_document",
+    "_write_json",
+    "_json_root_key",
+    "_canonical_path_is_within",
+    "_json_control_root",
+    "_exclusive_process_file_lock",
+    "_try_exclusive_process_file_lock",
+    "_json_global_gate",
+    "_try_json_global_gate",
+    "_ledger_process_lock",
+    "_document_process_lock",
+    "_planner_is_active",
+    "_reject_planner_mutation",
+    "_planner_boundary",
+    "_game_action_checkpoint",
+    "_reset_recovery_checkpoint",
+    "_read_game_action_json",
+    "_cleanup_game_action_temps_locked",
+    "_fsync_game_action_parent",
+    "_write_game_action_json",
+    "_remove_game_action_journal",
+    "_append_jsonl",
+)
+# Bind the exact #412/#432 cache field construction order moved with the JSON substrate.
+JSON_CACHE_FIELD_NAMES = (
+    "_ledger_cache_offset",
+    "_ledger_cache_mtime_ns",
+    "_ledger_cache_rows",
+    "_ledger_cache_by_player",
+    "_ledger_cache_by_id",
+    "_ledger_cache_tail_rows",
+    "_actions_cache_registry",
+    "_actions_cache_snapshot_stat",
+    "_actions_cache_journal_offset",
+    "_actions_cache_journal_stat",
+    "_actions_cache_compaction_floor",
+)
 
 
 # Prove the first #728 seam moves ownership without changing the public storage module.
@@ -294,7 +359,7 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         provider_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertTrue(set(RESET_METHOD_NAMES).isdisjoint(provider_methods))
         # Require reset ownership to remain before the provider contracts after later mixins.
-        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
         self.assertIs(storage.JsonStorageProvider.reset_transaction, storage_reset.JsonResetMixin.reset_transaction)
         # Keep ordinary JSON, ledger, document, and game-action implementations outside reset ownership.
         for forbidden in ("_read_json", "_write_json", "transact_ledger", "read_document", "execute_game_action_once", "resolve_game_action"):
@@ -448,6 +513,63 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         for forbidden in ("_drop_ledger_cache", "_read_actions_registry", "_json_global_gate", "_read_game_action_journal"):
             # Name any accidentally broadened provider ownership precisely.
             self.assertNotIn(forbidden, provider_source)
+
+    # Require the sixth #728 seam to single-own JSON filesystem and concurrency infrastructure.
+    def test_json_infrastructure_is_bounded_single_owned_and_reexported(self):
+        # Read the extracted infrastructure and historical facade as inert UTF-8 source.
+        infrastructure_source = JSON_INFRASTRUCTURE_SOURCE.read_text(encoding="utf-8")
+        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        # Keep both sides of this split below the permanent parent-issue ceiling.
+        self.assertLess(len(infrastructure_source.splitlines()), 1200)
+        self.assertLess(len(storage_source.splitlines()), 1200)
+        # Parse both modules without opening any filesystem path or provider gate.
+        infrastructure_tree = ast.parse(infrastructure_source)
+        storage_tree = ast.parse(storage_source)
+        # Locate the sole substrate owner and the concrete compatibility provider.
+        infrastructure_class = next(node for node in infrastructure_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonInfrastructureMixin")
+        provider_class = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
+        # Require the exact reviewed substrate inventory and no duplicate concrete declarations.
+        owned_methods = {node.name for node in infrastructure_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertEqual(owned_methods, set(JSON_INFRASTRUCTURE_METHOD_NAMES))
+        provider_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertTrue(set(JSON_INFRASTRUCTURE_METHOD_NAMES).isdisjoint(provider_methods))
+        # Preserve substrate-first method resolution before action, reset, and public contracts.
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
+        # Require every historical provider descriptor to resolve to the exact extracted object.
+        for method_name in JSON_INFRASTRUCTURE_METHOD_NAMES:
+            # Compare descriptor identity without constructing a provider or touching storage.
+            self.assertIs(getattr(storage.JsonStorageProvider, method_name), getattr(storage_json_infrastructure.JsonInfrastructureMixin, method_name), method_name)
+
+    # Require process-shared JSON gate state and #412/#432 cache invalidation to move exactly once.
+    def test_json_infrastructure_preserves_gate_and_cache_ownership(self):
+        # Read and parse both modules without executing lock construction.
+        infrastructure_source = JSON_INFRASTRUCTURE_SOURCE.read_text(encoding="utf-8")
+        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        infrastructure_tree = ast.parse(infrastructure_source)
+        storage_tree = ast.parse(storage_source)
+        # Collect top-level assignment names to distinguish ownership from compatibility imports.
+        def assigned_names(tree):
+            # Flatten simple reviewed top-level assignments into one ownership set.
+            return {target.id for node in tree.body if isinstance(node, (ast.Assign, ast.AnnAssign)) for target in ((node.targets if isinstance(node, ast.Assign) else [node.target])) if isinstance(target, ast.Name)}
+        # Require the three mutable gate objects only in the extracted owner.
+        for name in ("_JSON_GATE_REGISTRY_LOCK", "_JSON_GATE_LOCKS", "_JSON_GATE_LOCAL"):
+            # Bind one exact object through the compatibility import and reject a duplicate assignment.
+            self.assertIn(name, assigned_names(infrastructure_tree), name)
+            self.assertNotIn(name, assigned_names(storage_tree), name)
+            self.assertIs(getattr(storage, name), getattr(storage_json_infrastructure, name), name)
+        # Require the shared root-lock function to remain one exact implementation object.
+        self.assertIs(storage._json_gate_lock, storage_json_infrastructure._json_gate_lock)
+        # Locate the exact construction and invalidation methods in the extracted class.
+        infrastructure_class = next(node for node in infrastructure_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonInfrastructureMixin")
+        methods = {node.name: node for node in infrastructure_class.body if isinstance(node, ast.FunctionDef)}
+        # Preserve the reviewed construction order of every ledger and action cache field.
+        initialized = tuple((node.target if isinstance(node, ast.AnnAssign) else node.targets[0]).attr for node in methods["__init__"].body if isinstance(node, (ast.Assign, ast.AnnAssign)) and (isinstance(node, ast.AnnAssign) or len(node.targets) == 1) and isinstance(node.target if isinstance(node, ast.AnnAssign) else node.targets[0], ast.Attribute) and (node.target if isinstance(node, ast.AnnAssign) else node.targets[0]).attr in JSON_CACHE_FIELD_NAMES)
+        self.assertEqual(initialized, JSON_CACHE_FIELD_NAMES)
+        # Preserve exact invalidation field order for ledger and committed-action caches.
+        for method_name, expected in (("_drop_ledger_cache", JSON_CACHE_FIELD_NAMES[:6]), ("_drop_actions_cache", JSON_CACHE_FIELD_NAMES[6:])):
+            # Read assignments in source order rather than relying on mutable runtime state.
+            invalidated = tuple(node.targets[0].attr for node in methods[method_name].body if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Attribute))
+            self.assertEqual(invalidated, expected, method_name)
 
     # Require shared history fields to move once while preserving historical identity.
     def test_history_fields_are_single_owned_by_base_and_reexported(self):
