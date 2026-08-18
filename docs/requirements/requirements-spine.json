@@ -1035,9 +1035,12 @@
       "implementation_files": [
         "casino/admin.py",
         "web/admin.html",
-        "web/admin.js"
+        "web/admin.js",
+        "web/admin/telemetry.js",
+        "tests/unit/admin_telemetry_module.test.mjs"
       ],
-      "notes": ""
+      "changed_in": "issue-975-admin-telemetry-module",
+      "notes": "Issue #975 extracts the read-only Telemetry renderer behind an explicit dependency boundary while listener-free parity preserves the three frozen log routes, sequential failure behavior, pane order, stable hooks, calm empty states, and server-error privacy flag."
     },
     {
       "id": "ADMIN-008",
@@ -2541,11 +2544,13 @@
         "casino/admin.py",
         "web/admin.html",
         "web/admin.js",
+        "web/admin/telemetry.js",
+        "tests/unit/admin_telemetry_module.test.mjs",
         "web/styles.css"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "issue-975-admin-telemetry-module",
+      "notes": "Introduced in v9.1.0. Issue #975 extracts the read-only Telemetry renderer while preserving the exact app, error, and browser request order; title and helper copy; compact three-card topology; empty-state copy and hooks; and technical-detail suppression only for server errors."
     },
     {
       "id": "ADMIN-017",

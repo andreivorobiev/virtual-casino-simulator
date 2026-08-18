@@ -14,7 +14,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.20.10
+- admin: 1.20.11
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.5
 - teen_patti: 1.1.5
-- tests: 1.108.10
-- docs: 1.104.10
+- tests: 1.108.11
+- docs: 1.104.11
 - contracts: 1.62.4
 - tooling: 1.41.2
 - commenting_policy: 2.0.0
