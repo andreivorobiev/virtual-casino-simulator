@@ -120,8 +120,8 @@ governance, per-game docs), `tests/`, `scripts/` (validators and tooling), `migr
 
 ## Persistence
 
-Storage is behind one `StorageProvider` interface (`casino/core/storage.py`) with two
-implementations selected by configuration:
+Storage is behind one `StorageProvider` interface (`casino/core/storage/`) with a compatibility
+facade in `casino/core/storage/__init__.py` and two implementations selected by configuration:
 
 - **`JsonStorageProvider`** — default. JSON/JSONL files under `data/`, with atomic temp-file
   replacement, a cross-process wallet lock, and a write-ahead action journal

@@ -16,9 +16,9 @@ from casino.core.clock import utc_now
 # Import provider-neutral action values and validation helpers.
 from casino.core.game_action import GameActionIdentity, GameActionMovement, GameActionPlan, GameActionReceipt, GameActionResolution, GameActionResources, GameActionSnapshot, apply_plan_to_snapshot, validate_execution_request, validate_resolution_request
 # Import the provider-neutral codecs shared by JSON and MySQL lifecycle storage.
-from casino.core.storage_game_action_codecs import GameActionCodecMixin
+from casino.core.storage.game_action_codecs import GameActionCodecMixin
 # Import the private epoch constants shared with reset lifecycle storage.
-from casino.core.storage_reset import _GAME_ACTION_EPOCH_STORAGE_VERSION, _GAME_ACTION_MAX_EPOCH, _GAME_ACTION_STORAGE_VERSION
+from casino.core.storage.reset import _GAME_ACTION_EPOCH_STORAGE_VERSION, _GAME_ACTION_MAX_EPOCH, _GAME_ACTION_STORAGE_VERSION
 # Import fixed API error boundaries used by action validation and recovery.
 from casino.errors import ConflictError, NotFoundError, ValidationError
 

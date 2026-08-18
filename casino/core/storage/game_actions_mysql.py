@@ -18,9 +18,9 @@ from casino.core.game_action import GameActionIdentity, GameActionPlan, GameActi
 # Import read-only runtime schema verification for exact schema-four eligibility.
 from casino.core.mysql_migrations import verify_runtime_compatibility
 # Import the strict provider JSON decoder used for locked state documents.
-from casino.core.storage_base import _decode_json
+from casino.core.storage.base import _decode_json
 # Import the shared reset-epoch range accepted by both storage providers.
-from casino.core.storage_reset import _GAME_ACTION_MAX_EPOCH
+from casino.core.storage.reset import _GAME_ACTION_MAX_EPOCH
 # Import fixed API error boundaries used by lifecycle validation and recovery.
 from casino.errors import ConflictError, NotFoundError, ValidationError
 

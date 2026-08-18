@@ -28,7 +28,7 @@ from typing import Any, Callable
 # Import runtime roots and schema identity used by local JSON readiness and wallet validation.
 from casino.config import DATA_DIR, LOG_DIR, SCHEMA_VERSION
 # Import provider-neutral wallet validators used before any money state is exposed.
-from casino.core.storage_base import _normalizable_players_document, _validated_players_document
+from casino.core.storage.base import _normalizable_players_document, _validated_players_document
 # Import fixed public error boundaries without leaking filesystem details.
 from casino.errors import ConflictError, ValidationError
 
