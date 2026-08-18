@@ -88,6 +88,8 @@ class MobileCoreSecurityTests(unittest.TestCase):
         runtime_source = (MOBILE / "runtime" / "mobile-runtime.js").read_text(encoding="utf-8")
         # Read the shared auth UI controller.
         app_source = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        # Read the extracted password-reset view that now owns transient bearer state.
+        reset_source = (ROOT / "web" / "views" / "reset.js").read_text(encoding="utf-8")
         # Require only the optional scoped hook in shared browser source.
         self.assertIn("globalThis.CasinoMobileTransport?.fetch", api_source)
         # Reject the former global fetch rewriting defect.
@@ -122,12 +124,12 @@ class MobileCoreSecurityTests(unittest.TestCase):
         # Require both registered login and guest creation to use the same compound transaction.
         self.assertEqual(api_source.count("runNativeAccountSwitch(() => post('/api/v2/auth/"), 2)
         # Require a module-held reset bearer rather than a rerender-local token.
-        self.assertIn("let passwordResetBearerToken = '';", app_source)
+        self.assertIn("let passwordResetBearerToken = '';", reset_source)
         # Require arrival capture and immediate token-free history replacement.
-        self.assertIn("passwordResetBearerToken = holdTransientBearer(passwordResetBearerToken, arrivalToken);", app_source)
-        self.assertIn("history.replaceState({}, '', '/account/reset')", app_source)
+        self.assertIn("passwordResetBearerToken = holdTransientBearer(passwordResetBearerToken, arrivalToken);", reset_source)
+        self.assertIn("historyRef.replaceState({}, '', '/account/reset')", reset_source)
         # Require only terminal success to clear the held reset bearer.
-        self.assertEqual(app_source.count("passwordResetBearerToken = '';"), 2)
+        self.assertEqual(reset_source.count("passwordResetBearerToken = '';"), 2)
 
     # Require exact verified-link, secure-vault, and header ownership source contracts.
     def test_native_verified_link_and_vault_sources_are_exact(self) -> None:
