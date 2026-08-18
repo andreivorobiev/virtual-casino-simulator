@@ -14,8 +14,8 @@ from pathlib import Path
 
 # Resolve the repository root from this script's tracked location.
 ROOT=Path(__file__).resolve().parents[1]
-# Point at the exact runner source whose literal BR identifiers define valid profile keys.
-RUNNER_PATH=ROOT/'tests'/'run_tests.py'
+# Point at the extracted runner implementation whose literal BR identifiers define valid profile keys.
+RUNNER_PATH=ROOT/'tests'/'runner.py'
 # Point at the tracked profile consumed by duration-balanced packing.
 PROFILE_PATH=ROOT/'tests'/'browser_case_durations.json'
 # Bound the reviewed profile before parsing it.

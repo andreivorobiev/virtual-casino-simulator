@@ -43,8 +43,10 @@ LONG_SOAK_WORKFLOW = ROOT / ".github" / "workflows" / "long-suite-soak.yml"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 # Point at the long-suite runner so artifact and listener cleanup invariants can be inspected inertly.
 LONG_SUITE_RUNNER = ROOT / "tests" / "long_suites.py"
-# Point at the browser runner whose inline state must be affinity-owned.
-BROWSER_RUNNER = ROOT / "tests" / "run_tests.py"
+# Point at the stable compatibility entrypoint retained by workflows and operators.
+TEST_ENTRYPOINT = ROOT / "tests" / "run_tests.py"
+# Point at the extracted runner implementation whose inline state must remain governed.
+BROWSER_RUNNER = ROOT / "tests" / "runner.py"
 # Point at the extracted pure Browser shard policy module. (TEST-242)
 BROWSER_SHARDING = ROOT / "tests" / "browser_sharding.py"
 # Point at the reviewed pre-slice count and sorted case-id inventory. (TEST-242)
@@ -279,6 +281,40 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Parse the source as data so ownership checks cannot execute browser code.
         return source, ast.parse(source)
 
+    # Prove the historical command path is now a narrow compatibility shim. (TEST-242)
+    def test_run_tests_entrypoint_is_thin_compatibility_shim(self):
+        # Read the public entrypoint without importing the extracted runner.
+        source = self.workflow_text(TEST_ENTRYPOINT)
+        # Parse the shim as inert syntax so this structural check opens no listener or Browser.
+        tree = ast.parse(source)
+        # Enforce the parent issue's final under-three-hundred-line ceiling.
+        self.assertLess(len(source.splitlines()), 300)
+        # Reject function or class implementations that would rebuild a second runner monolith.
+        self.assertFalse(any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for node in tree.body))
+        # Locate the single explicit compatibility import from the implementation owner.
+        runner_imports = [node for node in tree.body if isinstance(node, ast.ImportFrom) and node.module == "tests.runner"]
+        # Require exactly one reviewed export boundary rather than scattered implementation imports.
+        self.assertEqual(len(runner_imports), 1)
+        # Bind every compatibility helper used by focused callers plus the one CLI delegate.
+        self.assertEqual(
+            {alias.name for alias in runner_imports[0].names},
+            {"DEFAULT_AUTH_EMAIL", "DEFAULT_AUTH_PASSWORD", "api", "login_default_user", "main", "roulette_i18n_failure_diagnostic", "start_server", "stop_server"},
+        )
+        # Require exactly one process-status delegation through the extracted main function.
+        self.assertEqual(source.count("raise SystemExit(main())"), 1)
+        # Reject case registrations and every lifecycle implementation from the compatibility surface.
+        for forbidden in ("run_case(", "def start_server", "def stop_server", "def run_api_tests", "def run_browser_tests", "sync_playwright", "subprocess.Popen"):
+            # Name the first regressed responsibility without executing it.
+            self.assertNotIn(forbidden, source)
+        # Require the moved implementation to retain the unchanged CLI dispatcher and suite owners.
+        implementation = self.workflow_text(BROWSER_RUNNER)
+        # Keep the one accepted main dispatcher in the implementation owner.
+        self.assertIn("def main():", implementation)
+        # Keep both API and Browser lifecycle functions out of the public shim.
+        self.assertIn("def run_api_tests():", implementation)
+        # Keep the Browser owner in the implementation module beside shared lifecycle state.
+        self.assertIn("def run_browser_tests(", implementation)
+
     # Read and parse the extracted shard policy without importing the compatibility runner.
     def browser_sharding_syntax(self):
         # Read exact checked-in shard-policy source once for literal ownership assertions.
@@ -290,8 +326,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     def test_browser_case_inventory_matches_runner_exactly(self):
         # Parse the compatibility runner without importing Playwright or opening a listener.
         source, _tree = self.browser_runner_syntax()
-        # Import the listener-free discovery seam without starting Playwright or a listener.
-        from tests import run_tests as browser_runner_module
+        # Import the listener-free discovery seam from the extracted implementation without starting Playwright or a listener.
+        from tests import runner as browser_runner_module
         # Expand inline and reviewed area-owned registrations in exact source order.
         case_ids = browser_runner_module.browser_case_ids()
         # Load the checked-in count and sorted-ID baseline as inert JSON.
@@ -1522,7 +1558,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove the complete auth-backend/PWA affinity family has one external owner and one runner delegation.
     def test_browser_auth_backend_pwa_affinity_registration_ownership_is_exact(self):
         # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
-        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        runner_source = self.workflow_text(BROWSER_RUNNER)
         # Read the complete affinity owner independently of its import path.
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
         # Bind the exact permanent producer/consumer identities declared by browser_sharding.py.
@@ -1555,7 +1591,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove the complete disposable guest-lifecycle affinity family has one external owner and one runner delegation.
     def test_browser_guest_lifecycle_affinity_registration_ownership_is_exact(self):
         # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
-        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        runner_source = self.workflow_text(BROWSER_RUNNER)
         # Read the complete guest owner independently of its import path.
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "guest_lifecycle.py")
         # Bind the exact permanent guest lifecycle identities declared by browser_sharding.py.
@@ -1588,7 +1624,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove the complete auth/lobby affinity family has one external owner and one runner delegation.
     def test_browser_auth_lobby_affinity_registration_ownership_is_exact(self):
         # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
-        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        runner_source = self.workflow_text(BROWSER_RUNNER)
         # Read the complete auth/lobby owner independently of its import path.
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_lobby.py")
         # Bind the exact permanent identities in their historical source order.
@@ -1628,7 +1664,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove the complete Roulette/Slots/Keno affinity family has one external owner and one runner delegation.
     def test_browser_roulette_slots_keno_affinity_registration_ownership_is_exact(self):
         # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
-        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        runner_source = self.workflow_text(BROWSER_RUNNER)
         # Read the complete multi-game owner independently of its import path.
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py")
         # Bind the exact permanent identities in their historical source order.
@@ -1667,7 +1703,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove the complete Bingo-through-Admin affinity family has one external owner and one runner delegation.
     def test_browser_bingo_admin_affinity_registration_ownership_is_exact(self):
         # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
-        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        runner_source = self.workflow_text(BROWSER_RUNNER)
         # Read the complete final affinity owner independently of its import path.
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "bingo_admin.py")
         # Bind all permanent identities in their historical source order.
@@ -1713,7 +1749,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Select the one browser runner function that owns all permanent BR cases.
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Import the listener-free runner module so the test uses its exact reviewed packer.
-        from tests import run_tests as browser_runner_module
+        from tests import runner as browser_runner_module
         # Discover inline and extracted permanent IDs at their exact cross-file source positions.
         case_ids = browser_runner_module.browser_case_ids()
         # Bind the complete inventory after adding real self-service conversion analytics acceptance. (TEST-195)
@@ -1822,7 +1858,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove hostile duration profile values fail with one fixed diagnostic and no mutation.
     def test_browser_duration_profile_is_strict_bounded_and_value_free(self):
         # Import the listener-free runner module without starting Browser or a server.
-        from tests import run_tests as browser_runner_module
+        from tests import runner as browser_runner_module
         # Preserve the tracked path and shared runner state across isolated hostile inputs.
         original_path = browser_runner_module.BROWSER_DURATION_PROFILE_PATH
         # Snapshot mutable globals that strict profile reads must never change.
@@ -1919,7 +1955,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove duration evidence is additive only to active Browser result rows.
     def test_browser_duration_publication_preserves_other_result_schemas(self):
         # Import the shared listener-free runner helpers without starting a server.
-        from tests import run_tests as browser_runner_module
+        from tests import runner as browser_runner_module
         # Preserve every shared runner global this focused test changes.
         original_results = browser_runner_module.RESULTS
         # Preserve the active reporter exactly.
@@ -2143,7 +2179,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     # Prove explicit detector selection controls aggregate coverage and cannot be forged by shard artifacts.
     def test_browser_aggregate_verifies_detector_owned_selection(self):
         # Import the listener-free runner module so source discovery and synthetic declarations match real packing.
-        from tests import run_tests as browser_runner_module
+        from tests import runner as browser_runner_module
         # Expand the permanent Browser inventory across the runner and reviewed area owners.
         case_ids = browser_runner_module.browser_case_ids()
         # Parse the extracted shard policy where affected-game ownership now lives. (TEST-242)
@@ -2169,7 +2205,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
                 # Write the exact filename consumed by the aggregate verifier.
                 (Path(temp_dir) / f"browser_results_shard_{index}_of_6.json").write_text(json.dumps(payload), encoding="utf-8")
             # Run the real aggregate CLI without invoking a browser or listener.
-            verified = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            verified = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require exact selected-case coverage to pass.
             self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
             # Forge one shard's declaration while keeping all case rows unchanged.
@@ -2181,7 +2217,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Persist the forged declaration for the negative regression.
             forged_path.write_text(json.dumps(forged), encoding="utf-8")
             # Re-run the real aggregate verifier against the same expected detector input.
-            rejected = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            rejected = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require the forged shard selection to fail closed.
             self.assertNotEqual(rejected.returncode, 0, rejected.stdout + rejected.stderr)
             # Retain a focused diagnostic proving the expected-selection mismatch was detected.
@@ -2193,7 +2229,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Persist the missing-owner forgery.
             forged_path.write_text(json.dumps(forged), encoding="utf-8")
             # Re-run the real aggregate verifier against the incomplete declaration.
-            missing_owner = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            missing_owner = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require each shard's exact owned_cases declaration, not merely result union.
             self.assertNotEqual(missing_owner.returncode, 0, missing_owner.stdout + missing_owner.stderr)
             # Pin the bounded ownership diagnostic.
@@ -2203,7 +2239,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Persist the duplicate-owner forgery.
             forged_path.write_text(json.dumps(forged), encoding="utf-8")
             # Re-run aggregate verification against the duplicated declaration.
-            duplicate_owner = subprocess.run([sys.executable, str(BROWSER_RUNNER), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            duplicate_owner = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require duplicate ownership to fail closed.
             self.assertNotEqual(duplicate_owner.returncode, 0, duplicate_owner.stdout + duplicate_owner.stderr)
             # Pin the fixed declaration diagnostic.
