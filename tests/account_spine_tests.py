@@ -288,8 +288,8 @@ class ProductAccountSpineTests(unittest.TestCase):
     def test_admin_access_grid_bounds_localized_controls(self) -> None:
         # Resolve the repository stylesheet without starting a browser or listener.
         styles = (Path(__file__).resolve().parents[1] / "web" / "styles.css").read_text(encoding="utf-8")
-        # Resolve the governed Browser harness so its owner-relative alignment remains reviewable without Chromium.
-        browser_harness = (Path(__file__).resolve().parents[1] / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Resolve the extracted Admin Browser owner so its alignment remains reviewable without Chromium.
+        browser_harness = (Path(__file__).resolve().parents[1] / "tests" / "cases" / "browser" / "bingo_admin.py").read_text(encoding="utf-8")
         # Require bounded desktop tracks for lifecycle and the localized save action only.
         self.assertIn("grid-template-columns: minmax(112px, 1fr) minmax(172px, 1.4fr);", styles)
         # Require every direct grid child to shrink inside its assigned track.

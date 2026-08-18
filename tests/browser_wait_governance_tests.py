@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNNER_SOURCE = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
 # Read the extracted Roulette owner so its semantic wait remains source-governed after #727 delegation.
 ROULETTE_OWNER_SOURCE = (ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py").read_text(encoding="utf-8")
+# Read the extracted Bingo/Admin owner for its state-driven reload and feedback-save gates.
+BINGO_ADMIN_OWNER_SOURCE = (ROOT / "tests" / "cases" / "browser" / "bingo_admin.py").read_text(encoding="utf-8")
 
 
 # Prove Browser acceptance waits for authoritative state instead of elapsed time.
@@ -70,7 +72,7 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
     # Require the Bingo Browser chain to remount through an observed state response.
     def test_bingo_terminal_gate_uses_authoritative_route_readiness(self) -> None:
         # Slice the exact Bingo producer-consumer chain without constraining later games.
-        bingo_source = RUNNER_SOURCE.partition("if browser_shard_owns_group('bingo_admin'):")[2].partition("# Seed one isolated deferred natural")[0]
+        bingo_source = BINGO_ADMIN_OWNER_SOURCE.partition("if browser_shard_owns_group('bingo_admin'):")[2].partition("# Seed one isolated deferred natural")[0]
         # Preserve the two permanent case ids and their exact existing requirement mappings.
         self.assertEqual(bingo_source.count("run_case('BR-BINGO-PURCHASE-001',['BINGO-012','BINGO-022','LEDGER-020','TEST-010','TEST-012']"), 1)
         # Preserve the premium terminal case identity and mapping byte-for-byte.
@@ -152,9 +154,9 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
     # Require every Admin feedback draft interaction to observe the exact authoritative POST.
     def test_admin_feedback_draft_uses_state_driven_readiness(self) -> None:
         # Slice only the named Admin feedback Browser function.
-        feedback_source = RUNNER_SOURCE.partition("def admin_feedback_browser():")[2].partition("run_case('BR-ADMIN-FEEDBACK-001'")[0]
+        feedback_source = BINGO_ADMIN_OWNER_SOURCE.partition("def admin_feedback_browser():")[2].partition("run_case('BR-ADMIN-FEEDBACK-001'")[0]
         # Preserve the permanent case id and its exact existing requirement mapping.
-        self.assertEqual(RUNNER_SOURCE.count("run_case('BR-ADMIN-FEEDBACK-001',['ADMIN-025','I18N-005','UX-019','TEST-094']"), 1)
+        self.assertEqual(BINGO_ADMIN_OWNER_SOURCE.count("run_case('BR-ADMIN-FEEDBACK-001',['ADMIN-025','I18N-005','UX-019','TEST-094']"), 1)
         # Require all three source call sites to use the response-backed helper.
         self.assertEqual(feedback_source.count("prepare_admin_feedback_draft(page,feedback_report_id)"), 3)
         # Require the preceding save to wait for its authoritative response and a replacement route generation.

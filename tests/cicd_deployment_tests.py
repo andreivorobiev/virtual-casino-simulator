@@ -1664,6 +1664,48 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one atomic skip for the exact complete affinity group.
         self.assertEqual(skipped_groups, ["roulette_slots_keno"])
 
+    # Prove the complete Bingo-through-Admin affinity family has one external owner and one runner delegation.
+    def test_browser_bingo_admin_affinity_registration_ownership_is_exact(self):
+        # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
+        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        # Read the complete final affinity owner independently of its import path.
+        owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "bingo_admin.py")
+        # Bind all permanent identities in their historical source order.
+        expected_ids = (
+            "BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001",
+            "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001",
+            "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001",
+            "BR-FEEDBACK-001", "BR-ADMIN-NAV-AUTH-001", "BR-ADMIN-001", "BR-ADMIN-DIAGNOSTICS-001",
+            "BR-ADMIN-ECONOMICS-001", "BR-ADMIN-SESSION-POLICY-001", "BR-ADMIN-LEDGER-LABELS-001",
+            "BR-ADMIN-FEEDBACK-001", "BR-ADMIN-OAUTH-001", "BR-ADMIN-MAIL-001", "BR-INVITE-001",
+            "BR-OPS-001", "BR-ADMIN-PRACTICE-OPPONENT-001", "BR-ADMIN-USERS-001", "BR-ADMIN-GUEST-001",
+            "BR-AUDIO-001", "BR-I18N-FOUNDATION-001", "BR-I18N-ADMIN-001",
+        )
+        # Extract only literal permanent registrations from the new owner.
+        owner_ids = tuple(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
+        # Require exact identity and historical order without invented or duplicate cases.
+        self.assertEqual(owner_ids, expected_ids)
+        # Reject any remaining inline registration in the compatibility runner.
+        for case_id in expected_ids:
+            # Keep each permanent identity under exactly one executable source owner.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the group's exact historical position.
+        self.assertEqual(runner_source.count("browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)"), 1)
+        # Require one owner-level guard without repeated partial setup checks.
+        self.assertEqual(owner_source.count("browser_shard_owns_group('bingo_admin')"), 1)
+        # Require the extracted owner to advance all 30 source positions atomically on non-owning shards.
+        self.assertEqual(owner_source.count("skip_browser_affinity('bingo_admin')"), 1)
+        # Import the extracted owner without starting the compatibility runner.
+        from tests.cases.browser import bingo_admin
+        # Retain the exact skip identity emitted by a non-owning shard.
+        skipped_groups = []
+        # Reject any accidental case execution on a shard that does not own the complete group.
+        reject_case = lambda *_args: self.fail("non-owner executed a Bingo/Admin case")
+        # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
+        bingo_admin.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 29))
+        # Require one atomic skip for the exact complete affinity group.
+        self.assertEqual(skipped_groups, ["bingo_admin"])
+
     # Prove declared producer/consumer groups fit one deterministic shard and guard their bodies.
     def test_browser_shard_affinity_groups_are_contiguous_and_guarded(self):
         # Parse the exact browser runner source without importing it.
@@ -1684,6 +1726,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         auth_lobby_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_lobby.py")
         # Read the extracted Roulette/Slots/Keno owner for guard-location checks below.
         roulette_slots_keno_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py")
+        # Read the extracted Bingo-through-Admin owner for guard-location checks below.
+        bingo_admin_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "bingo_admin.py")
         # Parse the extracted game-family owner so its Keno integrity callbacks remain structurally inspected.
         roulette_slots_keno_tree = ast.parse(roulette_slots_keno_source)
         # Compute the same deterministic six-runner partition used by the workflow.
@@ -1753,13 +1797,14 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Require all producers and consumers to execute on one shard.
             self.assertEqual(len(owners), 1, group_name)
             # Extracted Browser affinities own their guard and skip outside the compatibility runner.
-            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette_slots_keno"}:
+            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette_slots_keno", "bingo_admin"}:
                 # Bind the exact source-level delegation alias and external owner for this family.
                 delegation_alias, owner_source = {
                     "auth_backend_pwa": ("browser_auth_backend_pwa", auth_backend_pwa_source),
                     "guest_lifecycle": ("browser_guest_lifecycle", guest_lifecycle_source),
                     "auth_lobby": ("browser_auth_lobby", auth_lobby_source),
                     "roulette_slots_keno": ("browser_roulette_slots_keno", roulette_slots_keno_source),
+                    "bingo_admin": ("browser_bingo_admin", bingo_admin_source),
                 }[group_name]
                 # Require one source-level delegation so cross-file discovery preserves the group's exact position.
                 self.assertEqual(source.count(f"{delegation_alias}.run_cases("), 1)
@@ -2022,31 +2067,31 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Read the complete browser function for declared-driver inspection.
         runner_source = ast.get_source_segment(source, runner)
+        # Read the extracted shared-shell and Admin owner that contains the route interpolation producers.
+        owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "bingo_admin.py")
+        # Combine runner delegation and owner source so every reviewed producer remains visible to policy.
+        complete_source = runner_source + owner_source
         # Require the Slots history interpolation to own one visible spin producer.
-        self.assertIn("'games/slots':drive_slots_interpolation", runner_source)
+        self.assertIn("'games/slots':drive_slots_interpolation", complete_source)
         # Require the Keno final-draw interpolation to own one visible draw producer.
-        self.assertIn("'games/keno':drive_keno_interpolation", runner_source)
+        self.assertIn("'games/keno':drive_keno_interpolation", complete_source)
         # Require every route-specific producer to execute after mount and before audit.
-        self.assertIn("if interpolation_driver: interpolation_driver()", runner_source)
+        self.assertIn("if interpolation_driver: interpolation_driver()", complete_source)
         # Require state production to use only current player-visible action controls.
-        self.assertIn("page.get_by_test_id('slots-spin').click()", runner_source)
+        self.assertIn("page.get_by_test_id('slots-spin').click()", complete_source)
         # Require the Keno driver to use the real draw action rather than a hidden API shortcut.
-        self.assertIn("page.get_by_test_id('keno-draw').click()", runner_source)
+        self.assertIn("page.get_by_test_id('keno-draw').click()", complete_source)
 
     # Prove expected normal-role denials cannot poison the final browser-error invariant.
     def test_browser_admin_affinity_clears_only_expected_denial_observations(self):
-        # Read exact browser source without importing its runtime.
-        source, tree = self.browser_runner_syntax()
-        # Select the browser runner and isolate its source.
-        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
-        # Read the complete browser function for producer/cleanup ordering checks.
-        runner_source = ast.get_source_segment(source, runner)
+        # Read the extracted Admin owner without importing its Browser runtime.
+        owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "bingo_admin.py")
         # Locate the normal-role authorization producer on the Admin-owned shard.
-        producer_index = runner_source.index("normal_admin_navigation=collect_normal_admin_navigation()")
+        producer_index = owner_source.index("normal_admin_navigation=collect_normal_admin_navigation()")
         # Locate the bounded expected-denial cleanup after that producer.
-        cleanup_index = runner_source.index("console_errors.clear(); http_errors.clear()", producer_index)
+        cleanup_index = owner_source.index("console_errors.clear(); http_errors.clear()", producer_index)
         # Locate Admin login after the normal-role denial evidence is retained.
-        admin_login_index = runner_source.index("admin_browser_login=page.request.post", producer_index)
+        admin_login_index = owner_source.index("admin_browser_login=page.request.post", producer_index)
         # Require expected 403 observations to clear only after collection and before Admin activity.
         self.assertLess(producer_index, cleanup_index)
         # Preserve final invariant signal for every unexpected Admin-side browser failure.
