@@ -6,7 +6,7 @@
 export function createInvitationView(dependencies) {
   // Capture the accepted browser, API, locale, and presentation seams.
   const {
-    cryptoRef, documentRef, getLocaleState, historyRef, redeemInvitation,
+    cryptoRef, documentRef, getLocaleState, historyRef, html, redeemInvitation,
     renderLoginGate, safe, sessionStorageRef, setSession, syncFeedbackReporter,
     t, transientRouteBearer, wireLocaleSelect, windowRef,
   } = dependencies;
@@ -35,22 +35,22 @@ export function createInvitationView(dependencies) {
   // Render explicit invitation fields and generic result copy.
   function invitationMarkup(message, success) {
     // Preserve restricted-preview identity and explanation.
-    const heading = `<p class="eyebrow">${safe(t('invitation.eyebrow', {}, 'shell'))}</p><h1>${safe(t('invitation.title', {}, 'shell'))}</h1>`;
-    const copy = `<p class="auth-copy">${safe(t('invitation.copy', {}, 'shell'))}</p>`;
+    const heading = html`<p class="eyebrow">${t('invitation.eyebrow', {}, 'shell')}</p><h1>${t('invitation.title', {}, 'shell')}</h1>`;
+    const copy = html`<p class="auth-copy">${t('invitation.copy', {}, 'shell')}</p>`;
     // Preserve mailbox, display name, password, and locale inputs.
-    const email = `<label>${safe(t('invitation.email', {}, 'shell'))}<input id="invitation-email" data-testid="invitation-email" type="email" autocomplete="email" maxlength="254" required></label>`;
-    const nameInput = '<input id="invitation-display-name" data-testid="invitation-display-name" autocomplete="name" maxlength="80" required>';
-    const name = `<label>${safe(t('invitation.displayName', {}, 'shell'))}${nameInput}</label>`;
-    const passwordInput = '<input id="invitation-password" data-testid="invitation-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>';
-    const password = `<label>${safe(t('invitation.password', {}, 'shell'))}${passwordInput}</label>`;
-    const locale = `<label>${safe(t('invitation.language', {}, 'shell'))}<select id="invitation-locale" data-testid="invitation-locale"></select></label>`;
+    const email = html`<label>${t('invitation.email', {}, 'shell')}<input id="invitation-email" data-testid="invitation-email" type="email" autocomplete="email" maxlength="254" required></label>`;
+    const nameInput = html`<input id="invitation-display-name" data-testid="invitation-display-name" autocomplete="name" maxlength="80" required>`;
+    const name = html`<label>${t('invitation.displayName', {}, 'shell')}${nameInput}</label>`;
+    const passwordInput = html`<input id="invitation-password" data-testid="invitation-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>`;
+    const password = html`<label>${t('invitation.password', {}, 'shell')}${passwordInput}</label>`;
+    const locale = html`<label>${t('invitation.language', {}, 'shell')}<select id="invitation-locale" data-testid="invitation-locale"></select></label>`;
     // Preserve explicit current-terms acceptance and the primary mutation.
-    const terms = `<label class="check-row"><input id="invitation-terms" data-testid="invitation-terms" type="checkbox" required><span>${safe(t('invitation.terms', {}, 'shell'))}</span></label>`;
-    const submit = `<button class="primary" data-testid="invitation-submit" type="submit">${safe(t('invitation.submit', {}, 'shell'))}</button>`;
-    const status = `<p id="invitation-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p>`;
-    const form = `<form id="invitation-form" class="auth-form">${email}${name}${password}${locale}${terms}${submit}${status}</form>`;
-    const back = `<a href="/" data-testid="invitation-login-link">${safe(t('invitation.back', {}, 'shell'))}</a>`;
-    return `<section class="auth-panel" data-testid="invitation-redemption">${heading}${copy}${form}${back}</section>`;
+    const terms = html`<label class="check-row"><input id="invitation-terms" data-testid="invitation-terms" type="checkbox" required><span>${t('invitation.terms', {}, 'shell')}</span></label>`;
+    const submit = html`<button class="primary" data-testid="invitation-submit" type="submit">${t('invitation.submit', {}, 'shell')}</button>`;
+    const status = html`<p id="invitation-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${message}</p>`;
+    const form = html`<form id="invitation-form" class="auth-form">${email}${name}${password}${locale}${terms}${submit}${status}</form>`;
+    const back = html`<a href="/" data-testid="invitation-login-link">${t('invitation.back', {}, 'shell')}</a>`;
+    return html`<section class="auth-panel" data-testid="invitation-redemption">${heading}${copy}${form}${back}</section>`;
   }
 
   // Submit one explicit invitation redemption without enumerating failures.
@@ -109,7 +109,7 @@ export function createInvitationView(dependencies) {
       view.removeAttribute(attribute);
     }
     view.className = 'screen auth-screen';
-    view.innerHTML = invitationMarkup(message, success);
+    view.innerHTML = html`${invitationMarkup(message, success)}`;
     // Populate locale choices and preserve current status across locale changes.
     wireLocaleSelect(
       documentRef.getElementById('invitation-locale'),

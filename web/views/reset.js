@@ -6,7 +6,7 @@
 export function createPasswordResetView(dependencies) {
   // Capture the accepted browser, API, locale, and presentation seams.
   const {
-    api, cryptoRef, documentRef, getLocaleState, historyRef, holdTransientBearer,
+    api, cryptoRef, documentRef, getLocaleState, historyRef, holdTransientBearer, html,
     renderLoginGate, safe, setSession, syncFeedbackReporter, t,
     transientRouteBearer, windowRef,
   } = dependencies;
@@ -16,22 +16,22 @@ export function createPasswordResetView(dependencies) {
   // Render shared heading, mailbox, message, and back-link fragments.
   function sharedMarkup(message, success, complete) {
     // Preserve recovery identity and mode-specific title/copy.
-    const eyebrow = `<p class="eyebrow">${safe(t('recovery.eyebrow', {}, 'shell'))}</p>`;
+    const eyebrow = html`<p class="eyebrow">${t('recovery.eyebrow', {}, 'shell')}</p>`;
     const titleKey = complete ? 'recovery.completeTitle' : 'recovery.title';
     const copyKey = complete ? 'recovery.completeCopy' : 'recovery.copy';
-    const heading = `<h1>${safe(t(titleKey, {}, 'shell'))}</h1><p class="auth-copy">${safe(t(copyKey, {}, 'shell'))}</p>`;
+    const heading = html`<h1>${t(titleKey, {}, 'shell')}</h1><p class="auth-copy">${t(copyKey, {}, 'shell')}</p>`;
     // Preserve an explicit mailbox field for both non-enumerating flows.
-    const email = `<label>${safe(t('auth.email', {}, 'shell'))}<input id="reset-email" type="email" autocomplete="email" required></label>`;
+    const email = html`<label>${t('auth.email', {}, 'shell')}<input id="reset-email" type="email" autocomplete="email" required></label>`;
     const password = complete
-      ? `<label>${safe(t('recovery.newPassword', {}, 'shell'))}<input id="reset-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>`
-      : '';
+      ? html`<label>${t('recovery.newPassword', {}, 'shell')}<input id="reset-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>`
+      : html``;
     const actionKey = complete ? 'recovery.complete' : 'recovery.send';
-    const action = `<button class="primary" type="submit">${safe(t(actionKey, {}, 'shell'))}</button>`;
-    const status = `<p id="reset-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p>`;
-    const form = `<form id="password-reset-form" class="auth-form">${email}${password}${action}${status}</form>`;
-    const back = `<a href="/">${safe(t('recovery.back', {}, 'shell'))}</a>`;
+    const action = html`<button class="primary" type="submit">${t(actionKey, {}, 'shell')}</button>`;
+    const status = html`<p id="reset-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${message}</p>`;
+    const form = html`<form id="password-reset-form" class="auth-form">${email}${password}${action}${status}</form>`;
+    const back = html`<a href="/">${t('recovery.back', {}, 'shell')}</a>`;
     const testId = complete ? 'password-reset-complete' : 'password-reset-initiate';
-    return `<section class="auth-panel" data-testid="${testId}">${eyebrow}${heading}${form}${back}</section>`;
+    return html`<section class="auth-panel" data-testid="${testId}">${eyebrow}${heading}${form}${back}</section>`;
   }
 
   // Submit the currently rendered initiation or completion flow.
@@ -106,7 +106,7 @@ export function createPasswordResetView(dependencies) {
       historyRef.replaceState({}, '', '/account/reset');
     }
     // Render the exact mode and bind one bounded handler.
-    view.innerHTML = sharedMarkup(message, success, Boolean(token));
+    view.innerHTML = html`${sharedMarkup(message, success, Boolean(token))}`;
     documentRef.getElementById('password-reset-form').onsubmit = event => submitReset(event, token);
   }
 

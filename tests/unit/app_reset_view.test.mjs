@@ -10,6 +10,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 // Import the extracted Reset view factory.
 import { createPasswordResetView } from "../../web/views/reset.js";
+// Import the browser-independent tagged-template fixture for injected view rendering.
+import { html, raw } from "./html_template_fixture.mjs";
 
 // Resolve and read the reviewed source boundaries once.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -45,6 +47,9 @@ test("SEC-016 preserves transient password-reset completion after extraction", a
   let arrival = "RESET-SECRET";
   // Create the production completion view around deterministic seams.
   const renderReset = createPasswordResetView({
+    // Bind the same escape-by-default and reviewed-fragment contract as production.
+    html,
+    raw,
     api: async (path, options) => { requests.push({ path, options }); },
     cryptoRef: { randomUUID: () => "ACTION-KEY" },
     documentRef,

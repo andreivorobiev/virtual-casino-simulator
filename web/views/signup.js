@@ -6,7 +6,7 @@
 export function createSignupView(dependencies) {
   // Capture the accepted browser, API, locale, and presentation seams.
   const {
-    api, beginOAuth, cryptoRef, documentRef, getLocaleState, historyRef,
+    api, beginOAuth, cryptoRef, documentRef, getLocaleState, historyRef, html,
     oauthCompletionCopy, oauthProviders, renderEmailVerificationGate, safe,
     setPendingEnrollmentEmail, setSession, syncFeedbackReporter, t,
     wireLocaleSelect, windowRef,
@@ -15,30 +15,30 @@ export function createSignupView(dependencies) {
   // Render the local-email enrollment form.
   function localSignupForm(enabled, message, success) {
     // Preserve bounded account and locale fields.
-    const email = `<label>${safe(t('auth.email', {}, 'shell'))}<input id="signup-email" data-testid="signup-email" type="email" autocomplete="email" maxlength="254" required></label>`;
-    const name = `<label>${safe(t('invitation.displayName', {}, 'shell'))}<input id="signup-display-name" data-testid="signup-display-name" autocomplete="name" maxlength="80" required></label>`;
-    const passwordInput = '<input id="signup-password" data-testid="signup-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>';
-    const password = `<label>${safe(t('auth.password', {}, 'shell'))}${passwordInput}</label>`;
-    const locale = `<label>${safe(t('auth.language', {}, 'shell'))}<select id="signup-locale" data-testid="signup-locale"></select></label>`;
+    const email = html`<label>${t('auth.email', {}, 'shell')}<input id="signup-email" data-testid="signup-email" type="email" autocomplete="email" maxlength="254" required></label>`;
+    const name = html`<label>${t('invitation.displayName', {}, 'shell')}<input id="signup-display-name" data-testid="signup-display-name" autocomplete="name" maxlength="80" required></label>`;
+    const passwordInput = html`<input id="signup-password" data-testid="signup-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>`;
+    const password = html`<label>${t('auth.password', {}, 'shell')}${passwordInput}</label>`;
+    const locale = html`<label>${t('auth.language', {}, 'shell')}<select id="signup-locale" data-testid="signup-locale"></select></label>`;
     // Preserve three explicit acknowledgements before enrollment.
-    const terms = `<label class="check-row"><input id="signup-terms" data-testid="signup-terms" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label>`;
-    const privacy = `<label class="check-row"><input id="signup-privacy" data-testid="signup-privacy" type="checkbox"><span>${safe(t('signup.privacyCheck', {}, 'shell'))}</span></label>`;
-    const tokens = `<label class="check-row"><input id="signup-play-token" data-testid="signup-play-token" type="checkbox"><span>${safe(t('signup.fakeMoneyCheck', {}, 'shell'))}</span></label>`;
+    const terms = html`<label class="check-row"><input id="signup-terms" data-testid="signup-terms" type="checkbox" required><span>${t('auth.termsCheck', {}, 'shell')}</span></label>`;
+    const privacy = html`<label class="check-row"><input id="signup-privacy" data-testid="signup-privacy" type="checkbox"><span>${t('signup.privacyCheck', {}, 'shell')}</span></label>`;
+    const tokens = html`<label class="check-row"><input id="signup-play-token" data-testid="signup-play-token" type="checkbox"><span>${t('signup.fakeMoneyCheck', {}, 'shell')}</span></label>`;
     const disabled = enabled ? '' : 'disabled';
-    const submit = `<button class="primary" data-testid="signup-submit" type="submit" ${disabled}>${safe(t('signup.submit', {}, 'shell'))}</button>`;
-    const status = `<p id="signup-message" data-testid="signup-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p>`;
-    return `<form id="signup-form" class="auth-form">${email}${name}${password}${locale}${terms}${privacy}${tokens}${submit}${status}</form>`;
+    const submit = html`<button class="primary" data-testid="signup-submit" type="submit" ${disabled}>${t('signup.submit', {}, 'shell')}</button>`;
+    const status = html`<p id="signup-message" data-testid="signup-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${message}</p>`;
+    return html`<form id="signup-form" class="auth-form">${email}${name}${password}${locale}${terms}${privacy}${tokens}${submit}${status}</form>`;
   }
 
   // Render fail-closed social signup controls before readiness resolves.
   function providerSignupRegion() {
     // Preserve disabled native actions until exact provider readiness is returned.
-    const google = `<button class="oauth-provider-button" data-testid="signup-oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button>`;
-    const facebook = `<button class="oauth-provider-button" data-testid="signup-oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button>`;
-    const grid = `<div class="oauth-provider-grid">${google}${facebook}</div>`;
-    const message = `<p class="oauth-provider-copy" data-testid="oauth-signup-message" role="status">${safe(t('signup.oauthUnavailable', {}, 'shell'))}</p>`;
-    const heading = `<h2 id="oauth-signup-heading">${safe(t('signup.oauthDivider', {}, 'shell'))}</h2>`;
-    return `<section class="oauth-provider-status" data-testid="oauth-signup-disabled" aria-labelledby="oauth-signup-heading">${heading}${grid}${message}</section>`;
+    const google = html`<button class="oauth-provider-button" data-testid="signup-oauth-google" type="button" disabled aria-disabled="true">${t('auth.oauthGoogle', {}, 'shell')}</button>`;
+    const facebook = html`<button class="oauth-provider-button" data-testid="signup-oauth-facebook" type="button" disabled aria-disabled="true">${t('auth.oauthFacebook', {}, 'shell')}</button>`;
+    const grid = html`<div class="oauth-provider-grid">${google}${facebook}</div>`;
+    const message = html`<p class="oauth-provider-copy" data-testid="oauth-signup-message" role="status">${t('signup.oauthUnavailable', {}, 'shell')}</p>`;
+    const heading = html`<h2 id="oauth-signup-heading">${t('signup.oauthDivider', {}, 'shell')}</h2>`;
+    return html`<section class="oauth-provider-status" data-testid="oauth-signup-disabled" aria-labelledby="oauth-signup-heading">${heading}${grid}${message}</section>`;
   }
 
   // Submit one policy-gated local enrollment request.
@@ -133,22 +133,22 @@ export function createSignupView(dependencies) {
       view.removeAttribute(attribute);
     }
     // Render a stable loading shell while policy resolves.
-    const loadingHeading = `<p class="eyebrow">${safe(t('signup.eyebrow', {}, 'shell'))}</p><h1>${safe(t('signup.title', {}, 'shell'))}</h1>`;
-    const loadingCopy = `<p class="auth-copy">${safe(t('status.loading', {}, 'shell'))}</p>`;
-    view.innerHTML = `<section class="auth-panel" data-testid="signup-enrollment">${loadingHeading}${loadingCopy}</section>`;
+    const loadingHeading = html`<p class="eyebrow">${t('signup.eyebrow', {}, 'shell')}</p><h1>${t('signup.title', {}, 'shell')}</h1>`;
+    const loadingCopy = html`<p class="auth-copy">${t('status.loading', {}, 'shell')}</p>`;
+    view.innerHTML = html`<section class="auth-panel" data-testid="signup-enrollment">${loadingHeading}${loadingCopy}</section>`;
     const policy = await api('/api/v2/auth/enrollment-policy');
     const enabled = policy.signup_enabled === true;
     const socialRequested = policy.enrollment_mode === 'self-signup'
       && ['google', 'facebook'].some(provider => policy.signup_methods?.[provider] === true);
     // Render local and provider controls with explicit policy state.
     const enabledState = enabled || socialRequested ? 'true' : 'false';
-    const heading = `<p class="eyebrow">${safe(t('signup.eyebrow', {}, 'shell'))}</p><h1>${safe(t('signup.title', {}, 'shell'))}</h1>`;
+    const heading = html`<p class="eyebrow">${t('signup.eyebrow', {}, 'shell')}</p><h1>${t('signup.title', {}, 'shell')}</h1>`;
     const copyKey = enabled || socialRequested ? 'signup.copy' : 'signup.disabledCopy';
-    const copy = `<p class="auth-copy">${safe(t(copyKey, {}, 'shell'))}</p>`;
-    const back = `<a href="/" data-testid="signup-login-link">${safe(t('invitation.back', {}, 'shell'))}</a>`;
+    const copy = html`<p class="auth-copy">${t(copyKey, {}, 'shell')}</p>`;
+    const back = html`<a href="/" data-testid="signup-login-link">${t('invitation.back', {}, 'shell')}</a>`;
     const local = localSignupForm(enabled, signupMessage, success);
     const providers = providerSignupRegion();
-    view.innerHTML = `<section class="auth-panel" data-testid="signup-enrollment" data-signup-enabled="${enabledState}">${heading}${copy}${local}${providers}${back}</section>`;
+    view.innerHTML = html`<section class="auth-panel" data-testid="signup-enrollment" data-signup-enabled="${enabledState}">${heading}${copy}${local}${providers}${back}</section>`;
     // Bind locale rerender and policy-gated local submit.
     wireLocaleSelect(
       documentRef.getElementById('signup-locale'),

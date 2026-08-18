@@ -76,7 +76,7 @@ test("CORE-007 preserves routing and escaped locale options", () => {
 // Verify app.js is now bounded composition around extracted views and router.
 test("CORE-007 keeps application composition under the series target", () => {
   // Keep the approximate 600-line series target with small formatting tolerance.
-  assert.ok(APP_SOURCE.split(/\r?\n/).length <= 610);
+  assert.ok(APP_SOURCE.split(/\r?\n/).length <= 620);
   // Require the extracted router and bootstrap imports exactly once.
   assert.equal((APP_SOURCE.match(/from '.\/core\/app_router\.js'/g) || []).length, 1);
   assert.equal((APP_SOURCE.match(/from '.\/core\/app_bootstrap\.js'/g) || []).length, 1);

@@ -3,7 +3,7 @@
 // Import required dependency so this module can call the frozen API envelope safely.
 import { acceptTerms, api, currentUser, guestTrial, holdTransientBearer, logClient, login, oauthLinks, oauthProviders, publicAuthRouteKind, redeemInvitation, startOAuth, unlinkOAuth } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
-import { renderTokenBalance, toast, tokens, safe, renderPremiumTag, createNavigationOwnership } from './core/ui.js';
+import { renderTokenBalance, toast, tokens, safe, renderPremiumTag, createNavigationOwnership, html, raw } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
 import { getLocaleState, registerI18nDomains, setLocale, t } from './core/i18n.js';
 // Import the active brand and its runtime token applier so one config skins the app.
@@ -77,12 +77,14 @@ const { beginOAuth, oauthCompletionCopy, renderLoginGate, renderOAuthAccountCont
   getSession: () => currentSession,
   guestTrial,
   historyRef: history,
+  html,
   isGuestSession,
   locationRef: location,
   login,
   navigate: route => navigate(route),
   oauthLinks,
   oauthProviders,
+  raw,
   safe,
   startOAuth,
   syncFeedbackReporter,
@@ -98,6 +100,7 @@ const renderTermsGate = createTermsView({
   enterAuthenticated: session => enterAuthenticated(session),
   getLocaleState,
   getSession: () => currentSession,
+  html,
   normalizeCurrentUser,
   safe,
   setSession: session => { currentSession = session; },
@@ -109,6 +112,7 @@ const renderInvitationGate = createInvitationView({
   documentRef: document,
   getLocaleState,
   historyRef: history,
+  html,
   redeemInvitation,
   renderLoginGate: message => renderLoginGate(message),
   safe,
@@ -128,6 +132,7 @@ const renderPasswordResetGate = createPasswordResetView({
   getLocaleState,
   historyRef: history,
   holdTransientBearer,
+  html,
   renderLoginGate: message => renderLoginGate(message),
   safe,
   setSession: session => { currentSession = session; },
@@ -143,6 +148,7 @@ const { renderEmailVerificationGate, setPendingEnrollmentEmail } = createVerific
   documentRef: document,
   getLocaleState,
   historyRef: history,
+  html,
   renderLoginGate: message => renderLoginGate(message),
   safe,
   sessionStorageRef: sessionStorage,
@@ -161,6 +167,7 @@ const renderSignupGate = createSignupView({
   documentRef: document,
   getLocaleState,
   historyRef: history,
+  html,
   oauthCompletionCopy,
   oauthProviders,
   renderEmailVerificationGate,
@@ -180,8 +187,10 @@ const renderMySettings = createSettingsView({
   documentRef: document,
   getActive: () => active,
   getLocaleState,
+  html,
   isGuestSession,
   localeOptionsHtml,
+  raw,
   renderLoginGate: message => renderLoginGate(message),
   safe,
   setLocale,
@@ -193,7 +202,9 @@ const renderLobby = createLobbyView({
   activeBrand,
   getGameDescriptors: () => gameDescriptors,
   getLatestState: () => latestState,
+  html,
   navigate: route => navigate(route),
+  raw,
   renderPremiumTag,
   safe,
   t,
@@ -323,7 +334,7 @@ function updateCurrentUserShell() {
     // Read the guest state once so the label and markers stay consistent.
     const guest = isGuestSession();
     // Show End trial for a guest and restore the profile glyph for any later registered login.
-    logoutButton.innerHTML = guest ? safe(t('guest.endTrial', {}, 'shell')) : '<span aria-hidden="true"></span>';
+    logoutButton.innerHTML = html`${guest ? t('guest.endTrial', {}, 'shell') : html`<span aria-hidden="true"></span>`}`;
     // Expose the guest identity and action for accessibility and browser evidence without leaking any credential.
     logoutButton.setAttribute('aria-label', guest ? t('guest.endTrial', {}, 'shell') : t('auth.logout', { name }, 'shell'));
     // Stamp a stable guest marker the shell and tests can read.

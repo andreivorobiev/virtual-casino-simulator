@@ -6,7 +6,7 @@
 export function createTermsView(dependencies) {
   // Capture the existing API, session, locale, and presentation seams.
   const {
-    acceptTerms, documentRef, enterAuthenticated, getLocaleState, getSession,
+    acceptTerms, documentRef, enterAuthenticated, getLocaleState, getSession, html,
     normalizeCurrentUser, safe, setSession, t,
   } = dependencies;
 
@@ -52,13 +52,13 @@ export function createTermsView(dependencies) {
     view.className = 'screen auth-screen';
     const version = session.terms?.version || session.terms?.required_version || 'private-beta';
     // Render concise toy-simulator acknowledgement copy.
-    const eyebrow = `<p class="eyebrow">${safe(t('terms.eyebrow', {}, 'shell'))}</p>`;
-    const heading = `<h1>${safe(t('terms.title', {}, 'shell'))}</h1>`;
-    const copy = `<p class="auth-copy">${safe(t('terms.copy', {}, 'shell'))}</p>`;
-    const versionCopy = `<p class="auth-copy strong">${safe(t('terms.version', { version }, 'shell'))}</p>`;
-    const accept = `<button id="accept-terms-btn" class="primary" data-testid="accept-terms" type="button">${safe(t('terms.accept', {}, 'shell'))}</button>`;
-    const message = '<p id="auth-message" class="auth-message"></p>';
-    view.innerHTML = `<section class="auth-panel" data-testid="terms-gate">${eyebrow}${heading}${copy}${versionCopy}${accept}${message}</section>`;
+    const eyebrow = html`<p class="eyebrow">${t('terms.eyebrow', {}, 'shell')}</p>`;
+    const heading = html`<h1>${t('terms.title', {}, 'shell')}</h1>`;
+    const copy = html`<p class="auth-copy">${t('terms.copy', {}, 'shell')}</p>`;
+    const versionCopy = html`<p class="auth-copy strong">${t('terms.version', { version }, 'shell')}</p>`;
+    const accept = html`<button id="accept-terms-btn" class="primary" data-testid="accept-terms" type="button">${t('terms.accept', {}, 'shell')}</button>`;
+    const message = html`<p id="auth-message" class="auth-message"></p>`;
+    view.innerHTML = html`<section class="auth-panel" data-testid="terms-gate">${eyebrow}${heading}${copy}${versionCopy}${accept}${message}</section>`;
     // Bind one explicit acceptance operation.
     documentRef.getElementById('accept-terms-btn').onclick = handleTermsAccept;
   }

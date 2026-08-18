@@ -10,6 +10,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 // Import the extracted Login view factory.
 import { createLoginView } from "../../web/views/login.js";
+// Import the browser-independent tagged-template fixture for injected view rendering.
+import { html, raw } from "./html_template_fixture.mjs";
 
 // Resolve and read reviewed source boundaries once.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -61,6 +63,9 @@ test("UX-028 preserves guest-first Login behavior after extraction", async () =>
   const replacements = [];
   // Create the production renderer around ready guest, signup, and Google capabilities.
   const { renderLoginGate } = createLoginView({
+    // Bind the same escape-by-default and reviewed-fragment contract as production.
+    html,
+    raw,
     api: async () => ({ guest_trials_enabled: true, signup_enabled: true }),
     documentRef: fixture.documentRef,
     enterAuthenticated: session => sessions.push(session),

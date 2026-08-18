@@ -10,6 +10,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 // Import the extracted Lobby view factory.
 import { createLobbyView } from "../../web/views/lobby.js";
+// Import the browser-independent tagged-template fixture for injected view rendering.
+import { html, raw } from "./html_template_fixture.mjs";
 
 // Resolve and read the reviewed source boundaries once.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -47,6 +49,9 @@ test("CORE-007 preserves the searchable Lobby after extraction", () => {
   ];
   // Create the production renderer around deterministic catalog and brand seams.
   const renderLobby = createLobbyView({
+    // Bind the same escape-by-default and reviewed-fragment contract as production.
+    html,
+    raw,
     activeBrand: { venue: "Virtual Casino", mark: "VC" },
     getGameDescriptors: () => games,
     getLatestState: () => ({ games: [{ id: "roulette" }, { id: "slots" }], online_player_count: 3 }),

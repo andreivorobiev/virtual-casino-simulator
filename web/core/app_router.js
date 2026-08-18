@@ -104,7 +104,10 @@ export function createAppRouter(dependencies) {
     view.setAttribute('role', 'region');
     view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
     // Render localized progress through the escape-by-default boundary.
-    view.innerHTML = html`<div class="panel loading-panel" data-testid="route-restore-loading"><p class="eyebrow">${t('routeRestore.eyebrow', {}, 'shell')}</p><h2>${t('routeRestore.title', { game: gameLabel }, 'shell')}</h2><p class="status">${t('routeRestore.copy', {}, 'shell')}</p></div>`;
+    const eyebrow = html`<p class="eyebrow">${t('routeRestore.eyebrow', {}, 'shell')}</p>`;
+    const heading = html`<h2>${t('routeRestore.title', { game: gameLabel }, 'shell')}</h2>`;
+    const status = html`<p class="status">${t('routeRestore.copy', {}, 'shell')}</p>`;
+    view.innerHTML = html`<div class="panel loading-panel" data-testid="route-restore-loading">${eyebrow}${heading}${status}</div>`;
   }
 
   // Synchronize browser history with one resolved catalog route.
@@ -216,7 +219,8 @@ export function createAppRouter(dependencies) {
     const nav = documentRef.getElementById('main-nav');
     // Build lobby and personal-settings routes first.
     const active = getActive();
-    const items = [html`<button data-route="lobby" class="nav-item ${active === 'lobby' ? 'active' : ''}" data-testid="nav-lobby"><span class="nav-icon" aria-hidden="true">&#8962;</span>${t('nav.lobby', {}, 'shell')}</button>`];
+    const lobbyIcon = html`<span class="nav-icon" aria-hidden="true">&#8962;</span>`;
+    const items = [html`<button data-route="lobby" class="nav-item ${active === 'lobby' ? 'active' : ''}" data-testid="nav-lobby">${lobbyIcon}${t('nav.lobby', {}, 'shell')}</button>`];
     items.push(html`<button data-route="settings" class="nav-item ${active === 'settings' ? 'active' : ''}" data-testid="nav-settings">${t('settings.title', {}, 'shell')}</button>`);
     // Add one escaped button per game so every game stays reachable.
     getGameDescriptors().forEach(game => items.push(html`<button data-route="${game.id}" class="nav-item ${active === game.id ? 'active' : ''}" data-testid="nav-${game.id}">${game.label}</button>`));
@@ -358,7 +362,10 @@ export function createAppRouter(dependencies) {
       documentRef.body.classList.remove('lobby-active');
       view.removeAttribute('data-testid');
       view.className = 'screen game-screen';
-      view.innerHTML = html`<div class="panel loading-panel"><h2>${t('route.loadFailed', { route: routeLabel(targetRoute) }, 'shell')}</h2><p class="status">${error.message}</p><button data-route="lobby">${t('route.backToLobby', {}, 'shell')}</button></div>`;
+      const heading = html`<h2>${t('route.loadFailed', { route: routeLabel(targetRoute) }, 'shell')}</h2>`;
+      const status = html`<p class="status">${error.message}</p>`;
+      const back = html`<button data-route="lobby">${t('route.backToLobby', {}, 'shell')}</button>`;
+      view.innerHTML = html`<div class="panel loading-panel">${heading}${status}${back}</div>`;
       // Wire the fallback without depending on top navigation.
       view.querySelector('[data-route="lobby"]')?.addEventListener('click', () => navigate('lobby'));
     }

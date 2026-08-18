@@ -7,8 +7,8 @@ export function createLoginView(dependencies) {
   // Capture browser, API, locale, session, and presentation seams owned by this view.
   const {
     api, documentRef, enterAuthenticated, getLocaleState, getSession, guestTrial,
-    historyRef, isGuestSession, locationRef, login, navigate, oauthLinks,
-    oauthProviders, safe, startOAuth, syncFeedbackReporter, t, unlinkOAuth,
+    historyRef, html, isGuestSession, locationRef, login, navigate, oauthLinks,
+    oauthProviders, raw, safe, startOAuth, syncFeedbackReporter, t, unlinkOAuth,
     windowRef, wireLocaleSelect,
   } = dependencies;
   // Invalidate asynchronous capability reads whenever locale or route rendering replaces the gate.
@@ -153,7 +153,7 @@ export function createLoginView(dependencies) {
       // Resolve the dedicated primary slot after ownership is revalidated.
       const guestSlot = documentRef.getElementById('auth-guest-slot');
       // Render the real guest action only when the server advertises exact availability.
-      guestSlot.innerHTML = policy.guest_trials_enabled === true
+      const guestMarkup = policy.guest_trials_enabled === true
         ? [
           // Render the primary guest mutation before its explanatory copy.
           `<button id="guest-trial-button" class="primary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button>`,
@@ -166,6 +166,8 @@ export function createLoginView(dependencies) {
           `<p id="guest-trial-details" class="auth-disclosure-copy" data-testid="guest-trial-details" hidden>${safe(t('auth.guestInfo', {}, 'shell'))}</p>`,
         ].join('')
         : `<span class="auth-chip" data-testid="guest-trial-unavailable">${safe(t('auth.guestUnavailable', {}, 'shell'))}</span>`;
+      // Install the reviewed, individually escaped guest fragments through the tagged sink.
+      guestSlot.innerHTML = html`${raw(guestMarkup)}`;
       // Mark the primary slot settled after exact policy-owned markup replaces the loading placeholder.
       guestSlot.setAttribute('aria-busy', 'false');
       // Wire guest creation only when the policy rendered the actionable control.
@@ -173,7 +175,7 @@ export function createLoginView(dependencies) {
       // Resolve the separate tertiary account slot without mixing it with provider availability.
       const accountSlot = documentRef.getElementById('auth-account-slot');
       // Render signup only when authorized; otherwise render an explanatory invite-only disclosure chip.
-      accountSlot.innerHTML = policy.signup_enabled === true
+      const accountMarkup = policy.signup_enabled === true
         ? `<a class="auth-tertiary-link" href="/enroll/signup" data-testid="signup-entry-link">${safe(t('signup.cta', {}, 'shell'))}</a>`
         : [
           // Render invite-only status as an explanatory disclosure control.
@@ -182,6 +184,8 @@ export function createLoginView(dependencies) {
           // Keep enrollment detail out of layout until explicitly requested.
           `<p id="signup-invite-only-copy" class="auth-disclosure-copy" data-testid="signup-invite-only-copy" hidden>${safe(t('signup.entryCopy', {}, 'shell'))}</p>`,
         ].join('');
+      // Install the reviewed, individually escaped account fragments through the tagged sink.
+      accountSlot.innerHTML = html`${raw(accountMarkup)}`;
     } catch (_) {
       // Ignore stale failure completion after a replacement login generation owns the document.
       if (generation !== loginGateGeneration) return;
@@ -190,7 +194,7 @@ export function createLoginView(dependencies) {
       // Leave the replacement route untouched when the original login slot no longer exists.
       if (!guestSlot) return;
       // Replace the primary placeholder with noninteractive, localized fail-closed copy.
-      guestSlot.innerHTML = `<span class="auth-chip" data-testid="auth-capability-unavailable">${safe(t('auth.capabilityUnavailable', {}, 'shell'))}</span>`;
+      guestSlot.innerHTML = html`<span class="auth-chip" data-testid="auth-capability-unavailable">${t('auth.capabilityUnavailable', {}, 'shell')}</span>`;
       // Mark the primary capability slot complete even though no mutation action is available.
       guestSlot.setAttribute('aria-busy', 'false');
       // Publish policy failure only when more important caller/session feedback does not already exist.
@@ -258,14 +262,14 @@ export function createLoginView(dependencies) {
         // Resolve provider-specific copy from one allowlisted identifier.
         const label = t(`auth.oauth${provider === 'google' ? 'Google' : 'Facebook'}`, {}, 'shell');
         // Return one fixed provider sign-in action.
-        return `<button class="oauth-provider-button" data-testid="oauth-${safe(provider)}" type="button">${safe(label)}</button>`;
-      }).join('');
+        return html`<button class="oauth-provider-button" data-testid="oauth-${provider}" type="button">${label}</button>`;
+      });
       // Omit the complete provider region when no provider is actionable.
-      const providerLabel = safe(t('auth.oauthDivider', {}, 'shell'));
+      const providerLabel = t('auth.oauthDivider', {}, 'shell');
       // Mount the provider section only when at least one provider is actionable.
-      providerSlot.innerHTML = available.size
-        ? `<section class="auth-provider-actions" data-testid="oauth-providers-available" aria-label="${providerLabel}">${buttons}</section>`
-        : '';
+      providerSlot.innerHTML = html`${available.size
+        ? html`<section class="auth-provider-actions" data-testid="oauth-providers-available" aria-label="${providerLabel}">${buttons}</section>`
+        : html``}`;
       // Wire only controls that exist after the server reported that provider available.
       for (const provider of available) documentRef.querySelector(`[data-testid="oauth-${provider}"]`)?.addEventListener('click', () => beginOAuth(provider, 'signin'));
     } catch (_) {
@@ -276,7 +280,7 @@ export function createLoginView(dependencies) {
       // Leave replacement route markup untouched when the original slot no longer exists.
       if (!providerSlot) return;
       // Keep the provider slot action-free while exposing a stable test state outside live semantics.
-      providerSlot.innerHTML = '<span data-testid="oauth-providers-status-error" hidden></span>';
+      providerSlot.innerHTML = html`<span data-testid="oauth-providers-status-error" hidden></span>`;
       // Publish generic localized provider feedback only when caller/session feedback is not already visible.
       if (!documentRef.getElementById('auth-message')?.textContent) setAuthStatus(t('auth.oauthStatusError', {}, 'shell'));
     }
@@ -291,7 +295,7 @@ export function createLoginView(dependencies) {
     // Stamp a bounded loading state for assistive and automated lifecycle evidence.
     popover.dataset.oauthState = 'loading';
     // Render a localized loading state without provider configuration details.
-    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('status.loading', {}, 'shell'))}</p>`;
+    popover.innerHTML = html`<h2>${t('auth.oauthAccountTitle', {}, 'shell')}</h2><p class="oauth-provider-copy">${t('status.loading', {}, 'shell')}</p>`;
     // Start protected link-status loading so provider errors cannot affect gameplay.
     try {
       // Read boolean availability and ownership for the current canonical user.
@@ -316,7 +320,7 @@ export function createLoginView(dependencies) {
       // Add completion acknowledgement only when a reviewed marker exists.
       const completion = oauthCompletion ? `<p class="auth-message" data-testid="oauth-callback-message" role="status">${safe(oauthCompletionCopy())}</p>` : '';
       // Require explicit consent adjacent to provider actions.
-      popover.innerHTML = [
+      const accountMarkup = [
         // Name the account-method section before its actions.
         `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2>`,
         // Preserve the independent personal-settings entry.
@@ -331,6 +335,8 @@ export function createLoginView(dependencies) {
         // Append reviewed provider rows and their one status owner.
         `${rows}<p id="oauth-account-message" class="auth-message" role="status"></p>`,
       ].join('');
+      // Install reviewed, individually escaped account fragments through the tagged sink.
+      popover.innerHTML = html`${raw(accountMarkup)}`;
       // Keep personal settings routing separate from provider-link actions and Admin Console.
       popover.querySelector('[data-testid="my-settings-entry"]').onclick = () => {
         // Close the account menu before the shell takes ownership of Settings.
@@ -366,7 +372,7 @@ export function createLoginView(dependencies) {
       // Stamp one generic failure state without transport or provider detail.
       popover.dataset.oauthState = 'status-error';
       // Publish no provider configuration or request details.
-      popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('auth.oauthStatusError', {}, 'shell'))}</p>`;
+      popover.innerHTML = html`<h2>${t('auth.oauthAccountTitle', {}, 'shell')}</h2><p class="oauth-provider-copy">${t('auth.oauthStatusError', {}, 'shell')}</p>`;
     }
   }
 
@@ -427,7 +433,7 @@ export function createLoginView(dependencies) {
     // Reserve independent tertiary slots for account policy and provider readiness.
     const tertiary = '<div id="auth-tertiary" class="auth-tertiary"><div id="auth-account-slot"></div><div id="auth-provider-slot"></div></div>';
     // Mount the complete stable gate before asynchronous capabilities resolve.
-    view.innerHTML = `<section class="auth-panel auth-entry" data-testid="login-gate">${header}${guestSlot}${terms}${status}${signin}${tertiary}</section>`;
+    view.innerHTML = html`<section class="auth-panel auth-entry" data-testid="login-gate">${raw(header)}${raw(guestSlot)}${raw(terms)}${raw(status)}${raw(signin)}${raw(tertiary)}</section>`;
     // Wire the auth-screen locale selector and rerender the gate after switching.
     wireLocaleSelect(documentRef.getElementById('auth-locale-select'), () => renderLoginGate(message));
     // Wire form submission through the v2 auth login endpoint.

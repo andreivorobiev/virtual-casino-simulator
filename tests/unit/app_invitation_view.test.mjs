@@ -10,6 +10,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 // Import the extracted Invitation view factory.
 import { createInvitationView } from "../../web/views/invitation.js";
+// Import the browser-independent tagged-template fixture for injected view rendering.
+import { html, raw } from "./html_template_fixture.mjs";
 
 // Resolve and read the reviewed source boundaries once.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -50,6 +52,9 @@ test("INVITE-003 preserves private invitation redemption after extraction", asyn
   let arrival = "SECRET-TOKEN";
   // Create the production view around deterministic browser and API seams.
   const renderInvitation = createInvitationView({
+    // Bind the same escape-by-default and reviewed-fragment contract as production.
+    html,
+    raw,
     cryptoRef: globalThis.crypto,
     documentRef,
     getLocaleState: () => ({ locale: "en-US" }),

@@ -348,7 +348,7 @@ export function createFeedbackTab(dependencies) {
     if (!isActiveTab('feedback')) return;
     // Read and render the canonical report object.
     const report = data.report || {};
-    view.innerHTML = renderDetail(report);
+    view.innerHTML = html`${renderDetail(report)}`;
     // Bind mutations only after the canonical detail is installed.
     bindDetailActions(reportId, report);
   }

@@ -10,6 +10,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 // Import the extracted Terms view factory.
 import { createTermsView } from "../../web/views/terms.js";
+// Import the browser-independent tagged-template fixture for injected view rendering.
+import { html, raw } from "./html_template_fixture.mjs";
 
 // Resolve and read the reviewed source boundaries once.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -39,6 +41,9 @@ test("AUTH-011 preserves required terms acceptance after extraction", async () =
   const entered = [];
   // Create the production view around deterministic API and presentation seams.
   const renderTerms = createTermsView({
+    // Bind the same escape-by-default and reviewed-fragment contract as production.
+    html,
+    raw,
     acceptTerms: async payload => { accepted.push(payload); return { required: false, version: payload.terms_version }; },
     documentRef,
     enterAuthenticated: async value => { entered.push(value); },

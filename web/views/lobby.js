@@ -6,8 +6,8 @@
 export function createLobbyView(dependencies) {
   // Capture the accepted brand, catalog, navigation, and presentation seams.
   const {
-    activeBrand, getGameDescriptors, getLatestState, navigate,
-    renderPremiumTag, safe, t,
+    activeBrand, getGameDescriptors, getLatestState, html, navigate,
+    raw, renderPremiumTag, safe, t,
   } = dependencies;
   // Retain transient catalog search text only for this browser module lifetime.
   let lobbySearch = '';
@@ -17,22 +17,23 @@ export function createLobbyView(dependencies) {
   // Render one compact lobby trust tile.
   function trustItemHtml(code, title, detail) {
     // Preserve the approved icon, title, and detail hierarchy.
-    return `<div class="trust-item"><span class="round-icon">${safe(code)}</span><span><strong>${safe(title)}</strong><span>${safe(detail)}</span></span></div>`;
+    return html`<div class="trust-item"><span class="round-icon">${code}</span><span><strong>${title}</strong><span>${detail}</span></span></div>`;
   }
 
   // Render one premium game card from catalog metadata.
   function lobbyCardHtml(game) {
     // Preserve featured and wide layout modifiers.
     const sizeClass = `${game.featured ? ' featured' : ''}${game.wide ? ' wide' : ''}`;
-    const tags = game.tags.map(tag => renderPremiumTag(tag)).join('');
-    const kicker = `${game.featured ? '&#9733; ' : ''}${safe(game.kicker)}`;
+    const tags = game.tags.map(tag => raw(renderPremiumTag(tag)));
+    const featured = game.featured ? html`&#9733; ` : html``;
+    const kicker = html`${featured}${game.kicker}`;
     // Preserve deterministic art and localized descriptive content.
-    const art = `<div class="card-art ${game.artClass}" aria-hidden="true"></div>`;
-    const heading = `<h2 class="game-heading"><span class="game-symbol">${game.symbol}</span>${safe(game.label)}</h2>`;
-    const playLabel = `<span>${safe(t('catalog.play', {}, 'shell'))}</span>`;
-    const play = `<button class="play-button" data-open-game="${game.id}" data-testid="open-${game.id}">${playLabel}<span aria-hidden="true">&#8250;</span></button>`;
-    const content = `<div class="game-card-content">${heading}<p>${safe(game.description)}</p><div class="tag-row">${tags}</div>${play}</div>`;
-    return `<article class="game-card${sizeClass}" data-testid="card-${game.id}">${art}<span class="game-kicker">${kicker}</span>${content}</article>`;
+    const art = html`<div class="card-art ${game.artClass}" aria-hidden="true"></div>`;
+    const heading = html`<h2 class="game-heading"><span class="game-symbol">${game.symbol}</span>${game.label}</h2>`;
+    const playLabel = html`<span>${t('catalog.play', {}, 'shell')}</span>`;
+    const play = html`<button class="play-button" data-open-game="${game.id}" data-testid="open-${game.id}">${playLabel}<span aria-hidden="true">&#8250;</span></button>`;
+    const content = html`<div class="game-card-content">${heading}<p>${game.description}</p><div class="tag-row">${tags}</div>${play}</div>`;
+    return html`<article class="game-card${sizeClass}" data-testid="card-${game.id}">${art}<span class="game-kicker">${kicker}</span>${content}</article>`;
   }
 
   // Return catalog descriptors matching active search and category filters.
@@ -68,15 +69,15 @@ export function createLobbyView(dependencies) {
       // Preserve selected visual and assistive state.
       const selected = lobbyCategory === category;
       const activeClass = selected ? ' active' : '';
-      const label = safe(categoryLabel(category));
-      return `<button type="button" class="catalog-category${activeClass}" data-catalog-category="${safe(category)}" aria-pressed="${selected}">${label}</button>`;
-    }).join('');
-    const searchLabel = `<label class="catalog-search-label" for="catalog-search">${safe(t('catalog.searchLabel', {}, 'shell'))}</label>`;
-    const searchInput = `<input id="catalog-search" data-testid="catalog-search" type="search" value="${safe(lobbySearch)}" placeholder="${safe(t('catalog.searchPlaceholder', {}, 'shell'))}">`;
-    const search = `${searchLabel}${searchInput}`;
-    const categoryRail = `<div class="catalog-categories" data-testid="catalog-categories" aria-label="${safe(t('catalog.categoriesAria', {}, 'shell'))}">${buttons}</div>`;
-    const capacity = `<p class="catalog-capacity" data-testid="catalog-capacity">${safe(t('catalog.capacity', { current: gameCount }, 'shell'))}</p>`;
-    return `<section class="catalog-controls" data-testid="catalog-controls">${search}${categoryRail}${capacity}</section>`;
+      const label = categoryLabel(category);
+      return html`<button type="button" class="catalog-category${activeClass}" data-catalog-category="${category}" aria-pressed="${selected}">${label}</button>`;
+    });
+    const searchLabel = html`<label class="catalog-search-label" for="catalog-search">${t('catalog.searchLabel', {}, 'shell')}</label>`;
+    const searchInput = html`<input id="catalog-search" data-testid="catalog-search" type="search" value="${lobbySearch}" placeholder="${t('catalog.searchPlaceholder', {}, 'shell')}">`;
+    const search = html`${searchLabel}${searchInput}`;
+    const categoryRail = html`<div class="catalog-categories" data-testid="catalog-categories" aria-label="${t('catalog.categoriesAria', {}, 'shell')}">${buttons}</div>`;
+    const capacity = html`<p class="catalog-capacity" data-testid="catalog-capacity">${t('catalog.capacity', { current: gameCount }, 'shell')}</p>`;
+    return html`<section class="catalog-controls" data-testid="catalog-controls">${search}${categoryRail}${capacity}</section>`;
   }
 
   // Render the premium trust rail from authoritative state.
@@ -103,7 +104,7 @@ export function createLobbyView(dependencies) {
         t('lobby.trust.ledgerTitle', {}, 'shell'),
         t('lobby.trust.ledgerDetail', { count: gameCount }, 'shell'),
       ),
-    ].join('');
+    ];
   }
 
   // Render the complete premium Lobby markup.
@@ -116,26 +117,26 @@ export function createLobbyView(dependencies) {
       : 0;
     const visibleGames = filteredGames();
     const cards = visibleGames.length
-      ? visibleGames.map(lobbyCardHtml).join('')
-      : `<p class="catalog-empty" data-testid="catalog-empty">${safe(t('catalog.empty', {}, 'shell'))}</p>`;
+      ? visibleGames.map(lobbyCardHtml)
+      : html`<p class="catalog-empty" data-testid="catalog-empty">${t('catalog.empty', {}, 'shell')}</p>`;
     // Preserve hero identity and trust rail.
-    const eyebrow = `<p class="eyebrow">${safe(t('lobby.chooseTable', {}, 'shell'))}</p>`;
-    const title = `<h1 class="hero-title">${safe(activeBrand.venue)}</h1>`;
-    const rule = `<div class="hero-rule"><span>${safe(activeBrand.mark)}</span></div>`;
-    const heroCopy = `<div>${eyebrow}${title}${rule}</div>`;
-    const trust = `<aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail(gameCount, onlinePlayerCount)}</aside>`;
-    const hero = `<section class="lobby-hero" aria-label="Lobby introduction">${heroCopy}${trust}</section>`;
+    const eyebrow = html`<p class="eyebrow">${t('lobby.chooseTable', {}, 'shell')}</p>`;
+    const title = html`<h1 class="hero-title">${activeBrand.venue}</h1>`;
+    const rule = html`<div class="hero-rule"><span>${activeBrand.mark}</span></div>`;
+    const heroCopy = html`<div>${eyebrow}${title}${rule}</div>`;
+    const trust = html`<aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail(gameCount, onlinePlayerCount)}</aside>`;
+    const hero = html`<section class="lobby-hero" aria-label="Lobby introduction">${heroCopy}${trust}</section>`;
     // Preserve catalog controls and gallery as one named region.
     const controls = catalogControls(descriptors, gameCount);
-    const gallery = `<section class="game-gallery" data-testid="game-gallery" aria-label="${safe(t('catalog.galleryAria', {}, 'shell'))}">${cards}</section>`;
-    const catalog = `<section class="catalog-region" data-testid="catalog-region" aria-label="${safe(t('catalog.controlsAria', {}, 'shell'))}">${controls}${gallery}</section>`;
-    return `<section class="lobby" data-testid="lobby">${hero}${catalog}</section>`;
+    const gallery = html`<section class="game-gallery" data-testid="game-gallery" aria-label="${t('catalog.galleryAria', {}, 'shell')}">${cards}</section>`;
+    const catalog = html`<section class="catalog-region" data-testid="catalog-region" aria-label="${t('catalog.controlsAria', {}, 'shell')}">${controls}${gallery}</section>`;
+    return html`<section class="lobby" data-testid="lobby">${hero}${catalog}</section>`;
   }
 
   // Render Lobby markup and bind catalog-driven controls.
   function renderLobby(view, focusSearch = false) {
     // Replace atomically so cards and category counts cannot drift.
-    view.innerHTML = lobbyHtml();
+    view.innerHTML = html`${lobbyHtml()}`;
     const search = view.querySelector('[data-testid="catalog-search"]');
     // Rerender matching cards for each user edit.
     search.oninput = () => {

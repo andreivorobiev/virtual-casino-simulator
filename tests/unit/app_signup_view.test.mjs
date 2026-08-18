@@ -10,6 +10,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 // Import the extracted Signup view factory.
 import { createSignupView } from "../../web/views/signup.js";
+// Import the browser-independent tagged-template fixture for injected view rendering.
+import { html, raw } from "./html_template_fixture.mjs";
 
 // Resolve and read the reviewed source boundaries once.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -61,6 +63,9 @@ test("AUTH-018 preserves policy-gated Signup after extraction", async () => {
   const replacements = [];
   // Create the production renderer around a fully enabled policy.
   const renderSignup = createSignupView({
+    // Bind the same escape-by-default and reviewed-fragment contract as production.
+    html,
+    raw,
     api: async (path, options) => {
       // Return public policy for the initial read.
       if (path.endsWith("enrollment-policy")) {

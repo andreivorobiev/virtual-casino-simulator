@@ -10,6 +10,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 // Import the extracted Settings view factory.
 import { createSettingsView } from "../../web/views/settings.js";
+// Import the browser-independent tagged-template fixture for injected view rendering.
+import { html, raw } from "./html_template_fixture.mjs";
 
 // Resolve and read the reviewed source boundaries once.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -33,6 +35,9 @@ test("USER-009 preserves personal Settings after extraction", async () => {
   const loginMessages = [];
   // Create the production renderer around deterministic API and session seams.
   const renderSettings = createSettingsView({
+    // Bind the same escape-by-default and reviewed-fragment contract as production.
+    html,
+    raw,
     api: async (path, options) => {
       // Return durable settings or one account-owned history event.
       if (!options && path === "/api/v2/me/settings") {
