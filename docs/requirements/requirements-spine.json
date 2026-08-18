@@ -11594,7 +11594,7 @@
     {
       "id": "STORAGE-016",
       "module": "Core",
-      "description": "The storage subsystem exposes provider-neutral configuration, contract, validation, replay, event-helper, and durable game-action codec ownership plus bounded JSON reset/rollback/visibility, bounded JSON and MySQL game-action lifecycle owners, and a bounded complete ordinary MySQL provider while preserving the historical casino.core.storage import surface by exact object identity. Incremental package slices retain concrete JSON behavior and move each reviewed boundary without caller churn.",
+      "description": "The storage subsystem exposes provider-neutral configuration, contract, validation, replay, event-helper, and durable game-action codec ownership plus bounded JSON filesystem/locking/cache/planner infrastructure, bounded JSON reset/rollback/visibility, bounded JSON and MySQL game-action lifecycle owners, and a bounded complete ordinary MySQL provider while preserving the historical casino.core.storage import surface by exact object identity. Incremental package slices retain concrete JSON behavior and move each reviewed boundary without caller churn.",
       "status": "PASS",
       "api_tests": [
         "STORAGE-JSON-001"
@@ -11606,12 +11606,13 @@
         "casino/core/storage_game_actions_json.py",
         "casino/core/storage_game_actions_mysql.py",
         "casino/core/storage_game_action_codecs.py",
+        "casino/core/storage_json_infrastructure.py",
         "casino/core/storage_mysql_provider.py",
         "casino/core/storage.py"
       ],
       "introduced_in": "issue-940-storage-provider-base",
-      "changed_in": "issue-948-storage-mysql-provider",
-      "notes": "The #940 base, #942 reset, #944 JSON action, #946 MySQL action, and #948 complete MySQL provider seams use transitional storage_*.py modules because Python cannot safely load casino/core/storage.py and casino/core/storage/ as the same import during incremental cutover. Issue #948 also single-owns five provider-neutral durable codecs and shared history fields, keeps the complete provider below 1,200 lines, preserves historical class/config/field identities, and changes no SQL, lock, transaction, schema, pool, route, or caller behavior. The remaining JSON provider and final package/parity cutover stay governed by parent #728."
+      "changed_in": "issue-950-json-storage-infrastructure",
+      "notes": "The #940 base, #942 reset, #944 JSON action, #946 MySQL action, #948 complete MySQL provider, and #950 JSON infrastructure seams use transitional storage_*.py modules because Python cannot safely load casino/core/storage.py and casino/core/storage/ as the same import during incremental cutover. Issue #950 single-owns the exact forty-four-method filesystem, containment, lock, gate, durability, planner-purity, cache, and private-action substrate, keeps both resulting modules below 1,200 lines, preserves historical descriptors and mutable gate identities, and changes no provider, route, contract, schema, migration, or caller behavior. The final ordinary JSON ownership, package cutover, and named parity gate stay governed by parent #728."
     },
     {
       "id": "LEDGER-036",
@@ -11732,7 +11733,7 @@
     {
       "id": "TEST-243",
       "module": "Tests",
-      "description": "Storage package extraction evidence binds provider-neutral base, JSON reset, shared game-action codec, JSON and MySQL game-action lifecycle, and complete ordinary MySQL provider ownership; module ceilings, exact historical re-export identity, unchanged provider signatures, absence of duplicate declarations, exact method inventories and descriptors, shared history fields, and the #412/#432 ledger-then-action cache invalidation order are proven before established provider suites execute.",
+      "description": "Storage package extraction evidence binds provider-neutral base, JSON filesystem/locking/cache/planner infrastructure, JSON reset, shared game-action codec, JSON and MySQL game-action lifecycle, and complete ordinary MySQL provider ownership; module ceilings, exact historical re-export identity, unchanged provider signatures, absence of duplicate declarations, exact method inventories and descriptors, mutable gate ownership, shared history fields, and the #412/#432 cache construction and invalidation order are proven before established provider suites execute.",
       "status": "PASS",
       "api_tests": [
         "STORAGE-JSON-001"
@@ -11745,8 +11746,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-940-storage-provider-base",
-      "changed_in": "issue-948-storage-mysql-provider",
-      "notes": "The #940, #942, #944, #946, and #948 slices keep the existing STORAGE-JSON-001 registration and permanent case inventory unchanged while running listener-free ownership proof before accepted provider parity. The #948 gate proves the exact five-codec and thirty-three ordinary-MySQL method inventories, bounded modules, sole MySQL globals/classes, exact compatibility identities, one shared history-field declaration, and exclusion of JSON cache/gate/journal responsibilities. The parent #728 remains open until the JSON provider, final package cutover, and named cross-provider settlement-parity gate land."
+      "changed_in": "issue-950-json-storage-infrastructure",
+      "notes": "The #940, #942, #944, #946, #948, and #950 slices keep the existing STORAGE-JSON-001 registration and permanent case inventory unchanged while running listener-free ownership proof before accepted provider parity. The #950 gate proves the exact forty-four-method JSON infrastructure inventory, both module ceilings, substrate-first MRO, descriptor and mutable-gate identity, sole gate-global ownership, and exact #412/#432 cache construction and invalidation sequences. The parent #728 remains open until ordinary JSON ownership, final package cutover, and the named cross-provider settlement-parity gate land."
     },
     {
       "id": "TEST-175",
