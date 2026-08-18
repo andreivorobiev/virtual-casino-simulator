@@ -22,6 +22,8 @@ import { createAutoplayTab } from './admin/autoplay.js';
 import { createSystemTab } from './admin/system.js';
 // Import the Economics renderer so payout-rate summary and detail output retain their exact per-tab boundary. (ADMIN-030)
 import { createEconomicsTab } from './admin/economics.js';
+// Import the Launch Readiness renderer so its held-only visibility contract stays behind a reviewable per-tab boundary. (AUTH-016)
+import { createLaunchReadinessTab } from './admin/launch-readiness.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -102,6 +104,8 @@ const autoplay = createAutoplayTab({ api, html, post, safe, setTitle, t, table, 
 const system = createSystemTab({ api, html, isActiveTab, pre, safe, setTitle, t, table, view });
 // Bind the Economics renderer to the accepted summary, drill-down, escaping, and empty-state boundaries. (ADMIN-030, TEST-146)
 const economics = createEconomicsTab({ api, emptyState, html, humanLabel, safe, setTitle, t, table, view });
+// Bind the Launch Readiness renderer to the accepted read-only route, stale-tab guard, and compact card boundary. (AUTH-016)
+const launchReadiness = createLaunchReadinessTab({ api, html, humanLabel, isActiveTab, safe, setTitle, t, table, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -393,18 +397,6 @@ async function enrollment() {
   view.querySelector('#oauth-operational-preview').onclick = async () => { const result = await post('/api/v2/admin/oauth/operational-controls/preview', { changes: operationalChanges() }); const outlet = view.querySelector('#oauth-operational-preview-result'); outlet.hidden = false; outlet.textContent = JSON.stringify(result.impact || {}, null, 2); };
   // Apply only after confirmation; the server still requires external readiness for any enablement.
   view.querySelector('#oauth-operational-apply').onclick = async () => { if (!window.confirm(t('enrollment.providerOperationsConfirm', {}, 'admin'))) return; await post('/api/v2/admin/oauth/operational-controls', { changes: operationalChanges(), confirm: true, reason: view.querySelector('#oauth-operational-reason').value.trim(), revision: oauthControls.revision }); toast(t('enrollment.providerOperationsSaved', {}, 'admin'), true); await enrollment(); };
-}
-
-// Render a read-only release gate summary without exposing any activation control. (issue #209)
-async function launchReadiness() {
-  // Set the explicit held-launch heading and helper copy.
-  setTitle(t('launch.title', {}, 'admin'), t('launch.subtitle', {}, 'admin'));
-  // Read the owner-only aggregate from its additive v2 contract.
-  const data = await api('/api/v2/admin/launch-readiness');
-  // Stop a stale launch response from replacing another selected tab.
-  if (!isActiveTab('launch')) return;
-  // Render each gate and the non-negotiable separate-approval hold without buttons.
-  view.innerHTML = html`<section class="admin-card" data-testid="admin-launch-readiness" data-status="${safe(data.status)}"><h3>${safe(t('launch.status', {}, 'admin'))}: ${safe(humanLabel(data.status))}</h3><p>${safe(t('launch.held', {}, 'admin'))}</p>${table([t('launch.check', {}, 'admin'), t('launch.result', {}, 'admin')], (data.checks || []).map(row => html`<tr><td>${safe(humanLabel(row.id))}</td><td>${safe(humanLabel(row.status))}</td></tr>`))}</section>`;
 }
 
 // Render the de-identified Guest Trials telemetry section for account-free visitors. (issue #317)
