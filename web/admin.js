@@ -44,6 +44,8 @@ import { createAudioTab } from './admin/audio.js';
 import { createSessionsTab } from './admin/sessions.js';
 // Import trusted Operations diagnostics so dependency, OAuth, and mail health leave the dispatcher monolith. (ADMIN-014, MAIL-003)
 import { createOperationsTab } from './admin/operations.js';
+// Import shared locale options and the Language tab so localization leaves the dispatcher monolith. (I18N-005, I18N-014)
+import { createLanguageTab, createLocaleOptionHelpers } from './admin/language.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -72,6 +74,8 @@ const option = (value, label, selected) => html`<option value="${safe(value)}" $
 const ledgerEventLabel = (value, game) => localizedLedgerEventLabel(value, game, (key, params) => t(key, params, 'admin'));
 // Define emptyState to replace raw empty arrays with a calm, actionable Admin message.
 const emptyState = (titleText, detailText, testId = '') => html`<div class="admin-empty-state"${testId ? html` data-testid="${safe(testId)}"` : ''}><div><strong>${safe(titleText)}</strong><p>${safe(detailText)}</p></div></div>`;
+// Bind manifest-driven locale selectors once for Users, Invitations, Guest Trials, and Language.
+const { formatLocaleOptions, localeOptions } = createLocaleOptionHelpers({ getLocaleState, html, option, t });
 
 // Define eventList to present telemetry records with readable event labels and stable empty states.
 function eventList(events, emptyTitle, emptyDetail, testId, hideTechnicalDetails = false) {
@@ -245,6 +249,26 @@ const audio = createAudioTab({
 const sessions = createSessionsTab({ api, html, safe, setTitle, t, toast, view });
 // Bind Operations to its independent trusted diagnostic routes.
 const operations = createOperationsTab({ api, formatDate, html, isActiveTab, safe, setTitle, t, table, view });
+// Bind Language to the accepted runtime, browser-local settings, diagnostics, and shared selectors.
+const language = createLanguageTab({
+  formatDate,
+  formatLocaleOptions,
+  formatMoney,
+  formatNumber,
+  getLocaleSettings,
+  getLocaleState,
+  html,
+  localeOptions,
+  option,
+  resetLocaleSettings,
+  safe,
+  setLocale,
+  setTitle,
+  t,
+  table,
+  toast,
+  view,
+});
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -487,108 +511,6 @@ async function showGuestDetail(analyticsId) {
   detail.insertAdjacentHTML('beforeend', html`<dl class="guest-detail-grid"><div><dt>${safe(t('guests.colStartingBalance', {}, 'admin'))}</dt><dd>${formatMoney(row.starting_balance || 0)}</dd></div><div><dt>${safe(t('guests.colEndingBalance', {}, 'admin'))}</dt><dd>${row.ending_balance == null ? safe(t('guests.notAvailable', {}, 'admin')) : formatMoney(row.ending_balance)}</dd></div><div><dt>${safe(t('guests.colWagered', {}, 'admin'))}</dt><dd>${formatMoney(row.wagered || 0)}</dd></div><div><dt>${safe(t('guests.colReturned', {}, 'admin'))}</dt><dd>${formatMoney(row.returned || 0)}</dd></div><div><dt>${safe(t('guests.colNet', {}, 'admin'))}</dt><dd>${formatMoney(row.net || 0)}</dd></div><div><dt>${safe(t('guests.colErrors', {}, 'admin'))}</dt><dd>${formatNumber(row.errors || 0)}</dd></div></dl><section data-testid="admin-guest-timeline"><h4>${safe(t('guests.timelineTitle', {}, 'admin'))}</h4>${events.length ? table([t('guests.timelineEvent', {}, 'admin'), t('guests.timelineTime', {}, 'admin'), t('guests.colGame', {}, 'admin'), t('guests.timelineCategory', {}, 'admin'), t('guests.filterError', {}, 'admin'), t('guests.timelineLatency', {}, 'admin')], events.map(event => html`<tr><td>${safe(humanLabel(event.event))}</td><td>${safe(event.at)}</td><td>${safe(humanLabel(event.game || ''))}</td><td>${safe(humanLabel(event.action_category || ''))}</td><td>${safe(humanLabel(event.error_category || ''))}</td><td>${safe(humanLabel(event.latency_bucket || ''))}</td></tr>`)) : emptyState(t('guests.timelineEmpty', {}, 'admin'), t('guests.timelineEmptyDetail', {}, 'admin'))}</section>`);
   // Make the detail timeline keyboard-scrollable on narrow Admin viewports.
   detail.querySelector('[data-testid="admin-guest-timeline"]').tabIndex = 0;
-}
-
-// Define localeOptions to render installed locale options.
-function localeOptions(selected) {
-  // Store state so manifest locales drive the select list.
-  const state = getLocaleState();
-  // Return installed locale options with native labels.
-  return state.locales.map(locale => option(locale.id, `${locale.nativeLabel} (${locale.id})`, selected));
-}
-
-// Define formatLocaleOptions to render browser and installed format options.
-function formatLocaleOptions(selected) {
-  // Store state so every locked formatter locale stays in sync with the registry.
-  const state = getLocaleState();
-  // Store browser option before installed locale options.
-  const browser = option('browser', t('language.browserDefault', {}, 'admin'), selected);
-  // De-duplicate formatter fallbacks such as Shahmukhi Punjabi using the declared Intl identity.
-  const formatters = [...state.localeRegistry.reduce((entries, locale) => { if (!entries.has(locale.formatLocale)) entries.set(locale.formatLocale, locale); return entries; }, new Map()).values()];
-  // Return browser plus every deterministic formatter option without enabling untranslated UI packs.
-  return html`${browser}${formatters.map(locale => option(locale.formatLocale, `${locale.nativeLabel} (${locale.formatLocale})`, selected))}`;
-}
-
-// Define languageCards to render installed locale readiness cards.
-function languageCards(selected) {
-  // Store state so installed locale metadata drives the cards.
-  const state = getLocaleState();
-  // Return one compact card per installed locale.
-  return state.locales.map(locale => html`<article class="bot-edit" data-locale-card="${safe(locale.id)}" lang="${safe(locale.id)}" dir="${safe(locale.dir)}"><div class="row"><h3 style="margin-right:auto">${safe(locale.nativeLabel)}</h3><span class="badge">${safe(t(locale.id === selected ? 'language.active' : 'language.ready', {}, 'admin'))}</span></div><p class="muted">${safe(t('language.installedDescription', { label: locale.label, fallback: locale.fallbackChain.join(' → ') }, 'admin'))}</p><div class="row"><span class="badge">${safe(locale.script)}</span><span class="badge">${safe(t(`language.review.${locale.reviewStatus}`, {}, 'admin'))}</span><span class="badge">${safe(t(locale.voiceReady ? 'language.voiceReady' : 'language.voiceCheck', {}, 'admin'))}</span><span class="badge">${safe(locale.dir.toUpperCase())}</span></div></article>`);
-}
-
-// Define lockedLanguageGrid to render the complete owner-approved 25-locale registry.
-function lockedLanguageGrid() {
-  // Store state so every locked identity and readiness value comes from the manifest.
-  const state = getLocaleState();
-  // Return one generic metadata card per registry identity without claiming translation completion.
-  return html`<div class="grid2" data-testid="admin-locale-registry">${state.localeRegistry.map(locale => html`<article class="bot-edit" data-testid="admin-locale-registry-entry" data-locale-id="${safe(locale.id)}" lang="${safe(locale.id)}" dir="${safe(locale.dir)}"><div class="row"><span class="badge">#${formatNumber(locale.rank)}</span><strong style="margin-right:auto">${safe(locale.nativeLabel)}</strong><span class="badge">${safe(t(locale.uiReady ? 'language.ready' : 'language.metadataOnly', {}, 'admin'))}</span></div><p class="muted">${safe(locale.id)} · ${safe(locale.script)} · ${safe(locale.dir.toUpperCase())} · ${safe(locale.formatLocale)}</p></article>`)}</div>`;
-}
-
-// Define diagnosticsTable to render current runtime diagnostic values.
-function diagnosticsTable(state) {
-  // Return diagnostics in the same mini-table style as other Admin views.
-  return table([t('language.diagnostics', {}, 'admin'), 'Value'], [html`<tr><td>${safe(t('language.registryVersion', {}, 'admin'))}</td><td>${safe(state.registryVersion)}</td></tr>`, html`<tr><td>${safe(t('language.resolvedLocale', {}, 'admin'))}</td><td data-testid="admin-locale-state">${safe(state.locale)}</td></tr>`, html`<tr><td>${safe(t('language.fallbackLocale', {}, 'admin'))}</td><td>${safe(state.fallbackLocale)}</td></tr>`, html`<tr><td>${safe(t('language.installedLocales', {}, 'admin'))}</td><td data-testid="admin-locale-ready-count">${formatNumber(state.locales.length)} / ${formatNumber(state.localeRegistry.length)}</td></tr>`, html`<tr><td>${safe(t('language.registeredDomains', {}, 'admin'))}</td><td>${formatNumber(state.registeredDomains.length)}</td></tr>`, html`<tr><td>${safe(t('language.loadedDomains', {}, 'admin'))}</td><td>${safe(state.loadedDomains.join(', '))}</td></tr>`, html`<tr><td>${safe(t('language.missingKeys', {}, 'admin'))}</td><td>${formatNumber(state.missingKeyCount)}</td></tr>`]);
-}
-
-// Define language to render browser-local language and locale controls.
-async function language() {
-  // Set the localized language title and subtitle.
-  setTitle(t('language.title', {}, 'admin'), t('language.subtitle', {}, 'admin'));
-  // Store current runtime state for diagnostics and selected values.
-  const state = getLocaleState();
-  // Store saved settings so controls reflect browser-local preferences.
-  const settings = getLocaleSettings();
-  // Store selected language using the resolved locale when browser default is active.
-  const selectedLanguage = settings.useBrowserLocale ? state.locale : settings.language;
-  // Store selected format using browser sentinel when that preference is active.
-  const selectedFormat = settings.formatLocale || state.formatLocale;
-  // Render language cards, settings, previews, and diagnostics.
-  view.innerHTML = html`<div class="admin-split" data-testid="admin-localization-foundation"><section class="admin-card"><div class="row"><h3 style="margin-right:auto">${safe(t('language.availableTitle', {}, 'admin'))}</h3><span class="badge">${safe(t('language.readyCount', { ready: state.locales.length, total: state.localeRegistry.length }, 'admin'))}</span></div><div class="grid2">${languageCards(selectedLanguage)}</div><h3>${safe(t('language.registryTitle', {}, 'admin'))}</h3>${lockedLanguageGrid()}</section><section class="admin-card"><h3>${safe(t('language.localeSettings', {}, 'admin'))}</h3><div class="grid2 locale-settings-grid"><label>${safe(t('language.displayLanguage', {}, 'admin'))}<select id="admin_language" data-testid="admin-language-select">${localeOptions(selectedLanguage)}</select></label><label>${safe(t('language.formatLocale', {}, 'admin'))}<select id="admin_format_locale" data-testid="admin-format-locale-select">${formatLocaleOptions(selectedFormat)}</select></label></div><label><input id="admin_use_browser" type="checkbox" ${settings.useBrowserLocale ? 'checked' : ''}> ${safe(t('language.useBrowser', {}, 'admin'))}</label><label><input id="admin_persist_browser" type="checkbox" checked> ${safe(t('language.persistBrowser', {}, 'admin'))}</label><div class="result-box"><p data-testid="admin-money-preview">${safe(t('language.previewBalance', { amount: formatMoney(5030) }, 'admin'))}</p><p>${safe(t('language.datePreview', {}, 'admin'))}: ${safe(formatDate(new Date(), { dateStyle: 'medium', timeStyle: 'short' }))}</p></div><div class="row"><button id="admin_apply_locale" data-testid="admin-locale-apply" class="gold">${safe(t('language.apply', {}, 'admin'))}</button><button id="admin_save_locale" data-testid="admin-locale-save">${safe(t('language.saveBrowser', {}, 'admin'))}</button><button id="admin_reset_locale" data-testid="admin-locale-reset">${safe(t('language.resetBrowser', {}, 'admin'))}</button><button id="admin_preview_lobby">${safe(t('actions.previewLobby'))}</button></div>${diagnosticsTable(state)}<h3>${safe(t('language.stringPreview', {}, 'admin'))}</h3><div class="bot-edit"><b>English</b><p>Choose your table. All games use play tokens only. Ledger-backed outcomes are visible in Admin.</p></div><div class="bot-edit"><b>Русский</b><p>Выберите стол. Все игры используют только игровые токены. Результаты с учётом ledger видны в Admin.</p></div><div class="bot-edit"><b>${safe(t('language.fallback', {}, 'admin'))}</b><p>${safe(t('language.fallbackDescription', {}, 'admin'))}</p></div></section></div>`;
-  // Bind language form events after rendering.
-  bindLanguageControls();
-}
-
-// Define bindLanguageControls to attach Language/Locale button behavior.
-function bindLanguageControls() {
-  // Store language select for apply and save actions.
-  const languageSelect = view.querySelector('#admin_language');
-  // Store format select for number/date formatting.
-  const formatSelect = view.querySelector('#admin_format_locale');
-  // Store browser-default checkbox for locale resolution.
-  const browserToggle = view.querySelector('#admin_use_browser');
-  // Store persist checkbox for browser-local save behavior.
-  const persistToggle = view.querySelector('#admin_persist_browser');
-  // Define syncDisabled so browser-default mode communicates that language is resolved.
-  const syncDisabled = () => languageSelect.disabled = browserToggle.checked;
-  // Bind browser toggle changes to update the language select disabled state.
-  browserToggle.onchange = syncDisabled;
-  // Apply the initial disabled state.
-  syncDisabled();
-  // Bind Apply Now to switch in memory and optionally persist to this browser.
-  view.querySelector('#admin_apply_locale').onclick = () => saveLocale(languageSelect.value, formatSelect.value, browserToggle.checked, persistToggle.checked);
-  // Bind Save Browser Default to persist the selected language and format.
-  view.querySelector('#admin_save_locale').onclick = () => saveLocale(languageSelect.value, formatSelect.value, browserToggle.checked, true);
-  // Bind Reset to restore browser-default resolution.
-  view.querySelector('#admin_reset_locale').onclick = resetLanguage;
-  // Bind Preview Lobby to navigate without changing saved settings.
-  view.querySelector('#admin_preview_lobby').onclick = () => location.href = '/';
-}
-
-// Define saveLocale to switch locale without navigating away from the Admin tab.
-async function saveLocale(language, nextFormat, useBrowser, persist) {
-  // Switch runtime locale and formatting in place.
-  await setLocale(language, { persistLocal: persist, nextFormatLocale: nextFormat, nextUseBrowserLocale: useBrowser });
-  // Show localized feedback after the switch has completed.
-  toast(t('language.saved', {}, 'admin'), true);
-}
-
-// Define resetLanguage to return Admin to browser-default locale resolution.
-async function resetLanguage() {
-  // Reset runtime and browser-local settings through the i18n helper.
-  await resetLocaleSettings();
-  // Show localized feedback after reset.
-  toast(t('language.saved', {}, 'admin'), true);
 }
 
 // Declare the nested Admin navigation so current and added surfaces remain registry-driven. (ADMIN-031)
