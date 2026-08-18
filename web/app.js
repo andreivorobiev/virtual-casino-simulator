@@ -18,6 +18,8 @@ import { loadVoiceSettings, setPersonalSoundEnabled } from './core/voice.js';
 import { bindFeedbackDialog, localizeFeedback, syncFeedbackReporter } from './core/feedback.js';
 // Import the persistent every-game wellness controller for opt-in session reminders. (WELL-001, WELL-002)
 import { createWellnessController } from './core/wellness.js';
+// Import the terms gate so required consent leaves the application monolith. (AUTH-011)
+import { createTermsView } from './views/terms.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -66,6 +68,18 @@ let lobbyCategory = 'all';
 const oauthCompletion = readOAuthCompletion();
 // Own one document-lifetime wellness controller while authenticated sessions replace its timer generation.
 const wellnessController = createWellnessController({ apiClient: api, documentRef: document, windowRef: window, translate: (key, values) => t(key, values, 'shell'), formatTokens: tokens });
+// Bind the terms view to the existing shell session and authenticated-entry lifecycle.
+const renderTermsGate = createTermsView({
+  acceptTerms,
+  documentRef: document,
+  enterAuthenticated: session => enterAuthenticated(session),
+  getLocaleState,
+  getSession: () => currentSession,
+  normalizeCurrentUser,
+  safe,
+  setSession: session => { currentSession = session; },
+  t,
+});
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || t('autoplay.stopped', {}, 'shell')));
@@ -1059,28 +1073,6 @@ async function handleInvitationSubmit(event) {
   }
 }
 
-// Render the terms acceptance step when the current session still requires it.
-function renderTermsGate(session) {
-  // Store the current session so accepted terms can continue into the shell.
-  currentSession = session;
-  // Leave lobby-only flex containment before the terms screen replaces the route outlet.
-  document.body.classList.remove('lobby-active');
-  // Mark the document so chrome and game routes stay hidden until terms are accepted.
-  document.body.classList.add('auth-locked');
-  // Read the main route outlet reserved by index.html.
-  const view = document.getElementById('view');
-  // Remove authenticated lobby-region semantics before exposing the terms gate.
-  view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
-  // Apply the auth screen class contract for login and terms flows.
-  view.className = 'screen auth-screen';
-  // Read the required terms version from the current-user payload.
-  const version = session.terms?.version || session.terms?.required_version || 'private-beta';
-  // Render a concise toy-simulator terms acknowledgement gate.
-  view.innerHTML = `<section class="auth-panel" data-testid="terms-gate"><p class="eyebrow">${safe(t('terms.eyebrow', {}, 'shell'))}</p><h1>${safe(t('terms.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('terms.copy', {}, 'shell'))}</p><p class="auth-copy strong">${safe(t('terms.version', { version }, 'shell'))}</p><button id="accept-terms-btn" class="primary" data-testid="accept-terms" type="button">${safe(t('terms.accept', {}, 'shell'))}</button><p id="auth-message" class="auth-message"></p></section>`;
-  // Wire the accept button through the v2 current-user terms endpoint.
-  document.getElementById('accept-terms-btn').onclick = handleTermsAccept;
-}
-
 // Enter the authenticated casino shell after login and terms are complete.
 async function enterAuthenticated(session) {
   // Dispose any prior session generation before adopting a login, reconnect, or guest identity.
@@ -1174,27 +1166,6 @@ async function handleGuestTrial() {
     const copy = err.status === 403 ? t('auth.guestCapacityFull', {}, 'shell') : err.status === 429 ? t('auth.guestRateLimited', {}, 'shell') : err.message;
     // Render the localized failure through the same stable region used by every auth outcome.
     if (message) setAuthStatus(copy);
-  }
-}
-
-// Accept the required private beta toy-simulator terms for the current user.
-async function handleTermsAccept() {
-  // Read the shared message outlet for API errors.
-  const message = document.getElementById('auth-message');
-  // Start protected terms logic so API errors stay inside the terms panel.
-  try {
-    // Read the required terms version from the cached session.
-    const version = currentSession?.terms?.version || currentSession?.terms?.required_version || 'private-beta';
-    // Call the published v2 current-user terms endpoint.
-    const terms = await acceptTerms({ terms_version: version, locale: getLocaleState().locale });
-    // Merge the returned contract terms status into the canonical current-user payload.
-    currentSession = normalizeCurrentUser({ ...currentSession, terms });
-    // Enter the authenticated shell with the updated terms state.
-    await enterAuthenticated(currentSession);
-  // Handle failed terms acceptance with local auth-panel feedback.
-  } catch (err) {
-    // Render the API error without leaving the terms gate.
-    if (message) message.textContent = err.message;
   }
 }
 
