@@ -18,6 +18,8 @@ import { createRequirementsTab } from './admin/requirements.js';
 import { createStatesTab } from './admin/states.js';
 // Import the Autoplay renderer so session controls retain exact output behind a reviewable per-tab boundary. (AUTO-007, AUTO-008)
 import { createAutoplayTab } from './admin/autoplay.js';
+// Import the System renderer so canonical module revisions retain exact output behind a reviewable per-tab boundary. (ADMIN-004, ADMIN-014)
+import { createSystemTab } from './admin/system.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -94,6 +96,8 @@ const requirements = createRequirementsTab({ api, html, safe, setTitle, t, table
 const states = createStatesTab({ api, emptyState, html, pre, safe, setTitle, t, table, view });
 // Bind the Autoplay renderer to the accepted session, mutation, locale, and toast boundaries. (AUTO-007, AUTO-008, I18N-014)
 const autoplay = createAutoplayTab({ api, html, post, safe, setTitle, t, table, toast, view });
+// Bind the System renderer to the accepted dashboard, stale-tab, module-table, and diagnostic boundaries. (ADMIN-004, ADMIN-014, TEST-186)
+const system = createSystemTab({ api, html, isActiveTab, pre, safe, setTitle, t, table, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -969,18 +973,6 @@ async function resetLanguage() {
   await resetLocaleSettings();
   // Show localized feedback after reset.
   toast(t('language.saved', {}, 'admin'), true);
-}
-
-// Define system to show module revisions and raw overview data.
-async function system() {
-  // Set the localized system title and subtitle.
-  setTitle(t('system.title', {}, 'admin'), t('system.subtitle', {}, 'admin'));
-  // Load dashboard overview through the existing Admin endpoint.
-  const data = await api('/api/v1/admin/dashboard');
-  // Stop a stale System response from replacing a newer active Admin tab.
-  if (!isActiveTab('system')) return;
-  // Render module revisions and raw diagnostics.
-  view.innerHTML = html`<section class="admin-card"><h3>Module revisions</h3>${table(['Module', 'Revision'], (data.module_revisions || []).map(module => html`<tr><td>${safe(module.module)}</td><td>${safe(module.revision)}</td></tr>`))}</section><section class="admin-card"><h3>Raw overview</h3>${pre(data)}</section>`;
 }
 
 // Declare the nested Admin navigation so current and added surfaces remain registry-driven. (ADMIN-031)
