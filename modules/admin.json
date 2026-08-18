@@ -1,10 +1,11 @@
 {
   "module": "admin",
-  "version": "1.20.0",
+  "version": "1.20.1",
   "paths": [
     "casino/admin.py",
     "web/admin.html",
-    "web/admin.js"
+    "web/admin.js",
+    "web/admin/"
   ],
   "requirements_prefixes": [
     "ADMIN"
