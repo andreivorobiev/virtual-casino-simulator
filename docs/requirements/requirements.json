@@ -101,9 +101,14 @@
       "browser_tests": [],
       "implementation_files": [
         "casino/app.py",
-        "web/app.js"
+        "web/app.js",
+        "web/core/app_router.js",
+        "web/views/lobby.js",
+        "tests/unit/app_router_shell.test.mjs",
+        "tests/unit/app_lobby_view.test.mjs"
       ],
-      "notes": ""
+      "changed_in": "issue-730-app-view-modules",
+      "notes": "Issue #730 moves catalog routing and Lobby rendering behind explicit dependency boundaries while the shell retains navigation composition, lazy game ownership, history semantics, stale-route rejection, and the established Admin entry."
     },
     {
       "id": "CORE-008",
@@ -910,11 +915,33 @@
         "casino/admin.py",
         "web/admin.html",
         "web/admin.js",
+        "web/admin/administrators.js",
+        "web/admin/audio.js",
+        "web/admin/enrollment.js",
+        "web/admin/feedback.js",
+        "web/admin/guests.js",
+        "web/admin/invitations.js",
+        "web/admin/language.js",
+        "web/admin/operations.js",
+        "web/admin/players.js",
+        "web/admin/sessions.js",
         "web/admin/tests.js",
-        "tests/unit/admin_tests_module.test.mjs"
+        "web/admin/users.js",
+        "tests/unit/admin_administrators_module.test.mjs",
+        "tests/unit/admin_audio_module.test.mjs",
+        "tests/unit/admin_enrollment_module.test.mjs",
+        "tests/unit/admin_feedback_module.test.mjs",
+        "tests/unit/admin_guests_module.test.mjs",
+        "tests/unit/admin_invitations_module.test.mjs",
+        "tests/unit/admin_language_module.test.mjs",
+        "tests/unit/admin_operations_module.test.mjs",
+        "tests/unit/admin_players_module.test.mjs",
+        "tests/unit/admin_sessions_module.test.mjs",
+        "tests/unit/admin_tests_module.test.mjs",
+        "tests/unit/admin_users_module.test.mjs"
       ],
-      "changed_in": "issue-959-admin-tests-module",
-      "notes": "Issue #959 extracts the latest-results renderer behind an explicit dependency boundary while listener-free parity preserves its route, localized field count, escaped structured output, and populated or empty DOM bytes."
+      "changed_in": "issue-729-admin-tab-modules",
+      "notes": "Issue #729 completes the Admin monolith split: every remaining tab is now an explicit dependency-injected module, the dispatcher retains shared authorization and stale-response ownership, and listener-free tests preserve populated, empty, error, localization, escaping, and wiring behavior."
     },
     {
       "id": "ADMIN-002",
@@ -3817,11 +3844,14 @@
       ],
       "implementation_files": [
         "contracts/openapi/auth.v2.yaml",
+        "web/app.js",
+        "web/views/terms.js",
+        "tests/unit/app_terms_view.test.mjs",
         "codex/tasks/auth-mysql-token-frontend-auth.md"
       ],
       "introduced_in": "auth-mysql-token-foundation",
-      "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "changed_in": "issue-730-app-view-modules",
+      "notes": "Issue #730 moves the released terms gate into an escape-by-default view module while preserving the current version display, explicit acceptance action, authenticated-entry handoff, and frozen API contract."
     },
     {
       "id": "TERMS-002",
@@ -6489,17 +6519,21 @@
       "implementation_files": [
         "web/admin.html",
         "web/admin.js",
+        "web/admin/invitations.js",
         "web/app.js",
+        "web/views/invitation.js",
         "web/core/api.js",
         "web/i18n/en-US/admin.json",
         "web/i18n/ru-RU/admin.json",
         "web/i18n/en-US/shell.json",
         "web/i18n/ru-RU/shell.json",
-        "tests/visual/visual_matrix.json"
+        "tests/visual/visual_matrix.json",
+        "tests/unit/admin_invitations_module.test.mjs",
+        "tests/unit/app_invitation_view.test.mjs"
       ],
       "introduced_in": "issue-332-admin-invitations",
-      "changed_in": "pr-368-expired-session-recovery",
-      "notes": "After successful redemption the bearer is removed from browser history before returning to private-beta sign in; expected anonymous current-user probes never replace the public enrollment form with an authenticated-session expiry gate."
+      "changed_in": "issue-729-730-view-modules",
+      "notes": "Issues #729 and #730 extract both invitation surfaces behind escape-by-default module boundaries. Successful redemption still removes the bearer from browser history before private-beta sign in, and expected anonymous current-user probes never replace the public form with an authenticated-session expiry gate."
     },
     {
       "id": "INVITE-006",
@@ -6912,7 +6946,17 @@
         "web/brands/tiltseven.js",
         "web/core/pwa.js",
         "web/core/api.js",
+        "web/core/app_bootstrap.js",
+        "web/core/app_router.js",
         "web/app.js",
+        "web/views/invitation.js",
+        "web/views/lobby.js",
+        "web/views/login.js",
+        "web/views/reset.js",
+        "web/views/settings.js",
+        "web/views/signup.js",
+        "web/views/terms.js",
+        "web/views/verification.js",
         "casino/app.py",
         "casino/wsgi.py",
         "web/i18n/en-US/shell.json",
@@ -6920,13 +6964,13 @@
         "docs/pwa_foundation.md"
       ],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "pr-425-tiltseven-neon-pit",
-      "notes": "Install is atomic and now precaches the active brand descriptor and applier so the offline shell cannot boot without its imports. Activation still prunes only prior Casino static-shell caches, update activation is user-requested, protected-session expiry clears mounted authenticated chrome, anonymous enrollment remains intact, and no deployment or public exposure is authorized by this requirement."
+      "changed_in": "issue-730-app-view-modules",
+      "notes": "Issue #730 keeps installation atomic while precaching the complete static startup import closure, including extracted router, bootstrap, and view modules. Activation still prunes only prior Casino static-shell caches, update activation is user-requested, protected-session expiry clears mounted authenticated chrome, and no deployment or public exposure is authorized. Issue #719 remains open for version-pin single-sourcing and the separately documented offline game-route decision."
     },
     {
       "id": "TEST-095",
       "module": "Tests",
-      "description": "Browser-free policy tests prove canonical cache identity, exact public-static allowlisting including every imported brand module, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, message-lifetime ownership of skipWaiting, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, a real one-click multi-tab update with zero waiting/banner residue, update failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
+      "description": "Browser-free policy tests prove canonical cache identity, exact public-static allowlisting equal to the complete static application import closure, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, message-lifetime ownership of skipWaiting, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, a real one-click multi-tab update with zero waiting/banner residue, update failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -6939,8 +6983,8 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-578-pwa-multitab-recurrence",
-      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage now fails when the active brand import graph or event.waitUntil activation ownership is absent; the real Browser case uses isolated Casino, API-docs, and signup clients. Android/iOS metadata is still checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "issue-730-app-view-modules",
+      "notes": "Browser-free coverage now fails when any extracted static startup import is absent from the exact cache allowlist, when an allowlisted path is missing, or when event.waitUntil activation ownership is absent. Issue #719 remains open for the independent version-pin and offline game-route decisions; native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",
@@ -10247,14 +10291,16 @@
       ],
       "implementation_files": [
         "web/app.js",
+        "web/views/settings.js",
         "web/i18n/en-US/shell.json",
         "web/i18n/ru-RU/shell.json",
         "tests/run_tests.py",
-        "tests/visual/visual_matrix.json"
+        "tests/visual/visual_matrix.json",
+        "tests/unit/app_settings_view.test.mjs"
       ],
       "introduced_in": "issue-352-my-settings-completion",
-      "changed_in": "issue-352-my-settings-completion",
-      "notes": "This completes #352 after exact-head browser evidence and normal merge."
+      "changed_in": "issue-730-app-view-modules",
+      "notes": "Issue #730 moves the released Settings route into an escape-by-default view module while preserving locale and sound updates, paginated activity, guest conversion, error recovery, and exact authenticated ownership."
     },
     {
       "id": "SESSION-010",
@@ -10342,15 +10388,17 @@
         "casino/core/auth.py",
         "casino/wsgi.py",
         "web/app.js",
+        "web/views/reset.js",
         "web/i18n/en-US/shell.json",
         "web/i18n/ru-RU/shell.json",
         "contracts/openapi/auth.v2.yaml",
         "tests/account_spine_tests.py",
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/unit/app_reset_view.test.mjs"
       ],
       "introduced_in": "issue-334-password-reset-completion",
-      "changed_in": "issue-334-password-reset-completion",
-      "notes": "This completes #334 after standard review; the broader account-readiness umbrella #69 remains open."
+      "changed_in": "issue-730-app-view-modules",
+      "notes": "Issue #730 moves the released enumeration-safe recovery form into an escape-by-default view module while preserving bearer scrubbing, replay keys, generic acknowledgements, and explicit return to sign in."
     },
     {
       "id": "CONVERT-003",
@@ -10835,11 +10883,16 @@
         "casino/app.py",
         "casino/wsgi.py",
         "casino/config.py",
-        "contracts/openapi/auth.v2.yaml"
+        "contracts/openapi/auth.v2.yaml",
+        "web/app.js",
+        "web/views/signup.js",
+        "web/views/verification.js",
+        "tests/unit/app_signup_view.test.mjs",
+        "tests/unit/app_verification_view.test.mjs"
       ],
       "introduced_in": "issue-69-verified-email-enrollment",
-      "changed_in": "issue-69-verified-email-enrollment",
-      "notes": "The v1 API remains frozen. Provider delivery, public signup, and production configuration remain independently disabled; verification success requires a later explicit login."
+      "changed_in": "issue-730-app-view-modules",
+      "notes": "Issue #730 extracts the released signup and verification views behind escape-by-default dependency boundaries. The v1 API remains frozen; provider delivery, public signup, and production configuration remain independently disabled, and verification success still requires explicit login."
     },
     {
       "id": "USER-010",
@@ -11090,13 +11143,15 @@
       ],
       "implementation_files": [
         "web/app.js",
+        "web/views/login.js",
         "web/styles.css",
         "web/i18n/en-US/shell.json",
-        "web/i18n/ru-RU/shell.json"
+        "web/i18n/ru-RU/shell.json",
+        "tests/unit/app_login_view.test.mjs"
       ],
       "introduced_in": "issue-697-signin-decision-hierarchy",
-      "changed_in": "issue-697-signin-decision-hierarchy",
-      "notes": "Issue #697 redesigns only logged-out rendering and frontend validation. Existing authentication, guest, enrollment-policy, and OAuth endpoints remain unchanged and no provider or public signup capability is activated."
+      "changed_in": "issue-730-app-view-modules",
+      "notes": "Issue #730 moves the released logged-out hierarchy and provider-account controls into an escape-by-default view module without changing authentication, guest, enrollment-policy, or OAuth endpoints and without activating provider or public signup capability."
     },
     {
       "id": "TEST-176",

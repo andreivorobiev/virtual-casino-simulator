@@ -1,6 +1,6 @@
 {
   "module": "application",
-  "version": "9.70.7",
+  "version": "9.70.8",
   "paths": [
     "run.py",
     "pyproject.toml",
@@ -19,6 +19,8 @@
     "web/brands/",
     "web/core/i18n.js",
     "web/core/api.js",
+    "web/core/app_bootstrap.js",
+    "web/core/app_router.js",
     "web/core/admin_labels.js",
     "web/core/brand.js",
     "web/core/celebrate.js",
@@ -26,6 +28,7 @@
     "web/core/motion.js",
     "web/core/pwa.js",
     "web/core/ui.js",
+    "web/views/",
     "web/assets/pwa-icon-192.png",
     "web/assets/pwa-icon-512.png",
     "web/assets/pwa-maskable-192.png",

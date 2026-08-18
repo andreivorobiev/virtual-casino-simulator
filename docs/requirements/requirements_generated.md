@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.70.7
+- application: 9.70.8
 - core: 10.8.0
 - mobile: 1.0.0
 - ledger: 9.1.2
@@ -14,7 +14,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.20.11
+- admin: 1.20.12
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.3
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.5
 - teen_patti: 1.1.5
-- tests: 1.108.11
-- docs: 1.104.11
+- tests: 1.108.12
+- docs: 1.104.12
 - contracts: 1.62.4
 - tooling: 1.41.2
 - commenting_policy: 2.0.0
@@ -448,7 +448,7 @@ Historical source baseline: 9.1.0
 - **TEST-094** (Tests) - PASS: Provider-neutral unit, API, JSON-process, and disposable MySQL tests prove recoverable submission, single idempotent winners, durable rates, malformed-state preservation, atomic triage, privacy deletion and retention, metadata-only export, frozen-v1 compatibility, and manual-only publication; browser tests prove complete bilingual player and Admin states across governed viewports.
 - **PWA-001** (Application) - PASS: The restricted-preview browser application publishes a TiltSeven-branded standards-valid web manifest, matching theme and favicon metadata, complete 192- and 512-pixel any-purpose and maskable PNG icon sets, safe-area metadata, and a standalone-capable public shell while remaining fully usable in a normal browser; this repository foundation does not claim native Android or iOS installation acceptance, public hosting, or deployment.
 - **PWA-002** (Application) - PASS: A canonical-release-versioned root-scope service worker caches only one exact credential-free public static-shell allowlist, never intercepts non-GET, API, Admin, authenticated, private, wallet, ledger, outcome, invitation, OAuth, or provider traffic, and preserves the previous complete worker until an explicit update; offline server actions fail closed, and reconnect revalidates session, wallet, catalog, game state, and route before actions are released.
-- **TEST-095** (Tests) - PASS: Browser-free policy tests prove canonical cache identity, exact public-static allowlisting including every imported brand module, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, message-lifetime ownership of skipWaiting, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, a real one-click multi-tab update with zero waiting/banner residue, update failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
+- **TEST-095** (Tests) - PASS: Browser-free policy tests prove canonical cache identity, exact public-static allowlisting equal to the complete static application import closure, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, message-lifetime ownership of skipWaiting, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, a real one-click multi-tab update with zero waiting/banner residue, update failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
 - **TEST-096** (Tests) - PASS: The Roulette refund browser regression proves the logged deployment-closeout bugs for Clear bets and wager debit timing by placing a visible open wager, requiring the authoritative balance to debit on placement, activating the visible Clear bets control, and requiring the exact stake to be refunded before normal Roulette browser acceptance continues.
 - **TEST-099** (Tests) - PASS: An exact-source browser qualification runs one uninterrupted Baccarat session for exactly 2,000 rendered-control coups, permits only one attempt per round, requires exactly 2,000 accepted visible Deal activations and settled-to-wager-ready transitions, and rejects source drift, gaps, retries, browser diagnostics, wallet/account isolation failures, incomplete governed screenshots, or listener/runtime cleanup residue.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.
