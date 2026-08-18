@@ -26,6 +26,8 @@ import { createInvitationView } from './views/invitation.js';
 import { createPasswordResetView } from './views/reset.js';
 // Import pending-email verification so transient bearer and mailbox state leave the application monolith. (AUTH-018, USER-010)
 import { createVerificationView } from './views/verification.js';
+// Import full-account enrollment so policy and provider actions leave the application monolith. (AUTH-018, OAUTH-013)
+import { createSignupView } from './views/signup.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -127,6 +129,25 @@ const { renderEmailVerificationGate, setPendingEnrollmentEmail } = createVerific
   syncFeedbackReporter,
   t,
   transientRouteBearer,
+  wireLocaleSelect,
+  windowRef: window,
+});
+// Bind Signup to the Verification handoff and existing provider-intent composition seams.
+const renderSignupGate = createSignupView({
+  api,
+  beginOAuth: (provider, action) => beginOAuth(provider, action),
+  cryptoRef: crypto,
+  documentRef: document,
+  getLocaleState,
+  historyRef: history,
+  oauthCompletionCopy,
+  oauthProviders,
+  renderEmailVerificationGate,
+  safe,
+  setPendingEnrollmentEmail,
+  setSession: session => { currentSession = session; },
+  syncFeedbackReporter,
+  t,
   wireLocaleSelect,
   windowRef: window,
 });
@@ -762,104 +783,6 @@ function transientRouteBearer(path) {
   // Preserve the established browser route when no native bearer exists.
   return nativeBearer || new URL(location.href).searchParams.get('token') || '';
 }
-
-// Render the full-account enrollment form while honoring the server-published signup gate.
-async function renderSignupGate(message = '', success = false) {
-  // Resolve fixed server-owned provider completion copy when no caller feedback overrides it.
-  const signupMessage = message || oauthCompletionCopy();
-  // Clear any stale authenticated shell identity while the public route is displayed.
-  window.CasinoCurrentUser = null;
-  // Keep casino chrome locked behind successful signup and login.
-  document.body.classList.remove('lobby-active', 'guest-trial-active');
-  // Apply the established authentication layout at all governed viewports.
-  document.body.classList.add('auth-locked');
-  // Reset current session before showing the public form.
-  currentSession = null;
-  // Hide registered-user feedback while the browser is anonymous.
-  syncFeedbackReporter(null);
-  // Remove authenticated route semantics from the public outlet.
-  view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
-  // Render a loading form shell while the policy endpoint resolves.
-  view.innerHTML = `<section class="auth-panel" data-testid="signup-enrollment"><p class="eyebrow">${safe(t('signup.eyebrow', {}, 'shell'))}</p><h1>${safe(t('signup.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('status.loading', {}, 'shell'))}</p></section>`;
-  // Load policy from the public read-only endpoint.
-  const policy = await api('/api/v2/auth/enrollment-policy');
-  // Determine whether local-email public signup may submit.
-  const enabled = policy.signup_enabled === true;
-  // Determine whether any independently governed signup method is enabled by policy.
-  const socialRequested = policy.enrollment_mode === 'self-signup' && ['google', 'facebook'].some(provider => policy.signup_methods?.[provider] === true);
-  // Render the complete form with separate local and provider controls plus three explicit acknowledgements.
-  view.innerHTML = `<section class="auth-panel" data-testid="signup-enrollment" data-signup-enabled="${enabled || socialRequested ? 'true' : 'false'}"><p class="eyebrow">${safe(t('signup.eyebrow', {}, 'shell'))}</p><h1>${safe(t('signup.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(enabled || socialRequested ? t('signup.copy', {}, 'shell') : t('signup.disabledCopy', {}, 'shell'))}</p><form id="signup-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="signup-email" data-testid="signup-email" type="email" autocomplete="email" maxlength="254" required></label><label>${safe(t('invitation.displayName', {}, 'shell'))}<input id="signup-display-name" data-testid="signup-display-name" autocomplete="name" maxlength="80" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="signup-password" data-testid="signup-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="signup-locale" data-testid="signup-locale"></select></label><label class="check-row"><input id="signup-terms" data-testid="signup-terms" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><label class="check-row"><input id="signup-privacy" data-testid="signup-privacy" type="checkbox"><span>${safe(t('signup.privacyCheck', {}, 'shell'))}</span></label><label class="check-row"><input id="signup-play-token" data-testid="signup-play-token" type="checkbox"><span>${safe(t('signup.fakeMoneyCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="signup-submit" type="submit" ${enabled ? '' : 'disabled'}>${safe(t('signup.submit', {}, 'shell'))}</button><p id="signup-message" data-testid="signup-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(signupMessage)}</p></form><section class="oauth-provider-status" data-testid="oauth-signup-disabled" aria-labelledby="oauth-signup-heading"><h2 id="oauth-signup-heading">${safe(t('signup.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="signup-oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="signup-oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-signup-message" role="status">${safe(t('signup.oauthUnavailable', {}, 'shell'))}</p></section><a href="/" data-testid="signup-login-link">${safe(t('invitation.back', {}, 'shell'))}</a></section>`;
-  // Populate locale options through the shared locale manifest.
-  wireLocaleSelect(document.getElementById('signup-locale'), () => { void renderSignupGate(signupMessage, success); });
-  // Bind submit to the policy-gated signup API.
-  document.getElementById('signup-form').onsubmit = async event => {
-    // Keep the native form from navigating away.
-    event.preventDefault();
-    // Read the live status element.
-    const status = document.getElementById('signup-message');
-    // Start protected signup so validation errors stay local to the form.
-    try {
-      // Require every browser-owned acknowledgement before pending credential creation.
-      if (!document.getElementById('signup-terms').checked || !document.getElementById('signup-privacy').checked || !document.getElementById('signup-play-token').checked) throw new Error('signup consent required');
-      // Hold the transient mailbox only for the immediate pending-screen prefill.
-      const pendingEmail = document.getElementById('signup-email').value.trim();
-      // Hand off the transient mailbox through the Verification module's narrow memory-only seam.
-      setPendingEnrollmentEmail(pendingEmail);
-      // Submit the account-free pending request with one caller-owned replay key.
-      await api('/api/v2/auth/signup', { method: 'POST', body: { email: pendingEmail, password: document.getElementById('signup-password').value, display_name: document.getElementById('signup-display-name').value, locale: document.getElementById('signup-locale').value, terms_version: 'private-beta-1', accepted: true, idempotency_key: crypto.randomUUID() } });
-      // Move to the verification surface without creating or assuming a session.
-      history.replaceState({}, '', '/enroll/verify');
-      // Render the account-free pending state immediately.
-      renderEmailVerificationGate(t('signup.pending', {}, 'shell'), true);
-    // Show one localized enrollment failure without leaking backend details.
-    } catch (_) {
-      // Publish generic failure copy in the form.
-      status.textContent = t('signup.failed', {}, 'shell');
-    }
-  };
-  // Resolve provider-specific signup readiness only after the local form is usable.
-  void enableAvailableOAuthSignup();
-}
-
-
-// Enable only policy-approved and operationally released social-signup providers. (OAUTH-013)
-async function enableAvailableOAuthSignup() {
-  // Read the provider-signup region from the current enrollment render.
-  const region = document.querySelector('[data-testid^="oauth-signup-"]');
-  // Stop when navigation replaced the signup screen before status resolution.
-  if (!region) return;
-  // Start protected loading so failure leaves every provider action natively disabled.
-  try {
-    // Read only provider identifiers plus sign-in and signup availability booleans.
-    const result = await oauthProviders();
-    // Select only exact server-published signup-ready provider rows.
-    const available = new Set((result.providers || []).filter(item => item.signup_available === true).map(item => item.provider));
-    // Configure each reviewed external provider independently.
-    for (const provider of ['google', 'facebook']) {
-      // Read the stable provider-specific signup control.
-      const button = document.querySelector(`[data-testid="signup-oauth-${provider}"]`);
-      // Skip stale renders or malformed rows without changing the local form.
-      if (!button) continue;
-      // Enable only an exact provider reported signup-ready by both policy and runtime gates.
-      button.disabled = !available.has(provider);
-      // Keep assistive state aligned with native disabled behavior.
-      button.setAttribute('aria-disabled', String(button.disabled));
-      // Start only an explicit signup intent after all acknowledgements are checked.
-      button.onclick = button.disabled ? null : () => beginOAuth(provider, 'signup');
-    }
-    // Stamp the governed visual-matrix state from the resolved provider set.
-    region.dataset.testid = available.size ? 'oauth-signup-available' : 'oauth-signup-disabled';
-    // Explain the current state without disclosing provider configuration details.
-    region.querySelector('[data-testid="oauth-signup-message"]').textContent = available.size ? t('signup.oauthAvailable', {}, 'shell') : t('signup.oauthUnavailable', {}, 'shell');
-  // Preserve fail-closed controls and localized copy after any status failure.
-  } catch (_) {
-    // Stamp the bounded failure state without transport details.
-    region.dataset.testid = 'oauth-signup-status-error';
-    // Explain temporary unavailability with one generic localized message.
-    region.querySelector('[data-testid="oauth-signup-message"]').textContent = t('signup.oauthStatusError', {}, 'shell');
-  }
-}
-
 
 // Enter the authenticated casino shell after login and terms are complete.
 async function enterAuthenticated(session) {
