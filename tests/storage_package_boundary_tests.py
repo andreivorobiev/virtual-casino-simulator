@@ -17,6 +17,8 @@ from casino.core import storage
 from casino.core import storage_base
 # Import the extracted JSON reset lifecycle owner for exact mixin checks.
 from casino.core import storage_reset
+# Import the extracted JSON game-action lifecycle owner for exact mixin checks.
+from casino.core import storage_game_actions_json
 
 
 # Resolve the repository root from this tracked test module.
@@ -27,6 +29,8 @@ STORAGE_SOURCE = ROOT / "casino" / "core" / "storage.py"
 BASE_SOURCE = ROOT / "casino" / "core" / "storage_base.py"
 # Point at the extracted package-ready JSON reset lifecycle owner.
 RESET_SOURCE = ROOT / "casino" / "core" / "storage_reset.py"
+# Point at the extracted package-ready JSON game-action lifecycle owner.
+JSON_ACTION_SOURCE = ROOT / "casino" / "core" / "storage_game_actions_json.py"
 # Bind every moved compatibility name that the historical module must re-export.
 MOVED_NAMES = (
     "MySQLConfig",
@@ -71,6 +75,44 @@ RESET_METHOD_NAMES = (
     "reset_transaction",
     "reset",
     "state_visibility_transaction",
+)
+# Bind every JSON game-action method now single-owned by the lifecycle mixin.
+JSON_ACTION_METHOD_NAMES = (
+    "_serialize_game_action_resources",
+    "_deserialize_game_action_resources",
+    "_serialize_game_action_snapshot",
+    "_deserialize_game_action_snapshot",
+    "_serialize_game_action_plan",
+    "_deserialize_game_action_plan",
+    "_serialize_game_action_receipt",
+    "_deserialize_game_action_receipt",
+    "_empty_game_action_epoch",
+    "_read_game_action_epoch",
+    "_write_game_action_epoch",
+    "_ready_game_action_epoch",
+    "_empty_game_action_receipts",
+    "_read_game_action_receipts",
+    "_empty_game_action_claims",
+    "_read_game_action_claims",
+    "_commit_game_action_claim",
+    "_empty_game_action_states",
+    "_read_game_action_states",
+    "_json_wallet_cents",
+    "_json_wallet_value",
+    "_read_game_action_players",
+    "_capture_game_action_snapshot",
+    "_game_action_journal_record",
+    "_read_game_action_journal",
+    "_write_game_action_journal_stage",
+    "_apply_game_action_wallets",
+    "_apply_game_action_states",
+    "_commit_game_action_receipt",
+    "_game_action_ledger_events",
+    "_apply_game_action_ledger",
+    "_recover_game_action_journal_locked",
+    "_recover_all_json_actions_locked",
+    "execute_game_action_once",
+    "resolve_game_action",
 )
 
 
@@ -178,8 +220,8 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         # Reject duplicate reset declarations from the remaining concrete-provider class.
         provider_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertTrue(set(RESET_METHOD_NAMES).isdisjoint(provider_methods))
-        # Require the exact mixin to lead the concrete provider MRO.
-        self.assertEqual(ast.unparse(provider_class.bases[0]), "JsonResetMixin")
+        # Require reset ownership to remain before the provider contracts after later mixins.
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
         self.assertIs(storage.JsonStorageProvider.reset_transaction, storage_reset.JsonResetMixin.reset_transaction)
         # Keep ordinary JSON, ledger, document, and game-action implementations outside reset ownership.
         for forbidden in ("_read_json", "_write_json", "transact_ledger", "read_document", "execute_game_action_once", "resolve_game_action"):
@@ -207,6 +249,39 @@ class StoragePackageBoundaryTests(unittest.TestCase):
             self.assertEqual(method_source.count("self._drop_actions_cache()"), 1, method_name)
             # Preserve ledger-tail invalidation before action-registry invalidation verbatim.
             self.assertLess(method_source.index("self._drop_ledger_cache()"), method_source.index("self._drop_actions_cache()"), method_name)
+
+    # Require the third #728 seam to single-own the JSON game-action lifecycle.
+    def test_json_game_action_owner_is_bounded_and_single_owned(self):
+        # Read both owners as inert UTF-8 source.
+        action_source = JSON_ACTION_SOURCE.read_text(encoding="utf-8")
+        storage_source = STORAGE_SOURCE.read_text(encoding="utf-8")
+        # Keep the complete extracted lifecycle below the permanent module ceiling.
+        self.assertLess(len(action_source.splitlines()), 1200)
+        # Parse both modules without constructing a provider or touching storage.
+        action_tree = ast.parse(action_source)
+        storage_tree = ast.parse(storage_source)
+        # Locate the sole action mixin and concrete JSON provider declarations.
+        action_class = next(node for node in action_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonGameActionMixin")
+        provider_class = next(node for node in storage_tree.body if isinstance(node, ast.ClassDef) and node.name == "JsonStorageProvider")
+        # Require the complete reviewed game-action method inventory in its new owner.
+        owned_methods = {node.name for node in action_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertEqual(owned_methods, set(JSON_ACTION_METHOD_NAMES))
+        # Reject duplicate lifecycle declarations from the remaining concrete provider.
+        provider_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertTrue(set(JSON_ACTION_METHOD_NAMES).isdisjoint(provider_methods))
+        # Require every inherited implementation to be the exact mixin object.
+        for method_name in JSON_ACTION_METHOD_NAMES:
+            # Compare descriptor identity without constructing a provider.
+            self.assertIs(getattr(storage.JsonStorageProvider, method_name), getattr(storage_game_actions_json.JsonGameActionMixin, method_name), method_name)
+        # Keep ordinary JSON, reset, ledger, document, and MySQL implementations outside action ownership.
+        for forbidden in ("_read_json", "reset_transaction", "transact_ledger", "read_document", "_mysql_game_action_epoch"):
+            # Name any accidentally broadened lifecycle ownership precisely.
+            self.assertNotIn(forbidden, owned_methods)
+
+    # Require the private recovery-stage set to remain one exact compatibility object.
+    def test_json_game_action_owner_preserves_stage_constant_identity(self):
+        # Preserve the historical private import without duplicating its mutable set.
+        self.assertIs(storage._GAME_ACTION_STAGES, storage_game_actions_json._GAME_ACTION_STAGES)
 
 
 # Run the focused seam directly when a developer invokes this file.
