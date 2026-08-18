@@ -1585,6 +1585,46 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one atomic skip for the exact complete affinity group.
         self.assertEqual(skipped_groups, ["guest_lifecycle"])
 
+    # Prove the complete auth/lobby affinity family has one external owner and one runner delegation.
+    def test_browser_auth_lobby_affinity_registration_ownership_is_exact(self):
+        # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
+        runner_source = self.workflow_text(ROOT / "tests" / "run_tests.py")
+        # Read the complete auth/lobby owner independently of its import path.
+        owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_lobby.py")
+        # Bind the exact permanent identities in their historical source order.
+        expected_ids = (
+            "BR-STATIC-CACHE-001", "BR-MARKETING-001", "BR-SHELL-BRAND-GUEST-001", "BR-OAUTH-001",
+            "BR-OAUTH-SIGNUP-001", "BR-VERIFIED-EMAIL-001", "BR-TOUCH-TARGET-AUTH-001", "BR-AUTH-LOGIN-001",
+            "BR-TERMS-001", "BR-AUTH-SHELL-001", "BR-OAUTH-RUNTIME-001", "BR-TOKEN-001", "BR-SEC-001",
+            "BR-AUTH-LOCALE-001", "BR-AUTH-LOGOUT-001", "BR-TOKEN-FRACTION-001", "BR-SHELL-001",
+            "BR-TOUCH-TARGET-001", "BR-SHELL-BRAND-001", "BR-TOKEN-WALLET-001", "BR-LOBBY-001",
+            "BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001", "BR-LOBBY-RESP-001",
+        )
+        # Extract only literal permanent registrations from the new owner.
+        owner_ids = tuple(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
+        # Require exact identity and historical order without invented or duplicate cases.
+        self.assertEqual(owner_ids, expected_ids)
+        # Reject any remaining inline registration in the compatibility runner.
+        for case_id in expected_ids:
+            # Keep each permanent identity under exactly one executable source owner.
+            self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
+        # Require one delegation at the group's exact historical position.
+        self.assertEqual(runner_source.count("browser_auth_lobby.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_shard_owns,page,base,ROOT,visual_matrix,read_i18n_json,casino_config,assert_condition,shot,catalog_evidence,region_evidence,wallet_evidence,footer_evidence,game_evidence,console_errors,http_errors,provider_requests)"), 1)
+        # Require one owner-level guard without repeated partial setup checks.
+        self.assertEqual(owner_source.count("browser_shard_owns_group('auth_lobby')"), 1)
+        # Require the extracted owner to advance all 24 source positions atomically on non-owning shards.
+        self.assertEqual(owner_source.count("skip_browser_affinity('auth_lobby')"), 1)
+        # Import the extracted owner without starting the compatibility runner.
+        from tests.cases.browser import auth_lobby
+        # Retain the exact skip identity emitted by a non-owning shard.
+        skipped_groups = []
+        # Reject any accidental case execution on a shard that does not own the complete group.
+        reject_case = lambda *_args: self.fail("non-owner executed an auth/lobby case")
+        # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
+        auth_lobby.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 17))
+        # Require one atomic skip for the exact complete affinity group.
+        self.assertEqual(skipped_groups, ["auth_lobby"])
+
     # Prove declared producer/consumer groups fit one deterministic shard and guard their bodies.
     def test_browser_shard_affinity_groups_are_contiguous_and_guarded(self):
         # Parse the exact browser runner source without importing it.
@@ -1601,6 +1641,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         auth_backend_pwa_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
         # Read the extracted disposable guest-lifecycle owner for guard-location checks below.
         guest_lifecycle_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "guest_lifecycle.py")
+        # Read the extracted auth/lobby owner for guard-location checks below.
+        auth_lobby_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_lobby.py")
         # Compute the same deterministic six-runner partition used by the workflow.
         shard_sets = browser_runner_module.browser_shard_case_sets(6)
         # Recompute from identical inputs to prove packing replay is deterministic.
@@ -1668,9 +1710,13 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Require all producers and consumers to execute on one shard.
             self.assertEqual(len(owners), 1, group_name)
             # Extracted Browser affinities own their guard and skip outside the compatibility runner.
-            if group_name in {"auth_backend_pwa", "guest_lifecycle"}:
+            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_lobby"}:
                 # Bind the exact source-level delegation alias and external owner for this family.
-                delegation_alias, owner_source = ("browser_auth_backend_pwa", auth_backend_pwa_source) if group_name == "auth_backend_pwa" else ("browser_guest_lifecycle", guest_lifecycle_source)
+                delegation_alias, owner_source = {
+                    "auth_backend_pwa": ("browser_auth_backend_pwa", auth_backend_pwa_source),
+                    "guest_lifecycle": ("browser_guest_lifecycle", guest_lifecycle_source),
+                    "auth_lobby": ("browser_auth_lobby", auth_lobby_source),
+                }[group_name]
                 # Require one source-level delegation so cross-file discovery preserves the group's exact position.
                 self.assertEqual(source.count(f"{delegation_alias}.run_cases("), 1)
                 # Require the complete extracted body to remain beneath its declared group owner.
