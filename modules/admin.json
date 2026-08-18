@@ -1,6 +1,6 @@
 {
   "module": "admin",
-  "version": "1.20.4",
+  "version": "1.20.5",
   "paths": [
     "casino/admin.py",
     "web/admin.html",

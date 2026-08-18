@@ -14,6 +14,8 @@ import { createHistoryTab } from './admin/history.js';
 import { createTestsTab } from './admin/tests.js';
 // Import the Requirements renderer so coverage rows retain exact localized output behind a reviewable per-tab boundary. (ADMIN-010, ADMIN-021)
 import { createRequirementsTab } from './admin/requirements.js';
+// Import the Game States renderer so nested diagnostics retain exact output behind a reviewable per-tab boundary. (ADMIN-009, ADMIN-018, ADMIN-029)
+import { createStatesTab } from './admin/states.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -86,6 +88,8 @@ const history = createHistoryTab({ api, emptyState, formatMoney, html, humanLabe
 const tests = createTestsTab({ api, emptyState, html, pre, safe, setTitle, t, view });
 // Bind the Requirements renderer to the accepted locale, table, and Admin-shell boundaries. (ADMIN-010, ADMIN-021, I18N-014)
 const requirements = createRequirementsTab({ api, html, safe, setTitle, t, table, view });
+// Bind the Game States renderer to the accepted diagnostics and empty-state helpers. (ADMIN-009, ADMIN-018, ADMIN-029)
+const states = createStatesTab({ api, emptyState, html, pre, safe, setTitle, t, table, view });
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -777,18 +781,6 @@ async function economicsDetail(game) {
   view.innerHTML = html`<section class="admin-card" data-testid="admin-economics-detail"><div class="row"><button id="economics-back" type="button">${safe(t('economics.back', {}, 'admin'))}</button><span class="badge">${safe(humanLabel(game))}</span>${data.player_positive ? html`<span class="badge danger">${safe(t('economics.playerPositive', {}, 'admin'))}</span>` : ''}</div><p>${safe(t('economics.detailSummary', { rate: ratePercent(data.payout_rate), edge: ratePercent(data.house_edge), wagered: data.wagered, returned: data.returned, events: data.events }, 'admin'))}</p><h3>${safe(t('economics.byType', {}, 'admin'))}</h3>${(data.by_transaction_type || []).length ? table([t('economics.transactionType', {}, 'admin'), t('economics.count', {}, 'admin'), t('economics.netTotal', {}, 'admin')], data.by_transaction_type.map(economicsRow => html`<tr><td>${safe(humanLabel(economicsRow.transaction_type))}</td><td>${safe(economicsRow.count)}</td><td>${safe(economicsRow.total)}</td></tr>`)) : emptyState(t('economics.noActivity', {}, 'admin'), t('economics.noActivityDetail', {}, 'admin'), 'admin-economics-detail-empty')}<h3>${safe(t('economics.recent', {}, 'admin'))}</h3>${(data.recent || []).length ? table([t('economics.player', {}, 'admin'), t('economics.transactionType', {}, 'admin'), t('economics.amount', {}, 'admin')], data.recent.map(economicsRow => html`<tr><td>${safe(economicsRow.player_id)}</td><td>${safe(humanLabel(economicsRow.transaction_type))}</td><td>${safe(economicsRow.amount)}</td></tr>`)) : emptyState(t('economics.noRecent', {}, 'admin'), t('economics.noRecentDetail', {}, 'admin'), 'admin-economics-recent-empty')}</section>`;
   // Return to the live summary when the operator activates Back.
   view.querySelector('#economics-back').onclick = () => economics();
-}
-
-// Define states to show isolated game state files.
-async function states() {
-  // Set the localized state-diagnostics title and subtitle.
-  setTitle(t('states.title', {}, 'admin'), t('states.subtitle', {}, 'admin'));
-  // Load game states through the existing Admin endpoint.
-  const data = await api('/api/v1/admin/game-states');
-  // Normalize per-game and per-player state documents into stable table rows. (ADMIN-029)
-  const entries = Object.entries(data.states || {});
-  // Render expandable state detail or an explicit empty state. (ADMIN-029)
-  view.innerHTML = html`<section class="admin-card"><h3>${safe(t('states.heading', {}, 'admin'))}</h3>${entries.length ? table([t('states.state', {}, 'admin'), t('states.keys', {}, 'admin'), t('states.detail', {}, 'admin')], entries.map(([key, info]) => html`<tr><td>${safe(key)}</td><td>${safe(Object.keys(info.state || {}).length)}</td><td><details><summary>${safe(t('states.view', {}, 'admin'))}</summary>${pre(info.state)}</details></td></tr>`)) : emptyState(t('states.emptyTitle', {}, 'admin'), t('states.emptyDetail', {}, 'admin'), 'admin-game-states-empty')}</section>`;
 }
 
 // Define audio to preserve global sound and voice settings.
