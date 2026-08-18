@@ -34,6 +34,8 @@ import { createPlayersTab } from './admin/players.js';
 import { createUsersTab } from './admin/users.js';
 // Import owner-only role delegation so privilege changes leave the dispatcher monolith. (ADMIN-033)
 import { createAdministratorsTab } from './admin/administrators.js';
+// Import enrollment governance so signup and provider controls leave the dispatcher monolith. (AUTH-015)
+import { createEnrollmentTab } from './admin/enrollment.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -184,6 +186,22 @@ const administrators = createAdministratorsTab({
   toast,
   view,
 });
+// Bind Enrollment to its distinct policy, readiness, and provider-control boundaries.
+const enrollment = createEnrollmentTab({
+  api,
+  emptyState,
+  html,
+  humanLabel,
+  isActiveTab,
+  option,
+  post,
+  safe,
+  setTitle,
+  t,
+  table,
+  toast,
+  view,
+});
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -308,34 +326,6 @@ async function feedbackDetail(reportId) {
   view.querySelector('#feedback-export').onclick = async () => { const exported = await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}/export`); const blob = new Blob([JSON.stringify(exported.export || {}, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${report.reference || 'feedback-report'}.json`; link.click(); URL.revokeObjectURL(link.href); toast(t('feedback.admin.exported', {}, 'feedback'), true); };
   // Require explicit confirmation before starting the recoverable privacy-deletion saga.
   view.querySelector('#feedback-delete').onclick = async () => { if (!window.confirm(t('feedback.admin.deleteConfirm', {}, 'feedback'))) return; await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}`, { method: 'DELETE', body: { idempotency_key: feedbackActionKey() } }); toast(t('feedback.admin.deleted', {}, 'feedback'), true); feedbackReports(); };
-}
-
-// Render owner policy, readiness, preview, rollback inputs, and immutable change evidence. (AUTH-015)
-async function enrollment() {
-  // Set the enrollment-governance heading and restricted-preview boundary.
-  setTitle(t('enrollment.title', {}, 'admin'), t('enrollment.subtitle', {}, 'admin'));
-  // Read coherent enrollment policy, readiness, and separately governed provider kill switches.
-  const [data, readiness, oauthControls] = await Promise.all([api('/api/v2/admin/enrollment-policy'), api('/api/v2/admin/enrollment-readiness'), api('/api/v2/admin/oauth/operational-controls')]);
-  // Stop a stale enrollment request from replacing another selected tab.
-  if (!isActiveTab('enrollment')) return;
-  // Read the current durable policy once for controls and exact rollback input.
-  const policy = data.policy || { mode: 'closed', methods: { email: false, google: false, facebook: false }, invitations_enabled: false };
-  // Render policy controls, method-specific readiness, and verified audit without any launch action.
-  view.innerHTML = html`<section class="admin-card" data-testid="admin-enrollment-policy"><h3>${safe(t('enrollment.policyTitle', {}, 'admin'))}</h3><label>${safe(t('enrollment.mode', {}, 'admin'))}<select id="enrollment-mode">${(data.modes || []).map(mode => option(mode, humanLabel(mode), policy.mode))}</select></label><div class="grid3">${(data.methods || []).map(method => html`<label class="check-row"><input id="enrollment-method-${safe(method)}" type="checkbox" ${policy.methods?.[method] ? 'checked' : ''}><span>${safe(humanLabel(method))}</span></label>`)}</div><label class="check-row"><input id="enrollment-invitations" type="checkbox" ${policy.invitations_enabled ? 'checked' : ''}><span>${safe(t('enrollment.invitations', {}, 'admin'))}</span></label><label>${safe(t('enrollment.reason', {}, 'admin'))}<input id="enrollment-reason" maxlength="256"></label><div class="row"><button id="enrollment-preview" type="button">${safe(t('enrollment.preview', {}, 'admin'))}</button><button id="enrollment-apply" type="button" class="gold">${safe(t('enrollment.apply', {}, 'admin'))}</button></div><div id="enrollment-preview-result" class="result-box" hidden></div></section><section class="admin-card" data-testid="admin-enrollment-readiness"><h3>${safe(t('enrollment.readinessTitle', {}, 'admin'))}</h3><p>${safe(readiness.live_enablement_authorized ? t('enrollment.authorized', {}, 'admin') : t('enrollment.held', {}, 'admin'))}</p>${table([t('enrollment.method', {}, 'admin'), t('enrollment.enabled', {}, 'admin'), t('enrollment.ready', {}, 'admin'), t('enrollment.blockers', {}, 'admin')], Object.entries(readiness.methods || {}).map(([method, row]) => html`<tr><td>${safe(humanLabel(method))}</td><td>${safe(String(row.enabled))}</td><td>${safe(String(row.ready))}</td><td>${safe((row.blockers || []).map(humanLabel).join(', ') || '—')}</td></tr>`))}</section><section class="admin-card" data-testid="admin-enrollment-audit"><h3>${safe(t('enrollment.auditTitle', {}, 'admin'))}</h3>${(data.audit || []).length ? table([t('enrollment.time', {}, 'admin'), t('enrollment.actor', {}, 'admin'), t('enrollment.reason', {}, 'admin')], data.audit.slice().reverse().map(row => html`<tr><td>${safe(row.at)}</td><td>${safe(row.actor_id)}</td><td>${safe(row.reason)}</td></tr>`)) : emptyState(t('enrollment.auditEmpty', {}, 'admin'), t('enrollment.auditEmptyDetail', {}, 'admin'))}</section>`;
-  // Insert provider login kill switches as a distinct control plane after signup readiness.
-  view.querySelector('[data-testid="admin-enrollment-readiness"]').insertAdjacentHTML('afterend', html`<section class="admin-card" data-testid="admin-oauth-operational-controls"><h3>${safe(t('enrollment.providerOperationsTitle', {}, 'admin'))}</h3><p>${safe(t('enrollment.providerOperationsHelp', {}, 'admin'))}</p><div class="grid3">${Object.entries(oauthControls.providers || {}).map(([provider, enabled]) => html`<label class="check-row"><input id="oauth-operational-${safe(provider)}" type="checkbox" ${enabled ? 'checked' : ''}><span>${safe(humanLabel(provider))}</span></label>`)}</div><label>${safe(t('enrollment.reason', {}, 'admin'))}<input id="oauth-operational-reason" maxlength="256"></label><div class="row"><button id="oauth-operational-preview" type="button">${safe(t('enrollment.preview', {}, 'admin'))}</button><button id="oauth-operational-apply" type="button" class="gold">${safe(t('enrollment.providerOperationsApply', {}, 'admin'))}</button></div><div id="oauth-operational-preview-result" class="result-box" hidden></div></section>`);
-  // Build the exact complete proposal from visible owner controls.
-  const changes = () => ({ mode: view.querySelector('#enrollment-mode').value, methods: Object.fromEntries((data.methods || []).map(method => [method, view.querySelector(`#enrollment-method-${method}`).checked])), invitations_enabled: view.querySelector('#enrollment-invitations').checked });
-  // Preview through the same pure policy computation used by apply.
-  view.querySelector('#enrollment-preview').onclick = async () => { const result = await post('/api/v2/admin/enrollment-policy/preview', { changes: changes() }); const outlet = view.querySelector('#enrollment-preview-result'); outlet.hidden = false; outlet.textContent = JSON.stringify(result.impact || {}, null, 2); };
-  // Apply only after explicit browser confirmation and a bounded owner reason.
-  view.querySelector('#enrollment-apply').onclick = async () => { if (!window.confirm(t('enrollment.confirm', {}, 'admin'))) return; await post('/api/v2/admin/enrollment-policy', { changes: changes(), confirm: true, reason: view.querySelector('#enrollment-reason').value.trim(), revision: data.revision }); toast(t('enrollment.saved', {}, 'admin'), true); await enrollment(); };
-  // Build the independent operational-provider proposal without touching signup flags.
-  const operationalChanges = () => Object.fromEntries(Object.keys(oauthControls.providers || {}).map(provider => [provider, view.querySelector(`#oauth-operational-${provider}`).checked]));
-  // Preview exact existing-login lockout impact through the owner-only v2 route.
-  view.querySelector('#oauth-operational-preview').onclick = async () => { const result = await post('/api/v2/admin/oauth/operational-controls/preview', { changes: operationalChanges() }); const outlet = view.querySelector('#oauth-operational-preview-result'); outlet.hidden = false; outlet.textContent = JSON.stringify(result.impact || {}, null, 2); };
-  // Apply only after confirmation; the server still requires external readiness for any enablement.
-  view.querySelector('#oauth-operational-apply').onclick = async () => { if (!window.confirm(t('enrollment.providerOperationsConfirm', {}, 'admin'))) return; await post('/api/v2/admin/oauth/operational-controls', { changes: operationalChanges(), confirm: true, reason: view.querySelector('#oauth-operational-reason').value.trim(), revision: oauthControls.revision }); toast(t('enrollment.providerOperationsSaved', {}, 'admin'), true); await enrollment(); };
 }
 
 // Render the de-identified Guest Trials telemetry section for account-free visitors. (issue #317)
