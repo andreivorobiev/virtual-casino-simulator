@@ -31,7 +31,7 @@ def main():
     for folder in ["data", "logs", "dist"]:
         # Set (ROOT / folder).mkdir(exist_ok to the value needed for the next operation.
         (ROOT / folder).mkdir(exist_ok=True)
-    run([sys.executable, "-m", "py_compile", "run.py", "verify_rules.py", "tests/run_tests.py"])
+    run([sys.executable, "-m", "py_compile", "run.py", "verify_rules.py", "tests/run_tests.py", "tests/runner.py"])
     run([sys.executable, "verify_rules.py"])
     # Enforce the monotonic escape-by-default innerHTML migration before broader API suites run. (SEC-017)
     run([sys.executable, "scripts/validate_inner_html_templates.py"])

@@ -13,8 +13,8 @@ from tests.browser_readiness import prepare_admin_feedback_draft, require_admin_
 
 # Resolve the exact checkout independently of the caller's working directory.
 ROOT = Path(__file__).resolve().parents[1]
-# Read the governed Browser runner once for bounded source slices.
-RUNNER_SOURCE = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+# Read the governed Browser implementation once for bounded source slices.
+RUNNER_SOURCE = (ROOT / "tests" / "runner.py").read_text(encoding="utf-8")
 # Read the extracted Roulette owner so its semantic wait remains source-governed after #727 delegation.
 ROULETTE_OWNER_SOURCE = (ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py").read_text(encoding="utf-8")
 # Read the extracted Bingo/Admin owner for its state-driven reload and feedback-save gates.

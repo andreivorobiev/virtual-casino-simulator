@@ -199,8 +199,8 @@ class PwaFoundationTests(unittest.TestCase):
 
     # Require browser acceptance to serialize activation before a controlled reload and controller proof.
     def test_browser_acceptance_serializes_worker_readiness(self):
-        # Read the browser acceptance harness as governed source without starting Chromium.
-        harness = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Read the extracted PWA affinity owner as governed source without starting Chromium.
+        harness = (ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py").read_text(encoding="utf-8")
         # Isolate the narrowed PWA case so unrelated browser reloads cannot satisfy order checks.
         pwa_case = harness[harness.index("def pwa_installable_shell"):harness.index("run_case('BR-PWA-001")]
         # Locate the native active-registration readiness boundary.
@@ -236,8 +236,8 @@ class PwaFoundationTests(unittest.TestCase):
 
     # Require exact-head Browser evidence to exercise a real one-click multi-tab worker promotion. (PWA-003, TEST-095)
     def test_browser_acceptance_exercises_multitab_update(self):
-        # Read the Browser harness as governed source without starting Chromium locally.
-        harness = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Read the extracted PWA affinity owner as governed source without starting Chromium locally.
+        harness = (ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py").read_text(encoding="utf-8")
         # Isolate the real update case so synthetic PWA display states cannot satisfy this contract.
         update_case = harness[harness.index("def pwa_multitab_one_click_update"):harness.index("run_case('BR-PWA-UPDATE-001")]
         # Require the prior worker to use a distinct URL derived from canonical module metadata.

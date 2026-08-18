@@ -50,7 +50,7 @@ class NewestGameBrowserCoverageTests(unittest.TestCase):
         # Require every adopted game to own exactly the approved case id.
         self.assertEqual({game_id: acceptance_map.get(game_id) for game_id in EXPECTED_CASES}, EXPECTED_CASES)
         # Read literal Browser declarations to reject missing or duplicate cases.
-        source = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        source = (ROOT / "tests" / "runner.py").read_text(encoding="utf-8")
         # Require each dedicated case to appear exactly once as a run_case declaration.
         for case_id in EXPECTED_CASES.values():
             # Count only the declaration prefix so map and duration strings do not affect the assertion.

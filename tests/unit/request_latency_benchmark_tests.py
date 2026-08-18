@@ -1061,8 +1061,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
 
     # Prove the central runner accepts absent/equal hosted SHA and rejects all other assertions.
     def test_central_runner_provenance_matches_checkout_head(self) -> None:
-        # Parse the central runner without importing its broad test harness.
-        central_source = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Parse the extracted runner implementation without importing its broad test harness.
+        central_source = (ROOT / "tests" / "runner.py").read_text(encoding="utf-8")
         # Build the central runner syntax tree.
         central_tree = ast.parse(central_source)
         # Select only the request-latency provenance helper.
@@ -1078,7 +1078,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Supply only the helper's standard-library globals.
         namespace = {"os": os, "re": re, "subprocess": subprocess, "ROOT": ROOT}
         # Compile and load only the selected helper.
-        exec(compile(isolated, str(ROOT / "tests" / "run_tests.py"), "exec"), namespace)
+        exec(compile(isolated, str(ROOT / "tests" / "runner.py"), "exec"), namespace)
         # Retain the isolated callable.
         resolver = namespace["request_latency_source_commit"]
         # Select one exact synthetic checkout identity.
@@ -1305,8 +1305,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
 
     # Prove ordinary API selection runs only unit proof and benchmarks remain explicit.
     def test_run_tests_keeps_benchmark_behind_explicit_selector(self) -> None:
-        # Read the central runner as policy.
-        source = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Read the extracted runner implementation as policy.
+        source = (ROOT / "tests" / "runner.py").read_text(encoding="utf-8")
         # Read the extracted harness-foundation owner without executing its focused suites.
         harness_source = (ROOT / "tests" / "cases" / "api" / "harness_foundation.py").read_text(encoding="utf-8")
         # Require ordinary API registration of only the listener-free unit case in its area owner.
