@@ -60,6 +60,8 @@ from tests.cases.api import live_infrastructure as api_live_infrastructure
 from tests.cases.api import storage_foundation as api_storage_foundation
 # Import live session and wallet-integrity registration ownership behind the runner. (TEST-242)
 from tests.cases.api import session_integrity as api_session_integrity
+# Import post-restart platform-foundation registration ownership behind the runner. (TEST-242)
+from tests.cases.api import post_restart_foundation as api_post_restart_foundation
 # Import frontend-presentation registration ownership while execution stays in the runner. (TEST-242)
 from tests.cases.api import frontend_presentation as api_frontend_presentation
 # Import listener-free self-service foundation ownership behind the compatibility runner. (TEST-242)
@@ -1949,8 +1951,6 @@ def run_api_tests():
                 assert bingo_history_visible is expected['bingo_history_owned'] and all(row['player_id']==expected['player_id'] for row in restarted_history) and all(row['player_id']==expected['player_id'] for row in restarted_ledger)
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
-        # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002','PGP-002','JP-002','THPT-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -1963,7 +1963,6 @@ def run_api_tests():
             expected_game_revisions={game['id']:VERSION_MANIFEST['modules'][game['id']] for game in casino_config.GAMES}
             # Require every published game revision to match the canonical module manifest exactly.
             assert {game['id']:game['revision'] for game in state['games']}==expected_game_revisions
-        run_case('API-CORE-001',['CORE-001','CORE-016','TEST-003'],core)
 
         # Define catalog_foundation to prove every integration surface discovers the same games.
         def catalog_foundation():
@@ -1985,14 +1984,6 @@ def run_api_tests():
             assert resolve_authenticated_player({'bound_player_id':'session-player','user':{'player_id':'session-player'}},{'player_id':'other-player'},{'player_id':'third-player'})=='session-player'
             # Prove Admin-compatible explicit resolution remains available without a normal-user binding.
             assert resolve_authenticated_player({'user':{'role':'admin'}},{'player_id':'human'},{})=='human'
-        # Execute the catalog, driver, route-metadata, and shared resolver acceptance gate.
-        run_case('API-CATALOG-001',['CORE-021','SESSION-005','TEST-042'],catalog_foundation)
-        # Validate exact 46-game economics ownership and production-source bindings without repeating the long simulation lane.
-        run_case('ECONOMICS-REGISTRY-001',['TEST-175'],lambda: game_economics_registry_tests.validate_registry(game_economics_registry_tests.read_json(game_economics_registry_tests.REGISTRY_PATH)))
-
-        run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
-        # Record collision-free Phase 0 registry, catalog-discovery, and translation-readiness evidence.
-        run_case('API-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],validate_i18n_resources)
 
         # Define the bots_audio_autoplay function used by this module.
         def bots_audio_autoplay():
@@ -2017,7 +2008,8 @@ def run_api_tests():
             # Set stopped to the value needed for the next operation.
             stopped=api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':sess['autoplay_id']})['session']; assert stopped['stop_requested'] is True
             assert api(base,'/api/v1/admin/autoplay')['sessions']
-        run_case('API-CONTROL-001',['BOT-001','BOT-003','BOT-009','BOT-010','BOT-011','ADMIN-023','AUDIO-001','AUDIO-002','AUDIO-010','AUTO-001','AUTO-003'],bots_audio_autoplay)
+        # Delegate the exact post-restart registration block while retaining every callback and lifecycle seam here.
+        api_post_restart_foundation.run_cases(run_case,wallet_restart_persistence,core,catalog_foundation,lambda: game_economics_registry_tests.validate_registry(game_economics_registry_tests.read_json(game_economics_registry_tests.REGISTRY_PATH)),validate_i18n_resources,bots_audio_autoplay)
         # Define the roulette function used by this module.
         def roulette():
             # Set p0 to the value needed for the next operation.
