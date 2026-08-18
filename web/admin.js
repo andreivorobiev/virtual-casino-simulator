@@ -46,6 +46,8 @@ import { createSessionsTab } from './admin/sessions.js';
 import { createOperationsTab } from './admin/operations.js';
 // Import shared locale options and the Language tab so localization leaves the dispatcher monolith. (I18N-005, I18N-014)
 import { createLanguageTab, createLocaleOptionHelpers } from './admin/language.js';
+// Import privacy-bounded report triage so Feedback leaves the dispatcher monolith. (ADMIN-025)
+import { createFeedbackTab } from './admin/feedback.js';
 // Import voice helpers so the existing Audio & Voice tab keeps its behavior.
 import { availableVoices, loadVoiceSettings, saveVoiceSettings, speak } from './core/voice.js';
 // Import i18n helpers so Admin can switch language without reloading or remounting.
@@ -55,8 +57,6 @@ import { applyTranslations, formatDate, formatMoney, formatNumber, getLocaleSett
 let current = 'dashboard';
 // Preserve low-cardinality Guest Trials filters across locale rerenders and refreshes.
 let guestFilters = { locale: '', device: '', status: '', game: '', completed: '', error_category: '', range: '' };
-// Preserve governed problem-report filters across detail navigation and refreshes.
-let feedbackFilters = { priority: '', status: '', category: '', impact: '', locale: '', route: '', reporter: '', created_from: '', created_to: '' };
 // Store view so tab renderers share the same Admin content target.
 const view = document.getElementById('adminView');
 // Store title so tab renderers can update the current heading.
@@ -269,6 +269,23 @@ const language = createLanguageTab({
   toast,
   view,
 });
+// Bind Feedback to its attachment-free inbox, local-only draft, and privacy-safe export routes.
+const feedbackReports = createFeedbackTab({
+  api,
+  emptyState,
+  getLocaleState,
+  html,
+  humanLabel,
+  isActiveTab,
+  option,
+  post,
+  safe,
+  setTitle,
+  t,
+  table,
+  toast,
+  view,
+});
 
 // Define activate so sidebar tabs preserve the existing single-view Admin model.
 function activate(tab) {
@@ -333,66 +350,6 @@ async function load(tab = 'dashboard') {
     // Render a human recovery state without exposing raw transport or server diagnostics.
     view.innerHTML = html`<section class="admin-card danger" data-testid="admin-load-error"><h2>${safe(t('common.loadErrorTitle', {}, 'admin'))}</h2><p>${safe(t('common.loadErrorDetail', {}, 'admin'))}</p></section>`;
   }
-}
-
-// Render one governed select from a fixed value list.
-function feedbackSelect(id, values, selected, emptyLabel, keyPrefix = '') {
-  // Build the optional all-values row only for filter controls.
-  const emptyOption = emptyLabel ? html`<option value="">${safe(emptyLabel)}</option>` : '';
-  // Return stable human-readable options without an invalid empty choice in detail forms.
-  return html`<select id="${safe(id)}">${emptyOption}${values.map(value => option(value, keyPrefix ? t(`${keyPrefix}.${value}`, {}, 'feedback') : humanLabel(value), selected))}</select>`;
-}
-
-// Allocate one strong replay key for each explicit Admin mutation.
-function feedbackActionKey() {
-  // Remove separators so the key matches the shared service contract.
-  return crypto.randomUUID().replaceAll('-', '');
-}
-
-// Load and render the attachment-free Admin problem-report inbox. (ADMIN-025, issue #349)
-async function feedbackReports() {
-  // Set the tab heading through the localized feedback domain.
-  setTitle(t('feedback.admin.title', {}, 'feedback'), t('feedback.admin.subtitle', {}, 'feedback'));
-  // Build a query containing only non-empty governed filters.
-  const query = new URLSearchParams(Object.entries(feedbackFilters).filter(([, value]) => value));
-  // Fetch the additive v2 inbox contract.
-  const data = await api(`/api/v2/admin/feedback/reports${query.toString() ? `?${query}` : ''}`);
-  // Stop a stale response from replacing a newer Admin tab.
-  if (!isActiveTab('feedback')) return;
-  // Build rows with internal references and a dedicated detail action.
-  const rows = (data.reports || []).map(report => html`<tr><td><button type="button" class="feedback-link" data-feedback-id="${safe(report.report_id)}">${safe(report.reference)}</button></td><td><span class="badge">${safe(report.priority)}</span></td><td>${safe(t(`feedback.status.${report.status}`, {}, 'feedback'))}</td><td>${safe(t(`feedback.category.${report.category}`, {}, 'feedback'))}</td><td>${safe(t(`feedback.impact.${report.impact}`, {}, 'feedback'))}</td><td>${safe(report.reporter_reference)}</td><td>${safe(report.summary)}</td><td>${safe(report.route)}</td><td>${safe(report.created_at)}</td></tr>`);
-  // Render filters, the readable empty state, or the inbox table.
-  view.innerHTML = html`<section class="admin-card feedback-inbox" data-testid="admin-feedback-inbox"><div class="feedback-filters"><label>${safe(t('feedback.admin.priority', {}, 'feedback'))}${feedbackSelect('feedback-priority-filter', data.priorities || ['P1', 'P2', 'P3'], feedbackFilters.priority, t('feedback.admin.all', {}, 'feedback'))}</label><label>${safe(t('feedback.admin.status', {}, 'feedback'))}${feedbackSelect('feedback-status-filter', data.statuses || [], feedbackFilters.status, t('feedback.admin.all', {}, 'feedback'), 'feedback.status')}</label><label>${safe(t('feedback.admin.category', {}, 'feedback'))}${feedbackSelect('feedback-category-filter', data.categories || [], feedbackFilters.category, t('feedback.admin.all', {}, 'feedback'), 'feedback.category')}</label><label>${safe(t('feedback.admin.impact', {}, 'feedback'))}${feedbackSelect('feedback-impact-filter', data.impacts || [], feedbackFilters.impact, t('feedback.admin.all', {}, 'feedback'), 'feedback.impact')}</label><label>${safe(t('feedback.admin.locale', {}, 'feedback'))}${feedbackSelect('feedback-locale-filter', getLocaleState().locales.map(locale => locale.id), feedbackFilters.locale, t('feedback.admin.all', {}, 'feedback'))}</label><label>${safe(t('feedback.admin.routeFilter', {}, 'feedback'))}<input id="feedback-route-filter" value="${safe(feedbackFilters.route)}" maxlength="120"></label><label>${safe(t('feedback.admin.reporter', {}, 'feedback'))}<input id="feedback-reporter-filter" value="${safe(feedbackFilters.reporter)}" pattern="USR-[A-F0-9]{16}"></label><label>${safe(t('feedback.admin.createdFrom', {}, 'feedback'))}<input id="feedback-created-from-filter" type="datetime-local" value="${safe(feedbackFilters.created_from)}"></label><label>${safe(t('feedback.admin.createdTo', {}, 'feedback'))}<input id="feedback-created-to-filter" type="datetime-local" value="${safe(feedbackFilters.created_to)}"></label><button id="feedback-apply-filters" type="button">${safe(t('feedback.admin.apply', {}, 'feedback'))}</button><button id="feedback-cleanup" type="button">${safe(t('feedback.admin.cleanup', {}, 'feedback'))}</button></div>${rows.length ? html`<div class="feedback-table-scroll" tabindex="0" role="region" aria-label="${safe(t('feedback.admin.tableLabel', {}, 'feedback'))}">${table([t('feedback.admin.reference', {}, 'feedback'), t('feedback.admin.priority', {}, 'feedback'), t('feedback.admin.status', {}, 'feedback'), t('feedback.admin.category', {}, 'feedback'), t('feedback.admin.impact', {}, 'feedback'), t('feedback.admin.reporter', {}, 'feedback'), t('feedback.admin.summary', {}, 'feedback'), t('feedback.admin.route', {}, 'feedback'), t('feedback.admin.created', {}, 'feedback')], rows)}</div>` : emptyState(t('feedback.admin.emptyTitle', {}, 'feedback'), t('feedback.admin.emptyCopy', {}, 'feedback'), 'admin-feedback-empty')}</section>`;
-  // Apply current filter selections when the Admin requests a refresh.
-  view.querySelector('#feedback-apply-filters').onclick = () => { feedbackFilters = { priority: view.querySelector('#feedback-priority-filter').value, status: view.querySelector('#feedback-status-filter').value, category: view.querySelector('#feedback-category-filter').value, impact: view.querySelector('#feedback-impact-filter').value, locale: view.querySelector('#feedback-locale-filter').value, route: view.querySelector('#feedback-route-filter').value, reporter: view.querySelector('#feedback-reporter-filter').value, created_from: view.querySelector('#feedback-created-from-filter').value, created_to: view.querySelector('#feedback-created-to-filter').value }; feedbackReports(); };
-  // Resume interrupted deletions and enforce both report and opaque-rate retention ceilings.
-  view.querySelector('#feedback-cleanup').onclick = async () => { const result = await post('/api/v2/admin/feedback/cleanup', {}); toast(t('feedback.admin.cleaned', { reports: result.cleanup?.deleted || 0 }, 'feedback'), true); feedbackReports(); };
-  // Open detail views only through report identifiers returned by the server.
-  view.querySelectorAll('[data-feedback-id]').forEach(button => { button.onclick = () => feedbackDetail(button.dataset.feedbackId); });
-}
-
-// Render one canonical internal report with evidence and triage controls.
-async function feedbackDetail(reportId) {
-  // Fetch the Admin-only detail contract.
-  const data = await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}`);
-  // Stop a stale response from replacing another selected tab.
-  if (!isActiveTab('feedback')) return;
-  // Read the canonical report object.
-  const report = data.report || {};
-  // Build metadata-free image previews from server-normalized evidence.
-  const evidence = (report.attachments || []).map((attachment, index) => html`<figure><img src="data:${safe(attachment.media_type)};base64,${safe(attachment.data)}" alt="${safe(t('feedback.screenshotAlt', { number: index + 1 }, 'feedback'))}"><figcaption>${safe(attachment.width)} × ${safe(attachment.height)} · ${safe(attachment.bytes)} bytes</figcaption></figure>`);
-  // Render report prose, controlled workflow fields, internal notes, and manual GitHub linkage.
-  view.innerHTML = html`<section class="admin-card feedback-detail" data-testid="admin-feedback-detail"><div class="row"><button id="feedback-back" type="button">${safe(t('feedback.admin.back', {}, 'feedback'))}</button><span class="badge">${safe(report.reference)}</span><span class="badge">${safe(t(`feedback.category.${report.category}`, {}, 'feedback'))}</span><span class="badge">${safe(t(`feedback.impact.${report.impact}`, {}, 'feedback'))}</span><span class="badge">${safe(report.reporter_reference)}</span></div><h2>${safe(report.summary)}</h2><div class="admin-split"><section><h3>${safe(t('feedback.admin.actual', {}, 'feedback'))}</h3><p class="feedback-prose">${safe(report.actual)}</p><h3>${safe(t('feedback.admin.expected', {}, 'feedback'))}</h3><p class="feedback-prose">${safe(report.expected)}</p><h3>${safe(t('feedback.admin.context', {}, 'feedback'))}</h3>${table([t('feedback.admin.field', {}, 'feedback'), t('feedback.admin.value', {}, 'feedback')], Object.entries(report.context || {}).map(([key, value]) => html`<tr><td>${safe(humanLabel(key))}</td><td>${safe(value)}</td></tr>`))}</section><section class="feedback-triage"><label>${safe(t('feedback.admin.priority', {}, 'feedback'))}${feedbackSelect('feedback-detail-priority', ['P1', 'P2', 'P3'], report.priority, '')}</label><label>${safe(t('feedback.admin.status', {}, 'feedback'))}${feedbackSelect('feedback-detail-status', ['new', 'triaged', 'linked', 'resolved', 'duplicate', 'rejected'], report.status, '', 'feedback.status')}</label><label>${safe(t('feedback.admin.notes', {}, 'feedback'))}<textarea id="feedback-admin-notes" maxlength="4000" rows="7">${safe(report.admin_notes || '')}</textarea></label><label>${safe(t('feedback.admin.githubUrl', {}, 'feedback'))}<input id="feedback-github-url" type="url" value="${safe(report.github_issue_url || '')}" placeholder="https://github.com/andreivorobiev/virtual-casino-simulator/issues/…"></label><p class="muted">${safe(t('feedback.admin.manualOnly', {}, 'feedback'))}</p><button id="feedback-save" class="gold" type="button">${safe(t('feedback.admin.save', {}, 'feedback'))}</button><button id="feedback-draft" type="button">${safe(t('feedback.admin.prepareDraft', {}, 'feedback'))}</button><button id="feedback-export" type="button">${safe(t('feedback.admin.export', {}, 'feedback'))}</button><button id="feedback-delete" class="danger" type="button">${safe(t('feedback.admin.delete', {}, 'feedback'))}</button></section></div><h3>${safe(t('feedback.admin.screenshots', {}, 'feedback'))}</h3><div class="feedback-evidence">${evidence || html`<p class="muted">${safe(t('feedback.admin.noScreenshots', {}, 'feedback'))}</p>`}</div><div id="feedback-github-draft" class="feedback-draft" hidden></div></section>`;
-  // Return to the filtered inbox without losing filter state.
-  view.querySelector('#feedback-back').onclick = feedbackReports;
-  // Persist controlled triage fields and redraw from the server response.
-  view.querySelector('#feedback-save').onclick = async () => { await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}`, { method: 'PATCH', body: { idempotency_key: feedbackActionKey(), priority: view.querySelector('#feedback-detail-priority').value, status: view.querySelector('#feedback-detail-status').value, admin_notes: view.querySelector('#feedback-admin-notes').value, github_issue_url: view.querySelector('#feedback-github-url').value } }); toast(t('feedback.admin.saved', {}, 'feedback'), true); feedbackDetail(reportId); };
-  // Prepare a sanitized manual GitHub draft without publishing externally.
-  view.querySelector('#feedback-draft').onclick = async () => { const prepared = await post(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}/github-draft`, {}); const draft = prepared.draft || {}; const outlet = view.querySelector('#feedback-github-draft'); outlet.hidden = false; outlet.innerHTML = html`<h3>${safe(t('feedback.admin.draftTitle', {}, 'feedback'))}</h3><p class="muted">${safe(t('feedback.admin.manualOnly', {}, 'feedback'))}</p><label>${safe(t('feedback.admin.issueTitle', {}, 'feedback'))}<input id="feedback-draft-title" readonly value="${safe(draft.title || '')}"></label><label>${safe(t('feedback.admin.issueBody', {}, 'feedback'))}<textarea id="feedback-draft-body" readonly rows="14">${safe(draft.body || '')}</textarea></label><p>${safe(t('feedback.admin.labels', {}, 'feedback'))}: ${safe((draft.labels || []).join(', '))}</p><div class="row"><button id="feedback-copy-draft" type="button">${safe(t('feedback.admin.copyDraft', {}, 'feedback'))}</button></div>`; outlet.querySelector('#feedback-copy-draft').onclick = async () => { await navigator.clipboard.writeText(`${draft.title}\n\n${draft.body}`); toast(t('feedback.admin.copied', {}, 'feedback'), true); }; };
-  // Download only privacy-safe metadata after the server removes encoded evidence.
-  view.querySelector('#feedback-export').onclick = async () => { const exported = await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}/export`); const blob = new Blob([JSON.stringify(exported.export || {}, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${report.reference || 'feedback-report'}.json`; link.click(); URL.revokeObjectURL(link.href); toast(t('feedback.admin.exported', {}, 'feedback'), true); };
-  // Require explicit confirmation before starting the recoverable privacy-deletion saga.
-  view.querySelector('#feedback-delete').onclick = async () => { if (!window.confirm(t('feedback.admin.deleteConfirm', {}, 'feedback'))) return; await api(`/api/v2/admin/feedback/reports/${encodeURIComponent(reportId)}`, { method: 'DELETE', body: { idempotency_key: feedbackActionKey() } }); toast(t('feedback.admin.deleted', {}, 'feedback'), true); feedbackReports(); };
 }
 
 // Render the de-identified Guest Trials telemetry section for account-free visitors. (issue #317)
