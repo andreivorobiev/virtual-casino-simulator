@@ -79,6 +79,34 @@ cleanup_deployment() {
   return "${status}"
 }
 
+# Return at most one unsafe extracted-tree entry without following links.
+find_unsafe_archive_entry() {
+  # Use fixed host utilities so Windows test PATH aliases and production shell functions cannot alter traversal.
+  /usr/bin/find -P "$1" -mindepth 1 \( -type l -o ! -type d ! -type f \) -print -quit
+}
+
+# Apply the reviewed traversal mode to every real directory beneath one authenticated archive root.
+chmod_archive_directories() {
+  # Keep mode mutation directory-only and delegate batching to the fixed host find implementation.
+  /usr/bin/find -P "$1" -type d -exec /usr/bin/chmod 0755 {} +
+}
+
+# Normalize only authenticated extraction directories so the service identity can traverse them under the poller umask.
+normalize_extracted_directories() {
+  # Bind the canonical archive root supplied by the deployment state machine.
+  local candidate_root="$1"
+  # Reject a missing root or root-level link before walking or changing any mode.
+  test -d "${candidate_root}" && test ! -L "${candidate_root}" || { fail "archive_root_unsafe"; return 1; }
+  # Retain only a generic hostile-entry signal so paths never enter logs.
+  local unsafe_entry
+  # Refuse links and every non-file/non-directory shape without following them.
+  unsafe_entry="$(find_unsafe_archive_entry "${candidate_root}")" || { fail "archive_tree_scan_failed"; return 1; }
+  # Stop before chmod when an authenticated archive produced an unsafe tree shape.
+  test -z "${unsafe_entry}" || { fail "archive_tree_unsafe"; return 1; }
+  # Override the service unit's restrictive creation mask for directories only; regular-file bytes and modes stay unchanged.
+  chmod_archive_directories "${candidate_root}" || { fail "archive_directory_mode_failed"; return 1; }
+}
+
 require_runtime() {
   [[ "${REPOSITORY}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || fail "invalid_repository"
   [[ "${API_ROOT}" =~ ^https://[A-Za-z0-9._:/-]+$ ]] || fail "invalid_api_root"
@@ -486,6 +514,8 @@ deploy_latest() {
   unzip -q "${work_root}/${ASSET_ARCHIVE}" -d "${work_root}/extracted"
   local candidate_root="${work_root}/extracted/virtual_casino_simulator"
   test -d "${candidate_root}" || fail "archive_root_missing"
+  # Make the verified candidate traversable by the unprivileged application service before any candidate command or cutover.
+  normalize_extracted_directories "${candidate_root}"
   CASINO_VERIFY_ROOT="${candidate_root}" verify_assets "${work_root}" "${latest_tag}" "${latest_commit}"
   validate_monitor_configuration "${candidate_root}"
   check_schema_two "${candidate_root}"

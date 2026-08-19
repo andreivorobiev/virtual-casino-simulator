@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.83 Release Notes
+
+## Pull-poller extraction permission repair
+
+- Supersedes published-but-never-activated v0.9.5.82 after its first two production polls verified exact assets and schema 2 but failed closed because root-owned `unzip` directories inherited mode `0750` from systemd `UMask=0027`.
+- Rejects linked and special extracted entries without following them, then normalizes only authenticated real candidate directories to `0755` before any candidate verifier, schema command, environment write, or selector mutation.
+- Preserves every regular-file byte and mode, the exact checksum/provenance/inventory verifier, clean schema-two gate, application-only rollback, persistence, readiness, monitor, alarm, and root-integrity boundary.
+- Adds a required-Linux real-`unzip` regression under the production umask plus portable unsafe-tree and activation-order evidence.
+- Preserves frozen API compatibility, the exact 46-game catalog, paytables, wager acceptance, game mathematics, wallet behavior, and the restricted-preview admission policy.
+- Keeps production and application-only rollback at exact MySQL schema 2 while the catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, database rollback, provider activation, public signup, live OAuth, billing, DNS, or secret mutation is authorized.
+- Adds no requirement identifier; the governed total remains exactly 1104 permanent requirements.
+- Records the exact canonical package inventory as 817 regular files: v0.9.5.82 inventory 816 plus this v0.9.5.83 compatibility record.
+- Advances package `0.9.5.83`, application `9.70.12`, contracts `1.62.6`, tests `1.113.2`, docs `1.109.2`, and tooling `1.43.3`; Core `10.11.0` and every content-owned module remain exact.
+- Retains exact terminal-green v0.9.5.81 as the application-only schema-two rollback predecessor because v0.9.5.82 never activated. This packet closes only #987 after production rollout evidence is accepted.
+
 # Virtual Casino Simulator v0.9.5.82 Release Notes
 
 ## Atomic foundations and maintainable application surfaces

@@ -10,6 +10,8 @@ import json
 import os
 # Import portable paths for checked-in and disposable fixture files.
 from pathlib import Path
+# Import Unix file-type constants for deterministic ZIP member metadata.
+import stat
 # Import executable discovery for hosted Linux and local Windows test parity.
 import shutil
 # Import subprocess execution for the script's listener-free subcommands.
@@ -22,6 +24,8 @@ import textwrap
 import tempfile
 # Import unittest for dependency-free focused execution.
 import unittest
+# Import deterministic archive writing for the real-unzip permission regression.
+import zipfile
 
 # Resolve the repository root from this focused test module.
 ROOT = Path(__file__).resolve().parents[1]
@@ -526,6 +530,85 @@ class ReleasePollerTests(unittest.TestCase):
         # Prove the full verifier and every later activation seam remain untouched.
         self.assertFalse(marker.exists())
 
+    # Reproduce the systemd umask failure and prove directory-only normalization restores service traversal.
+    @unittest.skipIf(os.name == "nt", "Unix directory modes require the required Linux CI host")
+    def test_real_unzip_under_poller_umask_normalizes_only_candidate_directories(self):
+        # Bind one files-only archive matching the production package shape that triggered the host failure.
+        archive_path = self.root / "candidate.zip"
+        # Create deterministic regular-file entries without explicit directory members.
+        with zipfile.ZipFile(archive_path, "w") as archive:
+            # Add one nested Python file whose bytes and mode must survive normalization.
+            info = zipfile.ZipInfo("virtual_casino_simulator/casino/probe.py")
+            # Identify the member as Unix-authored so unzip applies its ordinary file mode.
+            info.create_system = 3
+            # Preserve the production archive's non-executable regular-file mode.
+            info.external_attr = (stat.S_IFREG | 0o644) << 16
+            # Write fixed bytes for before/after checksum comparison.
+            archive.writestr(info, b"VALUE = 1\n")
+        # Allocate a disposable extraction parent outside every repository and production path.
+        extracted_root = self.root / "extracted"
+        # Exercise the host's real unzip, restrictive umask, and checked-in normalizer in one shell process.
+        harness = r'''
+            umask 0027
+            /usr/bin/unzip -q "__ARCHIVE__" -d "__EXTRACTED__"
+            candidate="__EXTRACTED__/virtual_casino_simulator"
+            before_mode="$(/usr/bin/stat -c '%a' "${candidate}")"
+            before_file_mode="$(/usr/bin/stat -c '%a' "${candidate}/casino/probe.py")"
+            before_hash="$(/usr/bin/sha256sum "${candidate}/casino/probe.py" | /usr/bin/cut -d' ' -f1)"
+            source "__POLLER__"
+            normalize_extracted_directories "${candidate}"
+            after_mode="$(/usr/bin/stat -c '%a' "${candidate}")"
+            nested_mode="$(/usr/bin/stat -c '%a' "${candidate}/casino")"
+            after_file_mode="$(/usr/bin/stat -c '%a' "${candidate}/casino/probe.py")"
+            after_hash="$(/usr/bin/sha256sum "${candidate}/casino/probe.py" | /usr/bin/cut -d' ' -f1)"
+            printf '%s\n' "${before_mode}" "${after_mode}" "${nested_mode}" "${before_file_mode}" "${after_file_mode}" "${before_hash}" "${after_hash}"
+        '''
+        # Bind only disposable and checked-in paths into the listener-free shell fixture.
+        harness = textwrap.dedent(harness).replace("__ARCHIVE__", bash_path(archive_path)).replace("__EXTRACTED__", bash_path(extracted_root)).replace("__POLLER__", bash_path(POLLER))
+        # Require the normalization path to complete without service, listener, or network activity.
+        result = self.run_sourced_poller(harness)
+        # Parse the seven fixed evidence rows without depending on host-specific path spelling.
+        rows = result.stdout.splitlines()
+        # Prove the production umask reproduces the inaccessible release-root mode.
+        self.assertEqual(rows[0], "750")
+        # Require both root and nested candidate directories to become traversable.
+        self.assertEqual(rows[1:3], ["755", "755"])
+        # Preserve the regular file's extracted mode across host unzip implementations.
+        self.assertEqual(rows[3], rows[4])
+        # Keep the packaged Python file non-executable without overfitting unzip's umask handling.
+        self.assertIn(rows[4], {"640", "644"})
+        # Prove normalization changes no authenticated regular-file bytes.
+        self.assertEqual(rows[5], rows[6])
+
+    # Prove unsafe extracted shapes fail before any directory mode mutation.
+    def test_directory_normalization_rejects_unsafe_tree_before_chmod(self):
+        # Create one ordinary candidate root that passes the root-level containment check.
+        candidate_root = self.root / "unsafe-candidate"
+        # Materialize the test-owned root without links or special nodes.
+        candidate_root.mkdir()
+        # Bind a marker that a hostile-tree result must keep absent.
+        chmod_marker = self.root / "chmod-called"
+        # Replace only the tree scanner and chmod command to model an authenticated hostile entry portably.
+        harness = r'''
+            source "__POLLER__"
+            log() { printf '%s\n' "$1" >&2; }
+            find_unsafe_archive_entry() { printf '%s\n' '__HOSTILE_ENTRY__'; }
+            chmod_archive_directories() { printf 'called\n' > "__CHMOD_MARKER__"; }
+            normalize_extracted_directories "__CANDIDATE__"
+        '''
+        # Bind exact disposable paths while retaining the hostile entry only as scanner output.
+        harness = textwrap.dedent(harness).replace("__POLLER__", bash_path(POLLER)).replace("__HOSTILE_ENTRY__", bash_path(candidate_root / "link")).replace("__CHMOD_MARKER__", bash_path(chmod_marker)).replace("__CANDIDATE__", bash_path(candidate_root))
+        # Require the hostile shape to be handled as a bounded fail-closed result.
+        result = self.run_sourced_poller(harness, check=False)
+        # Accept only the expected nonzero rejection.
+        self.assertNotEqual(result.returncode, 0)
+        # Prove no chmod command ran after the scanner reported an unsafe shape.
+        self.assertFalse(chmod_marker.exists())
+        # Require the generic diagnostic without disclosing the hostile path.
+        self.assertIn("archive_tree_unsafe", result.stderr)
+        # Keep the modeled entry spelling out of sanitized failure output.
+        self.assertNotIn(bash_path(candidate_root / "link"), result.stdout + result.stderr)
+
     # Prove the documented direct rollback drill resolves monitor identity without service-owned environment injection.
     def test_direct_identity_probe_reads_only_the_root_managed_monitor_file(self):
         # Bind one non-secret synthetic bearer that is long enough for the production policy.
@@ -738,6 +821,10 @@ class ReleasePollerTests(unittest.TestCase):
         alarm_trap = text.index('trap "${cleanup_command}" EXIT')
         # Locate the candidate schema-two compatibility proof.
         schema_check = text.index('check_schema_two "${candidate_root}"')
+        # Locate directory traversal repair after extraction and before candidate execution.
+        directory_normalization = text.index('normalize_extracted_directories "${candidate_root}"')
+        # Locate the second full verification performed through candidate bytes.
+        candidate_verification = text.index('CASINO_VERIFY_ROOT="${candidate_root}" verify_assets')
         # Locate the first production-owned release fragment write.
         environment_install = text.index('install -m 0640 -o root -g root "${work_root}/release.env" "${RELEASE_ENV}"')
         # Locate the atomic selector switch independently.
@@ -754,6 +841,10 @@ class ReleasePollerTests(unittest.TestCase):
         self.assertLess(text.index("cleanup_deployment()"), text.index("deploy_latest()"))
         # Prove schema compatibility is established before release.env mutation.
         self.assertLess(schema_check, environment_install)
+        # Require directory-only normalization before any candidate verifier or schema command executes.
+        self.assertLess(directory_normalization, candidate_verification)
+        # Preserve the candidate verifier before its exact schema check.
+        self.assertLess(candidate_verification, schema_check)
         # Prove release.env is staged before the current selector moves.
         self.assertLess(environment_install, selector_switch)
         # Require an error trap to restore the previous selector and fragment.
