@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Complete Roulette, Slots, and Keno Browser affinity ownership."""
+"""Own independent Roulette, Slots, and Keno Browser affinity families."""
 
 # Import JSON parsing for exact browser-returned diagnostics and persisted-state fixtures.
 import json
@@ -13,12 +13,16 @@ import time
 from tests.browser_timing import WAIT_MS
 
 
-# Execute the complete producer/consumer family under one deterministic shard owner.
+# Execute each game-local producer/consumer family under its deterministic shard owner.
 def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,visual_matrix,save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots):
-    # Run the Roulette-to-Keno producer/consumer chain only on its declared owner.
-    if browser_shard_owns_group('roulette_slots_keno'):
-        # Open Roulette and wait for the premium vector wheel to mount.
-        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
+    # Run only the stateful Roulette producer/consumer chain on its declared owner.
+    if browser_shard_owns_group('roulette'):
+        # Normalize viewport and motion state before mounting Roulette independently of prior groups.
+        page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size({'width':1920,'height':1080})
+        # Open Roulette by canonical route so this group does not inherit another game's navigation state.
+        page.goto(base+'/games/roulette',wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
+        # Normalize the player locale before the Roulette cases build their own localized state.
+        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
         # Define the exhaustive hit-target integrity and geometry regression required by issue #222.
         def roulette_hit_target_integrity():
             # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)
@@ -725,10 +729,20 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         assert page.get_by_test_id('roulette-wheel').is_visible() and page.get_by_test_id('roulette-table').is_visible()
         # Restore desktop dimensions before the next game evidence run.
         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
-        # Navigate to the premium Slots route before collecting state evidence.
-        page.get_by_test_id('nav-slots').click()
+    # Preserve exact case accounting when this shard does not own Roulette.
+    else:
+        # Advance only the contiguous Roulette registrations.
+        skip_browser_affinity('roulette')
+    # Run the stateful Slots producer/consumer chain on its independent owner.
+    if browser_shard_owns_group('slots'):
+        # Normalize viewport and motion state before mounting Slots independently of Roulette.
+        page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size({'width':1920,'height':1080})
+        # Navigate directly to the premium Slots route without consuming Roulette navigation state.
+        page.goto(base+'/games/slots',wait_until='networkidle')
         # Wait for the fixed reel grid to mount before measuring layout stability.
         page.get_by_test_id('slot-grid').wait_for(timeout=WAIT_MS)
+        # Normalize the player locale before the Slots cases build their own localized state.
+        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
         # Capture the idle cabinet state for worker handback evidence.
         shot('slots_idle.png')
         # Capture the English Slots screen as after-pass shared shell and game-layout evidence.
@@ -1264,8 +1278,18 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Verify the premium Slots route avoids page-level horizontal overflow.
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
         run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','SLOT-030','SLOT-031','SLOT-032','SLOT-033','SLOT-034','SLOT-035','I18N-010','TEST-064','TEST-117','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
-        # Navigate to Keno and wait for the premium route shell to mount.
-        page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
+    # Preserve exact case accounting when this shard does not own Slots.
+    else:
+        # Advance only the contiguous Slots registrations.
+        skip_browser_affinity('slots')
+    # Run the stateful Keno producer/consumer chain on its independent owner.
+    if browser_shard_owns_group('keno'):
+        # Normalize viewport and motion state before mounting Keno independently of Slots.
+        page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size({'width':1920,'height':1080})
+        # Navigate directly to Keno so no Slots route state is required on this shard.
+        page.goto(base+'/games/keno',wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
+        # Normalize the player locale before Keno builds its complete localized evidence matrix.
+        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
         # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
         def keno_edge_containment():
             # Resolve the authenticated player whose disposable Keno state drives deterministic edge evidence.
@@ -1637,7 +1661,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         page.screenshot(path=str(screenshots/'after-pass-keno-mobile-390x844.png'),full_page=False)
         # Restore desktop dimensions before the next game evidence run.
         page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
-    # Preserve exact case accounting when the active shard does not own this transition chain.
+    # Preserve exact case accounting when the active shard does not own Keno.
     else:
-        # Advance every contiguous Roulette, autoplay, Slots, and Keno case.
-        skip_browser_affinity('roulette_slots_keno')
+        # Advance only the contiguous Keno registrations.
+        skip_browser_affinity('keno')

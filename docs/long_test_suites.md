@@ -45,6 +45,8 @@ Ordinary Playwright readiness waits use the single `CASINO_BROWSER_WAIT_MS` valu
 
 `.github/workflows/browser-duration-profile.yml` runs weekly and supports manual dispatch. It selects the newest successful protected-main Browser push, downloads only its ordinary shard artifacts, regenerates `tests/browser_case_durations.json` through the strict bounded parser, and runs the listener-free CI/CD policy suite. An unchanged profile publishes nothing, and any existing automated profile branch or pull request suppresses a duplicate. A changed profile creates one maintenance issue, pushes a run-owned branch containing only the profile, and opens a draft pull request that closes that issue only after review. Because GitHub suppresses recursive `pull_request` events for its workflow token, the publisher explicitly dispatches all nine unchanged qualification workflows against the exact branch head; the unpublished release-candidate lane receives the canonical packaged version and cannot publish. It never pushes directly to `main` or merges itself.
 
+The former 19-case Roulette/Slots/Keno affinity item is split into contiguous Roulette, Slots, and Keno families. Each family mounts its canonical authenticated route and normalizes viewport, motion, and locale state before running, so duration packing may place the three families on different shards without inheriting another game's page state. The reviewed case count, sorted IDs, source order, affinity validation, and aggregate shard-union gate remain unchanged.
+
 ## Parallel Shards
 
 Ten workers can split Suite 500 like this:

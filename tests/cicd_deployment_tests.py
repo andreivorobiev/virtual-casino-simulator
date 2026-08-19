@@ -1701,20 +1701,25 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one atomic skip for the exact complete affinity group.
         self.assertEqual(skipped_groups, ["auth_lobby"])
 
-    # Prove the complete Roulette/Slots/Keno affinity family has one external owner and one runner delegation.
+    # Prove the independent Roulette, Slots, and Keno affinity families share one source owner and runner delegation.
     def test_browser_roulette_slots_keno_affinity_registration_ownership_is_exact(self):
         # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
         runner_source = self.workflow_text(BROWSER_RUNNER)
         # Read the complete multi-game owner independently of its import path.
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py")
-        # Bind the exact permanent identities in their historical source order.
-        expected_ids = (
-            "BR-ROU-HITMAP-001", "BR-ROU-REFUND-001", "BR-ROU-SLIP-AUDIT-001", "BR-ROU-PREMIUM-001",
-            "BR-I18N-GAMESTATE-ROU-001", "BR-ROU-MOTION-CURVE-001", "BR-ROU-SPINNING-COPY-001",
-            "BR-ROU-LOCKED-REMOVE-001", "BR-ROU-001", "BR-AUTO-START-FAIL-001", "BR-AUTO-ROU-001",
-            "BR-ROU-REDUCED-MOTION-001", "BR-MONEY-LABEL-001", "BR-SLOTS-PAYLINE-001",
-            "BR-SLOT-LINE-BET-001", "BR-SLOT-ECONOMICS-001", "BR-SLOT-001", "BR-KENO-EDGE-001", "BR-KENO-001",
-        )
+        # Bind each reduced affinity tuple while preserving the complete historical source order.
+        expected_groups = {
+            "roulette": (
+                "BR-ROU-HITMAP-001", "BR-ROU-REFUND-001", "BR-ROU-SLIP-AUDIT-001", "BR-ROU-PREMIUM-001",
+                "BR-I18N-GAMESTATE-ROU-001", "BR-ROU-MOTION-CURVE-001", "BR-ROU-SPINNING-COPY-001",
+                "BR-ROU-LOCKED-REMOVE-001", "BR-ROU-001", "BR-AUTO-START-FAIL-001", "BR-AUTO-ROU-001",
+                "BR-ROU-REDUCED-MOTION-001",
+            ),
+            "slots": ("BR-MONEY-LABEL-001", "BR-SLOTS-PAYLINE-001", "BR-SLOT-LINE-BET-001", "BR-SLOT-ECONOMICS-001", "BR-SLOT-001"),
+            "keno": ("BR-KENO-EDGE-001", "BR-KENO-001"),
+        }
+        # Flatten the three insertion-ordered tuples into the unchanged permanent registration stream.
+        expected_ids = tuple(case_id for group_ids in expected_groups.values() for case_id in group_ids)
         # Extract only literal permanent registrations from the new owner.
         owner_ids = tuple(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
         # Require exact identity and historical order without invented or duplicate cases.
@@ -1725,20 +1730,26 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
         # Require one delegation at the group's exact historical position.
         self.assertEqual(runner_source.count("browser_roulette_slots_keno.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,visual_matrix,save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots)"), 1)
-        # Require one owner-level guard without repeated partial setup checks.
-        self.assertEqual(owner_source.count("browser_shard_owns_group('roulette_slots_keno')"), 1)
-        # Require the extracted owner to advance all 19 source positions atomically on non-owning shards.
-        self.assertEqual(owner_source.count("skip_browser_affinity('roulette_slots_keno')"), 1)
+        # Require one exact owner guard and one exact skip for each reduced contiguous group.
+        for group_name in expected_groups:
+            # Keep every producer/consumer family behind one owner decision.
+            self.assertEqual(owner_source.count(f"browser_shard_owns_group('{group_name}')"), 1)
+            # Advance only that group's source positions on a non-owning shard.
+            self.assertEqual(owner_source.count(f"skip_browser_affinity('{group_name}')"), 1)
+        # Require every reduced group to mount its canonical route before its first permanent case.
+        self.assertLess(owner_source.index("page.goto(base+'/games/roulette'"), owner_source.index("run_case('BR-ROU-HITMAP-001'"))
+        self.assertLess(owner_source.index("page.goto(base+'/games/slots'"), owner_source.index("run_case('BR-MONEY-LABEL-001'"))
+        self.assertLess(owner_source.index("page.goto(base+'/games/keno'"), owner_source.index("run_case('BR-KENO-EDGE-001'"))
         # Import the extracted owner without starting the compatibility runner.
         from tests.cases.browser import roulette_slots_keno
         # Retain the exact skip identity emitted by a non-owning shard.
         skipped_groups = []
-        # Reject any accidental case execution on a shard that does not own the complete group.
+        # Reject any accidental case execution on a shard that owns none of the reduced groups.
         reject_case = lambda *_args: self.fail("non-owner executed a Roulette/Slots/Keno case")
         # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
         roulette_slots_keno.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 18))
-        # Require one atomic skip for the exact complete affinity group.
-        self.assertEqual(skipped_groups, ["roulette_slots_keno"])
+        # Require one ordered skip for each exact contiguous reduced group.
+        self.assertEqual(skipped_groups, ["roulette", "slots", "keno"])
 
     # Prove the complete Bingo-through-Admin affinity family has one external owner and one runner delegation.
     def test_browser_bingo_admin_affinity_registration_ownership_is_exact(self):
@@ -1820,8 +1831,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
-        # Bind deterministic load totals after packing self-service analytics with its guest affinity group. (TEST-195)
-        self.assertEqual(shard_loads, (218, 218, 218, 216, 217, 216))
+        # Bind deterministic load totals after splitting the former Roulette/Slots/Keno mega-group. (TEST-195, TEST-242)
+        self.assertEqual(shard_loads, (217, 218, 218, 217, 217, 216))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 2)
         # Require exact union and nonduplication across all declared owners.
@@ -1857,7 +1868,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Read only literal strings and tuples from the tracked declaration.
         affinity_groups = ast.literal_eval(affinity_node.value)
         # Require every producer/consumer group introduced by the controller repair.
-        self.assertEqual(set(affinity_groups), {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette_slots_keno", "bingo_admin"})
+        self.assertEqual(set(affinity_groups), {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette", "slots", "keno", "bingo_admin"})
         # Keep the independent semantic-color matrix outside every legacy producer/consumer affinity group.
         self.assertNotIn("BR-GAME-COLOR-001", {case_id for group_case_ids in affinity_groups.values() for case_id in group_case_ids})
         # Validate every group against exact case identity and one-shard ownership.
@@ -1873,13 +1884,15 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Require all producers and consumers to execute on one shard.
             self.assertEqual(len(owners), 1, group_name)
             # Extracted Browser affinities own their guard and skip outside the compatibility runner.
-            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette_slots_keno", "bingo_admin"}:
+            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette", "slots", "keno", "bingo_admin"}:
                 # Bind the exact source-level delegation alias and external owner for this family.
                 delegation_alias, owner_source = {
                     "auth_backend_pwa": ("browser_auth_backend_pwa", auth_backend_pwa_source),
                     "guest_lifecycle": ("browser_guest_lifecycle", guest_lifecycle_source),
                     "auth_lobby": ("browser_auth_lobby", auth_lobby_source),
-                    "roulette_slots_keno": ("browser_roulette_slots_keno", roulette_slots_keno_source),
+                    "roulette": ("browser_roulette_slots_keno", roulette_slots_keno_source),
+                    "slots": ("browser_roulette_slots_keno", roulette_slots_keno_source),
+                    "keno": ("browser_roulette_slots_keno", roulette_slots_keno_source),
                     "bingo_admin": ("browser_bingo_admin", bingo_admin_source),
                 }[group_name]
                 # Require one source-level delegation so cross-file discovery preserves the group's exact position.
