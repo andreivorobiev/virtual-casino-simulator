@@ -11,8 +11,8 @@ LIR-006.
 import copy
 # Import bounded action-id validation without accepting arbitrary log text.
 import re
-# Import a process-local lock for the supported single-process simulator runtime.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import the read-only player service without a game-owned wallet mutation boundary.
 from casino.core import players
@@ -35,8 +35,6 @@ from casino.games.let_it_ride import engine
 GAME_ID = engine.GAME_ID
 # Accept UUID-like or namespaced action ids while bounding storage and log size.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
-# Serialize prepared state, ledger scans, movements, and markers in this local process.
-_ACTION_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent state.
 _ATOMIC_BASELINE_KEY = "_let_it_ride_atomic_baseline"
 # Name every field owned by the Let It Ride state machine.
@@ -198,7 +196,7 @@ class LetItRideController:
     # Read player state and finish only movements already prepared before interruption.
     def state(self, player_id: str) -> dict:
         # Serialize reload recovery against concurrent commands in this process.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the authenticated player's isolated document.
             state = self._load(player_id)
             # Recover any durable prepared action without creating new gameplay.
@@ -213,7 +211,7 @@ class LetItRideController:
         # Normalize wager now so replay comparisons use canonical precision.
         normalized_wager = engine.normalize_wager(wager)
         # Serialize preparation, ledger scans, movements, and markers locally.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the authenticated player's latest document.
             state = self._load(player_id)
             # Finish only prior prepared movements before evaluating a new command.
@@ -281,7 +279,7 @@ class LetItRideController:
             # Fail closed before state or ledger mutation.
             raise ValidationError("Let It Ride stage is invalid")
         # Serialize decision preparation and settlement locally.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the authenticated player's isolated document.
             state = self._load(player_id)
             # Recover the opening wager or earlier prepared movements first.

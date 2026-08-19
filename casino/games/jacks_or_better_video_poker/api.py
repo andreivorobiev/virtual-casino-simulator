@@ -9,8 +9,8 @@ Confirmed requirements include JOBVP-001 through JOBVP-006 and TEST-224.
 import copy
 # Import regular-expression validation for bounded client action identifiers.
 import re
-# Import a process-local settlement lock for exactly-once local simulator actions.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import shared ledger and player services without mutating balances directly.
 from casino.core import players
@@ -37,8 +37,6 @@ WAGER_TRANSACTION_TYPE = "JOBVP_WAGER_DEBIT"
 PAYOUT_TRANSACTION_TYPE = "JOBVP_PAYOUT_CREDIT"
 # Bound client retry keys to conservative URL-safe identifier characters.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Serialize state and ledger replay checks inside this local simulator process.
-_SETTLEMENT_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent state.
 _ATOMIC_BASELINE_KEY = "_jobvp_atomic_baseline"
 # Name every state field owned by Jacks-or-Better transitions.
@@ -217,7 +215,7 @@ class JacksOrBetterVideoPokerService:
         # Normalize the paytable column once for conflict-safe replay comparison.
         coins = engine.require_coins(body.get("coins"))
         # Serialize the state-save, ledger-check, debit, and recovery markers.
-        with _SETTLEMENT_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-scoped state inside the settlement lock.
             state = self._load(player_id)
             # Recover an earlier deal action before enforcing the one-active-round rule.
@@ -264,7 +262,7 @@ class JacksOrBetterVideoPokerService:
     # Persist held-card positions for reload-safe continuation.
     def set_holds(self, player_id: str, round_id: str, holds) -> dict:
         # Serialize hold changes against concurrent draws.
-        with _SETTLEMENT_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-scoped state inside the settlement lock.
             state = self._load(player_id)
             # Read the only actionable round from the active slot.
@@ -285,7 +283,7 @@ class JacksOrBetterVideoPokerService:
         # Validate the draw retry key before touching state or the ledger.
         action_id = require_action_id(body.get("action_id"), "action_id")
         # Serialize action binding, deterministic draw, ledger check, and completion marker.
-        with _SETTLEMENT_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-scoped state inside the settlement lock.
             state = self._load(player_id)
             # Find any round already owned by this draw action key.

@@ -21,10 +21,11 @@ The contract this core guarantees:
 import hashlib
 import re
 import secrets
-import threading
 
 from casino.core import players
 from casino.core.clock import utc_now
+# Import bounded per-player striping so unrelated MySQL wallets can settle concurrently. (GAMECORE-009)
+from casino.core.player_locks import player_action_lock
 # Import the canonical game-money compatibility gateway owned by SettlementAdapter. (GAMECORE-004)
 from casino.core.settlement import GameSettlementGateway
 from casino.core.state_store import load_player_game_state, update_player_game_state
@@ -32,8 +33,6 @@ from casino.errors import ConflictError, ValidationError
 
 # Bound request identifiers to conservative URL-safe characters and length.
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Serialize state, ledger proof, debit, settlement, and persistence per process.
-_SETTLEMENT_LOCK = threading.RLock()
 # Bound the retained per-player recent-round history so state stays compact.
 RECENT_ROUND_LIMIT = 25
 
@@ -238,8 +237,8 @@ class SimpleWagerGame:
             raise ValidationError(f"{self.game_id} requires a positive wager")
         # Derive the deterministic round identity for this player and request.
         round_id = self._round_id_factory(self.game_id, player_id, request_id)
-        # Serialize state cache, ledger proof, entropy, settlement, and persistence locally.
-        with _SETTLEMENT_LOCK:
+        # Serialize only this player's state, proof, entropy, settlement, and persistence locally.
+        with player_action_lock(player_id):
             # Load the player's current document once inside the lock.
             state = self._state_loader(player_id)
             # Resolve any prior round created by this exact request.

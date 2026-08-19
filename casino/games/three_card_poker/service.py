@@ -10,8 +10,8 @@ LEDGER-006, LEDGER-007, and LEDGER-009.
 import copy
 # Import bounded client-identifier validation.
 import re
-# Import a process-local lock for prepared state and ledger reconciliation.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import the read-only player service without a game-owned wallet mutation boundary.
 from casino.core import players
@@ -32,8 +32,6 @@ from casino.games.three_card_poker import engine
 GAME_ID = engine.GAME_ID
 # Accept bounded URL-safe client retry identifiers.
 CLIENT_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Serialize prepared state and replay scans in this local simulator process.
-_ACTION_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent game state.
 _ATOMIC_BASELINE_KEY = "_three_card_poker_atomic_baseline"
 # Name only the Three Card Poker fields one transition may replace.
@@ -260,7 +258,7 @@ class ThreeCardPokerService:
     # Read player state after reconciling any already-prepared action.
     def state(self, player_id: str) -> dict:
         # Serialize recovery against concurrent commands in this process.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load only this authenticated player's state document.
             state = self._load(player_id)
             # Complete pending ledger work before public state is projected.
@@ -277,7 +275,7 @@ class ThreeCardPokerService:
         # Bind exact normalized money settings to the client identifier.
         fingerprint = {"ante": ante, "pair_plus": pair_plus}
         # Serialize state preparation, ledger recovery, and marker saving.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-scoped document.
             state = self._load(player_id)
             # Recover older prepared work before accepting another command.
@@ -342,7 +340,7 @@ class ThreeCardPokerService:
         # Bind round and decision to the globally player-scoped client id.
         fingerprint = {"round_id": round_id, "decision": decision}
         # Serialize decision preparation and all remaining ledger work.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-scoped document.
             state = self._load(player_id)
             # Complete older prepared movements before interpreting the decision.

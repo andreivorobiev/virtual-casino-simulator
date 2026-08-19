@@ -13,7 +13,7 @@ The engine uses `casino.core.cards` and `casino.core.poker` from #96. A seed exi
 - One aggregate `MHVP_WAGER_DEBIT` covers `hand_count * wager_per_hand`.
 - One aggregate `MHVP_PAYOUT_CREDIT` returns all qualifying hand credits.
 - State is persisted before either movement, and retry recovery searches ledger events by player, game, round, and transaction type before issuing a movement.
-- A process-local settlement lock serializes the state/ledger recovery path used by this local simulator.
+- A bounded player-scoped stripe serializes each wallet's state/ledger recovery path without blocking unrelated MySQL wallets.
 - The game module never mutates `player.balance` or any storage-provider balance field directly.
 
 ## Public actions

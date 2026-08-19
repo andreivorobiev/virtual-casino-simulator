@@ -8,8 +8,8 @@ import random
 import copy
 # Import regular-expression validation for bounded client retry identifiers.
 import re
-# Import a process-local settlement lock for exactly-once simulator actions.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import the read-only player service without a game-owned mutation boundary.
 from casino.core import players
@@ -32,8 +32,6 @@ from casino.games.craps import engine
 GAME_ID = engine.GAME_ID
 # Bound client retry keys to conservative URL-safe identifier characters.
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Serialize state, dice, ledger replay, and recovery checks inside this process.
-_SETTLEMENT_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent state.
 _ATOMIC_BASELINE_KEY = "_craps_atomic_baseline"
 # Name every private or compatibility field owned by Craps state transitions.
@@ -352,7 +350,7 @@ class CrapsService:
         # Normalize the requested wager before conflict comparisons.
         wager = engine.require_wager(body.get("wager"))
         # Serialize state save, ledger check, debit, and recovery markers.
-        with _SETTLEMENT_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-scoped state inside the settlement lock.
             state = self._load(player_id)
             # Recover retained terminal money before accepting another wager.
@@ -407,7 +405,7 @@ class CrapsService:
         # Validate the per-roll retry key before consuming dice or state.
         request_id = require_request_id(body.get("request_id"))
         # Serialize action lookup, dice generation, persistence, and settlement.
-        with _SETTLEMENT_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-scoped state inside the settlement lock.
             state = self._load(player_id)
             # Find any retained start or roll already using this action id.

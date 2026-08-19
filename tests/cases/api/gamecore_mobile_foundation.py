@@ -98,7 +98,7 @@ def _run_mobile_core_security_tests():
 def run_cases(run_case):
     """Register the seven reviewed listener-free cases in historical order."""
     # Record exactly-once simple-game wager, replay, conflict, and recovery proof.
-    run_case("API-GAMECORE-001", ["GAMECORE-001", "GAMECORE-002", "GAMECORE-007", "TEST-127", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240"], _run_simple_game_core_tests)
+    run_case("API-GAMECORE-001", ["GAMECORE-001", "GAMECORE-002", "GAMECORE-007", "GAMECORE-009", "TEST-127", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240", "TEST-246"], _run_simple_game_core_tests)
     # Record provider-current merge, concurrency, and catalog-adoption evidence.
     run_case("API-GAMECORE-005", ["GAMECORE-005", "GAMECORE-006", "GAMECORE-007", "STORAGE-017", "TEST-233", "TEST-234", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240", "TEST-245"], _run_simple_game_atomic_tests)
     # Record signed settlement routing, replay, conflict, and recovery proof.

@@ -4,8 +4,8 @@
 
 # Import regular-expression validation for bounded client retry identifiers.
 import re
-# Import a process-local settlement lock for exactly-once local simulator actions.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import shared ledger, player, and clock services without mutating balances directly.
 from casino.core import players
@@ -28,8 +28,6 @@ from casino.games.multi_hand_video_poker import engine
 GAME_ID = engine.GAME_ID
 # Bound client retry keys to conservative URL-safe identifier characters.
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Serialize state and ledger replay checks inside this local simulator process.
-_SETTLEMENT_LOCK = threading.RLock()
 
 
 # Persist and load one player's state through explicit provider-owned boundaries.
@@ -197,7 +195,7 @@ class MultiHandVideoPokerService:
         # Normalize the per-hand wager once before any durable state transition.
         wager_per_hand = engine.require_wager_per_hand(body.get("wager_per_hand"))
         # Serialize local settlement calls while provider callbacks protect cross-process state.
-        with _SETTLEMENT_LOCK:
+        with player_action_lock(player_id):
             # Retain creation ownership and round identity outside the provider callback.
             selected = {}
 
@@ -265,7 +263,7 @@ class MultiHandVideoPokerService:
     # Persist hold positions for reload-safe continuation.
     def set_holds(self, player_id: str, round_id: str, holds) -> dict:
         # Serialize hold changes against concurrent draws.
-        with _SETTLEMENT_LOCK:
+        with player_action_lock(player_id):
             # Apply the hold selection inside the same lock that reads actionable state.
             def apply_holds(current: dict) -> dict:
                 # Read the only actionable round from the provider-current active slot.
@@ -293,7 +291,7 @@ class MultiHandVideoPokerService:
     # Draw every hand and settle one aggregate payout exactly once.
     def draw(self, player_id: str, round_id: str) -> dict:
         # Serialize deterministic draw, pre-credit state, ledger check, and completion marker.
-        with _SETTLEMENT_LOCK:
+        with player_action_lock(player_id):
             # Retain replay classification outside the atomic draw callback.
             selected = {}
 

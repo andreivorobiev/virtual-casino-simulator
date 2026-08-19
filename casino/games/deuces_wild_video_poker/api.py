@@ -10,8 +10,8 @@ LEDGER-009, and LEDGER-023. Permanent DWVP IDs remain owned by #77.
 import copy
 # Import regular-expression validation for bounded client action identifiers.
 import re
-# Import a process-local lock for exactly-once simulator settlement paths.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import the read-only player service without exposing a game-owned mutation boundary.
 from casino.core import players
@@ -32,8 +32,6 @@ from casino.games.deuces_wild_video_poker import engine
 GAME_ID = engine.GAME_ID
 # Accept UUID-like and namespaced retry identifiers without arbitrary log text.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
-# Serialize state preparation, ledger recovery, and marker persistence in this local process.
-_ACTION_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent state.
 _ATOMIC_BASELINE_KEY = "_deuces_wild_atomic_baseline"
 # Name the complete set of document fields owned by this game's engine and API adapter.
@@ -266,7 +264,7 @@ class DeucesWildVideoPokerService:
     # Read one player's reload-safe state and finish only prior prepared movements.
     def state(self, player_id: str) -> dict:
         # Serialize recovery against duplicate action requests in this process.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load current player-owned state inside the settlement lock.
             state = self._load(player_id)
             # Recover wager or payout markers created by prior requests.
@@ -285,7 +283,7 @@ class DeucesWildVideoPokerService:
         # Build the semantic fingerprint stored in replay state.
         fingerprint = {"wager": f"{wager:.2f}"}
         # Serialize preparation and reconciliation for duplicate local requests.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-owned state inside the action lock.
             state = self._load(player_id)
             # Recover every prepared wager and owed payout before admitting another round.
@@ -356,7 +354,7 @@ class DeucesWildVideoPokerService:
         # Use the canonical list directly as the replay fingerprint.
         fingerprint = {"holds": holds}
         # Serialize hold state against concurrent draw actions.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the latest player-owned document.
             state = self._load(player_id)
             # Resolve an earlier identical hold action first.
@@ -399,7 +397,7 @@ class DeucesWildVideoPokerService:
         # Use the target round as the entire normalized draw fingerprint.
         fingerprint = {"round_id": round_id}
         # Serialize deterministic draw and payout recovery in this process.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load current player-owned state inside the action lock.
             state = self._load(player_id)
             # Resolve an existing client action mapping before state transitions.

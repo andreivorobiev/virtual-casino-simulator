@@ -6,8 +6,8 @@
 import copy
 # Import cryptographic bounded selection for production ticket outcomes.
 import secrets
-# Import one process-wide reentrant lock for local state and ledger idempotency.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import the one approved play-token settlement compatibility boundary.
 from casino.core.settlement import GameSettlementGateway
@@ -20,8 +20,6 @@ from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, 
 # Import pure Scratch Cards rules and public-state sanitization.
 from casino.games.scratch_cards import engine
 
-# Serialize the complete local read-modify-ledger-write path against duplicate requests.
-_ACTION_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent state.
 _ATOMIC_BASELINE_KEY = "_scratch_cards_atomic_baseline"
 # Name every state field owned by Scratch Cards transitions.
@@ -145,7 +143,7 @@ class ScratchCardsService:
     # Return only the authenticated player's masked reload-safe state.
     def state(self, player_id: str) -> dict:
         # Serialize state reads with in-flight purchase and scratch transitions.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load only the session-bound player's private game document.
             state = self._load_state(player_id)
             # Return no ledger rows and no hidden prize data.
@@ -164,7 +162,7 @@ class ScratchCardsService:
         # Compute one semantic fingerprint that detects conflicting request reuse.
         request_fingerprint = engine.purchase_fingerprint(wager)
         # Serialize player-state preparation and ledger recovery as one local action.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load one independent private player state document.
             state = self._load_state(player_id)
             # Resolve any current or retained card created by this request identity.
@@ -255,7 +253,7 @@ class ScratchCardsService:
         # Compute one semantic fingerprint for conflicting action-id detection.
         action_fingerprint = engine.scratch_fingerprint(card_id, positions)
         # Serialize player state, action replay, and optional payout credit locally.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load only the authenticated player's independent private state.
             state = self._load_state(player_id)
             # Resolve the card only inside this player's current or retained state.

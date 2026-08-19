@@ -1381,8 +1381,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the provider read-path allocations to bring the governed registry to 1100 rows.
-        self.assertEqual(len(requirements), 1100)
+        # Require player-lock striping allocations to bring the governed registry to 1102 rows.
+        self.assertEqual(len(requirements), 1102)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1523,6 +1523,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-234": "Tests",  # Bind legacy proof, response, source, and process-concurrency evidence.
             "GAMECORE-007": "Core",  # Bind prepared-state lifecycle stages to shared settlement ordering.
             "GAMECORE-008": "Core",  # Bind one canonical gateway mutation vocabulary and historical-read policy.
+            "GAMECORE-009": "Core",  # Bind bounded player stripes, lock order, and unchanged JSON gating.
             "SIC-BO-007": "Sic Bo",  # Bind Sic Bo orchestration to one SimpleWagerGame coordinator.
             "TEST-235": "Tests",  # Bind lifecycle, recovery, history, source, and process evidence.
             "TEST-236": "Tests",  # Bind Chuck-a-Luck lifecycle, recovery, history, and process evidence.
@@ -1539,6 +1540,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-244": "Tests",  # Bind threshold, growth, stale-row, and exclusion evidence.
             "STORAGE-017": "Storage",  # Bind incremental history, point player, aggregate economics, and response reuse.
             "TEST-245": "Tests",  # Bind measured provider-call reduction and provider-neutral output parity.
+            "TEST-246": "Tests",  # Bind same-player serialization and real different-player MySQL concurrency.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

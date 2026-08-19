@@ -50,7 +50,7 @@ Every token movement goes through `casino/core/ledger.py`; the game never writes
 4. Play applies exactly one matching-ante debit and at most one combined settlement credit. Fold performs no further movement because the opening wagers were already debited.
 5. Decision retries recover committed ledger actions and return the original result. Reusing an `action_id` for a different decision fails closed.
 
-The adapter targets the supported single-process local simulator and serializes state/ledger recovery with a process-local lock. A future multi-process deployment would require a unique idempotency key enforced atomically by shared storage before making the same guarantee.
+The adapter orders state/ledger recovery with a bounded player-scoped stripe and relies on the provider's atomically enforced action identity for cross-process exactly-once settlement, so unrelated MySQL wallets can proceed concurrently.
 
 ## Permanent requirements
 
