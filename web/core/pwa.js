@@ -31,8 +31,6 @@ let offline = navigator.onLine === false;
 let currentState = offline ? 'offline' : 'online';
 // Store the application-owned authoritative refresh callback used after reconnect.
 let reconnectHandler = null;
-// Keep one observer so rerendered game controls inherit the current offline boundary.
-let controlObserver = null;
 // Prevent duplicate listener and service-worker registration when boot is called more than once.
 let initialized = false;
 // Hold the bounded update timeout so a failed activation can become visible without a reload loop.
@@ -158,8 +156,8 @@ function disableServerControls() {
   });
 }
 
-// Apply the current server-action boundary after route or dialog rerenders.
-function synchronizeServerControls() {
+// Apply the current server-action boundary after route renders and connectivity transitions.
+export function synchronizeServerControls() {
   // Keep server actions disabled while offline or while authoritative reconnect has not completed.
   if (offline || currentState === 'reconnecting' || currentState === 'reconnect-failed') disableServerControls();
   // Restore only PWA-owned disables after a successful authoritative refresh.
@@ -353,10 +351,6 @@ export function initPwa(options = {}) {
   window.addEventListener('offline', handleOffline);
   // Require an authoritative refresh before releasing controls after reconnect.
   window.addEventListener('online', () => { void reconnectAuthoritatively(); });
-  // Reapply the offline boundary when route code replaces controls.
-  controlObserver = new MutationObserver(() => synchronizeServerControls());
-  // Observe only subtree additions and removals because attributes remain application-owned.
-  controlObserver.observe(document.body, { childList: true, subtree: true });
   // Apply the initial browser connectivity boundary.
   if (offline) handleOffline(); else hideState();
   // Skip service-worker features gracefully in unsupported browsers.

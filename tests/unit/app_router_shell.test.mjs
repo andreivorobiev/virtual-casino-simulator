@@ -20,6 +20,8 @@ const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const APP_SOURCE = await readFile(`${ROOT}/web/app.js`, "utf8");
 const ROUTER_SOURCE = await readFile(`${ROOT}/web/core/app_router.js`, "utf8");
 const BOOTSTRAP_SOURCE = await readFile(`${ROOT}/web/core/app_bootstrap.js`, "utf8");
+// Read the PWA lifecycle owner so retired whole-body observation cannot return.
+const PWA_SOURCE = await readFile(`${ROOT}/web/core/pwa.js`, "utf8");
 
 // Build a router fixture whose pure catalog and location seams need no browser DOM.
 function routerFixture() {
@@ -48,7 +50,6 @@ function routerFixture() {
     t: key => key,
     updateCurrentUserShell: () => {},
     walletLifecycle: { interrupt: () => {} },
-    windowRef: { MutationObserver: class {} },
   });
 }
 
@@ -73,6 +74,33 @@ test("CORE-007 preserves routing and escaped locale options", () => {
   assert.equal(router.routeFromLocation(), "roulette");
   // Require the tagged helper to escape hostile ordinary locale text.
   assert.equal(String(router.localeOptionsHtml()), '<option value="ru-RU">Русский &lt;script&gt;</option>');
+});
+
+// Verify one shared route-render hook replaces the two standing subtree observers.
+test("PWA-002 coordinates post-render controls and game rails without observers", () => {
+  // Build one game rail whose accessibility decoration can be inspected without a browser.
+  const attributes = {};
+  const rail = {
+    // Start outside the keyboard order so the production helper must opt the rail in.
+    tabIndex: -1,
+    // Capture role and label writes at the exact element boundary.
+    setAttribute: (name, value) => { attributes[name] = value; },
+    // Supply the visible heading used as the accessible region name.
+    querySelector: () => ({ textContent: "Table controls" }),
+  };
+  // Return the rail only for the bounded shared game-region selector.
+  const view = { querySelectorAll: selector => selector === ".control-rail, .details-drawer" ? [rail] : [] };
+  const router = routerFixture();
+  // Refuse non-game route writes without touching game-only semantics.
+  assert.equal(router.prepareRouteAfterRender(view, { routeId: "lobby" }), false);
+  // Apply game semantics through the same hook invoked after outlet writes.
+  assert.equal(router.prepareRouteAfterRender(view, { routeId: "roulette" }), true);
+  assert.deepEqual([rail.tabIndex, attributes.role, attributes["aria-label"]], [0, "region", "Table controls"]);
+  // Reject both retired standing observers at their former production owners.
+  assert.doesNotMatch(ROUTER_SOURCE, /MutationObserver/);
+  assert.doesNotMatch(PWA_SOURCE, /MutationObserver/);
+  // Bind rail decoration, offline-control sync, and layout audit to the one existing render hook.
+  assert.match(BOOTSTRAP_SOURCE, /const afterRouteRender = \(view, render\) => \{[\s\S]*prepareRouteAfterRender\(view, render\);[\s\S]*synchronizeServerControls\(\);[\s\S]*scheduleLayoutAudit\(\);[\s\S]*installStableRouteRenders\(routeOutlet, getActive, afterRouteRender\);/);
 });
 
 // Verify app.js is now bounded composition around extracted views and router.

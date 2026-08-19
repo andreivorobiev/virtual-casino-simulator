@@ -238,8 +238,8 @@ assert.equal(uiModule.restoreRouteViewportState({}, null), false);
 assert.match(uiSource, /let renderSequence=0;[\s\S]*?requestAnimationFrame\(\(\)=>\{[\s\S]*?requestAnimationFrame\(\(\)=>\{/);
 // Require external focus plus fresh keyboard, pointer, wheel, or touch input to invalidate both deferred restoration callbacks. (UX-027, TEST-155)
 assert.match(uiSource, /let interactionSequence=0;[\s\S]*?let restorationActive=false;[\s\S]*?addEventListener\('focusin',markFocusInteraction,[\s\S]*?addEventListener\('keydown',markInteraction,[\s\S]*?addEventListener\('pointerdown',markInteraction,[\s\S]*?addEventListener\('wheel',markInteraction,[\s\S]*?addEventListener\('touchstart',markInteraction,[\s\S]*?interaction!==interactionSequence[\s\S]*?interaction!==interactionSequence/);
-// Require the shell to install the route-outlet interceptor exactly once with the live route callback. (UX-027)
-assert.match(appBootstrapSource, /installStableRouteRenders\(routeOutlet, getActive, scheduleLayoutAudit\);/);
+// Require the shell to install the route-outlet interceptor exactly once with its consolidated post-render callback. (UX-027)
+assert.match(appBootstrapSource, /installStableRouteRenders\(routeOutlet, getActive, afterRouteRender\);/);
 // Require the owner console to load and save the two bounded live rate-policy fields. (SEC-015, ADMIN-032)
 assert.match(adminSessionsSource, /\/api\/v2\/admin\/rate-limits[\s\S]*?admin-rate-limit-requests[\s\S]*?admin-rate-limit-window[\s\S]*?saveRateLimits/);
 // Require every sound channel and game announcement to start disabled in the frontend fallback. (AUDIO-010)

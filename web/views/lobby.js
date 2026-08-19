@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Build searchable catalog, trust rail, and game cards behind the Lobby route view. (CORE-007, CORE-012)
 
+// Bound search coalescing so rapid edits update once without making the catalog feel delayed. (CORE-007)
+const SEARCH_DEBOUNCE_MS = 100;
+
 // Create the Lobby renderer with route-local filter state.
 export function createLobbyView(dependencies) {
   // Capture the accepted brand, catalog, navigation, and presentation seams.
@@ -9,10 +12,16 @@ export function createLobbyView(dependencies) {
     activeBrand, getGameDescriptors, getLatestState, html, navigate,
     raw, renderPremiumTag, safe, t,
   } = dependencies;
+  // Accept deterministic timer seams for listener-free tests while using browser timers in production.
+  const clearTimeoutFn = dependencies.clearTimeoutFn || globalThis.clearTimeout;
+  // Schedule the bounded gallery-only update through the supplied or native timer.
+  const setTimeoutFn = dependencies.setTimeoutFn || globalThis.setTimeout;
   // Retain transient catalog search text only for this browser module lifetime.
   let lobbySearch = '';
   // Retain the selected discovered category without encoding it into game routes.
   let lobbyCategory = 'all';
+  // Retain at most one pending search update so superseded keystrokes never rebuild stale results.
+  let searchTimer = null;
 
   // Render one compact lobby trust tile.
   function trustItemHtml(code, title, detail) {
@@ -107,6 +116,16 @@ export function createLobbyView(dependencies) {
     ];
   }
 
+  // Render only the cards or empty state owned by the gallery region.
+  function galleryContents() {
+    // Resolve the latest filtered descriptors at the moment the debounced update commits.
+    const visibleGames = filteredGames();
+    // Preserve the established localized no-results state.
+    return visibleGames.length
+      ? visibleGames.map(lobbyCardHtml)
+      : html`<p class="catalog-empty" data-testid="catalog-empty">${t('catalog.empty', {}, 'shell')}</p>`;
+  }
+
   // Render the complete premium Lobby markup.
   function lobbyHtml(state = getLatestState()) {
     // Resolve authoritative counts and current descriptors.
@@ -115,10 +134,6 @@ export function createLobbyView(dependencies) {
     const onlinePlayerCount = Number.isInteger(state?.online_player_count)
       ? state.online_player_count
       : 0;
-    const visibleGames = filteredGames();
-    const cards = visibleGames.length
-      ? visibleGames.map(lobbyCardHtml)
-      : html`<p class="catalog-empty" data-testid="catalog-empty">${t('catalog.empty', {}, 'shell')}</p>`;
     // Preserve hero identity and trust rail.
     const eyebrow = html`<p class="eyebrow">${t('lobby.chooseTable', {}, 'shell')}</p>`;
     const title = html`<h1 class="hero-title">${activeBrand.venue}</h1>`;
@@ -128,21 +143,63 @@ export function createLobbyView(dependencies) {
     const hero = html`<section class="lobby-hero" aria-label="Lobby introduction">${heroCopy}${trust}</section>`;
     // Preserve catalog controls and gallery as one named region.
     const controls = catalogControls(descriptors, gameCount);
-    const gallery = html`<section class="game-gallery" data-testid="game-gallery" aria-label="${t('catalog.galleryAria', {}, 'shell')}">${cards}</section>`;
+    const gallery = html`<section class="game-gallery" data-testid="game-gallery" aria-label="${t('catalog.galleryAria', {}, 'shell')}">${galleryContents()}</section>`;
     const catalog = html`<section class="catalog-region" data-testid="catalog-region" aria-label="${t('catalog.controlsAria', {}, 'shell')}">${controls}${gallery}</section>`;
     return html`<section class="lobby" data-testid="lobby">${hero}${catalog}</section>`;
   }
 
+  // Bind the currently visible cards to canonical route navigation.
+  function bindVisibleGameCards(container) {
+    // Attach route actions only within the rendered root or gallery fragment supplied by the caller.
+    container.querySelectorAll('[data-open-game]').forEach((button) => {
+      // Navigate through the shared shell router.
+      button.onclick = () => navigate(button.dataset.openGame);
+    });
+  }
+
+  // Replace only filtered card markup so the search input, caret, hero, and category rail stay mounted.
+  function renderFilteredGallery(view) {
+    // Resolve the gallery from the still-current Lobby before committing delayed work.
+    const gallery = view.querySelector('[data-testid="game-gallery"]');
+    // Ignore a timer that outlived Lobby navigation instead of mutating a newer route.
+    if (!gallery) return false;
+    // Replace only the results region with the latest coalesced query.
+    gallery.innerHTML = html`${galleryContents()}`;
+    // Rebind route actions created by the gallery replacement.
+    bindVisibleGameCards(gallery);
+    // Report a committed gallery update for deterministic tests.
+    return true;
+  }
+
+  // Coalesce rapid search edits into one bounded gallery-only update.
+  function scheduleSearchGallery(view, search) {
+    // Publish the latest query immediately so a concurrent locale or category render uses current text.
+    lobbySearch = search.value;
+    // Cancel the superseded timer before scheduling the newest query.
+    if (searchTimer !== null) clearTimeoutFn(searchTimer);
+    // Commit after the short interaction budget without replacing the focused search control.
+    searchTimer = setTimeoutFn(() => {
+      // Release the handle before rendering so later edits schedule independently.
+      searchTimer = null;
+      // Apply only the filtered gallery region.
+      renderFilteredGallery(view);
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
   // Render Lobby markup and bind catalog-driven controls.
-  function renderLobby(view, focusSearch = false) {
+  function renderLobby(view) {
+    // Cancel delayed work before a full route, locale, or category repaint owns the outlet.
+    if (searchTimer !== null) {
+      // Clear the browser timer and its retained view reference.
+      clearTimeoutFn(searchTimer);
+      // Reset the handle so the next edit can schedule normally.
+      searchTimer = null;
+    }
     // Replace atomically so cards and category counts cannot drift.
     view.innerHTML = html`${lobbyHtml()}`;
     const search = view.querySelector('[data-testid="catalog-search"]');
-    // Rerender matching cards for each user edit.
-    search.oninput = () => {
-      lobbySearch = search.value;
-      renderLobby(view, true);
-    };
+    // Coalesce user edits while leaving the focused search field mounted.
+    search.oninput = () => scheduleSearchGallery(view, search);
     // Bind discovered category filters.
     view.querySelectorAll('[data-catalog-category]').forEach((button) => {
       // Preserve one selected category at a time.
@@ -151,16 +208,8 @@ export function createLobbyView(dependencies) {
         renderLobby(view);
       };
     });
-    // Bind visible game cards to canonical route navigation.
-    view.querySelectorAll('[data-open-game]').forEach((button) => {
-      // Navigate through the shared shell router.
-      button.onclick = () => navigate(button.dataset.openGame);
-    });
-    // Restore search focus and caret after filter rerender.
-    if (focusSearch) {
-      search.focus();
-      search.setSelectionRange(search.value.length, search.value.length);
-    }
+    // Bind visible game cards after the complete Lobby render.
+    bindVisibleGameCards(view);
   }
 
   // Publish only the router-facing Lobby renderer.

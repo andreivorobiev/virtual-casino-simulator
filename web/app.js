@@ -231,7 +231,6 @@ appRouter = createAppRouter({
   t,
   updateCurrentUserShell,
   walletLifecycle: walletCelebrationLifecycle,
-  windowRef: window,
 });
 
 // Convert one public catalog row through the extracted router.
@@ -269,8 +268,6 @@ function clearAuthenticatedShellState(options = {}) {
   wellnessController.dispose();
   // Dispose the session-owned celebration before a game or logged-out surface can remount.
   walletCelebrationLifecycle.unmount('session-cleared');
-  // Stop observing game-only rails before the authenticated route outlet is replaced.
-  appRouter.disconnectGameObserver();
   // Unmount the active game when its lifecycle hook exists so stale rerenders cannot survive sign-out.
   if (active && appRouter.loadedGames.has(active)) appRouter.loadedGames.get(active).unmount?.();
   // Clear the cached current-user payload so wallet and guest affordances cannot remain visible.
@@ -590,6 +587,7 @@ void startApplication({
   getShellConnected: () => shellConnected,
   isGuestSession,
   navigate,
+  prepareRouteAfterRender: appRouter.prepareRouteAfterRender,
   refreshAfterReconnect,
   refreshCurrentSession,
   refreshShellState,

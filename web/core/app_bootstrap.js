@@ -10,8 +10,8 @@ import { activeBrand, applyBrand } from './brand.js';
 import { bindFeedbackDialog, localizeFeedback } from './feedback.js';
 // Import locale initialization and change subscriptions.
 import { initI18n, onLocaleChange, t } from './i18n.js';
-// Import the offline-safe reconnect controller.
-import { initPwa } from './pwa.js';
+// Import the offline-safe reconnect controller and route-render control synchronizer.
+import { initPwa, synchronizeServerControls } from './pwa.js';
 // Import containment, stable-render, feedback, and formatting helpers.
 import { auditLayoutContainment, installStableRouteRenders, toast, tokens } from './ui.js';
 
@@ -48,7 +48,7 @@ export async function startApplication(dependencies) {
   const {
     clearAuthenticatedShellState, descriptorFromCatalog, documentRef, getActive,
     getCurrentSession, getGameDescriptors, getLatestState, getShellConnected,
-    isGuestSession, navigate, refreshAfterReconnect, refreshCurrentSession,
+    isGuestSession, navigate, prepareRouteAfterRender, refreshAfterReconnect, refreshCurrentSession,
     refreshShellState, renderExpiredSessionGate, renderInitialRouteRestore,
     renderLoginGate, renderNav, renderPublicAuthRoute, revealActiveNav,
     routeFromLocation, setCurrentSession, setGameDescriptors,
@@ -124,8 +124,17 @@ export async function startApplication(dependencies) {
   };
   // Debounce one settled audit after renders and resize.
   const scheduleLayoutAudit = () => { clearTimeout(layoutAuditTimer); layoutAuditTimer = setTimeout(runLayoutAudit, 700); };
+  // Coordinate every route-outlet replacement through the existing stable-render hook.
+  const afterRouteRender = (view, render) => {
+    // Reapply game scroll-region semantics without a standing subtree observer.
+    prepareRouteAfterRender(view, render);
+    // Reapply the current fail-closed offline boundary to newly rendered server controls.
+    synchronizeServerControls();
+    // Schedule containment measurement after all synchronous post-render decoration commits.
+    scheduleLayoutAudit();
+  };
   // Preserve scroll and focus across same-route rerenders. (UX-027)
-  installStableRouteRenders(routeOutlet, getActive, scheduleLayoutAudit);
+  installStableRouteRenders(routeOutlet, getActive, afterRouteRender);
   // Re-measure containment after viewport changes.
   windowRef.addEventListener('resize', scheduleLayoutAudit);
   // Repaint persistent shell text when locale changes.

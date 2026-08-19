@@ -997,15 +997,19 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         run_case('BR-LOBBY-001',['CORE-005','CORE-006','CORE-016','UX-008','UX-023','I18N-004','I18N-014','TEST-069','TEST-187','UX-012','TEST-072'],premium_lobby)
         # Define catalog_navigation to cover search and category facets from module metadata.
         def catalog_navigation():
+            # Retain the exact search node so filtering can prove the input is never replaced.
+            page.evaluate("""() => { const input=document.querySelector('[data-testid="catalog-search"]'); window.__catalogSearchNode=input; input.focus(); input.setSelectionRange(0,0); }""")
             # Filter by a game label through the visible search control.
             page.get_by_test_id('catalog-search').fill('roulette')
-            # Wait for the catalog rerender to show only the matching game card.
+            # Wait for the debounced gallery-only update to show the matching game card.
             page.wait_for_function("() => document.querySelectorAll('[data-testid^=\"card-\"]').length === 1")
             # Require the matching card and no unrelated game card.
             assert page.get_by_test_id('card-roulette').is_visible() and page.locator('[data-testid^="card-"]').count()==1
+            # Require search identity, focus, and end-of-query caret position to survive filtering.
+            assert page.evaluate("""() => { const input=document.querySelector('[data-testid="catalog-search"]'); return input===window.__catalogSearchNode && document.activeElement===input && input.selectionStart===8 && input.selectionEnd===8; }""")
             # Capture filtered catalog evidence at the primary desktop viewport.
             shot('after-pass-shell-lobby-catalog-filtered.png')
-            # Clear search through the freshly rendered control.
+            # Clear search through the same still-mounted control.
             page.get_by_test_id('catalog-search').fill('')
             # Select the Table category derived from catalog metadata.
             page.locator('[data-catalog-category="table"]').click()
@@ -1015,8 +1019,10 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             assert page.locator('[data-testid^="card-"]').count()==expected_tables and page.get_by_test_id('card-blackjack').is_visible()
             # Restore the all-games category for later visual and route checks.
             page.locator('[data-catalog-category="all"]').click()
+            # Remove the case-local identity marker before downstream Browser cases run.
+            page.evaluate("delete window.__catalogSearchNode")
         # Execute scalable lobby search and category navigation coverage.
-        run_case('BR-CATALOG-NAV-001',['UX-010','CORE-021'],catalog_navigation)
+        run_case('BR-CATALOG-NAV-001',['UX-010','CORE-021','PWA-002','UX-027'],catalog_navigation)
         # Define the focused Russian catalog acceptance case requested for the shared lobby surface.
         def catalog_ru_acceptance():
             # Switch the authenticated shell to Russian without navigating away from the lobby.
@@ -1298,7 +1304,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     reset_lobby_scroll()
                     # Enter a stable metadata-backed query that matches the installed poker category in both locales.
                     page.get_by_test_id('catalog-search').fill('poker')
-                    # Require a real non-empty filtered result set before testing its last action.
+                    # Wait for a real non-empty filtered result set smaller than the complete catalog.
+                    page.wait_for_function("(total) => { const count=document.querySelectorAll('[data-testid^=\"card-\"]').length; return count>1 && count<total; }",arg=len(casino_config.GAMES))
+                    # Require the committed filtered result set before testing its last action.
                     assert page.locator('[data-testid^="card-"]').count()>1
                     # Reach the search result set's final action through native End behavior on the scroll owner.
                     keyboard_end_to_boundary()
@@ -1310,11 +1318,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     reset_lobby_scroll()
                     # Enter an impossible query through the visible search field.
                     page.get_by_test_id('catalog-search').fill('__no_catalog_match__')
-                    # Require the localized empty state and zero stale game cards.
+                    # Wait for the debounced localized empty state before inspecting stale cards.
+                    page.get_by_test_id('catalog-empty').wait_for(timeout=5000)
+                    # Require the localized empty state and zero stale game cards after the gallery commit.
                     assert page.get_by_test_id('catalog-empty').is_visible() and page.locator('[data-testid^="card-"]').count()==0
-                    # Clear and dispatch the search input in one browser task so its synchronous rerender cannot detach Playwright's fill target mid-action. (issue #637)
-                    page.get_by_test_id('catalog-search').evaluate("(input) => { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }")
-                    # Wait for the cleared query to own a non-empty catalog before changing its category. (issue #637)
+                    # Clear through the stable search control so the debounced gallery update retains focus and caret ownership.
+                    page.get_by_test_id('catalog-search').fill('')
+                    # Wait for the cleared query's gallery-only update before changing its category.
                     page.wait_for_function("""() => document.querySelector('[data-testid="catalog-search"]')?.value === '' && document.querySelectorAll('[data-testid^="card-"]').length > 0""",timeout=5000)
                     # Select the table category as a visible representative after every category passed behavior checks.
                     page.locator('[data-catalog-category="table"]').click()
