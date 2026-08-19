@@ -575,21 +575,67 @@ class FileHeaderPolicyTests(unittest.TestCase):
         # Confirm CLI handling converts the same refusal into a failing exit status.
         self.assertEqual(policy.main(["--write"], root=self.root), 1)
 
-    # Verify exact filler comments are counted while identical string literals are ignored.
-    def test_filler_count_is_comment_only_and_exact(self) -> None:
-        """Avoid heuristic matching and never count source string contents."""
+    # Verify exact filler and both generated families are counted while strings remain ignored.
+    def test_filler_count_is_comment_only_and_governed(self) -> None:
+        """Match complete templates without counting near matches or source string contents."""
 
-        # Build source with one exact filler comment, one near-match comment, and one exact string literal.
+        # Build source with one exact filler, both families, near matches, and source strings.
         text = (
             '"""Explain filler counting."""\n'
             "# Return the computed value to the caller.\n"
+            "# Set result to the value needed for the next operation.\n"
+            "# Define the render function used by this module.\n"
             "# Return the computed value to the caller. Extra context.\n"
+            "# Set production defaults deliberately for the next operation.\n"
             'TEXT = "Return the computed value to the caller."\n'
+            'FAMILY = "Define the render function used by this module."\n'
         )
         # Count filler using Python tokens.
         count = policy.filler_count(text, ".py")
-        # Confirm only the exact actual comment matches.
-        self.assertEqual(count, 1)
+        # Confirm only the three complete actual comment templates match.
+        self.assertEqual(count, 3)
+        # Build JavaScript line comments covering both variable-name families and one string literal.
+        javascript = (
+            "// Set result to the value needed for the next operation.\n"
+            "// Define the render function used by this module.\n"
+            'const text = "Set result to the value needed for the next operation.";\n'
+        )
+        # Confirm the conservative JavaScript path recognizes both complete comment families only.
+        self.assertEqual(policy.filler_count(javascript, ".js"), 2)
+
+    # Verify the compatibility CLI automatically enforces the repository debt ledger.
+    def test_default_baseline_rejects_new_family_filler(self) -> None:
+        """Fail a newly seeded tautology without requiring callers to pass extra CLI flags."""
+
+        # Create one fully governed module with one recorded generated-family comment.
+        source = self._source(
+            "module.py",
+            (
+                self._python_header()
+                + '"""Explain default baseline behavior."""\n'
+                + "# Set value to the value needed for the next operation.\n"
+                + "VALUE = 1\n"
+            ).encode("utf-8"),
+        )
+        # Create the default baseline location used by the production compatibility entry point.
+        baseline = self.root / policy.DEFAULT_FILLER_BASELINE
+        # Ensure the governed scripts directory exists in the disposable repository.
+        baseline.parent.mkdir(parents=True, exist_ok=True)
+        # Record the one existing debt unit exactly.
+        baseline.write_text(
+            json.dumps({"version": 1, "files": {"module.py": 1}}),
+            encoding="utf-8",
+        )
+        # Prove normal check mode discovers and enforces the default ledger.
+        self.assertEqual(policy.main(["--check"], root=self.root), 0)
+        # Seed one new family comment without changing the baseline.
+        source.write_text(
+            source.read_text(encoding="utf-8")
+            + "# Define the seeded function used by this module.\n",
+            encoding="utf-8",
+        )
+        # Prove the same ordinary CI command fails the newly introduced tautology.
+        self.assertEqual(policy.main(["--check"], root=self.root), 1)
 
     # Verify baseline files enforce exact current debt and monotonic transitions.
     def test_filler_baseline_exactness_and_monotonic_transition(self) -> None:
@@ -635,7 +681,7 @@ class FileHeaderPolicyTests(unittest.TestCase):
             boundaries=("module.py",),
             filler_baseline_path=baseline,
         )
-        # Assert the exact actual/expected values are reported.
+        # Assert the governed actual/expected values are reported.
         self.assertTrue(any("count 1 does not match baseline 0" in item.message for item in stale.findings))
         # Accept a baseline decrease for an existing path.
         policy.validate_baseline_transition({"module.py": 2}, {"module.py": 1})

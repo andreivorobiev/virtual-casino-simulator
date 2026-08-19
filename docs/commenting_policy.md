@@ -29,4 +29,8 @@ Run:
 python scripts/check_file_headers.py --check
 ```
 
-The gate fails closed for a missing, partial, duplicate, conflicting, or misplaced header; a displaced shebang; invalid Python syntax or encoding; missing file purpose; or any known filler template. `--write` is available only with one or more explicit tracked path boundaries and proves Python executable-token equivalence or exact JavaScript reconstruction before writing the entire selected set. `scripts/check_comment_density.py` remains only as a compatibility entry point to this same gate; no density threshold is enforced.
+The gate fails closed for a missing, partial, duplicate, conflicting, or misplaced header; a displaced shebang; invalid Python syntax or encoding; missing file purpose; or any known filler template. Alongside the fixed phrases, it recognizes the complete generated families `Set … to the value needed for the next operation.` and `Define the … function used by this module.` without matching useful prose that happens to share one word.
+
+`scripts/comment_filler_baseline.json` records the remaining generated-family debt per tracked file. The #713 baseline starts at 1,027 comments: 672 assignment narrations and 355 function narrations. Normal checks require exact source-to-ledger agreement, while the Comment Density workflow compares the candidate ledger with its merge/base parent and rejects every per-file increase or newly positive path. Cleanup slices may only reduce or remove ledger entries; they may not transfer debt between files.
+
+`--write` is available only with one or more explicit tracked path boundaries and proves Python executable-token equivalence or exact JavaScript reconstruction before writing the entire selected set. `scripts/check_comment_density.py` remains only as a compatibility entry point to this same gate; no density threshold is enforced.
