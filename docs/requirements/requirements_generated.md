@@ -7,14 +7,14 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.10
-- core: 10.8.0
+- core: 10.9.0
 - mobile: 1.0.0
 - ledger: 9.1.2
-- players: 9.1.3
+- players: 9.1.4
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.20.12
+- admin: 1.20.13
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.7.5
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.5
 - teen_patti: 1.1.5
-- tests: 1.110.0
-- docs: 1.106.0
+- tests: 1.111.0
+- docs: 1.107.0
 - contracts: 1.62.4
 - tooling: 1.43.0
 - commenting_policy: 2.1.0
@@ -741,6 +741,8 @@ Historical source baseline: 9.1.0
 - **TEST-242** (Tests) - PASS: Every tests/run_tests.py extraction slice preserves exact reviewed Browser and non-Browser case counts plus sorted permanent ID lists; pure Browser shard policy, area-owned API registrations, and affinity-owned Browser registrations execute outside the monolith while the historical tests/run_tests.py CLI remains the compatibility entrypoint.
 - **TOOL-020** (Tooling) - PASS: A repository validator scans Git-tracked first-party Python and JavaScript, excludes data, vendored code, and explicitly marked generated source, and requires every file above 1,200 physical lines or 96 KiB to have an exact reviewed register row; malformed, missing, duplicate, unsorted, stale, or more-than-20-percent-grown audit entries fail closed inside the existing Module Boundary required context.
 - **TEST-244** (Tests) - PASS: Listener-free policy evidence proves the current reviewed baseline, independent line and byte thresholds, exact-versus-greater-than-twenty-percent growth behavior, stale-entry rejection, generated, vendored, and data exclusions, and fail-closed register schema, ordering, and duplication diagnostics without mutating checked source.
+- **STORAGE-017** (Storage) - PASS: Provider read paths avoid unrelated durable material: JSON history uses a stat-guarded incremental CSV tail cache with per-game indexing and reset invalidation, MySQL player reads use the player primary key, MySQL game economics aggregates inside the newest bounded SQL window, JSON economics iterates the cached ledger snapshot, and shared simple-game responses reuse provider-committed state and ledger events.
+- **TEST-245** (Tests) - PASS: Listener-free provider evidence proves warmed history reads decode only appended CSV bytes while matching a cache-free reader, JSON and MySQL player point-read parity and SQL shape, MySQL economics aggregation and detail bounds, and shared-game provider-call reduction with exact response, state, ledger, replay, and reset behavior preserved.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

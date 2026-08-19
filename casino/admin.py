@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Admin API handlers, policy controls, and operational reporting.
 import json
-# Import numeric finiteness checks so malformed ledger amounts cannot poison Admin economics.
-import math
 import secrets
 # Import timestamp parsing for bounded Guest Trials Admin filters.
 from datetime import datetime, timezone
@@ -20,7 +18,7 @@ from casino.core import invitations
 from casino.core.clock import utc_now
 from casino.core.state_store import read_json
 # Import the provider visibility boundary for direct game-state tree inspection.
-from casino.core.storage import get_storage_provider
+from casino.core.storage import ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS, _is_player_economics_event, _player_economics_amount, get_storage_provider
 from casino.bots import profiles, practice_opponents
 from casino.errors import ForbiddenError, NotFoundError, ValidationError
 
@@ -666,7 +664,7 @@ def game_states():
 
 
 # Ledger transaction fragments owned by funded opponents or account seeding, excluded from player economics. (ADMIN-030)
-_NON_PLAYER_LEDGER_FRAGMENTS = ("OPPONENT", "FUNDING", "FUND_ACCOUNT", "GUEST_TRIAL_END")
+_NON_PLAYER_LEDGER_FRAGMENTS = ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS
 # Bound one economics read independently from caller-supplied values.
 _ECONOMICS_MAX_WINDOW = 100_000
 # Bound one detail payload so recent evidence cannot expand without governance.
@@ -675,10 +673,8 @@ _ECONOMICS_MAX_RECENT = 50
 
 # Decide whether one ledger event represents a player-facing game movement instead of funding or opponent plumbing.
 def _is_player_facing(event: dict) -> bool:
-    # Read the type defensively so one malformed stored row cannot break the Admin economics view.
-    transaction_type = str(event.get("transaction_type", ""))
-    # Keep only game-bound movements whose type is outside the fixed infrastructure fragments.
-    return bool(event.get("game")) and not any(fragment in transaction_type for fragment in _NON_PLAYER_LEDGER_FRAGMENTS)
+    # Delegate the fixed classification to the provider-neutral economics boundary.
+    return _is_player_economics_event(event)
 
 
 # Clamp one integer control into its economics evidence range.
@@ -697,58 +693,22 @@ def _economics_bound(value, default: int, maximum: int) -> int:
 
 # Normalize one stored ledger amount or reject malformed/non-finite evidence.
 def _economics_amount(event: dict):
-    # Reject booleans because Python otherwise treats them as numeric one and zero.
-    if isinstance(event.get("amount"), bool):
-        # Exclude the malformed row.
-        return None
-    # Start protected conversion so hostile historical rows do not break diagnostics.
-    try:
-        # Convert accepted numeric representations to float for stable aggregation.
-        amount = float(event.get("amount", 0) or 0)
-    # Reject objects and text that cannot represent a numeric ledger amount.
-    except (TypeError, ValueError):
-        # Return no value so the entire malformed row is excluded.
-        return None
-    # Reject NaN and infinity because they cannot produce contract-safe JSON ratios.
-    return amount if math.isfinite(amount) else None
+    # Delegate strict finite-number handling to the provider-neutral economics boundary.
+    return _player_economics_amount(event)
 
 
 # Aggregate wagered-versus-returned play tokens from the shared ledger into per-game payout rates. (ADMIN-030)
 def game_economics(window: int = 100_000):
     # Clamp the window before calling the storage provider.
     window = _economics_bound(window, _ECONOMICS_MAX_WINDOW, _ECONOMICS_MAX_WINDOW)
-    # Accumulate signed wager and return totals per game over one bounded recent window.
-    by_game = {}
-    # Read the shared ledger once so summary rows share the same source snapshot.
-    for event in ledger.read_recent(limit=window):
-        # Skip non-game and funded-opponent movements so rates reflect player-facing activity only.
-        if not _is_player_facing(event):
-            # Continue with the next event after rejecting infrastructure plumbing.
-            continue
-        # Normalize a missing amount to zero while preserving signed debit and credit semantics.
-        amount = _economics_amount(event)
-        # Exclude malformed or non-finite rows from both counts and totals.
-        if amount is None:
-            # Continue without publishing corrupted evidence.
-            continue
-        # Create the stable aggregate row on first use.
-        aggregate = by_game.setdefault(event["game"], {"wagered": 0.0, "returned": 0.0, "events": 0})
-        # Count every player-facing movement included in the rate window.
-        aggregate["events"] += 1
-        # Treat negative movements as wagered play tokens.
-        if amount < 0:
-            # Accumulate the unsigned wager amount.
-            aggregate["wagered"] += -amount
-        # Treat positive movements as returned play tokens.
-        elif amount > 0:
-            # Accumulate the return amount.
-            aggregate["returned"] += amount
+    # Ask the active provider for one bounded aggregate snapshot.
+    evidence = ledger.economics(window)
     # Build deterministic alphabetic output for stable Admin rendering and tests.
     rows = []
     # Derive rates for every game represented in the bounded window.
-    for game in sorted(by_game):
-        # Read the accumulated values for this game.
-        aggregate = by_game[game]
+    for aggregate in evidence["games"]:
+        # Read the provider-normalized stable game identity.
+        game = aggregate["game"]
         # Round token totals to the ledger's two-decimal presentation precision.
         wagered = round(aggregate["wagered"], 2)
         # Round returns independently before computing the published ratio.
@@ -767,34 +727,14 @@ def game_economics_detail(game: str, window: int = 100_000, recent: int = 50):
     window = _economics_bound(window, _ECONOMICS_MAX_WINDOW, _ECONOMICS_MAX_WINDOW)
     # Clamp recent evidence independently from the provider window.
     recent = _economics_bound(recent, _ECONOMICS_MAX_RECENT, _ECONOMICS_MAX_RECENT)
-    # Retain only the selected game's player-facing movements from the same bounded ledger window.
-    events = [event for event in ledger.read_recent(limit=window) if event.get("game") == game and _is_player_facing(event) and _economics_amount(event) is not None]
-    # Accumulate per-type detail alongside the overall wager and return totals.
-    by_type = {}
-    # Start the wager total at zero for an empty window.
-    wagered = 0.0
-    # Start the return total at zero for an empty window.
-    returned = 0.0
-    # Visit each filtered event once.
-    for event in events:
-        # Normalize a missing transaction type to a stable low-cardinality label.
-        transaction_type = str(event.get("transaction_type", "unknown"))
-        # Normalize a missing amount to zero while retaining its sign.
-        amount = _economics_amount(event)
-        # Create the per-type counter on first use.
-        breakdown = by_type.setdefault(transaction_type, {"count": 0, "total": 0.0})
-        # Count the event in its transaction-type bucket.
-        breakdown["count"] += 1
-        # Accumulate the signed amount for operator inspection.
-        breakdown["total"] += amount
-        # Add negative movements to wagered tokens.
-        if amount < 0:
-            # Convert the debit into a positive wager total.
-            wagered += -amount
-        # Add positive movements to returned tokens.
-        elif amount > 0:
-            # Preserve the credit as a positive return total.
-            returned += amount
+    # Ask the provider for one selected-game aggregate and bounded recent evidence snapshot.
+    evidence = ledger.economics(window, game=game, recent=recent)
+    # Read the selected aggregate or preserve the historical empty-game defaults.
+    aggregate = evidence["games"][0] if evidence["games"] else {"wagered": 0.0, "returned": 0.0, "events": 0}
+    # Read the provider-aggregated wager total.
+    wagered = aggregate["wagered"]
+    # Read the provider-aggregated return total.
+    returned = aggregate["returned"]
     # Round wagered tokens to display precision.
     wagered = round(wagered, 2)
     # Round returned tokens to display precision.
@@ -802,7 +742,7 @@ def game_economics_detail(game: str, window: int = 100_000, recent: int = 50):
     # Publish no payout ratio until the selected game has a wager.
     rate = round(returned / wagered, 4) if wagered > 0 else None
     # Return the summary, deterministic type breakdown, and bounded recent evidence.
-    return {"game": game, "wagered": wagered, "returned": returned, "events": len(events), "payout_rate": rate, "house_edge": round(1 - rate, 4) if rate is not None else None, "player_positive": bool(rate is not None and rate > 1.0), "by_transaction_type": [{"transaction_type": name, "count": data["count"], "total": round(data["total"], 2)} for name, data in sorted(by_type.items())], "recent": events[:recent]}
+    return {"game": game, "wagered": wagered, "returned": returned, "events": aggregate["events"], "payout_rate": rate, "house_edge": round(1 - rate, 4) if rate is not None else None, "player_positive": bool(rate is not None and rate > 1.0), "by_transaction_type": [{**row, "total": round(row["total"], 2)} for row in evidence["by_transaction_type"]], "recent": evidence["recent"]}
 
 
 # Define the overview function used by this module.

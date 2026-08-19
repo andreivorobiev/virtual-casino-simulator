@@ -8855,8 +8855,8 @@
         "casino/games/craps/api.py"
       ],
       "introduced_in": "issue-412-ledger-tail-cache",
-      "changed_in": "issue-412-ledger-tail-cache",
-      "notes": "The Craps recovery window continues widening without a fixed horizon so exactly-once evidence cannot age out, while the JSON tail cache prevents each wider read from reparsing ledger bytes; committed-action retention semantics are deliberately untouched."
+      "changed_in": "issue-714-provider-read-path-efficiency",
+      "notes": "The Craps recovery window continues widening without a fixed horizon so exactly-once evidence cannot age out. Issue #714 applies the same stat-guarded incremental and reset-safe rules to history.csv, with a per-game index and external-append parity, so repeated recent-history reads scale with new bytes instead of total history; committed-action retention semantics are deliberately untouched."
     },
     {
       "id": "TEST-135",
@@ -9533,8 +9533,8 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-456-admin-economics",
-      "changed_in": "issue-969-admin-economics-module",
-      "notes": "Ordinary Admin authorization remains sufficient for read-only economics. Zero-wager games expose no invented ratio, malformed rows are ignored, detail is bounded, and hosted evidence covers summary, player-positive, zero-wager, detail, and empty states. Issue #969 moves the summary and drill-down renderer behind an explicit dependency-injected per-tab boundary while preserving its frozen routes and exact visible behavior."
+      "changed_in": "issue-714-provider-read-path-efficiency",
+      "notes": "Ordinary Admin authorization remains sufficient for read-only economics. Zero-wager games expose no invented ratio, malformed rows are ignored, detail is bounded, and hosted evidence covers summary, player-positive, zero-wager, detail, and empty states. Issue #714 moves bounded aggregation behind the provider contract: MySQL groups the newest raw window in SQL while JSON iterates its incremental ledger cache, preserving the frozen routes and exact visible behavior."
     },
     {
       "id": "TEST-146",
@@ -9554,8 +9554,8 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-456-admin-economics",
-      "changed_in": "issue-969-admin-economics-module",
-      "notes": "The listener-free suite drives the production aggregation over a bounded synthetic ledger and starts no HTTP listener. Issue #969 adds dependency-injected summary, detail, sorting, escaping, percentage, empty-state, endpoint, Back-navigation, dispatcher, and review-width parity. Browser qualification remains hosted-only."
+      "changed_in": "issue-714-provider-read-path-efficiency",
+      "notes": "The listener-free suite drives the production provider aggregation over a bounded synthetic ledger and starts no HTTP listener. Issue #714 additionally binds MySQL aggregate/group SQL, newest-window and recent-evidence limits, canonical database row mapping, and connection cleanup while retaining the dependency-injected frontend parity. Browser qualification remains hosted-only."
     },
     {
       "id": "SESSION-009",
@@ -12892,8 +12892,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-857-simple-wager-atomic-state",
-      "changed_in": "issue-857-simple-wager-atomic-state",
-      "notes": "This completes player-document atomic publication for the eleven shared-helper games without authorizing a second production worker: wallet, ledger, history, and player-game state remain separate provider transactions."
+      "changed_in": "issue-714-provider-read-path-efficiency",
+      "notes": "Issue #714 reuses the state updater's committed document and the wager/settlement events returned by their exactly-once transactions when assembling a fresh response, eliminating the terminal state reload and two proof lookups without changing replay, response, or money semantics. Wallet, ledger, history, and player-game state remain separate provider transactions and no second production worker is authorized."
     },
     {
       "id": "TEST-233",
@@ -13324,6 +13324,56 @@
       "introduced_in": "issue-731-file-length-standard",
       "changed_in": "issue-731-file-length-standard",
       "notes": "Every mutation-focused case uses a disposable Git worktree so source selection is exercised through the production inventory boundary, while the checked-repository case binds all current register rows and retired split paths."
+    },
+    {
+      "id": "STORAGE-017",
+      "module": "Storage",
+      "description": "Provider read paths avoid unrelated durable material: JSON history uses a stat-guarded incremental CSV tail cache with per-game indexing and reset invalidation, MySQL player reads use the player primary key, MySQL game economics aggregates inside the newest bounded SQL window, JSON economics iterates the cached ledger snapshot, and shared simple-game responses reuse provider-committed state and ledger events.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-LEDGER-CACHE-001",
+        "API-ADMIN-ECONOMICS-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/storage/base.py",
+        "casino/core/storage/json_infrastructure.py",
+        "casino/core/storage/json_provider.py",
+        "casino/core/storage/mysql_provider.py",
+        "casino/core/storage/reset.py",
+        "casino/core/players.py",
+        "casino/core/ledger.py",
+        "casino/core/simple_game.py",
+        "casino/admin.py"
+      ],
+      "introduced_in": "issue-714-provider-read-path-efficiency",
+      "changed_in": "issue-714-provider-read-path-efficiency",
+      "notes": "All optimizations preserve frozen response dictionaries and chronological evidence semantics. History caches invalidate on reset, truncation, and equal-size rewrite; external monotonic appends consume only their new bytes. MySQL economics first bounds raw ledger rows before exclusions and grouping, and no storage, API contract, or settlement authority is broadened."
+    },
+    {
+      "id": "TEST-245",
+      "module": "Tests",
+      "description": "Listener-free provider evidence proves warmed history reads decode only appended CSV bytes while matching a cache-free reader, JSON and MySQL player point-read parity and SQL shape, MySQL economics aggregation and detail bounds, and shared-game provider-call reduction with exact response, state, ledger, replay, and reset behavior preserved.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-LEDGER-CACHE-001",
+        "API-ADMIN-ECONOMICS-001",
+        "API-GAMECORE-005"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/storage_ledger_cache_tests.py",
+        "tests/storage_package_boundary_tests.py",
+        "tests/admin_economics_tests.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/mysql_migration_live.py",
+        "tests/simple_game_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-714-provider-read-path-efficiency",
+      "changed_in": "issue-714-provider-read-path-efficiency",
+      "notes": "The measured fresh winning action performs one state load, two exactly-once money transactions, zero redundant proof reads, one atomic state update, and one player point read; replay retains only the two required immutable proof lookups. SQL fixtures allocate no connector or network resource."
     },
     {
       "id": "ROU-001",

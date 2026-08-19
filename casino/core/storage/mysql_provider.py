@@ -28,7 +28,7 @@ from casino.core.mysql_migrations import verify_runtime_compatibility
 # Import the bounded process-local MySQL connection lifecycle.
 from casino.core.mysql_pool import MySQLConnectionPool, MySQLPoolConfig
 # Import the provider-neutral storage contract, configuration, and shared row helpers.
-from casino.core.storage.base import HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
+from casino.core.storage.base import ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS, HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
 # Import the shared bounded epoch ceiling used by reset lifecycle validation.
 from casino.core.storage.reset import _GAME_ACTION_MAX_EPOCH
 # Import canonical JSON lifecycle codecs reused without creating a concrete-provider cycle.
@@ -455,6 +455,39 @@ class MySQLStorageProvider(MySQLGameActionMixin, StorageProvider, GameActionExec
         # Always close the connection after loading players.
         finally:
             # Close the MySQL connection for this operation.
+            connection.close()
+
+    # Read one player with an indexed predicate instead of scanning the wallet table.
+    def get_player(self, player_id: str, default_factory: Callable[[], dict]) -> dict | None:
+        # Ensure the compatible schema exists before querying one wallet.
+        self.ensure_ready()
+        # Borrow one connection for the point read.
+        connection = self.connect()
+        # Protect lease cleanup for every result and mapping failure.
+        try:
+            # Open a dictionary cursor so the established player mapper remains authoritative.
+            cursor = connection.cursor(dictionary=True)
+            # Select only the exact primary-key player row.
+            cursor.execute("SELECT player_id, display_name, player_type, balance, created_at, updated_at, status FROM casino_players WHERE player_id = %s", (player_id,))
+            # Read at most the one row guaranteed by the primary key.
+            row = cursor.fetchone()
+            # Preserve the provider-neutral missing result.
+            if row is None:
+                # Return no player without loading unrelated wallets.
+                return None
+            # Convert and validate the selected money row through the existing strict mapper.
+            try:
+                # Build the established public player dictionary.
+                player = self._player_from_row(row)
+                # Validate this point row inside the canonical player document boundary.
+                return _validated_players_document({"schema_version": SCHEMA_VERSION, "players": [player]})["players"][0]
+            # Normalize malformed stored values to the fixed operator-recovery boundary.
+            except (TypeError, ValueError, OverflowError, ValidationError, ConflictError):
+                # Preserve the database row for explicit repair.
+                raise ConflictError("Wallet storage requires operator recovery") from None
+        # Always release the point-read connection.
+        finally:
+            # Return the lease to the provider pool.
             connection.close()
 
     # Scan or repair MySQL wallet residue in one row-locked transaction. (STORAGE-015, LEDGER-036)
@@ -890,6 +923,58 @@ class MySQLStorageProvider(MySQLGameActionMixin, StorageProvider, GameActionExec
         # Always close the connection after the ledger query.
         finally:
             # Close the MySQL connection for this operation.
+            connection.close()
+
+    # Aggregate player-facing game economics in SQL without materializing the full window. (ADMIN-030)
+    def ledger_economics(self, window: int, game: str | None = None, recent: int = 0) -> dict:
+        # Ensure the compatible schema exists before querying the ledger.
+        self.ensure_ready()
+        # Borrow one connection so detail queries share one repeatable-read snapshot.
+        connection = self.connect()
+        # Protect lease cleanup across summary, type, and recent projections.
+        try:
+            # Open a dictionary cursor for named aggregate columns.
+            cursor = connection.cursor(dictionary=True)
+            # Build one fixed exclusion predicate for infrastructure transaction families.
+            exclusions = " AND ".join("BINARY transaction_type NOT LIKE BINARY %s" for _fragment in ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS)
+            # Bind wildcard fragments without interpolating caller input into SQL.
+            exclusion_values = tuple(f"%{fragment}%" for fragment in ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS)
+            # Restrict aggregation to the exact selected game only for drill-down requests.
+            game_clause = " AND BINARY game = BINARY %s" if game is not None else ""
+            # Bind the window, fixed exclusions, and optional game in statement order.
+            base_values = (int(window), *exclusion_values, *((game,) if game is not None else ()))
+            # Aggregate signed totals after selecting the newest raw ledger window.
+            cursor.execute(
+                f"SELECT MIN(game) AS game, SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END) AS wagered, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS returned, COUNT(*) AS event_count FROM (SELECT sequence_id, game, transaction_type, amount FROM casino_ledger ORDER BY sequence_id DESC LIMIT %s) AS bounded_ledger WHERE game IS NOT NULL AND game <> '' AND {exclusions}{game_clause} GROUP BY BINARY game ORDER BY BINARY game",
+                base_values,
+            )
+            # Materialize only low-cardinality per-game aggregate rows.
+            aggregate_rows = cursor.fetchall()
+            # Convert database decimals into the provider-neutral raw aggregate shape.
+            games = [{"game": row["game"], "wagered": float(row["wagered"] or 0), "returned": float(row["returned"] or 0), "events": int(row["event_count"])} for row in aggregate_rows]
+            # Return summary-only evidence after the single aggregate query.
+            if game is None:
+                # Preserve the shared internal result keys for Admin rendering.
+                return {"games": games, "by_transaction_type": [], "recent": []}
+            # Aggregate signed totals and counts per transaction type inside the same bounded window.
+            cursor.execute(
+                f"SELECT MIN(transaction_type) AS transaction_type, COUNT(*) AS event_count, SUM(amount) AS total FROM (SELECT sequence_id, game, transaction_type, amount FROM casino_ledger ORDER BY sequence_id DESC LIMIT %s) AS bounded_ledger WHERE game IS NOT NULL AND game <> '' AND {exclusions}{game_clause} GROUP BY BINARY transaction_type ORDER BY BINARY transaction_type",
+                base_values,
+            )
+            # Convert database values into the established detail bucket shape.
+            by_type = [{"transaction_type": str(row["transaction_type"]), "count": int(row["event_count"]), "total": float(row["total"] or 0)} for row in cursor.fetchall()]
+            # Select the historical oldest matching evidence from within the same newest-first raw window.
+            cursor.execute(
+                f"SELECT ledger_id, ts, player_id, game, round_id, transaction_type, amount, balance_before, balance_after, details_json FROM (SELECT sequence_id, ledger_id, ts, player_id, game, round_id, transaction_type, amount, balance_before, balance_after, details_json FROM casino_ledger ORDER BY sequence_id DESC LIMIT %s) AS bounded_ledger WHERE game IS NOT NULL AND game <> '' AND {exclusions}{game_clause} ORDER BY sequence_id ASC LIMIT %s",
+                (*base_values, int(recent)),
+            )
+            # Convert bounded database rows into the frozen public ledger event shape.
+            recent_rows = [_ledger_from_row(row) for row in cursor.fetchall()]
+            # Return all drill-down dimensions from one consistent provider snapshot.
+            return {"games": games, "by_transaction_type": by_type, "recent": recent_rows}
+        # Always release the economics connection.
+        finally:
+            # Return the read-only lease to the provider pool.
             connection.close()
 
     # Append one history event to MySQL.

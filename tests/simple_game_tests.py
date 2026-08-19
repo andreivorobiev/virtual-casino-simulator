@@ -85,6 +85,42 @@ class MemoryState:
         return copy.deepcopy(updated)
 
 
+# Model the immutable gateway contract while counting provider proof round-trips. (STORAGE-017)
+class CountingLedgerGateway:
+    # Start with no committed actions or provider calls.
+    def __init__(self) -> None:
+        # Retain immutable events by action key for replay reads.
+        self.events = {}
+        # Count apply-once provider calls.
+        self.apply_calls = 0
+        # Count read-only proof lookups.
+        self.find_calls = 0
+
+    # Apply or replay one deterministic event.
+    def apply_once(self, **context):
+        # Record one provider transaction call.
+        self.apply_calls += 1
+        # Read the immutable action identity.
+        action_key = context["action_key"]
+        # Return a prior exact event as a replay.
+        if action_key in self.events:
+            # Preserve the gateway tuple contract.
+            return copy.deepcopy(self.events[action_key]), True
+        # Build the bounded event fields consumed by SimpleWagerGame.
+        event = {"ledger_id": f"ledger-{action_key}", "player_id": context["player_id"], "game": "unit_flip", "round_id": context["round_id"], "transaction_type": context["transaction_type"], "amount": context["signed_amount"], "details": copy.deepcopy(context["details"])}
+        # Commit a detached immutable copy.
+        self.events[action_key] = copy.deepcopy(event)
+        # Return the newly committed event.
+        return event, False
+
+    # Find one prior exact event by its action identity.
+    def find(self, **context):
+        # Record one provider point lookup.
+        self.find_calls += 1
+        # Return a detached committed event for the requested action.
+        return copy.deepcopy(self.events[context["action_key"]])
+
+
 # Build one isolated game whose entropy is pinned for deterministic assertions.
 def _game(forced_face: int = 3) -> SimpleWagerGame:
     # Force the entropy source so the drawn face is deterministic.
@@ -155,6 +191,46 @@ class SimpleGameCoreTests(unittest.TestCase):
         self.assertEqual(second["round"]["total_return"], first["round"]["total_return"])
         # Require the wallet to be unchanged by the replay.
         self.assertEqual(self._balance(), after_first)
+
+    # Require fresh settlement to reuse in-hand state and event authority instead of rereading it.
+    def test_fresh_response_reuses_committed_state_and_events(self) -> None:
+        # Build provider-shaped state and immutable ledger fixtures.
+        store = MemoryState()
+        # Build the call-counting gateway.
+        gateway = CountingLedgerGateway()
+        # Count state loads independently from provider-current updates.
+        state_loads = []
+        # Count player point reads independently from state documents.
+        player_reads = []
+
+        # Load one state snapshot while recording the provider call.
+        def load_state(player_id):
+            # Record the exact player-scoped read.
+            state_loads.append(player_id)
+            # Delegate to provider-shaped detached state.
+            return store.load(player_id)
+
+        # Return one complete player projection through the point-read seam.
+        def get_player(player_id):
+            # Record the exact requested wallet identity.
+            player_reads.append(player_id)
+            # Return the frozen public player shape needed by the response.
+            return {"player_id": player_id, "display_name": "Efficiency", "type": "human", "balance": 1040.0, "created_at": "2026-08-19T00:00:00Z", "updated_at": "2026-08-19T00:00:00Z", "status": "active"}
+
+        # Build one winning helper entirely over the measured provider seams.
+        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, entropy_source=lambda _n: 2, ledger_gateway=gateway, state_loader=load_state, state_updater=store.update, get_player=get_player)
+        # Execute one fresh winning action.
+        result = game.play("measured", {"request_id": "efficient", "face": 3, "stake": 10})
+        # Require only the initial state load, two money commits, and one player point read.
+        self.assertEqual((1, 2, 0, 1), (len(state_loads), gateway.apply_calls, gateway.find_calls, len(player_reads)))
+        # Require response state to come from the updater's committed authority.
+        self.assertEqual(store.documents["measured"], result["state"])
+        # Require the response ledger to reuse exact in-hand committed event identities.
+        self.assertEqual(("ledger-" + result["round"]["round_id"] + ":wager", "ledger-" + result["round"]["round_id"] + ":settlement"), (result["ledger"]["wager"]["ledger_id"], result["ledger"]["settlement"]["ledger_id"]))
+        # Replay the same request through stored state.
+        replay = game.play("measured", {"request_id": "efficient", "face": 3, "stake": 10})
+        # Require replay to add one state read and two required proof reads, but no redundant state reload.
+        self.assertEqual((2, 2, 2, 2, True), (len(state_loads), gateway.apply_calls, gateway.find_calls, len(player_reads), replay["replayed"]))
 
     # Require a request id reused with different wager content to fail closed.
     def test_request_id_content_conflict_fails_closed(self) -> None:

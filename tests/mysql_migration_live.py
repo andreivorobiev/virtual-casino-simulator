@@ -463,12 +463,20 @@ def _exercise_game_action_provider() -> None:
         wallets = {row["player_id"]: row for row in provider.load_players(lambda: {"players": []})["players"]}
         # Require debit and payout to converge on the expected balance.
         assert wallets["lifecycle_204"]["balance"] == 11.5
+        # Read the same wallet through the production primary-key point seam.
+        point_wallet = provider.get_player("lifecycle_204", lambda: {"players": []})
+        # Require point and complete-document projections to remain byte-equivalent.
+        assert point_wallet == wallets["lifecycle_204"]
         # Read the route-free state document committed with the receipt.
         assert provider.read_document("game_action:lifecycle_204", {}) == {"round_id": "round_204", "status": "settled"}
         # Read exact append-only movement rows for the synthetic wallet.
         ledger_rows = provider.read_ledger_recent(player_id="lifecycle_204", limit=10)
         # Require one row per movement and no duplicate replay projection.
         assert len(ledger_rows) == 2 and [row["amount"] for row in ledger_rows] == [-1.0, 2.5]
+        # Aggregate the newest bounded game window through production MySQL SQL.
+        economics = provider.ledger_economics(window=100, game="slots", recent=10)
+        # Require exact totals, event count, type buckets, and chronological evidence identities.
+        assert economics["games"] == [{"game": "slots", "wagered": 1.0, "returned": 2.5, "events": 2}] and len(economics["by_transaction_type"]) == 2 and [row["ledger_id"] for row in economics["recent"]] == [row["ledger_id"] for row in ledger_rows]
         # Bind a separate action for a real REPEATABLE READ claim/receipt race.
         race_identity = GameActionIdentity.create(game_id="slots", player_id="lifecycle_204", action_key="race_204", resources=resources, request={"stake_cents": 0})
         # Signal when the executor owns its uncommitted execute claim inside the planner.

@@ -50,6 +50,8 @@ class JsonResetMixin:
                 child.unlink()
         # Drop the ledger tail cache so reads never serve pre-reset rows. (issue #412)
         self._drop_ledger_cache()
+        # Drop the history tail cache alongside its removed CSV backing file. (STORAGE-017)
+        self._drop_history_cache()
         # Drop the action-registry cache alongside its removed backing file. (issue #412)
         self._drop_actions_cache()
         # Recreate every ordinary provider directory before caller bootstrap.
@@ -348,6 +350,8 @@ class JsonResetMixin:
             self._reset_recovery_checkpoint("restore_verified")
             # Drop caches so later reads observe restored bytes rather than reset state.
             self._drop_ledger_cache()
+            # Drop history cache identities tied to removed post-reset files.
+            self._drop_history_cache()
             # Drop committed-action cache identities tied to removed post-reset files.
             self._drop_actions_cache()
         # Preserve the sole recovery artifact and normalize every restoration failure.

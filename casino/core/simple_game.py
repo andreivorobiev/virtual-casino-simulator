@@ -168,7 +168,14 @@ class SimpleWagerGame:
 
     # Build the public state payload for one authenticated player.
     def state(self, player_id: str) -> dict:
+        # Load provider-current state for a standalone state request.
         current = self._state_loader(player_id)
+        # Build the established payload through the reusable in-hand state seam.
+        return self._state_payload(player_id, current)
+
+    # Build the public state payload from an already-authoritative state when available.
+    def _state_payload(self, player_id: str, current: dict) -> dict:
+        # Read only the requested wallet through the provider point-read boundary.
         return {"game": self.game_id, "state": current, "player": self._get_player(player_id), "bet_catalog": self._public_bet_catalog()}
 
     # Locate a prior round in state for replay detection.
@@ -179,7 +186,7 @@ class SimpleWagerGame:
         return None
 
     # Publish one committed round without replacing a concurrent round or unrelated sibling field. (GAMECORE-005)
-    def _publish_round(self, player_id: str, stored_round: dict) -> dict:
+    def _publish_round(self, player_id: str, stored_round: dict) -> tuple[dict, dict]:
         # Bind immutable request identity before entering provider-owned mutable state.
         request_id = stored_round["request_id"]
         # Bind the request fingerprint used to reject changed-meaning reuse.
@@ -216,8 +223,8 @@ class SimpleWagerGame:
         if published is None:
             # Fail closed instead of fabricating a successful state response.
             raise ConflictError(f"{self.game_id} committed round publication is missing")
-        # Return the exact provider-owned stored round used by response and ledger reconstruction.
-        return published
+        # Return the exact provider-owned round and complete committed document for response assembly.
+        return published, committed
 
     # Execute or replay one atomic wager, entropy draw, and settlement for a player.
     def play(self, player_id: str, request: dict) -> dict:
@@ -246,7 +253,7 @@ class SimpleWagerGame:
                 # Rebuild the ledger events for the replayed round from committed proof.
                 ledger_events = self._round_ledger(player_id, existing)
                 # Return the identical replayed round with explicit replay evidence.
-                return {"round": existing["public"], "replayed": True, "ledger": ledger_events, **self.state(player_id)}
+                return {"round": existing["public"], "replayed": True, "ledger": ledger_events, **self._state_payload(player_id, state)}
             # Persist or recover optional game-owned preparation before any ledger movement.
             lifecycle_context = self._lifecycle_call("prepare", player_id=player_id, request=request or {}, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=wager, wager_total=wager_total)
             # Preserve preparation replay evidence even if finalization returns a replacement context.
@@ -266,7 +273,7 @@ class SimpleWagerGame:
                     # Rebuild exact terminal movement evidence for the provider-owned round.
                     prepared_ledger = self._round_ledger(player_id, prepared_existing)
                     # Return the immutable winner with explicit state replay evidence.
-                    return {"round": prepared_existing["public"], "replayed": True, "ledger": prepared_ledger, **self.state(player_id)}
+                    return {"round": prepared_existing["public"], "replayed": True, "ledger": prepared_ledger, **self._state_payload(player_id, prepared_state)}
             # Require configured lifecycle preparation to publish authoritative entropy and timing.
             if self._lifecycle is not None:
                 # Reject a malformed lifecycle result before any wager can move tokens.
@@ -329,6 +336,8 @@ class SimpleWagerGame:
             self._lifecycle_call("settlement_resolved", player_id=player_id, request_id=request_id, round_id=round_id, fingerprint=fingerprint, wager=committed_wager, wager_total=wager_total, entropy=entropy, total_return=total_return, settlement=settlement, settled_at=settled_at, lifecycle_context=lifecycle_context)
             # Start with no replayed settlement event for a losing round.
             settlement_replayed = False
+            # Start with no settlement event so losing rounds retain the established null proof.
+            settlement_event = None
             # Branch when the deterministic outcome returns any value to the wallet.
             if total_return > 0:
                 # Build the settlement audit details from the committed round.
@@ -348,11 +357,11 @@ class SimpleWagerGame:
             # Build the compact stored round with replay and fingerprint bookkeeping.
             stored_round = {"request_id": request_id, "request_fingerprint": fingerprint, "round_id": round_id, "total_return": total_return, "public": public_round}
             # Atomically merge the committed round into provider-current history.
-            published_round = self._publish_round(player_id, stored_round)
-            # Rebuild ledger proof from the exact provider-owned round identity.
-            ledger_events = self._round_ledger(player_id, published_round)
+            published_round, published_state = self._publish_round(player_id, stored_round)
+            # Reuse the immutable events already returned by the exactly-once provider transactions.
+            ledger_events = {"wager": wager_event, "settlement": settlement_event}
             # Return the committed provider round while preserving the established response envelope.
-            return {"round": published_round["public"], "replayed": lifecycle_replayed or wager_replayed or settlement_replayed, "ledger": ledger_events, **self.state(player_id)}
+            return {"round": published_round["public"], "replayed": lifecycle_replayed or wager_replayed or settlement_replayed, "ledger": ledger_events, **self._state_payload(player_id, published_state)}
 
     # Rebuild the committed ledger events for one round from stored proof.
     def _round_ledger(self, player_id: str, stored_round: dict) -> dict:

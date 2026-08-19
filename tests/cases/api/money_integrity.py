@@ -7,7 +7,7 @@
 def run_cases(run_case, run_unit_module):
     """Register storage and legacy-settlement cases in historical execution order."""
     # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
-    run_case("STORAGE-LEDGER-CACHE-001", ["LEDGER-034", "STORAGE-009", "TEST-135", "TEST-169"], lambda: run_unit_module("tests.storage_ledger_cache_tests", "ledger cache, action journal, and bootstrap race suite failed"))
+    run_case("STORAGE-LEDGER-CACHE-001", ["LEDGER-034", "STORAGE-009", "STORAGE-017", "TEST-135", "TEST-169", "TEST-245"], lambda: run_unit_module("tests.storage_ledger_cache_tests", "ledger cache, action journal, bootstrap race, and provider read-path suite failed"))
     # Record the Blackjack and Baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
     run_case("API-LEGACY-SETTLE-001", ["LEDGER-030", "SEC-012"], lambda: run_unit_module("tests.legacy_settlement_tests", "blackjack and baccarat settlement suite failed"))
     # Record the Roulette and Keno exactly-once settlement, layout, and entropy proof. (issues #403, #222, #420)

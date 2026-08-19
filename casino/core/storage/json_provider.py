@@ -74,6 +74,21 @@ class JsonStorageProvider(JsonInfrastructureMixin, JsonGameActionMixin, JsonRese
                 # Return the compatible player document after recovery.
                 return self._load_players_document(default_factory)
 
+    # Read one JSON player through the same recovery boundary without returning unrelated wallets.
+    def get_player(self, player_id: str, default_factory: Callable[[], dict]) -> dict | None:
+        # Guard recovery and the point read from concurrent local threads.
+        with self.lock:
+            # Guard recovery and the player read from independent processes.
+            with self._ledger_process_lock():
+                # Complete every recoverable wallet action before exposing a player balance.
+                self._recover_all_json_actions_locked()
+                # Read the strict compatible wallet document exactly once.
+                state = self._load_players_document(default_factory)
+                # Locate only the exact requested player row.
+                player = next((row for row in state.get("players", []) if row.get("player_id") == player_id), None)
+                # Return a detached row so callers cannot mutate provider state.
+                return copy.deepcopy(player) if player is not None else None
+
     # Scan or repair JSON wallet residue under the complete money-state gate. (STORAGE-015, LEDGER-036)
     def normalize_wallet_balances(self, *, apply: bool = False) -> dict:
         # Reject operator mutation attempted from inside a game-action planner.
@@ -867,6 +882,66 @@ class JsonStorageProvider(JsonInfrastructureMixin, JsonGameActionMixin, JsonRese
                 # Return the requested tail of matching rows.
                 return rows[-limit:]
 
+    # Decode one cached CSV region using either its physical header or canonical field names.
+    def _decode_history_region(self, payload: bytes, *, has_header: bool) -> list[dict]:
+        # Import CSV parsing only for the local compatibility format.
+        import csv
+        # Import in-memory text streams so appended bytes can be decoded without reopening the file.
+        import io
+        # Decode with the same UTF-8 policy used by the previous full text-file reader.
+        text = payload.decode("utf-8", errors="replace")
+        # Build a newline-aware in-memory stream for the standard CSV parser.
+        stream = io.StringIO(text, newline="")
+        # Consume the physical header only when parsing from the beginning of the file.
+        reader = csv.DictReader(stream) if has_header else csv.DictReader(stream, fieldnames=HISTORY_FIELDS)
+        # Materialize the region using the exact dictionaries produced by csv.DictReader.
+        return list(reader)
+
+    # Read valid history rows in append order through a stat-guarded incremental cache. (STORAGE-017)
+    def _history_rows(self) -> list[dict]:
+        # Stat the append-only CSV once so unchanged content skips every reparse.
+        try:
+            # Read the current size and modification identity of the history file.
+            stat = os.stat(self.history_path())
+        # Treat a missing file as empty while discarding removed-file cache state.
+        except OSError:
+            # Forget cached rows that belonged to a reset or removed history file.
+            self._drop_history_cache()
+            # Return the established empty history result.
+            return []
+        # Serve the cached append-order rows when size and mtime are unchanged.
+        if stat.st_size == self._history_cache_offset and stat.st_mtime_ns == self._history_cache_mtime_ns:
+            # Return cached rows without touching history contents.
+            return self._history_cache_rows
+        # Reload from the header after truncation or an equal-size rewrite.
+        if stat.st_size <= self._history_cache_offset:
+            # Drop cache state because monotonic growth cannot explain this file identity.
+            self._drop_history_cache()
+        # Read only bytes at and after the last fully parsed CSV boundary.
+        with self.history_path().open("rb") as handle:
+            # Position at the first unparsed byte, including a prior unterminated fragment.
+            handle.seek(self._history_cache_offset)
+            # Read exactly the appended region observed by the stat call.
+            appended = handle.read(stat.st_size - self._history_cache_offset)
+        # Stop the durable cache at the final physical newline so partial appends are retried.
+        boundary = appended.rfind(b"\n") + 1
+        # Parse complete CSV bytes using the physical header only at offset zero.
+        completed = self._decode_history_region(appended[:boundary], has_header=self._history_cache_offset == 0) if boundary else []
+        # Add every completed row to append-order and per-game cache views.
+        for row in completed:
+            # Retain the compatible dictionary in append order.
+            self._history_cache_rows.append(row)
+            # Index the same row reference by game for ordinary filtered reads.
+            self._history_cache_by_game.setdefault(row.get("game"), []).append(row)
+        # Advance only past complete CSV bytes so a partial tail is re-read after growth.
+        self._history_cache_offset += boundary
+        # Remember the file identity that produced the current cached content.
+        self._history_cache_mtime_ns = stat.st_mtime_ns
+        # Decode an unterminated final row exactly like the former whole-file DictReader.
+        self._history_cache_tail_rows = self._decode_history_region(appended[boundary:], has_header=self._history_cache_offset == 0) if appended[boundary:] else []
+        # Return the complete cached view plus the transient trailing row view.
+        return self._history_cache_rows + self._history_cache_tail_rows if self._history_cache_tail_rows else self._history_cache_rows
+
     # Append a CSV history row using the existing local file format.
     def append_history(self, event: dict) -> None:
         # Reject provider mutation attempted from inside a planner.
@@ -894,26 +969,24 @@ class JsonStorageProvider(JsonInfrastructureMixin, JsonGameActionMixin, JsonRese
 
     # Read recent history rows from the local CSV file.
     def recent_history(self, limit: int = 100, game: str | None = None) -> list[dict]:
-        # Import csv only for the JSON provider's CSV compatibility path.
-        import csv
         # Serialize history visibility with reset and every provider operation.
         with self.lock:
             # Hold the stable and legacy process gates across the complete read.
             with self._json_global_gate():
                 # Complete every recoverable action before exposing history.
                 self._recover_all_json_actions_locked()
-                # Return no history for fresh local runs.
-                if not self.history_path().exists():
-                    # Return an empty result set when there is no local CSV yet.
-                    return []
-                # Open the CSV file using the existing newline settings.
-                with self.history_path().open("r", newline="", encoding="utf-8") as handle:
-                    # Decode every history row into dictionaries.
-                    rows = list(csv.DictReader(handle))
+                # Refresh only the newly appended CSV bytes before selecting a bounded tail.
+                rows = self._history_rows()
                 # Apply optional game filtering for admin and casino history endpoints.
                 if game:
-                    # Keep only rows for the requested game.
-                    rows = [row for row in rows if row.get("game") == game]
+                    # Scan the transient combined view only while an unterminated tail exists.
+                    if self._history_cache_tail_rows:
+                        # Keep only rows for the requested game across cached and trailing rows.
+                        rows = [row for row in rows if row.get("game") == game]
+                    # Use the per-game index during the ordinary fully cached path.
+                    else:
+                        # Select only rows for the requested game without scanning other games.
+                        rows = self._history_cache_by_game.get(game, [])
                 # Return the requested tail of matching rows.
                 return rows[-limit:]
 
