@@ -8880,7 +8880,7 @@
     {
       "id": "TOOL-009",
       "module": "Tooling",
-      "description": "The historical comment-density command remains a compatible fail-closed entry point that delegates to the governed first-party file-header, purpose-documentation, and generated-filler policy gate.",
+      "description": "The historical comment-density command remains a compatible fail-closed entry point that delegates to the governed first-party file-header, purpose-documentation, and generated-filler policy gate, including a default per-file debt ledger whose candidate values may not increase from the merge/base parent.",
       "status": "PASS",
       "api_tests": [
         "FILE-HEADER-POLICY-001"
@@ -8889,16 +8889,17 @@
       "implementation_files": [
         "scripts/check_comment_density.py",
         "scripts/check_file_headers.py",
+        "scripts/comment_filler_baseline.json",
         ".github/workflows/comment-density.yml"
       ],
       "introduced_in": "issue-416-density-gate",
-      "changed_in": "issue-441-file-header-policy",
-      "notes": "Issue #441 superseded the density ratio with objective source-header, purpose, syntax-placement, and exact-filler checks while preserving the old command for durable documentation and automation compatibility."
+      "changed_in": "issue-713-filler-family-ratchet",
+      "notes": "Issue #441 superseded the density ratio with objective source-header, purpose, syntax-placement, and exact-filler checks; issue #713 added the two variable-name tautology families, default ledger discovery, and merge/base monotonic comparison while preserving the old command for automation compatibility."
     },
     {
       "id": "COMMENT-001",
       "module": "Commenting Policy",
-      "description": "Every tracked first-party Python and JavaScript source carries the exact NOTICE-derived copyright and Apache-2.0 SPDX header at a language-valid position, preserves executable behavior and upstream vendor notices, states a substantive file purpose, and contains no governed machine-generated filler template.",
+      "description": "Every tracked first-party Python and JavaScript source carries the exact NOTICE-derived copyright and Apache-2.0 SPDX header at a language-valid position, preserves executable behavior and upstream vendor notices, states a substantive file purpose, and introduces no governed machine-generated filler phrase or complete generated tautology-family comment.",
       "status": "PASS",
       "api_tests": [
         "FILE-HEADER-POLICY-001"
@@ -8908,12 +8909,13 @@
         "AGENTS.md",
         "docs/commenting_policy.md",
         "scripts/check_file_headers.py",
+        "scripts/comment_filler_baseline.json",
         "tests/file_header_policy_tests.py",
         ".github/workflows/comment-density.yml"
       ],
       "introduced_in": "issue-441-file-header-policy",
-      "changed_in": "issue-441-file-header-policy",
-      "notes": "The fixed 2026 holder text comes verbatim from NOTICE; vendored JavaScript under web/vendor retains upstream ownership, semantic package markers may remain license-only, and the one-time migration removed only exact comment-token filler while preserving Python executable-token fingerprints."
+      "changed_in": "issue-713-filler-family-ratchet",
+      "notes": "The fixed 2026 holder text comes verbatim from NOTICE; vendored JavaScript under web/vendor retains upstream ownership, semantic package markers may remain license-only, and the gate now records 1,027 inherited Set/Define tautologies as per-file debt that cleanup slices may only reduce."
     },
     {
       "id": "TOOL-010",

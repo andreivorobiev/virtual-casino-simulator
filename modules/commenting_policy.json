@@ -1,10 +1,11 @@
 {
   "module": "commenting_policy",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "paths": [
     "docs/commenting_policy.md",
     "scripts/check_comment_density.py",
     "scripts/check_file_headers.py",
+    "scripts/comment_filler_baseline.json",
     ".github/workflows/comment-density.yml"
   ],
   "requirements_prefixes": [

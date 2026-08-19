@@ -1,6 +1,6 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-# Set RED_NUMBERS to the value needed for the next operation.
+# Define the canonical color sets, pocket order, and payout-rule helpers shared by Roulette actions.
 RED_NUMBERS = {"1","3","5","7","9","12","14","16","18","19","21","23","25","27","30","32","34","36"}
 # Set BLACK_NUMBERS to the value needed for the next operation.
 BLACK_NUMBERS = {str(n) for n in range(1,37)} - RED_NUMBERS

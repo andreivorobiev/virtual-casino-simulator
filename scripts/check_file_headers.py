@@ -59,6 +59,15 @@ FILLER_TEXTS = frozenset(
         "Explain this executable/data line so future Codex changes preserve intent.",
     }
 )
+# Match the two generated tautology families whose substituted names made exact-text matching ineffective.
+FILLER_FAMILY_PATTERNS = (
+    # Match assignment narration while requiring the generator's complete fixed suffix.
+    re.compile(r"^Set .+ to the value needed for the next operation\.$"),
+    # Match function narration while requiring the generator's complete fixed suffix.
+    re.compile(r"^Define the .+ function used by this module\.$"),
+)
+# Keep the repository's active debt ledger discoverable by every compatibility entry point.
+DEFAULT_FILLER_BASELINE = Path("scripts/comment_filler_baseline.json")
 
 
 # Define the fixed exception type used for all fail-closed policy and source-safety errors.
@@ -497,7 +506,21 @@ def is_semantic_marker_init(path: Path, text: str) -> bool:
     return False
 
 
-# Decide whether text is a substantive purpose comment rather than license or exact filler.
+# Decide whether normalized comment text belongs to any governed filler template.
+def _is_filler_text(text: str) -> bool:
+    """Return true for exact filler phrases or complete generated tautology families."""
+
+    # Normalize decorative comment whitespace before comparing policy templates.
+    candidate = text.strip()
+    # Preserve the original exact-template coverage.
+    if candidate in FILLER_TEXTS:
+        # Report an exact governed filler phrase.
+        return True
+    # Match only complete family templates so useful comments sharing one word remain valid.
+    return any(pattern.fullmatch(candidate) is not None for pattern in FILLER_FAMILY_PATTERNS)
+
+
+# Decide whether text is a substantive purpose comment rather than license or governed filler.
 def _is_substantive_comment(text: str, copyright_line: str) -> bool:
     """Return true only for nonempty human-purpose comment text."""
 
@@ -511,8 +534,8 @@ def _is_substantive_comment(text: str, copyright_line: str) -> bool:
     if candidate in {copyright_line, SPDX_LINE}:
         # License attribution is not file-purpose documentation.
         return False
-    # Reject exact known filler phrases without using heuristic similarity.
-    if candidate in FILLER_TEXTS:
+    # Reject governed filler phrases and complete generated families without fuzzy similarity.
+    if _is_filler_text(candidate):
         # Generated filler cannot satisfy the purpose requirement.
         return False
     # Accept any other explicit leading comment as human-authored purpose documentation.
@@ -644,9 +667,9 @@ def _javascript_has_purpose(text: str, copyright_line: str) -> bool:
     return False
 
 
-# Extract exact known filler comment counts without heuristic deletion or rewriting.
+# Extract governed filler comment counts without heuristic deletion or rewriting.
 def filler_count(text: str, suffix: str) -> int:
-    """Count only owner-approved exact filler comment texts."""
+    """Count owner-approved exact filler texts and complete generated families."""
 
     # Count Python comment tokens so strings containing filler phrases never match.
     if suffix == ".py":
@@ -654,14 +677,14 @@ def filler_count(text: str, suffix: str) -> int:
         python_executable_fingerprint(text)
         # Generate the source token stream once for exact comment inspection.
         tokens = tokenize.generate_tokens(io.StringIO(text).readline)
-        # Return the number of exact normalized filler comments.
+        # Return the number of governed normalized filler comments.
         return sum(
-            # Add one for each exact filler match.
+            # Add one for each governed filler match.
             1
             # Inspect every token.
             for token in tokens
             # Restrict matching to actual Python comment tokens.
-            if token.type == tokenize.COMMENT and _comment_text(token.string) in FILLER_TEXTS
+            if token.type == tokenize.COMMENT and _is_filler_text(_comment_text(token.string))
         )
     # Count JavaScript physical comment lines conservatively without parsing strings.
     if suffix == ".js":
@@ -675,8 +698,8 @@ def filler_count(text: str, suffix: str) -> int:
             if not stripped.startswith(("//", "/*", "*")):
                 # Continue without matching string or trailing-comment content.
                 continue
-            # Count only a full normalized filler text match.
-            if _comment_text(line) in FILLER_TEXTS:
+            # Count only a full normalized governed filler match.
+            if _is_filler_text(_comment_text(line)):
                 # Increment the exact-match count.
                 count += 1
         # Return the conservative JavaScript count.
@@ -768,13 +791,13 @@ def inspect_source_bytes(
     if not has_purpose:
         # Keep the finding actionable for a human-authored follow-up.
         messages.append("missing substantive file-purpose docstring or leading comment")
-    # Count only exact approved filler comment text.
+    # Count every governed filler comment template or generated family.
     actual_filler = filler_count(document.text, path.suffix)
     # Require exact baseline agreement so increases and stale decreases both need an audited baseline update.
     if actual_filler != expected_filler:
         # Report both values without reproducing source contents.
         messages.append(
-            f"exact filler count {actual_filler} does not match baseline {expected_filler}"  # Name exact debt.
+            f"governed filler count {actual_filler} does not match baseline {expected_filler}"  # Name debt.
         )
     # Return messages in deterministic policy order.
     return tuple(messages)
@@ -951,7 +974,7 @@ def _parser() -> argparse.ArgumentParser:
         default=[],  # Use an empty selection only for check mode.
         help="repository-relative file or directory boundary; repeat as needed",  # Explain safe use.
     )  # Finish path-option registration.
-    # Allow an explicit current filler baseline for future monotonic debt migrations.
+    # Allow an explicit current filler baseline while the repository default handles normal gate execution.
     parser.add_argument("--filler-baseline", type=Path)
     # Allow an explicit prior baseline for monotonic transition validation.
     parser.add_argument("--previous-filler-baseline", type=Path)
@@ -965,13 +988,22 @@ def main(argv: list[str] | None = None, *, root: Path = ROOT) -> int:
 
     # Parse explicit test arguments or process arguments when omitted.
     arguments = _parser().parse_args(argv)
-    # Convert CLI paths to absolute paths relative to the selected repository root.
+    # Select the explicit baseline or discover the repository's default debt ledger when present.
+    requested_filler_path = arguments.filler_baseline or DEFAULT_FILLER_BASELINE
+    # Resolve the selected baseline relative to the repository unless it is already absolute.
+    candidate_filler_path = (
+        # Preserve an absolute caller-supplied baseline path.
+        requested_filler_path
+        if requested_filler_path.is_absolute()
+        # Resolve the default or relative caller path from the explicit repository root.
+        else root / requested_filler_path
+    )
+    # Keep temporary zero-debt repositories compatible while a present default is always enforced.
     filler_path = (
-        # Preserve an absolute baseline path or resolve a relative one from the repository.
-        arguments.filler_baseline  # Preserve an already absolute or missing path.
-        if arguments.filler_baseline is None or arguments.filler_baseline.is_absolute()  # Test path shape.
-        else root / arguments.filler_baseline  # Resolve a relative path from the repository.
-    )  # Finish current-baseline path normalization.
+        candidate_filler_path
+        if arguments.filler_baseline is not None or candidate_filler_path.is_file()
+        else None
+    )
     # Resolve the optional previous baseline with the same repository-relative convention.
     previous_path = (
         # Preserve an absolute baseline path or resolve a relative one from the repository.
