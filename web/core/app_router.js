@@ -20,6 +20,14 @@ export function createAppRouter(dependencies) {
   // Track the active game-rail observer so navigation never leaves duplicate listeners.
   let gameRailObserver = null;
 
+  // Preserve application-root-relative catalog modules after routing moved beneath /core. (CORE-007)
+  function applicationModulePath(path) {
+    // Normalize the established ./games/... contract to a browser-root path before dynamic import resolves it.
+    const catalogPath = String(path || '');
+    // Leave already-rooted or absolute future module paths unchanged.
+    return catalogPath.startsWith('./') ? `/${catalogPath.slice(2)}` : catalogPath;
+  }
+
   // Convert one public API catalog row into the shell route descriptor.
   function descriptorFromCatalog(game) {
     // Read locale-owned metadata from the independently owned game descriptor.
@@ -33,7 +41,7 @@ export function createAppRouter(dependencies) {
       label: localized.label || game.label,
       category: game.category,
       categories: game.categories || [game.category],
-      path: game.frontend?.module,
+      path: applicationModulePath(game.frontend?.module),
       exportName: game.frontend?.export,
       readyTestId: game.frontend?.ready_testid,
       i18nDomain: game.frontend?.i18n_domain,

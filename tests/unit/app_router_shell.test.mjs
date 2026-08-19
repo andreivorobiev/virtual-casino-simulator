@@ -66,8 +66,10 @@ test("PWA-002 preserves current-user normalization and wallet precedence", () =>
 test("CORE-007 preserves routing and escaped locale options", () => {
   // Create one production router with Russian catalog metadata.
   const router = routerFixture();
-  const descriptor = router.descriptorFromCatalog({ id: "roulette", translations: { "ru-RU": { label: "Рулетка" } }, category: "table", frontend: {}, lobby: {} });
+  const descriptor = router.descriptorFromCatalog({ id: "roulette", translations: { "ru-RU": { label: "Рулетка" } }, category: "table", frontend: { module: "./games/roulette.js" }, lobby: {} });
   assert.equal(descriptor.label, "Рулетка");
+  // Preserve application-root module resolution after the router moved beneath /core.
+  assert.equal(descriptor.path, "/games/roulette.js");
   assert.equal(router.routeFromLocation(), "roulette");
   // Require the tagged helper to escape hostile ordinary locale text.
   assert.equal(String(router.localeOptionsHtml()), '<option value="ru-RU">Русский &lt;script&gt;</option>');
