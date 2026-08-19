@@ -1,8 +1,8 @@
 // Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 // SPDX-License-Identifier: Apache-2.0
 // Own the root-scope offline-safe static shell without caching private or authoritative data. (PWA-002)
-// Match the canonical packaged application release used by modules/module-manifest.json.
-const APP_VERSION = '0.9.5.83';
+// Import the one page-and-worker identity from the cache-bypassed module graph.
+import { PWA_APP_VERSION as APP_VERSION } from './core/pwa_version.js';
 // Prefix every Casino-owned cache so activation can prune only this application's predecessors.
 const CACHE_PREFIX = 'casino-static-shell-v';
 // Bind the cache identity to the canonical packaged release rather than an ad-hoc counter.
@@ -28,6 +28,7 @@ const SHELL_ASSETS = Object.freeze([
   '/core/wellness.js',
   '/core/i18n.js',
   '/core/pwa.js',
+  '/core/pwa_version.js',
   '/core/ui.js',
   '/core/voice.js',
   '/views/invitation.js',
@@ -42,6 +43,25 @@ const SHELL_ASSETS = Object.freeze([
   '/i18n/en-US/shell.json',
   '/i18n/ru-RU/feedback.json',
   '/i18n/ru-RU/shell.json',
+]);
+// Document every intentionally network-only shared asset so new core files cannot escape review silently.
+const SHELL_ASSET_EXCLUSIONS = Object.freeze([
+  // Admin labels never participate in the public player shell.
+  '/core/admin_labels.js',
+  // Autoplay is authoritative game runtime and cannot operate offline.
+  '/core/autoplay.js',
+  // Bot controls are authoritative game runtime and cannot operate offline.
+  '/core/bots.js',
+  // Shared card styling is loaded only by network-only game modules.
+  '/core/cards.css',
+  // Shared card rendering is loaded only by network-only game modules.
+  '/core/cards.js',
+  // Shared dice rendering is loaded only by network-only game modules.
+  '/core/dice.js',
+  // Game lifecycle helpers are loaded only by network-only game modules.
+  '/core/game_lifecycle.js',
+  // Motion helpers are loaded only by network-only game modules.
+  '/core/motion.js',
 ]);
 // Convert the exact asset list to a membership set without introducing prefix-based cache expansion.
 const SHELL_ASSET_SET = new Set(SHELL_ASSETS);

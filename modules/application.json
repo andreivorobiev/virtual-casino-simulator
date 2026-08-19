@@ -1,6 +1,6 @@
 {
   "module": "application",
-  "version": "9.71.0",
+  "version": "9.71.1",
   "paths": [
     "run.py",
     "pyproject.toml",
@@ -28,6 +28,7 @@
     "web/core/wellness.js",
     "web/core/motion.js",
     "web/core/pwa.js",
+    "web/core/pwa_version.js",
     "web/core/ui.js",
     "web/views/",
     "web/assets/pwa-icon-192.png",

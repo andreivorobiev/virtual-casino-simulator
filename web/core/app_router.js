@@ -10,7 +10,7 @@ export function createAppRouter(dependencies) {
   // Capture browser, shell-state, lifecycle, rendering, and diagnostics seams.
   const {
     documentRef, getActive, getCurrentSession, getGameDescriptors, historyRef,
-    isInvitationRoute, locationRef, logClient, navigationOwnership,
+    isInvitationRoute, isOnline, locationRef, logClient, navigationOwnership,
     renderExpiredSessionGate, renderLobby, renderMySettings, renderPublicAuthRoute,
     safe, setActive, setLocale, t, updateCurrentUserShell, walletLifecycle,
   } = dependencies;
@@ -74,6 +74,23 @@ export function createAppRouter(dependencies) {
     return route.split(/[_-]+/).filter(Boolean).map(part => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(' ') || route;
   }
 
+  // Render one honest network-only game boundary instead of leaving a dead loading panel. (PWA-002)
+  function renderOfflineGameRoute(view, route) {
+    // Apply the same stable game-region semantics used by online route loading.
+    documentRef.body.classList.remove('lobby-active');
+    view.className = 'screen game-screen';
+    view.removeAttribute('data-testid');
+    view.tabIndex = 0;
+    view.setAttribute('role', 'region');
+    view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
+    // Resolve visible copy before composing it through the escape-by-default boundary.
+    const eyebrow = html`<p class="eyebrow">${t('routeOffline.eyebrow', {}, 'shell')}</p>`;
+    const heading = html`<h2>${t('routeOffline.title', { game: routeFallbackLabel(route) }, 'shell')}</h2>`;
+    const status = html`<p class="status">${t('routeOffline.copy', {}, 'shell')}</p>`;
+    // Publish a stable test identity without presenting an actionable wager or stale result.
+    view.innerHTML = html`<div class="panel loading-panel" data-testid="game-offline-panel">${eyebrow}${heading}${status}</div>`;
+  }
+
   // Resolve the route represented by the current browser location.
   function routeFromLocation() {
     // Restore the distinct authenticated My Settings destination.
@@ -99,6 +116,8 @@ export function createAppRouter(dependencies) {
     const view = documentRef.getElementById('view');
     // Stop when malformed static load omitted the outlet.
     if (!view) return;
+    // Render the explicit network-only boundary before any authoritative session call can fail.
+    if (!isOnline()) { renderOfflineGameRoute(view, restoredRoute); return; }
     // Resolve a player-facing game label without delayed state.
     const gameLabel = routeFallbackLabel(restoredRoute);
     // Apply the authenticated game-region semantics to the placeholder.
@@ -315,6 +334,8 @@ export function createAppRouter(dependencies) {
       view.tabIndex = 0;
       view.setAttribute('role', 'region');
       view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
+      // Keep uncached game modules honest while offline and let reconnect remount this exact route.
+      if (!isOnline()) { renderOfflineGameRoute(view, targetRoute); return; }
       // Render escaped loading copy while the module resolves.
       view.innerHTML = html`<div class="panel loading-panel"><h2>${t('routeRestore.title', { game: routeLabel(targetRoute) }, 'shell')}</h2></div>`;
       // Resolve and mount the selected module only while ownership survives both awaits.

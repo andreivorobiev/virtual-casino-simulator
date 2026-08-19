@@ -36,6 +36,8 @@ import { createLoginView } from './views/login.js';
 import { createAppRouter } from './core/app_router.js';
 // Import browser lifecycle startup and compatible session normalization. (PWA-002, UX-026)
 import { currentTokenBalance, normalizeCurrentUser, startApplication } from './core/app_bootstrap.js';
+// Import the event-backed PWA boundary so routing never depends on lagging navigator state. (PWA-002)
+import { isPwaOffline } from './core/pwa.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -218,6 +220,7 @@ appRouter = createAppRouter({
   getLocaleState,
   historyRef: history,
   isInvitationRoute,
+  isOnline: () => !isPwaOffline(),
   locationRef: location,
   logClient,
   navigationOwnership: shellNavigationOwnership,

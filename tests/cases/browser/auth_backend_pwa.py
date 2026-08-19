@@ -166,9 +166,13 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                         # Dispatch exactly one offline event to the reconstructed window whose listeners now exist.
                         pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))")
                         # Read the synchronously committed reconstructed-document state without adding another wait.
-                        reconstructed_offline_state=pwa_page.evaluate("() => ({pwaState:window.CasinoPwa?.state?.()??null,shellMarker:document.body?.dataset?.testid??null,i18nPresent:Boolean(window.CasinoI18n)})")
-                        # Require the new window to settle offline while preserving the reconstructed shell and localization runtime.
-                        assert reconstructed_offline_state=={'pwaState':'offline','shellMarker':'pwa-shell','i18nPresent':True},reconstructed_offline_state
+                        reconstructed_offline_state=pwa_page.evaluate("() => { const panel=document.querySelector('[data-testid=game-offline-panel]'); return {pwaState:window.CasinoPwa?.state?.()??null,shellMarker:document.body?.dataset?.testid??null,i18nPresent:Boolean(window.CasinoI18n),offlinePanelPresent:Boolean(panel),restoreLoadingPresent:Boolean(document.querySelector('[data-testid=route-restore-loading]')),panelText:panel?.innerText.trim()||''}; }")
+                        # Require an honest localized game boundary instead of the former dead loading panel.
+                        assert reconstructed_offline_state['pwaState']=='offline' and reconstructed_offline_state['shellMarker']=='pwa-shell' and reconstructed_offline_state['i18nPresent'] and reconstructed_offline_state['offlinePanelPresent'] and not reconstructed_offline_state['restoreLoadingPresent'] and reconstructed_offline_state['panelText'] and 'routeOffline.' not in reconstructed_offline_state['panelText'],reconstructed_offline_state
+                        # Bind the new game-route surface to the governed compact PWA offline evidence cell.
+                        pwa_page.set_viewport_size(pwa_viewports['desktop_compact'])
+                        # Capture the exact offline route and localized panel through the existing evidence helper.
+                        pwa_evidence('after-pass-pwa-offline-game-route-en-us-desktop-compact.png','offline','en-US','desktop_compact')
                     # Always remove diagnostic listeners so the successful path retains no later output or state.
                     finally:
                         # Release the page-error listener installed only for this readiness boundary.
@@ -240,7 +244,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                     # Open API docs first because it does not register the application worker on its own.
                     docs_page=update_context.new_page(); update_pages.append(docs_page); docs_page.goto(f'{base}/api-docs',wait_until='domcontentloaded')
                     # Install and activate one prior-URL worker, then wait until the seed client is controlled.
-                    prior_identity=docs_page.evaluate("""async version => { const registration=await navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(version)}`,{scope:'/'}); await navigator.serviceWorker.ready; if (!navigator.serviceWorker.controller) await new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true})); return {active:registration.active?.scriptURL||'',controller:navigator.serviceWorker.controller?.scriptURL||'',waiting:Boolean(registration.waiting)}; }""",previous_worker_version)
+                    prior_identity=docs_page.evaluate("""async version => { const registration=await navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(version)}`,{scope:'/',type:'module',updateViaCache:'none'}); await navigator.serviceWorker.ready; if (!navigator.serviceWorker.controller) await new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true})); return {active:registration.active?.scriptURL||'',controller:navigator.serviceWorker.controller?.scriptURL||'',waiting:Boolean(registration.waiting)}; }""",previous_worker_version)
                     # Require a settled prior controller without an update already waiting.
                     assert prior_identity=={'active':f'{base}/sw.js?v={previous_worker_version}','controller':f'{base}/sw.js?v={previous_worker_version}','waiting':False},prior_identity
                     # Open the public signup client while the prior worker controls the same-origin tab population.

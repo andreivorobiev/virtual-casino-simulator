@@ -3,9 +3,11 @@
 // Own the offline-safe progressive-web-app shell without enabling deployment or public exposure. (PWA-001, PWA-002)
 // Import localized copy so every lifecycle message follows the active shell locale.
 import { t } from './i18n.js';
+// Import the single browser and worker cache identity instead of retaining a second release pin.
+import { PWA_APP_VERSION } from './pwa_version.js';
 
-// Match the canonical packaged application release used by the service-worker cache identity.
-export const PWA_APP_VERSION = '0.9.5.83';
+// Preserve the established read-only page-side export for tests and diagnostics.
+export { PWA_APP_VERSION };
 // Name the session marker that distinguishes a cold shell boot from a same-context warm boot.
 const WARM_START_KEY = 'casino.pwa.warmStart';
 // Bound controls whose actions require an authoritative server response while offline.
@@ -35,6 +37,12 @@ let reconnectHandler = null;
 let initialized = false;
 // Hold the bounded update timeout so a failed activation can become visible without a reload loop.
 let updateTimeout = null;
+
+// Report the PWA controller's event-backed connectivity boundary without relying on navigator timing.
+export function isPwaOffline() {
+  // Return only the normalized state maintained by initial detection and browser connectivity events.
+  return offline;
+}
 
 // Resolve the shell banner element, creating it once beneath the persistent status bar.
 function bannerElement() {
@@ -308,7 +316,7 @@ async function registerWorker() {
   // Start protected registration so unsupported hosting never blocks normal browser use.
   try {
     // Register the canonical-versioned script URL at root scope.
-    registration = await navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(PWA_APP_VERSION)}`, { scope: '/' });
+    registration = await navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(PWA_APP_VERSION)}`, { scope: '/', type: 'module', updateViaCache: 'none' });
     // Surface an update already waiting from a previous visit.
     if (registration.waiting) { updateWaiting = true; renderPwaState('update'); }
     // Watch one new installation without forcing activation.
