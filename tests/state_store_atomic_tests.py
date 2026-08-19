@@ -17,6 +17,8 @@ from unittest.mock import patch
 
 # Import the module under test so its runtime directory bindings can be isolated.
 from casino.core import state_store
+# Import the production JSON provider so facade tests exercise provider-owned filesystem locking.
+from casino.core.storage import JsonStorageProvider
 
 
 # Simulate the public MySQL document boundary without opening a database connection.
@@ -27,15 +29,66 @@ class _AtomicProvider:
         self.current = dict(current) if isinstance(current, dict) else current
         # Record every stable provider key received through state_store.update_json.
         self.keys = []
+        # Record every provider operation so facade parity is explicit.
+        self.operations = []
+
+    # Convert one state path into the same stable key used by the production database provider.
+    def document_reference(self, path, data_root):
+        # Return the portable data-relative key or fail closed for an arbitrary local path.
+        return Path(path).resolve().relative_to(Path(data_root).resolve()).as_posix()
+
+    # Return the current provider document or the caller's lazy default.
+    def read_document(self, key, default):
+        # Record the exact public operation and canonical key.
+        self.operations.append(("read", key))
+        # Preserve lazy default construction for an absent document.
+        source = default() if self.current is None and callable(default) else (default if self.current is None else self.current)
+        # Return an independent decoded copy just like a provider round trip.
+        return json.loads(json.dumps(source))
+
+    # Report whether the transaction-shaped fake currently owns a document.
+    def document_exists(self, key):
+        # Record the exact existence operation and canonical key.
+        self.operations.append(("exists", key))
+        # Return true only when committed provider state exists.
+        return self.current is not None
+
+    # Return one document through the strict provider seam and optional predicate.
+    def read_document_strict(self, key, default, validator=None):
+        # Record the exact strict operation and canonical key.
+        self.operations.append(("read_strict", key))
+        # Read the detached current or missing-document value without recording a second public call.
+        source = default() if self.current is None and callable(default) else (default if self.current is None else self.current)
+        # Copy the value so validation cannot mutate committed state.
+        value = json.loads(json.dumps(source))
+        # Reject a caller-invalid document through the provider's fixed boundary.
+        if validator is not None and validator(value) is not True:
+            # Match the provider-neutral recovery exception.
+            raise RuntimeError("Stored document requires operator recovery")
+        # Return the complete detached document.
+        return value
+
+    # Publish one complete provider document.
+    def write_document(self, key, data):
+        # Record the exact write operation and canonical key.
+        self.operations.append(("write", key))
+        # Persist an independent encoded copy.
+        self.current = json.loads(json.dumps(data))
 
     # Apply one transaction-shaped document mutation and publish only after success.
-    def update_document(self, key, mutator, default):
+    def update_document(self, key, mutator, default, validator=None):
         # Record the key before evaluating the provider-owned transaction.
         self.keys.append(key)
+        # Record whether state_store selected ordinary or strict provider mutation.
+        self.operations.append(("update_strict" if validator is not None else "update", key))
         # Evaluate the lazy default only when the provider document is absent.
         source = default() if self.current is None else self.current
         # Copy the decoded document so a failed mutator cannot alter committed provider state.
         working = json.loads(json.dumps(source))
+        # Apply the strict predicate before caller mutation when state_store requested it.
+        if validator is not None and validator(working) is not True:
+            # Match the fixed provider recovery boundary.
+            raise RuntimeError("Stored document requires operator recovery")
         # Apply the supplied transition before assigning any new committed state.
         updated = mutator(working)
         # Publish only the complete successful result, mirroring provider commit timing.
@@ -64,20 +117,22 @@ class PlayerGameStateAtomicTests(unittest.TestCase):
         self.game_patch = patch.object(state_store, "GAME_DATA_DIR", self.game_data_dir)
         # Patch the imported log root used by ensure_dirs.
         self.log_patch = patch.object(state_store, "LOG_DIR", self.log_dir)
-        # Force the default provider so focused tests never inspect developer configuration.
-        self.provider_patch = patch.object(state_store, "storage_provider_name", return_value="json")
+        # Construct the production JSON provider against the disposable data root.
+        self.json_provider = JsonStorageProvider(data_dir=self.data_dir)
+        # Force the provider object so focused tests never inspect developer configuration.
+        self.provider_patch = patch.object(state_store, "get_storage_provider", return_value=self.json_provider)
         # Start every directory and provider patch before invoking state_store.
         self.data_patch.start()
         # Start the player-game directory patch.
         self.game_patch.start()
         # Start the disposable log directory patch.
         self.log_patch.start()
-        # Start the explicit JSON-provider selection patch.
+        # Start the explicit JSON-provider object patch.
         self.provider_patch.start()
 
     # Restore module bindings and delete disposable runtime state after every regression.
     def tearDown(self):
-        # Restore provider selection before releasing temporary paths.
+        # Restore provider resolution before releasing temporary paths.
         self.provider_patch.stop()
         # Restore the imported log directory.
         self.log_patch.stop()
@@ -244,6 +299,120 @@ class PlayerGameStateAtomicTests(unittest.TestCase):
             state_store.player_game_state_path("demo", "player:beta"),
         )
 
+    # Prove every public state_store document operation has provider-neutral results and stable keys. (STORAGE-018, TEST-247)
+    def test_document_facade_parity_across_json_and_database_provider_shapes(self):
+        # Select one ordinary data document whose exact suffix must remain unchanged.
+        path = self.data_dir / "settings" / "facade-parity.json"
+
+        # Exercise the complete public document surface against one selected provider.
+        def run_sequence(provider):
+            # Route every facade call through the supplied provider object.
+            with patch.object(state_store, "get_storage_provider", return_value=provider):
+                # Read one absent document through a lazy default.
+                absent = state_store.read_json(path, lambda: {"count": 0})
+                # Publish the first complete document.
+                state_store.write_json(path, {"count": 1})
+                # Read the published document through the ordinary seam.
+                written = state_store.read_json(path, {})
+                # Advance the document through the ordinary atomic seam.
+                updated = state_store.update_json(path, lambda current: {"count": current["count"] + 1}, {})
+                # Read the result through the strict seam.
+                strict = state_store.read_json_strict(path, {}, "facade recovery")
+                # Advance the result through the strict atomic seam.
+                strict_updated = state_store.update_json_strict(path, lambda current: {"count": current["count"] + 1}, {}, "facade recovery")
+            # Return each public result in call order for exact cross-provider comparison.
+            return absent, written, updated, strict, strict_updated
+
+        # Run the complete sequence against the production JSON provider.
+        json_results = run_sequence(self.json_provider)
+        # Remove JSON bytes so the database-shaped fake starts from the same absent state.
+        path.unlink()
+        # Construct a transaction-shaped database provider with no existing document.
+        database_provider = _AtomicProvider(None)
+        # Run the identical state_store call sequence through the database-shaped provider.
+        database_results = run_sequence(database_provider)
+        # Require identical caller-visible behavior across both providers.
+        self.assertEqual(json_results, database_results)
+        # Bind the exact sequence of delegated provider operations.
+        self.assertEqual(
+            ["read", "write", "read", "update", "read_strict", "update_strict"],
+            [operation for operation, _key in database_provider.operations],
+        )
+        # Require every database call to use the same portable data-relative document key.
+        self.assertEqual(
+            ["settings/facade-parity.json"] * 6,
+            [key for _operation, key in database_provider.operations],
+        )
+
+    # Prove injectable paths remain explicitly JSON-provider-managed and database providers fail closed. (STORAGE-018)
+    def test_out_of_data_paths_are_json_managed_and_database_rejected(self):
+        # Select one injected service path outside the configured application data root.
+        external_path = self.root / "service-fixtures" / "mail.json"
+        # Publish the injected file through the active JSON provider facade.
+        state_store.write_json(external_path, {"status": "queued"})
+        # Confirm the exact requested path was used without a duplicate .json suffix.
+        self.assertEqual({"status": "queued"}, json.loads(external_path.read_text(encoding="utf-8")))
+        # Confirm the JSON provider did not derive a hybrid path below its ordinary data root.
+        self.assertFalse((self.data_dir / "service-fixtures" / "mail.json.json").exists())
+        # Construct the database-shaped provider that permits only data-relative keys.
+        database_provider = _AtomicProvider(None)
+        # Route the same external path through the database boundary.
+        with patch.object(state_store, "get_storage_provider", return_value=database_provider):
+            # Refuse a local path that cannot be represented by the database document namespace.
+            with self.assertRaises(ValueError):
+                # Attempt no fallback filesystem read under database selection.
+                state_store.read_json(external_path, {})
+        # Confirm fail-closed containment occurred before any provider document operation.
+        self.assertEqual([], database_provider.operations)
+
+    # Prove strict facade translation preserves evidence and never rewrites caller failures. (STORAGE-018, TEST-247)
+    def test_strict_facade_preserves_corrupt_bytes_and_caller_runtime_errors(self):
+        # Select one provider-managed security document.
+        path = self.data_dir / "auth" / "strict-facade.json"
+        # Create its parent without invoking the provider writer that requires valid JSON.
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Persist recognizable malformed bytes as operator-recovery evidence.
+        path.write_bytes(b'{"broken":')
+        # Capture exact source bytes before either strict operation.
+        original = path.read_bytes()
+        # Translate the provider's fixed strict-read boundary into the caller-owned message.
+        with self.assertRaisesRegex(RuntimeError, "facade-specific recovery"):
+            # Attempt a strict read without normalizing the malformed document.
+            state_store.read_json_strict(path, {}, "facade-specific recovery")
+        # Track whether an invalid document ever reaches the caller mutator.
+        mutator_calls = []
+        # Translate the provider's strict-update boundary before invoking caller code.
+        with self.assertRaisesRegex(RuntimeError, "facade-specific recovery"):
+            # Attempt a strict update that must fail before the callback.
+            state_store.update_json_strict(path, lambda value: mutator_calls.append(value), {}, "facade-specific recovery")
+        # Require no caller mutation and exact byte preservation across both failures.
+        self.assertEqual(([], original), (mutator_calls, path.read_bytes()))
+        # Replace the malformed fixture with one valid strict document.
+        state_store.write_json(path, {"safe": True})
+
+        # Raise one deliberate caller-owned RuntimeError after strict provider validation.
+        def caller_failure(_current):
+            # Preserve this distinct error text through the facade.
+            raise RuntimeError("caller transition stopped")
+
+        # Require the caller's failure rather than the storage recovery message.
+        with self.assertRaisesRegex(RuntimeError, "caller transition stopped"):
+            # Execute the failing callback inside the provider-owned strict transaction.
+            state_store.update_json_strict(path, caller_failure, {}, "facade-specific recovery")
+        # Confirm rollback kept the last valid document exact.
+        self.assertEqual({"safe": True}, state_store.read_json(path, {}))
+
+    # Prove state_store owns no backend selector or duplicate sidecar lock implementation. (STORAGE-018, TEST-247)
+    def test_state_store_source_has_one_provider_route_and_no_sidecar_lock(self):
+        # Read the exact source so accidental selector or lock reintroduction fails statically.
+        source = Path(state_store.__file__).read_text(encoding="utf-8")
+        # Require removal of the environment-name routing helper.
+        self.assertNotIn("storage_provider_name", source)
+        # Require removal of the duplicate state_store sidecar-lock implementation.
+        self.assertNotIn("def _file_lock", source)
+        # Require every public document operation plus existence to resolve the common provider seam.
+        self.assertEqual(6, source.count("provider, document = _provider_document(path)"))
+
     # Prove the historical global-human document seeds the first atomic player-scoped update.
     def test_legacy_human_fallback_is_preserved_without_rewriting_legacy_state(self):
         # Seed the historical global game document through the established helper.
@@ -295,14 +464,12 @@ class PlayerGameStateAtomicTests(unittest.TestCase):
             # Return the complete updated document.
             return current
 
-        # Route state_store through the fake MySQL public boundary for this regression.
-        with patch.object(state_store, "storage_provider_name", return_value="mysql"):
-            # Return the fake provider whenever update_json resolves the selected backend.
-            with patch.object(state_store, "get_storage_provider", return_value=provider):
-                # Freeze provider-published metadata.
-                with patch.object(state_store, "utc_now", return_value="2026-07-28T14:00:00Z"):
-                    # Execute one successful delegated mutation.
-                    result = state_store.update_player_game_state("demo", "mysql-player", increment, lambda: {"count": 0})
+        # Return the fake provider whenever state_store resolves the selected backend.
+        with patch.object(state_store, "get_storage_provider", return_value=provider):
+            # Freeze provider-published metadata.
+            with patch.object(state_store, "utc_now", return_value="2026-07-28T14:00:00Z"):
+                # Execute one successful delegated mutation.
+                result = state_store.update_player_game_state("demo", "mysql-player", increment, lambda: {"count": 0})
         # Confirm delegation used the stable data-relative provider document key.
         self.assertEqual(["games/demo/mysql-player.json"], provider.keys)
         # Confirm the provider committed the successful mutation.
@@ -321,14 +488,12 @@ class PlayerGameStateAtomicTests(unittest.TestCase):
             # Abort the transaction-shaped callback.
             raise RuntimeError("rollback provider update")
 
-        # Route the failing update through the same public provider boundary.
-        with patch.object(state_store, "storage_provider_name", return_value="mysql"):
-            # Reuse the same committed fake provider.
-            with patch.object(state_store, "get_storage_provider", return_value=provider):
-                # Confirm the provider-owned failure propagates to the caller.
-                with self.assertRaisesRegex(RuntimeError, "rollback provider update"):
-                    # Attempt the failing delegated mutation.
-                    state_store.update_player_game_state("demo", "mysql-player", fail_after_mutation, lambda: {})
+        # Reuse the same committed fake provider.
+        with patch.object(state_store, "get_storage_provider", return_value=provider):
+            # Confirm the provider-owned failure propagates to the caller.
+            with self.assertRaisesRegex(RuntimeError, "rollback provider update"):
+                # Attempt the failing delegated mutation.
+                state_store.update_player_game_state("demo", "mysql-player", fail_after_mutation, lambda: {})
         # Confirm the provider committed state remains exact after callback failure.
         self.assertEqual(committed, provider.current)
         # Confirm both attempts delegated through the same stable document key.

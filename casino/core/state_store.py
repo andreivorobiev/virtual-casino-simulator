@@ -1,265 +1,161 @@
 # Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors
 # SPDX-License-Identifier: Apache-2.0
-# Atomic JSON state persistence with locking, recovery, and bounded retries.
+# Provider-neutral state persistence facade plus intentionally local diagnostic logs.
 import json
 import shutil
 import threading
-# Import bounded retry timing for transient Windows atomic-replace sharing violations.
-import time
-# Import contextmanager so the cross-process file lock reads as a with-statement.
-from contextlib import contextmanager
 from pathlib import Path
-# Import POSIX advisory locking when the running platform provides it.
-try:
-    # Bind the POSIX flock interface for cross-process session-file locking.
-    import fcntl
-# Fall back cleanly on platforms without POSIX advisory locks.
-except ImportError:
-    # Signal the absence of POSIX locking so callers degrade to the in-process lock.
-    fcntl = None
-# Import Windows byte-range locking when the running platform provides it.
-try:
-    # Bind the Windows locking interface for cross-process session-file locking.
-    import msvcrt
-# Fall back cleanly on platforms without the Windows locking module.
-except ImportError:
-    # Signal the absence of Windows locking so callers degrade to the in-process lock.
-    msvcrt = None
 from typing import Any, Callable
 from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, SCHEMA_VERSION
 from casino.core.clock import utc_now, date_stamp
 # Import descriptor-owned read repair so poisoned game settings fail safe before engine consumption.
 from casino.core.game_rules import clamp_state_rules
-# Import required dependency so JSON-shaped state can use the configured storage provider.
-from casino.core.storage import get_storage_provider, storage_provider_name
+# Import required dependency so every JSON-shaped state operation uses the configured storage provider.
+from casino.core.storage import get_storage_provider
 
-# Set _LOCK to the value needed for the next operation.
-_LOCK = threading.RLock()
+# Serialize only intentionally local JSONL diagnostics and repair-notice deduplication.
+_LOG_LOCK = threading.RLock()
 # Remember value-free repair notices so a persistently corrupt row cannot flood one process log.
 _RULE_REPAIR_LOGGED = set()
 
-# Convert a data-directory path into the stable provider document key used by MySQL.
-def _provider_document_key(path: Path) -> str | None:
-    # Start protected path handling so files outside data/ retain normal filesystem behavior.
-    try:
-        # Return a portable relative key so copied deployments share the same document names.
-        return path.resolve().relative_to(DATA_DIR.resolve()).as_posix()
-    # Keep logs and other non-data files on disk when they are outside the provider root.
-    except ValueError:
-        # Return no key so the caller continues through the JSON file fallback.
-        return None
+# Resolve the active provider and its canonical reference for one state path. (STORAGE-018)
+def _provider_document(path: Path):
+    # Resolve the configured provider once so one operation cannot cross provider boundaries.
+    provider = get_storage_provider()
+    # Delegate path containment and key translation to the provider that owns persistence.
+    return provider, provider.document_reference(Path(path), DATA_DIR)
+
+# Report provider-owned document existence without consulting a hybrid local file. (STORAGE-018)
+def _document_exists(path: Path) -> bool:
+    # Resolve the complete provider-owned document reference once for this observation.
+    provider, document = _provider_document(path)
+    # Delegate visibility and recovery ordering to the selected provider.
+    return provider.document_exists(document)
 
 # Define the ensure_dirs function used by this module.
 def ensure_dirs() -> None:
-    # Set DATA_DIR.mkdir(parents to the value needed for the next operation.
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    # Set GAME_DATA_DIR.mkdir(parents to the value needed for the next operation.
-    GAME_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    # Let the configured provider create or verify its complete persistence substrate.
+    get_storage_provider().ensure_ready()
+    # Keep diagnostic logs intentionally local because the provider contract owns JSON documents, not JSONL streams.
+    _ensure_log_dirs()
+
+# Create only the intentionally local diagnostic directories without touching provider state.
+def _ensure_log_dirs() -> None:
     # Set LOG_DIR.mkdir(parents to the value needed for the next operation.
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     # Set (LOG_DIR / "test-runs").mkdir(parents to the value needed for the next operation.
     (LOG_DIR / "test-runs").mkdir(parents=True, exist_ok=True)
-    # Set (DATA_DIR / "settings").mkdir(parents to the value needed for the next operation.
-    (DATA_DIR / "settings").mkdir(parents=True, exist_ok=True)
 
 # Define the read_json function used by this module.
 def read_json(path: Path, default: Any) -> Any:
-    # Resolve the provider document key for persistent files under data/.
-    document_key = _provider_document_key(path)
-    # Route every JSON-shaped data document through MySQL when it is explicitly selected.
-    if document_key is not None and storage_provider_name() == "mysql":
-        # Preserve lazy default-factory behavior through the provider abstraction.
-        return get_storage_provider().read_document(document_key, default)
-    ensure_dirs()
-    # Manage this resource with automatic setup and cleanup.
-    with _LOCK:
-        if not path.exists():
-            return default() if callable(default) else default
-        # Start protected logic so failures can be handled safely.
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        # Handle the expected failure path for the protected logic.
-        except json.JSONDecodeError:
-            # Set backup to the value needed for the next operation.
-            backup = path.with_suffix(path.suffix + f".corrupt-{int(__import__('time').time())}")
-            # Use this standard-library helper to perform the requested operation.
-            shutil.copy2(path, backup)
-            return default() if callable(default) else default
+    # Resolve the complete provider-owned document reference once for this read.
+    provider, document = _provider_document(path)
+    # Preserve lazy defaults and provider-owned recovery through the common contract.
+    return provider.read_document(document, default)
 
 # Read one JSON document without normalizing syntactically corrupt operator evidence. (SESSION-008)
 def read_json_strict(path: Path, default: Any, invalid_message: str) -> Any:
-    # Resolve the provider document key for persistent files under data/.
-    document_key = _provider_document_key(path)
-    # Retain the existing provider read behavior when MySQL owns the canonical document.
-    if document_key is not None and storage_provider_name() == "mysql":
-        # Preserve lazy defaults while MySQL validates its JSON payload at the provider boundary.
-        return get_storage_provider().read_document(document_key, default)
-    # Ensure runtime directories exist before reading the default JSON provider.
-    ensure_dirs()
-    # Serialize this read against in-process JSON writers.
-    with _LOCK:
-        # Return the caller's default only when no document exists.
-        if not path.exists():
-            # Preserve lazy default-factory behavior for a genuinely absent document.
-            return default() if callable(default) else default
-        # Start strict decoding without creating a corrupt-file backup or replacement.
+    # Resolve the complete provider-owned document reference once for this strict read.
+    provider, document = _provider_document(path)
+    # Track a caller-owned default failure so it is never mistaken for provider corruption.
+    default_failed = False
+
+    # Preserve lazy default behavior while recording only an exception from caller code.
+    def guarded_default() -> Any:
+        # Share the failure flag with the outer recovery translator.
+        nonlocal default_failed
+        # Start caller-owned default construction without evaluating it early.
         try:
-            # Decode the complete existing document while leaving its bytes untouched.
-            return json.loads(path.read_text(encoding="utf-8"))
-        # Convert syntax and encoding corruption into the caller's fixed recovery boundary.
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            # Preserve the original document exactly for operator recovery.
-            raise RuntimeError(invalid_message) from None
+            # Return the caller's fresh missing-document value.
+            return default() if callable(default) else default
+        # Record and preserve any caller exception exactly.
+        except Exception:
+            # Prevent the outer handler from replacing this caller-owned failure.
+            default_failed = True
+            # Re-raise the original caller exception and traceback.
+            raise
+    # Translate only the provider's fixed recovery boundary into the caller-owned diagnostic.
+    try:
+        # Preserve exact missing/corrupt distinctions and bytes through the strict provider seam.
+        return provider.read_document_strict(document, guarded_default)
+    # Keep state_store's established caller-specific recovery message without exposing payload data.
+    except RuntimeError as exc:
+        # Preserve a RuntimeError intentionally raised by the caller's lazy default.
+        if default_failed or str(exc) != "Stored document requires operator recovery":
+            # Re-raise the original caller-owned exception unchanged.
+            raise
+        # Raise the fixed caller-owned message while discarding provider implementation detail.
+        raise RuntimeError(invalid_message) from None
 
 # Define the write_json function used by this module.
 def write_json(path: Path, data: Any) -> None:
-    # Resolve the provider document key for persistent files under data/.
-    document_key = _provider_document_key(path)
-    # Route every JSON-shaped data document through MySQL when it is explicitly selected.
-    if document_key is not None and storage_provider_name() == "mysql":
-        # Persist auth, sessions, game state, bots, autoplay, and settings as provider documents.
-        get_storage_provider().write_document(document_key, data)
-        # Stop before creating a hybrid JSON copy on disk.
-        return
-    ensure_dirs()
-    # Manage this resource with automatic setup and cleanup.
-    with _LOCK:
-        # Set path.parent.mkdir(parents to the value needed for the next operation.
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # Set tmp to the value needed for the next operation.
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        # Set tmp.write_text(json.dumps(data, indent to the value needed for the next operation.
-        tmp.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
-        # Retry only transient Windows sharing violations while preserving atomic replace semantics.
-        for attempt in range(5):
-            # Start protected replacement of the complete temporary document.
-            try:
-                # Atomically publish the fully written JSON document.
-                tmp.replace(path)
-                # Stop after the first successful atomic publication.
-                break
-            # Handle a brief scanner/indexer handle without widening the persistence operation.
-            except PermissionError:
-                # Re-raise after the bounded final attempt so durable failures remain visible.
-                if attempt == 4:
-                    # Preserve the original platform error and traceback.
-                    raise
-                # Wait a small exponentially bounded interval while still holding the document locks.
-                time.sleep(0.01 * (2 ** attempt))
-
-# Hold a best-effort exclusive cross-process lock around a state document's read-modify-write. (SESSION-007, CORE-021)
-@contextmanager
-def _file_lock(path: Path):
-    # Derive a sidecar lock file so the data document itself is never opened for locking.
-    lock_path = path.with_suffix(path.suffix + ".lock")
-    # Create the parent directory so the sidecar lock file can be opened.
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    # Open (or create) the sidecar lock file for the duration of the mutation.
-    handle = open(lock_path, "a+")
-    # Track whether an OS-level lock was actually acquired so release stays symmetric.
-    acquired = False
-    # Start protected acquisition so a platform quirk never breaks session persistence.
-    try:
-        # Acquire an exclusive advisory lock on POSIX systems when available.
-        if fcntl is not None:
-            # Block until the exclusive POSIX lock is held for this process.
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-            # Record that the POSIX lock must be released later.
-            acquired = True
-        # Acquire an exclusive byte-range lock on Windows when available.
-        elif msvcrt is not None:
-            # Seek to the start so the single-byte range lock is deterministic.
-            handle.seek(0)
-            # Block-with-retry until the Windows byte-range lock is held.
-            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
-            # Record that the Windows lock must be released later.
-            acquired = True
-    # Degrade to the in-process lock when OS locking is unavailable under contention.
-    except OSError:
-        # Leave acquired False so the finally block does not attempt an unmatched release.
-        acquired = False
-    # Start the protected critical section guarded by whatever lock was obtained.
-    try:
-        # Yield control to the caller while the mutation runs under the lock.
-        yield
-    # Always release and close so no stale lock or descriptor leaks.
-    finally:
-        # Release the OS-level lock only when one was actually acquired.
-        if acquired:
-            # Start protected release so an unlock failure cannot mask the caller's result.
-            try:
-                # Release the POSIX advisory lock before closing the handle.
-                if fcntl is not None:
-                    # Unlock the POSIX advisory lock held on this descriptor.
-                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-                # Release the Windows byte-range lock before closing the handle.
-                elif msvcrt is not None:
-                    # Seek to the same range that was locked before unlocking it.
-                    handle.seek(0)
-                    # Unlock the Windows byte-range lock held on this descriptor.
-                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
-            # Ignore unlock failures during teardown so results still propagate.
-            except OSError:
-                # Intentionally leave this block empty because the handle is closed next.
-                pass
-        # Always close the sidecar handle even if unlock raised.
-        handle.close()
+    # Resolve the complete provider-owned document reference once for this write.
+    provider, document = _provider_document(path)
+    # Delegate atomic publication and planner guards to the selected provider.
+    provider.write_document(document, data)
 
 # Apply an atomic read-modify-write so concurrent callers cannot lose each other's updates. (SESSION-007, CORE-021)
 def update_json(path: Path, mutator: Callable[[Any], Any], default: Any) -> Any:
-    # Resolve the provider document key for persistent files under data/.
-    document_key = _provider_document_key(path)
-    # Route the atomic mutation through the database provider when MySQL is selected.
-    if document_key is not None and storage_provider_name() == "mysql":
-        # Delegate the complete read-modify-write to the provider's cross-process transaction boundary.
-        return get_storage_provider().update_document(document_key, mutator, default)
-    # Ensure runtime directories exist before locking a JSON document.
-    ensure_dirs()
-    # Serialize the whole read-modify-write with the shared reentrant in-process lock.
-    with _LOCK:
-        # Create the parent directory so the lock and target files can be written.
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # Hold a best-effort cross-process file lock for the entire mutation.
-        with _file_lock(path):
-            # Read the current on-disk state or the lazy default when absent or corrupt.
-            current = read_json(path, default)
-            # Apply the caller-owned mutation to the current state.
-            updated = mutator(current)
-            # Write the mutated state through the same atomic temp-file replace.
-            write_json(path, updated)
-            # Return the persisted state to the caller.
-            return updated
+    # Resolve the complete provider-owned document reference once for this mutation.
+    provider, document = _provider_document(path)
+    # Delegate locking, rollback, and atomic publication to the provider contract.
+    return provider.update_document(document, mutator, default)
 
 # Apply an atomic mutation that refuses to normalize syntactically corrupt JSON. (SESSION-008)
 def update_json_strict(path: Path, mutator: Callable[[Any], Any], default: Any, invalid_message: str) -> Any:
-    # Resolve the provider document key for persistent files under data/.
-    document_key = _provider_document_key(path)
-    # Retain the existing row-locking MySQL transaction for provider-backed documents.
-    if document_key is not None and storage_provider_name() == "mysql":
-        # Delegate validation, mutation, rollback, and commit to the MySQL provider boundary.
-        return get_storage_provider().update_document(document_key, mutator, default)
-    # Ensure runtime directories exist before locking the default JSON document.
-    ensure_dirs()
-    # Serialize the complete strict read-modify-write in this process.
-    with _LOCK:
-        # Create the parent only so the lock sidecar can protect an absent document.
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # Hold the established cross-process lock for the complete strict mutation.
-        with _file_lock(path):
-            # Read without the permissive corruption backup/default behavior.
-            current = read_json_strict(path, default, invalid_message)
-            # Apply the caller-owned mutation only after strict decoding succeeds.
-            updated = mutator(current)
-            # Publish the complete validated result through the existing atomic replace.
-            write_json(path, updated)
-            # Return the persisted state to the caller.
-            return updated
+    # Resolve the complete provider-owned document reference once for this strict mutation.
+    provider, document = _provider_document(path)
+    # Track caller-owned execution so its RuntimeError is never rewritten as storage corruption.
+    caller_failed = False
+
+    # Preserve lazy default construction while marking only caller exceptions.
+    def guarded_default() -> Any:
+        # Share the caller-failure flag with the outer provider boundary.
+        nonlocal caller_failed
+        # Start caller-owned default construction without evaluating it early.
+        try:
+            # Return the caller's fresh absent-document state.
+            return default() if callable(default) else default
+        # Record and preserve any caller exception exactly.
+        except Exception:
+            # Prevent the provider recovery translator from replacing this failure.
+            caller_failed = True
+            # Re-raise the original caller exception and traceback.
+            raise
+
+    # Apply the caller mutation while marking only exceptions from caller code.
+    def guarded_mutator(current: Any) -> Any:
+        # Share the caller-failure flag with the outer provider boundary.
+        nonlocal caller_failed
+        # Start the caller-owned transition after provider strict validation.
+        try:
+            # Return the caller's complete updated document.
+            return mutator(current)
+        # Record and preserve any caller exception exactly.
+        except Exception:
+            # Prevent the provider recovery translator from replacing this failure.
+            caller_failed = True
+            # Re-raise the original caller exception and traceback.
+            raise
+    # Start the provider-owned strict transaction with a shape-neutral validation seam.
+    try:
+        # A true predicate selects strict decoding while preserving state_store's shape-neutral contract.
+        return provider.update_document(document, guarded_mutator, guarded_default, validator=lambda _value: True)
+    # Translate only the fixed provider recovery boundary into the caller-owned diagnostic.
+    except RuntimeError as exc:
+        # Preserve RuntimeError from either caller-owned callback unchanged.
+        if caller_failed or str(exc) != "Stored document requires operator recovery":
+            # Re-raise the original caller exception and traceback.
+            raise
+        # Preserve the source bytes or row and expose no provider-specific detail.
+        raise RuntimeError(invalid_message) from None
 
 # Define the append_jsonl function used by this module.
 def append_jsonl(path: Path, event: dict) -> None:
-    ensure_dirs()
-    # Manage this resource with automatic setup and cleanup.
-    with _LOCK:
+    # Create only intentionally local log directories without opening a provider transaction.
+    _ensure_log_dirs()
+    # Serialize the append inside this process because JSONL diagnostics are intentionally local.
+    with _LOG_LOCK:
         # Set path.parent.mkdir(parents to the value needed for the next operation.
         path.parent.mkdir(parents=True, exist_ok=True)
         # Manage this resource with automatic setup and cleanup.
@@ -277,8 +173,8 @@ def _repair_loaded_game_rules(game_id: str, state: dict) -> dict:
         return repaired_state
     # Build a stable process-local key that contains no player or supplied value.
     notice_key = (game_id, repaired_fields)
-    # Serialize notice deduplication with the existing state-store reentrant lock.
-    with _LOCK:
+    # Serialize notice deduplication with the local diagnostic reentrant lock.
+    with _LOG_LOCK:
         # Emit one safe warning only when this game/field repair has not been reported in this process.
         if notice_key not in _RULE_REPAIR_LOGGED:
             # Mark the notice before writing so recursive failures cannot duplicate it.
@@ -314,7 +210,7 @@ def load_player_game_state(game_id: str, player_id: str, default_factory: Callab
     # Set path to the player-scoped file so private sessions do not share in-progress state.
     path = player_game_state_path(game_id, player_id)
     # Branch when a legacy human state file should be honored for v1 compatibility.
-    if str(player_id or "human") == "human" and not path.exists() and game_state_path(game_id).exists():
+    if str(player_id or "human") == "human" and not _document_exists(path) and _document_exists(game_state_path(game_id)):
         # Return the legacy state so existing local data remains readable.
         return load_game_state(game_id, default_factory)
     # Set state to the value needed for the next operation.
@@ -340,7 +236,7 @@ def update_player_game_state(
     # Build the absent-document seed while preserving the established legacy-human read fallback.
     def initial_state() -> dict:
         # Reuse legacy global human state only while no player-scoped document exists.
-        if str(player_id or "human") == "human" and not path.exists() and game_state_path(game_id).exists():
+        if str(player_id or "human") == "human" and not _document_exists(path) and _document_exists(game_state_path(game_id)):
             # Load through the provider-aware legacy helper so JSON and MySQL keep existing behavior.
             return load_game_state(game_id, default_factory)
         # Create a fresh caller-owned default for every genuinely absent or malformed document.
@@ -404,9 +300,11 @@ def migrate_from_v7_if_needed() -> None:
     We intentionally do not migrate half-finished hands/draws because v7 global state could be inconsistent.
     """
     ensure_dirs()
-    # Branch when configured storage is not JSON because MySQL starts fresh by design.
-    if storage_provider_name() != "json":
-        # Return without importing local legacy files into the configured database.
+    # Resolve the configured provider's canonical reference for the local migration marker.
+    marker_reference = get_storage_provider().document_reference(DATA_DIR / ".v8_migration_complete", DATA_DIR)
+    # Branch when the provider translates local files into database document keys.
+    if not isinstance(marker_reference, Path):
+        # Return without importing local legacy files into a non-filesystem provider.
         return
     # Set marker to the value needed for the next operation.
     marker = DATA_DIR / ".v8_migration_complete"

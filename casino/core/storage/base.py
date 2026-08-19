@@ -429,6 +429,24 @@ class StorageProvider:
         # Raise because concrete providers must persist settings documents.
         raise NotImplementedError
 
+    # Convert one state-store path into the provider's canonical document reference. (STORAGE-018)
+    def document_reference(self, path: Path, data_root: Path) -> str | Path:
+        # Resolve both paths before checking containment so traversal cannot escape the data root.
+        resolved_path = Path(path).resolve()
+        # Start protected containment so non-filesystem providers reject arbitrary local paths.
+        try:
+            # Return the stable portable key used by database-backed provider documents.
+            return resolved_path.relative_to(Path(data_root).resolve()).as_posix()
+        # Refuse paths outside data/ because a database provider cannot preserve local-file semantics.
+        except ValueError:
+            # Publish one value-free configuration error without leaking the rejected path.
+            raise ValueError("State document path must stay within the provider data root") from None
+
+    # Report whether one named document exists without decoding or creating it. (STORAGE-018)
+    def document_exists(self, key: str) -> bool:
+        # Raise because concrete providers must own document visibility and recovery ordering.
+        raise NotImplementedError
+
     # Read one security-sensitive document without corruption fallback or read-side writes.
     def read_document_strict(self, key: str, default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
         # Raise because concrete providers must own strict missing/corrupt distinctions.
