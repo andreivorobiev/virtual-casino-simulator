@@ -37,6 +37,7 @@ function routerFixture() {
     getLocaleState: () => ({ locale: "ru-RU", locales: [{ id: "ru-RU", nativeLabel: "Русский <script>" }] }),
     historyRef: {},
     isInvitationRoute: () => false,
+    isOnline: () => true,
     locationRef: { href: "https://casino.test/games/roulette", pathname: "/games/roulette", hash: "" },
     logClient: async () => {},
     navigationOwnership: { claim: () => 1, owns: () => true },

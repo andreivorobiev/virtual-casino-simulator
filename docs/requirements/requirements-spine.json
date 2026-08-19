@@ -6936,7 +6936,7 @@
     {
       "id": "PWA-002",
       "module": "Application",
-      "description": "A canonical-release-versioned root-scope service worker caches only one exact credential-free public static-shell allowlist, never intercepts non-GET, API, Admin, authenticated, private, wallet, ledger, outcome, invitation, OAuth, or provider traffic, and preserves the previous complete worker until an explicit update; offline server actions fail closed, and reconnect revalidates session, wallet, catalog, game state, and route before actions are released.",
+      "description": "A single canonical browser release module versions a root-scope module service worker whose exact credential-free public static-shell allowlist covers the complete startup import closure and every installed locale shell, while every other shared-core file has an explicit network-only reason; the worker never intercepts non-GET, API, Admin, authenticated, private, wallet, ledger, outcome, invitation, OAuth, or provider traffic and preserves the previous complete worker until an explicit update. Offline server actions fail closed, offline game routes show an honest non-actionable connection boundary, and reconnect revalidates session, wallet, catalog, game state, and route before actions are released.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -6947,6 +6947,7 @@
         "web/core/brand.js",
         "web/brands/tiltseven.js",
         "web/core/pwa.js",
+        "web/core/pwa_version.js",
         "web/core/api.js",
         "web/core/app_bootstrap.js",
         "web/core/app_router.js",
@@ -6966,13 +6967,13 @@
         "docs/pwa_foundation.md"
       ],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-730-app-view-modules",
-      "notes": "Issue #730 keeps installation atomic while precaching the complete static startup import closure, including extracted router, bootstrap, and view modules. Activation still prunes only prior Casino static-shell caches, update activation is user-requested, protected-session expiry clears mounted authenticated chrome, and no deployment or public exposure is authorized. Issue #719 remains open for version-pin single-sourcing and the separately documented offline game-route decision."
+      "changed_in": "issue-719-service-worker-manifest",
+      "notes": "Issue #719 single-sources the page and module-worker cache identity, validates every cached file, installed locale shell, startup import, and explicitly excluded shared-core asset, and renders localized connection-required copy instead of a dead loader for offline game routes. Activation still prunes only prior Casino static-shell caches, update activation is user-requested, protected-session expiry clears mounted authenticated chrome, game modules and authoritative state remain network-only, and no deployment or public exposure is authorized."
     },
     {
       "id": "TEST-095",
       "module": "Tests",
-      "description": "Browser-free policy tests prove canonical cache identity, exact public-static allowlisting equal to the complete static application import closure, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, message-lifetime ownership of skipWaiting, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, a real one-click multi-tab update with zero waiting/banner residue, update failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
+      "description": "Browser-free policy tests prove the single canonical cache identity, exact public-static allowlisting equal to the complete static application import closure, explicit disposition for every shared-core file, installed-locale shell coverage, seeded missing-file and removed-row failures, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, message-lifetime ownership of skipWaiting, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, an honest localized offline game-route panel, offline fail-closed actions, reconnect, a real one-click multi-tab update with zero waiting/banner residue, update failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -6981,12 +6982,13 @@
       ],
       "implementation_files": [
         "tests/pwa_tests.py",
+        "tests/cases/browser/auth_backend_pwa.py",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-730-app-view-modules",
-      "notes": "Browser-free coverage now fails when any extracted static startup import is absent from the exact cache allowlist, when an allowlisted path is missing, or when event.waitUntil activation ownership is absent. Issue #719 remains open for the independent version-pin and offline game-route decisions; native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "issue-719-service-worker-manifest",
+      "notes": "Browser-free coverage fails when an extracted static startup import, installed locale shell, or shared-core disposition is absent, when a cached path is missing, when a reviewed row is removed, when page and worker identity diverge, or when event.waitUntil activation ownership is absent. Exact-head Browser coverage proves the cached shell reconstructs an honest offline game-route panel and remounts that route only after authoritative reconnect; native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",

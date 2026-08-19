@@ -15,6 +15,8 @@ import shutil
 import struct
 # Import subprocess execution for the real celebration module contract.
 import subprocess
+# Import temporary-directory support for seeded manifest-drift fixtures.
+import tempfile
 # Import unittest for normal repository test discovery.
 import unittest
 
@@ -24,9 +26,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 EXPECTED_SHELL_ASSETS = {
     "/index.html", "/styles.css", "/app.js", "/brands/tiltseven.js", "/manifest.webmanifest", "/assets/favicon.svg",
     "/assets/pwa-icon-192.png", "/assets/pwa-icon-512.png", "/assets/pwa-maskable-192.png", "/assets/pwa-maskable-512.png",
-    "/core/api.js", "/core/app_bootstrap.js", "/core/app_router.js", "/core/brand.js", "/core/celebrate.js", "/core/feedback.js", "/core/wellness.js", "/core/i18n.js", "/core/pwa.js", "/core/ui.js", "/core/voice.js",
+    "/core/api.js", "/core/app_bootstrap.js", "/core/app_router.js", "/core/brand.js", "/core/celebrate.js", "/core/feedback.js", "/core/wellness.js", "/core/i18n.js", "/core/pwa.js", "/core/pwa_version.js", "/core/ui.js", "/core/voice.js",
     "/views/invitation.js", "/views/lobby.js", "/views/login.js", "/views/reset.js", "/views/settings.js", "/views/signup.js", "/views/terms.js", "/views/verification.js",
     "/i18n/en-US/feedback.json", "/i18n/en-US/shell.json", "/i18n/ru-RU/feedback.json", "/i18n/ru-RU/shell.json",
+}
+# Name every reviewed shared asset kept network-only because it cannot function without authoritative state.
+EXPECTED_CORE_EXCLUSIONS = {
+    "/core/admin_labels.js", "/core/autoplay.js", "/core/bots.js", "/core/cards.css", "/core/cards.js", "/core/dice.js", "/core/game_lifecycle.js", "/core/motion.js",
 }
 # Name every governed lifecycle state required by the narrowed visual matrix.
 EXPECTED_PWA_STATES = {
@@ -42,7 +48,7 @@ def load_json(relative_path):
 
 
 # Resolve the complete static JavaScript import closure beneath the public web root.
-def static_javascript_closure(entry_path):
+def static_javascript_closure(entry_path, root=ROOT):
     # Retain canonical public paths so cycles and repeated imports terminate deterministically.
     pending = [entry_path]
     discovered = set()
@@ -55,7 +61,7 @@ def static_javascript_closure(entry_path):
             continue
         discovered.add(public_path)
         # Resolve the public URL beneath the governed web root.
-        source_path = ROOT / "web" / public_path.lstrip("/")
+        source_path = root / "web" / public_path.lstrip("/")
         source = source_path.read_text(encoding="utf-8")
         # Resolve every relative static import against the current module directory.
         for relative in STATIC_IMPORT_RE.findall(source):
@@ -69,6 +75,62 @@ def static_javascript_closure(entry_path):
                 pending.append(normalized)
     # Return the exact discovered module set including the entrypoint.
     return discovered
+
+
+# Extract one immutable path array from the reviewed service-worker policy source.
+def worker_path_array(source, constant_name):
+    # Match only the exact frozen-array declaration so unrelated literals cannot satisfy policy.
+    match = re.search(rf"const {constant_name} = Object\.freeze\(\[(.*?)\]\);", source, re.DOTALL)
+    # Reject a missing or renamed policy boundary before interpreting paths.
+    if match is None:
+        raise AssertionError(f"service-worker array missing: {constant_name}")
+    # Return every single-quoted public path inside the bounded declaration.
+    return set(re.findall(r"'([^']+)'", match.group(1))), match.group(1)
+
+
+# Validate the complete service-worker cache and explicit-exclusion inventory against one source tree.
+def validate_worker_asset_inventory(root):
+    # Read the exact worker source that owns cache and exclusion policy.
+    worker = (root / "web" / "sw.js").read_text(encoding="utf-8")
+    # Extract the reviewed cached and network-only arrays independently.
+    actual_assets, _ = worker_path_array(worker, "SHELL_ASSETS")
+    actual_exclusions, exclusion_block = worker_path_array(worker, "SHELL_ASSET_EXCLUSIONS")
+    # Reject silent additions, removals, or substitutions in either policy list.
+    if actual_assets != EXPECTED_SHELL_ASSETS:
+        raise AssertionError(f"service-worker allowlist drift: {sorted(actual_assets ^ EXPECTED_SHELL_ASSETS)}")
+    if actual_exclusions != EXPECTED_CORE_EXCLUSIONS:
+        raise AssertionError(f"service-worker exclusion drift: {sorted(actual_exclusions ^ EXPECTED_CORE_EXCLUSIONS)}")
+    # Keep cached and explicitly network-only ownership mutually exclusive.
+    if actual_assets & actual_exclusions:
+        raise AssertionError(f"service-worker asset has two policies: {sorted(actual_assets & actual_exclusions)}")
+    # Require every allowlisted path to resolve to a packaged public file.
+    for public_path in sorted(actual_assets):
+        # Resolve the canonical web-root file without broad prefix inference.
+        asset_path = root / "web" / public_path.lstrip("/")
+        if not asset_path.is_file():
+            raise AssertionError(f"allowlisted asset missing: {public_path}")
+    # Enumerate every current shared-core file so a future file cannot escape cache review.
+    core_files = {f"/core/{path.relative_to(root / 'web' / 'core').as_posix()}" for path in (root / "web" / "core").rglob("*") if path.is_file()}
+    # Require one and only one reviewed cache decision for every shared-core file.
+    if core_files != ({path for path in actual_assets if path.startswith('/core/')} | actual_exclusions):
+        raise AssertionError(f"unreviewed shared-core asset: {sorted(core_files ^ ({path for path in actual_assets if path.startswith('/core/')} | actual_exclusions))}")
+    # Require an adjacent explanatory comment for each intentional network-only path.
+    for public_path in sorted(actual_exclusions):
+        # Match the immediately preceding line comment inside the bounded exclusion declaration.
+        if re.search(rf"//[^\n]+\n\s*'{re.escape(public_path)}'", exclusion_block) is None:
+            raise AssertionError(f"service-worker exclusion lacks comment: {public_path}")
+    # Enumerate every installed locale shell resource from the real public tree.
+    active_shells = {f"/i18n/{locale.parent.name}/shell.json" for locale in (root / "web" / "i18n").glob("*/shell.json")}
+    # Require every selectable locale's shell copy to be available during offline reconstruction.
+    if not active_shells.issubset(actual_assets):
+        raise AssertionError(f"active locale shell missing from cache: {sorted(active_shells - actual_assets)}")
+    # Require the complete startup import graph so extracted views cannot drift out of offline cache.
+    startup_modules = static_javascript_closure("/app.js", root=root)
+    cached_javascript = {path for path in actual_assets if path.endswith(".js")}
+    if startup_modules != cached_javascript:
+        raise AssertionError(f"static startup closure drift: {sorted(startup_modules ^ cached_javascript)}")
+    # Return both reviewed sets for focused downstream assertions.
+    return actual_assets, actual_exclusions
 
 
 # Read one PNG's dimensions directly from its fixed signature and IHDR fields.
@@ -91,12 +153,21 @@ class PwaFoundationTests(unittest.TestCase):
         version = load_json("modules/module-manifest.json")["application"]
         # Read the page-side controller source.
         client = (ROOT / "web" / "core" / "pwa.js").read_text(encoding="utf-8")
+        # Read the sole browser-visible release identity module.
+        version_module = (ROOT / "web" / "core" / "pwa_version.js").read_text(encoding="utf-8")
         # Read the service-worker source.
         worker = (ROOT / "web" / "sw.js").read_text(encoding="utf-8")
-        # Require both version constants to equal the canonical packaged release.
-        self.assertIn(f"PWA_APP_VERSION = '{version}'", client)
-        # Require the worker cache identity to use the same canonical release.
-        self.assertIn(f"APP_VERSION = '{version}'", worker)
+        # Require the sole browser-side version constant to equal the canonical packaged release.
+        self.assertIn(f"PWA_APP_VERSION = '{version}'", version_module)
+        # Require the page controller to import and re-export the shared identity without another pin.
+        self.assertIn("import { PWA_APP_VERSION } from './pwa_version.js'", client)
+        self.assertIn("export { PWA_APP_VERSION }", client)
+        self.assertNotIn(version, client)
+        # Require the module worker to consume the same identity without another pin.
+        self.assertIn("import { PWA_APP_VERSION as APP_VERSION } from './core/pwa_version.js'", worker)
+        self.assertNotIn(version, worker)
+        # Require registration to bypass HTTP cache for the exact module-worker import graph.
+        self.assertIn("{ scope: '/', type: 'module', updateViaCache: 'none' }", client)
         # Reject the obsolete ad-hoc cache counter from the contributor draft.
         self.assertNotIn("casino-shell-v1", worker)
 
@@ -134,22 +205,11 @@ class PwaFoundationTests(unittest.TestCase):
     def test_worker_cache_allowlist_and_private_exclusions(self):
         # Read the complete service-worker source for static policy checks.
         worker = (ROOT / "web" / "sw.js").read_text(encoding="utf-8")
-        # Extract the immutable shell-assets array without executing worker code.
-        match = re.search(r"const SHELL_ASSETS = Object\.freeze\(\[(.*?)\]\);", worker, re.DOTALL)
-        # Require the exact allowlist declaration to remain present.
-        self.assertIsNotNone(match)
-        # Extract each single-quoted public path from the reviewed array.
-        actual_assets = set(re.findall(r"'([^']+)'", match.group(1)))
-        # Reject additions, omissions, and prefix expansion.
+        # Run the reusable fail-closed inventory validator against the repository tree.
+        actual_assets, actual_exclusions = validate_worker_asset_inventory(ROOT)
+        # Bind the reusable result to the exact reviewed cache and exclusion contracts.
         self.assertEqual(actual_assets, EXPECTED_SHELL_ASSETS)
-        # Require every allowlisted path to resolve to a packaged public file.
-        for public_path in actual_assets:
-            # Resolve the canonical web-root file without broad prefix inference.
-            asset_path = ROOT / "web" / public_path.lstrip("/")
-            self.assertTrue(asset_path.is_file(), public_path)
-        # Require the complete startup import graph so extracted views cannot drift out of offline cache.
-        startup_modules = static_javascript_closure("/app.js")
-        self.assertEqual(startup_modules - {"/app.js"}, {path for path in actual_assets if path.endswith(".js") and path != "/app.js"})
+        self.assertEqual(actual_exclusions, EXPECTED_CORE_EXCLUSIONS)
         # Require credential omission for installation and runtime cache fills.
         self.assertGreaterEqual(worker.count("credentials: 'omit'"), 2)
         # Reject the contributor draft's broad prefix cache discovery.
@@ -185,6 +245,29 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertIn('and not public_pwa_shell', development_adapter)
         # Require the production cookie bootstrap to share that exclusion.
         self.assertIn('and not public_pwa_shell', production_adapter)
+
+    # Prove missing files and removed allowlist rows fail through the reusable inventory validator.
+    def test_worker_asset_validator_rejects_seeded_drift(self):
+        # Create isolated copies so destructive drift never touches repository bytes.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Resolve two independent fixture roots for missing-byte and removed-row cases.
+            missing_root = pathlib.Path(temporary) / "missing"
+            removed_root = pathlib.Path(temporary) / "removed"
+            # Copy public bytes while omitting large network-only game directories from the validator fixture.
+            shutil.copytree(ROOT / "web", missing_root / "web", ignore=shutil.ignore_patterns("games"))
+            shutil.copytree(ROOT / "web", removed_root / "web", ignore=shutil.ignore_patterns("games"))
+            # Remove one allowlisted file to model an asset deleted without manifest reconciliation.
+            (missing_root / "web" / "core" / "api.js").unlink()
+            # Require the validator to name the missing allowlisted path.
+            with self.assertRaisesRegex(AssertionError, r"allowlisted asset missing: /core/api\.js"):
+                validate_worker_asset_inventory(missing_root)
+            # Remove one allowlist row while retaining its source file to model silent manifest staleness.
+            worker_path = removed_root / "web" / "sw.js"
+            worker_source = worker_path.read_text(encoding="utf-8")
+            worker_path.write_text(worker_source.replace("  '/core/api.js',\n", "", 1), encoding="utf-8")
+            # Require the validator to reject the removed path before Browser installation can drift.
+            with self.assertRaisesRegex(AssertionError, r"service-worker allowlist drift: \['/core/api\.js'\]"):
+                validate_worker_asset_inventory(removed_root)
 
     # Require atomic install, explicit activation, predecessor cleanup, and version proof.
     def test_worker_update_and_rollback_boundaries(self):
@@ -330,6 +413,9 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertIn("data-pwa-offline-disabled", client)
         # Require authoritative reconnect to preserve a fail-closed failure state.
         self.assertIn("renderPwaState('reconnect-failed')", client)
+        # Require route decisions to consume the event-backed PWA state instead of lagging navigator timing.
+        self.assertIn("export function isPwaOffline()", client)
+        self.assertIn("isOnline: () => !isPwaOffline()", app)
         # Require offline API calls to fail before fetch and carry a stable code.
         self.assertLess(api_source.index("navigator.onLine === false"), api_source.index("await transportFetch(path, init)"))
         # Require the stable no-replay offline error to flow through the localized safe-error boundary.
@@ -352,6 +438,10 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertLess(app.index("clearAuthenticatedShellState()", app.index("function renderExpiredSessionGate()")), app.index("renderLoginGate(t('pwa.expiredSession'", app.index("function renderExpiredSessionGate()")))
         # Require protected-route authorization failure handling to precede the generic game-load error panel.
         self.assertLess(navigation.index("error?.code === 'UNAUTHORIZED'"), navigation.index("const heading = html`<h2>${t('route.loadFailed'"))
+        # Require offline game routes to render the explicit network-only panel before dynamic import.
+        self.assertLess(navigation.index("if (!isOnline()) { renderOfflineGameRoute(view, targetRoute); return; }"), navigation.index("load: () => loadGame(desc)"))
+        # Require the honest panel to carry one stable browser evidence identity.
+        self.assertIn('data-testid="game-offline-panel"', router)
 
     # Require trial deep links to show an immediate route-restoration surface before slow session hydration.
     def test_initial_game_route_restore_placeholder_precedes_session_refresh(self):
@@ -365,10 +455,15 @@ class PwaFoundationTests(unittest.TestCase):
         init_block = bootstrap[bootstrap.index("export async function startApplication"):bootstrap.index("// Poll shell state periodically")]
         # Require the startup placeholder helper to remain present.
         self.assertIn("function renderInitialRouteRestore()", app)
+        self.assertIn("windowRef.addEventListener('casino-connectivity', event =>", bootstrap)
+        self.assertIn("if (event.detail?.state !== 'offline') return;", bootstrap)
+        self.assertIn("renderInitialRouteRestore();", bootstrap)
         # Require the placeholder to use the browser route rather than a stale active route.
         self.assertIn("const restoredRoute = routeFromLocation()", router)
         # Require the placeholder to render inside the governed game-screen outlet.
         self.assertIn("view.className = 'screen game-screen'", router)
+        # Require direct offline game routes to bypass the transient restoration placeholder.
+        self.assertIn("if (!isOnline()) { renderOfflineGameRoute(view, restoredRoute); return; }", router)
         # Require stable test identity for browser diagnostics and future acceptance evidence.
         self.assertIn('data-testid="route-restore-loading"', router)
         # Require localized route-restoration copy instead of a blank or raw loading panel.
@@ -376,7 +471,7 @@ class PwaFoundationTests(unittest.TestCase):
         # Locate i18n initialization because route copy depends on the loaded shell dictionary.
         i18n_index = init_block.index("await initI18n")
         # Locate the immediate placeholder render in the startup path.
-        placeholder_index = init_block.index("renderInitialRouteRestore()")
+        placeholder_index = init_block.index("renderInitialRouteRestore();", i18n_index)
         # Locate current-user refresh, which can be slow on hosted trial sessions.
         session_index = init_block.index("await refreshCurrentSession()")
         # Require i18n before placeholder so EN/RU startup copy is available.

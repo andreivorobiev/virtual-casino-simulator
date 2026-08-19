@@ -79,6 +79,13 @@ export async function startApplication(dependencies) {
   windowRef.addEventListener('pagehide', () => { if (isGuestSession()) void departGuestTrial().catch(() => {}); });
   // Reset stale authenticated chrome only while a session owns the shell.
   windowRef.addEventListener('casino-session-expired', () => { if (getCurrentSession()) renderExpiredSessionGate(); });
+  // Replace any direct game-route startup loader as soon as the PWA boundary confirms offline state. (PWA-002)
+  windowRef.addEventListener('casino-connectivity', event => {
+    // Leave reconnecting and online transitions to the authoritative reconnect callback.
+    if (event.detail?.state !== 'offline') return;
+    // Re-evaluate only the current URL so offline startup cannot imply that a game module is still loading.
+    renderInitialRouteRestore();
+  });
 
   // Apply brand design tokens before first paint.
   applyBrand(activeBrand);
