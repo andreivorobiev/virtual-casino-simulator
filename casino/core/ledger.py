@@ -67,3 +67,9 @@ def credit_once(player_id: str, amount: float, transaction_type: str, action_key
 def read_recent(player_id: str | None = None, limit: int = 100) -> list[dict]:
     # Return recent ledger events from the active storage provider.
     return get_storage_provider().read_ledger_recent(player_id, limit)
+
+
+# Aggregate player-facing game economics inside the selected storage provider. (ADMIN-030)
+def economics(window: int, game: str | None = None, recent: int = 0) -> dict:
+    # Delegate the bounded window so MySQL can aggregate in SQL and JSON can use its cache.
+    return get_storage_provider().ledger_economics(window, game=game, recent=recent)

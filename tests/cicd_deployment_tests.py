@@ -1262,7 +1262,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Define the exact reviewed cases and requirement mappings in historical order.
         expected_cases = (
             ("API-GAMECORE-001", ["GAMECORE-001", "GAMECORE-002", "GAMECORE-007", "TEST-127", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240"]),
-            ("API-GAMECORE-005", ["GAMECORE-005", "GAMECORE-006", "GAMECORE-007", "TEST-233", "TEST-234", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240"]),
+            ("API-GAMECORE-005", ["GAMECORE-005", "GAMECORE-006", "GAMECORE-007", "STORAGE-017", "TEST-233", "TEST-234", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240", "TEST-245"]),
             ("API-GAMECORE-002", ["GAMECORE-003", "LEDGER-033", "TEST-164"]),
             ("API-GAMECORE-004", ["LEDGER-032", "GAMECORE-004", "GAMECORE-008", "TEST-157", "TEST-241"]),
             ("API-GAMECORE-003", ["CORE-031"]),

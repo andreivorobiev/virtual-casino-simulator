@@ -30,9 +30,12 @@ def list_players() -> list[dict]:
 
 # Define the get_player function used by this module.
 def get_player(player_id: str) -> dict:
-    for p in list_players():
-        if p["player_id"] == player_id:
-            return p
+    # Use the provider's point-read seam so MySQL does not scan every unrelated wallet.
+    player = get_storage_provider().get_player(player_id, default_players)
+    # Return the exact provider-compatible player when it exists.
+    if player is not None:
+        # Preserve the established public player dictionary shape.
+        return player
     # Raise an error so invalid input or state is reported explicitly.
     raise NotFoundError(f"Player {player_id} was not found")
 

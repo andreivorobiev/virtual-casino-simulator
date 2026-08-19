@@ -3,6 +3,8 @@
 # Prove the JSON ledger tail cache stays byte-identical to full re-parses. (issue #412)
 # Import required dependency so tests can serialize seeded ledger rows exactly like the provider.
 import json
+# Import database-shaped decimals for MySQL point-read fixtures.
+from decimal import Decimal
 # Import required dependency so test data can be written outside the real data directory.
 import tempfile
 # Import required dependency so bootstrap races can be exercised from two threads.
@@ -20,6 +22,12 @@ from casino.core import players
 from casino.core import storage
 # Import the standard fail-closed error used for corrupt money-action journals.
 from casino.errors import ConflictError
+
+
+# Build one canonical CSV history event for incremental cache fixtures.
+def _history_row(index: int, game: str = "slots") -> dict:
+    # Return every required compatibility column as a CSV-safe scalar.
+    return {"timestamp": f"2026-08-19T00:00:{index % 60:02d}Z", "game": game, "round_id": f"history_{index}", "player_id": "human", "bet_type": "straight", "bet_label": f"bet-{index}", "amount": "1.00", "outcome": "win", "payout": "2.00", "balance_after": "5000.00", "details_json": "{}", "schema_version": "8"}
 
 
 # Build one realistic seeded ledger event for raw JSONL fixtures.
@@ -319,6 +327,128 @@ class LedgerActionJournalTests(unittest.TestCase):
         with self.assertRaises(ConflictError):
             # Trigger the provider recovery boundary that scans compaction residue.
             self.provider.load_players(players.default_players)
+
+
+# Group cache-equivalence and point-read proofs for provider read paths. (STORAGE-017)
+class ProviderReadPathEfficiencyTests(unittest.TestCase):
+    # Create one isolated data root per test.
+    def setUp(self):
+        # Build a disposable directory removed automatically after each case.
+        self._tmp = tempfile.TemporaryDirectory()
+        # Register cleanup even when a provider assertion fails.
+        self.addCleanup(self._tmp.cleanup)
+        # Retain the isolated root shared by warmed and fresh provider instances.
+        self.data_root = Path(self._tmp.name) / "data"
+
+    # Prove warmed history reads parse only appended bytes and remain identical to a fresh full read.
+    def test_history_tail_cache_reads_only_growth_and_preserves_filters(self):
+        # Build one provider and initialize its private directory layout.
+        provider = storage.JsonStorageProvider(self.data_root)
+        # Append a large cross-game history baseline through the production writer.
+        for index in range(120):
+            # Alternate games so the per-game index is exercised.
+            provider.append_history(_history_row(index, "slots" if index % 2 == 0 else "keno"))
+        # Retain each byte region decoded after instrumentation begins.
+        decoded_sizes = []
+        # Preserve the production region decoder for delegated parsing.
+        original_decode = provider._decode_history_region
+
+        # Measure only bytes presented to the standard CSV parser.
+        def measured_decode(payload, *, has_header):
+            # Record the exact incremental region size.
+            decoded_sizes.append(len(payload))
+            # Delegate parsing without changing compatibility semantics.
+            return original_decode(payload, has_header=has_header)
+
+        # Install the measurement seam on this isolated provider instance.
+        provider._decode_history_region = measured_decode
+        # Warm the cache over the complete baseline.
+        warmed_initial = provider.recent_history(1_000_000)
+        # Require every seeded history row in append order.
+        self.assertEqual(120, len(warmed_initial))
+        # Retain the full-parse byte count for a scale comparison.
+        full_parse_bytes = decoded_sizes[-1]
+        # Append one external row through an independent provider instance.
+        storage.JsonStorageProvider(self.data_root).append_history(_history_row(120, "slots"))
+        # Read the warmed filtered view after the external append.
+        warmed_slots = provider.recent_history(1_000_000, "slots")
+        # Require the appended row to be visible at the tail.
+        self.assertEqual("history_120", warmed_slots[-1]["round_id"])
+        # Require only the one-row growth region to be decoded after warm-up.
+        self.assertLess(decoded_sizes[-1] * 20, full_parse_bytes)
+        # Require exact output parity with a cache-free provider.
+        self.assertEqual(storage.JsonStorageProvider(self.data_root).recent_history(1_000_000, "slots"), warmed_slots)
+        # Reset through the warmed provider so cache invalidation is exercised.
+        provider.reset()
+        # Require no stale history after reset removed the backing CSV.
+        self.assertEqual([], provider.recent_history(10))
+
+    # Prove the JSON point-read returns one detached player without changing compatibility shape.
+    def test_json_player_point_read_is_detached_and_exact(self):
+        # Build and seed one isolated provider.
+        provider = storage.JsonStorageProvider(self.data_root)
+        # Seed the canonical players through the idempotent bootstrap path.
+        provider.bootstrap_players(players.default_players())
+        # Read only the human row through the new point seam.
+        selected = provider.get_player("human", players.default_players)
+        # Read the complete document only as a golden compatibility oracle.
+        expected = next(row for row in provider.load_players(players.default_players)["players"] if row["player_id"] == "human")
+        # Require byte-equivalent shape and values.
+        self.assertEqual(expected, selected)
+        # Mutate the detached result to prove durable state cannot be changed by the caller.
+        selected["balance"] = 1.0
+        # Require a second point read to preserve the authoritative balance.
+        self.assertEqual(expected["balance"], provider.get_player("human", players.default_players)["balance"])
+        # Preserve the established missing-player result.
+        self.assertIsNone(provider.get_player("missing", players.default_players))
+
+    # Prove the MySQL point-read uses the player primary-key predicate and returns no full-table scan.
+    def test_mysql_player_point_read_uses_primary_key_predicate(self):
+        # Retain the exact statement and values sent by the provider.
+        executed = []
+
+        # Model one dictionary cursor returning a single compatible player row.
+        class Cursor:
+            # Capture the point query.
+            def execute(self, statement, values):
+                # Retain exact SQL and parameters for the assertion.
+                executed.append((statement, values))
+
+            # Return one requested player row.
+            def fetchone(self):
+                # Match the database-to-public mapping columns.
+                return {"player_id": "human", "display_name": "You", "player_type": "human", "balance": Decimal("5000.00"), "created_at": "2026-08-19T00:00:00Z", "updated_at": "2026-08-19T00:00:00Z", "status": "active"}
+
+        # Model one read-only connection lease.
+        class Connection:
+            # Return the point cursor while retaining mapping mode.
+            def cursor(self, dictionary=False):
+                # Record dictionary mapping selection.
+                self.dictionary = dictionary
+                # Return the deterministic cursor.
+                return Cursor()
+
+            # Record exact cleanup.
+            def close(self):
+                # Mark the lease released.
+                self.closed = True
+
+        # Build the fake connection state.
+        connection = Connection()
+        # Start with no observed close.
+        connection.closed = False
+        # Construct a provider without allocating a real connection pool.
+        provider = object.__new__(storage.MySQLStorageProvider)
+        # Bypass schema readiness only for the SQL-shape test.
+        provider.ensure_ready = lambda: None
+        # Return the deterministic point-read lease.
+        provider.connect = lambda: connection
+        # Execute the production point-read implementation.
+        selected = provider.get_player("human", players.default_players)
+        # Require exact identity, an equality predicate, one bound id, and cleanup.
+        self.assertEqual(("human", ("human",), True, True), (selected["player_id"], executed[0][1], "WHERE player_id = %s" in executed[0][0], connection.closed))
+        # Reject accidental stable-order full-table scan behavior on this path.
+        self.assertNotIn("ORDER BY player_id", executed[0][0])
 
 
 # Group bootstrap provisioning race proofs for the seeded player path. (issue #431)

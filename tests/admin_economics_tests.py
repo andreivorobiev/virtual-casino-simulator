@@ -5,8 +5,14 @@
 # Import unittest for the dependency-free runner.
 import unittest
 
+# Import decimal values so the MySQL aggregation fake matches database money rows.
+from decimal import Decimal
+
 # Import the Admin module so tests exercise the shipped aggregation functions.
 from casino import admin
+# Import the production provider and provider-neutral aggregation oracle.
+from casino.core.storage import MySQLStorageProvider
+from casino.core.storage.base import _aggregate_player_economics
 
 # Define one deterministic ledger window spanning house-side, player-positive, opponent, and non-game rows.
 SYNTHETIC_EVENTS = [
@@ -41,15 +47,17 @@ SYNTHETIC_EVENTS = [
 class AdminEconomicsTests(unittest.TestCase):
     # Replace the ledger reader before each assertion.
     def setUp(self):
-        # Preserve the production reader for exact restoration.
-        self._original_read_recent = admin.ledger.read_recent
-        # Return a fresh list so one test cannot mutate another test's window.
-        admin.ledger.read_recent = lambda limit=100: list(SYNTHETIC_EVENTS)
+        # Preserve the production provider aggregation seam for exact restoration.
+        self._original_economics = admin.ledger.economics
+        # Retain a fresh event list so one test cannot mutate another test's window.
+        self.events = list(SYNTHETIC_EVENTS)
+        # Aggregate the newest bounded fixture rows through the same provider-neutral oracle.
+        admin.ledger.economics = lambda window, game=None, recent=0: _aggregate_player_economics(self.events[-window:], game=game, recent=recent)
 
     # Restore the production reader after each assertion.
     def tearDown(self):
-        # Reinstall the original function byte-for-byte.
-        admin.ledger.read_recent = self._original_read_recent
+        # Reinstall the original provider aggregation function byte-for-byte.
+        admin.ledger.economics = self._original_economics
 
     # Locate one game summary row.
     def _row(self, report, game):
@@ -103,7 +111,7 @@ class AdminEconomicsTests(unittest.TestCase):
     # Prove a credit-only game publishes no unanchored ratio or house edge.
     def test_zero_wager_rate_is_null(self):
         # Replace the window with one return that has no corresponding wager.
-        admin.ledger.read_recent = lambda limit=100: [{"player_id": "p6", "game": "credit_only", "transaction_type": "CREDIT_ONLY_PAYOUT", "amount": 10.0}]
+        self.events = [{"player_id": "p6", "game": "credit_only", "transaction_type": "CREDIT_ONLY_PAYOUT", "amount": 10.0}]
         # Aggregate the credit-only row.
         row = self._row(admin.game_economics(), "credit_only")
         # Require explicit null ratios while preserving the observed return.
@@ -114,13 +122,15 @@ class AdminEconomicsTests(unittest.TestCase):
         # Record every provider limit passed by the aggregation functions.
         limits = []
         # Return many valid rows while retaining the requested bound.
-        def read_recent(limit=100):
+        def economics(window, game=None, recent=0):
             # Capture the exact provider bound.
-            limits.append(limit)
+            limits.append(window)
             # Return enough events to exercise the detail recent slice.
-            return [{"player_id": f"p{index}", "game": "slots", "transaction_type": "SLOTS_WAGER_DEBIT", "amount": -1.0} for index in range(75)]
+            events = [{"player_id": f"p{index}", "game": "slots", "transaction_type": "SLOTS_WAGER_DEBIT", "amount": -1.0} for index in range(75)]
+            # Build the provider result while honoring the requested detail bound.
+            return _aggregate_player_economics(events[-window:], game=game, recent=recent)
         # Install the recording provider seam.
-        admin.ledger.read_recent = read_recent
+        admin.ledger.economics = economics
         # Request values above both reviewed maxima.
         admin.game_economics(window=1_000_000)
         # Request an oversized detail evidence slice.
@@ -133,7 +143,7 @@ class AdminEconomicsTests(unittest.TestCase):
     # Prove malformed and non-finite historical amounts fail safe without false diagnostics.
     def test_malformed_amounts_are_excluded(self):
         # Publish hostile stored representations beside one valid wager.
-        admin.ledger.read_recent = lambda limit=100: [
+        self.events = [
             # Keep one valid row so the game remains represented.
             {"player_id": "p1", "game": "slots", "transaction_type": "SLOTS_WAGER_DEBIT", "amount": -10.0},
             # Reject arbitrary text.
@@ -149,6 +159,77 @@ class AdminEconomicsTests(unittest.TestCase):
         self.assertEqual((10.0, 0.0, 0.0, 1), (row["wagered"], row["returned"], row["payout_rate"], row["events"]))
         # Require the drill-down to retain only the valid row.
         self.assertEqual(1, admin.game_economics_detail("slots")["events"])
+
+    # Prove MySQL aggregates the bounded ledger window in SQL instead of returning every row to Python.
+    def test_mysql_provider_uses_sql_aggregation_and_bounded_detail(self):
+        # Retain each executed statement and its bound parameters.
+        statements = []
+
+        # Model the dictionary cursor result sets for summary, type detail, and recent evidence.
+        class Cursor:
+            # Start before the first scripted result.
+            def __init__(self):
+                # Track which statement result should be returned next.
+                self.index = -1
+
+            # Capture one provider query without a database connection.
+            def execute(self, statement, values):
+                # Advance to the result owned by this query.
+                self.index += 1
+                # Retain exact SQL and parameters for structural assertions.
+                statements.append((statement, values))
+
+            # Return the deterministic result for the most recent statement.
+            def fetchall(self):
+                # Return the selected-game aggregate first.
+                if self.index == 0:
+                    # Match MySQL DECIMAL and COUNT result types.
+                    return [{"game": "slots", "wagered": Decimal("100.00"), "returned": Decimal("92.00"), "event_count": 2}]
+                # Return two transaction-type buckets second.
+                if self.index == 1:
+                    # Preserve signed totals exactly like SUM(amount).
+                    return [{"transaction_type": "SLOTS_PAYOUT_CREDIT", "event_count": 1, "total": Decimal("92.00")}, {"transaction_type": "SLOTS_WAGER_DEBIT", "event_count": 1, "total": Decimal("-100.00")}]
+                # Return the chronological public ledger evidence last.
+                return [{"ledger_id": "L1", "ts": "2026-08-19T00:00:00Z", "player_id": "p1", "game": "slots", "round_id": "r1", "transaction_type": "SLOTS_WAGER_DEBIT", "amount": Decimal("-100.00"), "balance_before": Decimal("500.00"), "balance_after": Decimal("400.00"), "details_json": "{}"}]
+
+        # Model one read-only provider connection.
+        class Connection:
+            # Return the scripted dictionary cursor.
+            def cursor(self, dictionary=False):
+                # Require the production mapping mode.
+                self.dictionary = dictionary
+                # Return one cursor shared by all statements in this operation.
+                return self._cursor
+
+            # Record that the provider released the lease.
+            def close(self):
+                # Mark exact cleanup for the assertion.
+                self.closed = True
+
+        # Build the fake connection state.
+        connection = Connection()
+        # Install one cursor whose sequence spans all three queries.
+        connection._cursor = Cursor()
+        # Start with no observed close.
+        connection.closed = False
+        # Construct the provider without allocating a real pool.
+        provider = object.__new__(MySQLStorageProvider)
+        # Bypass schema readiness only inside this deterministic SQL-shape test.
+        provider.ensure_ready = lambda: None
+        # Return the fake read-only lease.
+        provider.connect = lambda: connection
+        # Request one game detail through the production MySQL implementation.
+        evidence = provider.ledger_economics(100_000, game="slots", recent=50)
+        # Require low-cardinality aggregates and one bounded public evidence row.
+        self.assertEqual(({"game": "slots", "wagered": 100.0, "returned": 92.0, "events": 2}, 2, ["L1"]), (evidence["games"][0], len(evidence["by_transaction_type"]), [row["ledger_id"] for row in evidence["recent"]]))
+        # Require aggregate SQL, a newest-window derived table, and no Python-side full ledger read.
+        self.assertTrue(all("bounded_ledger" in statement and "LIMIT %s" in statement for statement, _values in statements))
+        # Require the first two statements to aggregate inside MySQL.
+        self.assertTrue(all("GROUP BY" in statement and ("SUM(" in statement or "COUNT(" in statement) for statement, _values in statements[:2]))
+        # Require database collation not to broaden the exact Python game/type classification.
+        self.assertTrue(all("BINARY" in statement for statement, _values in statements))
+        # Require the detail evidence query to retain its separate bound and the lease to close.
+        self.assertEqual((100_000, 50, True), (statements[2][1][0], statements[2][1][-1], connection.closed))
 
 
 # Run the focused module directly for local diagnostics.

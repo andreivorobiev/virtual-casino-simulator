@@ -9,7 +9,7 @@ def run_cases(run_case, run_unit_module):
     # Record recursive nested/legacy Admin state discovery and empty-state safety. (ADMIN-029, TEST-145)
     run_case("API-ADMIN-GAME-STATES-001", ["ADMIN-029", "TEST-145"], lambda: run_unit_module("tests.admin_game_states_tests.AdminGameStatesTests", "Admin diagnostics suite failed"))
     # Record bounded payout-rate arithmetic, exclusion, malformed-row, and detail evidence. (ADMIN-030, TEST-146)
-    run_case("API-ADMIN-ECONOMICS-001", ["ADMIN-030", "TEST-146"], lambda: run_unit_module("tests.admin_economics_tests", "Admin economics suite failed"))
+    run_case("API-ADMIN-ECONOMICS-001", ["ADMIN-030", "STORAGE-017", "TEST-146", "TEST-245"], lambda: run_unit_module("tests.admin_economics_tests", "Admin economics provider suite failed"))
     # Record owner-only clamped provider-backed session-policy routes and persistence. (SESSION-009, ADMIN-031, TEST-150)
     run_case("API-ADMIN-SESSION-POLICY-001", ["SESSION-009", "SESSION-010", "SESSION-011", "SESSION-012", "ADMIN-031", "ADMIN-034", "TEST-150", "TEST-158"], lambda: run_unit_module("tests.admin_game_states_tests.AdminSessionSettingsTests", "Admin session policy suite failed"))
     # Run the owner-only live rate-policy provider and route contract. (SEC-015, ADMIN-032, TEST-156)

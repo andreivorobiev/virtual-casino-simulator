@@ -14,6 +14,8 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN
 import hashlib
 # Import required dependency so action and database row payloads keep canonical JSON shapes.
 import json
+# Import numeric finiteness checks so provider aggregation excludes corrupt evidence.
+import math
 # Import required dependency so MySQL provider configuration remains environment-backed.
 import os
 # Import required dependency so the base reset contract keeps legacy local cleanup behavior.
@@ -38,6 +40,91 @@ from casino.errors import ConflictError, ValidationError
 _MONEY_QUANTUM = Decimal("0.01")
 # Bound fake-money values to the signed-cent range already enforced by game actions.
 _MAX_MONEY = Decimal("90000000000000000")
+# Exclude infrastructure funding and opponent movements from player-facing economics. (ADMIN-030)
+ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS = ("OPPONENT", "FUNDING", "FUND_ACCOUNT", "GUEST_TRIAL_END")
+
+
+# Decide whether one ledger row belongs in player-facing game economics. (ADMIN-030)
+def _is_player_economics_event(event: dict) -> bool:
+    # Normalize a missing transaction type before applying the fixed exclusions.
+    transaction_type = str(event.get("transaction_type", ""))
+    # Require a non-empty game and reject infrastructure-owned transaction families.
+    return bool(event.get("game")) and not any(fragment in transaction_type for fragment in ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS)
+
+
+# Convert one stored amount to a finite float or reject the row from economics. (ADMIN-030)
+def _player_economics_amount(event: dict) -> float | None:
+    # Reject booleans because Python otherwise treats them as numeric one and zero.
+    if isinstance(event.get("amount"), bool):
+        # Report no accepted amount for this malformed row.
+        return None
+    # Convert compatible database and JSON representations without exposing failures.
+    try:
+        # Normalize a missing amount to zero for provider-neutral signed aggregation.
+        amount = float(event.get("amount", 0) or 0)
+    # Exclude arbitrary objects and non-numeric text from operator diagnostics.
+    except (TypeError, ValueError):
+        # Report no accepted amount for this malformed row.
+        return None
+    # Reject NaN and infinity because they cannot form contract-safe ratios.
+    return amount if math.isfinite(amount) else None
+
+
+# Aggregate one already-bounded chronological ledger window into provider-neutral evidence.
+def _aggregate_player_economics(events: list[dict], game: str | None = None, recent: int = 0) -> dict:
+    # Retain only player-facing rows and an optional exact game selection.
+    accepted = []
+    # Visit each bounded event once so malformed rows cannot affect any result dimension.
+    for event in events:
+        # Skip infrastructure rows and rows outside the requested game.
+        if not _is_player_economics_event(event) or (game is not None and event.get("game") != game):
+            # Continue with the next bounded ledger event.
+            continue
+        # Normalize the signed amount once for every aggregate projection.
+        amount = _player_economics_amount(event)
+        # Exclude malformed or non-finite money evidence.
+        if amount is None:
+            # Continue without publishing corrupted evidence.
+            continue
+        # Retain a detached reference plus normalized amount for this one calculation.
+        accepted.append((event, amount))
+    # Accumulate deterministic per-game totals for summary responses.
+    by_game: dict[str, dict] = {}
+    # Accumulate transaction-type detail only when one game was requested.
+    by_type: dict[str, dict] = {}
+    # Visit every accepted event exactly once.
+    for event, amount in accepted:
+        # Create the stable aggregate row on first use.
+        aggregate = by_game.setdefault(str(event["game"]), {"wagered": 0.0, "returned": 0.0, "events": 0})
+        # Count this accepted player-facing movement.
+        aggregate["events"] += 1
+        # Treat negative movements as wagered tokens.
+        if amount < 0:
+            # Accumulate the unsigned wager value.
+            aggregate["wagered"] += -amount
+        # Treat positive movements as returned tokens.
+        elif amount > 0:
+            # Accumulate the positive returned value.
+            aggregate["returned"] += amount
+        # Build detail counters only for a selected game.
+        if game is not None:
+            # Normalize a missing type to the established low-cardinality label.
+            transaction_type = str(event.get("transaction_type", "unknown"))
+            # Create the stable type bucket on first use.
+            breakdown = by_type.setdefault(transaction_type, {"count": 0, "total": 0.0})
+            # Count the selected movement in its type bucket.
+            breakdown["count"] += 1
+            # Accumulate the signed amount for operator inspection.
+            breakdown["total"] += amount
+    # Return raw provider aggregates so Admin owns final presentation rounding and ratios.
+    return {
+        # Publish per-game rows in deterministic alphabetic order.
+        "games": [{"game": name, **by_game[name]} for name in sorted(by_game)],
+        # Publish selected-game transaction buckets in deterministic alphabetic order.
+        "by_transaction_type": [{"transaction_type": name, **by_type[name]} for name in sorted(by_type)],
+        # Preserve the historical oldest-first evidence slice inside the bounded window.
+        "recent": [dict(event) for event, _amount in accepted[:recent]] if game is not None and recent > 0 else [],
+    }
 
 
 # Resolve the active legacy data root while the public storage module remains the compatibility owner.
@@ -266,6 +353,15 @@ class StorageProvider:
         # Raise because concrete providers must map their own storage rows.
         raise NotImplementedError
 
+    # Read one player without materializing every unrelated wallet at the call site.
+    def get_player(self, player_id: str, default_factory: Callable[[], dict]) -> dict | None:
+        # Preserve compatibility for third-party providers through the complete document seam.
+        state = self.load_players(default_factory)
+        # Locate the exact requested player in the validated provider document.
+        player = next((row for row in state.get("players", []) if row.get("player_id") == player_id), None)
+        # Return a detached row or the established missing result.
+        return dict(player) if player is not None else None
+
     # Scan or normalize durable wallet balances through one provider-owned boundary. (STORAGE-015)
     def normalize_wallet_balances(self, *, apply: bool = False) -> dict:
         # Raise because concrete providers must preserve their own locking and audit semantics.
@@ -310,6 +406,13 @@ class StorageProvider:
     def read_ledger_recent(self, player_id: str | None = None, limit: int = 100) -> list[dict]:
         # Raise because concrete providers must expose admin and player history.
         raise NotImplementedError
+
+    # Aggregate bounded player-facing ledger economics through one provider-owned seam. (ADMIN-030)
+    def ledger_economics(self, window: int, game: str | None = None, recent: int = 0) -> dict:
+        # Reuse the provider's bounded chronological ledger read as the compatibility implementation.
+        events = self.read_ledger_recent(limit=window)
+        # Build provider-neutral totals, detail, and historical evidence from that one snapshot.
+        return _aggregate_player_economics(events, game=game, recent=recent)
 
     # Append a normalized history event for game outcomes.
     def append_history(self, event: dict) -> None:

@@ -78,6 +78,16 @@ class JsonInfrastructureMixin:
         self._ledger_cache_by_id: dict[str, dict] = {}
         # Hold rows decoded from an unterminated trailing line without caching them. (issue #412)
         self._ledger_cache_tail_rows: list[dict] = []
+        # Track how many complete history.csv bytes have been parsed into the tail cache. (STORAGE-017)
+        self._history_cache_offset = 0
+        # Track the history file mtime at the cached offset so rewrites invalidate the cache. (STORAGE-017)
+        self._history_cache_mtime_ns: int | None = None
+        # Cache decoded history rows in append order so reads stop reparsing the full CSV. (STORAGE-017)
+        self._history_cache_rows: list[dict] = []
+        # Index cached history rows by game for bounded filtered reads. (STORAGE-017)
+        self._history_cache_by_game: dict[Any, list[dict]] = {}
+        # Hold decoded rows from an unterminated trailing CSV fragment without caching them. (STORAGE-017)
+        self._history_cache_tail_rows: list[dict] = []
         # Cache the parsed committed-action registry so wallet actions stop re-parsing it. (issue #412)
         self._actions_cache_registry: Any = None
         # Track the legacy snapshot identity used to seed the append-only action journal cache. (issue #432)
@@ -197,6 +207,19 @@ class JsonInfrastructureMixin:
         self._ledger_cache_by_id = {}
         # Discard rows decoded from an unterminated trailing line.
         self._ledger_cache_tail_rows = []
+
+    # Forget every cached history row so the next read reloads from the CSV. (STORAGE-017)
+    def _drop_history_cache(self) -> None:
+        # Restart incremental parsing from the beginning of the history file.
+        self._history_cache_offset = 0
+        # Forget the cached file identity so any observed state forces a reload.
+        self._history_cache_mtime_ns = None
+        # Discard previously decoded append-order rows.
+        self._history_cache_rows = []
+        # Discard the per-game index built from the discarded rows.
+        self._history_cache_by_game = {}
+        # Discard rows decoded from an unterminated trailing fragment.
+        self._history_cache_tail_rows = []
 
     # Forget the cached committed-action registry so the next read reloads from the file. (issue #412)
     def _drop_actions_cache(self) -> None:

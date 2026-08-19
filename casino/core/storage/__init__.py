@@ -32,7 +32,7 @@ from casino.core.game_action import GameActionExecutor, GameActionMovement, Game
 # Preserve the historical pool-configuration import used by storage fixtures and live validation.
 from casino.core.mysql_pool import MySQLPoolConfig
 # Import and re-export the provider-neutral storage contract and shared helpers.
-from casino.core.storage.base import HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
+from casino.core.storage.base import ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS, HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _is_player_economics_event, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _player_economics_amount, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
 # Import and re-export the JSON reset lifecycle and shared private epoch constants.
 from casino.core.storage.reset import JsonResetMixin, _GAME_ACTION_EPOCH_STORAGE_VERSION, _GAME_ACTION_MAX_EPOCH, _GAME_ACTION_STORAGE_VERSION
 # Import and re-export the JSON game-action lifecycle and private recovery-stage set.
