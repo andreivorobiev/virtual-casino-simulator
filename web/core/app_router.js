@@ -13,12 +13,9 @@ export function createAppRouter(dependencies) {
     isInvitationRoute, locationRef, logClient, navigationOwnership,
     renderExpiredSessionGate, renderLobby, renderMySettings, renderPublicAuthRoute,
     safe, setActive, setLocale, t, updateCurrentUserShell, walletLifecycle,
-    windowRef,
   } = dependencies;
   // Cache loaded game module exports for the application lifetime.
   const loadedGames = new Map();
-  // Track the active game-rail observer so navigation never leaves duplicate listeners.
-  let gameRailObserver = null;
 
   // Preserve application-root-relative catalog modules after routing moved beneath /core. (CORE-007)
   function applicationModulePath(path) {
@@ -164,22 +161,14 @@ export function createAppRouter(dependencies) {
     });
   }
 
-  // Preserve scroll-region semantics across game-owned rerenders.
-  function observeGameScrollRegions(view) {
-    // Disconnect the previous route observer before watching the new route.
-    gameRailObserver?.disconnect();
-    // Apply semantics immediately to the first completed render.
+  // Apply game-only semantics from the shared route-outlet post-render hook.
+  function prepareRouteAfterRender(view, render = {}) {
+    // Ignore Lobby, Settings, auth, loading, and stale route writes without scanning their markup.
+    if (!getGameDescriptors().some(game => game.id === render.routeId)) return false;
+    // Decorate the current game's intentional scroll regions after its root write commits.
     prepareGameScrollRegions(view);
-    // Reapply semantics after structural replacements.
-    gameRailObserver = new windowRef.MutationObserver(() => prepareGameScrollRegions(view));
-    // Avoid observing attributes written by this helper.
-    gameRailObserver.observe(view, { childList: true, subtree: true });
-  }
-
-  // Disconnect game-only observation before a non-game shell surface replaces it.
-  function disconnectGameObserver() {
-    // Stop the active observer when one exists.
-    gameRailObserver?.disconnect();
+    // Report that the game route accepted post-render semantics for listener-free tests.
+    return true;
   }
 
   // Load one catalog-owned frontend module with diagnostic failures.
@@ -293,8 +282,7 @@ export function createAppRouter(dependencies) {
       const view = documentRef.getElementById('view');
       // Render Lobby without loading a game module.
       if (targetRoute === 'lobby') {
-        // Stop game observation and apply bounded Lobby semantics.
-        disconnectGameObserver();
+        // Apply bounded Lobby semantics without leaving game-specific observers behind.
         documentRef.body.classList.add('lobby-active');
         view.className = 'screen lobby-screen';
         view.tabIndex = 0;
@@ -307,8 +295,7 @@ export function createAppRouter(dependencies) {
       }
       // Render personal Settings without importing a game.
       if (targetRoute === 'settings') {
-        // Stop game observation and apply bounded Settings semantics.
-        disconnectGameObserver();
+        // Apply bounded Settings semantics without standing game observers.
         documentRef.body.classList.remove('lobby-active');
         view.className = 'screen settings-screen';
         view.setAttribute('data-testid', 'settings-screen');
@@ -342,10 +329,11 @@ export function createAppRouter(dependencies) {
         // Unmount stale work and restore only the newer public route.
         onStale: (game, mountStarted) => { if (mountStarted) game?.unmount?.(); renderPublicAuthRoute(); },
       });
-      // Stop before observers or wallet repaint when stale.
+      // Stop before post-render semantics or wallet repaint when stale.
       if (mountedRoute.stale) return;
-      // Prepare shared game rails and refresh authoritative wallet chrome.
-      observeGameScrollRegions(view);
+      // Prepare shared game rails even when a compatible mount appended instead of replacing the outlet.
+      prepareRouteAfterRender(view, { routeId: targetRoute });
+      // Refresh authoritative wallet chrome after the owned mount completes.
       updateCurrentUserShell();
     } catch (error) {
       // Never replace a newer public gate with stale route work.
@@ -382,10 +370,10 @@ export function createAppRouter(dependencies) {
   // Publish the reviewed routing and shared locale seams.
   return {
     descriptorFromCatalog,
-    disconnectGameObserver,
     loadedGames,
     localeOptionsHtml,
     navigate,
+    prepareRouteAfterRender,
     renderInitialRouteRestore,
     renderNav,
     revealActiveNav,
