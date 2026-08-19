@@ -13534,6 +13534,20 @@
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {
+      "id": "TEST-249",
+      "module": "Tests",
+      "description": "The standalone Deuces Wild diagnostic issues a distinct browser-readable CSRF cookie only after a valid session-bound bootstrap, accepts exact cookie/header pairs for real English and Russian deal, hold, and draw actions, and rejects anonymous bootstrap plus missing, mismatched, or cross-session proofs before game dispatch. Both focused and browser paths close their ephemeral non-production listener on success or failure.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/games/deuces_wild_video_poker/test_browser.py"
+      ],
+      "introduced_in": "issue-828-deuces-wild-diagnostic-csrf",
+      "changed_in": "issue-828-deuces-wild-diagnostic-csrf",
+      "notes": "The fixture exercises the public /api/v2/auth/csrf bootstrap and double-submit wire contract without changing or bypassing production auth, API, game, contract, or browser code. The diagnostic remains explicitly outside formal after-pass Browser evidence."
+    },
+    {
       "id": "ROU-001",
       "module": "Roulette",
       "description": "Single-zero roulette mode supports 0 and 1-36.",
