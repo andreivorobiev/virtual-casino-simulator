@@ -51,15 +51,15 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.6
-- tests: 1.114.3
-- docs: 1.110.3
+- tests: 1.114.4
+- docs: 1.110.4
 - contracts: 1.62.6
 - tooling: 1.43.4
 - commenting_policy: 2.1.0
 - color_wheel: 1.1.6
 - poker_dice: 1.1.4
 - boule: 1.1.6
-- faro: 1.1.6
+- faro: 1.1.7
 - trente_et_quarante: 1.1.5
 - pachinko: 1.1.5
 - coin_pusher: 1.1.5
@@ -748,7 +748,7 @@ Historical source baseline: 9.1.0
 - **STORAGE-018** (Storage) - PASS: The state_store compatibility API is a thin provider facade: ordinary and strict reads, complete writes, and atomic updates unconditionally delegate key resolution, locking, recovery, validation, rollback, and publication to the selected storage provider. JSON preserves exact injectable filesystem paths, while non-filesystem providers reject paths outside the configured data root before any operation.
 - **TEST-247** (Tests) - PASS: Listener-free facade evidence runs the identical absent-read, write, ordinary read, atomic update, strict read, and strict update sequence through production JSON and transaction-shaped database providers; binds exact portable keys; proves injectable JSON paths; rejects out-of-root database paths; preserves rollback and concurrency; and statically prevents selector or sidecar-lock reintroduction. Disposable MySQL coverage continues to exercise production state_store callers against real provider rows.
 - **CORE-034** (Application) - PASS: Isolated browser games may delegate route ownership, asynchronous mount cancellation, busy-state coordination, lazy locale initialization and teardown, domain-bound translation, external same-origin stylesheet ownership, and opaque request identities to one shared lifecycle controller without changing game DOM, actions, settlement, localization, or visible layout.
-- **TEST-248** (Tests) - PASS: Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of the first adopter's duplicate helpers; the dedicated Daily Draw Lab browser case preserves its real settled-round and repeat flow.
+- **TEST-248** (Tests) - PASS: Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab and Faro browser cases preserve their real settled-round and repeat flows.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

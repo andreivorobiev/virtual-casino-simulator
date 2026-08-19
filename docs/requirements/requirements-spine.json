@@ -13489,31 +13489,37 @@
         "UI-GAME-LIFECYCLE-001"
       ],
       "browser_tests": [
-        "BR-DAILY-DRAW-LAB-001"
+        "BR-DAILY-DRAW-LAB-001",
+        "BR-FARO-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
         "web/games/daily_draw_lab.js",
         "web/games/daily_draw_lab.css",
+        "web/games/faro.js",
+        "web/games/faro.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
+        "docs/evidence/faro/README.md",
         "modules/application.json",
-        "modules/daily_draw_lab.json"
+        "modules/daily_draw_lab.json",
+        "modules/faro.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-718-game-frontend-lifecycle",
-      "notes": "The first adopter is Daily Draw Lab. Its previously inline route CSS is a formatted external module-owned asset, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged."
+      "changed_in": "issue-718-faro-lifecycle-slice",
+      "notes": "Daily Draw Lab and Faro are the first two adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of the first adopter's duplicate helpers; the dedicated Daily Draw Lab browser case preserves its real settled-round and repeat flow.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab and Faro browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
       ],
       "browser_tests": [
-        "BR-DAILY-DRAW-LAB-001"
+        "BR-DAILY-DRAW-LAB-001",
+        "BR-FARO-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
@@ -13524,8 +13530,8 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-718-game-frontend-lifecycle",
-      "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Existing affected-game browser evidence remains the authoritative visible and settlement acceptance for the adopter."
+      "changed_in": "issue-718-faro-lifecycle-slice",
+      "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     }
   ]
 }
