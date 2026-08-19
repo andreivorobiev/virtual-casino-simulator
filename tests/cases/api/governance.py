@@ -34,6 +34,8 @@ def run_cases(run_case, run_unit_module, root):
     """Register governance cases in their historical execution order."""
     # Prove the governed source-header migration, vendor exclusion, write safety, and filler ratchet. (issue #441)
     run_case("FILE-HEADER-POLICY-001", ["COMMENT-001", "TOOL-009"], lambda: run_unit_module("tests.file_header_policy_tests", "file header policy suite failed"))
+    # Enforce the reviewed line/byte tripwire, growth ratchet, and stale-register cleanup. (issue #731)
+    run_case("GOV-FILE-LENGTH-001", ["TOOL-020", "TEST-244"], lambda: run_unit_module("tests.file_length_policy_tests", "file-length policy suite failed"))
     # Record the exact-source payload and shipped-asset budget checkpoint. (issue #323, TEST-159)
     run_case("PERF-PAYLOAD-BUDGET-001", ["TEST-159"], lambda: run_unit_module("tests.unit.payload_frontend_budget_tests", "payload and frontend budget suite failed"))
     # Record compact shell/Roulette projections and frozen-response compatibility. (issue #323, TEST-166)

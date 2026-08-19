@@ -21,3 +21,5 @@ jobs:
       - name: Run checks
         run: |
           python scripts/validate_module_boundaries.py
+          # Keep the existing required context while enforcing the source-size review tripwire. (TOOL-020)
+          python scripts/validate_file_length.py

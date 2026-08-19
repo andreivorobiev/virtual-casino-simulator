@@ -167,6 +167,24 @@ game allowlists. `docs/game_catalog_governance.md` is authoritative for isolated
 games and `docs/game_expansion_integration_sequence.md` records the serialized
 shared-file integration model.
 
+### Source file-length review tripwire
+
+Hand-written first-party Python and JavaScript that exceeds 1,200 physical lines
+or 96 KiB requires an explicit split-or-justify decision. The canonical audit is
+the path-specific row in `docs/file_length_register.json`; each row records the
+reviewed line count, one-paragraph reason to remain whole, named reviewer, review
+date, and revisit date. A row is not a permanent exemption: growth greater than
+20 percent forces a new review, and a file that returns below both thresholds
+must remove its stale row in the same change.
+
+`scripts/validate_file_length.py` scans Git-tracked `.py` and `.js` files, skips
+repository data, vendored code, and explicitly marked generated sources, and
+runs inside the existing Module Boundary required context. New source and split
+series must keep the register current instead of weakening or bypassing the
+validator. The four original monolith exceptions for #727 through #730 retired
+when their source paths dropped below threshold; successor owners are reviewed
+on their own current paths and rationale.
+
 Python and JavaScript follow `docs/commenting_policy.md`: every meaningful
 executable line has an inline or immediately adjacent purpose comment. Other
 formats use clear section comments where legal. Generated artifacts must be

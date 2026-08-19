@@ -1381,8 +1381,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the seven game ports, alias retirement, and first #727 extraction to total 1094 rows.
-        self.assertEqual(len(requirements), 1096)
+        # Require the storage split and file-length governance allocations to total 1098 rows.
+        self.assertEqual(len(requirements), 1098)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1535,6 +1535,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-241": "Tests",  # Bind alias rejection, canonical call shape, and historical-read evidence.
             "TEST-242": "Tests",  # Bind exact Browser and API-lane inventory equality across every runner extraction.
             "TEST-243": "Tests",  # Bind storage package ownership, signatures, and provider parity evidence.
+            "TOOL-020": "Tooling",  # Bind the tracked-source file-length tripwire and review register.
+            "TEST-244": "Tests",  # Bind threshold, growth, stale-row, and exclusion evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

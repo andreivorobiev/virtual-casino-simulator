@@ -35,6 +35,8 @@ def main():
     run([sys.executable, "verify_rules.py"])
     # Enforce the monotonic escape-by-default innerHTML migration before broader API suites run. (SEC-017)
     run([sys.executable, "scripts/validate_inner_html_templates.py"])
+    # Reject unreviewed large first-party sources and stale or overgrown audit-register entries. (TOOL-020)
+    run([sys.executable, "scripts/validate_file_length.py"])
     run([sys.executable, "tests/run_tests.py", "--api"])
     run([sys.executable, "scripts/validate_contracts.py"])
     run([sys.executable, "scripts/validate_module_boundaries.py"])

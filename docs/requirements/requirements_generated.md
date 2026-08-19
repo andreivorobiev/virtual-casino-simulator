@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.5
 - teen_patti: 1.1.5
-- tests: 1.108.12
-- docs: 1.104.12
+- tests: 1.109.0
+- docs: 1.105.0
 - contracts: 1.62.4
-- tooling: 1.41.2
+- tooling: 1.42.0
 - commenting_policy: 2.0.0
 - color_wheel: 1.1.6
 - poker_dice: 1.1.4
@@ -739,6 +739,8 @@ Historical source baseline: 9.1.0
 - **TEST-240** (Tests) - PASS: Focused SimpleWagerGame and Dragon Tiger evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry card redraw, frozen action, shoe summary, rules, and nested response shapes, old ledger-proof recovery without shoe consumption, every shared lifecycle crash window, direct fifty-round history plus unbounded durable action replay, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-241** (Tests) - PASS: Listener-free settlement evidence pins the exact canonical keyword-only GameSettlementGateway.apply_once signature, rejects every retired alias and missing, empty, or structured fingerprints before ledger access, proves new events contain no configured historical detail-key alias, preserves reads of immutable predecessor rows, and parses every production game apply-once call to reject an explicit retired keyword spelling.
 - **TEST-242** (Tests) - PASS: Every tests/run_tests.py extraction slice preserves exact reviewed Browser and non-Browser case counts plus sorted permanent ID lists; pure Browser shard policy, area-owned API registrations, and affinity-owned Browser registrations execute outside the monolith while the historical tests/run_tests.py CLI remains the compatibility entrypoint.
+- **TOOL-020** (Tooling) - PASS: A repository validator scans Git-tracked first-party Python and JavaScript, excludes data, vendored code, and explicitly marked generated source, and requires every file above 1,200 physical lines or 96 KiB to have an exact reviewed register row; malformed, missing, duplicate, unsorted, stale, or more-than-20-percent-grown audit entries fail closed inside the existing Module Boundary required context.
+- **TEST-244** (Tests) - PASS: Listener-free policy evidence proves the current reviewed baseline, independent line and byte thresholds, exact-versus-greater-than-twenty-percent growth behavior, stale-entry rejection, generated, vendored, and data exclusions, and fail-closed register schema, ordering, and duplication diagnostics without mutating checked source.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
