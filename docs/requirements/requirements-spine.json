@@ -1918,12 +1918,13 @@
         "contracts/compatibility/app-0.9.5.80.json",
         "contracts/compatibility/app-0.9.5.81.json",
         "contracts/compatibility/app-0.9.5.82.json",
+        "contracts/compatibility/app-0.9.5.83.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "issue-985-release-copy-inventory",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.82 publication derives exact retained immutable v0.9.5.81 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Its Git-archive API copy receives a complete disposable index before repository gates run, preserving tracked-only inventory without a filesystem fallback, source-byte mutation, user Git templates, or remote contact. The release declares rollback at unchanged MySQL schema 2 inside both runtime windows; rollback is application-only and never reverses the MySQL schema. v0.9.6.0 remains reserved for a separately accepted product wave."
+      "changed_in": "issue-987-poller-extraction-permissions",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Corrective v0.9.5.83 publication derives exact retained terminal-green v0.9.5.81 from repository compatibility policy because v0.9.5.82 never activated, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Its Git-archive API copy receives a complete disposable index before repository gates run, preserving tracked-only inventory without a filesystem fallback, source-byte mutation, user Git templates, or remote contact. The release declares rollback at unchanged MySQL schema 2 inside both runtime windows; rollback is application-only and never reverses the MySQL schema. v0.9.6.0 remains reserved for a separately accepted product wave."
     },
     {
       "id": "BOT-001",
@@ -7623,7 +7624,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.82 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.83 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -7660,7 +7661,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.82 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.83 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -9389,7 +9390,7 @@
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
       "changed_in": "issue-430-mysql-schema-rollback-bridge",
-      "notes": "The bridge rejects an exact-schema-three or exact-schema-four candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three or schema-four release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.82 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three or schema-four production activation, or issue closure."
+      "notes": "The bridge rejects an exact-schema-three or exact-schema-four candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three or schema-four release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.83 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three or schema-four production activation, or issue closure."
     },
     {
       "id": "UX-023",
@@ -11240,7 +11241,7 @@
     {
       "id": "OPS-007",
       "module": "Operations",
-      "description": "Production delivery is a host-owned pull state machine: a root systemd timer queries the newest stable immutable GitHub Release at a bounded cadence, never downgrades, alarms when a newer release remains undelivered for more than three intervals, preserves the exact prior application selector and provenance fragment for rollback, prevents every poller and edge-monitor Python child from writing interpreter caches into immutable release roots, resolves direct-drill monitoring through a strict root-managed environment reader, and reports success only after public liveness plus authenticated readiness identify the exact expected version and full source SHA.",
+      "description": "Production delivery is a host-owned pull state machine: a root systemd timer queries the newest stable immutable GitHub Release at a bounded cadence, never downgrades, alarms when a newer release remains undelivered for more than three intervals, preserves the exact prior application selector and provenance fragment for rollback, normalizes only authenticated real extraction directories so the unprivileged application service can traverse them under the poller umask, prevents every poller and edge-monitor Python child from writing interpreter caches into immutable release roots, resolves direct-drill monitoring through a strict root-managed environment reader, and reports success only after public liveness plus authenticated readiness identify the exact expected version and full source SHA.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-PULL-001"
@@ -11256,13 +11257,13 @@
         "tests/release_poller_tests.py"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-820-poller-lag-cleanup",
-      "notes": "Repository acceptance is listener-free and makes no host connection. The direct drill reads only allowlisted authorization and origin assignments without shell evaluation or output, every Python child inherits the bytecode-write prohibition, lag-check cleanup is scoped to its isolated invocation, and every failure removes only the captured owned work directory before recording a durable alarm. Host requalification remains separately guarded on issue #732; umbrella #435 stays open until that evidence is accepted."
+      "changed_in": "issue-987-poller-extraction-permissions",
+      "notes": "Repository acceptance is listener-free and makes no host connection. The directory normalizer runs only after current-release verification authenticates the archive, rejects links and special nodes without following them, changes no regular-file byte or mode, and precedes every candidate command or selector mutation. The direct drill reads only allowlisted authorization and origin assignments without shell evaluation or output, every Python child inherits the bytecode-write prohibition, lag-check cleanup is scoped to its isolated invocation, and every failure removes only the captured owned work directory before recording a durable alarm."
     },
     {
       "id": "TOOL-015",
       "module": "Tooling",
-      "description": "The packaged release contains a root-owned pull poller plus systemd service and timer templates. The poller accepts only a canonical stable GitHub Release, downloads the exact three hosted assets, verifies the two-record checksum file, manifest artifact and source provenance, complete package policy, monitor pairing and exact clean schema two before selector mutation, disables Python bytecode writes for direct, systemd poller, and scheduled edge-monitor execution so rollback-drill roots remain archive-identical for the first pull, reads direct-command monitor settings through an allowlisted non-shell parser, captures cleanup ownership independently of function-local lifetime, switches the application atomically, updates its stable executable only after successful health, and performs application-only rollback without migration, grant, provider, or database-rollback authority.",
+      "description": "The packaged release contains a root-owned pull poller plus systemd service and timer templates. The poller accepts only a canonical stable GitHub Release, downloads the exact three hosted assets, verifies the two-record checksum file, manifest artifact and source provenance, complete package policy, monitor pairing and exact clean schema two before selector mutation, rejects linked or special extracted entries and normalizes only authenticated real directories to traversal mode before candidate execution, disables Python bytecode writes for direct, systemd poller, and scheduled edge-monitor execution so rollback-drill roots remain archive-identical for the first pull, reads direct-command monitor settings through an allowlisted non-shell parser, captures cleanup ownership independently of function-local lifetime, switches the application atomically, updates its stable executable only after successful health, and performs application-only rollback without migration, grant, provider, or database-rollback authority.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-PULL-001"
@@ -11279,13 +11280,13 @@
         "docs/production_cicd_runbook.md"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-820-poller-lag-cleanup",
-      "notes": "Protected-main workflow publication retains its existing context and immutable-release checks but has no SSH, SCP, inbound credential, or host mutation leg. Anonymous GitHub API access is the default; an optional fine-grained token is limited to repository Contents and Metadata read access and never appears in argv or output. Direct monitor authorization is read from the root-managed file without reflection, release-root comparison remains strict for missing, changed, symlinked, or unrelated extra entries, and lag-check cleanup uses a subshell-local EXIT trap so no function-local path can leak into the caller."
+      "changed_in": "issue-987-poller-extraction-permissions",
+      "notes": "Protected-main workflow publication retains its existing context and immutable-release checks but has no SSH, SCP, inbound credential, or host mutation leg. Anonymous GitHub API access is the default; an optional fine-grained token is limited to repository Contents and Metadata read access and never appears in argv or output. The current trusted release verifies the files-only archive before extraction; the candidate tree then rejects links and special nodes and receives directory-only mode 0755 so systemd UMask 0027 cannot make the service working directory inaccessible. Direct monitor authorization is read from the root-managed file without reflection, release-root comparison remains strict for missing, changed, symlinked, or unrelated extra entries, and lag-check cleanup uses a subshell-local EXIT trap so no function-local path can leak into the caller."
     },
     {
       "id": "TEST-180",
       "module": "Tests",
-      "description": "Listener-free release-delivery evidence executes numeric compare and no-downgrade decisions, exact stable-release metadata inspection, canonical checksum and source-provenance verification, corrupt-asset rejection before the full verifier, direct-command monitor-file loading without token output, candidate and predecessor readiness failure recovery, and a successful rollback-drill-to-poll sequence that proves zero Python cache residue before exact-root reuse. Static order proofs require immutable and schema-two gates before production mutation, strict rejection of unrelated release-root extras, poller and edge-monitor bytecode-write prohibition, exact owned-work cleanup plus durable failure alarm, application-only rollback, five-minute persistent scheduling, three-interval lag detection, and complete retirement of runner SSH credentials and commands.",
+      "description": "Listener-free release-delivery evidence executes numeric compare and no-downgrade decisions, exact stable-release metadata inspection, canonical checksum and source-provenance verification, corrupt-asset rejection before the full verifier, real-unzip extraction under the production umask with directory-only traversal repair and byte preservation, unsafe-tree rejection before chmod or selector mutation, direct-command monitor-file loading without token output, candidate and predecessor readiness failure recovery, and a successful rollback-drill-to-poll sequence that proves zero Python cache residue before exact-root reuse. Static order proofs require immutable and schema-two gates before production mutation, strict rejection of unrelated release-root extras, poller and edge-monitor bytecode-write prohibition, exact owned-work cleanup plus durable failure alarm, application-only rollback, five-minute persistent scheduling, three-interval lag detection, and complete retirement of runner SSH credentials and commands.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-PULL-001",
@@ -11300,8 +11301,8 @@
         ".github/workflows/deploy-production.yml"
       ],
       "introduced_in": "issue-732-release-poller",
-      "changed_in": "issue-820-poller-lag-cleanup",
-      "notes": "Synthetic files and API records stay in disposable directories. The suite executes lag-check through main for current, within-window, overdue, and identity-conflict outcomes, proves exact temporary cleanup and continued caller execution, opens no listener, makes no GitHub or production request, invokes no real service manager, and performs no release, host, database, provider, secret, DNS, or billing mutation."
+      "changed_in": "issue-987-poller-extraction-permissions",
+      "notes": "Synthetic files and API records stay in disposable directories. Required Linux CI uses the real unzip/stat/chmod tools under umask 0027; the portable hostile-tree seam proves no chmod follows a linked or special entry. The suite executes lag-check through main for current, within-window, overdue, and identity-conflict outcomes, proves exact temporary cleanup and continued caller execution, opens no listener, makes no GitHub or production request, invokes no real service manager, and performs no release, host, database, provider, secret, DNS, or billing mutation."
     },
     {
       "id": "TOOL-014",
