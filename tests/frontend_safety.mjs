@@ -31,10 +31,16 @@ const rouletteSource = await readFile(path.join(root, 'web', 'games', 'roulette.
 const teenPattiSource = await readFile(path.join(root, 'web', 'games', 'teen_patti.js'), 'utf8');
 // Read the shared autoplay lifecycle for reconciliation and server-tick contracts.
 const autoplaySource = await readFile(path.join(root, 'web', 'core', 'autoplay.js'), 'utf8');
-// Read the application shell for render-stability and containment-telemetry wiring. (UX-026, UX-027)
-const appSource = await readFile(path.join(root, 'web', 'app.js'), 'utf8');
-// Read the Admin console for owner-adjustable rate-policy wiring. (SEC-015, ADMIN-032)
-const adminSource = await readFile(path.join(root, 'web', 'admin.js'), 'utf8');
+// Read the extracted Language tab that owns formatter option composition. (CORE-033)
+const adminLanguageSource = await readFile(path.join(root, 'web', 'admin', 'language.js'), 'utf8');
+// Read the extracted Sessions tab that owns request-rate policy controls. (SEC-015, ADMIN-032)
+const adminSessionsSource = await readFile(path.join(root, 'web', 'admin', 'sessions.js'), 'utf8');
+// Read the extracted Guest Trials tab that owns the admission policy controls. (GUEST-001, GUEST-004)
+const adminGuestsSource = await readFile(path.join(root, 'web', 'admin', 'guests.js'), 'utf8');
+// Read the extracted Login view that owns anonymous account-entry policy. (UX-028)
+const loginSource = await readFile(path.join(root, 'web', 'views', 'login.js'), 'utf8');
+// Read the extracted application bootstrap that owns layout stabilization and telemetry. (UX-026, UX-027)
+const appBootstrapSource = await readFile(path.join(root, 'web', 'core', 'app_bootstrap.js'), 'utf8');
 // Read the shared audio helper so its fail-closed fallback remains silent before settings load. (AUDIO-010)
 const voiceSource = await readFile(path.join(root, 'web', 'core', 'voice.js'), 'utf8');
 // Read Blackjack focus and announcement integration.
@@ -106,9 +112,9 @@ assert.match(cardsSource, /import \{ safe \} from '\.\/ui\.js';/);
 // Reject any return of the retired card-local escape implementation. (CORE-033)
 assert.doesNotMatch(cardsSource, /function escapeHtml\(/);
 // Require the formatter selector to compose its reviewed option fragments through the tagged template. (CORE-033)
-assert.match(adminSource, /return html`\$\{browser\}\$\{formatters\.map\(locale => option\(/);
+assert.match(adminLanguageSource, /return html`\$\{browser\}\$\{formatters\.map\(locale => option\(/);
 // Reject string coercion that would make the outer template escape every generated option as text. (CORE-033)
-assert.doesNotMatch(adminSource, /return browser \+ formatters\.map\(/);
+assert.doesNotMatch(adminLanguageSource, /return browser \+ formatters\.map\(/);
 // Build the persistent toast outlet used by every palette assertion.
 const toastOutlet = { textContent: '', style: {}, hidden: true };
 // Route only the shared toast identity to the focused outlet.
@@ -233,20 +239,24 @@ assert.match(uiSource, /let renderSequence=0;[\s\S]*?requestAnimationFrame\(\(\)
 // Require external focus plus fresh keyboard, pointer, wheel, or touch input to invalidate both deferred restoration callbacks. (UX-027, TEST-155)
 assert.match(uiSource, /let interactionSequence=0;[\s\S]*?let restorationActive=false;[\s\S]*?addEventListener\('focusin',markFocusInteraction,[\s\S]*?addEventListener\('keydown',markInteraction,[\s\S]*?addEventListener\('pointerdown',markInteraction,[\s\S]*?addEventListener\('wheel',markInteraction,[\s\S]*?addEventListener\('touchstart',markInteraction,[\s\S]*?interaction!==interactionSequence[\s\S]*?interaction!==interactionSequence/);
 // Require the shell to install the route-outlet interceptor exactly once with the live route callback. (UX-027)
-assert.match(appSource, /installStableRouteRenders\(routeOutlet, \(\) => active, scheduleLayoutAudit\);/);
+assert.match(appBootstrapSource, /installStableRouteRenders\(routeOutlet, getActive, scheduleLayoutAudit\);/);
 // Require the owner console to load and save the two bounded live rate-policy fields. (SEC-015, ADMIN-032)
-assert.match(adminSource, /\/api\/v2\/admin\/rate-limits[\s\S]*?admin-rate-limit-requests[\s\S]*?admin-rate-limit-window[\s\S]*?saveRateLimits/);
+assert.match(adminSessionsSource, /\/api\/v2\/admin\/rate-limits[\s\S]*?admin-rate-limit-requests[\s\S]*?admin-rate-limit-window[\s\S]*?saveRateLimits/);
 // Require every sound channel and game announcement to start disabled in the frontend fallback. (AUDIO-010)
 assert.match(voiceSource, /AUDIO_SETTINGS=\{master_enabled:false,[\s\S]*?sfx_enabled:false,[\s\S]*?voice_enabled:false,[\s\S]*?announce_roulette_results:false,[\s\S]*?announce_blackjack_results:false,[\s\S]*?announce_baccarat_results:false,[\s\S]*?announce_bingo_calls:false,[\s\S]*?announce_keno_results:false\}/);
 // Require the Admin Guest Trials surface to publish and save the owner admission switch. (GUEST-001, GUEST-004)
-assert.match(adminSource, /\/api\/v2\/admin\/guest-trials\/settings[\s\S]*?admin-guest-trials-enabled[\s\S]*?admin-save-guest-policy/);
+assert.equal(adminGuestsSource.match(/\/api\/v2\/admin\/guest-trials\/settings/g)?.length, 2);
+// Require both stable admission-control identities in the extracted policy card.
+assert.match(adminGuestsSource, /admin-guest-trials-enabled[\s\S]*?admin-save-guest-policy/);
 // Require anonymous entry to exist only after the public provider-backed policy explicitly allows it. (GUEST-001, GUEST-002, UX-028)
-assert.match(appSource, /auth-guest-slot[\s\S]*?renderLoginPolicyActions[\s\S]*?policy\.guest_trials_enabled === true \? `<button id="guest-trial-button"/);
+assert.match(loginSource, /async function renderLoginPolicyActions[\s\S]*?policy\.guest_trials_enabled === true[\s\S]*?`<button id="guest-trial-button"/);
+// Require the login template to retain the dedicated policy-owned guest slot.
+assert.match(loginSource, /id="auth-guest-slot"/);
 // Require unavailable provider actions to be omitted instead of rendering permanently disabled controls. (OAUTH-007, UX-028)
-assert.doesNotMatch(appSource, /data-testid="oauth-providers-disabled"/);
+assert.doesNotMatch(loginSource, /data-testid="oauth-providers-disabled"/);
 // Require password and guest entry to share the same terms validator and single status owner. (UX-028)
-assert.match(appSource, /function requireLoginTerms\(\)[\s\S]*?setAuthStatus\(t\('auth\.termsRequired'[\s\S]*?async function handleLoginSubmit[\s\S]*?if \(!requireLoginTerms\(\)\) return;[\s\S]*?async function handleGuestTrial[\s\S]*?if \(!requireLoginTerms\(\)\) return;/);
+assert.match(loginSource, /function requireLoginTerms\(\)[\s\S]*?setAuthStatus\(t\('auth\.termsRequired'[\s\S]*?async function handleLoginSubmit[\s\S]*?if \(!requireLoginTerms\(\)\) return;[\s\S]*?async function handleGuestTrial[\s\S]*?if \(!requireLoginTerms\(\)\) return;/);
 // Require settled containment loss to reach Admin telemetry through the frozen client-log helper. (UX-026)
-assert.match(appSource, /logClient\('layout_overflow', \{ route: active \|\| 'none', viewport: /);
+assert.match(appBootstrapSource, /logClient\('layout_overflow',[\s\S]*?route: getActive\(\) \|\| 'none',[\s\S]*?viewport:/);
 // Require Roulette to center and scale its fixed board through the measured continuous fit. (UX-026)
 assert.match(rouletteSource, /translateX\(\$\{offsetX\.toFixed\(2\)\}px\) scale\(\$\{scale\.toFixed\(4\)\}\)/);

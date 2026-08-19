@@ -54,24 +54,28 @@ test("warm native account links mount one-shot public auth routes", async () => 
   assert.equal(publicAuthRouteKind("/games/roulette"), "");
   // Read the shared controller to prove popstate checks the public gate before session navigation.
   const source = await readFile(new URL("../../web/app.js", import.meta.url), "utf8");
+  // Read extracted lifecycle wiring that now owns the browser popstate listener.
+  const bootstrapSource = await readFile(new URL("../../web/core/app_bootstrap.js", import.meta.url), "utf8");
   // Require the warm-link event to route through the centralized public renderer first.
-  assert.match(source, /addEventListener\('popstate',[^\n]+renderPublicAuthRoute\(\)/);
+  assert.match(bootstrapSource, /addEventListener\('popstate',[\s\S]+if \(renderPublicAuthRoute\(\)\) return;/);
   // Isolate the public router so authenticated game lifecycle teardown cannot be satisfied elsewhere.
   const publicRouter = source.slice(source.indexOf("function renderPublicAuthRoute"), source.indexOf("function transientRouteBearer"));
   // Require active session, route, state, or descriptors to trigger the centralized unmount boundary once.
   assert.match(publicRouter, /shellNavigationOwnership\.invalidate\(\)[\s\S]+if \(currentSession \|\| active \|\| latestState \|\| gameDescriptors\.length\) clearAuthenticatedShellState\(\{ invalidateNavigation: false \}\)/);
   // Require all three one-shot native destinations to retain their module-held bearer readers.
-  assert.ok(["/enroll/invitation", "/enroll/verify", "/account/reset"].every(path => source.includes(`transientRouteBearer('${path}')`)));
+  const accountViews = await Promise.all(["invitation", "verification", "reset"].map(name => readFile(new URL(`../../web/views/${name}.js`, import.meta.url), "utf8")));
+  // Require each transient route to stay owned by one extracted account view.
+  assert.ok(["/enroll/invitation", "/enroll/verify", "/account/reset"].every(path => accountViews.some(viewSource => viewSource.includes(`transientRouteBearer('${path}')`))));
   // Isolate the invitation renderer so its warm-route state reset cannot be satisfied by another gate.
-  const invitation = source.slice(source.indexOf("function renderInvitationGate"), source.indexOf("async function handleInvitationSubmit"));
+  const invitation = accountViews[0].slice(accountViews[0].indexOf("function renderInvitationGate"));
   // Require the invitation gate to clear both authenticated session and feedback ownership.
-  assert.match(invitation, /currentSession = null; window\.CasinoCurrentUser = null;[\s\S]+syncFeedbackReporter\(null\)/);
+  assert.match(invitation, /setSession\(null\);[\s\S]+windowRef\.CasinoCurrentUser = null;[\s\S]+syncFeedbackReporter\(null\)/);
   // Isolate reconnect handling so a retained vault session cannot overwrite the warm public gate.
-  const reconnect = source.slice(source.indexOf("async function refreshAfterReconnect"), source.indexOf("export async function navigate"));
+  const reconnect = source.slice(source.indexOf("async function refreshAfterReconnect"), source.indexOf("void startApplication"));
   // Require public auth ownership to return before current-user refresh.
   assert.match(reconnect, /if \(renderPublicAuthRoute\(\)\) return \{ status: 'public-auth-route' \};[\s\S]+refreshCurrentSession\(\)/);
   // Isolate current-user refresh to prove cold public links and non-auth failures stay fail closed.
-  const refresh = source.slice(source.indexOf("async function refreshCurrentSession"), source.indexOf("async function loadGame"));
+  const refresh = source.slice(source.indexOf("async function refreshCurrentSession"), source.indexOf("function setStatusText"));
   // Require a cold public gate before currentUser and restrict stale-shell clearing to exact unauthorized.
   assert.match(refresh, /if \(renderPublicAuthRoute\(\)\) return false;[\s\S]+currentUser\(\)[\s\S]+if \(err\?\.code !== 'UNAUTHORIZED'\) throw err;/);
   // Read the API client so compound native account-switch serialization is source-bound.
@@ -135,11 +139,11 @@ test("warm public route invalidates deferred game navigation", async () => {
   // Verify the public gate remained the final rendered owner after the stale failure.
   assert.equal(effects.publicRenders, 3);
   // Read the application source so the tested helper is proven at every navigate async and catch boundary.
-  const source = await readFile(new URL("../../web/app.js", import.meta.url), "utf8");
+  const source = await readFile(new URL("../../web/core/app_router.js", import.meta.url), "utf8");
   // Isolate navigate from initialization so unrelated ownership checks cannot satisfy the regression.
-  const navigateSource = source.slice(source.indexOf("export async function navigate"), source.indexOf("// Initialize shell state"));
+  const navigateSource = source.slice(source.indexOf("async function navigate(route, options = {})"));
   // Require a claimed ticket, owned mount helper, settings post-await check, and owned diagnostic boundary.
-  assert.match(navigateSource, /const navigationTicket = shellNavigationOwnership\.claim\(\)[\s\S]+await renderMySettings\(view\)[\s\S]+shellNavigationOwnership\.owns\(navigationTicket\)[\s\S]+await mountOwnedRoute\([\s\S]+if \(mountedRoute\.stale\) return;[\s\S]+catch \(err\)[\s\S]+shellNavigationOwnership\.owns\(navigationTicket\)[\s\S]+await awaitOwnedRouteEffect\([\s\S]+if \(!ownsAfterLog\) return;/);
+  assert.match(navigateSource, /const navigationTicket = navigationOwnership\.claim\(\)[\s\S]+await renderMySettings\(view\)[\s\S]+navigationOwnership\.owns\(navigationTicket\)[\s\S]+await mountOwnedRoute\([\s\S]+if \(mountedRoute\.stale\) return;[\s\S]+catch \(error\)[\s\S]+navigationOwnership\.owns\(navigationTicket\)[\s\S]+await awaitOwnedRouteEffect\([\s\S]+if \(!ownsAfterLog\) return;/);
   // Claim an error route before its asynchronous diagnostic begins.
   const diagnosticTicket = ownership.claim();
   // Pause the diagnostic at the exact await that formerly permitted stale error repaint.

@@ -2,7 +2,6 @@
   "schema_version": 1,
   "requirement": "SEC-017",
   "maximum_unmigrated_assignments": {
-    "web/app.js": 24,
     "web/core/autoplay.js": 1,
     "web/core/feedback.js": 3,
     "web/games/acey_deucey.js": 1,

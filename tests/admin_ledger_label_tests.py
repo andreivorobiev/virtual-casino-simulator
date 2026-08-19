@@ -21,6 +21,8 @@ ADMIN_PATH = ROOT / "web" / "admin.js"
 DASHBOARD_PATH = ROOT / "web" / "admin" / "dashboard.js"
 # Name the extracted Ledger-tab module source.
 LEDGER_PATH = ROOT / "web" / "admin" / "ledger.js"
+# Name the extracted Players & Bots-tab module source.
+PLAYERS_PATH = ROOT / "web" / "admin" / "players.js"
 
 
 # Verify ADMIN-027 and TEST-132 without opening a listener or browser.
@@ -38,6 +40,8 @@ class AdminLedgerLabelTests(unittest.TestCase):
         cls.dashboard_source = DASHBOARD_PATH.read_text(encoding="utf-8")
         # Read the extracted Ledger renderer source.
         cls.ledger_source = LEDGER_PATH.read_text(encoding="utf-8")
+        # Read the extracted Players & Bots renderer source.
+        cls.players_source = PLAYERS_PATH.read_text(encoding="utf-8")
         # Join the two governed ledger surfaces for behavior-level occurrence checks.
         cls.surface_source = f"{cls.dashboard_source}\n{cls.ledger_source}"
         # Extract the ordered suffix-to-resource table from production JavaScript.
@@ -98,8 +102,10 @@ class AdminLedgerLabelTests(unittest.TestCase):
         self.assertEqual(self.surface_source.count("ledgerEventLabel(row.transaction_type, row.game)"), 2)
         # Keep generic labels out of both governed ledger surfaces.
         self.assertEqual(self.surface_source.count("humanLabel(row.transaction_type)"), 0)
-        # Leave only the separately mapped practice-opponent fallback in the Admin dispatcher source.
-        self.assertEqual(self.admin_source.count("humanLabel(row.transaction_type)"), 1)
+        # Keep the dispatcher free of tab-owned transaction rendering.
+        self.assertEqual(self.admin_source.count("humanLabel(row.transaction_type)"), 0)
+        # Leave only the separately mapped practice-opponent fallback in the Players & Bots surface.
+        self.assertEqual(self.players_source.count("humanLabel(row.transaction_type)"), 1)
         # Require the listener-free helper to be imported from the application-owned shared path.
         self.assertIn("from './core/admin_labels.js'", self.admin_source)
         # Require the dispatcher to inject that shared helper into the extracted Dashboard surface.

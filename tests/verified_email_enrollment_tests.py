@@ -402,17 +402,19 @@ class VerifiedEmailEnrollmentTests(unittest.TestCase):
     # Prove the browser exposes cancellation only with a bearer and reuses its exact lost-response key.
     def test_cancel_frontend_requires_bearer_and_stable_action_key(self):
         # Read the governed frontend source without launching a browser listener.
-        source = (Path(__file__).resolve().parents[1] / "web" / "app.js").read_text(encoding="utf-8")
+        source = (Path(__file__).resolve().parents[1] / "web" / "views" / "verification.js").read_text(encoding="utf-8")
         # Require the cancel control to stay disabled before an email-link bearer arrives.
-        self.assertIn("data-testid=\"email-verification-cancel\" type=\"button\" ${emailVerificationBearer ? '' : 'disabled'}", source)
+        self.assertIn("const disabled = emailVerificationBearer ? '' : 'disabled';", source)
+        self.assertIn('data-testid="email-verification-cancel" type="button" ${disabled}', source)
         # Require the exact bearer in the cancellation request body.
-        self.assertIn("body: { token: emailVerificationBearer, email:", source)
+        self.assertIn("api('/api/v2/auth/signup/cancel'", source)
+        self.assertIn("token: emailVerificationBearer,", source)
         # Require a domain-separated stable caller key rather than a fresh click UUID.
         self.assertIn("emailVerificationIdempotency(emailVerificationBearer, 'cancel')", source)
         # Require the replay key to clear only after acknowledged terminal success.
-        self.assertIn("sessionStorage.removeItem(await emailVerificationStorageKey(emailVerificationBearer, 'cancel'))", source)
+        self.assertIn("await emailVerificationStorageKey(emailVerificationBearer, 'cancel'),", source)
         # Require successful verification to remove its independent terminal replay key too.
-        self.assertIn("sessionStorage.removeItem(await emailVerificationStorageKey(emailVerificationBearer, 'verify'))", source)
+        self.assertIn("sessionStorageRef.removeItem(await emailVerificationStorageKey(emailVerificationBearer));", source)
 
     # Prove cancellation wins against every delivery phase and cannot be resurrected by a stale callback.
     def test_cancel_at_each_delivery_phase_is_terminal_and_revokes_every_token(self):
