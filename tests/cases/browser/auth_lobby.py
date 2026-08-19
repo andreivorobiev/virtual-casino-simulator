@@ -5,12 +5,15 @@
 # Import regular expressions for exact visible-text and route diagnostics retained by the extracted family.
 import re
 
+# Import the sole environment-scalable Playwright wait budget. (TEST-053)
+from tests.browser_timing import WAIT_MS
+
 
 # Execute the complete producer/consumer family under one deterministic shard owner.
 def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_shard_owns,page,base,ROOT,visual_matrix,read_i18n_json,casino_config,assert_condition,shot,catalog_evidence,region_evidence,wallet_evidence,footer_evidence,game_evidence,console_errors,http_errors,provider_requests):
     # Run visible auth, wallet, shell, catalog, and lobby state only on the declared owner.
     if browser_shard_owns_group('auth_lobby'):
-        initial_shell_response=page.goto(base, wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+        initial_shell_response=page.goto(base, wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
         # Define development-adapter HTML and lazy-module cache parity through a real browser reload. (CORE-026, TEST-068)
         def static_cache_parity():
             # Require the first browser navigation to return the shared no-store contract.
@@ -28,7 +31,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Require both lazy-module responses to be successful, uncached by policy, and exact-current.
             assert len(module_evidence)==2 and all(item=={'ok':True,'cacheControl':'no-store','sourceMatches':True} for item in module_evidence)
             # Navigate through the stable same-origin API documentation URL and wait for Swagger initialization.
-            docs_response=page.goto(base+'/api-docs',wait_until='networkidle'); page.locator('#swagger-ui .download-url-wrapper').wait_for(timeout=10000)
+            docs_response=page.goto(base+'/api-docs',wait_until='networkidle'); page.locator('#swagger-ui .download-url-wrapper').wait_for(timeout=WAIT_MS * 2)
             # Require the dedicated documentation bytes rather than an application-shell fallback.
             assert docs_response and docs_response.body()==(ROOT/'web'/'api-docs.html').read_bytes()
             # Require Swagger's selector to expose every governed contract exactly once.
@@ -40,7 +43,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Return to the anonymous application shell for the later visible Auth cases.
             page.goto(base,wait_until='networkidle')
             # Require the reload to restore the visible anonymous shell before later Auth cases continue.
-            page.get_by_test_id('login-gate').wait_for(timeout=5000)
+            page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
         # Record exact HTML and lazy JavaScript parity through the supported development browser adapter.
         run_case('BR-STATIC-CACHE-001',['CORE-026','TEST-068','API-003','TEST-152'],static_cache_parity)
         # Validate the checked repository-only TiltSeven scaffold without contacting a public host.
@@ -62,7 +65,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Require the browser to remain on checked local bytes rather than a network origin.
                 assert page.url.startswith('file:') and page.url.endswith(locale_path.name)
                 # Wait for the stable marketing landmark before reading copy or geometry.
-                page.locator('main[data-testid="marketing-site"]').wait_for(timeout=5000)
+                page.locator('main[data-testid="marketing-site"]').wait_for(timeout=WAIT_MS)
                 # Require the authored locale, title, shared stylesheet, and local mark to load.
                 identity=page.evaluate("""() => ({ lang:document.documentElement.lang, title:document.title, styleSheets:document.styleSheets.length, markComplete:document.querySelector('.brand img')?.complete===true, markWidth:document.querySelector('.brand img')?.naturalWidth||0, scripts:document.scripts.length, forms:document.forms.length })""")
                 # Reject a missing resource, wrong locale, executable script, or collecting form.
@@ -94,7 +97,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Restore normal media, the primary viewport, and the local Casino login page for existing cases.
             page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size({'width':1920,'height':1080})
             # Return to the loopback application without preserving any public-site state.
-            page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+            page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
         # Record bilingual semantics, safety, accessibility, containment, and eight governed visual artifacts.
         run_case('BR-MARKETING-001',['MARKETING-001','MARKETING-002','TEST-107'],marketing_site_browser)
         # Capture logged-out login evidence for the frontend auth handback.
@@ -140,7 +143,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Wait for the synchronous gate rerender and active locale state.
                 page.wait_for_function("locale => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === locale",arg=locale)
                 # Wait for the policy-owned invite chip to prove asynchronous capability settlement.
-                page.get_by_test_id('signup-invite-only').wait_for(timeout=5000)
+                page.get_by_test_id('signup-invite-only').wait_for(timeout=WAIT_MS)
                 # Require unavailable signup and provider actions to be absent rather than disabled.
                 assert page.get_by_test_id('signup-entry-link').count()==0 and page.get_by_test_id('oauth-google').count()==0 and page.get_by_test_id('oauth-facebook').count()==0 and page.get_by_test_id('oauth-providers-available').count()==0
                 # Expand the invite-only explanation through its real button-owned disclosure.
@@ -168,7 +171,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Trigger fresh policy and provider reads through the visible locale rerender.
                 page.get_by_test_id('auth-locale-select').select_option(locale)
                 # Wait until the exact available provider and signup actions commit.
-                page.get_by_test_id('oauth-providers-available').wait_for(timeout=5000); page.get_by_test_id('signup-entry-link').wait_for(timeout=5000)
+                page.get_by_test_id('oauth-providers-available').wait_for(timeout=WAIT_MS); page.get_by_test_id('signup-entry-link').wait_for(timeout=WAIT_MS)
                 # Require only released actions to exist, with no disabled Facebook substitute.
                 assert page.get_by_test_id('oauth-google').is_visible() and page.get_by_test_id('oauth-facebook').count()==0 and page.get_by_test_id('signup-entry-link').is_visible() and page.get_by_test_id('signup-invite-only').count()==0 and page.locator('[data-testid="login-gate"] :is(button,input,select):disabled').count()==0
                 # Capture every governed viewport without activating sensitive navigation.
@@ -188,7 +191,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Trigger a fresh failed status request through the visible locale rerender.
                 page.get_by_test_id('auth-locale-select').select_option(locale)
                 # Wait for the governed low-cardinality attached error marker.
-                page.get_by_test_id('oauth-providers-status-error').wait_for(state='attached',timeout=5000)
+                page.get_by_test_id('oauth-providers-status-error').wait_for(state='attached',timeout=WAIT_MS)
                 # Require provider actions absent and the sole live owner to expose localized feedback.
                 assert page.get_by_test_id('oauth-google').count()==0 and page.get_by_test_id('oauth-facebook').count()==0 and page.locator('[data-testid="login-gate"] [aria-live]').count()==1 and page.get_by_test_id('oauth-callback-message').inner_text()==read_i18n_json(ROOT/'web'/'i18n'/locale/'shell.json')['auth.oauthStatusError']
                 # Capture every governed viewport for the generic failure state.
@@ -208,9 +211,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Trigger one final real policy-aware refresh through a guaranteed locale change.
             page.get_by_test_id('auth-locale-select').select_option('en-US')
             # Wait for invite-only policy and provider omission before downstream Auth tests continue.
-            page.get_by_test_id('signup-invite-only').wait_for(timeout=5000); page.wait_for_function("() => !document.querySelector('[data-testid=oauth-providers-available]')")
+            page.get_by_test_id('signup-invite-only').wait_for(timeout=WAIT_MS); page.wait_for_function("() => !document.querySelector('[data-testid=oauth-providers-available]')")
             # Restore Russian through a second real change so downstream login coverage receives fresh default policy.
-            page.get_by_test_id('auth-locale-select').select_option('ru-RU'); page.get_by_test_id('signup-invite-only').wait_for(timeout=5000)
+            page.get_by_test_id('auth-locale-select').select_option('ru-RU'); page.get_by_test_id('signup-invite-only').wait_for(timeout=WAIT_MS)
             # Restore the primary viewport while leaving Russian selected for the existing login flow.
             page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
         # Record policy-aware EN/RU action omission, availability, errors, and visual evidence.
@@ -222,7 +225,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Require the complete visual acceptance matrix.
             assert set(viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
             # Navigate to the real default-held provider signup surface.
-            page.goto(base+'/enroll/signup',wait_until='networkidle'); page.get_by_test_id('signup-enrollment').wait_for(timeout=5000); page.get_by_test_id('oauth-signup-disabled').wait_for(timeout=5000)
+            page.goto(base+'/enroll/signup',wait_until='networkidle'); page.get_by_test_id('signup-enrollment').wait_for(timeout=WAIT_MS); page.get_by_test_id('oauth-signup-disabled').wait_for(timeout=WAIT_MS)
             # Exercise default-off provider signup in both installed locales.
             for locale in ('en-US','ru-RU'):
                 # Switch through the visible enrollment locale selector.
@@ -246,7 +249,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Publish one signup-ready provider independently from ordinary sign-in state.
             page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","available":true,"signup_available":true},{"provider":"facebook","available":false,"signup_available":false}]}}'))
             # Reload the same-origin signup route through only synthetic responses.
-            page.goto(base+'/enroll/signup',wait_until='networkidle'); page.get_by_test_id('oauth-signup-available').wait_for(timeout=5000)
+            page.goto(base+'/enroll/signup',wait_until='networkidle'); page.get_by_test_id('oauth-signup-available').wait_for(timeout=WAIT_MS)
             # Require only the independently enabled provider signup control.
             assert not page.get_by_test_id('signup-oauth-google').is_disabled() and page.get_by_test_id('signup-oauth-facebook').is_disabled()
             # Click before acknowledgement to prove provider navigation cannot start.
@@ -256,7 +259,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Capture the exact consent-required state at the primary viewport.
             page.set_viewport_size(viewports['desktop_primary']); game_evidence('after-pass-auth-oauth-signup-consent-required.png','auth',['oauth_signup_available','oauth_signup_consent_required'],'ru-RU','desktop_primary')
             # Load one fixed server-owned successful completion marker without a provider callback.
-            page.goto(base+'/enroll/signup?oauth_provider=google&oauth_status=signed_up',wait_until='networkidle'); page.get_by_test_id('oauth-signup-available').wait_for(timeout=5000)
+            page.goto(base+'/enroll/signup?oauth_provider=google&oauth_status=signed_up',wait_until='networkidle'); page.get_by_test_id('oauth-signup-available').wait_for(timeout=WAIT_MS)
             # Require a localized non-sensitive success acknowledgement and scrubbed query.
             assert page.get_by_test_id('signup-message').inner_text() and 'oauth_provider' not in page.url and 'oauth_status' not in page.url
             # Capture the governed successful completion state.
@@ -264,7 +267,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Restore real public endpoints before downstream authentication cases.
             page.unroute('**/api/v2/auth/enrollment-policy'); page.unroute('**/api/v2/auth/oauth/providers')
             # Return to the real default-held login surface and primary viewport.
-            page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000); page.set_viewport_size({'width':1920,'height':1080})
+            page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS); page.set_viewport_size({'width':1920,'height':1080})
         # Record provider-specific signup policy, consent, EN/RU, and visual-matrix evidence.
         run_case('BR-OAUTH-SIGNUP-001',['OAUTH-013','AUTH-017','TEST-168'],oauth_signup_browser)
         # Define pending verified-email URL-scrubbing, localization, and containment acceptance. (AUTH-018)
@@ -276,7 +279,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Enter through a synthetic bearer link without submitting it to any backend.
             page.goto(base+'/enroll/verify?token=synthetic-browser-verification-bearer',wait_until='networkidle')
             # Wait for the dedicated account-free pending surface.
-            page.get_by_test_id('email-verification-pending').wait_for(timeout=5000)
+            page.get_by_test_id('email-verification-pending').wait_for(timeout=WAIT_MS)
             # Require immediate bearer scrubbing from the visible URL and browser history entry.
             assert page.url.rstrip('/').endswith('/enroll/verify') and 'token=' not in page.url
             # Exercise the pending surface in both installed locales.
@@ -298,7 +301,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     # Record localized after-pass pending-verification evidence.
                     game_evidence(f'after-pass-auth-email-verification-{locale}-{viewport_id}.png','auth',['email_signup_pending','email_verification_link'],locale,viewport_id)
             # Return to the default login route before downstream browser cases.
-            page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000); page.set_viewport_size({'width':1920,'height':1080})
+            page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS); page.set_viewport_size({'width':1920,'height':1080})
         # Record bearer scrubbing, bilingual controls, and governed responsive containment.
         run_case('BR-VERIFIED-EMAIL-001',['AUTH-018','USER-010','TEST-171'],verified_email_browser)
         # Define exact geometry acceptance for every primary Auth hit target. (issue #283)
@@ -316,7 +319,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Wait for the active locale and replacement DOM to settle.
                 page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"login-email\"]')",arg=locale)
                 # Wait for both independently loaded policy actions before measuring their hit geometry.
-                page.get_by_test_id('guest-trial-button').wait_for(timeout=5000); page.get_by_test_id('signup-invite-only').wait_for(timeout=5000)
+                page.get_by_test_id('guest-trial-button').wait_for(timeout=WAIT_MS); page.get_by_test_id('signup-invite-only').wait_for(timeout=WAIT_MS)
                 # Measure and capture every governed viewport for this locale.
                 for viewport_id,viewport in touch_viewports.items():
                     # Apply the exact visual-matrix dimensions before reading hit geometry.
@@ -344,7 +347,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Verify the required toy-simulator terms checkbox is visible.
             assert page.get_by_test_id('login-terms-check').is_visible()
             # Wait for the default policy-aware guest and invite-only decisions to settle.
-            page.get_by_test_id('guest-trial-button').wait_for(timeout=5000); page.get_by_test_id('signup-invite-only').wait_for(timeout=5000)
+            page.get_by_test_id('guest-trial-button').wait_for(timeout=WAIT_MS); page.get_by_test_id('signup-invite-only').wait_for(timeout=WAIT_MS)
             # Require one concise legal line, one live status owner, and zero disabled interactive elements.
             assert page.locator('#auth-legal-line').count()==1 and page.locator('[data-testid="login-gate"] [aria-live]').count()==1 and page.locator('[data-testid="login-gate"] :is(button,input,select):disabled').count()==0
             # Fill valid credential shapes so shared terms validation runs before the password API.
@@ -379,26 +382,26 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Restore the primary viewport for downstream auth coverage.
             page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
             # Open enumeration-safe public recovery through the visible sign-in affordance. (RESET-004)
-            page.get_by_test_id('password-reset-entry').click(); page.get_by_test_id('password-reset-initiate').wait_for(timeout=5000)
+            page.get_by_test_id('password-reset-entry').click(); page.get_by_test_id('password-reset-initiate').wait_for(timeout=WAIT_MS)
             # Require recovery to stay outside authenticated casino chrome and retain bounded responsive geometry.
             assert not page.get_by_test_id('premium-topbar').is_visible() and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
             # Capture the public recovery initiation surface without submitting any mailbox value.
             shot('after-pass-password-reset-initiate.png')
             # Return to the login gate so the existing real-backend authentication flow remains unchanged.
-            page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000); page.get_by_test_id('guest-trial-button').wait_for(timeout=5000); page.set_viewport_size({'width':1920,'height':1080})
+            page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS); page.get_by_test_id('guest-trial-button').wait_for(timeout=WAIT_MS); page.set_viewport_size({'width':1920,'height':1080})
         run_case('BR-AUTH-LOGIN-001',['AUTH-001','TERMS-001','AUTH-UI-002','RESET-004','UX-028','TEST-071','TEST-158','TEST-176'],auth_login_gate)
         # Reselect the Russian gate through the visible control when this shard skipped the producing cases.
         if not browser_shard_owns('BR-TOUCH-TARGET-AUTH-001'): page.get_by_test_id('auth-locale-select').select_option('ru-RU')
         # Keep the Russian locale selected by the OAuth acceptance loop for login persistence coverage.
         page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
         # Wait for the fresh email field to be ready after the locale rerender.
-        page.get_by_test_id('login-email').wait_for(timeout=5000)
+        page.get_by_test_id('login-email').wait_for(timeout=WAIT_MS)
         # Let the auth form rerender settle before entering credentials.
         page.wait_for_timeout(150)
         # Fill the real backend login form through browser-visible controls.
         page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click()
         # Wait for the terms acceptance screen returned by the canonical backend identity.
-        page.get_by_test_id('terms-gate').wait_for(timeout=5000)
+        page.get_by_test_id('terms-gate').wait_for(timeout=WAIT_MS)
         # Capture terms evidence for the frontend auth handback.
         shot('auth_terms_gate.png')
         run_case('BR-TERMS-001',['TERMS-001','TERMS-002','TERMS-003'],lambda: assert_condition(page.get_by_test_id('accept-terms').is_visible(),'terms gate missing'))
@@ -409,7 +412,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         # Verify the real backend accepted terms with the standard success envelope.
         assert terms_accept_info.value.json()['ok'] is True
         # Wait for the authenticated casino shell to mount after terms acceptance.
-        page.get_by_test_id('lobby').wait_for(timeout=5000)
+        page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
         # Capture authenticated shell evidence for the frontend auth handback.
         shot('auth_shell_tokens.png')
         # Define the auth_shell function used by this module.
@@ -421,7 +424,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Verify the chosen locale survived login and terms acceptance.
             assert page.get_by_test_id('shell-locale-select').input_value()=='ru-RU'
             # Open the personal settings surface through the regular authenticated navigation. (USER-008, USER-009)
-            page.get_by_test_id('nav-settings').click(); page.get_by_test_id('my-settings').wait_for(timeout=5000)
+            page.get_by_test_id('nav-settings').click(); page.get_by_test_id('my-settings').wait_for(timeout=WAIT_MS)
             # Require newly introduced accounts to keep personal sound off until explicit opt-in.
             assert not page.get_by_test_id('personal-settings-sound').is_checked() and page.get_by_test_id('my-history').is_visible()
             # Persist the explicit sound-off choice through the real optimistic settings route.
@@ -433,7 +436,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Capture personal settings/history evidence distinct from the Admin Console.
             shot('after-pass-my-settings-sound-off.png')
             # Return to the lobby so later account-provider acceptance starts from its existing route.
-            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
         run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003','USER-008','USER-009','TEST-158'],auth_shell)
         # Define provider-free authenticated account-method and callback lifecycle visual acceptance. (OAUTH-010)
         def oauth_runtime_browser():
@@ -456,7 +459,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Open the native details account surface when it is currently closed.
                 if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
                 # Wait for the fixed Google row to become visible only after its native details owner is open.
-                page.get_by_test_id('oauth-link-google').wait_for(timeout=5000)
+                page.get_by_test_id('oauth-link-google').wait_for(timeout=WAIT_MS)
                 # Require explicit confirmation and both provider rows before capture.
                 assert page.get_by_test_id('oauth-link-confirm').is_visible() and page.get_by_test_id('oauth-link-google').is_visible() and page.get_by_test_id('oauth-link-facebook').is_visible()
                 # Focus the native account summary for keyboard-reachability evidence.
@@ -508,9 +511,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Select the exact linked-provider unlink control.
                 unlink_button=page.locator('[data-testid="oauth-link-google"] [data-oauth-account-action="unlink"]')
                 # Require the linked action to be visible before accepting its browser confirmation.
-                unlink_button.wait_for(timeout=5000); page.once('dialog',lambda dialog: dialog.accept()); unlink_button.click()
+                unlink_button.wait_for(timeout=WAIT_MS); page.once('dialog',lambda dialog: dialog.accept()); unlink_button.click()
                 # Wait until the provider-neutral localized failure message replaces the empty status outlet.
-                page.wait_for_function("() => Boolean(document.getElementById('oauth-account-message')?.textContent.trim())",timeout=5000)
+                page.wait_for_function("() => Boolean(document.getElementById('oauth-account-message')?.textContent.trim())",timeout=WAIT_MS)
                 # Require failure to preserve the linked rows without rendering configuration or identity data.
                 assert page.locator('[data-testid="oauth-account-popover"]').get_attribute('data-oauth-state')=='linked' and 'CASINO_' not in page.get_by_test_id('oauth-account-popover').inner_text() and '@' not in page.get_by_test_id('oauth-account-popover').inner_text()
                 # Capture the confirmed unlink failure at every governed viewport.
@@ -526,9 +529,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Restore normal mutation routing while retaining the provider-free linked status fixture.
             page.unroute('**/api/v2/me/oauth/google/unlink')
             # Reload through one fixed successful callback marker to prove safe outcome cleanup and refresh persistence.
-            page.goto(base+'?oauth_provider=google&oauth_status=linked',wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+            page.goto(base+'?oauth_provider=google&oauth_status=linked',wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
             # Open the account surface after the authenticated reload.
-            page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+            page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-callback-message').wait_for(timeout=WAIT_MS)
             # Require browser history to remove the low-cardinality completion query immediately.
             assert 'oauth_provider=' not in page.url and 'oauth_status=' not in page.url
             # Capture successful callback and refresh persistence across locale and viewport.
@@ -540,7 +543,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Reopen the native account details after DOM-stable shell refresh when needed.
                 if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
                 # Require fixed success copy to remain visible after refresh.
-                page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+                page.get_by_test_id('oauth-callback-message').wait_for(timeout=WAIT_MS)
                 # Capture all four governed viewports.
                 for viewport_id,viewport in oauth_viewports.items():
                     # Resize to the matrix dimensions.
@@ -552,9 +555,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     # Record successful callback and same-session refresh evidence.
                     region_evidence(f'after-pass-oauth-callback-success-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['callback_success','refresh_persisted','linked'],locale,viewport_id)
             # Reload through one fixed failure marker to prove callback-error localization and history cleanup independently from status loading.
-            page.goto(base+'?oauth_provider=google&oauth_status=error',wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+            page.goto(base+'?oauth_provider=google&oauth_status=error',wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
             # Open the account surface after the authenticated error-marker reload.
-            page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+            page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-callback-message').wait_for(timeout=WAIT_MS)
             # Require browser history to remove the low-cardinality error marker immediately.
             assert 'oauth_provider=' not in page.url and 'oauth_status=' not in page.url
             # Exercise the actual callback-error acknowledgement in both installed locales.
@@ -566,7 +569,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Reopen the native details popover when rerendering closed it.
                 if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
                 # Require the fixed callback-error message without provider response details.
-                page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000); assert page.get_by_test_id('oauth-callback-message').inner_text().strip()
+                page.get_by_test_id('oauth-callback-message').wait_for(timeout=WAIT_MS); assert page.get_by_test_id('oauth-callback-message').inner_text().strip()
                 # Capture the actual callback failure at every governed viewport.
                 for viewport_id,viewport in oauth_viewports.items():
                     # Resize before responsive containment proof.
@@ -590,7 +593,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Open the account popover and wait for the generic localized failure copy.
                 if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
                 # Wait until the failed request replaces the loading state.
-                page.locator('[data-testid="oauth-account-popover"][data-oauth-state="status-error"]').wait_for(timeout=5000)
+                page.locator('[data-testid="oauth-account-popover"][data-oauth-state="status-error"]').wait_for(timeout=WAIT_MS)
                 # Require the popover to contain no provider configuration or identifier rows.
                 assert 'CASINO_' not in page.get_by_test_id('oauth-account-popover').inner_text() and '@' not in page.get_by_test_id('oauth-account-popover').inner_text()
                 # Capture the generic error at every governed viewport.
@@ -606,7 +609,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Restore the real current-user endpoint and clear the intentionally generated 503 diagnostics.
             page.unroute('**/api/v2/me/oauth/providers'); http_errors.clear()
             # Reload the normal authenticated shell without a callback marker or mocked provider state.
-            page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+            page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
             # Restore the primary desktop viewport for downstream wallet evidence.
             page.set_viewport_size({'width':1920,'height':1080})
         # Record the complete provider-free OAuth lifecycle and visual matrix.
@@ -618,7 +621,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         # Read the real ledger before the visible token-add action.
         ledger_before_add=page.evaluate("async playerId => (await (await fetch(`/api/v1/players/${playerId}/ledger`, {credentials:'include'})).json()).data.ledger",browser_player_id)
         # Fill the add-token amount through the browser-visible token control.
-        page.get_by_test_id('add-tokens').wait_for(timeout=5000); page.locator('#add-token-amount').fill('250.50')
+        page.get_by_test_id('add-tokens').wait_for(timeout=WAIT_MS); page.locator('#add-token-amount').fill('250.50')
         # Observe the real token-add API response while submitting the wallet control.
         with page.expect_response(lambda response: response.url.endswith('/api/v2/me/tokens/add') and response.request.method == 'POST') as token_add_info:
             # Submit the visible token-add request.
@@ -642,7 +645,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         # Require the tampered DOM to differ temporarily without changing the server wallet.
         assert '999,999' in page.get_by_test_id('premium-wallet').inner_text()
         # Refresh the whole browser document so authoritative current-user state replaces local tampering.
-        page.reload(wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+        page.reload(wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
         # Define the hostile-client refresh assertion against the real server wallet.
         def hostile_client_refresh():
             # Verify current-user refresh restores the exact ledger-backed balance.
@@ -659,14 +662,14 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'en-US'")
         run_case('BR-AUTH-LOCALE-001',['I18N-003','AUTH-UI-001'],lambda: route_before_locale and page.get_by_test_id('lobby').is_visible() and page.locator('#balance').inner_text()=='5,250.50')
         # Logout through the shell control to verify the browser returns to the login gate.
-        page.get_by_test_id('logout').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+        page.get_by_test_id('logout').click(); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
         # Probe the current-user endpoint after visible logout so the browser cannot hide a surviving cookie.
         logout_me_status=page.evaluate("async () => { const response=await fetch('/api/v2/me', {credentials:'include'}); return {status:response.status, ok:(await response.json()).ok}; }")
         # Reload the browser document to prove current-user bootstrapping does not resurrect the old session.
-        page.reload(wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+        page.reload(wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
         run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001','SESSION-006'],lambda: logout_me_status['status']==401 and logout_me_status['ok'] is False and page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
         # Re-login after logout so the existing browser suite can continue authenticated.
-        page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+        page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
         # Establish the English oracle explicitly because re-authentication correctly restores a previously saved locale preference.
         page.get_by_test_id('shell-locale-select').select_option('en-US')
         # Wait until the shared runtime and mounted shell both own the English locale before asserting English token copy.
@@ -674,7 +677,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         # Clear expected unauthenticated /me failures produced by the login and logout gates.
         console_errors.clear(); http_errors.clear()
         # Navigate to Roulette to verify the same current-user wallet persists on a game surface.
-        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
         # Read the live current-user balance while Roulette is mounted.
         roulette_me_balance=page.evaluate("async () => (await (await fetch('/api/v2/me', {credentials:'include'})).json()).data.player.token_balance")
         # Define the fractional_wallet_consistency regression against the authenticated shell and mounted game scoreboard.
@@ -688,7 +691,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         # Execute the fractional wallet consistency regression under the shared shell and balance requirements.
         run_case('BR-TOKEN-FRACTION-001',['UX-007','LEDGER-025','TOKEN-001'],fractional_wallet_consistency)
         # Return to the lobby before the existing shell and lobby checks continue.
-        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
         # Define the premium_shell function used by this module.
         def premium_shell():
             # Verify the visual matrix exposes the required schema, viewports, locales, gates, and surfaces.
@@ -745,7 +748,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     # Capture authenticated Lobby proof for the exact locale and viewport.
                     game_evidence(f'after-pass-touch-target-shell-{locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','touch_target_floor'],locale,viewport_id)
                     # Open the affected Slots surface through the real bounded navigation.
-                    page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=WAIT_MS)
                     # Measure every named Slots control, including disabled Stop, by its real layout box.
                     slots_diagnostics=page.evaluate("""selectors => selectors.map(selector => { const element=document.querySelector(selector); if(!element) return {selector,missing:true}; const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); return {selector,width:rect.width,height:rect.height,display:style.display,visibility:style.visibility}; })""",slots_selectors)
                     # Require all Slots wager, autoplay, and action controls to meet the adopted floor.
@@ -755,7 +758,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     # Capture the affected game surface in its idle touch-target state.
                     game_evidence(f'after-pass-touch-target-slots-{locale.lower()}-{viewport_id}.png','slots',['idle','touch_target_floor'],locale,viewport_id)
                     # Open Roulette through the real navigation before measuring its high-frequency controls.
-                    page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=WAIT_MS)
                     # Reveal the player-operated racetrack controls through their semantic disclosure.
                     page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
                     # Measure every visible fast-bet, call-bet, toggle, and rebet target in its real rendered layout.
@@ -773,7 +776,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     # Capture exact-locale and exact-viewport proof for the Roulette touch-target matrix state.
                     game_evidence(f'after-pass-touch-target-roulette-{locale.lower()}-{viewport_id}.png','roulette',['betting','keyboard_focus','touch_target_floor'],locale,viewport_id)
                     # Return to the stable Lobby surface before the next viewport or locale.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
             # Restore the default locale and primary viewport for downstream shell acceptance.
             page.set_viewport_size(touch_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US')
             # Wait for the restored English Lobby before the next case begins.
@@ -801,7 +804,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Read the exact canonical subtitle for this locale from the paired resource file.
                 expected_subtitle=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['brand.subtitle']
                 # Wait for the asynchronous locale rerender to publish the exact canonical subtitle, which also proves resource-key-free equality.
-                page.wait_for_function("expected => document.querySelector('#shell-brand-subtitle')?.textContent.trim() === expected", arg=expected_subtitle, timeout=5000)
+                page.wait_for_function("expected => document.querySelector('#shell-brand-subtitle')?.textContent.trim() === expected", arg=expected_subtitle, timeout=WAIT_MS)
                 # Read the settled rendered player-facing brand subtitle for the metadata checks.
                 rendered_subtitle=page.locator('#shell-brand-subtitle').inner_text().strip()
                 # Require the approved product name to remain exact and resource-key-free.
@@ -825,7 +828,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     # Capture exact-head authenticated lobby evidence with a self-describing sidecar.
                     game_evidence(f'after-pass-shell-brand-authenticated-{brand_locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','tiltseven_neon_pit'],brand_locale,viewport_id)
                 # Open one representative affected game so shared-shell evidence is not limited to the lobby.
-                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
+                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=WAIT_MS)
                 # Capture the same authenticated header across the representative game at all governed sizes.
                 for viewport_id,viewport in brand_viewports.items():
                     # Resize to the exact governed viewport before the shared-shell overflow check.
@@ -835,7 +838,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     # Record one affected game surface alongside the shared lobby acceptance evidence.
                     game_evidence(f'after-pass-roulette-brand-{brand_locale.lower()}-{viewport_id}.png','roulette',['betting','tiltseven_neon_pit'],brand_locale,viewport_id)
                 # Return to the lobby before switching locale so the next evidence set starts from the canonical shell route.
-                page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
             # Compare matching viewport heights so EN/RU switching cannot move the game stage.
             for viewport_id in brand_viewports:
                 # Allow only sub-pixel rounding while rejecting a locale-dependent topbar height change.
@@ -912,7 +915,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Calculate the exact authoritative display expected from that server response.
                 expected=round(before+amount,2)
                 # Wait until both the private current-user cache and visible wallet publish the same value.
-                page.wait_for_function("expected => { const session=window.CasinoCurrentUser||{}; const player=session.player||{}; const value=Number(player.token_balance ?? player.tokens ?? session.token_balance ?? session.tokens?.balance ?? 0); const rendered=Number(String(document.querySelector('#balance')?.textContent||'').replace(/[^0-9.-]/g,'')); return value===expected && rendered===expected; }",arg=expected,timeout=5000)
+                page.wait_for_function("expected => { const session=window.CasinoCurrentUser||{}; const player=session.player||{}; const value=Number(player.token_balance ?? player.tokens ?? session.token_balance ?? session.tokens?.balance ?? 0); const rendered=Number(String(document.querySelector('#balance')?.textContent||'').replace(/[^0-9.-]/g,'')); return value===expected && rendered===expected; }",arg=expected,timeout=WAIT_MS)
                 # Branch between visible normal motion and intentionally animation-free reduced motion.
                 if reduced:
                     # Require the comfort path to allocate no chip, coin layer, marker, or animation class.
@@ -937,7 +940,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                 # Select the exact locale before its complete viewport and motion matrix.
                 page.get_by_test_id('shell-locale-select').select_option(celebration_locale)
                 # Wait for locale state and lobby remount before opening wallet controls.
-                page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"lobby\"]')",arg=celebration_locale,timeout=5000)
+                page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"lobby\"]')",arg=celebration_locale,timeout=WAIT_MS)
                 # Exercise every governed viewport without substituting primary-only evidence.
                 for celebration_viewport_id,celebration_viewport in celebration_viewports.items():
                     # Resize to the exact visual-matrix dimensions before each wallet branch.
@@ -1066,7 +1069,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             # Enter a Russian query with no matches so the localized empty state becomes visible.
             page.get_by_test_id('catalog-search').fill('нет совпадений')
             # Wait for the localized empty-state row after the live filter rerender.
-            page.get_by_test_id('catalog-empty').wait_for(timeout=5000)
+            page.get_by_test_id('catalog-empty').wait_for(timeout=WAIT_MS)
             # Verify the no-result message is the exact Russian shell resource value.
             assert page.get_by_test_id('catalog-empty').inner_text()=='Игры по заданным фильтрам не найдены.'
             # Collect visible and accessible catalog-control copy for a focused English-leak audit.
@@ -1319,17 +1322,17 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
                     # Enter an impossible query through the visible search field.
                     page.get_by_test_id('catalog-search').fill('__no_catalog_match__')
                     # Wait for the debounced localized empty state before inspecting stale cards.
-                    page.get_by_test_id('catalog-empty').wait_for(timeout=5000)
+                    page.get_by_test_id('catalog-empty').wait_for(timeout=WAIT_MS)
                     # Require the localized empty state and zero stale game cards after the gallery commit.
                     assert page.get_by_test_id('catalog-empty').is_visible() and page.locator('[data-testid^="card-"]').count()==0
                     # Clear through the stable search control so the debounced gallery update retains focus and caret ownership.
                     page.get_by_test_id('catalog-search').fill('')
                     # Wait for the cleared query's gallery-only update before changing its category.
-                    page.wait_for_function("""() => document.querySelector('[data-testid="catalog-search"]')?.value === '' && document.querySelectorAll('[data-testid^="card-"]').length > 0""",timeout=5000)
+                    page.wait_for_function("""() => document.querySelector('[data-testid="catalog-search"]')?.value === '' && document.querySelectorAll('[data-testid^="card-"]').length > 0""",timeout=WAIT_MS)
                     # Select the table category as a visible representative after every category passed behavior checks.
                     page.locator('[data-catalog-category="table"]').click()
                     # Wait for the selected category and its cards to share one completed rerender. (issue #637)
-                    page.wait_for_function("""() => document.querySelector('[data-catalog-category="table"]')?.getAttribute('aria-pressed') === 'true' && document.querySelectorAll('[data-testid^="card-"]').length > 0""",timeout=5000)
+                    page.wait_for_function("""() => document.querySelector('[data-catalog-category="table"]')?.getAttribute('aria-pressed') === 'true' && document.querySelectorAll('[data-testid^="card-"]').length > 0""",timeout=WAIT_MS)
                     # Reach the representative category's last action through the same native End helper.
                     keyboard_end_to_boundary()
                     # Require the representative category's final action to remain fully visible.

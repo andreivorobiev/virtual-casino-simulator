@@ -4,6 +4,14 @@
 
 # Import paths for exact repository-source inspection.
 from pathlib import Path
+# Import environment copying for isolated wait-budget parser checks.
+import os
+# Import regular expressions for the one workflow-level wait override.
+import re
+# Import subprocess execution for fresh-process environment validation.
+import subprocess
+# Import the active interpreter for dependency-free timing-policy probes.
+import sys
 # Import standard dependency-free assertions.
 import unittest
 
@@ -19,10 +27,68 @@ RUNNER_SOURCE = (ROOT / "tests" / "runner.py").read_text(encoding="utf-8")
 ROULETTE_OWNER_SOURCE = (ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py").read_text(encoding="utf-8")
 # Read the extracted Bingo/Admin owner for its state-driven reload and feedback-save gates.
 BINGO_ADMIN_OWNER_SOURCE = (ROOT / "tests" / "cases" / "browser" / "bingo_admin.py").read_text(encoding="utf-8")
+# Read the ordinary Browser workflow so its one environment override remains governed.
+BROWSER_WORKFLOW_SOURCE = (ROOT / ".github" / "workflows" / "browser-tests.yml").read_text(encoding="utf-8")
+# Name every runtime Browser owner that must consume the one shared wait budget.
+BROWSER_RUNTIME_SOURCES = (
+    ROOT / "tests" / "runner.py",
+    ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py",
+    ROOT / "tests" / "cases" / "browser" / "auth_lobby.py",
+    ROOT / "tests" / "cases" / "browser" / "bingo_admin.py",
+    ROOT / "tests" / "cases" / "browser" / "guest_lifecycle.py",
+    ROOT / "tests" / "cases" / "browser" / "roulette_slots_keno.py",
+    ROOT / "tests" / "games" / "chuck_a_luck" / "browser_check.py",
+)
 
 
 # Prove Browser acceptance waits for authoritative state instead of elapsed time.
 class BrowserWaitGovernanceTests(unittest.TestCase):
+    # Prove one environment-scalable wait budget replaces every historical five/ten-second literal. (TEST-053)
+    def test_browser_wait_budget_is_single_source_and_environment_scalable(self):
+        # Read every Browser runtime owner without importing Playwright.
+        sources = {path: path.read_text(encoding="utf-8") for path in BROWSER_RUNTIME_SOURCES}
+        # Require every runtime owner to import the shared timing policy.
+        self.assertTrue(all("from tests.browser_timing import WAIT_MS" in source for source in sources.values()))
+        # Reject every historical duplicated wait literal from the complete governed tests tree.
+        all_test_source = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "tests").rglob("*.py"))
+        # Prove both duplicated budgets are absent from executable and source-bound evidence.
+        self.assertNotIn("timeout=" + "5000", all_test_source)
+        # Prove doubled waits also derive from the shared knob.
+        self.assertNotIn("timeout=" + "10000", all_test_source)
+        # Require at least one ordinary and one doubled wait so the policy cannot pass vacuously.
+        self.assertTrue(any("timeout=WAIT_MS" in source for source in sources.values()))
+        # Require long waits to scale with the same reviewed knob.
+        self.assertTrue(any("timeout=WAIT_MS * 2" in source for source in sources.values()))
+        # Require exactly one editable workflow-level decimal override without pinning its chosen value.
+        self.assertEqual(len(re.findall(r"(?m)^  CASINO_BROWSER_WAIT_MS: [1-9][0-9]*$", BROWSER_WORKFLOW_SOURCE)), 1)
+        # Build one clean subprocess environment with an explicit alternative CI budget.
+        environment = dict(os.environ)
+        # Change only the supported environment knob.
+        environment["CASINO_BROWSER_WAIT_MS"] = "7500"
+        # Resolve the shared constant in a fresh process so import caching cannot mask the override.
+        configured = subprocess.run([sys.executable, "-c", "from tests.browser_timing import WAIT_MS; print(WAIT_MS)"], cwd=ROOT, env=environment, text=True, capture_output=True, check=False)
+        # Require the exact alternate millisecond value.
+        self.assertEqual((configured.returncode, configured.stdout.strip()), (0, "7500"), configured.stderr)
+
+    # Prove malformed or unsafe Browser wait overrides fail closed with one fixed diagnostic. (TEST-053)
+    def test_browser_wait_budget_rejects_hostile_overrides(self):
+        # Exercise syntax, Unicode, lower-bound, and upper-bound failures independently.
+        for hostile_value in ("", "99", "60001", "+5000", " 5000", "1.5", "٥٠٠٠"):
+            # Isolate each hostile override from the parent process.
+            environment = dict(os.environ)
+            # Install only the current hostile value.
+            environment["CASINO_BROWSER_WAIT_MS"] = hostile_value
+            # Import the timing policy in a fresh process and capture its fixed diagnostic.
+            rejected = subprocess.run([sys.executable, "-c", "import tests.browser_timing"], cwd=ROOT, env=environment, text=True, capture_output=True, check=False)
+            # Require failure without reflecting the hostile value in the diagnostic.
+            self.assertNotEqual(rejected.returncode, 0)
+            # Require the stable value-free policy error.
+            self.assertIn("browser wait budget is invalid", rejected.stderr)
+            # Reject caller-controlled value reflection for nonempty hostile inputs.
+            if hostile_value:
+                # Keep CI logs free of untrusted knob content.
+                self.assertNotIn(hostile_value, rejected.stderr)
+
     # Build one authoritative auto or reload payload for focused readiness tests.
     @staticmethod
     def bingo_payload(*, include_session=True, session_id="bingo-ready"):
@@ -80,13 +146,13 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
         # Require explicit auto-response and reload-response validation around a lobby transition.
         self.assertIn("require_bingo_terminal_auto_payload(bingo_auto_payload)", bingo_source)
         # Require route ownership to leave Bingo before the state-response-observed remount.
-        self.assertIn("page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)", bingo_source)
+        self.assertIn("page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)", bingo_source)
         # Bind the remount to the authoritative state response consumed by Bingo load().
         self.assertIn("page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/state')", bingo_source)
         # Require the complete terminal render helper after the exact-session reload check.
         self.assertIn("wait_for_bingo_terminal_render(page,bingo_reload_terminal)", bingo_source)
         # Reject the former same-route fixed winning-cell wait that flaked on shard zero.
-        self.assertNotIn("page.get_by_test_id('nav-bingo').click(); page.locator('[data-winning-cell=\"true\"]').first.wait_for(timeout=5000)", bingo_source)
+        self.assertNotIn("page.get_by_test_id('nav-bingo').click(); page.locator('[data-winning-cell=\"true\"]').first.wait_for(timeout=WAIT_MS)", bingo_source)
 
     # Prove a delayed terminal render is polled by state rather than accepted by elapsed time.
     def test_bingo_terminal_render_waits_through_delayed_snapshots(self) -> None:
@@ -164,7 +230,7 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
         # Require the report identity to come from the exact opened list row.
         self.assertIn("feedback_report_id=report_button.get_attribute('data-feedback-id')", feedback_source)
         # Reject every former single-locator readiness assumption from this case.
-        self.assertNotIn("page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)", feedback_source)
+        self.assertNotIn("page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=WAIT_MS)", feedback_source)
 
     # Prove the save boundary rejects the already-visible detail until its replacement renders.
     def test_admin_feedback_save_waits_for_replacement_generation(self) -> None:

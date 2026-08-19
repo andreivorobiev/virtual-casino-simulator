@@ -1,0 +1,119 @@
+name: Browser Duration Profile
+
+# Refresh measured Browser weights weekly or when an operator explicitly requests one reviewed update.
+on:
+  schedule:
+    - cron: '29 8 * * 2'
+  workflow_dispatch:
+
+# Permit exact artifact reads plus the one maintenance issue, branch, and draft pull request.
+permissions:
+  actions: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+# Serialize refreshes so two schedules cannot publish competing profile branches.
+concurrency:
+  group: browser-duration-profile
+  cancel-in-progress: false
+
+jobs:
+  refresh_browser_duration_profile:
+    name: refresh_browser_duration_profile
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Pin the generator and reviewed profile to current protected main.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      # Use the repository's governed Python baseline without installing Browser dependencies.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Select the newest successful protected-main Browser push with retained shard artifacts.
+      - name: Resolve latest successful Browser run
+        id: browser_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/browser-tests.yml/runs?branch=main&status=success&per_page=50" --jq '[.workflow_runs[] | select(.event == "push" and .conclusion == "success")][0].id')"
+          test -n "${run_id}"
+          test "${run_id}" != "null"
+          echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
+      # Download only ordinary Browser shard artifacts from the accepted protected-main run.
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ steps.browser_run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          pattern: browser-test-artifacts-shard-*
+          path: logs/test-runs
+          merge-multiple: true
+      # Regenerate the tracked profile through its strict bounded evidence parser.
+      - name: Regenerate reviewed duration profile
+        run: python scripts/generate_browser_durations.py logs/test-runs
+      # Re-run the listener-free sharding, generator, and workflow policy suite before publication.
+      - name: Validate regenerated profile
+        run: python -m unittest tests.cicd_deployment_tests
+      # Publish nothing when measured whole-second weights are already current.
+      - name: Detect profile change
+        id: change
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if git diff --quiet -- tests/browser_case_durations.json; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            open_profile_prs="$(gh pr list --state open --base main --json headRefName --jq '[.[] | select(.headRefName | startswith("codex/browser-duration-profile-"))] | length')"
+            remote_profile_branches="$(git ls-remote --heads origin 'refs/heads/codex/browser-duration-profile-*')"
+            if [ "${open_profile_prs}" = "0" ] && [ -z "${remote_profile_branches}" ]; then
+              echo "changed=true" >> "${GITHUB_OUTPUT}"
+            else
+              echo "changed=blocked" >> "${GITHUB_OUTPUT}"
+              echo "A Browser duration-profile branch or pull request is already open; refusing a duplicate."
+            fi
+          fi
+      # Commit exactly the reviewed profile to one run-owned branch.
+      - name: Publish profile branch
+        if: ${{ steps.change.outputs.changed == 'true' }}
+        env:
+          BRANCH_NAME: codex/browser-duration-profile-${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "${BRANCH_NAME}"
+          git add -- tests/browser_case_durations.json
+          git commit -m "test: refresh Browser duration profile"
+          git push origin "HEAD:${BRANCH_NAME}"
+      # File one exact maintenance ticket, then open a draft PR whose merge will close it under TOOL-012.
+      - name: Open reviewed profile pull request
+        if: ${{ steps.change.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: codex/browser-duration-profile-${{ github.run_id }}
+          BROWSER_RUN_ID: ${{ steps.browser_run.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          issue_url="$(gh issue create --title "Refresh Browser duration profile from run ${BROWSER_RUN_ID}" --body "The scheduled Browser duration-profile workflow measured a changed reviewed profile from successful protected-main Browser run ${BROWSER_RUN_ID}. Merge only after the ordinary required checks pass.")"
+          issue_number="${issue_url##*/}"
+          body_path="${RUNNER_TEMP}/browser-duration-profile-pr.md"
+          printf '%s\n' "## Issues resolved" "" "- Fixes #${issue_number}" "" "## Evidence" "" "- Source Browser run: ${BROWSER_RUN_ID}" "- Generator: scripts/generate_browser_durations.py" "- Changed path: tests/browser_case_durations.json" > "${body_path}"
+          gh pr create --draft --base main --head "${BRANCH_NAME}" --title "test: refresh Browser duration profile" --body-file "${body_path}"
+          app_version="$(python -c 'import json; print(json.load(open("modules/module-manifest.json", encoding="utf-8"))["application"])')"
+          # GITHUB_TOKEN-authored pull requests do not emit recursive pull_request events, so dispatch every unchanged qualification workflow against the exact branch head.
+          gh workflow run ci.yml --ref "${BRANCH_NAME}"
+          gh workflow run browser-tests.yml --ref "${BRANCH_NAME}" -f formal_ui_50000=false -f baccarat_sustained_2000=false -f concurrent_browser_138=false -f profile_refresh=true
+          gh workflow run long-suite-100.yml --ref "${BRANCH_NAME}"
+          gh workflow run release.yml --ref "${BRANCH_NAME}" -f app_version="${app_version}" -f recovery_action=candidate
+          gh workflow run docs.yml --ref "${BRANCH_NAME}"
+          gh workflow run comment-density.yml --ref "${BRANCH_NAME}"
+          gh workflow run contract-tests.yml --ref "${BRANCH_NAME}"
+          gh workflow run module-boundaries.yml --ref "${BRANCH_NAME}"
+          gh workflow run codex-review.yml --ref "${BRANCH_NAME}"

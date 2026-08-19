@@ -9,6 +9,9 @@ import os
 # Resolve the exact commit and branch without transferring runner lifecycle ownership.
 import subprocess
 
+# Import the sole environment-scalable Playwright wait budget. (TEST-053)
+from tests.browser_timing import WAIT_MS
+
 
 # Execute or skip the complete guest producer/consumer group without splitting its shard ownership.
 def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser, base, screenshots, ROOT, read_i18n_json, auth_core, guest_analytics):
@@ -49,7 +52,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
         # Start protected inspection so the isolated browser context always closes.
         try:
             # Navigate to the real login shell and wait for the mocked policy-owned unavailable chip.
-            guest_policy_page.goto(base,wait_until='networkidle'); guest_policy_page.get_by_test_id('guest-trial-unavailable').wait_for(timeout=5000)
+            guest_policy_page.goto(base,wait_until='networkidle'); guest_policy_page.get_by_test_id('guest-trial-unavailable').wait_for(timeout=WAIT_MS)
             # Require the unauthorized mutation control to be absent with no disabled interactive substitute.
             guest_policy_disabled_result=guest_policy_page.get_by_test_id('guest-trial-button').count()==0 and guest_policy_page.get_by_test_id('guest-trial-unavailable').is_visible() and guest_policy_page.locator('[data-testid="login-gate"] :is(button,input,select):disabled').count()==0
         # Destroy the mocked context before real guest creation begins.
@@ -67,7 +70,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                 # Start protected guest verification so context and temporary credentials always close.
                 try:
                     # Navigate without a seeded cookie so the real backend returns the login gate.
-                    guest_page.goto(base,wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=5000); guest_page.get_by_test_id('guest-trial-button').wait_for(timeout=5000)
+                    guest_page.goto(base,wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS); guest_page.get_by_test_id('guest-trial-button').wait_for(timeout=WAIT_MS)
                     # Select the tested locale through the browser-visible login control.
                     guest_page.get_by_test_id('auth-locale-select').select_option(guest_locale)
                     # Wait until translated disposable terms copy replaces the prior locale.
@@ -107,11 +110,11 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                     # Store the real standard envelope for principal and wallet assertions.
                     guest_payload=guest_response_info.value.json()
                     # Wait for the authenticated lobby after sessionStorage has captured the one-time proof.
-                    guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    guest_page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                     # Read current-user state through the frontend helper that attaches the browser proof.
                     guest_current=guest_page.evaluate("async () => (await import('/core/api.js')).currentUser()")
                     # Open personal settings to prove guest conversion is visible but separate from Admin enrollment policy. (CONVERT-003)
-                    guest_page.get_by_test_id('nav-settings').click(); guest_page.get_by_test_id('guest-conversion').wait_for(timeout=5000)
+                    guest_page.get_by_test_id('nav-settings').click(); guest_page.get_by_test_id('guest-conversion').wait_for(timeout=WAIT_MS)
                     # Require a complete conversion form and sound-off default without submitting identifying data.
                     guest_conversion_visible=guest_page.get_by_test_id('guest-conversion-submit').is_visible() and not guest_page.get_by_test_id('personal-settings-sound').is_checked()
                     # Require the personal/convert cards to remain inside the active responsive viewport.
@@ -119,7 +122,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                     # Capture the localized conversion offer without creating a durable account.
                     guest_evidence(guest_page,f'after-pass-guest-conversion-{guest_locale}-{guest_viewport_id}.png','shell_lobby',['guest_conversion_form','personal_sound_default_off'],guest_locale,guest_viewport_id)
                     # Return to the lobby before authorization and game-entry checks.
-                    guest_page.get_by_test_id('nav-lobby').click(); guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    guest_page.get_by_test_id('nav-lobby').click(); guest_page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                     # Prove the guest cannot access the centrally protected Admin API with its valid proof.
                     guest_admin_code=guest_page.evaluate("async () => { try { await (await import('/core/api.js')).api('/api/v2/admin/guest-trials'); return 'ALLOWED'; } catch (error) { return error.code; } }")
                     # Read the persistent guest marker and localized End control.
@@ -129,13 +132,13 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                     # Require the active shell to keep its exact expiry and no-recovery disclosure visible.
                     guest_expiry_notice=guest_page.get_by_test_id('guest-trial-notice').is_visible() and bool(guest_page.get_by_test_id('guest-trial-notice').inner_text().strip())
                     # Open one released catalog game through the same visible action used by registered players.
-                    guest_page.get_by_test_id('open-slots').click(); guest_page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                    guest_page.get_by_test_id('open-slots').click(); guest_page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
                     # Record that a real game module mounted under the guest-bound player identity with reduced motion active.
                     guest_game_entered=guest_page.get_by_test_id('slots-premium').is_visible() and guest_page.evaluate("() => matchMedia('(prefers-reduced-motion: reduce)').matches")
                     # Return through the shared navigation before exercising same-context refresh.
-                    guest_page.get_by_test_id('nav-lobby').click(); guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    guest_page.get_by_test_id('nav-lobby').click(); guest_page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                     # Reload inside the same browser context to prove refresh preserves sessionStorage and access.
-                    guest_page.reload(wait_until='networkidle'); guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    guest_page.reload(wait_until='networkidle'); guest_page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                     # Require no responsive page spill after the same-context reload.
                     assert guest_page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
                     # Focus the irreversible lifecycle control for keyboard evidence.
@@ -159,9 +162,9 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                     # Store the identifier-free teardown acknowledgement.
                     guest_end_payload=guest_end_info.value.json()
                     # Require immediate return to the login gate.
-                    guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                    guest_page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
                     # Reload to prove the explicitly ended trial cannot recover.
-                    guest_page.reload(wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                    guest_page.reload(wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
                     # Capture the localized terminal redirect after the disposable session is irreversibly revoked.
                     guest_evidence(guest_page,f'after-pass-guest-auth-ended-{guest_locale}-{guest_viewport_id}.png','auth',['guest_trial_ended'],guest_locale,guest_viewport_id)
                     # Record the complete result without retaining any credential or raw browser proof.
@@ -179,7 +182,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
             # Open the disposable entry surface.
             original_page=original_context.new_page()
             # Navigate, localize, consent, and create the guest session.
-            original_page.goto(base,wait_until='networkidle'); original_page.get_by_test_id('auth-locale-select').select_option(guest_locale); original_page.get_by_test_id('login-terms-check').check(); original_page.get_by_test_id('guest-trial-button').click(); original_page.get_by_test_id('lobby').wait_for(timeout=5000)
+            original_page.goto(base,wait_until='networkidle'); original_page.get_by_test_id('auth-locale-select').select_option(guest_locale); original_page.get_by_test_id('login-terms-check').check(); original_page.get_by_test_id('guest-trial-button').click(); original_page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
             # Preserve only browser cookies to simulate browser restart without sessionStorage.
             preserved_cookies=original_context.cookies()
             # Close the original context so its browser proof is destroyed.
@@ -189,7 +192,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
             # Install the preserved cookies without any sessionStorage proof.
             replacement_context.add_cookies(preserved_cookies)
             # Open a new page and allow the shell's current-user request to fail closed.
-            replacement_page=replacement_context.new_page(); replacement_page.goto(base,wait_until='networkidle'); replacement_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+            replacement_page=replacement_context.new_page(); replacement_page.goto(base,wait_until='networkidle'); replacement_page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
             # Record the no-recovery result without retaining cookie values.
             guest_close_results.append(replacement_page.get_by_test_id('login-gate').is_visible())
             # Destroy the replacement context and its now-revoked cookie.
@@ -210,7 +213,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                 # Start the browser-owned guest trial.
                 conversion_page.get_by_test_id('guest-trial-button').click()
             # Wait for the authenticated shell and open the self-service conversion form.
-            conversion_page.get_by_test_id('lobby').wait_for(timeout=5000); conversion_page.get_by_test_id('nav-settings').click(); conversion_page.get_by_test_id('guest-conversion').wait_for(timeout=5000)
+            conversion_page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS); conversion_page.get_by_test_id('nav-settings').click(); conversion_page.get_by_test_id('guest-conversion').wait_for(timeout=WAIT_MS)
             # Use one deterministic fixture mailbox that is unique inside the disposable Browser data root.
             conversion_email='browser-self-conversion-analytics@example.test'
             # Fill only the ordinary account fields accepted by the visible conversion form.
@@ -220,7 +223,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                 # Submit through the browser-visible self-service action.
                 conversion_page.get_by_test_id('guest-conversion-submit').click()
             # Require the explicit sign-in handoff after successful account adoption.
-            conversion_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+            conversion_page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
             # Decode only the standard public result envelope for status and ending-balance proof.
             conversion_payload=conversion_response_info.value.json()
             # Resolve the durable account from its normalized public mailbox.

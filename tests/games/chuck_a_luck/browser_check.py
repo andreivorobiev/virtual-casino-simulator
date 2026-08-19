@@ -30,6 +30,10 @@ from playwright.sync_api import sync_playwright
 
 # Resolve the repository root from this game-owned focused test file.
 ROOT = Path(__file__).resolve().parents[3]
+# Add the repository root so the shared Browser timing policy is importable during direct execution.
+sys.path.insert(0, str(ROOT))
+# Import the sole environment-scalable Playwright wait budget. (TEST-053)
+from tests.browser_timing import WAIT_MS
 # Resolve the companion server launcher without relying on the process working directory.
 SERVER_LAUNCHER = Path(__file__).with_name("browser_server.py")
 # Preserve the authoritative visual-matrix viewports in stable evidence order.
@@ -257,7 +261,7 @@ def run_browser_check(evidence_dir=None):
                 # Submit the authenticated session request through the visible primary action.
                 page.get_by_test_id("login-submit").click()
                 # Wait for descriptor-driven lazy loading of the isolated game module.
-                page.get_by_test_id("chuck-a-luck").wait_for(timeout=10000)
+                page.get_by_test_id("chuck-a-luck").wait_for(timeout=WAIT_MS * 2)
                 # Prove ready-state EN/RU responsiveness across all four viewports.
                 exercise_matrix(page, evidence_dir, "ready")
                 # Restore primary desktop English before the atomic backend action.
@@ -283,7 +287,7 @@ def run_browser_check(evidence_dir=None):
                 # Start one guarded atomic roll from the real browser UI.
                 page.locator("[data-roll]").click()
                 # Require the browser to remain in its decorative, non-authoritative rolling phase while the real response is deliberately held.
-                page.locator('[data-testid="chuck-a-luck"][data-phase="rolling"]').wait_for(timeout=10000)
+                page.locator('[data-testid="chuck-a-luck"][data-phase="rolling"]').wait_for(timeout=WAIT_MS * 2)
                 # Prove rolling-state EN/RU responsiveness across all four viewports against the committed real-backend request.
                 exercise_matrix(page, evidence_dir, "rolling")
                 # Release the server response only after every rolling assertion and representative image succeeds.
@@ -315,7 +319,7 @@ def run_browser_check(evidence_dir=None):
                 # Reload the canonical route to prove player-owned state restoration.
                 page.reload(wait_until="networkidle")
                 # Wait for the restored settled state without issuing another wager.
-                page.locator('[data-testid="chuck-a-luck"][data-phase="settled"]').wait_for(timeout=10000)
+                page.locator('[data-testid="chuck-a-luck"][data-phase="settled"]').wait_for(timeout=WAIT_MS * 2)
                 # Read the restored dice after the real reload.
                 restored_dice = [int(value) for value in page.locator("[data-die]").evaluate_all("elements => elements.map(element => element.dataset.face)")]
                 # Require the reload to preserve the previously committed outcome.
@@ -331,7 +335,7 @@ def run_browser_check(evidence_dir=None):
                     # Start the second atomic action through the visible control.
                     page.locator("[data-roll]").click()
                 # Require the zero-delay shared motion callback to reach settlement.
-                page.locator('[data-testid="chuck-a-luck"][data-phase="settled"][data-reduced-motion="true"]').wait_for(timeout=10000)
+                page.locator('[data-testid="chuck-a-luck"][data-phase="settled"][data-reduced-motion="true"]').wait_for(timeout=WAIT_MS * 2)
                 # Capture representative reduced-motion evidence in both locales and two key viewports.
                 for locale in LOCALE_TITLES:
                     # Switch locales without remounting the settled game state.

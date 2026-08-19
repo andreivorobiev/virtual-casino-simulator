@@ -9,6 +9,9 @@ import re
 # Import monotonic waits retained by the extracted game-state transitions.
 import time
 
+# Import the sole environment-scalable Playwright wait budget. (TEST-053)
+from tests.browser_timing import WAIT_MS
+
 
 # Execute the complete producer/consumer family under one deterministic shard owner.
 def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,visual_matrix,save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots):
@@ -21,13 +24,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)
             def clear_roulette_audit_bets():
                 # Capture the documented clear response before activating the real rendered control.
-                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/clear') and response.request.method=='POST', timeout=5000) as clear_info:
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/clear') and response.request.method=='POST', timeout=WAIT_MS) as clear_info:
                     # Activate the same clear-all path a player uses rather than mutating test state directly.
                     page.locator('#clear').click()
                 # Require the refund request to succeed before attempting a wheel-mode transition.
                 assert clear_info.value.ok, 'Roulette audit-bet clear request failed'
                 # Require the rerendered control to prove the browser consumed the empty-bet response.
-                page.wait_for_function("() => document.querySelector('#clear')?.disabled === true", timeout=5000)
+                page.wait_for_function("() => document.querySelector('#clear')?.disabled === true", timeout=WAIT_MS)
             # Select the smallest chip so exhaustive region coverage cannot deplete the wallet.
             page.get_by_test_id('chip-1').click()
             # Read the semantic precision-layer state before changing it. (issue #348)
@@ -77,7 +80,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Build the stable selector for this hit target.
                 selector=f'[data-cell-key="{key}"]'
                 # Capture the exact completed wager POST triggered by activating this cell.
-                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=5000) as response_info:
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=WAIT_MS) as response_info:
                     # Activate the cell through Playwright's real actionability-checked pointer path. (issue #348)
                     page.get_by_test_id('roulette-table').locator(selector).click()
                 # Require authoritative wager completion before another bet or clear can overtake it.
@@ -91,7 +94,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Settle the board rerender before activating the next hit target.
                 page.wait_for_timeout(25)
             # Capture the exact "2nd 12" wager the issue reported as mismatched.
-            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=5000) as second_dozen_info:
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=WAIT_MS) as second_dozen_info:
                 # Activate the reported second-dozen hit target through the real pointer path.
                 page.locator('[data-cell-key="dozen:2"]').click()
             # Require the authoritative second-dozen response before reading or clearing its wager.
@@ -107,7 +110,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Open advanced settings through the visible summary before exercising its native select controls.
             if rules_disclosure.get_attribute('open') is None: rules_disclosure.locator('summary').click()
             # Require the real mode field to become visible rather than bypassing disclosure actionability.
-            page.get_by_test_id('roulette-mode').wait_for(state='visible', timeout=5000)
+            page.get_by_test_id('roulette-mode').wait_for(state='visible', timeout=WAIT_MS)
             # Audit every zero-zone special in both supported wheel modes so no catalog combination can share a pointer target. (issue #348)
             for wheel_mode,expected_count in (('single',6),('double',10)):
                 # Read the current rendered wheel mode before deciding whether an asynchronous settings request is required.
@@ -115,13 +118,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Change modes only when needed so every expected response corresponds to a real state transition.
                 if current_mode!=wheel_mode:
                     # Capture the documented settings response that owns the catalog rerender.
-                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/settings') and response.request.method=='POST', timeout=5000) as settings_info:
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/settings') and response.request.method=='POST', timeout=WAIT_MS) as settings_info:
                         # Select the requested wheel mode through the rendered control.
                         page.get_by_test_id('roulette-mode').select_option(wheel_mode)
                     # Require the mode transition to succeed before reading its zero-zone catalog.
                     assert settings_info.value.ok, f'Roulette {wheel_mode} mode settings request failed'
                 # Wait for the independently loaded mode catalog to replace the previous mode's rendered targets. (TEST-166)
-                page.wait_for_function("(expected) => document.querySelectorAll('[data-betid][data-bet-type=zero_split],[data-betid][data-bet-type=trio],[data-betid][data-bet-type=first_four],[data-betid][data-bet-type=top_line]').length === expected", arg=expected_count, timeout=5000)
+                page.wait_for_function("(expected) => document.querySelectorAll('[data-betid][data-bet-type=zero_split],[data-betid][data-bet-type=trio],[data-betid][data-bet-type=first_four],[data-betid][data-bet-type=top_line]').length === expected", arg=expected_count, timeout=WAIT_MS)
                 # Require the semantic visibility state to survive the mode-owned rerender.
                 assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', f'Roulette {wheel_mode} mode hid inside spots after rerender'
                 # Read only the mode-specific zero-zone targets and their real pointer rectangles.
@@ -147,7 +150,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Build the stable selector that survives each wager-owned rerender.
                     selector=f'[data-cell-key="{key}"]'
                     # Capture the exact completed wager request emitted by the real pointer activation.
-                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=5000) as zero_response:
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST', timeout=WAIT_MS) as zero_response:
                         # Exercise Playwright visibility, stability, hit testing, and pointer dispatch together.
                         page.locator(selector).click()
                     # Require authoritative completion before the next target or mode clear can overtake it.
@@ -165,7 +168,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Restore the documented collapsed state through the visible summary for downstream test isolation.
             if rules_disclosure.get_attribute('open') is not None: rules_disclosure.locator('summary').click()
             # Require advanced settings to be hidden again before handing the shared page to the next case.
-            page.get_by_test_id('roulette-mode').wait_for(state='hidden', timeout=5000)
+            page.get_by_test_id('roulette-mode').wait_for(state='hidden', timeout=WAIT_MS)
         # Record the exhaustive Roulette hit-target integrity and geometry regression.
         run_case('BR-ROU-HITMAP-001',['ROU-002','ROU-005','ROU-007','ROU-011','ROU-012','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053','TEST-092'],roulette_hit_target_integrity)
         # Prove leaving Roulette with an open, un-spun bet refunds the stake rather than stranding it. (issue #246)
@@ -208,11 +211,11 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Require the open bet to have debited the authoritative balance before leaving the table.
             assert wait_balance(lambda value: value < refund_balance_before-0.005) < refund_balance_before-0.005
             # Leave the table without spinning by navigating back to the lobby, which unmounts Roulette and fires the refund.
-            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
             # Require the authoritative balance to return to the pre-wager amount because the open bet was refunded on leave.
             assert abs(wait_balance(lambda value: abs(value-refund_balance_before)<0.005)-refund_balance_before)<0.005
             # Reopen Roulette and require the refunded round to start with no lingering open-bet chips.
-            page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+            page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
             # Require no open-bet chip to remain after the refund so the next round starts clean.
             assert page.locator('.bet-chip').count()==0
         # Record the refund-on-leave wallet-correctness regression before the standard betting acceptance continues.
@@ -229,7 +232,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 else:
                     page.locator(selector).first.click()
                 # Require the slip to gain exactly one row instead of failing silently. (issue #233)
-                page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n", arg=rows_before+1, timeout=5000)
+                page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n", arg=rows_before+1, timeout=WAIT_MS)
                 # Read the newest slip label and require the exact catalog wording. (issues #230 #250)
                 newest_label=page.locator('.bet-item').last.locator('span').first.inner_text().strip()
                 assert newest_label==expected_label, (selector, newest_label, expected_label)
@@ -238,7 +241,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Skip when the slip is already empty because the clear control disables itself.
                 if page.locator('.bet-item').count():
                     # Clear through the visible refund control and wait for the empty slip.
-                    page.locator('#clear').click(); page.wait_for_function("() => document.querySelectorAll('.bet-item').length === 0", timeout=5000)
+                    page.locator('#clear').click(); page.wait_for_function("() => document.querySelectorAll('.bet-item').length === 0", timeout=WAIT_MS)
             # Start from a clean slip after the preceding hit-map case.
             clear_slip()
             # Audit every American-wheel straight pocket so zero, double zero, and all 1-36 labels are authoritative. (issues #230 #250)
@@ -283,7 +286,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Reject silent no-ops even when a call type legitimately expands to several rows.
                 assert expected_call_labels, call_type
                 # Wait until the rerendered slip contains every returned component and no extra row.
-                page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n",arg=len(expected_call_labels),timeout=5000)
+                page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n",arg=len(expected_call_labels),timeout=WAIT_MS)
                 # Read every rendered component label in stable response order.
                 actual_call_labels=[label.strip() for label in page.locator('.bet-item span').all_inner_texts()]
                 # Require the visible slip to match the exact authoritative label sequence.
@@ -582,7 +585,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Attempt autoplay through the current visible shared Start action.
         page.get_by_test_id('roulette-auto-start').click()
         # Wait for the localized player-facing failure rather than relying on transport timing alone.
-        page.wait_for_function("() => { const toast=document.querySelector('#toast'); return toast && !toast.hidden && toast.textContent.includes('No automatic action was placed'); }",timeout=5000)
+        page.wait_for_function("() => { const toast=document.querySelector('#toast'); return toast && !toast.hidden && toast.textContent.includes('No automatic action was placed'); }",timeout=WAIT_MS)
         # Allow enough time for several incorrect fast ticks to become observable.
         page.wait_for_timeout(900)
         # Record the authoritative wallet and state after the client has recovered to idle.
@@ -622,16 +625,16 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Request stop while the current committed spin is allowed to finish safely.
         page.get_by_test_id('roulette-auto-stop').click()
         # Wait for that committed spin to settle before capturing route-return persistence evidence.
-        page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=10000)
+        page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=WAIT_MS * 2)
         run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
         # Collapse autoplay after verification so route-return evidence restores the gameplay-first composition.
         page.get_by_test_id('roulette-autoplay-disclosure').locator('summary').click()
         # Store the settled result before leaving the route.
         roulette_result_before_return=page.get_by_test_id('roulette-result-region').get_attribute('data-result-number')
         # Leave Roulette through the shared navigation to exercise route unmounting.
-        page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+        page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=WAIT_MS)
         # Return to Roulette and wait for the premium wheel to remount from persisted state.
-        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
         # Verify the route return preserves the authoritative settled pocket.
         assert page.get_by_test_id('roulette-result-region').get_attribute('data-result-number') == roulette_result_before_return
         # Let the remounted route complete paint before capturing return evidence.
@@ -651,7 +654,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture every governed responsive layout through a fresh real action.
                     for viewport_id,viewport in presentation_viewports.items():
                         # Apply the exact preference, locale, and viewport before starting the action.
-                        page.emulate_media(reduced_motion=reduced_setting); page.set_viewport_size(viewport); page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                        page.emulate_media(reduced_motion=reduced_setting); page.set_viewport_size(viewport); page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
                         # Place the smallest visible straight bet so each evidence row drives the real public action.
                         page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
                         # Capture the authoritative response while starting the actual spin.
@@ -681,7 +684,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Require result panel and wheel identity to converge on the response after the changed branch completes.
                         assert page.get_by_test_id('roulette-result-region').get_attribute('data-result-number')==presentation_result and page.get_by_test_id('roulette-wheel').get_attribute('data-selected-result')==presentation_result
             # Restore the ordinary English primary-desktop route for downstream Roulette checks.
-            page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size(presentation_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+            page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size(presentation_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
         # Execute both the legacy curve suppression check and the real sixteen-combination presentation matrix under one permanent case.
         def roulette_reduced_motion_and_presentation():
             # Preserve the existing exact reduced-motion runtime assertion.
@@ -725,7 +728,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Navigate to the premium Slots route before collecting state evidence.
         page.get_by_test_id('nav-slots').click()
         # Wait for the fixed reel grid to mount before measuring layout stability.
-        page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+        page.get_by_test_id('slot-grid').wait_for(timeout=WAIT_MS)
         # Capture the idle cabinet state for worker handback evidence.
         shot('slots_idle.png')
         # Capture the English Slots screen as after-pass shared shell and game-layout evidence.
@@ -791,7 +794,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Persist the authoritative result through the same state store the Slots route reads after refresh.
             save_player_game_state('slots',payline_player,{'last_spins':[payline_spin],'progressive':slots_engine.PROGRESSIVE_SEED+0.2,'progressive_basis':{'active_lines':slots_engine.PROGRESSIVE_QUALIFYING_LINES,'line_bet':slots_engine.PROGRESSIVE_QUALIFYING_LINE_BET},'free_spins':0})
             # Reload the real route so the overlay, result text, and history all recover from one authoritative state.
-            page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
+            page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=WAIT_MS)
             # Define a browser-side audit that compares every rendered SVG point with its actual cell center in screen coordinates.
             def audit_payline_geometry():
                 # Center the bounded reel grid so fixed shell actions cannot mask symbol identity during elementFromPoint checks.
@@ -817,7 +820,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Verify every locale and governed viewport, capturing after-pass route-restored multi-win evidence with sidecars.
             for locale in ('en-US','ru-RU'):
                 # Switch through the player-visible locale control so the overlay's accessible copy rerenders normally.
-                page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
+                page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-payline').wait_for(timeout=WAIT_MS)
                 # Exercise every exact visual-matrix size for this locale.
                 for viewport_id,viewport in payline_viewports.items():
                     # Resize through the supported browser path before auditing responsive alignment.
@@ -841,11 +844,11 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Record the zoomed after-pass state separately so the evidence sidecar names the acceptance dimension.
             game_evidence('after-pass-slots-paylines-en-US-desktop_primary-zoomed.png','slots',['win','multi_win','zoomed'], 'en-US','desktop_primary')
             # Restore normal zoom before exercising the operating-system reduced-motion preference.
-            page.evaluate("document.body.style.zoom=''"); page.emulate_media(reduced_motion='reduce'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
+            page.evaluate("document.body.style.zoom=''"); page.emulate_media(reduced_motion='reduce'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=WAIT_MS)
             # Exercise true reduced motion across both supported locales and every governed viewport.
             for locale in ('en-US','ru-RU'):
                 # Switch through the visible shell so reduced-motion copy and layout follow the supported locale path.
-                page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
+                page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-payline').wait_for(timeout=WAIT_MS)
                 # Exercise every exact visual-matrix size under reduced motion.
                 for viewport_id,viewport in payline_viewports.items():
                     # Resize the mounted route and let its observer realign the static overlay.
@@ -855,7 +858,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture the clear non-animated win treatment for this exact locale and viewport.
                     game_evidence(f'after-pass-slots-paylines-{locale}-{viewport_id}-reduced-motion.png','slots',['win','multi_win','reduced_motion','route_restored'],locale,viewport_id)
             # Restore the default media preference and route state for the existing Slots regression sequence.
-            page.emulate_media(reduced_motion='no-preference'); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(payline_viewports['desktop_primary']); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000); require_payline_acceptance(audit_payline_geometry())
+            page.emulate_media(reduced_motion='no-preference'); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(payline_viewports['desktop_primary']); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=WAIT_MS); require_payline_acceptance(audit_payline_geometry())
         # Execute the payline-to-reel alignment regression.
         run_case('BR-SLOTS-PAYLINE-001',['SLOT-029','I18N-010','TEST-077','TEST-117'],slots_payline_alignment)
         # Exercise the changed Slots action branches across the complete exact-head normal/reduced evidence matrix. (SLOT-037)
@@ -873,7 +876,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture every governed responsive layout through a fresh real spin.
                     for viewport_id,viewport in presentation_viewports.items():
                         # Apply the exact locale and viewport before starting the action.
-                        page.set_viewport_size(viewport); page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                        page.set_viewport_size(viewport); page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
                         # Use the smallest bounded fake-money setup for this presentation-only action.
                         page.get_by_test_id('slots-lines').select_option('1'); page.get_by_test_id('slots-line-bet').fill('0.01')
                         # Capture the authoritative response while starting the actual public spin.
@@ -899,7 +902,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Wait for the real action to settle before starting the next matrix row.
                         page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === false",timeout=7000)
             # Restore the ordinary English primary-desktop route for downstream Slots checks.
-            page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size(presentation_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+            page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size(presentation_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
         # Define the focused line-bet regression using real visible controls and backend requests.
         def slots_line_bet_validation():
             # Track only Slots spin requests so input edits can prove they never move tokens by themselves.
@@ -969,7 +972,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Read the frozen endpoint payload after Playwright observes the real request.
             corrected_payload=corrected_request_info.value.post_data_json
             # Wait for a completed real round rather than accepting request emission alone.
-            page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"slots-result\"]')?.textContent.includes('Result.')",timeout=5000)
+            page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"slots-result\"]')?.textContent.includes('Result.')",timeout=WAIT_MS)
             # Require one corrected minimum-cent line bet and an authoritative completed result.
             assert corrected_payload['line_bet']==0.01 and corrected_payload['active_lines']==20 and observed_spin_requests and page.get_by_test_id('slots-result').is_visible()
             # Limit the visible autoplay control to one round so its corrected plan can be inspected safely.
@@ -987,7 +990,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Require the corrected visible value to reach the autoplay plan unchanged.
             assert autoplay_payload['plan']['active_lines']==20 and autoplay_payload['plan']['line_bet']==0.01
             # Wait for the one locally committed autoplay action to settle and return the controls to Off.
-            page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"autoplay-slots\"] .badge')?.textContent === 'Off'",timeout=5000)
+            page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"autoplay-slots\"] .badge')?.textContent === 'Off'",timeout=WAIT_MS)
             # Clear the synthetic session identifier so later route-unmount cleanup stays listener-free.
             page.evaluate("() => { const session=window.__casinoAutoplaySessions?.get('slots'); if(session) session.serverId=null; }")
             # Remove the bounded control-plane stub before any later autoplay coverage.
@@ -1080,7 +1083,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Save one detached copy so route reads cannot mutate a later matrix cell.
                         save_player_game_state('slots',matrix_player,json.loads(json.dumps(prepared_state)))
                         # Reload the canonical Slots route from the persisted state.
-                        page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                        page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
                         # Switch through the visible locale control and wait for the runtime rerender.
                         page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected",arg=locale)
                         # Read the exact backing state/config returned to the mounted browser.
@@ -1088,9 +1091,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Re-enter the route through normal navigation for the route-restored cell.
                         if state_name=='route_restored':
                             # Leave the game through the shared lobby action.
-                            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                             # Return through the catalog-owned Slots route.
-                            page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                            page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
                             # Read state again after the real unmount/remount cycle.
                             restored=page.request.get(base+'/api/v1/games/slots/state').json()['data']
                             # Require the same exact round, result, meter, and economics configuration after restoration.
@@ -1155,7 +1158,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Seed idle state for the three interaction-owned visual states.
                     save_player_game_state('slots',matrix_player,matrix_state())
                     # Reload and restore the active locale after the deterministic seed.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option(locale)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS); page.get_by_test_id('shell-locale-select').select_option(locale)
                     # Enter invalid input through the player-visible control.
                     page.get_by_test_id('slots-line-bet').fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.getAttribute('aria-invalid') === 'true'")
                     # Read state after the invalid edit to prove it caused no hidden game action.
@@ -1165,13 +1168,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture the exact invalid-input matrix cell.
                     game_evidence(f'after-pass-slots-economics-invalid_line_bet-{locale}-{viewport_id}.png','slots',['invalid_line_bet'],locale,viewport_id)
                     # Enable the real reduced-motion media preference and rebuild the route.
-                    page.emulate_media(reduced_motion='reduce'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                    page.emulate_media(reduced_motion='reduce'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
                     # Require the real media preference, idle reel cells, and bounded layout under reduced motion.
                     assert page.evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches") and page.get_by_test_id('slot-grid').is_visible() and page.locator('.slots-symbol.spinning').count()==0 and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                     # Capture the reduced-motion matrix cell.
                     game_evidence(f'after-pass-slots-economics-reduced_motion-{locale}-{viewport_id}.png','slots',['reduced_motion'],locale,viewport_id)
                     # Restore normal motion and apply the governed 125-percent zoom state.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000); page.evaluate("document.body.style.zoom='125%'"); page.wait_for_timeout(120)
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS); page.evaluate("document.body.style.zoom='125%'"); page.wait_for_timeout(120)
                     # Require the exact zoom value, page containment, and visible primary action.
                     assert page.evaluate("document.body.style.zoom==='125%'") and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('slots-spin').is_visible()
                     # Capture the zoomed matrix cell.
@@ -1187,7 +1190,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture the actual spinning matrix cell before the fixed reveal delay completes.
                     game_evidence(f'after-pass-slots-economics-spinning-{locale}-{viewport_id}.png','slots',['spinning'],locale,viewport_id)
                     # Wait for the real action to finish before the next matrix cell or viewport.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === false",timeout=5000)
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === false",timeout=WAIT_MS)
             # Restore English, primary desktop, normal motion, and normal zoom for downstream cases.
             page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(matrix_viewports['desktop_primary']); page.emulate_media(reduced_motion='no-preference'); page.evaluate("document.body.style.zoom=''")
         # Execute the existing economics matrix plus the real normal/reduced presentation matrix under one permanent case.
@@ -1262,7 +1265,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
         run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','SLOT-030','SLOT-031','SLOT-032','SLOT-033','SLOT-034','SLOT-035','I18N-010','TEST-064','TEST-117','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
         # Navigate to Keno and wait for the premium route shell to mount.
-        page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+        page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
         # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
         def keno_edge_containment():
             # Resolve the authenticated player whose disposable Keno state drives deterministic edge evidence.
@@ -1292,7 +1295,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Apply the exact viewport before route reconstruction and geometry sampling.
                     page.set_viewport_size({'width':edge_width,'height':edge_height})
                     # Reload the canonical game route so local selection state is empty and backend state is current.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
                     # Switch through the real shell control so visible copy and accessible names use the requested locale.
                     page.get_by_test_id('shell-locale-select').select_option(edge_locale)
                     # Wait for the locale runtime to confirm the completed in-place rerender.
@@ -1360,7 +1363,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Start exactly one real public draw from the selected corners.
                         page.get_by_test_id('keno-draw').click()
                         # Wait for the production reveal loop to enter a genuine partial drawing state.
-                        page.wait_for_function("""() => { const count=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count>=2 && count<20; }""",timeout=5000)
+                        page.wait_for_function("""() => { const count=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count>=2 && count<20; }""",timeout=WAIT_MS)
                         # Resolve the drawing PNG target without retaining a locator across the production rerender loop.
                         keno_drawing_target=screenshots/f'after-pass-keno-drawing-{edge_locale.lower()}-{edge_viewport_id}.png'
                         # Atomically read the current partial count and page-relative crop before another reveal rerender can detach the region.
@@ -1396,7 +1399,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
                     save_player_game_state('keno',edge_player,final_edge_state)
                     # Reconstruct the route from authoritative history and wait for all twenty final balls.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=WAIT_MS)
                     # Require the seeded result to render every draw plus all caught cells and the latest bottom-right edge.
                     assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==20 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
                     # Require the restored live amount and enabled repeat action to match the settled authoritative ticket.
@@ -1438,9 +1441,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Persist the authoritative settled fixture again before testing a distinct route reconstruction.
                     save_player_game_state('keno',edge_player,final_edge_state)
                     # Reconstruct the route independently from the persisted result instead of reusing the result DOM.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
                     # Wait for the requested locale and all authoritative result balls after reconstruction.
-                    page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
+                    page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=WAIT_MS)
                     # Read the exact state returned by the frozen public route after reconstruction.
                     restored_edge_state=page.request.get(base+'/api/v1/games/keno/state').json()['data']['state']
                     # Resolve the exact authoritative terminal draw and ticket used by the restored surface.
@@ -1466,7 +1469,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Require every one of the 64 governed Keno matrix cells to have passed assertions and emitted evidence.
             assert keno_matrix_cells==keno_matrix_expected_cells,(keno_matrix_cells,keno_matrix_expected_cells)
             # Restore an empty English desktop route so the existing real-draw regression remains independent.
-            save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+            save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
         # Prove restored ticket authority, repeat, autoplay, and aligned history through public controls. (issue #472)
         def keno_economics_route_behavior():
             # Resolve the authenticated player whose isolated state drives this current-route proof.
@@ -1480,7 +1483,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Persist both sources so the open ticket must win visible restoration precedence.
             open_state={'open_tickets':[{'ticket_id':'keno-open-restore','player_id':behavior_player,'spots':open_spots,'amount':0.11,'source':'browser-test','created_at':'2026-07-20T00:01:00Z'}],'last_draws':settled_state['last_draws']}
             # Reconstruct the route from the state containing both historical and open-ticket values.
-            save_player_game_state('keno',behavior_player,open_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+            save_player_game_state('keno',behavior_player,open_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
             # Read each open-ticket restoration predicate into one diagnostic probe.
             open_restore_probe={'amount':float(page.get_by_test_id('keno-amount').input_value()),'open_rows':page.get_by_test_id('keno-open-ticket').count(),'selected_count':page.locator('.keno-num.selected').count(),'pressed_spots':[spot for spot in open_spots if page.get_by_test_id(f'keno-num-{spot}').get_attribute('aria-pressed')=='true'],'drawn_count':page.locator('[data-testid="keno-drawn-ball"]').count(),'paytable_comparisons':page.get_by_test_id('keno-paytable-comparison').count(),'new_ticket_controls':page.get_by_test_id('keno-new-ticket').count(),'buy_controls':page.get_by_test_id('keno-buy').count()}
             # Require the newest open human ticket to own the exact live fake-token amount.
@@ -1494,7 +1497,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Require selection controls and reject every historical result-mode surface.
             assert open_restore_probe['buy_controls']==1 and open_restore_probe['paytable_comparisons']==0 and open_restore_probe['new_ticket_controls']==0,open_restore_probe
             # Replace the state with settled history only so repeat and autoplay restoration share one authority.
-            save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+            save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
             # Require settled history to restore the exact live amount, spots, and repeat availability.
             assert float(page.get_by_test_id('keno-amount').input_value())==0.07 and page.locator('.keno-num.selected').count()==len(settled_spots) and all(page.get_by_test_id(f'keno-num-{spot}').get_attribute('aria-pressed')=='true' for spot in settled_spots) and not page.locator('[data-action="repeat"]').is_disabled()
             # Capture the repeat purchase request emitted by the real visible control.
@@ -1526,13 +1529,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Require exactly one added draw whose settled ticket retains repeat's restored fields.
             assert len(repeat_state['last_draws'])==2 and repeat_state['last_draws'][-1]['results'][0]['ticket']['spots']==settled_spots and float(repeat_state['last_draws'][-1]['results'][0]['ticket']['amount'])==0.07,repeat_state
             # Re-seed the settled fixture so the first autoplay tick starts from a clean reload.
-            save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+            save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
             # Configure exactly one fast autoplay round through public controls.
             page.get_by_test_id('keno-auto-rounds').fill('1'); page.get_by_test_id('keno-auto-speed').select_option('fast')
             # Capture the first autoplay purchase request after route restoration.
-            with page.expect_response(lambda response: response.url.endswith('/api/v1/games/keno/draw') and response.request.method=='POST',timeout=10000) as autoplay_draw_response:
+            with page.expect_response(lambda response: response.url.endswith('/api/v1/games/keno/draw') and response.request.method=='POST',timeout=WAIT_MS * 2) as autoplay_draw_response:
                 # Capture the first ticket purchase paired with the one-round autoplay session.
-                with page.expect_request(lambda request: request.url.endswith('/api/v1/games/keno/tickets') and request.method=='POST',timeout=10000) as autoplay_request:
+                with page.expect_request(lambda request: request.url.endswith('/api/v1/games/keno/tickets') and request.method=='POST',timeout=WAIT_MS * 2) as autoplay_request:
                     # Start server-authorized autoplay through the mounted control plane.
                     page.get_by_test_id('keno-auto-start').click()
             # Parse the first autoplay action body.
@@ -1544,7 +1547,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Resolve the exact first-tick human result.
             autoplay_result=next(result for result in autoplay_draw['results'] if result['ticket']['player_id']==behavior_player)
             # Wait for the exact new round identity and stopped one-round control-plane state.
-            page.wait_for_function("""roundId => document.querySelector('[data-testid="autoplay-keno"] .badge')?.textContent==='Off' && [...document.querySelectorAll('[data-testid="keno-history"] .keno-history-row span')].some(node => node.textContent.trim()===roundId)""",arg=autoplay_draw['round_id'],timeout=10000)
+            page.wait_for_function("""roundId => document.querySelector('[data-testid="autoplay-keno"] .badge')?.textContent==='Off' && [...document.querySelectorAll('[data-testid="keno-history"] .keno-history-row span')].some(node => node.textContent.trim()===roundId)""",arg=autoplay_draw['round_id'],timeout=WAIT_MS * 2)
             # Read player-scoped Keno history after exact autoplay completion.
             autoplay_history=page.request.get(base+'/api/v1/casino/history?game=keno').json()['data']['history']
             # Resolve and decode the exact aligned autoplay history row.
@@ -1556,7 +1559,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Require one and only one added draw whose first tick retained restored fields.
             assert len(autoplay_state['last_draws'])==2 and autoplay_state['last_draws'][-1]['results'][0]['ticket']['spots']==settled_spots and float(autoplay_state['last_draws'][-1]['results'][0]['ticket']['amount'])==0.07,autoplay_state
             # Restore an empty state so the following legacy Keno acceptance starts independently.
-            save_player_game_state('keno',behavior_player,{'open_tickets':[],'last_draws':[]}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+            save_player_game_state('keno',behavior_player,{'open_tickets':[],'last_draws':[]}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
         # Combine the existing edge proof and new economics behavior under their one contiguous owning case.
         def keno_complete_acceptance():
             # Execute all sixty-four exact visual-matrix cells first.
@@ -1580,7 +1583,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Capture the approved draw-progress evidence state.
         shot('keno_draw_progress.png')
         # Wait for the full Keno draw and comparison drawer to finish rendering.
-        page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20""", timeout=5000); page.get_by_test_id('keno-paytable-comparison').wait_for(timeout=5000)
+        page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20""", timeout=WAIT_MS); page.get_by_test_id('keno-paytable-comparison').wait_for(timeout=WAIT_MS)
         # Store the final-result board box for stability assertions.
         keno_result_box=page.evaluate("() => { const box=document.querySelector('[data-testid=\"keno-grid\"]')?.getBoundingClientRect(); return box&&box.width>0&&box.height>0?{width:box.width,height:box.height}:null; }"); assert keno_result_box
         # Capture the approved result and paytable-comparison evidence state.
@@ -1616,7 +1619,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Select English before reload so the copy assertion checks the exact reported wording.
             page.get_by_test_id('shell-locale-select').select_option('en-US')
             # Reload the route so the visible browser client renders the persisted one-catch result.
-            page.reload(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+            page.reload(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
             # Read the visible result copy after the route reload.
             keno_singular_result=page.get_by_test_id('keno-result').inner_text()
             # Require singular English copy and reject the reported plural grammar defect.

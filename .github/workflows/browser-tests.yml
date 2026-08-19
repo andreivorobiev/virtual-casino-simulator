@@ -1,4 +1,9 @@
 name: Browser Tests
+
+# Expose one reviewed millisecond budget that every ordinary Browser wait consumes.
+env:
+  CASINO_BROWSER_WAIT_MS: 5000
+
 on:
   workflow_dispatch:
     inputs:
@@ -17,14 +22,23 @@ on:
         required: true
         default: false
         type: boolean
+      profile_refresh:
+        description: 'Run ordinary Browser qualification for an automated duration-profile pull request'
+        required: true
+        default: false
+        type: boolean
   pull_request:
     # Run browser coverage when UI/runtime code, its harness, or canonical version input changes.
     paths:
       - 'web/**'
       - 'casino/**'
       - 'tests/browser/**'
+      - 'tests/browser_timing.py'
+      - 'tests/browser_case_durations.json'
+      - 'tests/cases/browser/**'
       - 'tests/progress.py'
       - 'tests/test_progress.py'
+      - 'tests/runner.py'
       - 'tests/run_tests.py'
       - 'modules/module-manifest.json'
       # Re-run Browser evidence when this workflow's trigger or execution policy changes.
@@ -37,8 +51,12 @@ on:
       - 'web/**'
       - 'casino/**'
       - 'tests/browser/**'
+      - 'tests/browser_timing.py'
+      - 'tests/browser_case_durations.json'
+      - 'tests/cases/browser/**'
       - 'tests/progress.py'
       - 'tests/test_progress.py'
+      - 'tests/runner.py'
       - 'tests/run_tests.py'
       - 'modules/module-manifest.json'
       - '.github/workflows/browser-tests.yml'
@@ -51,7 +69,7 @@ jobs:
   # Resolve which games' dedicated browser cases must run so a single-game PR skips the unaffected heavy cluster. (issue #468 item 4)
   detect_affected_games:
     name: detect_affected_games
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true || inputs.profile_refresh == true }}
     runs-on: ubuntu-latest
     outputs:
       games_arg: ${{ steps.detect.outputs.games_arg }}
@@ -94,7 +112,7 @@ jobs:
   browser_tests_shard:
     name: browser_tests_shard_${{ matrix.shard }}
     needs: detect_affected_games
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true || inputs.profile_refresh == true }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -124,7 +142,7 @@ jobs:
     needs:
       - detect_affected_games
       - browser_tests_shard
-    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true) }}
+    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true || inputs.profile_refresh == true) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
