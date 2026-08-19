@@ -165,8 +165,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
     run_case("STORAGE-GAME-ACTION-LIFECYCLE-001", ["CORE-031", "STORAGE-013", "TEST-174"], run_json_game_action_provider_tests)
     # Prove schema-four MySQL claim, transaction, resolver, replay, and rollback parity.
     run_case("MYSQL-GAME-ACTION-LIFECYCLE-001", ["MYSQL-009", "STORAGE-013", "TEST-174"], run_mysql_game_action_provider_tests)
-    # Prove player-scoped JSON concurrency, rollback, fallback, isolation, and MySQL delegation.
-    run_case("STORAGE-PLAYER-STATE-ATOMIC-001", ["CORE-030", "STORAGE-001", "STORAGE-002"], run_player_state_atomic_tests)
+    # Prove player-scoped concurrency plus thin-facade parity, containment, rollback, and delegation.
+    run_case("STORAGE-PLAYER-STATE-ATOMIC-001", ["CORE-030", "STORAGE-001", "STORAGE-002", "STORAGE-018", "TEST-247"], run_player_state_atomic_tests)
     # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
     run_case("STORAGE-PRACTICE-OPPONENT-001", ["BOT-009", "BOT-010", "BOT-011", "ADMIN-023", "LEDGER-026", "STORAGE-005", "STORAGE-006"], storage_tests.run_practice_opponent_accounting)
 
@@ -212,4 +212,4 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246"], lambda: run_mysql_migration_live_matrix(request_latency_callback))
+        run_case("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "STORAGE-018", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246", "TEST-247"], lambda: run_mysql_migration_live_matrix(request_latency_callback))

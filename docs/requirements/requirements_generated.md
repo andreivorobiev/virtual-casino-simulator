@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.10
-- core: 10.10.0
+- core: 10.11.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.4
@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.6
-- tests: 1.112.0
-- docs: 1.108.0
+- tests: 1.113.0
+- docs: 1.109.0
 - contracts: 1.62.4
-- tooling: 1.43.0
+- tooling: 1.43.1
 - commenting_policy: 2.1.0
 - color_wheel: 1.1.6
 - poker_dice: 1.1.4
@@ -745,6 +745,8 @@ Historical source baseline: 9.1.0
 - **STORAGE-017** (Storage) - PASS: Provider read paths avoid unrelated durable material: JSON history uses a stat-guarded incremental CSV tail cache with per-game indexing and reset invalidation, MySQL player reads use the player primary key, MySQL game economics aggregates inside the newest bounded SQL window, JSON economics iterates the cached ledger snapshot, and shared simple-game responses reuse provider-committed state and ledger events.
 - **TEST-245** (Tests) - PASS: Listener-free provider evidence proves warmed history reads decode only appended CSV bytes while matching a cache-free reader, JSON and MySQL player point-read parity and SQL shape, MySQL economics aggregation and detail bounds, and shared-game provider-call reduction with exact response, state, ledger, replay, and reset behavior preserved.
 - **TEST-246** (Tests) - PASS: Listener-free evidence proves fixed registry capacity, deterministic stripe selection, malformed identity refusal, documented lock ordering, concurrent completion for distinct player stripes, and strict same-player serialization. Disposable MySQL evidence uses two real wallets and a resolver rendezvous to prove unrelated player actions both reach settlement and commit exactly one debit and credit without changing the JSON global gate.
+- **STORAGE-018** (Storage) - PASS: The state_store compatibility API is a thin provider facade: ordinary and strict reads, complete writes, and atomic updates unconditionally delegate key resolution, locking, recovery, validation, rollback, and publication to the selected storage provider. JSON preserves exact injectable filesystem paths, while non-filesystem providers reject paths outside the configured data root before any operation.
+- **TEST-247** (Tests) - PASS: Listener-free facade evidence runs the identical absent-read, write, ordinary read, atomic update, strict read, and strict update sequence through production JSON and transaction-shaped database providers; binds exact portable keys; proves injectable JSON paths; rejects out-of-root database paths; preserves rollback and concurrency; and statically prevents selector or sidecar-lock reintroduction. Disposable MySQL coverage continues to exercise production state_store callers against real provider rows.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

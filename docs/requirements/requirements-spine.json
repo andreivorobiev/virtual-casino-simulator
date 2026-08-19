@@ -8893,8 +8893,8 @@
         ".github/workflows/comment-density.yml"
       ],
       "introduced_in": "issue-416-density-gate",
-      "changed_in": "issue-713-filler-family-ratchet",
-      "notes": "Issue #441 superseded the density ratio with objective source-header, purpose, syntax-placement, and exact-filler checks; issue #713 added the two variable-name tautology families, default ledger discovery, and merge/base monotonic comparison while preserving the old command for automation compatibility."
+      "changed_in": "issue-716-state-store-provider-facade",
+      "notes": "Issue #441 superseded the density ratio with objective source-header, purpose, syntax-placement, and exact-filler checks; issue #713 added the two variable-name tautology families, default ledger discovery, and merge/base monotonic comparison. The #716 facade deletion ratchets state_store inherited filler from 42 to 34 without increasing any other row."
     },
     {
       "id": "COMMENT-001",
@@ -8914,8 +8914,8 @@
         ".github/workflows/comment-density.yml"
       ],
       "introduced_in": "issue-441-file-header-policy",
-      "changed_in": "issue-713-filler-family-ratchet",
-      "notes": "The fixed 2026 holder text comes verbatim from NOTICE; vendored JavaScript under web/vendor retains upstream ownership, semantic package markers may remain license-only, and the gate now records 1,027 inherited Set/Define tautologies as per-file debt that cleanup slices may only reduce."
+      "changed_in": "issue-716-state-store-provider-facade",
+      "notes": "The fixed 2026 holder text comes verbatim from NOTICE; vendored JavaScript under web/vendor retains upstream ownership, semantic package markers may remain license-only, and inherited Set/Define tautologies remain per-file debt that cleanup slices may only reduce. The #716 state_store simplification retires eight governed filler comments and updates only that baseline row."
     },
     {
       "id": "TOOL-010",
@@ -13418,6 +13418,47 @@
       "introduced_in": "issue-715-player-lock-striping",
       "changed_in": "issue-715-player-lock-striping",
       "notes": "The distinct-player rendezvous would time out under the retired process-wide game lock. Same-player transfer is explicitly held until the first resolver releases, and the live matrix verifies final MySQL balances and immutable movement order for both wallets."
+    },
+    {
+      "id": "STORAGE-018",
+      "module": "Storage",
+      "description": "The state_store compatibility API is a thin provider facade: ordinary and strict reads, complete writes, and atomic updates unconditionally delegate key resolution, locking, recovery, validation, rollback, and publication to the selected storage provider. JSON preserves exact injectable filesystem paths, while non-filesystem providers reject paths outside the configured data root before any operation.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-PLAYER-STATE-ATOMIC-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/state_store.py",
+        "casino/core/storage/base.py",
+        "casino/core/storage/json_infrastructure.py",
+        "casino/core/storage/json_provider.py"
+      ],
+      "introduced_in": "issue-716-state-store-provider-facade",
+      "changed_in": "issue-716-state-store-provider-facade",
+      "notes": "The retired state_store backend-name branches, process lock, sidecar lock, JSON decoder, and atomic writer no longer compete with provider ownership. JSONL diagnostics remain intentionally local and separately locked because the document-provider contract does not own append-only logs."
+    },
+    {
+      "id": "TEST-247",
+      "module": "Tests",
+      "description": "Listener-free facade evidence runs the identical absent-read, write, ordinary read, atomic update, strict read, and strict update sequence through production JSON and transaction-shaped database providers; binds exact portable keys; proves injectable JSON paths; rejects out-of-root database paths; preserves rollback and concurrency; and statically prevents selector or sidecar-lock reintroduction. Disposable MySQL coverage continues to exercise production state_store callers against real provider rows.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-PLAYER-STATE-ATOMIC-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/state_store_atomic_tests.py",
+        "tests/storage_package_boundary_tests.py",
+        "tests/cases/api/storage_foundation.py",
+        "tests/mysql_migration_live.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-716-state-store-provider-facade",
+      "changed_in": "issue-716-state-store-provider-facade",
+      "notes": "Provider parity is asserted at the public state_store call boundary rather than by duplicating provider internals. Existing MySQL integration covers auth, mail, enrollment, invitation, analytics, bot, autoplay, and player-game documents through the same facade."
     }
   ]
 }

@@ -155,7 +155,7 @@ class JsonInfrastructureMixin:
         return self.data_dir / ".game_actions" / "states.json"
 
     # Return one sidecar lock path for an atomic named-document mutation.
-    def document_lock_path(self, key: str) -> Path:
+    def document_lock_path(self, key: str | Path) -> Path:
         # Place the lock beside the selected document so independent documents do not block each other.
         return self.document_path(key).with_suffix(".json.lock")
 
@@ -165,9 +165,18 @@ class JsonInfrastructureMixin:
         return self.data_dir / "history.csv"
 
     # Return the local JSON document path for a named document key.
-    def document_path(self, key: str) -> Path:
-        # Return a namespaced JSON path so settings retain their current layout.
+    def document_path(self, key: str | Path) -> Path:
+        # Honor exact paths supplied by state_store so injectable service files remain intentionally local.
+        if isinstance(key, Path):
+            # Resolve the explicit local reference without adding a second JSON suffix.
+            return key.resolve()
+        # Return a namespaced JSON path so direct provider keys retain their current layout.
         return self.data_dir / f"{key}.json"
+
+    # Preserve exact local state-store paths while database providers use relative document keys. (STORAGE-018)
+    def document_reference(self, path: Path, data_root: Path) -> str | Path:
+        # Return the caller's resolved path because the JSON provider owns filesystem containment and locking.
+        return Path(path).resolve()
 
     # Create local data folders only after the caller owns the stable provider gate.
     def _ensure_ready_direct(self) -> None:
@@ -697,7 +706,7 @@ class JsonInfrastructureMixin:
 
     # Hold the global JSON gate across a named-document operation.
     @contextmanager
-    def _document_process_lock(self, key: str):
+    def _document_process_lock(self, key: str | Path):
         # Resolve the exact legacy per-document sidecar path.
         document_lock = self.document_lock_path(key)
         # Build a process/root/key identity for reentrant same-thread calls.

@@ -1053,6 +1053,25 @@ class MySQLStorageProvider(MySQLGameActionMixin, StorageProvider, GameActionExec
             # Close the MySQL connection for this operation.
             connection.close()
 
+    # Report exact database document existence without decoding or creating a row. (STORAGE-018)
+    def document_exists(self, key: str) -> bool:
+        # Ensure schema compatibility before inspecting the canonical document table.
+        self.ensure_ready()
+        # Open one provider connection for the point lookup.
+        connection = self.connect()
+        # Start protected query logic so the connection is always closed.
+        try:
+            # Open a compact ordinary cursor for one existence bit.
+            cursor = connection.cursor()
+            # Select one constant by the canonical document primary key.
+            cursor.execute("SELECT 1 FROM casino_documents WHERE document_key = %s", (key,))
+            # Return true only when the exact canonical row exists.
+            return cursor.fetchone() is not None
+        # Always close the provider connection after the point lookup.
+        finally:
+            # Release the connection and any implicit read transaction.
+            connection.close()
+
     # Read one MySQL security document through the existing strict decoder and shape boundary.
     def read_document_strict(self, key: str, default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
         # Start protected decoding so malformed provider JSON uses the fixed recovery boundary.

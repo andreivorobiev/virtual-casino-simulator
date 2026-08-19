@@ -991,7 +991,7 @@ class JsonStorageProvider(JsonInfrastructureMixin, JsonGameActionMixin, JsonRese
                 return rows[-limit:]
 
     # Read a named JSON document from local storage.
-    def read_document(self, key: str, default: Any) -> Any:
+    def read_document(self, key: str | Path, default: Any) -> Any:
         # Guard recovery and document reads from concurrent local threads.
         with self.lock:
             # Bridge the provider-wide and shipped per-document process locks.
@@ -1001,8 +1001,19 @@ class JsonStorageProvider(JsonInfrastructureMixin, JsonGameActionMixin, JsonRese
                 # Reuse the local JSON helper for settings documents.
                 return self._read_json(self.document_path(key), default)
 
+    # Report exact local document existence under the provider's recovery and locking boundary.
+    def document_exists(self, key: str | Path) -> bool:
+        # Guard recovery and the existence observation from concurrent local threads.
+        with self.lock:
+            # Bridge the provider-wide and shipped per-document process locks.
+            with self._document_process_lock(key):
+                # Complete every recoverable action before publishing document visibility.
+                self._recover_all_json_actions_locked()
+                # Return only the existence bit without decoding or creating the document.
+                return self.document_path(key).exists()
+
     # Read one local security document strictly without fallback backups or normalization.
-    def read_document_strict(self, key: str, default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
+    def read_document_strict(self, key: str | Path, default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
         # Guard recovery and strict document reads from concurrent local threads.
         with self.lock:
             # Bridge the provider-wide and shipped per-document process locks.
@@ -1037,7 +1048,7 @@ class JsonStorageProvider(JsonInfrastructureMixin, JsonGameActionMixin, JsonRese
                 return _validated_strict_document(value, validator)
 
     # Write a named JSON document to local storage.
-    def write_document(self, key: str, data: Any) -> None:
+    def write_document(self, key: str | Path, data: Any) -> None:
         # Reject provider mutation attempted from inside a planner.
         self._reject_planner_mutation()
         # Guard recovery and document writes from concurrent local threads.
@@ -1050,7 +1061,7 @@ class JsonStorageProvider(JsonInfrastructureMixin, JsonGameActionMixin, JsonRese
                 self._write_json(self.document_path(key), data)
 
     # Mutate one local document under the provider lock for direct provider callers.
-    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
+    def update_document(self, key: str | Path, mutator: Callable[[Any], Any], default: Any, validator: Callable[[Any], bool] | None = None) -> Any:
         # Reject provider mutation attempted from inside a planner.
         self._reject_planner_mutation()
         # Serialize the direct provider read-modify-write inside this process.

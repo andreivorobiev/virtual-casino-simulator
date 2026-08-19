@@ -15,7 +15,7 @@
     "casino/core/logger.py": 15,
     "casino/core/players.py": 11,
     "casino/core/settings.py": 9,
-    "casino/core/state_store.py": 42,
+    "casino/core/state_store.py": 34,
     "casino/core/validation.py": 3,
     "casino/errors.py": 11,
     "casino/games/baccarat/api.py": 22,
