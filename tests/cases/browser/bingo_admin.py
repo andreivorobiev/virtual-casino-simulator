@@ -9,13 +9,16 @@ import json
 # Import regular expressions for report, locale, and ledger-label assertions.
 import re
 
+# Import the sole environment-scalable Playwright wait budget. (TEST-053)
+from tests.browser_timing import WAIT_MS
+
 
 # Execute the complete producer/consumer family under one deterministic shard owner.
 def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots):
     # Run the Bingo-through-Admin producer/consumer chain only on its declared owner.
     if browser_shard_owns_group('bingo_admin'):
         # Navigate to Bingo before exercising the real card-purchase mutation boundary.
-        page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('premium-bingo').wait_for(timeout=5000)
+        page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('premium-bingo').wait_for(timeout=WAIT_MS)
         # Read the current player's ledger before the one visible card purchase.
         bingo_ledger_before=page.request.get(base+f'/api/v1/players/{browser_player_id}/ledger').json()['data']['ledger']
         # Store immutable ledger identities because response ordering is not a persistence contract.
@@ -25,7 +28,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Buy one card through the current visible player control.
         page.get_by_test_id('bingo-buy').click()
         # Wait until the real backend committed while the browser response remains deliberately held.
-        page.wait_for_function('window.__bingoPurchaseHeld === true',timeout=5000)
+        page.wait_for_function('window.__bingoPurchaseHeld === true',timeout=WAIT_MS)
         # Read the authoritative state at the controlled stale-response boundary.
         bingo_pending_state=page.request.get(base+'/api/v1/games/bingo/state').json()['data']['state']
         # Record the shared busy boundary and semantic control locks during the pending purchase.
@@ -39,7 +42,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Release the committed response so state, bots, wallet, and controls can settle normally.
         page.evaluate('window.__bingoReleasePurchase()')
         # Wait for the one active card and recovered Call control after purchase completion.
-        page.wait_for_function("() => document.querySelector('[data-testid=\"bingo-control-rail\"]')?.getAttribute('aria-busy') === 'false' && !document.querySelector('[data-testid=\"bingo-call\"]')?.disabled",timeout=5000)
+        page.wait_for_function("() => document.querySelector('[data-testid=\"bingo-control-rail\"]')?.getAttribute('aria-busy') === 'false' && !document.querySelector('[data-testid=\"bingo-call\"]')?.disabled",timeout=WAIT_MS)
         # Restore the unwrapped browser fetch function before later suite actions.
         page.evaluate('window.__bingoRestoreFetch()')
         # Read the final ledger and authoritative Bingo state after the purchase sequence.
@@ -75,9 +78,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Fail closed unless the mutation response contains one archived winning session.
         bingo_terminal=require_bingo_terminal_auto_payload(bingo_auto_payload)
         # Leave Bingo through a deterministic route transition so clicking Bingo must create a fresh mount.
-        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
         # Observe the exact state response consumed by the fresh Bingo route mount.
-        with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/state') and response.request.method=='GET',timeout=5000) as bingo_reload_info:
+        with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/state') and response.request.method=='GET',timeout=WAIT_MS) as bingo_reload_info:
             # Remount Bingo through its real navigation control after route ownership changed.
             page.get_by_test_id('nav-bingo').click()
         # Prove the remount loaded the same authoritative terminal session before inspecting markup.
@@ -97,7 +100,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Navigate to Blackjack before checking the premium table surface.
         page.get_by_test_id('nav-blackjack').click()
         # Wait for the premium Blackjack shell to mount.
-        page.get_by_test_id('blackjack-premium').wait_for(timeout=5000)
+        page.get_by_test_id('blackjack-premium').wait_for(timeout=WAIT_MS)
         # Set a visible one-hundred-token stake for an exact three-to-two payout assertion.
         page.get_by_test_id('blackjack-bet').fill('100')
         # Observe the real deal response while activating the public Blackjack control.
@@ -105,7 +108,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Deal the controlled natural entirely through the rendered button.
             page.get_by_test_id('blackjack-deal').click()
         # Wait for the first player hand lane to render.
-        page.get_by_test_id('blackjack-hand-0').wait_for(timeout=5000)
+        page.get_by_test_id('blackjack-hand-0').wait_for(timeout=WAIT_MS)
         # Require the deferred natural to expose both the even-money choice and ordinary Stand decline path.
         page.wait_for_function("() => !document.querySelector('[data-testid=\"blackjack-even-money\"]')?.disabled && !document.querySelector('[data-testid=\"blackjack-stand\"]')?.disabled")
         # Store the backend round id exposed by the stable test hook.
@@ -173,7 +176,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Persist only the synthetic insured round for the browser player before remounting Blackjack.
         browser_blackjack_insurance_state['rounds']={browser_blackjack_insurance_round['round_id']:browser_blackjack_insurance_round}; save_player_game_state('blackjack',browser_player_id,browser_blackjack_insurance_state)
         # Leave and re-enter Blackjack so the route reloads the persisted insured settlement fixture.
-        page.get_by_test_id('nav-baccarat').click(); page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000); page.get_by_test_id('nav-blackjack').click(); page.get_by_test_id('blackjack-premium').wait_for(timeout=5000)
+        page.get_by_test_id('nav-baccarat').click(); page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=WAIT_MS); page.get_by_test_id('nav-blackjack').click(); page.get_by_test_id('blackjack-premium').wait_for(timeout=WAIT_MS)
         # Read the localized Net value from the rendered settlement drawer without adding a test-only selector.
         blackjack_insurance_net_text=page.evaluate("""() => { const rows = Array.from(document.querySelectorAll('[data-testid="blackjack-drawer"] .mini-stat')); const net = rows.map(row => ({ label: row.querySelector('span')?.textContent?.trim(), value: row.querySelector('strong')?.textContent?.trim() })).find(row => row.label === 'Net'); return net?.value || ''; }""")
         # Define the blackjack_insurance_net_browser function used by this display regression.
@@ -187,7 +190,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Click Baccarat and wait for its final mount-time wallet refresh response.
             page.get_by_test_id('nav-baccarat').click()
         # Wait for the wager setup state to mount.
-        page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000)
+        page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=WAIT_MS)
         # Switch the idle table to Russian so the corrected shoe terminology is exact-head browser evidence.
         page.get_by_test_id('shell-locale-select').select_option('ru-RU'); page.wait_for_timeout(100)
         # Define the focused Russian Baccarat copy regression before gameplay changes the visible status list.
@@ -223,7 +226,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Place a banker wager through the same visible public control a player uses.
         page.get_by_test_id('baccarat-banker').click()
         # Wait until the real backend committed while the browser response remains deliberately held.
-        page.wait_for_function('window.__baccaratFirstBetHeld === true',timeout=5000)
+        page.wait_for_function('window.__baccaratFirstBetHeld === true',timeout=WAIT_MS)
         # Read backend state while the browser is still at the controlled stale-response boundary.
         baccarat_pending_state=page.request.get(base+'/api/v1/games/baccarat/state').json()['data']['state']
         # Record the truthful shared busy state before attempting the disabled visible Deal control.
@@ -239,11 +242,11 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Release the first committed response so the queue can apply its authoritative open-bet state.
         page.evaluate('window.__baccaratReleaseFirstBet()')
         # Wait until the one visible wager appears and the serialized Deal control becomes available.
-        page.wait_for_function("() => !document.querySelector('[data-testid=\"baccarat-deal\"]').disabled && document.querySelector('.bac-drawer-total')?.textContent.includes('25')",timeout=5000)
+        page.wait_for_function("() => !document.querySelector('[data-testid=\"baccarat-deal\"]').disabled && document.querySelector('.bac-drawer-total')?.textContent.includes('25')",timeout=WAIT_MS)
         # Deal one coup so the reveal theater and settlement state are exercised.
         page.get_by_test_id('baccarat-deal').click()
         # Wait for the post-reveal result state to settle.
-        page.get_by_test_id('baccarat-result').wait_for(timeout=5000)
+        page.get_by_test_id('baccarat-result').wait_for(timeout=WAIT_MS)
         # Read final backend state after the one visible wager settles.
         baccarat_final_state=page.request.get(base+'/api/v1/games/baccarat/state').json()['data']['state']
         # Read final ledger rows so exactly one new Baccarat debit is proven.
@@ -301,7 +304,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Spin through the same visible control a player uses.
                 page.get_by_test_id('slots-spin').click()
                 # Wait for one settled history row and a re-enabled action before auditing text.
-                page.wait_for_function("() => Boolean(document.querySelector('[data-testid=\"slots-recent-spins\"] .slots-history-row')) && !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled",timeout=5000)
+                page.wait_for_function("() => Boolean(document.querySelector('[data-testid=\"slots-recent-spins\"] .slots-history-row')) && !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled",timeout=WAIT_MS)
             # Produce one complete Keno draw when this isolated shard has no final-draw metric.
             def drive_keno_interpolation():
                 # Skip the action when a prior draw already rendered its complete twenty-ball result.
@@ -311,7 +314,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Start one real draw through the current visible control.
                 page.get_by_test_id('keno-draw').click()
                 # Wait until the route owns a complete final-draw interpolation state.
-                page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
+                page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=WAIT_MS)
             # Declare only route-owned state producers needed by interpolation templates.
             route_interpolation_drivers={'games/slots':drive_slots_interpolation,'games/keno':drive_keno_interpolation}
             # Store stable navigation, mount, domain, and interpolation probes for every game route.
@@ -333,7 +336,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Click the route after no special completion response is required.
                         page.get_by_test_id(nav_testid).click()
                     # Wait for the route-owned stable mount selector before scanning strings.
-                    page.get_by_test_id(ready_testid).wait_for(timeout=5000)
+                    page.get_by_test_id(ready_testid).wait_for(timeout=WAIT_MS)
                     # Run only the mounted route's declared visible state producer when required.
                     interpolation_driver=route_interpolation_drivers.get(domain)
                     # Produce the interpolation state inside this same case and shard.
@@ -369,9 +372,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Install page-local routes so no test preference survives this case.
             page.route('**/api/v2/me/wellness',wellness_settings_route); page.route('**/api/v2/me/wellness/summary',wellness_summary_route)
             # Reload the authenticated shell so the production controller adopts the controlled opt-in state.
-            page.reload(wait_until='networkidle'); page.get_by_test_id('wellness-open').wait_for(state='visible',timeout=5000)
+            page.reload(wait_until='networkidle'); page.get_by_test_id('wellness-open').wait_for(state='visible',timeout=WAIT_MS)
             # Require the persistent control on a real game route rather than only the lobby.
-            page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000); assert page.get_by_test_id('wellness-open').is_visible()
+            page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS); assert page.get_by_test_id('wellness-open').is_visible()
             # Exercise every governed wellness locale and viewport under reduced motion.
             viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}; page.emulate_media(reduced_motion='reduce')
             # Iterate the complete two-locale matrix without persisting the temporary locale choice.
@@ -509,7 +512,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Verify the browser context received a successful Admin login response.
         assert admin_browser_login.json()['ok'] is True
         # Load the normal shared shell first so Admin navigation is exercised as a user-visible affordance.
-        page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+        page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
         # Store the Admin shell results for the combined two-role authorization assertion.
         admin_nav_results=[]
         # Exercise the Admin affordance through both installed locales and focused responsive viewports.
@@ -541,7 +544,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Record the focused control before its native Enter activation changes documents.
         admin_nav_focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid')")
         # Activate the Admin route using the button's native keyboard contract.
-        page.get_by_test_id('nav-admin').press('Enter'); page.wait_for_url('**/admin'); page.get_by_test_id('admin-tab-audio').wait_for(timeout=5000)
+        page.get_by_test_id('nav-admin').press('Enter'); page.wait_for_url('**/admin'); page.get_by_test_id('admin-tab-audio').wait_for(timeout=WAIT_MS)
         # Verify the Admin browser session can still read a protected API after route entry using its same-origin cookie.
         admin_api_result=page.evaluate("""async () => { const response=await fetch('/api/v1/admin/overview',{credentials:'include'}); return {status:response.status,body:await response.json()}; }""")
         # Capture the destination surface reached through the keyboard-owned shell affordance.
@@ -583,7 +586,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Open the existing System tab where canonical module revisions are displayed.
             page.locator('[data-tab="system"]').click()
             # Wait for the module-revision table to replace the dashboard asynchronously.
-            page.get_by_text('Module revisions',exact=True).wait_for(timeout=5000)
+            page.get_by_text('Module revisions',exact=True).wait_for(timeout=WAIT_MS)
             # Select the first System table that lists module and revision columns.
             module_table=page.locator('#adminView table').first
             # Require one header plus every canonical module row.
@@ -635,27 +638,27 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Apply exact visual geometry.
                         page.set_viewport_size(viewport)
                         # Render nested and flat state rows.
-                        mode['value']='populated'; page.get_by_test_id('admin-tab-states').click(); page.locator('[data-testid="admin-tab-states"]').wait_for(timeout=5000); page.get_by_text('bingo/human',exact=True).wait_for(timeout=5000)
+                        mode['value']='populated'; page.get_by_test_id('admin-tab-states').click(); page.locator('[data-testid="admin-tab-states"]').wait_for(timeout=WAIT_MS); page.get_by_text('bingo/human',exact=True).wait_for(timeout=WAIT_MS)
                         # Require both state layouts and page containment.
                         assert page.get_by_text('roulette',exact=True).is_visible() and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
                         # Capture nested and legacy state evidence.
                         game_evidence(f'after-pass-admin-diagnostics-states-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['nested_and_flat_states','keyboard_focus'],locale,viewport_id)
                         # Render and capture the state empty contract.
-                        mode['value']='empty'; page.get_by_test_id('admin-tab-states').click(); page.get_by_test_id('admin-game-states-empty').wait_for(timeout=5000); game_evidence(f'after-pass-admin-diagnostics-states-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['empty_states'],locale,viewport_id)
+                        mode['value']='empty'; page.get_by_test_id('admin-tab-states').click(); page.get_by_test_id('admin-game-states-empty').wait_for(timeout=WAIT_MS); game_evidence(f'after-pass-admin-diagnostics-states-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['empty_states'],locale,viewport_id)
                         # Render one readable history row.
-                        mode['value']='populated'; page.get_by_test_id('admin-tab-history').click(); page.get_by_text('browser-admin',exact=True).wait_for(timeout=5000)
+                        mode['value']='populated'; page.get_by_test_id('admin-tab-history').click(); page.get_by_text('browser-admin',exact=True).wait_for(timeout=WAIT_MS)
                         # Require table copy instead of raw object text.
                         assert page.get_by_text('Line card',exact=True).is_visible()
                         # Capture populated history evidence.
                         game_evidence(f'after-pass-admin-diagnostics-history-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['history_table'],locale,viewport_id)
                         # Render and capture the history empty contract.
-                        mode['value']='empty'; page.get_by_test_id('admin-tab-history').click(); page.get_by_test_id('admin-history-empty').wait_for(timeout=5000); game_evidence(f'after-pass-admin-diagnostics-history-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['history_empty'],locale,viewport_id)
+                        mode['value']='empty'; page.get_by_test_id('admin-tab-history').click(); page.get_by_test_id('admin-history-empty').wait_for(timeout=WAIT_MS); game_evidence(f'after-pass-admin-diagnostics-history-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['history_empty'],locale,viewport_id)
                         # Render the structured test receipt.
-                        mode['value']='populated'; page.get_by_test_id('admin-tab-tests').click(); page.get_by_text(expected_result_fields[locale],exact=True).wait_for(timeout=5000)
+                        mode['value']='populated'; page.get_by_test_id('admin-tab-tests').click(); page.get_by_text(expected_result_fields[locale],exact=True).wait_for(timeout=WAIT_MS)
                         # Capture populated test-result evidence.
                         game_evidence(f'after-pass-admin-diagnostics-tests-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['test_results'],locale,viewport_id)
                         # Render and capture the test-result empty contract.
-                        mode['value']='empty'; page.get_by_test_id('admin-tab-tests').click(); page.get_by_test_id('admin-tests-empty').wait_for(timeout=5000); game_evidence(f'after-pass-admin-diagnostics-tests-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['test_results_empty'],locale,viewport_id)
+                        mode['value']='empty'; page.get_by_test_id('admin-tab-tests').click(); page.get_by_test_id('admin-tests-empty').wait_for(timeout=WAIT_MS); game_evidence(f'after-pass-admin-diagnostics-tests-empty-{locale}-{viewport_id}.png','BR-ADMIN-DIAGNOSTICS-001',['test_results_empty'],locale,viewport_id)
             # Remove exactly the routes installed by this case.
             finally:
                 # Restore real diagnostic endpoints for later Admin cases.
@@ -695,7 +698,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Apply exact visual geometry.
                         page.set_viewport_size(viewport)
                         # Render the complete summary.
-                        mode['value']='populated'; page.get_by_test_id('admin-tab-economics').click(); page.locator('[data-economics-game="buggy_game"]').wait_for(timeout=5000)
+                        mode['value']='populated'; page.get_by_test_id('admin-tab-economics').click(); page.locator('[data-economics-game="buggy_game"]').wait_for(timeout=WAIT_MS)
                         # Require player-positive and zero-wager formatting plus containment.
                         economics_text=page.get_by_test_id('admin-economics').inner_text(); assert '150.0%' in economics_text and '—' in economics_text and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
                         # Focus the real drill-down control for keyboard evidence.
@@ -703,13 +706,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Capture summary states together.
                         game_evidence(f'after-pass-admin-economics-summary-{locale}-{viewport_id}.png','BR-ADMIN-ECONOMICS-001',['summary','player_positive','zero_wager','keyboard_focus'],locale,viewport_id)
                         # Activate the detail by keyboard and wait for its real renderer.
-                        page.locator('[data-economics-game="buggy_game"]').press('Enter'); page.get_by_test_id('admin-economics-detail').wait_for(timeout=5000)
+                        page.locator('[data-economics-game="buggy_game"]').press('Enter'); page.get_by_test_id('admin-economics-detail').wait_for(timeout=WAIT_MS)
                         # Require bounded type and recent evidence.
                         assert page.get_by_text('browser-admin',exact=True).is_visible()
                         # Capture the detail state.
                         game_evidence(f'after-pass-admin-economics-detail-{locale}-{viewport_id}.png','BR-ADMIN-ECONOMICS-001',['detail'],locale,viewport_id)
                         # Render the explicit empty summary.
-                        mode['value']='empty'; page.get_by_test_id('admin-tab-economics').click(); page.get_by_test_id('admin-economics-empty').wait_for(timeout=5000)
+                        mode['value']='empty'; page.get_by_test_id('admin-tab-economics').click(); page.get_by_test_id('admin-economics-empty').wait_for(timeout=WAIT_MS)
                         # Capture the empty economics state.
                         game_evidence(f'after-pass-admin-economics-empty-{locale}-{viewport_id}.png','BR-ADMIN-ECONOMICS-001',['empty'],locale,viewport_id)
             # Remove exactly the routes installed by this case.
@@ -773,7 +776,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Reset the independent live request policy before this cell.
                         rate_policy.update({'schema_version':2,'requests_per_window':1200,'window_seconds':60})
                         # Apply exact visual geometry and render the owner view.
-                        page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-enabled\"]')?.checked === true && document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '30' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '12' && document.querySelector('[data-testid=\"admin-sessions-warning\"]')?.value === '2' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '15' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === true && document.querySelector('[data-testid=\"admin-sessions-provenance\"]')?.textContent?.trim() && document.querySelector('[data-testid=\"admin-rate-limit-requests\"]')?.value === '1200' && document.querySelector('[data-testid=\"admin-rate-limit-window\"]')?.value === '60'""",timeout=5000)
+                        page.set_viewport_size(viewport); page.get_by_test_id('admin-tab-sessions').click(); page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-enabled\"]')?.checked === true && document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '30' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '12' && document.querySelector('[data-testid=\"admin-sessions-warning\"]')?.value === '2' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '15' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === true && document.querySelector('[data-testid=\"admin-sessions-provenance\"]')?.textContent?.trim() && document.querySelector('[data-testid=\"admin-rate-limit-requests\"]')?.value === '1200' && document.querySelector('[data-testid=\"admin-rate-limit-window\"]')?.value === '60'""",timeout=WAIT_MS)
                         # Require the complete owner policy to remain contained.
                         assert page.get_by_test_id('admin-sessions-idle').input_value()=='30' and page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1")
                         # Focus the real save action for keyboard evidence.
@@ -783,13 +786,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Submit values outside reviewed bounds through the real UI control.
                         page.get_by_test_id('admin-sessions-enabled').uncheck(); page.get_by_test_id('admin-sessions-idle').fill('0'); page.get_by_test_id('admin-sessions-absolute').fill('99'); page.get_by_test_id('admin-sessions-warning').fill('99'); page.get_by_test_id('admin-sessions-admin-idle').fill('5000'); page.get_by_test_id('admin-sessions-admin-stricter').uncheck()
                         # Bind the real Save action to completion of its exact owner-policy POST.
-                        with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/session-settings') and response.request.method=='POST',timeout=5000):
+                        with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/session-settings') and response.request.method=='POST',timeout=WAIT_MS):
                             # Trigger the asynchronous save while its response observer is armed.
                             page.get_by_test_id('admin-save-sessions').click()
                         # Rerender from the persisted deterministic response.
                         page.get_by_test_id('admin-tab-sessions').click()
                         # Wait for all exact clamped controls instead of the already-visible stale panel.
-                        page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-enabled\"]')?.checked === false && document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '1' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '24' && document.querySelector('[data-testid=\"admin-sessions-warning\"]')?.value === '0' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '1440' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === false && document.querySelector('[data-testid=\"admin-sessions-provenance\"]')?.textContent?.includes('browser-owner')""",timeout=5000)
+                        page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-sessions-enabled\"]')?.checked === false && document.querySelector('[data-testid=\"admin-sessions-idle\"]')?.value === '1' && document.querySelector('[data-testid=\"admin-sessions-absolute\"]')?.value === '24' && document.querySelector('[data-testid=\"admin-sessions-warning\"]')?.value === '0' && document.querySelector('[data-testid=\"admin-sessions-admin-idle\"]')?.value === '1440' && document.querySelector('[data-testid=\"admin-sessions-admin-stricter\"]')?.checked === false && document.querySelector('[data-testid=\"admin-sessions-provenance\"]')?.textContent?.includes('browser-owner')""",timeout=WAIT_MS)
                         # Require exact clamped values and boolean persistence.
                         assert not page.get_by_test_id('admin-sessions-enabled').is_checked() and page.get_by_test_id('admin-sessions-idle').input_value()=='1' and page.get_by_test_id('admin-sessions-absolute').input_value()=='24' and page.get_by_test_id('admin-sessions-warning').input_value()=='0' and page.get_by_test_id('admin-sessions-admin-idle').input_value()=='1440' and not page.get_by_test_id('admin-sessions-admin-stricter').is_checked()
                         # Capture clamped and saved policy evidence.
@@ -797,19 +800,19 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Submit out-of-range live rate controls through the real owner UI.
                         page.get_by_test_id('admin-rate-limit-requests').fill('50000'); page.get_by_test_id('admin-rate-limit-window').fill('0')
                         # Bind the real Save action to completion of its exact rate-policy POST.
-                        with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/rate-limits') and response.request.method=='POST',timeout=5000):
+                        with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/rate-limits') and response.request.method=='POST',timeout=WAIT_MS):
                             # Trigger the independent live rate-policy save.
                             page.get_by_test_id('admin-save-rate-limits').click()
                         # Rerender from both persisted policy responses.
                         page.get_by_test_id('admin-tab-sessions').click()
                         # Wait for exact backend-equivalent clamps rather than accepting stale controls.
-                        page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-rate-limit-requests\"]')?.value === '10000' && document.querySelector('[data-testid=\"admin-rate-limit-window\"]')?.value === '1'""",timeout=5000)
+                        page.wait_for_function("""() => document.querySelector('[data-testid=\"admin-rate-limit-requests\"]')?.value === '10000' && document.querySelector('[data-testid=\"admin-rate-limit-window\"]')?.value === '1'""",timeout=WAIT_MS)
                         # Require the live policy to display its exact committed values.
                         assert page.get_by_test_id('admin-rate-limit-requests').input_value()=='10000' and page.get_by_test_id('admin-rate-limit-window').input_value()=='1'
                 # Record diagnostics before modeling one canonical ordinary-Admin denial.
                 denial_http_index=len(http_errors); denial_console_index=len(console_errors); denial_page_index=len(page_errors)
                 # Return the canonical forbidden envelope on the next read.
-                denied['value']=True; page.get_by_test_id('admin-tab-sessions').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                denied['value']=True; page.get_by_test_id('admin-tab-sessions').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=WAIT_MS)
                 # Isolate diagnostics emitted by the deliberate forbidden response.
                 denial_http=http_errors[denial_http_index:]; denial_console=console_errors[denial_console_index:]; denial_pages=page_errors[denial_page_index:]
                 # Require one exact forbidden response and no JavaScript exception.
@@ -843,7 +846,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Apply exact visual-matrix geometry before rendering either ledger surface.
                     page.set_viewport_size(admin_ledger_viewport)
                     # Open Dashboard and wait for at least one real ledger event from the preceding browser actions.
-                    page.locator('[data-tab="dashboard"]').click(); page.locator('[data-testid="admin-ledger-event"]').first.wait_for(timeout=5000)
+                    page.locator('[data-tab="dashboard"]').click(); page.locator('[data-testid="admin-ledger-event"]').first.wait_for(timeout=WAIT_MS)
                     # Read every visible localized Dashboard action label.
                     dashboard_labels=page.locator('[data-testid="admin-ledger-event"]').all_inner_texts()
                     # Require readable labels with no raw enum separators or source-style all-caps action phrase.
@@ -855,7 +858,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture exact-head Dashboard label evidence for human EN/RU review.
                     game_evidence(f'after-pass-admin-ledger-dashboard-{admin_ledger_locale}-{admin_ledger_viewport_id}.png','admin',['dashboard'],admin_ledger_locale,admin_ledger_viewport_id)
                     # Open the complete Ledger and wait for its independently rendered localized action cells.
-                    page.locator('[data-tab="ledger"]').click(); page.locator('[data-testid="admin-ledger-event"]').first.wait_for(timeout=5000)
+                    page.locator('[data-tab="ledger"]').click(); page.locator('[data-testid="admin-ledger-event"]').first.wait_for(timeout=WAIT_MS)
                     # Read every visible localized full-ledger action label.
                     ledger_labels=page.locator('[data-testid="admin-ledger-event"]').all_inner_texts()
                     # Require the full audit surface to enforce the same raw-enum and casing boundary.
@@ -873,13 +876,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Define Admin inbox, evidence, triage, manual draft, export, and responsive acceptance. (issue #349)
         def admin_feedback_browser():
             # Open the dedicated Admin feedback surface and wait for its attachment-free list.
-            page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=WAIT_MS)
             # Locate exactly the report created by the authenticated player flow.
             report_button=page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']); assert report_button.count()==1
             # Capture the exact report identity used to bind every manual-draft response.
             feedback_report_id=report_button.get_attribute('data-feedback-id'); assert isinstance(feedback_report_id,str) and feedback_report_id.startswith('report_')
             # Open canonical detail and require one normalized Admin-only screenshot.
-            report_button.click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); assert page.locator('.feedback-evidence img').count()==1
+            report_button.click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=WAIT_MS); assert page.locator('.feedback-evidence img').count()==1
             # Apply controlled P1 triage, bounded notes, and a link that canonically commits linked status.
             page.locator('#feedback-detail-priority').select_option('P1'); page.locator('#feedback-detail-status').select_option('triaged'); page.locator('#feedback-admin-notes').fill('Confirmed by exact-head browser acceptance.'); page.locator('#feedback-github-url').fill('https://github.com/andreivorobiev/virtual-casino-simulator/issues/349'); save_admin_feedback_triage(page,feedback_report_id,'P1','linked')
             # Prepare the manual-only reporter-free draft without an external publication control.
@@ -891,9 +894,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Switch through the shared Admin locale runtime.
                 page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
                 # Reopen the feedback inbox after locale rerender.
-                page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=WAIT_MS)
                 # Apply and prove the independent impact filter before responsive evidence.
-                page.locator('#feedback-impact-filter').select_option('difficult'); page.locator('#feedback-apply-filters').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                page.locator('#feedback-impact-filter').select_option('difficult'); page.locator('#feedback-apply-filters').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=WAIT_MS)
                 # Check every governed Admin layout.
                 for viewport_id,viewport in {'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}.items():
                     # Apply exact visual-matrix geometry.
@@ -903,7 +906,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture the localized filtered inbox and keyboard-scroll surface.
                     game_evidence(f'after-pass-admin-feedback-inbox-{locale}-{viewport_id}.png','admin',['feedback_inbox','feedback_filtered','feedback_keyboard_focus','feedback_reduced_motion'],locale,viewport_id)
                     # Open the retained report from this exact localized responsive list.
-                    page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
+                    page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=WAIT_MS)
                     # Capture the true linked triage and evidence-detail state.
                     game_evidence(f'after-pass-admin-feedback-detail-{locale}-{viewport_id}.png','admin',['feedback_detail','feedback_triaged','feedback_manual_linked','feedback_export'],locale,viewport_id)
                     # Prepare the server-sanitized manual-only draft in this locale and viewport.
@@ -911,11 +914,11 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture the manual draft with no external publication action.
                     game_evidence(f'after-pass-admin-feedback-manual-draft-{locale}-{viewport_id}.png','admin',['feedback_manual_draft'],locale,viewport_id)
                     # Return to the exact filtered inbox for the next viewport.
-                    page.locator('#feedback-back').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                    page.locator('#feedback-back').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=WAIT_MS)
             # Restore one detail and capture triage/manual-draft states at primary desktop.
             page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
             # Reopen the selected report from the filtered list.
-            page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); prepare_admin_feedback_draft(page,feedback_report_id)
+            page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=WAIT_MS); prepare_admin_feedback_draft(page,feedback_report_id)
             # Download the metadata-only export through the real additive v2 route.
             with page.expect_download():
                 # Activate the explicit Admin export control.
@@ -933,7 +936,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Trigger the active tab's normal refresh path and prove the controlled list request occurred.
             with page.expect_request(feedback_list_pattern): page.locator('#refreshAdmin').click()
             # Require the shared localized Admin error boundary after the injected storage failure.
-            page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+            page.get_by_test_id('admin-load-error').wait_for(timeout=WAIT_MS)
             # Capture the localized storage-recovery failure without raw state.
             game_evidence('after-pass-admin-feedback-storage-error-en-US-desktop_primary.png','admin',['feedback_storage_error'],'en-US','desktop_primary')
             # Isolate the diagnostics emitted by the one deliberate Admin 503 response.
@@ -955,7 +958,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Switch locale without persisting a preference outside this disposable test copy.
                 page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
                 # Open Operations because OAuth diagnostics render as an independent card on that surface.
-                page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=5000); page.get_by_test_id('admin-oauth-diagnostics').wait_for(timeout=5000)
+                page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=WAIT_MS); page.get_by_test_id('admin-oauth-diagnostics').wait_for(timeout=WAIT_MS)
                 # Select locale-owned Admin copy as the dynamic-card rerender barrier for evidence.
                 expected_heading={'en-US':'Identity providers','ru-RU':'Поставщики входа'}[locale]
                 # Wait until a fresh provider card renders with the exact active-locale heading.
@@ -977,11 +980,11 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Replace only OAuth diagnostics with a standard failure envelope on a successful HTTP response.
                 page.route('**/api/v2/admin/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"OAUTH_DIAGNOSTICS_UNAVAILABLE","message":"Unavailable"}}'))
                 # Refresh and prove Operations remains live while the separate provider card reports unavailable.
-                page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=5000); page.get_by_test_id('admin-oauth-diagnostics-unavailable').wait_for(timeout=5000)
+                page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=WAIT_MS); page.get_by_test_id('admin-oauth-diagnostics-unavailable').wait_for(timeout=WAIT_MS)
                 # Remove the focused failure shim before the next locale or Operations acceptance case.
                 page.unroute('**/api/v2/admin/oauth/providers')
                 # Refresh once to restore real backend provider diagnostics.
-                page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-oauth-diagnostics').wait_for(timeout=5000)
+                page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-oauth-diagnostics').wait_for(timeout=WAIT_MS)
             # Restore primary desktop dimensions and English for the broader Operations suite.
             page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
         # Record Admin authorization presentation, runtime-disabled status, isolation, and evidence.
@@ -1016,7 +1019,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Intercept only the Admin mail diagnostic while Operations and OAuth use the real backend.
                     page.route('**/api/v2/admin/mail/readiness',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
                     # Refresh the active Operations surface and wait for the exact explicit state card.
-                    page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id(f'admin-mail-{status}').wait_for(timeout=5000)
+                    page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id(f'admin-mail-{status}').wait_for(timeout=WAIT_MS)
                     # Wait for the repeated release-held suppression scenario to render its new aggregate before evidence.
                     if matrix_state=='operations_mail_suppression_summary': page.wait_for_function("expected => document.querySelector('[data-testid=\"admin-mail-suppression-summary\"]')?.textContent.includes(expected)",arg=str(suppressed_count))
                     # Read the rendered card once for data-minimization assertions.
@@ -1038,7 +1041,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Remove the focused response before installing the next state.
                     page.unroute('**/api/v2/admin/mail/readiness')
             # Restore the real disabled backend response and primary desktop dimensions.
-            page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }"); page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-mail-disabled').wait_for(timeout=5000)
+            page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }"); page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-mail-disabled').wait_for(timeout=WAIT_MS)
         # Record dual-gate states, secret-free aggregate diagnostics, responsive containment, and evidence.
         run_case('BR-ADMIN-MAIL-001',['MAIL-002','MAIL-003','MAIL-005','TEST-090'],admin_mail_browser)
         # Define masked Admin invitation and account-free redemption evidence across every governed locale and viewport. (issue #332)
@@ -1068,7 +1071,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Intercept only the invitation list endpoint while all other Admin APIs remain real.
                     page.route('**/api/v2/admin/invitations?limit=100',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
                     # Open the dedicated tab and wait for the exact readiness card.
-                    page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id(test_id).wait_for(timeout=5000)
+                    page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id(test_id).wait_for(timeout=WAIT_MS)
                     # Require only masked recipient display and no secret-bearing URL or environment label.
                     visible_invitation=page.get_by_test_id('admin-invitation-list').inner_text(); assert 'i***@e***.invalid' in visible_invitation or not data['invitations']; assert 'CASINO_' not in visible_invitation and 'token=' not in visible_invitation.lower() and '://' not in visible_invitation and 'invitee@' not in visible_invitation
                     # Capture every state at all four governed viewports with containment checks.
@@ -1112,7 +1115,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Publish one standard API error to prove a bounded localized Admin recovery state.
                 page.route('**/api/v2/admin/invitations?limit=100',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"INVITATION_UNAVAILABLE","message":"Unavailable"}}'))
                 # Open and wait for the shared localized Admin load-error card.
-                page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=WAIT_MS)
                 # Capture the invitation error state at every governed viewport.
                 for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-admin-invitations-error-{locale}-{viewport_id}.png','admin',['invitations_error'],locale,viewport_id)
                 # Remove the error shim before the next locale.
@@ -1126,7 +1129,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Exercise the form, consent, generic error, focus, motion, and zoom states in both locales.
             for locale in ('en-US','ru-RU'):
                 # Navigate with a synthetic bearer that is never rendered or written to evidence metadata.
-                page.goto(base+'/enroll/invitation?token=synthetic-browser-invitation-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=5000)
+                page.goto(base+'/enroll/invitation?token=synthetic-browser-invitation-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=WAIT_MS)
                 # Switch the visible form locale through its own governed selector.
                 page.get_by_test_id('invitation-locale').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
                 # Capture the empty account-free form and explicit unaccepted-terms state at every viewport.
@@ -1166,13 +1169,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Exercise terminal success independently in both installed locales with identifier-free responses.
             for success_locale in ('en-US','ru-RU'):
                 # Open a fresh synthetic form whose bearer is never written to screenshots or sidecars.
-                page.goto(base+'/enroll/invitation?token=synthetic-browser-success-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=5000)
+                page.goto(base+'/enroll/invitation?token=synthetic-browser-success-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=WAIT_MS)
                 # Select and verify the exact locale before submitting so evidence metadata matches rendered copy.
                 page.get_by_test_id('invitation-locale').select_option(success_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=success_locale)
                 # Intercept the terminal response without creating a real account in the browser copy.
                 page.route('**/api/v2/auth/redeem-invitation',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"status":"enrolled"}}'))
                 # Fill current terms and submit through the visible public form.
-                page.get_by_test_id('invitation-email').fill('visual-success@example.invalid'); page.get_by_test_id('invitation-display-name').fill('Invited Player'); page.get_by_test_id('invitation-password').fill('Synthetic-Invite-2026!'); page.get_by_test_id('invitation-terms').check(); page.get_by_test_id('invitation-submit').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                page.get_by_test_id('invitation-email').fill('visual-success@example.invalid'); page.get_by_test_id('invitation-display-name').fill('Invited Player'); page.get_by_test_id('invitation-password').fill('Synthetic-Invite-2026!'); page.get_by_test_id('invitation-terms').check(); page.get_by_test_id('invitation-submit').click(); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
                 # Require the bearer to be removed from browser history after success.
                 assert page.url.rstrip('/')==base.rstrip('/') and 'token=' not in page.url
                 # Capture the identifier-free success return at every governed viewport with truthful locale metadata.
@@ -1180,7 +1183,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Remove the focused success shim before the next locale or authenticated restoration.
                 page.unroute('**/api/v2/auth/redeem-invitation')
             # Restore an authenticated Admin session for the following browser suites.
-            page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD}); page.goto(base+'/admin',wait_until='networkidle'); page.get_by_test_id('admin-tab-operations').wait_for(timeout=5000)
+            page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD}); page.goto(base+'/admin',wait_until='networkidle'); page.get_by_test_id('admin-tab-operations').wait_for(timeout=WAIT_MS)
             # Retain only diagnostics emitted by the controlled account-free invitation journey.
             invitation_expected_console=console_errors[invitation_console_index:]; invitation_expected_http=http_errors[invitation_http_index:]; invitation_expected_page_errors=page_errors[invitation_page_error_index:]
             # Require zero anonymous current-user probes and only the two contract-shaped generic redemption rejections.
@@ -1202,7 +1205,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Switch locale in place without changing the user's browser preference outside this test.
                 page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
                 # Open the Operations tab and wait for healthy real-backend telemetry.
-                page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=5000)
+                page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=WAIT_MS)
                 # Capture the healthy state at every exact governed viewport.
                 for viewport_name,viewport in viewports.items():
                     # Resize to the named visual-matrix dimensions.
@@ -1214,7 +1217,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Always restore storage before continuing to the down-state proof.
                 try:
                     # Refresh the active tab and wait for sanitized degraded telemetry.
-                    page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-degraded').wait_for(timeout=5000)
+                    page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-degraded').wait_for(timeout=WAIT_MS)
                     # Capture the degraded state at every governed viewport.
                     for viewport_name,viewport in viewports.items():
                         # Resize to the named visual-matrix dimensions.
@@ -1228,7 +1231,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Replace only the Operations response with a standard unavailable envelope so the client must infer down without browser console noise.
                 page.route('**/api/v2/admin/operations',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"OPERATIONS_UNREACHABLE","message":"Unavailable"}}'))
                 # Refresh and wait for the explicit client-derived down presentation.
-                page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-down').wait_for(timeout=5000)
+                page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-down').wait_for(timeout=WAIT_MS)
                 # Capture the down state at every governed viewport.
                 for viewport_name,viewport in viewports.items():
                     # Resize to the named visual-matrix dimensions.
@@ -1246,7 +1249,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Open the Players & Bots control-plane surface.
             page.get_by_test_id('admin-tab-players').click()
             # Wait for the account allocation and funding control to render.
-            page.get_by_test_id('practice-opponent-admin').wait_for(timeout=5000)
+            page.get_by_test_id('practice-opponent-admin').wait_for(timeout=WAIT_MS)
             # Require all three server-managed account rows before funding.
             assert page.get_by_test_id('practice-opponent-account').count()==3
             # Submit funding through the visible Admin controller action.
@@ -1254,7 +1257,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Click the idempotent funding control.
                 page.get_by_test_id('fund-practice-opponents').click()
             # Wait for append-only funding activity to replace the prior view.
-            page.get_by_test_id('practice-opponent-activity').first.wait_for(timeout=10000)
+            page.get_by_test_id('practice-opponent-activity').first.wait_for(timeout=WAIT_MS * 2)
             # Require one visible ledger row per funded account.
             assert page.get_by_test_id('practice-opponent-activity').count()>=3
             # Capture the affected Admin matrix row at desktop compact in English.
@@ -1268,7 +1271,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Execute the Admin allocation, funding, ledger activity, and evidence gate.
         run_case('BR-ADMIN-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','TEST-023'],admin_practice_opponents_browser)
         # Open Telemetry to verify Admin event presentation uses human labels and polished empty states.
-        page.locator('[data-tab="telemetry"]').click(); page.get_by_text('Application events',exact=True).wait_for(timeout=5000)
+        page.locator('[data-tab="telemetry"]').click(); page.get_by_text('Application events',exact=True).wait_for(timeout=WAIT_MS)
         # Store visible telemetry copy for raw identifier and raw-array regression checks.
         telemetry_text=page.locator('#adminView').inner_text()
         # Verify raw API event identifiers and raw empty arrays are absent from the Admin presentation.
@@ -1284,7 +1287,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Open the Admin Users tab.
             page.get_by_test_id('admin-tab-users').click()
             # Wait for the create-user form to render.
-            page.get_by_test_id('admin-user-email').wait_for(timeout=5000)
+            page.get_by_test_id('admin-user-email').wait_for(timeout=WAIT_MS)
             # Fill the beta user's email.
             page.get_by_test_id('admin-user-email').fill('beta.browser@example.test')
             # Fill the beta user's display name.
@@ -1298,9 +1301,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Store a stable locator for the created user row.
             user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"]')
             # Wait for the created user row to appear in the table.
-            user_row.wait_for(timeout=10000)
+            user_row.wait_for(timeout=WAIT_MS * 2)
             # Wait for the one-time temporary password notice.
-            page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
+            page.get_by_test_id('admin-user-temp-password').wait_for(timeout=WAIT_MS)
             # Select a non-active lifecycle state through the account-only Users surface.
             user_row.get_by_test_id('admin-user-status').select_option('suspended')
             # Accept the explicit lifecycle confirmation for this controlled Admin mutation.
@@ -1318,7 +1321,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Wait for the persisted lifecycle control to re-render from the refreshed account.
             user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="suspended"]')
             # Require the selected control to reflect the canonical persisted account state and no privilege editor to exist.
-            user_row.wait_for(timeout=10000); assert user_row.get_by_test_id('admin-user-status').input_value()=='suspended' and user_row.get_by_test_id('admin-user-role-admin').count()==0
+            user_row.wait_for(timeout=WAIT_MS * 2); assert user_row.get_by_test_id('admin-user-status').input_value()=='suspended' and user_row.get_by_test_id('admin-user-role-admin').count()==0
             # Enumerate every governed Admin viewport for the lifecycle evidence corpus.
             account_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
             # Pin the locale-owned lifecycle action so Russian evidence cannot reuse English copy.
@@ -1332,7 +1335,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Resolve the refreshed synthetic row and bounded scroll owner.
                 user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="suspended"]')
                 # Wait for the persisted account row before localization and geometry assertions.
-                user_row.wait_for(timeout=5000)
+                user_row.wait_for(timeout=WAIT_MS)
                 # Require the lifecycle save action to use exact locale-owned copy.
                 assert user_row.get_by_test_id('admin-user-save-account').inner_text().strip()==account_labels[locale]['save']
                 # Require the lifecycle resource keys never to leak into visible Admin copy.
@@ -1370,11 +1373,11 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Resolve the active player row after the protected restoration completes.
             user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]')
             # Require the restored row and continued absence of a privilege editor before delegation.
-            user_row.wait_for(timeout=10000); assert user_row.get_by_test_id('admin-user-role-admin').count()==0
+            user_row.wait_for(timeout=WAIT_MS * 2); assert user_row.get_by_test_id('admin-user-role-admin').count()==0
             # Capture the durable user id for the separate owner-only Administrators workflow.
             created_user_id=user_row.get_attribute('data-user')
             # Open the dedicated privilege-management surface instead of using generic account rows.
-            page.get_by_test_id('admin-tab-administrators').click(); page.get_by_test_id('admin-administrator-grant').wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-administrators').click(); page.get_by_test_id('admin-administrator-grant').wait_for(timeout=WAIT_MS)
             # Select the active synthetic account and supply transient step-up evidence.
             page.locator('#administrator-target').select_option(created_user_id); page.locator('#administrator-password').fill(DEFAULT_AUTH_PASSWORD); page.locator('#administrator-reason').fill('Browser delegation acceptance')
             # Commit one owner-reauthenticated Admin grant through the dedicated endpoint.
@@ -1382,7 +1385,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Activate the fixed grant control while its exact response observer is armed.
                 page.get_by_test_id('administrator-grant').click()
             # Require the standard grant envelope and durable ordinary-Admin list row.
-            assert grant_response_info.value.json()['ok'] is True; page.locator(f'.administrator-revoke[data-user="{created_user_id}"]').wait_for(timeout=10000)
+            assert grant_response_info.value.json()['ok'] is True; page.locator(f'.administrator-revoke[data-user="{created_user_id}"]').wait_for(timeout=WAIT_MS * 2)
             # Require one immutable audit row and scrubbed password field after the rerender.
             assert 'Browser delegation acceptance' in page.get_by_test_id('admin-administrator-audit').inner_text() and page.locator('#administrator-password').input_value()==''
             # Open the Administrators workspace in one locale without racing its asynchronous locale rerender.
@@ -1400,7 +1403,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Wait until the asynchronously rendered heading uses the requested locale rather than the prior DOM.
                 page.wait_for_function("async () => { const i18n=await import('/core/i18n.js'); return document.querySelector('#adminTitle')?.textContent===i18n.t('administrators.title',{},'admin'); }")
                 # Require the replacement workspace and its scrubbed transient-password field.
-                page.get_by_test_id('admin-administrator-list').wait_for(timeout=5000); assert page.locator('#administrator-password').input_value()==''
+                page.get_by_test_id('admin-administrator-list').wait_for(timeout=WAIT_MS); assert page.locator('#administrator-password').input_value()==''
             # Capture the complete delegation workspace under every required locale and viewport.
             for locale in ('en-US','ru-RU'):
                 # Render the exact locale through one non-racing Administrators load.
@@ -1422,21 +1425,21 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Activate the target-bound revoke control.
                 page.locator(f'.administrator-revoke[data-user="{created_user_id}"]').click()
             # Require the standard revoke envelope and a durable audit row without the prior Admin listing.
-            assert revoke_response_info.value.json()['ok'] is True; page.wait_for_function("""({ userId }) => document.querySelector('[data-testid="admin-administrator-audit"]')?.textContent.includes('Browser delegation cleanup') && !document.querySelector(`.administrator-revoke[data-user="${userId}"]`)""", arg={'userId':created_user_id}, timeout=5000)
+            assert revoke_response_info.value.json()['ok'] is True; page.wait_for_function("""({ userId }) => document.querySelector('[data-testid="admin-administrator-audit"]')?.textContent.includes('Browser delegation cleanup') && !document.querySelector(`.administrator-revoke[data-user="${userId}"]`)""", arg={'userId':created_user_id}, timeout=WAIT_MS)
             # Return to generic Users for lifecycle, password, terms, and locale actions.
-            page.get_by_test_id('admin-tab-users').click(); user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]'); user_row.wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-users').click(); user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]'); user_row.wait_for(timeout=WAIT_MS)
             # Deactivate the user through the first row action.
             user_row.get_by_test_id('admin-user-toggle').click()
             # Reacquire the row after its status-driven DOM replacement renders.
             user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="inactive"]')
             # Wait for the inactive state to render before reactivation.
-            user_row.wait_for(timeout=10000)
+            user_row.wait_for(timeout=WAIT_MS * 2)
             # Reactivate the user through the same row action.
             user_row.get_by_test_id('admin-user-toggle').click()
             # Reacquire the row after the reactivation rerender.
             user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]')
             # Wait for the active state to render before later actions reuse the row.
-            user_row.wait_for(timeout=10000)
+            user_row.wait_for(timeout=WAIT_MS * 2)
             # Reset the user's password through the visible action.
             with page.expect_response(lambda response: response.url.endswith('/password-reset') and response.request.method == 'POST') as reset_response_info:
                 # Wait for the reset-triggered Users refresh before the next action can race it.
@@ -1448,7 +1451,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Verify the reset API returned the standard success envelope.
             assert reset_response['ok'] is True
             # Wait for the refreshed temporary password notice.
-            page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
+            page.get_by_test_id('admin-user-temp-password').wait_for(timeout=WAIT_MS)
             # Accept terms through the visible action.
             with page.expect_response(lambda response: '/api/v1/admin/users/' in response.url and response.url.endswith('/terms') and response.request.method == 'POST') as terms_response_info:
                 # Wait for the terms-triggered Users refresh before checking row attributes.
@@ -1464,7 +1467,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Refresh the active Users tab so row attributes come from persisted state.
                 page.get_by_test_id('admin-refresh').click()
             # Wait for the accepted terms status to render.
-            page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-terms="accepted"]').wait_for(timeout=10000)
+            page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-terms="accepted"]').wait_for(timeout=WAIT_MS * 2)
             # Save locale preferences from the rendered row controls.
             user_row.get_by_test_id('admin-user-save-locale').click()
             # Verify the token balance remains visible after all actions.
@@ -1478,7 +1481,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Switch the Admin runtime before rerendering the Users surface.
                 page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
                 # Reload the active Users tab so every new handoff string comes from the selected locale.
-                page.get_by_test_id('admin-tab-users').click(); page.get_by_test_id('admin-users-guest-separation').wait_for(timeout=5000)
+                page.get_by_test_id('admin-tab-users').click(); page.get_by_test_id('admin-users-guest-separation').wait_for(timeout=WAIT_MS)
                 # Retain a stable locator for geometry, translation, and interaction proof.
                 handoff=page.get_by_test_id('admin-users-guest-separation')
                 # Require the exact locale-owned heading without leaking any handoff resource key.
@@ -1498,11 +1501,11 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Write one exact-head bounded PNG and sidecar for independent EN/RU human review.
                     region_evidence(f'after-pass-admin-users-separation-{locale}-{viewport_id}.png','[data-testid="admin-users-guest-separation"]','admin',['users'],locale,viewport_id)
                 # Follow the visible ownership handoff and require the Guest Trials surface to load.
-                page.get_by_test_id('admin-open-guest-trials').click(); page.get_by_test_id('admin-guest-filters').wait_for(timeout=5000)
+                page.get_by_test_id('admin-open-guest-trials').click(); page.get_by_test_id('admin-guest-filters').wait_for(timeout=WAIT_MS)
             # Restore the suite-default locale and viewport after governed evidence.
             page.set_viewport_size(users_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
             # Open the owner enrollment workspace without changing any live capability.
-            page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-policy').wait_for(timeout=5000); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=5000); page.get_by_test_id('admin-oauth-operational-controls').wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-policy').wait_for(timeout=WAIT_MS); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=WAIT_MS); page.get_by_test_id('admin-oauth-operational-controls').wait_for(timeout=WAIT_MS)
             # Require both independent provider operations to remain disabled under repository defaults.
             assert page.locator('#oauth-operational-google').is_checked() is False and page.locator('#oauth-operational-facebook').is_checked() is False
             # Preview the unchanged closed policy through the real pure-computation endpoint.
@@ -1510,13 +1513,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Activate only the non-mutating preview control.
                 page.locator('#enrollment-preview').click()
             # Require a visible bounded impact result and no launch authorization control.
-            page.locator('#enrollment-preview-result:not([hidden])').wait_for(timeout=5000); assert page.get_by_test_id('admin-enrollment-policy').locator('button').count()==2
+            page.locator('#enrollment-preview-result:not([hidden])').wait_for(timeout=WAIT_MS); assert page.get_by_test_id('admin-enrollment-policy').locator('button').count()==2
             # Capture enrollment policy/readiness and held launch status across the required matrix.
             for locale in ('en-US','ru-RU'):
                 # Switch the Admin locale before rerendering governance workspaces.
                 page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
                 # Reload the enrollment workspace in the selected locale.
-                page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=5000); page.get_by_test_id('admin-oauth-operational-controls').wait_for(timeout=5000)
+                page.get_by_test_id('admin-tab-enrollment').click(); page.get_by_test_id('admin-enrollment-readiness').wait_for(timeout=WAIT_MS); page.get_by_test_id('admin-oauth-operational-controls').wait_for(timeout=WAIT_MS)
                 # Exercise every governed responsive viewport for policy and readiness evidence.
                 for viewport_id,viewport in users_viewports.items():
                     # Apply exact visual-matrix dimensions and require document containment.
@@ -1524,7 +1527,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Capture the complete owner policy and secret-free readiness state.
                     game_evidence(f'after-pass-admin-enrollment-{locale}-{viewport_id}.png','BR-ADMIN-USERS-001',['enrollment_policy','provider_readiness','provider_operational_controls','live_enablement_held'],locale,viewport_id)
                 # Open the read-only launch dashboard after enrollment evidence.
-                page.get_by_test_id('admin-tab-launch').click(); page.get_by_test_id('admin-launch-readiness').wait_for(timeout=5000)
+                page.get_by_test_id('admin-tab-launch').click(); page.get_by_test_id('admin-launch-readiness').wait_for(timeout=WAIT_MS)
                 # Require held status and the complete absence of any action control.
                 assert page.get_by_test_id('admin-launch-readiness').get_attribute('data-status')=='held' and page.get_by_test_id('admin-launch-readiness').locator('button,input,select').count()==0
                 # Capture the launch hold at each governed viewport without a mutation affordance.
@@ -1536,7 +1539,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Verify the existing Language / Locale tab remains reachable.
             page.set_viewport_size(users_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
             # Navigate to the existing language surface after the new governance workspaces.
-            page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=WAIT_MS)
         run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','ADMIN-026','ADMIN-033','AUTH-015','AUTH-016','OAUTH-011','OAUTH-012','I18N-009','TEST-081','TEST-112','TEST-158','TEST-167'],admin_users_browser)
         # Prove the Admin Guest Trials section reports de-identified account-free telemetry. (issue #317)
         def admin_guest_trials_browser():
@@ -1565,13 +1568,13 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Retain the intercepted route without continuing it until loading evidence is captured.
                         page.route(summary_pattern,lambda route: pending_routes.append(route))
                         # Open Guest Trials through the visible sidebar action.
-                        page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-loading').wait_for(timeout=5000)
+                        page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-loading').wait_for(timeout=WAIT_MS)
                         # Require the explicit loading state to remain horizontally contained.
                         assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1") and pending_routes
                         # Capture exact-head localized loading evidence.
                         game_evidence(f'after-pass-admin-guest-loading-{locale}-{viewport_id}.png','admin',['guest_trials_loading'],locale,viewport_id)
                         # Release the one held request and remove its interceptor before observing the empty response.
-                        pending_routes.pop(0).continue_(); page.unroute(summary_pattern); page.get_by_test_id('admin-guest-empty').wait_for(timeout=5000)
+                        pending_routes.pop(0).continue_(); page.unroute(summary_pattern); page.get_by_test_id('admin-guest-empty').wait_for(timeout=WAIT_MS)
                         # Capture the genuine zero-row Admin surface.
                         game_evidence(f'after-pass-admin-guest-empty-{locale}-{viewport_id}.png','admin',['guest_trials_empty'],locale,viewport_id)
                         # Record diagnostics boundaries so the intentional failure probe cannot pollute suite-wide error accounting.
@@ -1579,7 +1582,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                         # Fail the next summary request with a sanitized standard error response.
                         page.route(summary_pattern,lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"UNAVAILABLE","message":"Unavailable"}}'))
                         # Reload the current Guest Trials tab through its visible control.
-                        page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                        page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=WAIT_MS)
                         # Require the recovery state to remain contained without raw response details.
                         assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1") and 'UNAVAILABLE' not in page.get_by_test_id('admin-load-error').inner_text()
                         # Capture exact-head localized error evidence before removing the interceptor.
@@ -1613,19 +1616,19 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Switch the Admin runtime without persisting beyond the disposable browser copy.
                     page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
                     # Open the dedicated Guest Trials section through its visible sidebar tab.
-                    page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                    page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-summary').wait_for(timeout=WAIT_MS)
                     # Filter to the active locale and desktop-class seeded row.
                     with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and f'locale={locale}' in response.url):
                         # Select the active locale filter through its native control.
                         page.locator('#guest-filter-locale').select_option(locale)
                     # Wait for the filtered funnel to replace the prior content.
-                    page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                    page.get_by_test_id('admin-guest-summary').wait_for(timeout=WAIT_MS)
                     # Filter to the seeded device class through the visible control.
                     with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and 'device=desktop' in response.url):
                         # Select the seeded coarse device class through its native control.
                         page.locator('#guest-filter-device').select_option('desktop')
                     # Wait for the device-filtered funnel to replace the prior content.
-                    page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                    page.get_by_test_id('admin-guest-summary').wait_for(timeout=WAIT_MS)
                     # Apply the bounded thirty-day time range through its visible shortcut.
                     with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and 'since=' in response.url):
                         # Select the recent-window filter.
@@ -1651,7 +1654,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Require all named funnel rows, detailed game metrics, and fake-token summary cards.
                     assert page.get_by_test_id('admin-guest-funnel').locator('tbody tr, tr').count()>=10 and page.get_by_test_id('admin-guest-game-detail').is_visible() and '1' in page.get_by_test_id('admin-guest-summary').inner_text()
                     # Require one analytics-only row and open its bounded detail.
-                    guest_first_row=page.get_by_test_id('admin-guest-row').first; guest_first_row.wait_for(timeout=5000)
+                    guest_first_row=page.get_by_test_id('admin-guest-row').first; guest_first_row.wait_for(timeout=WAIT_MS)
                     # Read the visible row for identifier privacy checks.
                     guest_row_text=guest_first_row.inner_text()
                     # Require no email or raw auth/player/session identifier pattern.
@@ -1667,9 +1670,9 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Fill only transient target-account content into the explicit support form.
                     page.get_by_test_id('admin-guest-conversion-email').fill(f'assisted-{locale}@example.test'); page.get_by_test_id('admin-guest-conversion-display-name').fill('Assisted Browser Guest'); page.get_by_test_id('admin-guest-conversion-password').fill('BrowserAssistedPassw0rd!23')
                     # Require literal confirmation before submitting the first bounded conversion request.
-                    page.get_by_test_id('admin-guest-conversion-confirm').check(); page.get_by_test_id('admin-guest-conversion-submit').click(); page.wait_for_function("() => !document.querySelector('[data-testid=\"admin-guest-conversion-submit\"]')?.disabled && document.querySelector('[data-testid=\"admin-guest-conversion-password\"]')?.value === '' && !document.querySelector('[data-testid=\"admin-guest-conversion-confirm\"]')?.checked",timeout=5000)
+                    page.get_by_test_id('admin-guest-conversion-confirm').check(); page.get_by_test_id('admin-guest-conversion-submit').click(); page.wait_for_function("() => !document.querySelector('[data-testid=\"admin-guest-conversion-submit\"]')?.disabled && document.querySelector('[data-testid=\"admin-guest-conversion-password\"]')?.value === '' && !document.querySelector('[data-testid=\"admin-guest-conversion-confirm\"]')?.checked",timeout=WAIT_MS)
                     # Re-enter only the cleared credential and confirmation before retrying the exact form operation.
-                    page.get_by_test_id('admin-guest-conversion-password').fill('BrowserAssistedPassw0rd!23'); page.get_by_test_id('admin-guest-conversion-confirm').check(); page.get_by_test_id('admin-guest-conversion-submit').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"admin-guest-conversion-password\"]')?.value === '' && !document.querySelector('[data-testid=\"admin-guest-conversion-confirm\"]')?.checked",timeout=5000)
+                    page.get_by_test_id('admin-guest-conversion-password').fill('BrowserAssistedPassw0rd!23'); page.get_by_test_id('admin-guest-conversion-confirm').check(); page.get_by_test_id('admin-guest-conversion-submit').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"admin-guest-conversion-password\"]')?.value === '' && !document.querySelector('[data-testid=\"admin-guest-conversion-confirm\"]')?.checked",timeout=WAIT_MS)
                     # Stop intercepting after the exact single request has caused the normal Guest Trials rerender.
                     page.unroute('**/api/v2/admin/guest-trials/convert')
                     # Isolate only the diagnostics emitted by the controlled failed first attempt.
@@ -1681,28 +1684,28 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     # Require analytics-only targeting, explicit confirmations, one stable retry key, and cleared credential controls after success.
                     assert len(assisted_requests)==2 and assisted_requests[0]['guest_identity'].startswith('gtrial_') and all(request['confirm'] is True and request['accepted'] is True for request in assisted_requests) and len(assisted_requests[0]['idempotency_key'])>=16 and assisted_requests[0]['idempotency_key']==assisted_requests[1]['idempotency_key'] and page.get_by_test_id('admin-guest-conversion-password').input_value()=='' and not page.get_by_test_id('admin-guest-conversion-confirm').is_checked()
                     # Re-resolve the first filtered row after the conversion-success rerender.
-                    guest_first_row=page.get_by_test_id('admin-guest-row').first; guest_first_row.wait_for(timeout=5000)
+                    guest_first_row=page.get_by_test_id('admin-guest-row').first; guest_first_row.wait_for(timeout=WAIT_MS)
                     # Open the analytics-only detail through the keyboard-focusable action.
                     guest_first_row.locator('.guest-detail-button').focus(); guest_first_row.locator('.guest-detail-button').press('Enter'); page.wait_for_function("() => document.querySelector('[data-testid=\"admin-guest-detail\"] dd')?.textContent.includes('gtrial_')")
                     # Require the allowlisted server event timeline to render without a raw session replay.
-                    page.get_by_test_id('admin-guest-timeline').wait_for(timeout=5000); assert page.get_by_test_id('admin-guest-timeline').locator('tr').count()>=2
+                    page.get_by_test_id('admin-guest-timeline').wait_for(timeout=WAIT_MS); assert page.get_by_test_id('admin-guest-timeline').locator('tr').count()>=2
                     # Focus the wide recent table region and exercise native End-key scrolling.
                     recent_region=page.get_by_test_id('admin-guest-recent'); recent_region.focus(); recent_region.press('End')
                     # Require the cleanup health surface and run its fixed server cleanup action once per locale.
-                    page.get_by_test_id('admin-guest-cleanup-status').wait_for(timeout=5000)
+                    page.get_by_test_id('admin-guest-cleanup-status').wait_for(timeout=WAIT_MS)
                     with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/guest-trials/cleanup') and response.request.method=='POST'):
                         # Activate the protected cleanup control through the visible Admin surface.
                         page.get_by_test_id('admin-guest-cleanup').click()
                     # Wait for the refreshed Guest Trials funnel after cleanup.
-                    page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                    page.get_by_test_id('admin-guest-summary').wait_for(timeout=WAIT_MS)
                     # Exercise every exact governed viewport for this locale.
                     for viewport_id,viewport in guest_admin_viewports.items():
                         # Resize the complete Admin document before containment inspection.
                         page.set_viewport_size(viewport); page.wait_for_timeout(150)
                         # Reopen Guest Trials because mobile navigation and refresh can move focus only, never state.
-                        page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                        page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-summary').wait_for(timeout=WAIT_MS)
                         # Reopen the bounded de-identified detail so each viewport artifact actually contains its claimed timeline state.
-                        page.get_by_test_id('admin-guest-row').first.locator('.guest-detail-button').click(); page.get_by_test_id('admin-guest-timeline').wait_for(timeout=5000)
+                        page.get_by_test_id('admin-guest-row').first.locator('.guest-detail-button').click(); page.get_by_test_id('admin-guest-timeline').wait_for(timeout=WAIT_MS)
                         # Require page containment plus intentional horizontal containment on table regions.
                         contained=page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1 && [...document.querySelectorAll('[data-testid=\"admin-guest-funnel\"], [data-testid=\"admin-guest-games\"], [data-testid=\"admin-guest-game-detail\"], [data-testid=\"admin-guest-recent\"]')].every(region => region.scrollWidth >= region.clientWidth)")
                         # Require every filter, clickable checkbox row, and action to meet the approved 42 CSS-pixel floor.
@@ -1739,14 +1742,14 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 write_json(guest_analytics.TRIALS_PATH,original_analytics)
         # Execute the de-identified Guest Trials Admin regression.
         run_case('BR-ADMIN-GUEST-001',['GUEST-001','GUEST-003','GUEST-004','GUEST-005','ADMIN-035','TEST-081','TEST-193'],admin_guest_trials_browser)
-        page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
+        page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=WAIT_MS)
         run_case('BR-AUDIO-001',['AUDIO-002','AUDIO-005'],lambda: page.get_by_test_id('admin-preview-voice').is_visible())
         # Define the Phase 0 registry, formatter, fallback, discovery, and visual evidence gate.
         def localization_foundation_browser():
             # Open the generic Admin Language/Locale surface.
             page.get_by_test_id('admin-tab-language').click()
             # Wait for the complete locked registry rather than one hard-coded locale control.
-            page.get_by_test_id('admin-locale-registry').wait_for(timeout=5000)
+            page.get_by_test_id('admin-locale-registry').wait_for(timeout=WAIT_MS)
             # Read the public runtime state used by shell and Admin selectors.
             foundation_state=page.evaluate("() => window.CasinoI18n.getLocaleState()")
             # Require all 25 metadata identities while exposing only complete English and Russian packs.
@@ -1782,7 +1785,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Switch through the production runtime without persisting beyond the disposable browser copy.
                 page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:true,nextUseBrowserLocale:false}); }",locale)
                 # Wait for the locale-driven Admin rerender to restore the foundation surface.
-                page.get_by_test_id('admin-localization-foundation').wait_for(timeout=5000)
+                page.get_by_test_id('admin-localization-foundation').wait_for(timeout=WAIT_MS)
                 # Require all locked entries after each in-place language switch.
                 assert page.get_by_test_id('admin-locale-registry-entry').count()==25
                 # Reject replacement characters and unresolved interpolation placeholders in visible foundation copy.
@@ -1812,7 +1815,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Open the new Language/Locale tab.
             page.get_by_test_id('admin-tab-language').click()
             # Wait for the language select to render.
-            page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
+            page.get_by_test_id('admin-language-select').wait_for(timeout=WAIT_MS)
             # Select Russian as the display language.
             page.get_by_test_id('admin-language-select').select_option('ru-RU')
             # Apply the locale and persist the browser-local setting.
@@ -1834,25 +1837,25 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Reopen Players & Bots to verify the affected Admin surface uses Russian resources.
             page.get_by_test_id('admin-tab-players').click()
             # Wait for the localized practice-opponent heading to render.
-            page.get_by_text("Тренировочные соперники Texas Hold'em",exact=True).wait_for(timeout=5000)
+            page.get_by_text("Тренировочные соперники Texas Hold'em",exact=True).wait_for(timeout=WAIT_MS)
             # Require dynamic controller activity to use Russian rather than English fallback copy.
             assert 'Fund Account' not in page.get_by_test_id('practice-opponent-admin').inner_text() and 'Пополнение счёта' in page.get_by_test_id('practice-opponent-admin').inner_text()
             # Require the players table to use the exact Russian resource-owned headers.
             assert page.locator('#adminView table').first.locator('th').all_inner_texts()==[admin_copy[key] for key in ('players.id','players.name','players.type','players.balance')]
             # Open Users and wait for the account-only managed-user table.
-            page.get_by_test_id('admin-tab-users').click(); page.get_by_test_id('admin-users-managed-table').wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-users').click(); page.get_by_test_id('admin-users-managed-table').wait_for(timeout=WAIT_MS)
             # Require every managed-user header to match the Russian dictionary exactly.
             assert page.get_by_test_id('admin-users-managed-table').locator('th').all_inner_texts()==[admin_copy[key] for key in ('users.email','users.name','users.accessControls','users.tokenBalance','users.tokenState','users.terms','users.language','users.format','users.actions')]
             # Open Autoplay and wait for its resource-owned heading to replace the prior Users view.
-            page.get_by_test_id('admin-tab-autoplay').click(); page.locator('#adminView h3',has_text=admin_copy['autoplay.sessions']).wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-autoplay').click(); page.locator('#adminView h3',has_text=admin_copy['autoplay.sessions']).wait_for(timeout=WAIT_MS)
             # Require every autoplay header to match the Russian dictionary exactly.
             assert page.locator('#adminView table').first.locator('th').all_inner_texts()==[admin_copy[key] for key in ('autoplay.id','autoplay.game','autoplay.player','autoplay.status','autoplay.speed','autoplay.completed','autoplay.limit','autoplay.updated')]
             # Open Requirements and wait for its localized heading to replace the prior Autoplay view.
-            page.get_by_test_id('admin-tab-requirements').click(); page.locator('#adminView h3',has_text=admin_copy['nav.requirements']).wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-requirements').click(); page.locator('#adminView h3',has_text=admin_copy['nav.requirements']).wait_for(timeout=WAIT_MS)
             # Require every requirements header to match the Russian dictionary exactly.
             assert page.locator('#adminView table').first.locator('th').all_inner_texts()==[admin_copy[key] for key in ('requirements.id','requirements.module','requirements.description','requirements.status','requirements.tests')]
             # Return to Players & Bots before capturing the affected Admin visual evidence.
-            page.get_by_test_id('admin-tab-players').click(); page.get_by_test_id('practice-opponent-admin').wait_for(timeout=5000)
+            page.get_by_test_id('admin-tab-players').click(); page.get_by_test_id('practice-opponent-admin').wait_for(timeout=WAIT_MS)
             # Capture Russian evidence for the affected Admin matrix row.
             page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(250)
             # Scroll the localized affected card into view before reading its evidence bounds.

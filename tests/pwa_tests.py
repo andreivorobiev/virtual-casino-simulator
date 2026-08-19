@@ -348,11 +348,11 @@ class PwaFoundationTests(unittest.TestCase):
         # Require Playwright's keyword-only argument boundary for each parameterized PWA display-state wait.
         self.assertIn("dataset.state===state\",arg=pwa_states[state],timeout=3000", pwa_case)
         # Require the same keyword-only boundary for locale synchronization before evidence capture.
-        self.assertIn("getLocaleState().locale===locale\",arg=pwa_locale,timeout=5000", pwa_case)
+        self.assertIn("getLocaleState().locale===locale\",arg=pwa_locale,timeout=WAIT_MS", pwa_case)
         # Reject the positional forms that fail before service-worker acceptance can begin.
         self.assertNotIn("dataset.state===state\",pwa_states[state],timeout=3000", pwa_case)
         # Reject the locale positional form independently so either regression is diagnosed without a hosted browser.
-        self.assertNotIn("getLocaleState().locale===locale\",pwa_locale,timeout=5000", pwa_case)
+        self.assertNotIn("getLocaleState().locale===locale\",pwa_locale,timeout=WAIT_MS", pwa_case)
         # Require the synthetic mismatched worker message and listener-state read to share one synchronous browser task.
         self.assertIn("dispatchEvent(new MessageEvent('message',{data:{type:'PWA_VERSION',version:'0.0.0'}})); return window.CasinoPwa?.state()||''", pwa_case)
         # Reject an asynchronous stale-client poll that can lose the short-lived listener result to reconnect completion.

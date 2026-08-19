@@ -2,6 +2,8 @@ name: Codex Review Placeholder
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  # Permit the bounded duration-profile publisher to qualify its GITHUB_TOKEN-authored branch.
+  workflow_dispatch:
 jobs:
   codex_review_placeholder:
     runs-on: ubuntu-latest

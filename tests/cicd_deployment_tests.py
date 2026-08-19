@@ -57,8 +57,12 @@ API_CASES_ROOT = ROOT / "tests" / "cases" / "api"
 API_CASE_INVENTORY = ROOT / "tests" / "api_case_inventory.json"
 # Point at the ordinary, formal, and sustained browser workflow.
 BROWSER_WORKFLOW = ROOT / ".github" / "workflows" / "browser-tests.yml"
+# Point at the scheduled and manually dispatchable Browser duration-profile workflow. (TOOL-017)
+BROWSER_DURATION_WORKFLOW = ROOT / ".github" / "workflows" / "browser-duration-profile.yml"
 # Point at the pull-request affected-game detector.
 AFFECTED_BROWSER_GAMES = ROOT / "scripts" / "affected_browser_games.py"
+# Declare the sole ordinary Browser shard-count oracle used by synthetic CI evidence. (TEST-242)
+BROWSER_SHARD_COUNT = 6
 
 
 # Validate the production deployment workflow without invoking GitHub or SSH.
@@ -1978,7 +1982,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Bind one hostile huge integer measurement to a known Browser case.
             hostile = '{"results":[{"test_id":"BR-AB-001","duration_seconds":%s}]}' % (10 ** 400)
             # Persist the hostile shard artifact.
-            (evidence_dir / "browser_results_shard_0_of_6.json").write_text(hostile, encoding="utf-8")
+            (evidence_dir / f"browser_results_shard_0_of_{BROWSER_SHARD_COUNT}.json").write_text(hostile, encoding="utf-8")
             # Capture the exact profile bytes before validation.
             before = profile_path.read_bytes()
             # Require the fixed value-free evidence error without OverflowError.
@@ -2226,9 +2230,9 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         game_cases = ast.literal_eval(mapping_node.value)
         # Keep shared cases and the one selected game's dedicated case.
         expected = [case_id for case_id in case_ids if case_id not in set(game_cases.values()) or case_id == game_cases["acey_deucey"]]
-        # Compute the exact six-runner governed ownership declarations.
-        shard_sets = browser_runner_module.browser_shard_case_sets(6)
-        # Create one disposable six-shard result packet.
+        # Compute the exact governed ownership declarations from the sole test oracle.
+        shard_sets = browser_runner_module.browser_shard_case_sets(BROWSER_SHARD_COUNT)
+        # Create one disposable complete-shard result packet.
         with tempfile.TemporaryDirectory() as temp_dir:
             # Write each deterministic packed shard result with an exact self-description.
             for index, owned_set in enumerate(shard_sets):
@@ -2237,15 +2241,15 @@ class CiQualificationWorkflowTests(unittest.TestCase):
                 # Build passing evidence for owned cases that survive detector selection.
                 results = [{"test_id": case_id, "status": "PASS"} for case_id in owned if case_id in set(expected)]
                 # Bind worker identity, detector selection, and exact ownership beside its results.
-                payload = {"shard_index": index, "shard_count": 6, "affected_games": ["acey_deucey"], "owned_cases": owned, "results": results}
+                payload = {"shard_index": index, "shard_count": BROWSER_SHARD_COUNT, "affected_games": ["acey_deucey"], "owned_cases": owned, "results": results}
                 # Write the exact filename consumed by the aggregate verifier.
-                (Path(temp_dir) / f"browser_results_shard_{index}_of_6.json").write_text(json.dumps(payload), encoding="utf-8")
+                (Path(temp_dir) / f"browser_results_shard_{index}_of_{BROWSER_SHARD_COUNT}.json").write_text(json.dumps(payload), encoding="utf-8")
             # Run the real aggregate CLI without invoking a browser or listener.
-            verified = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            verified = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", str(BROWSER_SHARD_COUNT), "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require exact selected-case coverage to pass.
             self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
             # Forge one shard's declaration while keeping all case rows unchanged.
-            forged_path = Path(temp_dir) / "browser_results_shard_0_of_6.json"
+            forged_path = Path(temp_dir) / f"browser_results_shard_0_of_{BROWSER_SHARD_COUNT}.json"
             # Read the existing evidence before changing only its self-description.
             forged = json.loads(forged_path.read_text(encoding="utf-8"))
             # Claim a different detector selection to simulate an untrusted artifact.
@@ -2253,7 +2257,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Persist the forged declaration for the negative regression.
             forged_path.write_text(json.dumps(forged), encoding="utf-8")
             # Re-run the real aggregate verifier against the same expected detector input.
-            rejected = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            rejected = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", str(BROWSER_SHARD_COUNT), "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require the forged shard selection to fail closed.
             self.assertNotEqual(rejected.returncode, 0, rejected.stdout + rejected.stderr)
             # Retain a focused diagnostic proving the expected-selection mismatch was detected.
@@ -2265,7 +2269,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Persist the missing-owner forgery.
             forged_path.write_text(json.dumps(forged), encoding="utf-8")
             # Re-run the real aggregate verifier against the incomplete declaration.
-            missing_owner = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            missing_owner = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", str(BROWSER_SHARD_COUNT), "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require each shard's exact owned_cases declaration, not merely result union.
             self.assertNotEqual(missing_owner.returncode, 0, missing_owner.stdout + missing_owner.stderr)
             # Pin the bounded ownership diagnostic.
@@ -2275,7 +2279,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Persist the duplicate-owner forgery.
             forged_path.write_text(json.dumps(forged), encoding="utf-8")
             # Re-run aggregate verification against the duplicated declaration.
-            duplicate_owner = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", "6", "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
+            duplicate_owner = subprocess.run([sys.executable, str(TEST_ENTRYPOINT), "--verify-browser-shards", temp_dir, "--shard-count", str(BROWSER_SHARD_COUNT), "--games", "acey_deucey"], text=True, capture_output=True, cwd=ROOT, check=False)
             # Require duplicate ownership to fail closed.
             self.assertNotEqual(duplicate_owner.returncode, 0, duplicate_owner.stdout + duplicate_owner.stderr)
             # Pin the fixed declaration diagnostic.
@@ -2285,12 +2289,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
         # Read the complete workflow as inert text.
         workflow_text = self.workflow_text(BROWSER_WORKFLOW)
-        # Require exactly six duration-balanced ordinary Browser workers. (issue #502)
-        self.assertIn("shard: [0, 1, 2, 3, 4, 5]", workflow_text)
         # Require exact aggregate result accounting through the historical branch-protection context.
         self.assertIn("      - browser_tests_shard", workflow_text)
-        # Require literal-case union verification after every shard succeeds.
-        self.assertIn("--verify-browser-shards logs/test-runs --shard-count 6", workflow_text)
         # Preserve the explicit formal 50,000-cycle authorization input and exact aggregate.
         self.assertIn("formal_ui_50000:", workflow_text)
         # Preserve the exact formal cycle count and source-commit-bound aggregate.
@@ -2299,6 +2299,63 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertIn("baccarat_sustained_2000:", workflow_text)
         # Require the focused Baccarat command to remain independent of ordinary shard execution.
         self.assertIn("python -m tests.baccarat_sustained", workflow_text)
+
+    # Prove one canonical test constant is the sole reviewed alignment boundary for workflow shard count. (TEST-242)
+    def test_browser_workflow_matches_canonical_shard_count(self):
+        # Read the workflow once so one named assertion owns every count-bearing representation.
+        workflow_text = self.workflow_text(BROWSER_WORKFLOW)
+        # Derive the complete matrix text from the one canonical test constant.
+        expected_matrix = "shard: [" + ", ".join(str(index) for index in range(BROWSER_SHARD_COUNT)) + "]"
+        # Derive the exact runner argument from the same constant.
+        expected_argument = f"--shard-count {BROWSER_SHARD_COUNT}"
+        # Compare matrix presence and both worker/aggregate arguments in one named fail-closed assertion.
+        self.assertEqual((expected_matrix in workflow_text, workflow_text.count(expected_argument)), (True, 2), "Browser workflow shard count does not match BROWSER_SHARD_COUNT")
+
+    # Prove scheduled/manual profile refresh uses exact successful shard evidence and opens only a reviewable PR. (TOOL-017, TEST-183)
+    def test_browser_duration_profile_workflow_is_bounded_and_reviewable(self):
+        # Read the workflow as inert policy text without contacting GitHub.
+        workflow_text = self.workflow_text(BROWSER_DURATION_WORKFLOW)
+        # Require both the scheduled maintenance lane and an operator-visible on-demand trigger.
+        self.assertIn("schedule:", workflow_text)
+        self.assertIn("workflow_dispatch:", workflow_text)
+        # Require the latest successful protected-main Browser run rather than untrusted PR evidence.
+        self.assertIn("actions/workflows/browser-tests.yml/runs?", workflow_text)
+        self.assertIn("branch=main", workflow_text)
+        self.assertIn("status=success", workflow_text)
+        # Require exact shard artifact download with merged result filenames.
+        self.assertIn("pattern: browser-test-artifacts-shard-*", workflow_text)
+        self.assertIn("merge-multiple: true", workflow_text)
+        # Require the strict tracked generator and focused policy suite before publication.
+        self.assertIn("python scripts/generate_browser_durations.py logs/test-runs", workflow_text)
+        self.assertIn("python -m unittest tests.cicd_deployment_tests", workflow_text)
+        # Require no-change runs to stop before branch, push, or PR creation.
+        self.assertIn("git diff --quiet -- tests/browser_case_durations.json", workflow_text)
+        # Require an existing automated profile branch or PR to suppress duplicate publication.
+        self.assertIn("gh pr list --state open --base main --json headRefName", workflow_text)
+        self.assertIn("git ls-remote --heads origin 'refs/heads/codex/browser-duration-profile-*'", workflow_text)
+        self.assertIn("changed=blocked", workflow_text)
+        # Require the workflow to stage only the reviewed duration profile.
+        self.assertIn("git add -- tests/browser_case_durations.json", workflow_text)
+        # Require a draft review boundary and the repository's issue-lifecycle metadata section.
+        self.assertIn("gh pr create --draft", workflow_text)
+        self.assertIn("## Issues resolved", workflow_text)
+        # Require the token-authored PR to dispatch all nine unchanged qualification workflows against its exact branch head.
+        expected_workflows = ("ci.yml", "browser-tests.yml", "long-suite-100.yml", "release.yml", "docs.yml", "comment-density.yml", "contract-tests.yml", "module-boundaries.yml", "codex-review.yml")
+        # Require each exact workflow dispatch once so the resulting draft can become genuinely green.
+        self.assertTrue(all(workflow_text.count(f"gh workflow run {workflow_name} --ref") == 1 for workflow_name in expected_workflows))
+        # Require ordinary Browser coverage rather than a formal or sustained qualification profile.
+        self.assertIn("-f formal_ui_50000=false -f baccarat_sustained_2000=false -f concurrent_browser_138=false -f profile_refresh=true", workflow_text)
+        # Require the profile workflow to own the Actions write permission needed for explicit dispatch.
+        self.assertIn("actions: write", workflow_text)
+        # Require the unpublished manual candidate to consume the exact canonical packaged version.
+        self.assertIn('gh workflow run release.yml --ref "${BRANCH_NAME}" -f app_version="${app_version}" -f recovery_action=candidate', workflow_text)
+        # Require every newly dispatchable simple gate to retain its historical job body unchanged.
+        for workflow_name in ("ci.yml", "docs.yml", "comment-density.yml", "contract-tests.yml", "module-boundaries.yml", "codex-review.yml"):
+            # Inspect only the declared trigger surface for the bounded dispatch hook.
+            self.assertIn("workflow_dispatch:", self.workflow_text(ROOT / ".github" / "workflows" / workflow_name))
+        # Reject direct protected-main pushes and automatic merge behavior.
+        self.assertNotIn("git push origin main", workflow_text)
+        self.assertNotIn("gh pr merge", workflow_text)
 
 
 # Run focused evidence directly when invoked by a developer or release validator.

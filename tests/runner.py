@@ -40,6 +40,8 @@ from casino.core.state_store import save_player_game_state, write_json
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import pure Browser discovery, affinity packing, and shard verification outside the compatibility runner. (TEST-242)
 from tests import browser_sharding
+# Import the sole environment-scalable Playwright wait budget. (TEST-053)
+from tests.browser_timing import WAIT_MS
 # Import source-only API registration discovery and exact reviewed inventory validation. (TEST-242)
 from tests import api_case_inventory
 # Import the complete auth-backend and PWA Browser affinity owner. (TEST-242)
@@ -2650,7 +2652,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Fail the shard bootstrap before any owned case can consume an invalid session.
                     if not shard_fixture_login.ok or shard_fixture_login.json().get('ok') is not True: raise AssertionError('case-neutral shard login failed')
                     # Mount the authoritative lobby in the same browser context used by owned cases.
-                    page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                     # Resolve the player identity without depending on the shard-zero wallet case.
                     browser_player_id=page.evaluate("window.CasinoCurrentUser.player.player_id")
                 # Collect the normal-player half of Admin navigation authorization on the same shard as its consumer.
@@ -2676,11 +2678,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore English and the primary viewport before route-restoration proof.
                     page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
                     # Navigate and reload one game route under the same normal-player session.
-                    page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000); page.reload(wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS); page.reload(wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
                     # Record that route restoration preserves complete Admin-affordance absence.
                     route_restored=page.get_by_test_id('nav-admin').count()==0
                     # Return to the lobby before direct protected-resource checks.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                     # Probe protected Admin HTML, JavaScript, and API authority with the normal session.
                     html_result=page.evaluate("""async () => { const response=await fetch('/admin',{credentials:'include'}); const text=await response.text(); return {status:response.status,contains_admin_view:text.includes('adminView')}; }""")
                     # Require JavaScript source to remain protected before any Admin bytes load.
@@ -2716,7 +2718,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     # Open the game through its catalog-owned navigation button.
                                     page.get_by_test_id(f'nav-{color_game}').click()
                                     # Wait for the game's real route surface to own the outlet.
-                                    page.get_by_test_id(ready_testid).wait_for(timeout=5000)
+                                    page.get_by_test_id(ready_testid).wait_for(timeout=WAIT_MS)
                                     # Put Keno into its real selected-number state without starting a wager.
                                     if color_game=='keno':
                                         # Resolve the first numbered board control for a deterministic metallic-gold selection.
@@ -2843,7 +2845,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Return to the shared lobby route.
                         page.get_by_test_id('nav-lobby').click()
                         # Require the lobby to own the route before the case terminalizes.
-                        page.get_by_test_id('lobby').wait_for(timeout=5000)
+                        page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Register one new permanent Browser case with only its authorized product and test requirements.
                 run_case('BR-GAME-COLOR-001',['UX-024','TEST-149'],semantic_game_colors)
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
@@ -2877,7 +2879,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Release the held module request so the selected route can finish mounting normally.
                     held_loading_route['route'].continue_()
                     # Wait for the selected module's declared ready selector before removing the route handler.
-                    page.get_by_test_id(loading_game['frontend']['ready_testid']).wait_for(timeout=5000)
+                    page.get_by_test_id(loading_game['frontend']['ready_testid']).wait_for(timeout=WAIT_MS)
                     # Remove the one-shot import hold before the generic catalog route walk.
                     page.unroute('**/games/andar_bahar.js',hold_loading_module)
                     # Visit every catalog game through its generated shell navigation control.
@@ -2885,11 +2887,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Navigate through the generic catalog-owned test id.
                         page.get_by_test_id(f"nav-{game['id']}").click()
                         # Wait for the independently declared ready selector before continuing.
-                        page.get_by_test_id(game['frontend']['ready_testid']).wait_for(timeout=5000)
+                        page.get_by_test_id(game['frontend']['ready_testid']).wait_for(timeout=WAIT_MS)
                         # Require the canonical reloadable route to match module metadata.
                         assert page.url.split('?',1)[0].endswith(game['route'])
                     # Return to the lobby after generic discovery coverage.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute catalog-driven frontend driver discovery for all current games.
                 run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042','UX-011'],catalog_route_discovery)
                 # Define layout_containment_walk to prove no meaningful content escapes the viewport or its clipper on any route. (UX-026)
@@ -2905,7 +2907,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Navigate through the generic catalog-owned test id.
                                 page.get_by_test_id(f"nav-{containment_game['id']}").click()
                                 # Wait for the independently declared ready selector before measuring.
-                                page.get_by_test_id(containment_game['frontend']['ready_testid']).wait_for(timeout=5000)
+                                page.get_by_test_id(containment_game['frontend']['ready_testid']).wait_for(timeout=WAIT_MS)
                                 # Let responsive tracks and route-owned fitting settle before the audit.
                                 page.wait_for_timeout(120)
                                 # Measure through the same production auditor that powers runtime telemetry.
@@ -2919,7 +2921,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Mount Roulette through its real navigation control.
                             page.get_by_test_id('nav-roulette').click()
                             # Wait for the premium Roulette surface before measuring the board.
-                            page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
+                            page.get_by_test_id('roulette-premium').wait_for(timeout=WAIT_MS)
                             # Let the measured continuous fit apply before reading rects.
                             page.wait_for_timeout(150)
                             # Read the board and shell rectangles from the live layout.
@@ -2941,7 +2943,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Mount Bingo through its real navigation control.
                             page.get_by_test_id('nav-bingo').click()
                             # Wait for the premium Bingo surface before measuring its complete stage.
-                            page.get_by_test_id('premium-bingo').wait_for(timeout=5000)
+                            page.get_by_test_id('premium-bingo').wait_for(timeout=WAIT_MS)
                             # Let desktop grid tracks settle before reading bottom-edge containment.
                             page.wait_for_timeout(150)
                             # Read the real card, call bay, stage, outlet, and fixed status-bar boundaries.
@@ -2959,7 +2961,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Return to the shared lobby route.
                         page.get_by_test_id('nav-lobby').click()
                         # Require the lobby to own the route before the case terminalizes.
-                        page.get_by_test_id('lobby').wait_for(timeout=5000)
+                        page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Register the permanent containment case with only its authorized product and test requirements.
                 run_case('BR-LAYOUT-CONTAIN-001',['UX-026','TEST-154'],layout_containment_walk)
                 # Define action_scroll_focus_stability to prove in-game actions never reload, renavigate, or reset the reading position. (UX-027)
@@ -2971,7 +2973,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Mount Blackjack through its real navigation control.
                         page.get_by_test_id('nav-blackjack').click()
                         # Wait for the Blackjack surface before arranging scroll state.
-                        page.get_by_test_id('blackjack-deal').wait_for(timeout=5000)
+                        page.get_by_test_id('blackjack-deal').wait_for(timeout=WAIT_MS)
                         # Stamp a document-lifetime marker that any reload or renavigation would destroy.
                         page.evaluate("() => { window.__uxStabilityMarker='held'; }")
                         # Record the pre-action route for the no-navigation assertion.
@@ -2999,7 +3001,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Mount Roulette because its stacked route exposed the reported delayed document-scroll clamp.
                         page.get_by_test_id('nav-roulette').click()
                         # Wait for the chip controls before arranging document scroll.
-                        page.wait_for_selector('#view [data-chip]',timeout=5000)
+                        page.wait_for_selector('#view [data-chip]',timeout=WAIT_MS)
                         # Scroll the document deep toward the play controls.
                         page.evaluate("() => window.scrollTo(0,Math.max(0,document.documentElement.scrollHeight-window.innerHeight))")
                         # Record the deep scroll offset the rerender must not clamp to the top.
@@ -3021,7 +3023,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Return to the shared lobby route.
                         page.get_by_test_id('nav-lobby').click()
                         # Require the lobby to own the route before the case terminalizes.
-                        page.get_by_test_id('lobby').wait_for(timeout=5000)
+                        page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Register the permanent action-stability case with only its authorized product and test requirements.
                 run_case('BR-ACTION-STABILITY-001',['UX-027','TEST-155'],action_scroll_focus_stability)
                 # Define the governed ready-state visual proof for the twelve catalog-expansion games. (issue #73)
@@ -3047,7 +3049,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Open the game through the catalog-owned route control.
                                 page.get_by_test_id(f"nav-{game['id']}").click()
                                 # Wait for the module-owned readiness marker before visual or localization assertions.
-                                page.get_by_test_id(game['frontend']['ready_testid']).wait_for(timeout=5000)
+                                page.get_by_test_id(game['frontend']['ready_testid']).wait_for(timeout=WAIT_MS)
                                 # Let the stable ready layout settle without exercising game mechanics.
                                 page.wait_for_timeout(100)
                                 # Require the canonical reloadable route declared by the module descriptor.
@@ -3069,7 +3071,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore the primary desktop viewport expected by later browser cases.
                     page.set_viewport_size({'width':1920,'height':1080})
                     # Return to the lobby after all governed expansion artifacts are complete.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the expansion matrix under each game-specific permanent test allocation.
                 run_case('BR-CATALOG-EXPANSION-001',['CWHEEL-001','CWHEEL-002','PDICE-001','PDICE-002','BOULE-001','BOULE-002','FARO-001','FARO-002','TEQ-001','TEQ-002','PACH-001','PACH-002','COINP-001','COINP-002','MARBLE-001','MARBLE-002','PATTERN-001','PATTERN-002','LGRID-001','LGRID-002','DDLAB-001','DDLAB-002','FOURCP-001','FOURCP-002','TEST-119','TEST-120','TEST-121','TEST-122','TEST-123','TEST-124','TEST-125','TEST-126','TEST-128','TEST-129','TEST-130','TEST-131'],catalog_expansion_visuals)
                 # Read the authoritative wallet rendered by the shared shell as a numeric play-token balance. (issue #712, TEST-185)
@@ -3079,27 +3081,27 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Require one simple settled-round game to wager, settle, refresh its wallet, and recover its repeat state after reload.
                 def newest_simple_game_acceptance(game_id, ready_testid, endpoint_suffix, action, result_testid, repeat_testid):
                     # Enter the catalog-owned route and wait for its stable module marker.
-                    page.get_by_test_id(f'nav-{game_id}').click(); page.get_by_test_id(ready_testid).wait_for(timeout=10000)
+                    page.get_by_test_id(f'nav-{game_id}').click(); page.get_by_test_id(ready_testid).wait_for(timeout=WAIT_MS * 2)
                     # Capture the pre-action wallet so a stale rendered value cannot satisfy settlement evidence accidentally.
                     before=newest_game_wallet_value()
                     # Observe the one real mutation response while the supplied control callback starts the wager.
-                    with page.expect_response(lambda response: response.request.method=='POST' and endpoint_suffix in response.url,timeout=10000) as response_info: action()
+                    with page.expect_response(lambda response: response.request.method=='POST' and endpoint_suffix in response.url,timeout=WAIT_MS * 2) as response_info: action()
                     # Read the standard API envelope and bind the rendered wallet to its authoritative player payload.
                     payload=response_info.value.json()['data']; expected=float(payload['player']['balance'])
                     # Wait for terminal controls and the exact response-owned wallet to become visible.
-                    page.get_by_test_id(repeat_testid).wait_for(state='visible',timeout=10000); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=10000)
+                    page.get_by_test_id(repeat_testid).wait_for(state='visible',timeout=WAIT_MS * 2); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=WAIT_MS * 2)
                     # Wait for the game-owned presentation to finish after the wallet refresh, then require its terminal status and repeat action.
-                    page.wait_for_function("ids => { const result=document.querySelector(`[data-testid=\"${ids.result}\"]`); const repeat=document.querySelector(`[data-testid=\"${ids.repeat}\"]`); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",arg={'result':result_testid,'repeat':repeat_testid},timeout=10000)
+                    page.wait_for_function("ids => { const result=document.querySelector(`[data-testid=\"${ids.result}\"]`); const repeat=document.querySelector(`[data-testid=\"${ids.repeat}\"]`); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",arg={'result':result_testid,'repeat':repeat_testid},timeout=WAIT_MS * 2)
                     # Re-read the settled controls so this assertion remains bound to the visible terminal frame.
                     assert page.get_by_test_id(result_testid).inner_text().strip() and page.get_by_test_id(repeat_testid).is_enabled()
                     # Require the action to have produced an authoritative wallet observation, allowing a legitimate push to equal the prior balance.
                     assert isinstance(before,(int,float)) and newest_game_wallet_value()==expected
                     # Reload the canonical deep link and require server-owned repeat and wallet recovery without a second mutation.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id(ready_testid).wait_for(timeout=10000); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=10000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id(ready_testid).wait_for(timeout=WAIT_MS * 2); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=WAIT_MS * 2)
                     # Require the route, repeat control, and authoritative wallet to survive the reload.
                     assert page.url.split('?',1)[0].endswith(f'/games/{game_id}') and page.get_by_test_id(repeat_testid).is_enabled() and newest_game_wallet_value()==expected
                     # Return to the lobby so every dedicated case begins from the same shell state.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Exercise Faro through its real deal endpoint and reload-safe recent-round state.
                 def faro_browser_acceptance():
                     # Use the default rank and five-token chip for one real settled deal.
@@ -3137,25 +3139,25 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Exercise Four Card Poker's two-step real deal and decision lifecycle.
                 def four_card_poker_browser_acceptance():
                     # Enter the catalog-owned route and wait for the stable game root.
-                    page.get_by_test_id('nav-four_card_poker').click(); page.get_by_test_id('four-card-poker').wait_for(timeout=10000)
+                    page.get_by_test_id('nav-four_card_poker').click(); page.get_by_test_id('four-card-poker').wait_for(timeout=WAIT_MS * 2)
                     # Set a small legal ante and explicitly dispatch change before starting the round.
                     page.locator('[data-ante]').fill('2'); page.locator('[data-ante]').dispatch_event('change')
                     # Start one real deal and wait for the player decision stage.
-                    with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/four-card-poker/rounds'),timeout=10000): page.locator('[data-deal]').click()
+                    with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/four-card-poker/rounds'),timeout=WAIT_MS * 2): page.locator('[data-deal]').click()
                     # Require the one-times play option before committing the terminal decision.
-                    page.locator('[data-play="1"]').wait_for(timeout=10000)
+                    page.locator('[data-play="1"]').wait_for(timeout=WAIT_MS * 2)
                     # Observe the real terminal response while choosing one-times play.
-                    with page.expect_response(lambda response: response.request.method=='POST' and '/api/v1/games/four-card-poker/rounds/' in response.url and response.url.endswith('/decisions'),timeout=10000) as response_info: page.locator('[data-play="1"]').click()
+                    with page.expect_response(lambda response: response.request.method=='POST' and '/api/v1/games/four-card-poker/rounds/' in response.url and response.url.endswith('/decisions'),timeout=WAIT_MS * 2) as response_info: page.locator('[data-play="1"]').click()
                     # Bind the rendered wallet to the terminal response's authoritative player value.
-                    expected=float(response_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=10000)
+                    expected=float(response_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=WAIT_MS * 2)
                     # Require the settled result and enabled repeat action.
-                    page.get_by_test_id('four-card-poker-result').wait_for(timeout=10000); assert page.locator('[data-action="repeat"]').is_enabled()
+                    page.get_by_test_id('four-card-poker-result').wait_for(timeout=WAIT_MS * 2); assert page.locator('[data-action="repeat"]').is_enabled()
                     # Reload and require the exact settled route, wallet, and repeat state to recover without another wager.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('four-card-poker').wait_for(timeout=10000); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=10000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('four-card-poker').wait_for(timeout=WAIT_MS * 2); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=WAIT_MS * 2)
                     # Prove both authoritative terminal result and repeat controls survived the reload.
                     assert page.get_by_test_id('four-card-poker-result').inner_text().strip() and page.locator('[data-action="repeat"]').is_enabled() and newest_game_wallet_value()==expected
                     # Return to the lobby for the next independent Browser case.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Record Four Card Poker's dedicated affected-game acceptance case.
                 run_case('BR-FOUR-CARD-POKER-001',['FOURCP-001','FOURCP-002','TEST-185'],four_card_poker_browser_acceptance)
                 # Prove every catalog game keeps its enabled controls vertically reachable in the fixed-height shell. (issue #221, CORE-015, UX-004, TEST-139)
@@ -3175,7 +3177,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Enter the game through its catalog-owned navigation control.
                         page.get_by_test_id(f"nav-{reach_game['id']}").click()
                         # Wait for the descriptor-declared ready marker before measuring the complete route outlet.
-                        page.get_by_test_id(reach_game['frontend']['ready_testid']).wait_for(timeout=10000)
+                        page.get_by_test_id(reach_game['frontend']['ready_testid']).wait_for(timeout=WAIT_MS * 2)
                         # Measure and capture both required desktop surfaces.
                         for reach_viewport_id,reach_width,reach_height in reach_viewports:
                             # Apply the exact governed viewport and let responsive layout settle.
@@ -3191,7 +3193,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Fail after the full sweep so the artifact and error identify every clipped route.
                     assert not unreachable_report,unreachable_report
                     # Restore the canonical lobby and primary viewport for the next independent case.
-                    page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute one shard-owned full-catalog case under the reserved permanent test mapping.
                 run_case('BR-CONTROL-REACH-001',['CORE-015','UX-004','TEST-139'],control_reachability)
                 # Define catalog-wide repeat control, localization, real action, and visual acceptance. (UX-022, TEST-137)
@@ -3221,7 +3223,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Navigate through the catalog-owned route control.
                             page.get_by_test_id(f"nav-{game['id']}").click()
                             # Wait for the independently declared game readiness marker.
-                            game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=5000)
+                            game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=WAIT_MS)
                             # Resolve the one visible repeat button inside the mounted route outlet, because some readiness markers intentionally identify only the visual stage.
                             repeat_button=page.locator('#view').locator(repeat_selector)
                             # Read the phase-dependent count without requiring a settled-only control on an untouched idle route.
@@ -3253,7 +3255,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Wait for English before reading request payloads from the representative route.
                     page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
                     # Open Color Wheel because its fixed color and stake form one compact, auditable repeat configuration.
-                    page.get_by_test_id('nav-color_wheel').click(); page.get_by_test_id('color-wheel').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-color_wheel').click(); page.get_by_test_id('color-wheel').wait_for(timeout=WAIT_MS)
                     # Capture the first real settlement request while using the primary action.
                     with page.expect_request(lambda request: request.url.endswith('/api/v1/games/color-wheel/spins') and request.method=='POST') as first_request_info:
                         # Start one normally configured spin through the visible primary button.
@@ -3261,7 +3263,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Preserve only the non-secret wager configuration and exactly-once identity.
                     first_payload=first_request_info.value.post_data_json
                     # Wait until the decorative spin finishes and repeat becomes enabled.
-                    page.wait_for_function("() => !document.querySelector('[data-testid=\"color-wheel-repeat\"]')?.disabled",timeout=10000)
+                    page.wait_for_function("() => !document.querySelector('[data-testid=\"color-wheel-repeat\"]')?.disabled",timeout=WAIT_MS * 2)
                     # Capture the second real settlement request while using only one repeat click.
                     with page.expect_request(lambda request: request.url.endswith('/api/v1/games/color-wheel/spins') and request.method=='POST') as repeated_request_info:
                         # Trigger exactly one repeat through the localized secondary action.
@@ -3271,7 +3273,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Require the repeat to preserve color and stake while minting a fresh action identity.
                     assert repeated_payload['color']==first_payload['color'] and repeated_payload['stake']==first_payload['stake'] and repeated_payload['request_id']!=first_payload['request_id'],{'first':first_payload,'repeat':repeated_payload}
                     # Wait for the second settlement and busy-state cleanup before visual evidence.
-                    page.wait_for_function("() => !document.querySelector('[data-testid=\"color-wheel-repeat\"]')?.disabled",timeout=10000)
+                    page.wait_for_function("() => !document.querySelector('[data-testid=\"color-wheel-repeat\"]')?.disabled",timeout=WAIT_MS * 2)
                     # Enumerate the exact EN/RU and four-viewport matrix on the route whose real repeat action just passed.
                     evidence_rows=(('en-US','color_wheel','desktop_primary',1920,1080),('en-US','color_wheel','desktop_compact',1440,900),('en-US','color_wheel','tablet',1024,900),('en-US','color_wheel','mobile',390,844),('ru-RU','color_wheel','desktop_primary',1920,1080),('ru-RU','color_wheel','desktop_compact',1440,900),('ru-RU','color_wheel','tablet',1024,900),('ru-RU','color_wheel','mobile',390,844))
                     # Capture each representative route with exact-source sidecar provenance.
@@ -3285,7 +3287,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Resolve catalog metadata for the representative route.
                         game=next(item for item in repeat_games if item['id']==game_id)
                         # Open the route through its catalog-owned navigation control.
-                        page.get_by_test_id(f'nav-{game_id}').click(); game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=5000)
+                        page.get_by_test_id(f'nav-{game_id}').click(); game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=WAIT_MS)
                         # Resolve the repeat control dynamically so evidence remains stable across route hydration rerenders.
                         repeat_button=page.locator('#view').locator(repeat_selector)
                         # Scroll atomically without retaining an element handle that a normal hydration rerender may detach.
@@ -3295,7 +3297,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Capture the complete game surface with the governed repeat-ready state.
                         game_evidence(f'after-pass-repeat-bet-{game_id}-{locale}-{viewport_id}.png',game_id,['repeat_available'],locale,viewport_id)
                     # Restore English, primary desktop, and lobby ownership for later cases.
-                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'"); page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'"); page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Record catalog-wide rendering plus one exact real-backend repeat and eight governed artifacts.
                 run_case('BR-REPEAT-BET-001',['UX-022','TEST-137'],catalog_repeat_bet)
                 # Store the browser audit that proves every game control is reachable inside a scroll region at one viewport. (issue #221)
@@ -3333,7 +3335,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Apply the governed viewport before measuring shell and game layout.
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
                         # Return to the lobby so the shell chrome is measured in a stable state.
-                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                         # Require no page-level horizontal overflow at any governed viewport.
                         assert page.evaluate("() => document.documentElement.scrollWidth - window.innerWidth") <= 2, f'horizontal overflow at {viewport_id}'
                         # Read the brand title text and its horizontal clip amount for the truncation assertion.
@@ -3347,7 +3349,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Prove each control the issue named remains reachable via a scroll region at this viewport.
                         for game_id,ready_testid in [('bingo','premium-bingo'),('blackjack','blackjack-premium'),('sic_bo','sic-bo-table'),('chuck_a_luck','chuck-a-luck')]:
                             # Open the game through its bounded-menu route control.
-                            page.get_by_test_id(f'nav-{game_id}').click(); page.get_by_test_id(ready_testid).wait_for(timeout=5000)
+                            page.get_by_test_id(f'nav-{game_id}').click(); page.get_by_test_id(ready_testid).wait_for(timeout=WAIT_MS)
                             # Settle any mount animation before measuring control containment.
                             page.wait_for_timeout(200)
                             # Require no page-level horizontal overflow while the game is mounted.
@@ -3357,7 +3359,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Require every audited control to be reachable and never clipped by a hidden-overflow ancestor.
                             assert not reach['unreachable'], f'{game_id} controls unreachable at {viewport_id}: {reach["unreachable"][:5]}'
                             # Return to the lobby before the next audited game.
-                            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                     # Capture bounded compact-desktop shell evidence for the affected surface.
                     page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(150)
                     # Store one after-pass compact shell screenshot for review.
@@ -3365,13 +3367,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore desktop primary dimensions before later game interaction coverage runs.
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(200)
                     # Return to the lobby so subsequent cases start from the shared shell.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Record bounded keyboard-accessible navigation, brand readability, and control containment across governed viewports.
                 run_case('BR-SHELL-NAV-001',['CORE-006','CORE-007','CORE-015','UX-007','UX-009','SIC-BO-004','CHUCK-004','TEST-052'],shell_nav_containment)
                 # Define real-backend Multi-Hand Video Poker browser and visual acceptance coverage.
                 def multi_hand_video_poker_acceptance():
                     # Open the catalog-generated route and wait for its module-owned readiness selector.
-                    page.get_by_test_id('nav-multi_hand_video_poker').click(); page.get_by_test_id('multi-hand-video-poker').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-multi_hand_video_poker').click(); page.get_by_test_id('multi-hand-video-poker').wait_for(timeout=WAIT_MS)
                     # Require the canonical route and complete English title before interaction.
                     assert page.url.split('?',1)[0].endswith('/games/multi_hand_video_poker') and page.locator('.mhvp-header h1').inner_text()=='Multi-Hand Video Poker'
                     # Require the visible push row to state one returned credit rather than one-to-one profit odds.
@@ -3393,29 +3395,29 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore primary desktop dimensions for hold and multi-mode interaction evidence.
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                     # Select the required three-hand mode and start one real-backend wagered round.
-                    page.locator('[data-hand-count="3"]').click(); page.locator('#mhvp-wager').fill('1'); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=5000)
+                    page.locator('[data-hand-count="3"]').click(); page.locator('#mhvp-wager').fill('1'); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=WAIT_MS)
                     # Hold the first common card and wait for the persisted pressed state after rerender.
                     page.locator('[data-hold-position="0"]').click(); page.wait_for_function("() => document.querySelector('[data-hold-position=\"0\"]')?.getAttribute('aria-pressed') === 'true'")
                     # Capture the English hold-decision state with the selected control visible.
                     game_evidence('after-pass-mhvp-choose-holds-en-desktop_primary.png','multi_hand_video_poker',['choose_holds'],'en-US','desktop_primary')
                     # Draw all three hands and require the exact result cardinality and aggregate summary.
-                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('mhvp-summary').wait_for(timeout=5000); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=3)
+                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('mhvp-summary').wait_for(timeout=WAIT_MS); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=3)
                     # Capture the completed three-hand English state at primary desktop.
                     game_evidence('after-pass-mhvp-settled-3-en-desktop_primary.png','multi_hand_video_poker',['settled_3_hands'],'en-US','desktop_primary')
                     # Select five hands and start the next real-backend round.
-                    page.locator('[data-hand-count="5"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=5000)
+                    page.locator('[data-hand-count="5"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=WAIT_MS)
                     # Complete five hands and require every catalog-discovered result lane.
                     page.locator('[data-action="draw"]').click(); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=5)
                     # Resize to compact desktop and capture the five-hand settlement state.
                     page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(150); game_evidence('after-pass-mhvp-settled-5-en-desktop_compact.png','multi_hand_video_poker',['settled_5_hands'],'en-US','desktop_compact')
                     # Select ten hands and start the highest-cardinality real-backend round.
-                    page.locator('[data-hand-count="10"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=5000)
+                    page.locator('[data-hand-count="10"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=WAIT_MS)
                     # Complete ten hands and require every result lane before responsive evidence.
                     page.locator('[data-action="draw"]').click(); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=10)
                     # Resize to tablet and capture the stacked ten-hand settlement state.
                     page.set_viewport_size({'width':1024,'height':900}); page.wait_for_timeout(150); assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'); game_evidence('after-pass-mhvp-settled-10-en-tablet.png','multi_hand_video_poker',['settled_10_hands'],'en-US','tablet')
                     # Reload the canonical deep link and require the settled round to restore from real backend state.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('multi-hand-video-poker').wait_for(timeout=5000); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=10)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('multi-hand-video-poker').wait_for(timeout=WAIT_MS); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=10)
                     # Restore primary desktop and capture canonical route restoration evidence.
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150); game_evidence('after-pass-mhvp-route-restored-en-desktop_primary.png','multi_hand_video_poker',['route_restored','settled_10_hands'],'en-US','desktop_primary')
                     # Switch the mounted real game to Russian without losing its persisted state.
@@ -3425,13 +3427,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Reject representative English game copy from the Russian player-facing surface.
                     russian_copy=page.get_by_test_id('multi-hand-video-poker').inner_text(); english_phrases=['Multi-Hand Video Poker','Deal hands','Draw cards','Play controls','Paytable','Ready to deal','Choose cards to hold','play tokens']; assert not [phrase for phrase in english_phrases if phrase.lower() in russian_copy.lower()],russian_copy
                     # Select three hands and start a Russian real-backend round for actionable evidence.
-                    page.locator('[data-hand-count="3"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=5000)
+                    page.locator('[data-hand-count="3"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=WAIT_MS)
                     # Hold the second common card and wait for its localized persisted selection.
                     page.locator('[data-hold-position="1"]').click(); page.wait_for_function("() => document.querySelector('[data-hold-position=\"1\"]')?.getAttribute('aria-pressed') === 'true'")
                     # Capture the Russian hold-decision state before drawing.
                     game_evidence('after-pass-mhvp-choose-holds-ru-desktop_primary.png','multi_hand_video_poker',['choose_holds'],'ru-RU','desktop_primary')
                     # Complete the Russian three-hand round and require the localized summary.
-                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('mhvp-summary').wait_for(timeout=5000); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=3)
+                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('mhvp-summary').wait_for(timeout=WAIT_MS); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=3)
                     # Capture Russian settled-state evidence at every required viewport.
                     for viewport_id,width,height in required_viewports:
                         # Resize to the exact visual-matrix dimensions before localized containment checks.
@@ -3443,13 +3445,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore primary desktop and English locale for established downstream browser cases.
                     page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => document.querySelector('.mhvp-header h1')?.textContent === 'Multi-Hand Video Poker'")
                     # Return to the lobby so route restoration and existing game interactions start normally.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute real-backend mode, localization, responsive, route, and visual acceptance coverage.
                 run_case('BR-MHVP-001',['MHVP-001','MHVP-002','MHVP-004','MHVP-005','I18N-010','TEST-117'],multi_hand_video_poker_acceptance)
                 # Define real-backend Casino War browser and visual acceptance coverage.
                 def casino_war_acceptance():
                     # Open the catalog-generated route and wait for its module-owned table selector.
-                    page.get_by_test_id('nav-casino_war').click(); page.get_by_test_id('casino-war-table').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-casino_war').click(); page.get_by_test_id('casino-war-table').wait_for(timeout=WAIT_MS)
                     # Require the canonical route and complete English title before interaction.
                     assert page.url.split('?',1)[0].endswith('/games/casino_war') and page.locator('.cw-header h1').inner_text()=='Casino War'
                     # Reject representative raw resource identifiers from the initial player-facing surface.
@@ -3477,7 +3479,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Start one real ledger-backed round through the mounted frontend.
                         page.locator('[data-action="deal"]').click()
                         # Wait until the rerender exposes either a tie decision or the next-round control.
-                        page.wait_for_function("() => { const war=document.querySelector('[data-action=\"war\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((war && !war.disabled) || (deal && !deal.disabled)); }",timeout=5000)
+                        page.wait_for_function("() => { const war=document.querySelector('[data-action=\"war\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((war && !war.disabled) || (deal && !deal.disabled)); }",timeout=WAIT_MS)
                         # Stop on the first naturally dealt initial tie.
                         if page.locator('[data-action="war"]').count() and page.locator('[data-action="war"]').is_enabled():
                             # Preserve the successful discovery for the bounded-loop assertion.
@@ -3515,7 +3517,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore primary desktop before committing the ledger-backed war decision.
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                     # Choose war through the real frontend and wait for the terminal next-round control.
-                    page.locator('[data-action="war"]').click(); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=5000)
+                    page.locator('[data-action="war"]').click(); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=WAIT_MS)
                     # Capture the Russian war result at every required viewport.
                     for viewport_id,width,height in required_viewports:
                         # Resize before localized terminal-state containment checks.
@@ -3535,7 +3537,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Record self-describing English war-result evidence.
                         game_evidence(f'after-pass-casino-war-result-en-{viewport_id}.png','casino_war',['war_result'],'en-US',viewport_id)
                     # Reload the canonical deep link and require the settled war round to restore.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('casino-war-table').wait_for(timeout=5000); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }")
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('casino-war-table').wait_for(timeout=WAIT_MS); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }")
                     # Restore primary desktop and record canonical route-restoration evidence.
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150); game_evidence('after-pass-casino-war-route-restored-en-desktop_primary.png','casino_war',['route_restored','war_result'],'en-US','desktop_primary')
                     # Continue only if the first bounded search tied before producing a normal initial result.
@@ -3543,7 +3545,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Bound follow-up attempts while resolving any additional ties by surrender.
                         for attempt in range(40):
                             # Start the next real round through the restored route.
-                            page.locator('[data-action="deal"]').click(); page.wait_for_function("() => { const war=document.querySelector('[data-action=\"war\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((war && !war.disabled) || (deal && !deal.disabled)); }",timeout=5000)
+                            page.locator('[data-action="deal"]').click(); page.wait_for_function("() => { const war=document.querySelector('[data-action=\"war\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((war && !war.disabled) || (deal && !deal.disabled)); }",timeout=WAIT_MS)
                             # Capture and stop when the round settled from the initial comparison.
                             if page.locator('[data-action="deal"]').count() and page.locator('[data-action="deal"]').is_enabled():
                                 # Record the remaining normal initial-result matrix state.
@@ -3553,17 +3555,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Stop after the first qualifying initial result.
                                 break
                             # Resolve another natural tie cheaply so the next comparison can begin.
-                            page.locator('[data-action="surrender"]').click(); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=5000)
+                            page.locator('[data-action="surrender"]').click(); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=WAIT_MS)
                     # Require ordinary initial-result evidence in addition to the decision and war-result states.
                     assert initial_result_captured,'Casino War did not produce an initial-result evidence state'
                     # Return to the lobby so established downstream browser cases start normally.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute real-backend rules, localization, responsive, route, and visual acceptance coverage.
                 run_case('BR-CW-001',['CW-001','CW-002','CW-004','CW-005'],casino_war_acceptance)
                 # Define real-backend Big Six browser, localization, responsive, motion, and visual acceptance coverage.
                 def big_six_acceptance():
                     # Open the catalog-generated route and wait for the game-owned readiness selector.
-                    page.get_by_test_id('nav-big_six_wheel').click(); page.get_by_test_id('big-six-wheel').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-big_six_wheel').click(); page.get_by_test_id('big-six-wheel').wait_for(timeout=WAIT_MS)
                     # Require the canonical route, English title, and ready phase from the live backend mount.
                     assert page.url.split('?',1)[0].endswith('/games/big_six_wheel') and page.locator('.big-six-wheel__header h1').inner_text()=='Big Six Wheel' and page.get_by_test_id('big-six-wheel-phase').inner_text()=='Accepting wagers'
                     # Require the complete code-native stage to remain painted inside its panel and every hidden ancestor.
@@ -3593,7 +3595,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Activate the same visible control used by players.
                         page.locator('[data-spin]').click()
                     # Require the timer-owned active state and cumulative six-turn target before settlement.
-                    page.wait_for_function("minimum => Number.parseFloat(document.querySelector('[data-wheel]')?.style.getPropertyValue('--wheel-angle')) >= minimum",arg=initial_big_six_target+(6*360),timeout=5000)
+                    page.wait_for_function("minimum => Number.parseFloat(document.querySelector('[data-wheel]')?.style.getPropertyValue('--wheel-angle')) >= minimum",arg=initial_big_six_target+(6*360),timeout=WAIT_MS)
                     # Decode the first standard response envelope for independent pointer-alignment proof.
                     first_big_six_round=first_big_six_response_info.value.json()['data']['round']
                     # Read the cumulative target mutated on the already-painted wheel element.
@@ -3611,13 +3613,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the active normal-motion state while the route-owned timer is pending.
                     game_evidence('after-pass-big-six-spinning-en-desktop_primary.png','big_six_wheel',['spinning'],'en-US','desktop_primary')
                     # Wait for the scheduled settlement to restore an enabled action.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Settled' && !document.querySelector('[data-spin]')?.disabled",timeout=5000)
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Settled' && !document.querySelector('[data-spin]')?.disabled",timeout=WAIT_MS)
                     # Start a second consecutive spin to reject absolute-angle reset and reverse regressions.
                     with page.expect_response(lambda response: response.url.endswith('/api/v1/games/big-six-wheel/spins') and response.request.method=='POST') as second_big_six_response_info:
                         # Reuse the retained positive wager through the visible action.
                         page.locator('[data-spin]').click()
                     # Require another complete forward target from the prior settled angle.
-                    page.wait_for_function("minimum => Number.parseFloat(document.querySelector('[data-wheel]')?.style.getPropertyValue('--wheel-angle')) >= minimum",arg=first_big_six_target+(6*360),timeout=5000)
+                    page.wait_for_function("minimum => Number.parseFloat(document.querySelector('[data-wheel]')?.style.getPropertyValue('--wheel-angle')) >= minimum",arg=first_big_six_target+(6*360),timeout=WAIT_MS)
                     # Decode the second authoritative result for independent alignment proof.
                     second_big_six_round=second_big_six_response_info.value.json()['data']['round']
                     # Read the second cumulative target without discarding its rotation history.
@@ -3627,7 +3629,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Reject reset, reverse, freeze, or server-index disagreement on the consecutive action.
                     assert second_big_six_target-first_big_six_target>=6*360-1e-6 and abs((second_big_six_target%360)-second_big_six_landing)<1e-6
                     # Wait for the second presentation to restore controls before terminal evidence begins.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Settled' && !document.querySelector('[data-spin]')?.disabled",timeout=5000)
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Settled' && !document.querySelector('[data-spin]')?.disabled",timeout=WAIT_MS)
                     # Capture the settled English surface at every required viewport.
                     for viewport_id,width,height in required_viewports:
                         # Resize before terminal-state containment checks.
@@ -3653,7 +3655,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Record self-describing Russian settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-ru-{viewport_id}.png','big_six_wheel',['settled'],'ru-RU',viewport_id)
                     # Reload in Russian so the route lifecycle restores a clean ready phase with persisted history.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('big-six-wheel').wait_for(timeout=5000); page.wait_for_function("() => !document.querySelector('[data-spin]')?.disabled")
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('big-six-wheel').wait_for(timeout=WAIT_MS); page.wait_for_function("() => !document.querySelector('[data-spin]')?.disabled")
                     # Capture Russian ready evidence at every governed viewport.
                     for viewport_id,width,height in required_viewports:
                         # Resize before localized ready-state containment checks.
@@ -3667,19 +3669,19 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore the unsent wager cleared by the full-page route reload.
                     page.locator('[data-wager="one"]').fill('1')
                     # Start one normal-motion Russian spin at primary desktop size.
-                    page.set_viewport_size({'width':1920,'height':1080}); page.locator('[data-spin]').click(); page.wait_for_function("() => document.querySelector('[data-spin]')?.disabled === true",timeout=5000)
+                    page.set_viewport_size({'width':1920,'height':1080}); page.locator('[data-spin]').click(); page.wait_for_function("() => document.querySelector('[data-spin]')?.disabled === true",timeout=WAIT_MS)
                     # Record the localized active state before the route-owned timer settles.
                     game_evidence('after-pass-big-six-spinning-ru-desktop_primary.png','big_six_wheel',['spinning'],'ru-RU','desktop_primary')
                     # Resize during the same pending action and preserve the active-state mobile evidence.
                     page.set_viewport_size({'width':390,'height':844}); game_evidence('after-pass-big-six-spinning-ru-mobile.png','big_six_wheel',['spinning'],'ru-RU','mobile')
                     # Wait for the real backend result presentation to restore the spin action.
-                    page.wait_for_function("() => document.querySelector('[data-spin]')?.disabled === false",timeout=5000)
+                    page.wait_for_function("() => document.querySelector('[data-spin]')?.disabled === false",timeout=WAIT_MS)
                     # Return to English before exercising the reduced-motion scheduler.
                     page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => document.querySelector('.big-six-wheel__header h1')?.textContent === 'Big Six Wheel'")
                     # Emulate the platform reduced-motion preference consumed by the mounted timer scope.
                     page.emulate_media(reduced_motion='reduce'); page.set_viewport_size({'width':1920,'height':1080})
                     # Start another real spin and require its zero-delay reveal to complete safely.
-                    page.locator('[data-spin]').click(); page.wait_for_function("() => document.querySelector('[data-wheel]')?.dataset.reducedMotion === 'true' && document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Settled'",timeout=5000)
+                    page.locator('[data-spin]').click(); page.wait_for_function("() => document.querySelector('[data-wheel]')?.dataset.reducedMotion === 'true' && document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Settled'",timeout=WAIT_MS)
                     # Record reduced-motion evidence with the terminal state and explicit route marker.
                     game_evidence('after-pass-big-six-reduced-motion-en-desktop_primary.png','big_six_wheel',['reduced_motion','settled'],'en-US','desktop_primary')
                     # Resize the same timer-clean result for required mobile reduced-motion evidence.
@@ -3687,17 +3689,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore normal media before proving canonical deep-link restoration.
                     page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size({'width':1920,'height':1080})
                     # Reload the canonical route and require the latest settled round to restore.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('big-six-wheel').wait_for(timeout=5000); page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Accepting wagers'")
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('big-six-wheel').wait_for(timeout=WAIT_MS); page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Accepting wagers'")
                     # Record exact-route restoration with live backend history visible.
                     game_evidence('after-pass-big-six-route-restored-en-desktop_primary.png','big_six_wheel',['route_restored','ready'],'en-US','desktop_primary')
                     # Return to the lobby so established downstream browser cases start normally.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute Big Six rules, session route, localization, motion, responsive, and visual gates.
                 run_case('BR-BIG-SIX-001',['BIG-SIX-001','BIG-SIX-002','BIG-SIX-004','BIG-SIX-005','BIG-SIX-006','TEST-065'],big_six_acceptance)
                 # Define real-backend Red Dog browser, localization, responsive, state, and visual acceptance coverage.
                 def red_dog_acceptance():
                     # Open the catalog-generated route and wait for the game-owned readiness selector.
-                    page.get_by_test_id('nav-red_dog').click(); page.get_by_test_id('red-dog-table').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-red_dog').click(); page.get_by_test_id('red-dog-table').wait_for(timeout=WAIT_MS)
                     # Require the canonical route, complete English title, and initial ready phase.
                     assert page.url.split('?',1)[0].endswith('/games/red_dog') and page.locator('.rd-header h1').inner_text()=='Red Dog' and page.locator('.rd-phase').inner_text()=='Accepting wagers'
                     # Define every named viewport required by the Red Dog visual-matrix row.
@@ -3737,7 +3739,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Start one real ledger-backed opening from the currently enabled terminal or ready state.
                         page.locator('[data-action="deal"]').click()
                         # Wait until either the spread decision or an automatically settled next-round action appears.
-                        page.wait_for_function("() => { const decision=document.querySelector('[data-action=\"raise\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((decision && !decision.disabled) || (deal && !deal.disabled)); }",timeout=5000)
+                        page.wait_for_function("() => { const decision=document.querySelector('[data-action=\"raise\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((decision && !decision.disabled) || (deal && !deal.disabled)); }",timeout=WAIT_MS)
                         # Read the session-bound public state to classify the real shuffled result without a test seam.
                         outcome=page.evaluate("async () => (await (await fetch('/api/v1/games/red-dog/state')).json()).data.state.rounds[0].outcome")
                         # Handle a normal spread before starting another opening.
@@ -3753,7 +3755,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Complete the chosen real frontend action through its session-bound API route.
                             page.locator(f'[data-action="{decision}"]').click()
                             # Wait for terminal settlement to restore the next-round action.
-                            page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=5000)
+                            page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=WAIT_MS)
                             # Capture one terminal third-card result once in both locales and all viewports.
                             if not third_captured:
                                 # Record the completed third-card matrix after the real matching raise.
@@ -3779,19 +3781,19 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Require the shuffled real backend to have produced every governed Red Dog state.
                     assert spread_captured and pair_captured and consecutive_captured and third_captured,'Red Dog did not produce every required live state within 240 rounds'
                     # Reload the canonical deep link and require private terminal history to restore.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('red-dog-table').wait_for(timeout=5000); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }")
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('red-dog-table').wait_for(timeout=WAIT_MS); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }")
                     # Capture route restoration in both locales and every governed viewport.
                     localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby so established downstream browser cases start normally.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute Red Dog rules, session route, localization, responsive, and visual gates.
                 run_case('BR-RD-001',['RD-001','RD-002','RD-004','RD-005'],red_dog_acceptance)
                 # Define real-backend Dragon Tiger browser, localization, responsive, replay, and visual acceptance coverage.
                 def dragon_tiger_acceptance():
                     # Open the catalog-generated route and wait for the game-owned readiness selector.
-                    page.get_by_test_id('nav-dragon_tiger').click(); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-dragon_tiger').click(); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=WAIT_MS)
                     # Wait for the session-bound initial state request to replace the intentional loading controls.
-                    page.wait_for_function("() => document.querySelector('.dt-phase')?.textContent === 'Accepting wagers'",timeout=5000)
+                    page.wait_for_function("() => document.querySelector('.dt-phase')?.textContent === 'Accepting wagers'",timeout=WAIT_MS)
                     # Require the canonical route, complete English title, and initial ready phase.
                     assert page.url.split('?',1)[0].endswith('/games/dragon_tiger') and page.locator('.dt-header h1').inner_text()=='Dragon Tiger' and page.locator('.dt-phase').inner_text()=='Accepting wagers'
                     # Define every named viewport required by the Dragon Tiger visual-matrix row.
@@ -3835,7 +3837,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the ready state in both locales and every required viewport.
                     localized_evidence('ready',['ready'])
                     # Execute one real frontend round through the registered session-bound handler.
-                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.dt-phase')?.textContent === 'Round settled'",timeout=5000)
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.dt-phase')?.textContent === 'Round settled'",timeout=WAIT_MS)
                     # Capture the real settled table in both locales and every required viewport.
                     localized_evidence('settled',['settled'])
                     # Execute and replay one caller-stable public action to prove exactly-once behavior in the real browser session.
@@ -3843,7 +3845,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Require the retry response to preserve the exact result and wallet balance.
                     assert replay_result=={'same':True,'replayed':True,'sameBalance':True},replay_result
                     # Reload the game-owned state so the exact replay result is visible in the shared shell.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=5000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=WAIT_MS)
                     # Capture exact-replay evidence from the restored registered backend state.
                     localized_evidence('exact-replay',['exact_replay'])
                     # Search bounded real shuffled rounds for the governed Dragon/Tiger half-loss tie state.
@@ -3861,7 +3863,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Require the registered shuffled backend to produce the tie state within the bounded search.
                     assert tie_round is not None,'Dragon Tiger did not produce a tie half-loss within 200 rounds'
                     # Reload so the newest tie result is mounted through the production state endpoint.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=5000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=WAIT_MS)
                     # Require visible state to match the retained tie and half-return settlement.
                     assert page.locator('.dt-stage h2').inner_text()=='The cards tie' and tie_round['total_return']==1 and tie_round['net']==-1
                     # Capture the real tie half-loss in both locales and every required viewport.
@@ -3873,19 +3875,19 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore the default media preference for downstream browser cases.
                     page.emulate_media(reduced_motion='no-preference')
                     # Reload the canonical deep link and require private terminal history to restore.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=5000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=WAIT_MS)
                     # Capture route restoration in both locales and every governed viewport.
                     localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby so established downstream browser cases start normally.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute Dragon Tiger rules, session route, localization, replay, responsive, and visual gates.
                 run_case('BR-DT-001',['DT-001','DT-002','DT-004','DT-005'],dragon_tiger_acceptance)
                 # Define real-backend Hi-Lo browser, localization, responsive, decision, and visual acceptance coverage.
                 def hi_lo_acceptance():
                     # Open the catalog-generated route and wait for the game-owned readiness selector.
-                    page.get_by_test_id('nav-hi_lo').click(); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-hi_lo').click(); page.get_by_test_id('hi-lo').wait_for(timeout=WAIT_MS)
                     # Wait for the session-bound initial state request to replace the loading shell.
-                    page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Ready to deal'",timeout=5000)
+                    page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Ready to deal'",timeout=WAIT_MS)
                     # Require the canonical route, complete English title, and initial ready phase.
                     assert page.url.split('?',1)[0].endswith('/games/hi_lo') and page.locator('.hilo-header h1').inner_text()=='Hi-Lo' and page.locator('.hilo-phase').inner_text()=='Ready to deal'
                     # Require the exact authoritative range as two-decimal player-facing tokens.
@@ -3927,7 +3929,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the ready state in both locales and every required viewport.
                     localized_evidence('ready',['ready'])
                     # Deal one real opening card through the mounted frontend control.
-                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Choose higher or lower'",timeout=5000)
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Choose higher or lower'",timeout=WAIT_MS)
                     # Require the protected next card and both documented choice controls during the active decision.
                     assert page.get_by_text('Face-down playing card',exact=True).count()==0 and page.locator('[data-guess="higher"]').is_enabled() and page.locator('[data-guess="lower"]').is_enabled()
                     # Read the active card and its authoritative price through the same authenticated frozen-v1 response.
@@ -3937,7 +3939,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the higher-or-lower choice state in both locales and every required viewport.
                     localized_evidence('choose',['choose_higher_or_lower','rank_priced_choice'])
                     # Complete the mounted choice so later direct public actions start without an active-round conflict.
-                    page.locator('[data-guess="higher"]').click(); page.wait_for_function("() => !['Choose higher or lower',''].includes(document.querySelector('.hilo-phase')?.textContent || '')",timeout=5000)
+                    page.locator('[data-guess="higher"]').click(); page.wait_for_function("() => !['Choose higher or lower',''].includes(document.querySelector('.hilo-phase')?.textContent || '')",timeout=WAIT_MS)
                     # Define a bounded real-backend search for one documented settlement class.
                     def find_outcome(target):
                         # Retain real entropy while giving the one-in-thirteen tie state ample opportunity.
@@ -3951,7 +3953,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Fail the browser case if the bounded real-backend search never reaches the governed state.
                         raise AssertionError(f'Hi-Lo did not produce {target} within 240 rounds')
                     # Find and mount one real correct prediction.
-                    correct_result=find_outcome('correct'); correct_round=correct_result['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    correct_result=find_outcome('correct'); correct_round=correct_result['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=WAIT_MS)
                     # Select the exact total-return price published for the visible current-card rank.
                     correct_price=correct_result['rules']['correct_paytable'][correct_round['current_card'][:-1]]
                     # Require ledger-rounded rank pricing before recording correct-result evidence.
@@ -3959,13 +3961,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture correct prediction evidence in both locales and every required viewport.
                     localized_evidence('correct',['correct_guess'])
                     # Find and mount one real incorrect prediction.
-                    incorrect_round=find_outcome('incorrect')['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    incorrect_round=find_outcome('incorrect')['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=WAIT_MS)
                     # Require the documented zero return before recording incorrect-result evidence.
                     assert incorrect_round['payout']==0 and incorrect_round['net']==-incorrect_round['wager']
                     # Capture incorrect prediction evidence in both locales and every required viewport.
                     localized_evidence('incorrect',['incorrect_guess'])
                     # Find and mount one real equal-rank refund.
-                    tie_round=find_outcome('tie')['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    tie_round=find_outcome('tie')['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=WAIT_MS)
                     # Require the documented 1x refund and zero net before recording tie evidence.
                     assert tie_round['payout']==tie_round['wager'] and tie_round['net']==0
                     # Capture equal-rank refund evidence in both locales and every required viewport.
@@ -3977,17 +3979,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore the default media preference for downstream browser cases.
                     page.emulate_media(reduced_motion='no-preference')
                     # Reload the canonical deep link and require private terminal history to restore.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=WAIT_MS)
                     # Capture route restoration in both locales and every governed viewport.
                     localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby so established downstream browser cases start normally.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute Hi-Lo rules, session route, localization, responsive, and visual gates.
                 run_case('BR-HILO-001',['HILO-001','HILO-002','HILO-004','HILO-005'],hi_lo_acceptance)
                 # Define real-backend Three Card Poker localization, responsive, decision, and visual acceptance.
                 def three_card_poker_acceptance():
                     # Open the catalog-generated route and wait for the game-owned readiness selector.
-                    page.get_by_test_id('nav-three_card_poker').click(); page.get_by_test_id('three-card-poker').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-three_card_poker').click(); page.get_by_test_id('three-card-poker').wait_for(timeout=WAIT_MS)
                     # Define every viewport governed by the Three Card Poker visual row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture one mounted state in both supported locales and every governed viewport.
@@ -3999,7 +4001,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Switch locale without discarding the active route or private state.
                             page.get_by_test_id('shell-locale-select').select_option(locale)
                             # Wait for installed game resources to repaint instead of assuming a fixed network duration.
-                            page.wait_for_function("(expected) => document.querySelector('.tcp-header h1')?.textContent === expected",arg=expected_title,timeout=5000)
+                            page.wait_for_function("(expected) => document.querySelector('.tcp-header h1')?.textContent === expected",arg=expected_title,timeout=WAIT_MS)
                             # Require the localized title instead of a key or fallback.
                             assert page.locator('.tcp-header h1').inner_text()==expected_title
                             # Capture every registered matrix dimension after checking containment.
@@ -4015,23 +4017,23 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the ready table before placing a wager.
                     localized_evidence('ready',['ready'])
                     # Deal through the frontend and require hidden dealer cards during the decision.
-                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Decision required'",timeout=5000); assert page.locator('[aria-label="Face-down playing card"]').count()==3
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Decision required'",timeout=WAIT_MS); assert page.locator('[aria-label="Face-down playing card"]').count()==3
                     # Capture the actionable decision.
                     localized_evidence('decision',['decision'])
                     # Complete one real Play action and capture the real shuffled terminal state.
-                    page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Round settled'",timeout=5000); terminal=page.locator('.tcp-stage-head h2').inner_text().lower(); terminal_state='dealer_not_qualified' if 'qualify' in terminal else ('player_win' if 'win' in terminal else 'dealer_win'); localized_evidence(terminal_state,[terminal_state])
+                    page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Round settled'",timeout=WAIT_MS); terminal=page.locator('.tcp-stage-head h2').inner_text().lower(); terminal_state='dealer_not_qualified' if 'qualify' in terminal else ('player_win' if 'win' in terminal else 'dealer_win'); localized_evidence(terminal_state,[terminal_state])
                     # Complete a second real round through Fold and capture reduced-motion rendering.
-                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Decision required'",timeout=5000); page.locator('[data-action="fold"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Round settled'",timeout=5000); localized_evidence('folded',['folded']); page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference')
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Decision required'",timeout=WAIT_MS); page.locator('[data-action="fold"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Round settled'",timeout=WAIT_MS); localized_evidence('folded',['folded']); page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference')
                     # Reload the deep link and capture restored terminal history.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('three-card-poker').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('three-card-poker').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute Three Card Poker rules, route, localization, responsive, and visual gates.
                 run_case('BR-TCP-001',['TCP-001','TCP-002','TCP-004','TCP-005'],three_card_poker_acceptance)
                 # Define real-backend Jacks or Better localization, responsive, hold, draw, and visual acceptance.
                 def jacks_or_better_acceptance():
                     # Open the catalog route and wait for the game-owned readiness selector.
-                    page.get_by_test_id('nav-jacks_or_better_video_poker').click(); page.get_by_test_id('jacks-or-better-video-poker').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-jacks_or_better_video_poker').click(); page.get_by_test_id('jacks-or-better-video-poker').wait_for(timeout=WAIT_MS)
                     # Define every viewport governed by the visual matrix.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture one mounted state in both locales and all viewports.
@@ -4055,21 +4057,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the ready machine before wagering.
                     localized_evidence('ready',['ready'])
                     # Deal through the mounted frontend and require five selectable cards.
-                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.jobvp-phase')?.textContent === 'Choose cards to hold'",timeout=5000); assert page.locator('.jobvp-card-button').count()==5
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.jobvp-phase')?.textContent === 'Choose cards to hold'",timeout=WAIT_MS); assert page.locator('.jobvp-card-button').count()==5
                     # Select one hold and capture the actionable phase.
                     page.locator('.jobvp-card-button').first.click(); localized_evidence('choose-holds',['choose_holds'])
                     # Draw through the public frontend and capture the real terminal result.
-                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('jobvp-result').wait_for(timeout=5000); settled_state='winning_hand' if page.locator('.jobvp-phase').inner_text()=='Winning hand' else 'losing_hand'; localized_evidence(settled_state,[settled_state])
+                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('jobvp-result').wait_for(timeout=WAIT_MS); settled_state='winning_hand' if page.locator('.jobvp-phase').inner_text()=='Winning hand' else 'losing_hand'; localized_evidence(settled_state,[settled_state])
                     # Capture reduced-motion and route-restored terminal states.
-                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('jacks-or-better-video-poker').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('jacks-or-better-video-poker').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Jacks or Better browser and visual gate.
                 run_case('BR-JOBVP-001',['JOBVP-001','JOBVP-002','JOBVP-004','JOBVP-005'],jacks_or_better_acceptance)
                 # Define real-backend Deuces Wild localization, responsive, hold, draw, and visual acceptance.
                 def deuces_wild_acceptance():
                     # Open the catalog route and wait for the game-owned readiness selector.
-                    page.get_by_test_id('nav-deuces_wild_video_poker').click(); page.get_by_test_id('deuces-wild-video-poker').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-deuces_wild_video_poker').click(); page.get_by_test_id('deuces-wild-video-poker').wait_for(timeout=WAIT_MS)
                     # Define every viewport governed by the visual matrix.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture the mounted state in both locales and every viewport.
@@ -4093,21 +4095,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the ready table before wagering.
                     localized_evidence('ready',['ready'])
                     # Deal through the frontend and require five selectable cards.
-                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.dwvp-phase')?.textContent === 'Choose cards to hold'",timeout=5000); assert page.locator('.dwvp-card-button').count()==5
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.dwvp-phase')?.textContent === 'Choose cards to hold'",timeout=WAIT_MS); assert page.locator('.dwvp-card-button').count()==5
                     # Hold one card and capture the actionable state.
                     page.locator('.dwvp-card-button').first.click(); localized_evidence('choose-holds',['choose_holds'])
                     # Draw and capture the real terminal result.
-                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('dwvp-summary').wait_for(timeout=5000); settled_state='winning_hand' if page.locator('.dwvp-phase').inner_text()=='Winning hand' else 'losing_hand'; localized_evidence(settled_state,[settled_state])
+                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('dwvp-summary').wait_for(timeout=WAIT_MS); settled_state='winning_hand' if page.locator('.dwvp-phase').inner_text()=='Winning hand' else 'losing_hand'; localized_evidence(settled_state,[settled_state])
                     # Capture reduced motion and canonical route restoration.
-                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('deuces-wild-video-poker').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('deuces-wild-video-poker').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Deuces Wild browser and visual gate.
                 run_case('BR-DWVP-001',['DWVP-001','DWVP-002','DWVP-004','DWVP-005'],deuces_wild_acceptance)
                 # Define real-backend Scratch Cards localization, reveal, responsive, and route acceptance.
                 def scratch_cards_acceptance():
                     # Open the catalog-owned route and wait for its stable readiness selector.
-                    page.get_by_test_id('nav-scratch_cards').click(); page.get_by_test_id('scratch-cards').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-scratch_cards').click(); page.get_by_test_id('scratch-cards').wait_for(timeout=WAIT_MS)
                     # Enumerate every governed viewport for both required locales.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture one real mounted state across locales and viewports.
@@ -4131,21 +4133,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the ready surface before wagering.
                     localized_evidence('ready',['ready'])
                     # Start one card and require all nine covered cells.
-                    page.locator('[data-action="start"]').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-covered').length === 9",timeout=5000)
+                    page.locator('[data-action="start"]').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-covered').length === 9",timeout=WAIT_MS)
                     # Reveal one cell through the mounted real backend and capture partial progress.
-                    page.get_by_test_id('scratch-cell-0').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 1",timeout=5000); localized_evidence('revealing',['revealing'])
+                    page.get_by_test_id('scratch-cell-0').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 1",timeout=WAIT_MS); localized_evidence('revealing',['revealing'])
                     # Reveal the remaining cells and classify the actual terminal outcome.
-                    page.locator('[data-action="reveal-all"]').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 9",timeout=5000); settled_state='settled_win' if 'Payout:' in page.locator('.scratch-result').inner_text() else 'settled_no_win'; localized_evidence(settled_state,[settled_state])
+                    page.locator('[data-action="reveal-all"]').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 9",timeout=WAIT_MS); settled_state='settled_win' if 'Payout:' in page.locator('.scratch-result').inner_text() else 'settled_no_win'; localized_evidence(settled_state,[settled_state])
                     # Capture reduced motion and canonical reload restoration.
-                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('scratch-cards').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('scratch-cards').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Scratch Cards browser and visual gate.
                 run_case('BR-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-004','SCRATCH-005'],scratch_cards_acceptance)
                 # Define real-backend Sic Bo localization, wager, responsive, motion, and route acceptance.
                 def sic_bo_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-sic_bo').click(); page.get_by_test_id('sic-bo-table').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-sic_bo').click(); page.get_by_test_id('sic-bo-table').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture one mounted state across both locales and every viewport.
@@ -4171,19 +4173,19 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Select one canonical position and capture the visible selected state.
                     page.locator('[data-bet-id="small"]').click(); assert page.locator('[data-bet-id="small"]').get_attribute('aria-pressed')=='true'; localized_evidence('wagers-selected',['wagers_selected'])
                     # Start the public round and capture the decorative server-wait phase at desktop.
-                    page.locator('[data-action="shake"]').click(); page.locator('.sb-dice-tray.is-rolling').wait_for(timeout=5000); game_evidence('after-pass-sic-bo-rolling-en-us-desktop_primary.png','sic_bo',['rolling'],'en-US','desktop_primary')
+                    page.locator('[data-action="shake"]').click(); page.locator('.sb-dice-tray.is-rolling').wait_for(timeout=WAIT_MS); game_evidence('after-pass-sic-bo-rolling-en-us-desktop_primary.png','sic_bo',['rolling'],'en-US','desktop_primary')
                     # Wait for the authoritative settled dice and capture both locales and all viewports.
-                    page.wait_for_function("() => document.querySelectorAll('.sb-die:not(.is-rolling)').length === 3 && document.querySelector('.sb-result-grid')",timeout=10000); localized_evidence('settled',['settled'])
+                    page.wait_for_function("() => document.querySelectorAll('.sb-die:not(.is-rolling)').length === 3 && document.querySelector('.sb-result-grid')",timeout=WAIT_MS * 2); localized_evidence('settled',['settled'])
                     # Capture reduced-motion and canonical route restoration.
-                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('sic-bo-table').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('sic-bo-table').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Sic Bo browser and visual gate.
                 run_case('BR-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-004','SIC-BO-005'],sic_bo_acceptance)
                 # Define real-backend Chuck-a-Luck localization, wager, responsive, motion, and route acceptance.
                 def chuck_a_luck_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-chuck_a_luck').click(); page.get_by_test_id('chuck-a-luck').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-chuck_a_luck').click(); page.get_by_test_id('chuck-a-luck').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture one mounted state across both locales and every viewport.
@@ -4209,19 +4211,19 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Enter one canonical face wager and require the aggregate amount to become actionable.
                     page.locator('[data-wager="one"]').fill('1'); assert not page.locator('[data-roll]').is_disabled()
                     # Start the public roll and capture the decorative server-wait phase at desktop.
-                    page.locator('[data-roll]').click(); page.locator('[data-testid="chuck-a-luck"][data-phase="rolling"]').wait_for(timeout=5000); game_evidence('after-pass-chuck-a-luck-rolling-en-us-desktop_primary.png','chuck_a_luck',['rolling'],'en-US','desktop_primary')
+                    page.locator('[data-roll]').click(); page.locator('[data-testid="chuck-a-luck"][data-phase="rolling"]').wait_for(timeout=WAIT_MS); game_evidence('after-pass-chuck-a-luck-rolling-en-us-desktop_primary.png','chuck_a_luck',['rolling'],'en-US','desktop_primary')
                     # Wait for the authoritative settled dice and capture both locales and all viewports.
-                    page.locator('[data-testid="chuck-a-luck"][data-phase="settled"]').wait_for(timeout=10000); assert page.locator('[data-die]:not(.is-rolling)').count()==3; localized_evidence('settled',['settled'])
+                    page.locator('[data-testid="chuck-a-luck"][data-phase="settled"]').wait_for(timeout=WAIT_MS * 2); assert page.locator('[data-die]:not(.is-rolling)').count()==3; localized_evidence('settled',['settled'])
                     # Capture reduced-motion and canonical route restoration.
-                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('chuck-a-luck').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('chuck-a-luck').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Chuck-a-Luck browser and visual gate.
                 run_case('BR-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-004','CHUCK-005'],chuck_a_luck_acceptance)
                 # Define real-backend Craps localization, point-play, responsive, motion, and route acceptance.
                 def craps_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-craps').click(); page.get_by_test_id('craps').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-craps').click(); page.get_by_test_id('craps').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture one mounted state across both locales and every viewport.
@@ -4249,13 +4251,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Trigger the same public roll action exercised by a player.
                         page.get_by_test_id('craps-roll').click()
                         # Require the rendered server-owned round to contain one additional committed roll.
-                        page.wait_for_function("prior => Number(document.querySelectorAll('.craps-metrics .craps-metric strong')[3]?.textContent.replace(/[^0-9.-]/g, '')) > prior",arg=prior_roll_count,timeout=10000)
+                        page.wait_for_function("prior => Number(document.querySelectorAll('.craps-metrics .craps-metric strong')[3]?.textContent.replace(/[^0-9.-]/g, '')) > prior",arg=prior_roll_count,timeout=WAIT_MS * 2)
                         # Wait for decorative frames to finish before inspecting point or terminal state.
-                        page.wait_for_function("() => !document.querySelector('.craps-die.is-rolling')",timeout=10000)
+                        page.wait_for_function("() => !document.querySelector('.craps-die.is-rolling')",timeout=WAIT_MS * 2)
                     # Capture the complete ready table before committing a line wager.
                     localized_evidence('ready',['ready'])
                     # Start one Pass Line round and capture its committed come-out state.
-                    page.get_by_test_id('craps-bet-type').select_option('pass_line'); page.get_by_test_id('craps-wager').fill('1'); page.get_by_test_id('craps-wager').press('Tab'); page.get_by_test_id('craps-start').click(); page.get_by_test_id('craps-roll').wait_for(timeout=5000); localized_evidence('come-out',['come_out'])
+                    page.get_by_test_id('craps-bet-type').select_option('pass_line'); page.get_by_test_id('craps-wager').fill('1'); page.get_by_test_id('craps-wager').press('Tab'); page.get_by_test_id('craps-start').click(); page.get_by_test_id('craps-roll').wait_for(timeout=WAIT_MS); localized_evidence('come-out',['come_out'])
                     # Roll bounded rounds until one server result establishes an actual point.
                     point_found=False
                     # Use enough independent come-out attempts to make random non-establishment negligible.
@@ -4265,7 +4267,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Stop when the authoritative round exposes a point puck and remains actionable.
                         if page.locator('[data-testid="craps-point"].is-on').count() and page.get_by_test_id('craps-roll').count(): point_found=True; break
                         # Start another small round after an immediate come-out settlement.
-                        page.get_by_test_id('craps-start').wait_for(timeout=5000); page.get_by_test_id('craps-wager').fill('1'); page.get_by_test_id('craps-wager').press('Tab'); page.get_by_test_id('craps-start').click(); page.get_by_test_id('craps-roll').wait_for(timeout=5000)
+                        page.get_by_test_id('craps-start').wait_for(timeout=WAIT_MS); page.get_by_test_id('craps-wager').fill('1'); page.get_by_test_id('craps-wager').press('Tab'); page.get_by_test_id('craps-start').click(); page.get_by_test_id('craps-roll').wait_for(timeout=WAIT_MS)
                     # Require real point play rather than accepting only immediate come-out outcomes.
                     assert point_found
                     # Capture the active point across both locales and all governed viewports.
@@ -4277,17 +4279,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Advance the active point through one server-authoritative action.
                         roll_and_wait_for_commit()
                     # Require a terminal settled round and capture it across both locales and all viewports.
-                    page.get_by_test_id('craps-start').wait_for(timeout=5000); localized_evidence('settled',['settled'])
+                    page.get_by_test_id('craps-start').wait_for(timeout=WAIT_MS); localized_evidence('settled',['settled'])
                     # Capture reduced-motion and canonical route restoration.
-                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('craps').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('craps').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Craps browser and visual gate.
                 run_case('BR-CRAPS-001',['CRAPS-001','CRAPS-002','CRAPS-004','CRAPS-005'],craps_acceptance)
                 # Define real-backend Crown and Anchor localization, wager, responsive, motion, and route acceptance.
                 def crown_and_anchor_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-crown_and_anchor').click(); page.get_by_test_id('crown-and-anchor').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-crown_and_anchor').click(); page.get_by_test_id('crown-and-anchor').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4319,21 +4321,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Enter one canonical symbol wager and start the real-backend round.
                     page.locator('[data-wager="crown"]').fill('1'); page.locator('[data-play]').click()
                     # Capture the committed dice reveal while its managed timer remains active.
-                    page.locator('.crown-anchor__die[data-rolling="true"]').first.wait_for(timeout=5000); game_evidence('after-pass-crown-and-anchor-rolling-en-us-desktop_primary.png','crown_and_anchor',['rolling'],'en-US','desktop_primary')
+                    page.locator('.crown-anchor__die[data-rolling="true"]').first.wait_for(timeout=WAIT_MS); game_evidence('after-pass-crown-and-anchor-rolling-en-us-desktop_primary.png','crown_and_anchor',['rolling'],'en-US','desktop_primary')
                     # Wait for authoritative settlement and capture both locales and all viewports.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"crown-and-anchor-phase\"]')?.textContent === 'Settled'",timeout=10000); assert page.locator('.crown-anchor__die[data-rolling="false"]').count()==3; localized_evidence('settled',['settled'])
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"crown-and-anchor-phase\"]')?.textContent === 'Settled'",timeout=WAIT_MS * 2); assert page.locator('.crown-anchor__die[data-rolling="false"]').count()==3; localized_evidence('settled',['settled'])
                     # Commit another real round under reduced motion and require the presentation flag.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="anchor"]').fill('1'); page.locator('[data-play]').click(); page.locator('.crown-anchor__die[data-reduced-motion="true"]').first.wait_for(timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="anchor"]').fill('1'); page.locator('[data-play]').click(); page.locator('.crown-anchor__die[data-reduced-motion="true"]').first.wait_for(timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and capture restored private history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('crown-and-anchor').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('crown-and-anchor').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Crown and Anchor browser and visual gate.
                 run_case('BR-CAA-001',['CAA-001','CAA-002','CAA-004','CAA-005'],crown_and_anchor_acceptance)
                 # Define real-backend Over/Under 7 localization, wager, responsive, motion, and route acceptance.
                 def over_under_7_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-over_under_7').click(); page.get_by_test_id('over-under-7').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-over_under_7').click(); page.get_by_test_id('over-under-7').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4371,21 +4373,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Enter one under-seven wager and start the real-backend dice play.
                     page.locator('[data-wager="under"]').fill('1'); page.locator('[data-play]').click()
                     # Capture the managed dice-reveal phase at the primary desktop viewport.
-                    page.locator('.ou7-die.rolling').first.wait_for(timeout=5000); game_evidence('after-pass-over-under-7-rolling-en-us-desktop_primary.png','over_under_7',['rolling'],'en-US','desktop_primary')
+                    page.locator('.ou7-die.rolling').first.wait_for(timeout=WAIT_MS); game_evidence('after-pass-over-under-7-rolling-en-us-desktop_primary.png','over_under_7',['rolling'],'en-US','desktop_primary')
                     # Wait for authoritative settlement and capture both locales and all viewports.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"over-under-7-phase\"]')?.textContent === 'Settled'",timeout=10000); assert page.locator('.ou7-die:not(.rolling)').count()==2; localized_evidence('settled',['settled'])
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"over-under-7-phase\"]')?.textContent === 'Settled'",timeout=WAIT_MS * 2); assert page.locator('.ou7-die:not(.rolling)').count()==2; localized_evidence('settled',['settled'])
                     # Commit another real play under reduced motion and capture its stable result.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="over"]').fill('1'); page.locator('[data-play]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="over"]').fill('1'); page.locator('[data-play]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('over-under-7').wait_for(timeout=5000); assert page.locator('.ou7-history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('over-under-7').wait_for(timeout=WAIT_MS); assert page.locator('.ou7-history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Over/Under 7 browser and visual gate.
                 run_case('BR-OU7-001',['OU7-001','OU7-002','OU7-004','OU7-005','OU7-006','TEST-067'],over_under_7_acceptance)
                 # Define real-backend Plinko localization, drop, responsive, motion, and route acceptance.
                 def plinko_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-plinko').click(); page.get_by_test_id('plinko').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-plinko').click(); page.get_by_test_id('plinko').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4411,23 +4413,23 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready table before the first wagered drop.
                     localized_evidence('ready',['ready'])
                     # Enter one wager and start the real-backend committed-path replay.
-                    page.locator('#plinko-wager').fill('2'); page.locator('[data-action="drop"]').click(); page.locator('.plinko-puck').wait_for(timeout=10000)
+                    page.locator('#plinko-wager').fill('2'); page.locator('[data-action="drop"]').click(); page.locator('.plinko-puck').wait_for(timeout=WAIT_MS * 2)
                     # Capture the server-owned path replay at the primary desktop viewport.
                     assert len(page.locator('.plinko-puck').get_attribute('data-path'))==8; game_evidence('after-pass-plinko-path-replay-en-us-desktop_primary.png','plinko',['path_replay'],'en-US','desktop_primary')
                     # Capture the settled drop across both locales and every viewport.
                     localized_evidence('settled',['settled'])
                     # Commit another real drop under reduced motion and require stable history growth.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('#plinko-wager').fill('3'); page.locator('[data-action="drop"]').click(); page.wait_for_function("() => document.querySelectorAll('.plinko-history-list li').length >= 2",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('#plinko-wager').fill('3'); page.locator('[data-action="drop"]').click(); page.wait_for_function("() => document.querySelectorAll('.plinko-history-list li').length >= 2",timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('plinko').wait_for(timeout=5000); assert page.locator('.plinko-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('plinko').wait_for(timeout=WAIT_MS); assert page.locator('.plinko-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Plinko browser and visual gate.
                 run_case('BR-PLINKO-001',['PLINKO-001','PLINKO-002','PLINKO-004','PLINKO-005'],plinko_acceptance)
                 # Define real-backend Fan-Tan localization, counting, responsive, motion, and route acceptance.
                 def fan_tan_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-fan_tan').click(); page.get_by_test_id('fan-tan').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-fan_tan').click(); page.get_by_test_id('fan-tan').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4455,21 +4457,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Enter one residue wager and start the real-backend counted-pile round.
                     page.locator('[data-wager="1"]').fill('1'); page.locator('[data-play]').click()
                     # Capture the managed counting phase at the primary desktop viewport.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"fan-tan-phase\"]')?.textContent === 'Counting groups of four'",timeout=5000); game_evidence('after-pass-fan-tan-counting-en-us-desktop_primary.png','fan_tan',['counting'],'en-US','desktop_primary')
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"fan-tan-phase\"]')?.textContent === 'Counting groups of four'",timeout=WAIT_MS); game_evidence('after-pass-fan-tan-counting-en-us-desktop_primary.png','fan_tan',['counting'],'en-US','desktop_primary')
                     # Wait for authoritative settlement and capture both locales and all viewports.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"fan-tan-phase\"]')?.textContent === 'Round settled'",timeout=10000); assert page.locator('.fan-tan__history-row').count()>=1; localized_evidence('settled',['settled'])
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"fan-tan-phase\"]')?.textContent === 'Round settled'",timeout=WAIT_MS * 2); assert page.locator('.fan-tan__history-row').count()>=1; localized_evidence('settled',['settled'])
                     # Commit another real round under reduced motion and require the presentation flag.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="4"]').fill('1'); page.locator('[data-play]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000); assert page.locator('.fan-tan__tray').get_attribute('data-reduced-motion')=='true'; localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="4"]').fill('1'); page.locator('[data-play]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=WAIT_MS * 2); assert page.locator('.fan-tan__tray').get_attribute('data-reduced-motion')=='true'; localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('fan-tan').wait_for(timeout=5000); assert page.locator('.fan-tan__history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('fan-tan').wait_for(timeout=WAIT_MS); assert page.locator('.fan-tan__history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Fan-Tan browser and visual gate.
                 run_case('BR-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-004','FAN-TAN-005'],fan_tan_acceptance)
                 # Define the lost-response idempotency regression proving a retry replays one identity and body with exactly one debit. (issue #261)
                 def fan_tan_lost_response_idempotency():
                     # Open the Fan-Tan route and wait for the stable game surface.
-                    page.get_by_test_id('nav-fan_tan').click(); page.get_by_test_id('fan-tan').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-fan_tan').click(); page.get_by_test_id('fan-tan').wait_for(timeout=WAIT_MS)
                     # Read the authenticated player id for exact ledger assertions.
                     ft_me=page.request.get(base+'/api/v2/me').json()['data']; ft_player=ft_me['player']['player_id']
                     # Count existing Fan-Tan wager debits so the regression measures only this intended round.
@@ -4481,11 +4483,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Submit the play; the backend commits while the browser sees a simulated lost response.
                     page.locator('[data-play]').click()
                     # Wait for the ambiguous-failure recovery to re-enable the play control.
-                    page.locator('[data-play]:not([disabled])').wait_for(timeout=10000)
+                    page.locator('[data-play]:not([disabled])').wait_for(timeout=WAIT_MS * 2)
                     # Retry the play through the same visible control; the wager stays locked to the pending snapshot.
                     page.locator('[data-play]').click()
                     # Wait for settlement to complete and the control to re-enable.
-                    page.locator('[data-play]:not([disabled])').wait_for(timeout=10000)
+                    page.locator('[data-play]:not([disabled])').wait_for(timeout=WAIT_MS * 2)
                     # Read both captured round request bodies.
                     ft_reqs=page.evaluate('window.__ftRequests')
                     # Prove the retry reused the exact same idempotency identity and immutable wager body.
@@ -4493,13 +4495,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Prove the intended round was charged exactly once despite the lost-response retry.
                     ft_after=page.request.get(base+f'/api/v1/players/{ft_player}/ledger').json()['data']['ledger']; ft_debits_after=sum(1 for r in ft_after if r.get('game')=='fan_tan' and r.get('transaction_type')=='FAN_TAN_WAGER_DEBIT'); assert ft_debits_after==ft_debits_before+1
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the lost-response idempotency regression for Fan-Tan. (issue #261)
                 run_case('BR-FAN-TAN-IDEMPOTENCY-001',['LEDGER-028','TEST-070'],fan_tan_lost_response_idempotency)
                 # Define real-backend Andar Bahar localization, responsive, motion, and route acceptance.
                 def andar_bahar_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-andar_bahar').click(); page.get_by_test_id('andar-bahar').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-andar_bahar').click(); page.get_by_test_id('andar-bahar').wait_for(timeout=WAIT_MS)
                     # Require both authoritative prices as exact two-decimal visible English tokens before evidence.
                     andar_rules=page.locator('.andar-rules').inner_text(); assert '1.90x' in andar_rules and '2.00x' in andar_rules
                     # Enumerate all governed viewport dimensions.
@@ -4533,21 +4535,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready table before the first side prediction.
                     localized_evidence('ready',['ready'])
                     # Enter one wager and settle a real-backend rank-match round.
-                    page.locator('#andar-wager').fill('1'); page.locator('[data-side="andar"]').click(); page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelectorAll('.andar-history-list li').length >= 1",timeout=10000)
+                    page.locator('#andar-wager').fill('1'); page.locator('[data-side="andar"]').click(); page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelectorAll('.andar-history-list li').length >= 1",timeout=WAIT_MS * 2)
                     # Capture the settled round across both locales and all viewports.
                     localized_evidence('settled',['settled'])
                     # Commit another real round under reduced motion and require stable history growth.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-side="bahar"]').click(); page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelectorAll('.andar-history-list li').length >= 2",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-side="bahar"]').click(); page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelectorAll('.andar-history-list li').length >= 2",timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('andar-bahar').wait_for(timeout=5000); assert page.locator('.andar-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('andar-bahar').wait_for(timeout=WAIT_MS); assert page.locator('.andar-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Andar Bahar browser and visual gate.
                 run_case('BR-AB-001',['AB-001','AB-002','AB-004','AB-005'],andar_bahar_acceptance)
                 # Define real-backend Acey-Deucey localization, decision, responsive, motion, and route acceptance.
                 def acey_deucey_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-acey_deucey').click(); page.get_by_test_id('acey-deucey').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-acey_deucey').click(); page.get_by_test_id('acey-deucey').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4577,7 +4579,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Bound retries so a broken pricing response fails instead of looping.
                         for _attempt in range(12):
                             # Deal one free real-backend boundary pair and await its decision controls.
-                            page.locator('[data-action="deal"]:not([disabled])').click(); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=10000)
+                            page.locator('[data-action="deal"]:not([disabled])').click(); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=WAIT_MS * 2)
                             # Read the exact server-owned spread, table price, and compatibility scalar.
                             pricing=page.evaluate("""async () => { const payload=await (await fetch('/api/v1/games/acey-deucey/state')).json(); if(!payload.ok) throw new Error(payload.error?.message || 'Acey-Deucey state failed'); const row=payload.data.state.active_round; const spread=row.inside_rank_count; return {spread,multiplier:payload.data.rules.inside_paytable[String(spread)],legacy:payload.data.rules.inside_return_multiplier}; }""")
                             # Accept a positive spread only when UI and both public price fields agree.
@@ -4595,7 +4597,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Require explicit pass-only localized guidance instead of a silent disabled control.
                             assert page.locator('.acey-help').inner_text()==no_inside_copy
                             # Pass without wallet movement and await the next free-deal control.
-                            page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000)
+                            page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS * 2)
                         # Fail closed when no priceable server round appears inside the bounded search.
                         raise AssertionError('Acey-Deucey did not publish a priceable spread in 12 deals')
                     # Capture the complete ready table before the free boundary deal.
@@ -4603,21 +4605,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Deal two real-backend boundaries and prove the exact spread price before wallet movement.
                     deal_until_priceable(); localized_evidence('boundaries-dealt',['boundaries_dealt'])
                     # Pass the prepared decision and capture the no-wager terminal path.
-                    page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000); localized_evidence('passed',['passed'])
+                    page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); localized_evidence('passed',['passed'])
                     # Deal again, enter a play-token wager, and settle the hidden third card.
-                    deal_until_priceable(); page.locator('#acey-wager').fill('1'); page.locator('[data-action="play"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000); localized_evidence('settled',['settled'])
+                    deal_until_priceable(); page.locator('#acey-wager').fill('1'); page.locator('[data-action="play"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); localized_evidence('settled',['settled'])
                     # Commit another pass under reduced motion and require stable history growth.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('acey-deucey').wait_for(timeout=5000); assert page.locator('.acey-history-list li').count()>=3; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('acey-deucey').wait_for(timeout=WAIT_MS); assert page.locator('.acey-history-list li').count()>=3; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Acey-Deucey browser and visual gate.
                 run_case('BR-AD-001',['AD-001','AD-002','AD-004','AD-005'],acey_deucey_acceptance)
                 # Define real-backend Caribbean Stud localization, decision, responsive, motion, and route acceptance.
                 def caribbean_stud_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-caribbean_stud').click(); page.get_by_test_id('caribbean-stud').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-caribbean_stud').click(); page.get_by_test_id('caribbean-stud').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4651,23 +4653,23 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Require the strongest and weakest published Call returns to be visible with localized hand labels.
                     assert 'Call payout schedule' in caribbean_stud_paytable_text and 'Royal flush' in caribbean_stud_paytable_text and '100:1' in caribbean_stud_paytable_text and 'High card' in caribbean_stud_paytable_text and '1:1' in caribbean_stud_paytable_text
                     # Deal through the public frontend and require private dealer hole cards during the decision.
-                    page.locator('#cs-ante').fill('1'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=10000); assert page.locator('[aria-label="Face-down dealer card"]').count()==4
+                    page.locator('#cs-ante').fill('1'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=WAIT_MS * 2); assert page.locator('[aria-label="Face-down dealer card"]').count()==4
                     # Capture the actionable call-or-fold decision.
                     localized_evidence('decision',['decision'])
                     # Complete one real call and classify the authoritative shuffled terminal outcome.
-                    page.locator('[data-action="call"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Settled'",timeout=10000); terminal=page.locator('.cs-result').inner_text().lower(); terminal_state='dealer_not_qualified' if 'does not qualify' in terminal else ('player_win' if 'player hand beats' in terminal else ('push' if 'tie' in terminal else 'dealer_win')); localized_evidence(terminal_state,[terminal_state])
+                    page.locator('[data-action="call"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Settled'",timeout=WAIT_MS * 2); terminal=page.locator('.cs-result').inner_text().lower(); terminal_state='dealer_not_qualified' if 'does not qualify' in terminal else ('player_win' if 'player hand beats' in terminal else ('push' if 'tie' in terminal else 'dealer_win')); localized_evidence(terminal_state,[terminal_state])
                     # Complete a second real round through Fold while reduced motion is active.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=10000); page.locator('[data-action="fold"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Folded'",timeout=10000); localized_evidence('fold-reduced-motion',['fold','reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=WAIT_MS * 2); page.locator('[data-action="fold"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Folded'",timeout=WAIT_MS * 2); localized_evidence('fold-reduced-motion',['fold','reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('caribbean-stud').wait_for(timeout=5000); assert page.locator('.cs-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('caribbean-stud').wait_for(timeout=WAIT_MS); assert page.locator('.cs-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Caribbean Stud browser and visual gate.
                 run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005','CS-006','I18N-010','TEST-063','TEST-117'],caribbean_stud_acceptance)
                 # Define real-backend Let It Ride localization, staged decisions, responsive, motion, and route acceptance.
                 def let_it_ride_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-let_it_ride').click(); page.get_by_test_id('let-it-ride').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-let_it_ride').click(); page.get_by_test_id('let-it-ride').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4695,27 +4697,27 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready table before the three-unit opening wager.
                     localized_evidence('ready',['ready'])
                     # Deal through the public frontend and require both community cards to remain hidden.
-                    page.get_by_test_id('let-it-ride-wager').select_option('5'); page.locator('[data-action="deal"]').click(); page.locator('[data-stage="first"]:not([disabled])').first.wait_for(timeout=10000); assert page.locator('.lir-card-empty').count()==2
+                    page.get_by_test_id('let-it-ride-wager').select_option('5'); page.locator('[data-action="deal"]').click(); page.locator('[data-stage="first"]:not([disabled])').first.wait_for(timeout=WAIT_MS * 2); assert page.locator('.lir-card-empty').count()==2
                     # Capture the first ride-or-pull decision beat.
                     localized_evidence('first-decision',['first_decision'])
                     # Leave the first unit riding and require exactly one community card reveal.
-                    page.locator('[data-stage="first"][data-decision="ride"]').click(); page.locator('[data-stage="second"]:not([disabled])').first.wait_for(timeout=10000); assert page.locator('.lir-card-empty').count()==1
+                    page.locator('[data-stage="first"][data-decision="ride"]').click(); page.locator('[data-stage="second"]:not([disabled])').first.wait_for(timeout=WAIT_MS * 2); assert page.locator('.lir-card-empty').count()==1
                     # Capture the second decision beat with the first community card visible.
                     localized_evidence('second-decision',['second_decision'])
                     # Pull one eligible unit and require terminal settled history.
-                    page.locator('[data-stage="second"][data-decision="pull"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000); assert page.locator('.lir-history-row').count()>=1; localized_evidence('settled',['settled'])
+                    page.locator('[data-stage="second"][data-decision="pull"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); assert page.locator('.lir-history-row').count()>=1; localized_evidence('settled',['settled'])
                     # Complete another all-ride round under reduced motion and require stable history growth.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-stage="first"]:not([disabled])').first.wait_for(timeout=10000); page.locator('[data-stage="first"][data-decision="ride"]').click(); page.locator('[data-stage="second"]:not([disabled])').first.wait_for(timeout=10000); page.locator('[data-stage="second"][data-decision="ride"]').click(); page.wait_for_function("() => document.querySelectorAll('.lir-history-row').length >= 2",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-stage="first"]:not([disabled])').first.wait_for(timeout=WAIT_MS * 2); page.locator('[data-stage="first"][data-decision="ride"]').click(); page.locator('[data-stage="second"]:not([disabled])').first.wait_for(timeout=WAIT_MS * 2); page.locator('[data-stage="second"][data-decision="ride"]').click(); page.wait_for_function("() => document.querySelectorAll('.lir-history-row').length >= 2",timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('let-it-ride').wait_for(timeout=5000); assert page.locator('.lir-history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('let-it-ride').wait_for(timeout=WAIT_MS); assert page.locator('.lir-history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Let It Ride browser and visual gate.
                 run_case('BR-LIR-001',['LIR-001','LIR-002','LIR-004','LIR-005'],let_it_ride_acceptance)
                 # Define real-backend Casino Hold'em localization, decision, responsive, motion, and route acceptance.
                 def casino_holdem_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-casino_holdem').click(); page.get_by_test_id('casino-holdem').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-casino_holdem').click(); page.get_by_test_id('casino-holdem').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 copy expectations from the paired canonical resource files.
@@ -4745,23 +4747,23 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready table before the ante-backed flop.
                     localized_evidence('ready',['ready'])
                     # Deal through the public frontend and require the private dealer and unrevealed board slots.
-                    page.locator('#choldem-wager').fill('1'); page.locator('#choldem-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-decision="call"]:not([disabled])').wait_for(timeout=10000); assert page.locator('.playing-card--back').count()==4
+                    page.locator('#choldem-wager').fill('1'); page.locator('#choldem-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-decision="call"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); assert page.locator('.playing-card--back').count()==4
                     # Capture the actionable call-or-fold decision.
                     localized_evidence('decision',['decision'])
                     # Complete one real call and classify the authoritative shuffled terminal outcome.
-                    page.locator('[data-decision="call"]').click(); page.wait_for_function("() => document.querySelectorAll('.choldem-history-list li').length >= 1",timeout=10000); terminal=page.locator('.choldem-result').inner_text().lower(); terminal_state='dealer_not_qualified' if 'did not qualify' in terminal else ('player_win' if 'player won' in terminal else ('push' if 'equal' in terminal else 'dealer_win')); localized_evidence(terminal_state,[terminal_state])
+                    page.locator('[data-decision="call"]').click(); page.wait_for_function("() => document.querySelectorAll('.choldem-history-list li').length >= 1",timeout=WAIT_MS * 2); terminal=page.locator('.choldem-result').inner_text().lower(); terminal_state='dealer_not_qualified' if 'did not qualify' in terminal else ('player_win' if 'player won' in terminal else ('push' if 'equal' in terminal else 'dealer_win')); localized_evidence(terminal_state,[terminal_state])
                     # Complete a second real round through fold while reduced motion is active.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-decision="fold"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-decision="fold"]').click(); page.wait_for_function("() => document.querySelectorAll('.choldem-history-list li').length >= 2",timeout=10000); localized_evidence('folded-reduced-motion',['folded','reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-decision="fold"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.locator('[data-decision="fold"]').click(); page.wait_for_function("() => document.querySelectorAll('.choldem-history-list li').length >= 2",timeout=WAIT_MS * 2); localized_evidence('folded-reduced-motion',['folded','reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('casino-holdem').wait_for(timeout=5000); assert page.locator('.choldem-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('casino-holdem').wait_for(timeout=WAIT_MS); assert page.locator('.choldem-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Casino Hold'em browser and visual gate.
                 run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005','CH-006','TEST-084'],casino_holdem_acceptance)
                 # Define real-backend Pai Gow Poker localization, setting, responsive, motion, and route acceptance.
                 def pai_gow_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-pai_gow_poker').click(); page.get_by_test_id('pai-gow-poker').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-pai_gow_poker').click(); page.get_by_test_id('pai-gow-poker').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4789,7 +4791,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready table before the ante-backed deal.
                     localized_evidence('ready',['ready'])
                     # Deal through the public frontend and require seven selectable cards with the private dealer hidden.
-                    page.locator('#pgp-wager').fill('1'); page.locator('#pgp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); setting_counts={'playerTiles':page.locator('[data-testid="pai-gow-poker"] .pgp-tiles .pgp-tile').count(),'privateDealerCards':page.locator('[data-testid="pai-gow-poker"] .pgp-cards .playing-card--back').count()}; assert setting_counts=={'playerTiles':7,'privateDealerCards':7},setting_counts
+                    page.locator('#pgp-wager').fill('1'); page.locator('#pgp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); setting_counts={'playerTiles':page.locator('[data-testid="pai-gow-poker"] .pgp-tiles .pgp-tile').count(),'privateDealerCards':page.locator('[data-testid="pai-gow-poker"] .pgp-cards .playing-card--back').count()}; assert setting_counts=={'playerTiles':7,'privateDealerCards':7},setting_counts
                     # Capture the actionable hand-setting stage.
                     localized_evidence('setting',['setting'])
                     # Collect every authoritative win, loss, and push presentation through bounded public play.
@@ -4799,7 +4801,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Set the prepared hand by the public house-way action.
                         page.locator('[data-action="house-way"]').click()
                         # Wait until settlement re-enables the next canonical deal action.
-                        page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000)
+                        page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS * 2)
                         # Read the server-owned latest outcome instead of classifying localized presentation copy.
                         terminal_state=page.evaluate("async () => (await (await fetch('/api/v1/games/pai-gow-poker/state')).json()).data.state.recent_rounds.slice(-1)[0].outcome")
                         # Capture the first governed corpus for each distinct terminal result.
@@ -4814,21 +4816,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Deal another real round when one terminal class remains unobserved.
                         page.locator('[data-action="deal"]').click()
                         # Wait for the next prepared hand before continuing bounded public play.
-                        page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000)
+                        page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=WAIT_MS * 2)
                     # Require complete terminal coverage rather than accepting one random outcome.
                     assert captured_terminal_states=={'win','loss','push'}
                     # Complete a second real round by the house way while reduced motion is active.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="house-way"]').click(); page.wait_for_function("() => document.querySelectorAll('.pgp-history-list li').length >= 2",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.locator('[data-action="house-way"]').click(); page.wait_for_function("() => document.querySelectorAll('.pgp-history-list li').length >= 2",timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('pai-gow-poker').wait_for(timeout=5000); assert page.locator('.pgp-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('pai-gow-poker').wait_for(timeout=WAIT_MS); assert page.locator('.pgp-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Pai Gow Poker browser and visual gate.
                 run_case('BR-PGP-001',['PGP-001','PGP-002','PGP-004','PGP-005'],pai_gow_poker_acceptance)
                 # Define real-backend Joker Poker localization, hold, draw, responsive, motion, and route acceptance.
                 def joker_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-joker_poker').click(); page.get_by_test_id('joker-poker').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-joker_poker').click(); page.get_by_test_id('joker-poker').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4858,9 +4860,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready machine before the ledger-backed deal.
                     localized_evidence('ready',['ready'])
                     # Commit the wager edit before clicking the rerendered deal control.
-                    page.locator('#jp-wager').fill('1'); page.locator('#jp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.get_by_test_id('joker-poker-source-hand').wait_for(timeout=10000); assert page.locator('[data-hold-position]').count()==5
+                    page.locator('#jp-wager').fill('1'); page.locator('#jp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.get_by_test_id('joker-poker-source-hand').wait_for(timeout=WAIT_MS * 2); assert page.locator('[data-hold-position]').count()==5
                     # Persist one hold through the public API and capture the actionable phase.
-                    page.locator('[data-hold-position="0"]').click(); page.locator('[data-hold-position="0"][aria-pressed="true"]').wait_for(timeout=10000); localized_evidence('choose-holds',['choose_holds'])
+                    page.locator('[data-hold-position="0"]').click(); page.locator('[data-hold-position="0"][aria-pressed="true"]').wait_for(timeout=WAIT_MS * 2); localized_evidence('choose-holds',['choose_holds'])
                     # Track both governed terminal classes so exact-head visual evidence never depends on one random outcome.
                     captured_outcomes=set()
                     # Play a bounded set of real-backend hands until both win and loss evidence has been captured.
@@ -4868,11 +4870,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Start another public round after the first prepared hold when another terminal class is still missing.
                         if attempt:
                             # Deal through the mounted frontend so later evidence remains real-backend browser evidence.
-                            page.locator('[data-action="deal"]').click(); page.get_by_test_id('joker-poker-source-hand').wait_for(timeout=10000)
+                            page.locator('[data-action="deal"]').click(); page.get_by_test_id('joker-poker-source-hand').wait_for(timeout=WAIT_MS * 2)
                             # Persist the same representative keyboard-addressable hold in every additional round.
-                            page.locator('[data-hold-position="0"]').click(); page.locator('[data-hold-position="0"][aria-pressed="true"]').wait_for(timeout=10000)
+                            page.locator('[data-hold-position="0"]').click(); page.locator('[data-hold-position="0"][aria-pressed="true"]').wait_for(timeout=WAIT_MS * 2)
                         # Draw through the public frontend and wait for the authoritative settled hand.
-                        page.locator('[data-action="draw"]').click(); page.get_by_test_id('joker-poker-result').wait_for(timeout=10000)
+                        page.locator('[data-action="draw"]').click(); page.get_by_test_id('joker-poker-result').wait_for(timeout=WAIT_MS * 2)
                         # Classify the visible result into the two visual-matrix terminal states.
                         settled_state='losing_hand' if page.locator('.jp-result header strong').inner_text()=='No win' else 'winning_hand'
                         # Capture each terminal class once across both locales and all governed viewports.
@@ -4884,15 +4886,15 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the stable terminal hand under reduced motion.
                     page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('joker-poker').wait_for(timeout=5000); assert page.locator('.jp-history-list li').count()>=1; localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('joker-poker').wait_for(timeout=WAIT_MS); assert page.locator('.jp-history-list li').count()>=1; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Joker Poker browser and visual gate.
                 run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005','I18N-010','TEST-117'],joker_poker_acceptance)
                 # Define real-backend Double Bonus localization, hold, draw, responsive, motion, and route acceptance.
                 def double_bonus_video_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-double_bonus_video_poker').click(); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-double_bonus_video_poker').click(); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=WAIT_MS)
                     # Enumerate every viewport governed by the Double Bonus visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 expectations from both canonical locale resources.
@@ -4922,23 +4924,23 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready machine before the ledger-backed deal.
                     localized_evidence('ready',['ready'])
                     # Commit a bounded wager and deal through the public frontend.
-                    page.locator('[data-bet]').fill('1'); page.locator('[data-bet]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_test_id('double-bonus-video-poker-hand').wait_for(timeout=10000); assert page.locator('[data-hold]').count()==5
+                    page.locator('[data-bet]').fill('1'); page.locator('[data-bet]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_test_id('double-bonus-video-poker-hand').wait_for(timeout=WAIT_MS * 2); assert page.locator('[data-hold]').count()==5
                     # Select one visible hold and capture the actionable draw state.
-                    page.locator('[data-hold="0"]').click(); page.locator('[data-hold="0"][aria-pressed="true"]').wait_for(timeout=10000); localized_evidence('choose-holds',['choose_holds'])
+                    page.locator('[data-hold="0"]').click(); page.locator('[data-hold="0"][aria-pressed="true"]').wait_for(timeout=WAIT_MS * 2); localized_evidence('choose-holds',['choose_holds'])
                     # Draw through the public frontend and require one authoritative settled result.
-                    page.locator('[data-draw]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); assert page.get_by_test_id('double-bonus-video-poker-result').is_visible(); localized_evidence('settled',['settled'])
+                    page.locator('[data-draw]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS * 2); assert page.get_by_test_id('double-bonus-video-poker-result').is_visible(); localized_evidence('settled',['settled'])
                     # Capture the stable terminal table under reduced-motion media emulation.
                     page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['settled','reduced_motion'])
                     # Reload the canonical game route and require restored player-owned terminal state.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['settled','route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=WAIT_MS); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['settled','route_restored'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Double Bonus browser and governed visual gate.
                 run_case('BR-DBVP-001',['DBVP-001','DBVP-002','TEST-114'],double_bonus_video_poker_acceptance)
                 # Define real-backend Mississippi Stud localization, progressive-reveal, settlement, motion, and route acceptance.
                 def mississippi_stud_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-mississippi_stud').click(); page.get_by_test_id('mississippi-stud').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-mississippi_stud').click(); page.get_by_test_id('mississippi-stud').wait_for(timeout=WAIT_MS)
                     # Enumerate every viewport governed by the Mississippi Stud visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 expectations from both canonical locale resources.
@@ -4976,25 +4978,25 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready machine before the ledger-backed deal.
                     localized_evidence('ready',['ready'])
                     # Commit a bounded ante and deal through the public frontend.
-                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_text('Street 1 of 3',exact=True).wait_for(timeout=10000)
+                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_text('Street 1 of 3',exact=True).wait_for(timeout=WAIT_MS * 2)
                     # Capture the first decision before any community card is exposed.
                     localized_evidence('street-one-decision',['street_one_decision'],1,0)
                     # Bet the first street and require exactly one revealed community card.
-                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 2 of 3',exact=True).wait_for(timeout=10000); localized_evidence('street-two-decision',['street_two_decision'],2,1)
+                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 2 of 3',exact=True).wait_for(timeout=WAIT_MS * 2); localized_evidence('street-two-decision',['street_two_decision'],2,1)
                     # Bet the second street and require exactly two revealed community cards.
-                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 3 of 3',exact=True).wait_for(timeout=10000); localized_evidence('street-three-decision',['street_three_decision'],3,2)
+                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 3 of 3',exact=True).wait_for(timeout=WAIT_MS * 2); localized_evidence('street-three-decision',['street_three_decision'],3,2)
                     # Settle through the public frontend and capture the complete terminal hand under reduced motion.
-                    page.locator('[data-bet="1"]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); page.emulate_media(reduced_motion='reduce'); localized_evidence('settled-reduced-motion',['settled','reduced_motion'],None,3)
+                    page.locator('[data-bet="1"]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.emulate_media(reduced_motion='reduce'); localized_evidence('settled-reduced-motion',['settled','reduced_motion'],None,3)
                     # Reload the canonical route and require restored player-owned terminal state.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('mississippi-stud').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'],None,3)
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('mississippi-stud').wait_for(timeout=WAIT_MS); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'],None,3)
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Mississippi Stud browser and governed visual gate.
                 run_case('BR-MSTUD-001',['MSTUD-001','MSTUD-002','TEST-115'],mississippi_stud_acceptance)
                 # Define real-backend Teen Patti localization, decision, settlement, privacy, motion, and route acceptance.
                 def teen_patti_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
-                    page.get_by_test_id('nav-teen_patti').click(); page.get_by_test_id('teen-patti').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-teen_patti').click(); page.get_by_test_id('teen-patti').wait_for(timeout=WAIT_MS)
                     # Enumerate every viewport governed by the Teen Patti visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 expectations from both canonical locale resources.
@@ -5032,25 +5034,25 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready table before the ledger-backed deal.
                     localized_evidence('ready',['ready'],'result.idle',expected_cards=0)
                     # Commit a bounded ante and deal through the public frontend.
-                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000)
+                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=WAIT_MS * 2)
                     # Capture the private decision state with exactly three player cards and no dealer reveal.
                     localized_evidence('decision',['decision'],'result.decide',expected_cards=3)
                     # Play through the public action and require a complete six-card showdown.
-                    page.locator('[data-play]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('play-settled',['play_settled'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    page.locator('[data-play]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS * 2); localized_evidence('play-settled',['play_settled'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
                     # Deal another round and fold through the public action without exposing the dealer.
-                    page.locator('[data-deal]').click(); page.locator('[data-fold]:not([disabled])').wait_for(timeout=10000); page.locator('[data-fold]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('folded',['folded'],'outcome.folded',expected_cards=3)
+                    page.locator('[data-deal]').click(); page.locator('[data-fold]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.locator('[data-fold]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS * 2); localized_evidence('folded',['folded'],'outcome.folded',expected_cards=3)
                     # Complete a real showdown with reduced motion enabled.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-deal]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000); page.locator('[data-play]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('reduced-motion',['reduced_motion'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-deal]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.locator('[data-play]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
                     # Reload the canonical game route and require restored player-owned terminal state.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('teen-patti').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('teen-patti').wait_for(timeout=WAIT_MS); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Teen Patti browser and governed visual gate.
                 run_case('BR-TEEN-PATTI-001',['TEENP-001','TEENP-002','TEST-116'],teen_patti_acceptance)
                 # Define registered Texas Hold'em localization, streets, settlement, motion, and route acceptance.
                 def texas_holdem_practice_acceptance():
                     # Open the catalog-owned route and wait for the stable table selector.
-                    page.get_by_test_id('nav-texas_holdem_practice_table').click(); page.get_by_test_id('texas-holdem-practice-table').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-texas_holdem_practice_table').click(); page.get_by_test_id('texas-holdem-practice-table').wait_for(timeout=WAIT_MS)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -5076,21 +5078,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready table before any wallet reservation.
                     localized_evidence('ready',['ready'])
                     # Commit one low fixed-limit unit and start through the public browser action.
-                    page.locator('#thpt-wager').fill('1'); page.locator('#thpt-wager').press('Tab'); page.locator('[data-action="start-hand"]').click(); page.locator('[data-action="call"]:not([disabled])').wait_for(timeout=10000)
+                    page.locator('#thpt-wager').fill('1'); page.locator('#thpt-wager').press('Tab'); page.locator('[data-action="start-hand"]').click(); page.locator('[data-action="call"]:not([disabled])').wait_for(timeout=WAIT_MS * 2)
                     # Capture private preflop play with redacted funded opponents.
                     assert all(page.get_by_test_id(f'thpt-seat-opponent_{index}').locator('.playing-card--back').count()==2 for index in (1,2,3)); localized_evidence('preflop-decision',['preflop_decision'])
                     # Advance and capture flop, turn, and river public decision states.
                     for prefix,state,card_count in [('flop-decision','flop_decision',3),('turn-decision','turn_decision',4),('river-decision','river_decision',5)]:
                         # Call through the public control and wait for the authoritative next street.
-                        page.locator('[data-action="call"]:not([disabled])').click(); page.locator('[data-action="call"]:not([disabled])').wait_for(timeout=10000); page.wait_for_function(f"() => document.querySelectorAll('[data-testid=thpt-community-cards] .playing-card').length === {card_count}")
+                        page.locator('[data-action="call"]:not([disabled])').click(); page.locator('[data-action="call"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.wait_for_function(f"() => document.querySelectorAll('[data-testid=thpt-community-cards] .playing-card').length === {card_count}")
                         # Capture this exact decision street in both locales and all viewports.
                         localized_evidence(prefix,[state])
                     # Complete the river call and wait for fully reconciled four-wallet settlement.
-                    page.locator('[data-action="call"]:not([disabled])').click(); page.get_by_test_id('thpt-result').wait_for(timeout=10000)
+                    page.locator('[data-action="call"]:not([disabled])').click(); page.get_by_test_id('thpt-result').wait_for(timeout=WAIT_MS * 2)
                     # Capture revealed showdown and terminal settlement together.
                     assert page.locator('[data-testid^="thpt-seat-opponent_"] .playing-card--back').count()==0; localized_evidence('showdown-settled',['showdown','settled'])
                     # Start a second real hand and exercise the explicit fold path.
-                    page.locator('[data-action="start-hand"]:not([disabled])').click(); page.locator('[data-action="fold"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="fold"]:not([disabled])').click(); page.get_by_test_id('thpt-result').wait_for(timeout=10000); localized_evidence('folded',['folded'])
+                    page.locator('[data-action="start-hand"]:not([disabled])').click(); page.locator('[data-action="fold"]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.locator('[data-action="fold"]:not([disabled])').click(); page.get_by_test_id('thpt-result').wait_for(timeout=WAIT_MS * 2); localized_evidence('folded',['folded'])
                     # Capture stable settled presentation with reduced motion enabled.
                     page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion'])
                     # Counterfeit the rendered pot, result, and an unrelated cache key without sending another server action.
@@ -5098,29 +5100,29 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Require the hostile DOM edits to exist temporarily before authoritative refresh.
                     assert '999,999' in page.get_by_test_id('thpt-pot').inner_text() and 'ATTACKER RESULT' in page.get_by_test_id('thpt-result').inner_text()
                     # Reload the canonical route and require server-owned pot, result, and player history to replace client tampering.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('texas-holdem-practice-table').wait_for(timeout=5000); assert page.get_by_test_id('thpt-result').is_visible() and '999,999' not in page.get_by_test_id('thpt-pot').inner_text() and 'ATTACKER RESULT' not in page.get_by_test_id('thpt-result').inner_text() and page.evaluate("localStorage.getItem('casino.hostile.thpt')")=='999999'; localized_evidence('route-restored',['route_restored','client_tamper_refreshed'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('texas-holdem-practice-table').wait_for(timeout=WAIT_MS); assert page.get_by_test_id('thpt-result').is_visible() and '999,999' not in page.get_by_test_id('thpt-pot').inner_text() and 'ATTACKER RESULT' not in page.get_by_test_id('thpt-result').inner_text() and page.evaluate("localStorage.getItem('casino.hostile.thpt')")=='999999'; localized_evidence('route-restored',['route_restored','client_tamper_refreshed'])
                     # Return to the lobby for downstream browser cases.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Texas Hold'em browser and hostile-client visual gate.
                 run_case('BR-THPT-001',['THPT-001','THPT-002','THPT-004','THPT-005','SEC-002','SEC-003','SEC-009'],texas_holdem_practice_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.
-                    page.goto(base+'/games/roulette',wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    page.goto(base+'/games/roulette',wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
                     # Reload the same deep link and require the route to remount without a lobby redirect.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
                     # Require the persistent brand and wallet to finish painting before acceptance evidence.
-                    page.locator('.brand-mark').wait_for(timeout=5000); page.get_by_test_id('premium-wallet').wait_for(timeout=5000); page.wait_for_timeout(300)
+                    page.locator('.brand-mark').wait_for(timeout=WAIT_MS); page.get_by_test_id('premium-wallet').wait_for(timeout=WAIT_MS); page.wait_for_timeout(300)
                     # Capture the restored game surface at the primary desktop viewport.
                     viewport_shot('after-pass-shell-route-roulette-desktop.png')
                     # Push a second catalog route through normal shell navigation.
-                    page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=WAIT_MS)
                     # Restore Roulette through browser Back and wait for the route-owned readiness selector.
-                    page.go_back(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    page.go_back(); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
                     # Restore Slots through browser Forward and wait for its route-owned readiness selector.
-                    page.go_forward(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                    page.go_forward(); page.get_by_test_id('slot-grid').wait_for(timeout=WAIT_MS)
                     # Return to the lobby so existing game interaction coverage starts from its normal baseline.
-                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the browser lifecycle restoration gate.
                 run_case('BR-ROUTE-RESTORE-001',['CORE-022','MOTION-002'],route_restoration)
                 # Delegate the complete Roulette, autoplay, Slots, and Keno affinity chain without transferring shared page ownership.

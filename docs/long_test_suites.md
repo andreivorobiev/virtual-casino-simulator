@@ -37,6 +37,14 @@ Shard `0` includes the browser audio verification path; shards `1` through `3` p
 
 Superseded ordinary runs for the same pull request are cancelled automatically by workflow-and-PR concurrency groups. Main pushes and manual dispatches fall back to unique run IDs, so they cannot cancel each other or formal 50,000-cycle, Baccarat sustained, release, deployment, or manually selected soak work. Browser Tests includes its own workflow file in the pull-request path filter so execution-policy edits always receive fresh exact-head browser evidence.
 
+## Browser Harness Knobs
+
+Ordinary Playwright readiness waits use the single `CASINO_BROWSER_WAIT_MS` value declared in `.github/workflows/browser-tests.yml`; `tests/browser_timing.py` validates the same optional environment input for local runs and defaults to five seconds. Longer historical ten-second waits derive as `WAIT_MS * 2`. The parser rejects non-decimal, unsafe, or unbounded overrides, and source governance rejects reintroduced `timeout=5000` or `timeout=10000` literals. Changing the hosted wait budget is therefore one reviewed workflow-line edit rather than a sweep across Browser cases.
+
+`tests/cicd_deployment_tests.py` owns the one ordinary Browser shard-count oracle used by its synthetic packets and CLI arguments. Exactly one named alignment test compares that constant with the workflow matrix and both worker/aggregate arguments; changing the constant produces one focused policy failure until `.github/workflows/browser-tests.yml` is updated. Exact shard union and affinity validation remain fail closed.
+
+`.github/workflows/browser-duration-profile.yml` runs weekly and supports manual dispatch. It selects the newest successful protected-main Browser push, downloads only its ordinary shard artifacts, regenerates `tests/browser_case_durations.json` through the strict bounded parser, and runs the listener-free CI/CD policy suite. An unchanged profile publishes nothing, and any existing automated profile branch or pull request suppresses a duplicate. A changed profile creates one maintenance issue, pushes a run-owned branch containing only the profile, and opens a draft pull request that closes that issue only after review. Because GitHub suppresses recursive `pull_request` events for its workflow token, the publisher explicitly dispatches all nine unchanged qualification workflows against the exact branch head; the unpublished release-candidate lane receives the canonical packaged version and cannot publish. It never pushes directly to `main` or merges itself.
+
 ## Parallel Shards
 
 Ten workers can split Suite 500 like this:

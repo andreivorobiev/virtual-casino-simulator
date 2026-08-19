@@ -3,6 +3,8 @@ on:
   pull_request:
   push:
     branches: [ main ]
+  # Permit the bounded duration-profile publisher to qualify its GITHUB_TOKEN-authored branch.
+  workflow_dispatch:
 # Cancel superseded runs for the same pull request; pushes and dispatches keep unique groups.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}

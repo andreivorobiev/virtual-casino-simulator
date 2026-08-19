@@ -13,6 +13,9 @@ import subprocess
 # Issue one credential-free public-shell request outside authenticated Browser cookies.
 import urllib.request
 
+# Import the sole environment-scalable Playwright wait budget. (TEST-053)
+from tests.browser_timing import WAIT_MS
+
 
 # Execute or skip the complete producer/consumer group without splitting its shard ownership.
 def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser, base, packaged_version, screenshots, ROOT, DEFAULT_AUTH_EMAIL, DEFAULT_AUTH_PASSWORD, PlaywrightTimeoutError):
@@ -28,7 +31,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
         # Start protected login verification so the isolated page is always closed before the broad suite.
         try:
             # Navigate without a seeded cookie so the real backend returns the login gate.
-            real_login_page.goto(base, wait_until='networkidle'); real_login_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+            real_login_page.goto(base, wait_until='networkidle'); real_login_page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
             # Observe the actual backend login response while submitting browser-visible credentials.
             with real_login_page.expect_response(lambda response: response.url.endswith('/api/v2/auth/login') and response.request.method == 'POST') as login_response_info:
                 # Fill the bootstrap email and password through the same controls used by a local player.
@@ -36,7 +39,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
             # Store the real response payload so the test proves the backend accepted the form request.
             real_login_response=login_response_info.value.json()
             # Wait for the authenticated shell that can only mount after the backend session cookie is accepted.
-            real_login_page.get_by_test_id('lobby').wait_for(timeout=5000)
+            real_login_page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
             # Record the focused real-backend browser login regression coverage.
             run_case('BR-AUTH-BACKEND-001',['AUTH-001','AUTH-002','SESSION-001','OAUTH-006','TEST-045'],lambda: real_login_response['ok'] is True and real_login_response['data']['user']['email']==DEFAULT_AUTH_EMAIL and real_login_page.get_by_test_id('lobby').is_visible())
             # Prove the narrowed installable and offline-safe PWA foundation without native-install claims. (PWA-001, PWA-002, TEST-095)
@@ -146,7 +149,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                     # Bound listener cleanup around the unchanged offline navigation and readiness wait.
                     try:
                         # Navigate while truly offline so only the cached index and exact static module allowlist can reconstruct the shell.
-                        pwa_page.goto(f'{base}/games/roulette',wait_until='domcontentloaded',timeout=10000)
+                        pwa_page.goto(f'{base}/games/roulette',wait_until='domcontentloaded',timeout=WAIT_MS * 2)
                         # Preserve one eight-second wait while proving only reconstructed-document readiness.
                         try:
                             # Require the reconstructed PWA controller, cached shell, and localization runtime before dispatching the new document's event.
@@ -206,7 +209,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                         # Reload through the locale query so visible copy and sidecar metadata share one source.
                         pwa_page.goto(f'{base}/?locale={pwa_locale}',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Wait until the active locale exactly matches the evidence label.
-                        pwa_page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale===locale",arg=pwa_locale,timeout=5000)
+                        pwa_page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale===locale",arg=pwa_locale,timeout=WAIT_MS)
                         # Visit every governed viewport in stable matrix order.
                         for pwa_viewport_id,pwa_viewport in pwa_viewports.items():
                             # Resize before state render so responsive layout and wrapping are final.
@@ -220,7 +223,7 @@ def run_cases(run_case, browser_shard_owns_group, skip_browser_affinity, browser
                     # Trigger one offline-to-online transition after server-side logout.
                     pwa_page.context.set_offline(True); pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))"); pwa_page.context.set_offline(False); pwa_page.evaluate("() => window.dispatchEvent(new Event('online'))")
                     # Require stale authenticated UI to be replaced by login and the explicit expired-session state.
-                    pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='expired-session' && Boolean(document.querySelector('[data-testid=login-gate]'))",timeout=10000)
+                    pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='expired-session' && Boolean(document.querySelector('[data-testid=login-gate]'))",timeout=WAIT_MS * 2)
                 # Always release worker, cache, connectivity, and page state for downstream browser cases.
                 finally:
                     # Restore the context network before cleanup requests.
