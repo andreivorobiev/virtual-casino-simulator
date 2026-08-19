@@ -17,3 +17,5 @@ def run_cases(run_case, run_roulette_motion_tests, run_game_frontend_node_test):
     run_case("UI-SLOT-PRESENTATION-001", ["SLOT-030", "SLOT-031", "SLOT-032", "SLOT-033", "SLOT-034", "SLOT-035", "SLOT-037"], lambda: run_game_frontend_node_test(Path("tests/games/slots/test_frontend.mjs"), "Slots presentation suite failed"))
     # Record the shared committed-debit renderer and catalog-wide presentation-order proof.
     run_case("UI-WALLET-TIMING-001", ["LEDGER-031", "TEST-151"], lambda: run_game_frontend_node_test(Path("tests/wallet_timing.mjs"), "wallet timing suite failed"))
+    # Record shared route, busy, locale, style, request-id, and first-adopter lifecycle ownership.
+    run_case("UI-GAME-LIFECYCLE-001", ["CORE-034", "TEST-248"], lambda: run_game_frontend_node_test(Path("tests/game_frontend_lifecycle.mjs"), "game frontend lifecycle suite failed"))

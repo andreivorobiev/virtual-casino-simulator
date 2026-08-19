@@ -1,5 +1,5 @@
 {
-  "count": 209,
+  "count": 210,
   "case_ids": [
     "API-AB-001",
     "API-AB-ATOMIC-001",
@@ -201,6 +201,7 @@
     "UI-50000-HARNESS-001",
     "UI-ADMIN-LEDGER-LABELS-001",
     "UI-BROWSER-WAIT-001",
+    "UI-GAME-LIFECYCLE-001",
     "UI-GAME-POLISH-001",
     "UI-I18N-SINGLE-SOURCE-001",
     "UI-KENO-BALL-RAIL-001",
