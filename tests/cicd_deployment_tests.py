@@ -1044,6 +1044,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             ("UI-ROU-PRESENTATION-001", ["ROU-063", "ROU-064", "ROU-065", "ROU-066", "ROU-067", "ROU-068", "ROU-072"]),
             ("UI-SLOT-PRESENTATION-001", ["SLOT-030", "SLOT-031", "SLOT-032", "SLOT-033", "SLOT-034", "SLOT-035", "SLOT-037"]),
             ("UI-WALLET-TIMING-001", ["LEDGER-031", "TEST-151"]),
+            ("UI-GAME-LIFECYCLE-001", ["CORE-034", "TEST-248"]),
         )
         # Read the compatibility runner and extracted area as inert source text.
         runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
@@ -1079,7 +1080,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in captured), expected_cases)
         # Prove the Roulette motion case retains the runner-owned unittest callback verbatim.
         self.assertIs(captured[0][2], roulette_motion_callback)
-        # Execute only the three inert lazy adapters against the capture callback.
+        # Execute only the four inert lazy adapters against the capture callback.
         for _, _, callback in captured[1:]:
             # Resolve one lazy mapping without launching Node.
             callback()
@@ -1088,6 +1089,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             (Path("tests/games/roulette/test_frontend.mjs"), "Roulette presentation suite failed"),
             (Path("tests/games/slots/test_frontend.mjs"), "Slots presentation suite failed"),
             (Path("tests/wallet_timing.mjs"), "wallet timing suite failed"),
+            (Path("tests/game_frontend_lifecycle.mjs"), "game frontend lifecycle suite failed"),
         ])
         # Require every moved registration to be absent from the compatibility runner.
         for case_id, _ in expected_cases:

@@ -1,0 +1,170 @@
+/* Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors */
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Route-local Daily Draw Lab presentation migrated from opaque JavaScript injection by issue #718. */
+.daily {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  color: var(--text, #f5ead6);
+  align-items: start;
+}
+
+.dd-stage {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 12px;
+  min-width: 0;
+}
+
+.dd-board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  width: min(420px, 100%);
+}
+
+.dd-num {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.dd-num[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: rgba(255, 59, 107, 0.16);
+  color: var(--text);
+}
+
+.dd-num.drawn {
+  background: rgba(34, 224, 195, 0.20);
+  border-color: var(--accent);
+}
+
+.dd-num.hit {
+  background: radial-gradient(circle at 40% 34%, #bff0cf, #0f9c4c);
+  color: #052312;
+  border-color: var(--metal-gold);
+}
+
+.dd-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dd-card {
+  padding: 14px;
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.dd-card h3 {
+  margin: 0 0 10px;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.dd-pays {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dd-pays div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dd-pays span:last-child {
+  color: var(--gold);
+}
+
+.dd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dd-chip {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.18));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.dd-chip[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: rgba(255, 59, 107, 0.16);
+  color: var(--text);
+}
+
+.dd-go {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.dd-go:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dd-result {
+  min-height: 24px;
+  font-size: 15px;
+  color: var(--text);
+  text-align: center;
+}
+
+.dd-result .net {
+  font-weight: 900;
+}
+
+.dd-repeat {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.dd-repeat:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Stack the route rails without changing control order on narrow viewports. */
+@media (max-width: 900px) {
+  .daily {
+    grid-template-columns: 1fr;
+  }
+}

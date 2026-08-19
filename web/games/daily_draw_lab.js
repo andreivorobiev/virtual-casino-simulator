@@ -5,13 +5,15 @@
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, style, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/daily_draw_lab';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'daily-draw-lab-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'dd', stylesheet: { id: 'daily-draw-lab-styles', href: '/games/daily_draw_lab.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Mirror the backend number pool size.
 export const POOL = 30;
 // Mirror the backend maximum pick count.
@@ -21,39 +23,13 @@ const CHIPS = [1, 5, 25, 100];
 // Fix the decorative reveal duration; the outcome is already server-authoritative.
 const DRAW_MS = 700;
 
-// Store the current route outlet, marked numbers, chosen stake, and in-flight guard.
-let root = null;
+// Store the marked numbers and chosen stake while the shared lifecycle owns route and busy state.
 let picks = [];
 let stake = 5;
-let drawBusy = false;
-let localeUnsubscribe = null;
 // Retain the last settled draw so a repaint keeps showing drawn numbers and hits.
 let shownDraw = null;
 // Retain the last committed picks and stake so one click can repeat the same draw.
 let lastBet = null;
-
-// Translate one game-domain key through the shared installed-locale fallback chain.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
-
-// Install compact game-owned styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.daily{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .dd-stage{display:grid;justify-items:center;gap:12px;padding:12px;min-width:0;} .dd-board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;width:min(420px,100%);} .dd-num{aspect-ratio:1;border-radius:10px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);color:var(--text);font-weight:900;font-size:14px;cursor:pointer;display:grid;place-items:center;} .dd-num[aria-pressed="true"]{border-color:var(--gold);background:rgba(255,59,107,.16);color:var(--text);} .dd-num.drawn{background:rgba(34,224,195,.20);border-color:var(--accent);} .dd-num.hit{background:radial-gradient(circle at 40% 34%,#bff0cf,#0f9c4c);color:#052312;border-color:var(--metal-gold);} .dd-panel{display:grid;gap:12px;min-width:0;} .dd-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .dd-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .dd-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .dd-pays div{display:flex;justify-content:space-between;} .dd-pays span:last-child{color:var(--gold);} .dd-chips{display:flex;flex-wrap:wrap;gap:8px;} .dd-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .dd-chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(255,59,107,.16);color:var(--text);} .dd-go{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,var(--brand),var(--brand-strong));color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .dd-go:disabled{opacity:.55;cursor:not-allowed;} .dd-result{min-height:24px;font-size:15px;color:var(--text);text-align:center;} .dd-result .net{font-weight:900;} @media (max-width:900px){.daily{grid-template-columns:1fr;}}.dd-repeat{width:100%;min-height:46px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;cursor:pointer;}.dd-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.appendChild(style);
-}
-
-// Generate one caller-stable retry identity for exactly-once settlement.
-function newRequestId() {
-  // Prefer a real UUID when the platform provides one.
-  return (globalThis.crypto?.randomUUID?.() || `dd-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
-}
 
 // Toggle a number in or out of the current marks, bounded to the maximum pick count.
 function toggleMark(number) {
@@ -87,6 +63,8 @@ function paytableRows() {
 
 // Render the complete Daily Draw Lab route into the outlet.
 function render(resultText) {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Build the thirty number cells, marking picks, draws, and hits.
@@ -96,9 +74,9 @@ function render(resultText) {
   // Report the mark hint.
   const hint = tx('pick.hint', { count: picks.length });
   // Paint the whole route.
-  root.innerHTML = `<section class="daily" data-testid="daily-draw-lab"><div class="dd-stage"><div class="dd-board" data-testid="daily-draw-lab-board">${nums}</div><p class="dd-result" data-testid="daily-draw-lab-result" role="status">${resultText || safe(hint)}</p></div><div class="dd-panel"><div class="dd-card"><h3>${safe(tx('pay.title'))}</h3><div class="dd-pays">${paytableRows()}</div></div><div class="dd-card"><h3>${safe(tx('stake.title'))}</h3><div class="dd-chips">${chips}</div></div><button class="dd-go" data-testid="daily-draw-lab-go" type="button" ${drawBusy || picks.length < 1 ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing') : tx('action.draw'))}</button><button class="dd-repeat" data-testid="daily-draw-lab-repeat" type="button" ${drawBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
+  root.innerHTML = `<section class="daily" data-testid="daily-draw-lab"><div class="dd-stage"><div class="dd-board" data-testid="daily-draw-lab-board">${nums}</div><p class="dd-result" data-testid="daily-draw-lab-result" role="status">${resultText || safe(hint)}</p></div><div class="dd-panel"><div class="dd-card"><h3>${safe(tx('pay.title'))}</h3><div class="dd-pays">${paytableRows()}</div></div><div class="dd-card"><h3>${safe(tx('stake.title'))}</h3><div class="dd-chips">${chips}</div></div><button class="dd-go" data-testid="daily-draw-lab-go" type="button" ${lifecycle.isBusy() || picks.length < 1 ? 'disabled' : ''}>${safe(lifecycle.isBusy() ? tx('action.drawing') : tx('action.draw'))}</button><button class="dd-repeat" data-testid="daily-draw-lab-repeat" type="button" ${lifecycle.isBusy() || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the number mark buttons.
-  root.querySelectorAll('[data-number]').forEach(btn => { btn.onclick = () => { if (!drawBusy) toggleMark(Number(btn.dataset.number)); }; });
+  root.querySelectorAll('[data-number]').forEach(btn => { btn.onclick = () => { if (!lifecycle.isBusy()) toggleMark(Number(btn.dataset.number)); }; });
   // Wire the chip buttons.
   root.querySelectorAll('[data-chip]').forEach(btn => { btn.onclick = () => { stake = Number(btn.dataset.chip); render(); }; });
   // Wire the draw action.
@@ -131,15 +109,15 @@ async function load() {
 
 // Execute one atomic wager, draw, and settlement.
 async function run() {
-  // Ignore repeated clicks or an empty mark set.
-  if (drawBusy || !root || picks.length < 1) return;
+  // Ignore repeated clicks, teardown, or an empty mark set through shared lifecycle state.
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || picks.length < 1) return;
   // Mark the draw busy and disable the control before the request.
-  drawBusy = true;
+  lifecycle.setBusy(true);
   render();
   // Start protected settlement so the busy flag is always released.
   try {
     // Post the exactly-once draw with a caller-stable retry id and the marked numbers.
-    const response = await post('/api/v1/games/daily-draw-lab/draws', { request_id: newRequestId(), picks: [...picks], stake });
+    const response = await post('/api/v1/games/daily-draw-lab/draws', { request_id: lifecycle.nextRequestId(), picks: [...picks], stake });
     // Show the committed debit before the draw exposes its authoritative numbers. (LEDGER-031, issue #593)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
@@ -163,12 +141,12 @@ async function run() {
       ? `${safe(tx('result.win', { count: round.detail.hit_count }))} <span class="net">${netText}</span>`
       : `${safe(tx('result.lose', { count: round.detail.hit_count }))} <span class="net">${netText}</span>`;
     // Release the guard before the final repaint.
-    drawBusy = false;
+    lifecycle.setBusy(false);
     // Repaint with the drawn board and result.
     render(text);
   } catch (err) {
     // Release the guard and report a bounded error.
-    drawBusy = false;
+    lifecycle.setBusy(false);
     // Surface the failure without leaking internal detail.
     toast(err?.message || tx('error.draw'), 'error');
     // Repaint the unlocked controls.
@@ -179,7 +157,7 @@ async function run() {
 // Re-apply the last committed picks and stake and re-fire one draw without a timer.
 async function repeat() {
   // Ignore repeat while a draw is active, after teardown, or before any prior draw has settled.
-  if (drawBusy || !root || !lastBet) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || !lastBet) return;
   // Restore the previous marks into the local selection.
   picks = [...lastBet.picks];
   // Restore the previous stake into the local selection.
@@ -194,31 +172,21 @@ export const DailyDrawLabGame = {
   id: 'daily_draw_lab',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet.
-    root = node;
     // Reset the marks for a fresh mount.
     picks = [];
     // Reset the repeatable bet so a new mount never inherits a stale one before load reconciles history.
     lastBet = null;
-    // Install game-owned styles.
-    ensureStyles();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings on a locale change unless a draw owns the board.
-    localeUnsubscribe = onLocaleChange(() => { if (!drawBusy) render(); });
+    // Establish shared route, stylesheet, localization, and locale-subscription ownership.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released the route during asynchronous locale initialization.
+    if (!mounted) return;
     // Load session-bound state and render the first frame.
     await load();
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    drawBusy = false;
+    // Release route, locale-subscription, and in-flight lifecycle ownership.
+    lifecycle.unmount();
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
   },

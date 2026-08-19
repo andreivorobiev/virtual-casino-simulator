@@ -126,6 +126,8 @@ An isolated game or catalog revision slice should:
 6. Bump the game module revision in its descriptor and the #104 aggregate manifest. Report packaged application release impact as `None` unless release-artifact work is explicitly assigned.
 7. Run `python scripts/validate_game_catalog.py`, module boundaries, contracts, requirements, versions, API, browser, and the relevant long-suite smoke.
 
+Browser-game lifecycle and route-local presentation follow one shared convention. New games and reviewed adopter slices use `createGameLifecycle` from `web/core/game_lifecycle.js` for route ownership, busy-state coordination, locale initialization and teardown, domain-bound translation, and opaque request identities. A game that owns route-local presentation declares a formatted `web/games/<game-id>.css` asset in its module descriptor and installs it through the lifecycle's same-origin stylesheet descriptor; opaque JavaScript CSS injection is not an accepted ownership mechanism. Adopter slices preserve the game's existing DOM, selectors, actions, settlement behavior, localization, and visible layout while deleting the superseded game-local helpers.
+
 The shared catalog validator rejects duplicate ids, invalid routes/categories, missing canonical revisions, broken backend or driver imports, missing frontend exports/readiness selectors, and absent contracts. Individual game workers should not edit `casino/app.py`, `web/app.js`, validator allowlists, or `tests/long_suites.py` merely to register their game.
 
 ## Browser and visual expectations

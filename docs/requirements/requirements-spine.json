@@ -13463,6 +13463,53 @@
       "introduced_in": "issue-716-state-store-provider-facade",
       "changed_in": "issue-716-state-store-provider-facade",
       "notes": "Provider parity is asserted at the public state_store call boundary rather than by duplicating provider internals. Existing MySQL integration covers auth, mail, enrollment, invitation, analytics, bot, autoplay, and player-game documents through the same facade."
+    },
+    {
+      "id": "CORE-034",
+      "module": "Application",
+      "description": "Isolated browser games may delegate route ownership, asynchronous mount cancellation, busy-state coordination, lazy locale initialization and teardown, domain-bound translation, external same-origin stylesheet ownership, and opaque request identities to one shared lifecycle controller without changing game DOM, actions, settlement, localization, or visible layout.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-GAME-LIFECYCLE-001"
+      ],
+      "browser_tests": [
+        "BR-DAILY-DRAW-LAB-001"
+      ],
+      "implementation_files": [
+        "web/core/game_lifecycle.js",
+        "web/games/daily_draw_lab.js",
+        "web/games/daily_draw_lab.css",
+        "docs/game_catalog_governance.md",
+        "docs/evidence/daily_draw_lab/README.md",
+        "modules/application.json",
+        "modules/daily_draw_lab.json"
+      ],
+      "introduced_in": "issue-718-game-frontend-lifecycle",
+      "changed_in": "issue-718-game-frontend-lifecycle",
+      "notes": "The first adopter is Daily Draw Lab. Its previously inline route CSS is a formatted external module-owned asset, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged."
+    },
+    {
+      "id": "TEST-248",
+      "module": "Tests",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of the first adopter's duplicate helpers; the dedicated Daily Draw Lab browser case preserves its real settled-round and repeat flow.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-GAME-LIFECYCLE-001"
+      ],
+      "browser_tests": [
+        "BR-DAILY-DRAW-LAB-001"
+      ],
+      "implementation_files": [
+        "tests/game_frontend_lifecycle.mjs",
+        "tests/cases/api/frontend_presentation.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/api_case_inventory.json",
+        "tests/unit/request_latency_benchmark_tests.py",
+        "tests/runner.py"
+      ],
+      "introduced_in": "issue-718-game-frontend-lifecycle",
+      "changed_in": "issue-718-game-frontend-lifecycle",
+      "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Existing affected-game browser evidence remains the authoritative visible and settlement acceptance for the adopter."
     }
   ]
 }

@@ -3122,12 +3122,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def daily_draw_lab_browser_acceptance():
                     # Mark number one before invoking the otherwise shared settled-round helper.
                     def draw_once():
+                        # Require exactly one external game-owned stylesheet rather than injected opaque CSS.
+                        style_link=page.locator('link#daily-draw-lab-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/daily_draw_lab.css'
+                        # Prove the migrated asset loaded by binding the unchanged desktop grid and number-board layout.
+                        assert page.get_by_test_id('daily-draw-lab').evaluate("el => { const route=getComputedStyle(el); const board=getComputedStyle(el.querySelector('.dd-board')); return route.display==='grid' && route.gridTemplateColumns.split(' ').length===2 && board.display==='grid' && board.gridTemplateColumns.split(' ').length===6; }")
+                        # Capture after-pass first-adopter evidence before the real settled action mutates its board.
+                        page.screenshot(path=str(screenshots/'after-pass-daily-draw-lab-lifecycle-desktop.png'),full_page=False)
                         # Select one legal number and start the real draw.
                         page.locator('[data-number="1"]').click(); page.get_by_test_id('daily-draw-lab-go').click()
                     # Bind the draw response, terminal wallet, and recovered repeat control.
                     newest_simple_game_acceptance('daily_draw_lab','daily-draw-lab','/api/v1/games/daily-draw-lab/draws',draw_once,'daily-draw-lab-result','daily-draw-lab-repeat')
                 # Record Daily Draw Lab's dedicated affected-game acceptance case.
-                run_case('BR-DAILY-DRAW-LAB-001',['DDLAB-001','DDLAB-002','TEST-185'],daily_draw_lab_browser_acceptance)
+                run_case('BR-DAILY-DRAW-LAB-001',['DDLAB-001','DDLAB-002','CORE-034','TEST-185','TEST-248'],daily_draw_lab_browser_acceptance)
                 # Exercise Four Card Poker's two-step real deal and decision lifecycle.
                 def four_card_poker_browser_acceptance():
                     # Enter the catalog-owned route and wait for the stable game root.
