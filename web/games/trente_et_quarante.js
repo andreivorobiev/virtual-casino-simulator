@@ -5,13 +5,15 @@
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, style, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/trente_et_quarante';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'teq-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'teq', stylesheet: { id: 'teq-styles', href: '/games/trente_et_quarante.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Publish the four selectable bets in stable order.
 export const BETS = Object.freeze(['rouge', 'noir', 'couleur', 'inverse']);
 // Publish the chip denominations offered for the stake.
@@ -19,39 +21,13 @@ const CHIPS = [1, 5, 25, 100];
 // Fix the decorative deal duration; the outcome is already server-authoritative.
 const DEAL_MS = 800;
 
-// Store the current route outlet, chosen bet, chosen stake, and in-flight guard.
-let root = null;
+// Store the chosen bet and stake while the shared lifecycle owns route and busy state.
 let selectedBet = 'rouge';
 let stake = 5;
-let dealBusy = false;
-let localeUnsubscribe = null;
 // Retain the last settled deal so a repaint after the coup keeps showing the rows.
 let shownDeal = null;
 // Retain the last settled bet target and stake so one click can repeat the same coup.
 let lastBet = null;
-
-// Translate one game-domain key through the shared installed-locale fallback chain.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
-
-// Install compact game-owned styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.teq{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .teq-stage{display:grid;gap:14px;padding:12px;min-width:0;} .teq-row{display:grid;gap:6px;min-width:0;} .teq-row-head{display:flex;justify-content:space-between;align-items:baseline;font-weight:900;text-transform:uppercase;letter-spacing:.06em;font-size:12px;} .teq-row.noir .teq-row-head{color:#c9c9d4;} .teq-row.rouge .teq-row-head{color:#e0788a;} .teq-row-head .total{font-size:20px;} .teq-row.win{outline:2px solid #e8c760;outline-offset:4px;border-radius:10px;} .teq-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .teq-card{width:40px;height:56px;display:grid;place-items:center;border-radius:8px;background:linear-gradient(160deg,#fbf3dd,#e2cf9d);font-weight:900;font-size:16px;box-shadow:0 4px 10px rgba(0,0,0,.35),inset 0 0 0 2px #a9791f;} .teq-card.red{color:#b41b29;} .teq-card.black{color:#161616;} .teq-panel{display:grid;gap:12px;min-width:0;} .teq-card-box{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .teq-card-box h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .teq-bets{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .teq-bet{display:grid;gap:2px;padding:10px;border:2px solid transparent;border-radius:12px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;text-align:left;} .teq-bet small{font-weight:700;opacity:.8;font-size:11px;} .teq-bet[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 2px rgba(255,59,107,.5);} .teq-chips{display:flex;flex-wrap:wrap;gap:8px;} .teq-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .teq-chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(255,59,107,.16);color:var(--text);} .teq-deal{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,var(--brand),var(--brand-strong));color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .teq-deal:disabled{opacity:.55;cursor:not-allowed;} .teq-result{min-height:24px;font-size:15px;color:var(--text);} .teq-result .net{font-weight:900;} @media (max-width:900px){.teq{grid-template-columns:1fr;}}.teq-repeat{width:100%;min-height:46px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;font-size:16px;cursor:pointer;}.teq-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.appendChild(style);
-}
-
-// Generate one caller-stable retry identity for exactly-once settlement.
-function newRequestId() {
-  // Prefer a real UUID when the platform provides one.
-  return (globalThis.crypto?.randomUUID?.() || `teq-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
-}
 
 // Build the card chips for one dealt row.
 function rowCards(cards) {
@@ -61,6 +37,8 @@ function rowCards(cards) {
 
 // Render the complete Trente et Quarante route into the outlet.
 function render(resultText) {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Read the settled winner so the winning row can be highlighted.
@@ -74,7 +52,7 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="teq-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="teq" data-testid="trente-et-quarante"><div class="teq-stage">${noir}${rouge}<p class="teq-result" data-testid="teq-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="teq-panel"><div class="teq-card-box"><h3>${safe(tx('bet.title'))}</h3><div class="teq-bets">${bets}</div></div><div class="teq-card-box"><h3>${safe(tx('stake.title'))}</h3><div class="teq-chips">${chips}</div></div><button class="teq-deal" data-testid="teq-deal" type="button" ${dealBusy ? 'disabled' : ''}>${safe(dealBusy ? tx('action.dealing') : tx('action.deal'))}</button><button class="teq-repeat" data-testid="teq-repeat" data-action="repeat" type="button" ${dealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
+  root.innerHTML = `<section class="teq" data-testid="trente-et-quarante"><div class="teq-stage">${noir}${rouge}<p class="teq-result" data-testid="teq-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="teq-panel"><div class="teq-card-box"><h3>${safe(tx('bet.title'))}</h3><div class="teq-bets">${bets}</div></div><div class="teq-card-box"><h3>${safe(tx('stake.title'))}</h3><div class="teq-chips">${chips}</div></div><button class="teq-deal" data-testid="teq-deal" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(lifecycle.isBusy() ? tx('action.dealing') : tx('action.deal'))}</button><button class="teq-repeat" data-testid="teq-repeat" data-action="repeat" type="button" ${lifecycle.isBusy() || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the bet buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = btn.dataset.bet; render(); }; });
   // Wire the chip buttons.
@@ -92,7 +70,7 @@ function render(resultText) {
 // Re-apply the last settled bet and re-fire one coup without a timer.
 async function repeat() {
   // Ignore repeat while a coup is resolving or before any settled bet exists.
-  if (dealBusy || !lastBet) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || !lastBet) return;
   // Restore the previous bet target into the local configuration.
   selectedBet = lastBet.bet;
   // Restore the previous stake into the local configuration.
@@ -122,14 +100,14 @@ async function load() {
 // Execute one atomic wager, deal, and settlement.
 async function deal() {
   // Ignore repeated clicks while a coup is resolving.
-  if (dealBusy || !root) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted()) return;
   // Mark the deal busy and disable the control before the request.
-  dealBusy = true;
+  lifecycle.setBusy(true);
   render();
   // Start protected settlement so the busy flag is always released.
   try {
     // Post the exactly-once coup with a caller-stable retry id and the chosen bet.
-    const response = await post('/api/v1/games/trente-et-quarante/coups', { request_id: newRequestId(), bet: selectedBet, stake });
+    const response = await post('/api/v1/games/trente-et-quarante/coups', { request_id: lifecycle.nextRequestId(), bet: selectedBet, stake });
     // Show the committed debit before both authoritative rows reveal. (LEDGER-031, issue #600)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
@@ -147,12 +125,12 @@ async function deal() {
     // Compose the localized result copy from the authoritative outcome and net.
     const text = `${safe(tx('outcome.' + round.outcome))} <span class="net">${net > 0 ? '+' + net : net}</span>`;
     // Release the guard before the final repaint.
-    dealBusy = false;
+    lifecycle.setBusy(false);
     // Repaint with the dealt rows and result.
     render(text);
   } catch (err) {
     // Release the guard and report a bounded error.
-    dealBusy = false;
+    lifecycle.setBusy(false);
     // Surface the failure without leaking internal detail.
     toast(err?.message || tx('error.deal'), 'error');
     // Repaint the unlocked controls.
@@ -166,29 +144,19 @@ export const TrenteEtQuaranteGame = {
   id: 'trente_et_quarante',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet.
-    root = node;
     // Reset any repeatable bet so a new mount never inherits a stale one before load recovers history.
     lastBet = null;
-    // Install game-owned styles.
-    ensureStyles();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings on a locale change unless a coup owns the table.
-    localeUnsubscribe = onLocaleChange(() => { if (!dealBusy) render(); });
+    // Establish shared route, stylesheet, localization, and locale-subscription ownership.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released the route during asynchronous locale initialization.
+    if (!mounted) return;
     // Load session-bound state and render the first frame.
     await load();
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    dealBusy = false;
+    // Release route, locale-subscription, and in-flight lifecycle ownership.
+    lifecycle.unmount();
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
   },

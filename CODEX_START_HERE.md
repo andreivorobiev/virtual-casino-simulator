@@ -260,6 +260,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/evidence/scratch_cards/README.md`](docs/evidence/scratch_cards/README.md) — Scratch Cards evidence status
 - [`docs/evidence/semantic-game-colors/README.md`](docs/evidence/semantic-game-colors/README.md) — Semantic game-color evidence
 - [`docs/evidence/slots/README.md`](docs/evidence/slots/README.md) — Slots evidence status
+- [`docs/evidence/trente_et_quarante/README.md`](docs/evidence/trente_et_quarante/README.md) — Trente et Quarante lifecycle-adopter evidence
 - [`docs/evidence/wallet-celebration/README.md`](docs/evidence/wallet-celebration/README.md) — Wallet celebration evidence status
 - [`docs/game_catalog_governance.md`](docs/game_catalog_governance.md) — Game Catalog Governance
 - [`docs/game_expansion_integration_sequence.md`](docs/game_expansion_integration_sequence.md) — Game Expansion Integration Sequence
