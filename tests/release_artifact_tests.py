@@ -17,12 +17,16 @@ import unittest
 # Import ZIP inspection for negative private-content assertions.
 import zipfile
 
+# Import the canonical release driver for exact-copy inventory initialization evidence.
+from scripts import make_release
 # Import the release implementation under test from the repository scripts namespace.
 from scripts import package_app
 # Import the protected predecessor receipt helper for exact fail-closed recovery tests.
 from scripts import bootstrap_predecessor
 # Import compatibility-owned predecessor resolution for the live release-policy regression.
 from scripts import resolve_release_predecessor
+# Import the file-length policy consumer that requires authoritative tracked-source inventory.
+from scripts import validate_file_length
 
 
 # Exercise deterministic packaging, exclusion, verification, and rollback behavior.
@@ -105,6 +109,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         ):
             # Read exact source text from the checkout under test.
             self.files[relative_path] = (package_app.ROOT / relative_path).read_text(encoding="utf-8")
+
         # Write every fixture file beneath its canonical repository-relative path.
         for relative_path, contents in self.files.items():
             # Resolve the current fixture file without using host-specific paths in data.
@@ -119,6 +124,39 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.commit_sha = "a" * 40
         # Use one fixed source timestamp across equivalent test builds.
         self.commit_epoch = 1_700_000_000
+
+    # Prove the trusted exact-HEAD copy receives a complete index without weakening non-Git refusal.
+    def test_isolated_api_copy_initializes_exact_tracked_inventory(self):
+        # Allocate one disposable archive-like source root independent of the packaging fixture.
+        with tempfile.TemporaryDirectory(prefix="casino-release-index-") as temporary:
+            # Resolve the exact extracted-copy root used by the production helper.
+            root = pathlib.Path(temporary)
+            # Create the register parent required by the file-length validator.
+            (root / "docs").mkdir()
+            # Provide an empty canonical review register for the compact source fixtures.
+            (root / "docs" / "file_length_register.json").write_text('{"schema_version": 1, "entries": []}\n', encoding="utf-8")
+            # Create one Python source from the hypothetical trusted archive.
+            (root / "exact.py").write_text("# Exact archived source.\n", encoding="utf-8")
+            # Create one nested JavaScript source from the same archive.
+            (root / "web").mkdir()
+            # Preserve one compact executable-source fixture beneath its canonical area.
+            (root / "web" / "exact.js").write_text("// Exact archived source.\n", encoding="utf-8")
+            # Retain one non-source archive member to prove the complete extraction is indexed.
+            (root / "README.md").write_text("# Exact archive\n", encoding="utf-8")
+            # Model a tracked source that also matches a repository ignore rule.
+            (root / ".gitignore").write_text("exact.py\n", encoding="utf-8")
+            # Initialize only the disposable index through the production release seam.
+            make_release.initialize_validation_index(root)
+            # Ask Git for the complete indexed inventory using the production separator format.
+            indexed = make_release.subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode("utf-8").split("\0")
+            # Require every exact archive member and no metadata path in canonical order.
+            self.assertEqual([path for path in indexed if path], [".gitignore", "README.md", "docs/file_length_register.json", "exact.py", "web/exact.js"])
+            # Add a late runtime-like source after indexing to prove it cannot enter policy scope.
+            (root / "late.py").write_text("# Untracked late source.\n", encoding="utf-8")
+            # Require the production file-length inventory to see only indexed first-party sources.
+            self.assertEqual(validate_file_length.tracked_source_paths(root), ("exact.py", "web/exact.js"))
+            # Require the complete policy gate to pass without a filesystem-walk bypass.
+            self.assertEqual(validate_file_length.validate_file_lengths(root), ())
 
     # Build a fixture release with optional tag and prior rollback provenance.
     def build(self, output_name, release_tag=None, previous_manifest=None):

@@ -54,7 +54,7 @@ Historical source baseline: 9.1.0
 - tests: 1.113.1
 - docs: 1.109.1
 - contracts: 1.62.5
-- tooling: 1.43.1
+- tooling: 1.43.2
 - commenting_policy: 2.1.0
 - color_wheel: 1.1.6
 - poker_dice: 1.1.4
@@ -186,7 +186,7 @@ Historical source baseline: 9.1.0
 - **DOC-016** (Documentation) - PASS: Parallel-agent workflow documentation defines coordinator and worker responsibilities for humans, Claude, Codex, and other automation.
 - **TOOL-001** (Tooling) - PASS: Agent task packets and pull-request templates preserve author, coordinator, merge executor, scope, file ownership, validation, dependency, exact-head, and handback context.
 - **TOOL-002** (Tooling) - PASS: GitHub Actions exposes fail-closed sharded qualification: Suite 100 runs on pull requests, Suite 300 or 500 is manually selected, and Browser pull requests select only unambiguously affected game-owned cases while shared, unknown, protected-main, release, and manual inputs retain complete coverage.
-- **TOOL-003** (Tooling) - PASS: Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, extracted-host command inventory enforcement, protected publication gate, and application-only prior-artifact rollback mapping.
+- **TOOL-003** (Tooling) - PASS: Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, an authoritative complete disposable Git index for exact-HEAD API validation, fail-closed private-content exclusion, extracted-host command inventory enforcement, protected publication gate, and application-only prior-artifact rollback mapping.
 - **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
 - **BOT-002** (Bots) - PASS: Game modules must not import bot strategy modules.
 - **BOT-003** (Bots) - PASS: A bot appears for a game only when it has a compatible strategy.

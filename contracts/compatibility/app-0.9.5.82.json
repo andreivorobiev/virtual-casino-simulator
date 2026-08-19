@@ -72,7 +72,7 @@
     "tests": "1.113.1",
     "docs": "1.109.1",
     "contracts": "1.62.5",
-    "tooling": "1.43.1",
+    "tooling": "1.43.2",
     "commenting_policy": "2.1.0",
     "color_wheel": "1.1.6",
     "poker_dice": "1.1.4",
@@ -87,5 +87,5 @@
     "daily_draw_lab": "1.1.6",
     "four_card_poker": "1.1.7"
   },
-  "notes": "Compatible immutable release packaging delivers the accepted protected-main work since v0.9.5.81: atomic game-state and shared-settlement hardening, cents-safe wallet and guest-lifecycle integrity, provider-owned storage and read-path improvements, complete runner/storage/Admin/application modularization, escape-by-default browser templates, responsive and semantic-color fixes, and governance ratchets. The frozen API compatibility boundary, 46-game catalog, paytables, wager acceptance, release channel, and private-invite policy remain unchanged. The host-owned pull delivery agent remains checksum-, provenance-, inventory-, schema-, health-, readiness-, rollback-, persistence-, root-integrity-, and alarm-gated; v0.9.5.81 remains the exact application-only rollback predecessor. Production remains exact schema 2; migration application, grant mutation, database rollback, provider activation, public signup, live OAuth, billing, DNS, and secret mutation remain prohibited. Permanent requirements total exactly 1104. Canonical inventory is exactly 816 regular files: the current source selection of 815 plus this compatibility record. All content issues were closed through their own rolling-out pull requests; this release-only wrapper closes no issue."
+  "notes": "Compatible immutable release packaging delivers the accepted protected-main work since v0.9.5.81: atomic game-state and shared-settlement hardening, cents-safe wallet and guest-lifecycle integrity, provider-owned storage and read-path improvements, complete runner/storage/Admin/application modularization, escape-by-default browser templates, responsive and semantic-color fixes, governance ratchets, and the exact-copy tracked-inventory repair from #985. The frozen API compatibility boundary, 46-game catalog, paytables, wager acceptance, release channel, and private-invite policy remain unchanged. The host-owned pull delivery agent remains checksum-, provenance-, inventory-, schema-, health-, readiness-, rollback-, persistence-, root-integrity-, and alarm-gated; v0.9.5.81 remains the exact application-only rollback predecessor. Production remains exact schema 2; migration application, grant mutation, database rollback, provider activation, public signup, live OAuth, billing, DNS, and secret mutation remain prohibited. Permanent requirements total exactly 1104. Canonical inventory is exactly 816 regular files: the current source selection of 815 plus this compatibility record. All prior content issues were closed through their own rolling-out pull requests; this packet closes only #985 after its release-builder evidence rolls out."
 }
