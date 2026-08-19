@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.70.9
+- application: 9.70.10
 - core: 10.8.0
 - mobile: 1.0.0
 - ledger: 9.1.2
@@ -17,7 +17,7 @@ Historical source baseline: 9.1.0
 - admin: 1.20.12
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.7.3
+- roulette: 9.7.4
 - slots: 9.5.2
 - blackjack: 9.1.13
 - baccarat: 9.2.1
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.4
 - pai_gow_poker: 1.1.5
 - teen_patti: 1.1.5
-- tests: 1.109.1
-- docs: 1.105.1
+- tests: 1.109.2
+- docs: 1.105.2
 - contracts: 1.62.4
 - tooling: 1.42.0
 - commenting_policy: 2.0.0

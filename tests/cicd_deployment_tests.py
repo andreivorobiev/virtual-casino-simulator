@@ -1533,29 +1533,61 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one explicit area delegation at the historical registration point.
         self.assertEqual(runner_source.count("api_guest.run_cases(run_case,validate_guest_lifecycle,validate_guest_analytics,validate_guest_contracts)"), 1)
 
-    # Prove the shared semantic fallbacks cannot flatten Color Wheel's route-owned gradients.
-    def test_semantic_game_color_cascade_preserves_color_wheel_gradients(self):
-        # Read the shared stylesheet as inert text so the focused oracle opens no listener or browser.
+    # Prove semantic game colors remain route- or component-scoped without a global important cascade. (#717)
+    def test_semantic_game_color_namespaces_are_scoped_without_important(self):
+        # Read each production style owner as inert text so this focused oracle opens no listener or browser.
         stylesheet = self.workflow_text(ROOT / "web" / "styles.css")
-        # Read Color Wheel's production stylesheet source as the canonical gradient owner.
+        # Read Color Wheel's route-owned style source independently from the shared stylesheet.
         color_wheel_source = self.workflow_text(ROOT / "web" / "games" / "color_wheel.js")
-        # Bind each route-qualified override to its exact existing production gradient stops.
-        expected_overrides = {
-            # Preserve the production red wager gradient with an explicit shared-cascade override.
-            ".color-wheel .cw-bet.red": ("linear-gradient(180deg, #d6323d, #8e1822)", "linear-gradient(180deg,#d6323d,#8e1822)"),
-            # Preserve the production green wager gradient with an explicit shared-cascade override.
-            ".color-wheel .cw-bet.green": ("linear-gradient(180deg, #0f9c4c, #0a5f2e)", "linear-gradient(180deg,#0f9c4c,#0a5f2e)"),
-        }
-        # Check both semantic colors through one symmetric static oracle.
-        for selector, (shared_gradient, production_gradient) in expected_overrides.items():
-            # Require one route-qualified shared override so no unrelated red or green control is recolored.
-            self.assertEqual(stylesheet.count(selector), 1)
-            # Isolate the exact override body without depending on unrelated stylesheet ordering.
-            rule_body = stylesheet.split(selector, 1)[1].split("}", 1)[0]
-            # Require the shared fallback conflict to be resolved without flattening the gradient.
-            self.assertIn(f"background: {shared_gradient} !important;", rule_body)
-            # Require the copied stops to remain byte-for-byte aligned with Color Wheel's production source.
-            self.assertIn(f"background:{production_gradient};", color_wheel_source)
+        # Read Roulette's route-owned style source independently from other game modules.
+        roulette_source = self.workflow_text(ROOT / "web" / "games" / "roulette.js")
+        # Read Trente et Quarante's card owner to protect a representative non-shared card surface.
+        trente_source = self.workflow_text(ROOT / "web" / "games" / "trente_et_quarante.js")
+        # Bind the source header to the permanent grep-policy explanation requested by issue #717.
+        namespace_note = "/* CSS namespace gate (#717): bare `.red`, `.black`, and `.green` rules are forbidden; route and card scopes own semantic game colors. */"
+        # Require the namespace rule to remain visible before every executable stylesheet rule.
+        self.assertEqual(stylesheet.splitlines()[0], namespace_note)
+        # Reject the three bare semantic selectors that previously leaked into unrelated game namespaces.
+        self.assertIsNone(re.search(r"(?m)^\s*\.(?:red|black|green)\s*\{", stylesheet))
+        # Isolate the shared playing-card suit rule without depending on unrelated stylesheet ordering.
+        playing_card_rule = stylesheet.split(".playing-card.red", 1)[1].split("}", 1)[0]
+        # Preserve the exact red suit foreground and ivory card face after removing the cascade conflict.
+        self.assertIn("color: #b10020;", playing_card_rule)
+        self.assertIn("background: #fbf7e9;", playing_card_rule)
+        # Reject a priority override on the scoped card face because no global color fallback remains.
+        self.assertNotIn("!important", playing_card_rule)
+        # Bind Color Wheel's route-owned gradients to their exact production stops.
+        for color_rule in (
+            ".cw-bet.red{background:linear-gradient(180deg,#d6323d,#8e1822);}",
+            ".cw-bet.black{background:linear-gradient(180deg,#2a2a2a,#0e0e0e);}",
+            ".cw-bet.green{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);}",
+        ):
+            # Require every Color Wheel semantic control to remain owned by its route source.
+            self.assertIn(color_rule, color_wheel_source)
+        # Bind representative playing-card colors to the game-owned Trente et Quarante surface.
+        self.assertIn(".teq-card.red{color:#b41b29;}", trente_source)
+        self.assertIn(".teq-card.black{color:#161616;}", trente_source)
+        # Enumerate every Roulette selector that previously needed an important counter-override.
+        roulette_selectors = (
+            ".roulette-premium .table-cell.red",
+            ".roulette-premium .table-cell.black",
+            ".roulette-premium .table-cell.green",
+            ".roulette-result-pocket.red",
+            ".roulette-result-pocket.black",
+            ".roulette-result-pocket.green",
+            ".roulette-history-pills span.red",
+            ".roulette-history-pills span.black",
+            ".roulette-history-pills span.green",
+            ".roulette-history-pills span.result-cell",
+        )
+        # Check every formerly conflicting Roulette rule through one exact scoped oracle.
+        for selector in roulette_selectors:
+            # Require the route source to retain exactly one owner for the semantic selector.
+            self.assertEqual(roulette_source.count(f"'{selector}{{"), 1)
+            # Isolate only the selected rule body from the compact production style table.
+            rule_body = roulette_source.split(f"'{selector}{{", 1)[1].split("}", 1)[0]
+            # Reject all important priority from the former global-color cascade war.
+            self.assertNotIn("!important", rule_body)
 
     # Prove the complete auth-backend/PWA affinity family has one external owner and one runner delegation.
     def test_browser_auth_backend_pwa_affinity_registration_ownership_is_exact(self):

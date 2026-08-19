@@ -9422,13 +9422,15 @@
       ],
       "implementation_files": [
         "web/styles.css",
+        "web/games/roulette.js",
         "tests/run_tests.py",
+        "tests/cicd_deployment_tests.py",
         "tests/visual/visual_matrix.json",
         "docs/evidence/semantic-game-colors/README.md"
       ],
       "introduced_in": "issue-554-semantic-game-colors",
-      "changed_in": "issue-554-semantic-game-colors",
-      "notes": "The bounded shared-token repair changes no game source, game module version, wager, payout, result, economy, ledger, API, contract, provider, public policy, package, release, or deployment behavior. Hosted exact-head evidence computes the rendered semantic colors in English and Russian at all four governed viewports, checks brand and playing-card invariants, restores route, locale, and viewport state, and keeps issues #74 and #554 open."
+      "changed_in": "issue-717-css-brand-scope",
+      "notes": "Issue #717 removes the bare global red, black, and green fallbacks, keeps semantic colors under route or card namespaces, and removes only the counter-important declarations that the leak required. The rendered gradients, suit colors, brand chrome, wagers, payouts, results, economy, ledger, API, contracts, providers, and public policy remain unchanged. Hosted exact-head evidence computes the rendered semantic colors in English and Russian at all four governed viewports, checks brand and playing-card invariants, and restores route, locale, and viewport state."
     },
     {
       "id": "TEST-149",
@@ -9447,8 +9449,8 @@
         "docs/evidence/semantic-game-colors/README.md"
       ],
       "introduced_in": "issue-554-semantic-game-colors",
-      "changed_in": "issue-554-semantic-game-colors",
-      "notes": "BR-GAME-COLOR-001 maps only UX-024 and TEST-149, writes bounded computed-style diagnostics beside exact-head screenshots, and adds no generic TEST, API, contract, game, provider, workflow, or release identifier. Browser and heavy qualification are hosted-only for this slice."
+      "changed_in": "issue-717-css-brand-scope",
+      "notes": "BR-GAME-COLOR-001 maps only UX-024 and TEST-149, writes bounded computed-style diagnostics beside exact-head screenshots, and adds no generic TEST, API, contract, game, provider, workflow, or release identifier. Issue #717 adds a listener-free namespace gate that rejects bare semantic-color selectors and every important counter-override from the former cascade conflict. Browser and heavy qualification remain hosted-only."
     },
     {
       "id": "ADMIN-029",

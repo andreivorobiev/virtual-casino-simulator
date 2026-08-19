@@ -126,15 +126,15 @@ const PREMIUM_STYLE = [
   '.roulette-premium .roulette-table-board{flex:none;width:760px;height:590px;border:2px solid var(--gold);border-radius:12px;background:radial-gradient(circle at 45% 14%,rgba(255,255,255,.09),transparent 38%),radial-gradient(circle at 50% 115%,rgba(0,0,0,.5),transparent 55%),linear-gradient(145deg,var(--felt2),var(--felt));box-shadow:inset 0 0 60px rgba(0,0,0,.5),inset 0 0 0 6px rgba(255,217,120,.05),0 14px 30px rgba(0,0,0,.28);}', // Give the betting layout deep-pile felt, table lighting, a vignette, and a double gold trim.
   '.roulette-table-board.roulette-board-dimmed{filter:saturate(.72) brightness(.78);}', // Dim the table during the reveal without layout motion.
   '.roulette-premium .table-cell,.roulette-premium .outside-cell{border-color:rgba(255,245,218,.55);border-radius:5px;box-shadow:inset 0 1px rgba(255,255,255,.1),inset 0 -6px 12px rgba(0,0,0,.22);}', // Bevel cell edges like stitched felt lanes while preserving every existing hit target.
-  '.roulette-premium .table-cell.red{background:linear-gradient(165deg,#c22433,#7c1220 78%)!important;}', // Skin red pockets with a lacquered two-stop red over the shared important brand fallback.
-  '.roulette-premium .table-cell.black{background:linear-gradient(165deg,#2b2f2e,#0a0d0c 78%)!important;}', // Skin black pockets with a graphite two-stop black over the shared important brand fallback.
-  '.roulette-premium .table-cell.green{background:linear-gradient(165deg,#0f9152,#065a31 78%)!important;}', // Skin zero pockets with an emerald two-stop green over the shared important brand fallback.
+  '.roulette-premium .table-cell.red{background:linear-gradient(165deg,#c22433,#7c1220 78%);}', // Scope red pocket lacquer to Roulette without relying on a global semantic-color fallback.
+  '.roulette-premium .table-cell.black{background:linear-gradient(165deg,#2b2f2e,#0a0d0c 78%);}', // Scope black pocket graphite to Roulette without relying on a global semantic-color fallback.
+  '.roulette-premium .table-cell.green{background:linear-gradient(165deg,#0f9152,#065a31 78%);}', // Scope zero-pocket emerald to Roulette without relying on a global semantic-color fallback.
   '.roulette-premium .outside-cell{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.26));font-size:12px;letter-spacing:.05em;text-transform:uppercase;}', // Present outside lanes as etched glass plaques with confident lettering.
   '.roulette-premium .table-cell button:hover,.roulette-premium .outside-cell button:hover{box-shadow:inset 0 0 22px rgba(255,218,119,.28),inset 0 0 0 1px rgba(255,218,119,.5);}', // Add a gold-ring felt hover cue.
   '.roulette-premium .bet-chip{border:3px dashed #fff6da;background:radial-gradient(circle,#fffdf4 0 24%,#e4b12f 25% 54%,#8a5c07 55% 72%,#5d3c03 73%);box-shadow:0 5px 12px rgba(0,0,0,.55),inset 0 0 0 2px rgba(90,50,0,.55),inset 0 2px 3px rgba(255,255,255,.6);}', // Layer the wager chip like a real edge-striped casino check without moving its center.
-  '.roulette-result-pocket.red{background:linear-gradient(160deg,#c22433,#6d0f1b)!important;}', // Match the settled badge to a red pocket over the shared important brand fallback.
-  '.roulette-result-pocket.black{background:linear-gradient(160deg,#333836,#070908)!important;}', // Match the settled badge to a black pocket over the shared important brand fallback.
-  '.roulette-result-pocket.green{background:linear-gradient(160deg,#0f9152,#04492a)!important;}', // Match the settled badge to a zero pocket over the shared important brand fallback.
+  '.roulette-result-pocket.red{background:linear-gradient(160deg,#c22433,#6d0f1b);}', // Match the settled badge to its scoped red pocket color.
+  '.roulette-result-pocket.black{background:linear-gradient(160deg,#333836,#070908);}', // Match the settled badge to its scoped black pocket color.
+  '.roulette-result-pocket.green{background:linear-gradient(160deg,#0f9152,#04492a);}', // Match the settled badge to its scoped zero-pocket color.
   '.roulette-premium .table-cell.result-cell,.roulette-premium .outside-cell.result-cell{outline:3px solid var(--gold);box-shadow:inset 0 0 26px rgba(255,217,120,.4),0 0 22px rgba(255,217,120,.3);}', // Lock the settled result visibly to the winning table area.
   '.roulette-result-marker{position:absolute;right:5px;bottom:3px;color:var(--gold);font-size:9px;font-weight:1000;}', // Keep the table WIN marker inside its pocket.
   '.roulette-premium .spot{display:grid;place-items:center;width:24px;height:24px;border:0;background:transparent;opacity:1;}', // Provide a reliable touch target while the visible marker stays compact. (UX-025)
@@ -162,10 +162,10 @@ const PREMIUM_STYLE = [
   '.roulette-spark-bars i{display:block;min-height:8px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#e8c760,#8e1822);box-shadow:0 3px 8px rgba(0,0,0,.28);}', // Render live frequency bars with casino gold-to-red depth.
   '.roulette-history-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}', // Keep recent pockets in a stable wrapping row.
   '.roulette-history-pills span{display:grid;place-items:center;width:29px;height:29px;border:1px solid rgba(255,255,255,.14);border-radius:50%;color:var(--text);font-size:10px;}', // Render results as compact physical pocket tokens.
-  '.roulette-history-pills span.red{background:linear-gradient(160deg,#c22433,#7c1220)!important;}', // Paint red history pockets with the table's lacquered red.
-  '.roulette-history-pills span.black{background:linear-gradient(160deg,#2b2f2e,#0a0d0c)!important;}', // Paint black history pockets with the table's graphite black.
-  '.roulette-history-pills span.green{background:linear-gradient(160deg,#0f9152,#065a31)!important;}', // Paint zero history pockets with the table's emerald green.
-  '.roulette-history-pills span.result-cell{border-color:#e8c760;background:#e8c760!important;color:#1f1400;font-weight:1000;}', // Highlight the latest settled pocket.
+  '.roulette-history-pills span.red{background:linear-gradient(160deg,#c22433,#7c1220);}', // Paint red history pockets with Roulette-scoped lacquered red.
+  '.roulette-history-pills span.black{background:linear-gradient(160deg,#2b2f2e,#0a0d0c);}', // Paint black history pockets with Roulette-scoped graphite black.
+  '.roulette-history-pills span.green{background:linear-gradient(160deg,#0f9152,#065a31);}', // Paint zero history pockets with Roulette-scoped emerald green.
+  '.roulette-history-pills span.result-cell{border-color:#e8c760;background:#e8c760;color:#1f1400;font-weight:1000;}', // Highlight the latest settled pocket without a global semantic-color conflict.
   '.roulette-premium .details-drawer>h3,.roulette-premium .details-drawer>h4{color:var(--gold);text-transform:uppercase;font-size:11px;letter-spacing:.08em;}', // Give secondary drawer sections one quiet hierarchy.
   '.roulette-premium .details-drawer .mini-table{font-size:11px;}', // Keep scoreboard rows compact.
   '.roulette-premium .details-drawer .stat-bars{max-height:110px;overflow:auto;}', // Contain long hot-number output inside the drawer.
