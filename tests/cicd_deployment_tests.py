@@ -566,7 +566,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             ("STORAGE-MYSQL-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "LEDGER-009", "LEDGER-033", "TEST-164"]),
             ("MYSQL-POOL-001", ["STORAGE-010", "TEST-141", "TEST-220"]),
             ("STORAGE-MYSQL-LIVE-001", ["STORAGE-001", "STORAGE-002", "STORAGE-003", "STORAGE-004", "STORAGE-005", "STORAGE-006", "STORAGE-010", "MYSQL-001", "MYSQL-002", "MYSQL-003", "MYSQL-004", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "INVITE-003", "TEST-038", "TEST-043", "TEST-089", "TEST-090", "TEST-091", "TEST-141", "TEST-171", "TEST-220"]),
-            ("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220"]),
+            ("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246"]),
         )
         # Read the compatibility runner and extracted owner as inert source text.
         runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
@@ -1261,7 +1261,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     def test_api_gamecore_mobile_foundation_area_registration_ownership_is_exact(self):
         # Define the exact reviewed cases and requirement mappings in historical order.
         expected_cases = (
-            ("API-GAMECORE-001", ["GAMECORE-001", "GAMECORE-002", "GAMECORE-007", "TEST-127", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240"]),
+            ("API-GAMECORE-001", ["GAMECORE-001", "GAMECORE-002", "GAMECORE-007", "GAMECORE-009", "TEST-127", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240", "TEST-246"]),
             ("API-GAMECORE-005", ["GAMECORE-005", "GAMECORE-006", "GAMECORE-007", "STORAGE-017", "TEST-233", "TEST-234", "TEST-235", "TEST-236", "TEST-237", "TEST-238", "TEST-239", "TEST-240", "TEST-245"]),
             ("API-GAMECORE-002", ["GAMECORE-003", "LEDGER-033", "TEST-164"]),
             ("API-GAMECORE-004", ["LEDGER-032", "GAMECORE-004", "GAMECORE-008", "TEST-157", "TEST-241"]),

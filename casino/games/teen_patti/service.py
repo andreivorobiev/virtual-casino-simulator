@@ -10,8 +10,8 @@ import copy
 import hashlib
 # Import regular expressions for bounded public action identities.
 import re
-# Import a reentrant lock for single-process state and ledger reconciliation.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import the only approved player-balance mutation service.
 from casino.core import players
@@ -31,8 +31,6 @@ GAME_ID = engine.GAME_ID
 # Bound client retry ids to log-safe characters and a conservative length.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local history to preserve retry recovery for the supported simulator.
-# Serialize action-id lookup and ledger writes inside the one-process server.
-_ACTION_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent game state.
 _ATOMIC_BASELINE_KEY = "_teen_patti_atomic_baseline"
 # Name every Teen Patti field one transition may replace.
@@ -264,7 +262,7 @@ class TeenPattiService:
     # Read reload-safe state for one authenticated player.
     def state(self, player_id: str) -> dict:
         # Serialize recovery against concurrent actions for the same local process.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the newest player-scoped document inside the lock.
             state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
@@ -285,7 +283,7 @@ class TeenPattiService:
         # Bind the action identity to the exact normalized ante.
         fingerprint = request_fingerprint({"stage": "deal", "ante": ante})
         # Serialize state preparation, debit, and marker persistence.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the current player's state inside the critical section.
             state = self._load(player_id)
             # Recover any interrupted prior action before enforcing active-round rules.
@@ -360,7 +358,7 @@ class TeenPattiService:
         # Bind the action to the exact round and decision.
         fingerprint = request_fingerprint({"stage": "decision", "round_id": round_id, "decision": decision})
         # Serialize reveal, play debit, archive, and returned-token settlement.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load only the authenticated player's latest document.
             state = self._load(player_id)
             # Recover or clear any interrupted action before allowing a decision.

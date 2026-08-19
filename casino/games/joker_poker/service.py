@@ -10,8 +10,8 @@ import json
 import re
 # Import hashing so changed retries fail even when amounts happen to match.
 import hashlib
-# Import a reentrant lock for single-process state and ledger reconciliation.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import the only approved player-balance mutation service.
 from casino.core import players
@@ -31,8 +31,6 @@ GAME_ID = engine.GAME_ID
 # Bound client retry ids to log-safe characters and a conservative length.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local history to preserve retry recovery for the supported simulator.
-# Serialize action-id lookup and ledger writes inside the one-process server.
-_ACTION_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent state.
 _ATOMIC_BASELINE_KEY = "_joker_poker_atomic_baseline"
 # Name every state field owned by Joker Poker transitions.
@@ -233,7 +231,7 @@ class JokerPokerService:
     # Read reload-safe state for one authenticated player.
     def state(self, player_id: str) -> dict:
         # Serialize recovery against concurrent actions for the same local process.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the newest player-scoped document inside the lock.
             state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
@@ -254,7 +252,7 @@ class JokerPokerService:
         # Bind the action identity to the exact normalized wager.
         fingerprint = request_fingerprint({"stage": "deal", "wager": wager})
         # Serialize state preparation, debit, and marker persistence.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the current player's state inside the critical section.
             state = self._load(player_id)
             # Recover any interrupted prior action before enforcing active-round rules.
@@ -339,7 +337,7 @@ class JokerPokerService:
             # Reject malformed bodies before state access.
             raise ValidationError("Joker Poker holds body must be an object")
         # Serialize hold changes against concurrent draws.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the current player's state inside the critical section.
             state = self._load(player_id)
             # Recover any interrupted wager before accepting a hold edit.
@@ -372,7 +370,7 @@ class JokerPokerService:
         # Bind the action to the exact round and current held positions.
         fingerprint = request_fingerprint({"stage": "draw", "round_id": round_id, "holds": engine.normalize_holds(request.get("holds", [])) if "holds" in request else None})
         # Serialize draw, archive, and returned-token settlement.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load only the authenticated player's latest document.
             state = self._load(player_id)
             # Recover or clear any prepared wager before allowing a draw action.

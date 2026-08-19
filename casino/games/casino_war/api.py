@@ -8,8 +8,8 @@ LEDGER-007, LEDGER-023, SESSION-003, SESSION-004, and planned SESSION-005 from #
 
 # Import deep-copy support so failed prepared decisions can restore prior state.
 import copy
-# Import a process-local reentrant lock so duplicate local requests serialize.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 # Import action-id validation for bounded idempotency keys.
 import re
 
@@ -30,8 +30,6 @@ from casino.games.casino_war import engine
 GAME_ID = engine.GAME_ID
 # Accept UUID-like and namespaced client action ids without arbitrary text.
 ACTION_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
-# Serialize prepared state and ledger recovery in the current local server process.
-_ACTION_LOCK = threading.RLock()
 
 
 # Persist and load player-scoped Casino War state through the shared store.
@@ -318,7 +316,7 @@ class CasinoWarController:
     # Read player state and finish any already-prepared interrupted action.
     def state(self, player_id: str) -> dict:
         # Serialize recovery against duplicate action requests in this process.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the session-bound player document.
             state = self.repository.load(player_id)
             # Recover only actions the player already requested before interruption.
@@ -329,7 +327,7 @@ class CasinoWarController:
     # Deal one initial comparison under a replay-safe client action id.
     def start_round(self, player_id: str, wager, action_id: str) -> dict:
         # Serialize preparation and reconciliation for duplicate local requests.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the session-bound player document.
             state = self.repository.load(player_id)
             # Prepare or adopt one exact round against the provider-owned latest document.
@@ -360,7 +358,7 @@ class CasinoWarController:
     # Execute surrender or war once under a replay-safe client action id.
     def decide(self, player_id: str, round_id: str, decision: str, action_id: str) -> dict:
         # Serialize preparation and reconciliation for duplicate local decisions.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the session-bound player document.
             state = self.repository.load(player_id)
             # Prepare or adopt one exact decision against the provider-owned latest document.

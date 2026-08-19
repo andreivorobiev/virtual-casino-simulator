@@ -9,8 +9,8 @@ Requirements: SESSION-005, LEDGER-005, LEDGER-006, LEDGER-007, and LEDGER-023.
 import copy
 # Import regular expressions for bounded client idempotency keys.
 import re
-# Import a process-local lock for single-server retry serialization.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import player and managed-account services without a game-owned ledger mutation boundary.
 from casino.core import players, practice_accounts
@@ -33,8 +33,6 @@ from casino.games.texas_holdem_practice_table import engine
 GAME_ID = engine.GAME_ID
 # Accept UUID-like and namespaced action ids without arbitrary log text.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,96}$")
-# Serialize prepared state, ledger recovery, and action replay locally.
-_ACTION_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent game state.
 _ATOMIC_BASELINE_KEY = "_texas_holdem_practice_table_atomic_baseline"
 # Name only the practice-table fields one transition may replace.
@@ -326,7 +324,7 @@ class TexasHoldemPracticeTableController:
     # Read player state and finish any already-prepared interrupted movement.
     def state(self, player_id: str) -> dict:
         # Serialize reload recovery against duplicate action requests.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the session-bound player's isolated table document.
             state = self._load(player_id)
             # Recover only movements that were already durably prepared.
@@ -339,7 +337,7 @@ class TexasHoldemPracticeTableController:
         # Normalize the wager before comparing idempotent replay parameters.
         wager = engine.require_base_wager(base_wager)
         # Serialize preparation and reconciliation for duplicate local requests.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Ensure every fixed practice opponent has a real funded wallet before reserving exposure.
             self.ledger.ensure_accounts()
             # Load the latest player-scoped state under the action lock.
@@ -404,7 +402,7 @@ class TexasHoldemPracticeTableController:
         # Validate the client-observed phase before loading mutable hand state.
         normalized_phase = require_expected_phase(expected_phase)
         # Serialize state transitions and settlement recovery locally.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the latest session-bound player state.
             state = self._load(player_id)
             # Recover any movement prepared by an earlier request first.

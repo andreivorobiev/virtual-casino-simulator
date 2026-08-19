@@ -10,8 +10,8 @@ import json
 import hashlib
 # Import regular expressions for bounded action identities.
 import re
-# Import a reentrant lock for one-process state and ledger serialization.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import only the shared player boundary allowed for game reads.
 from casino.core import players
@@ -30,8 +30,6 @@ from casino.games.acey_deucey import engine
 GAME_ID = engine.GAME_ID
 # Bound public action ids to log-safe characters and conservative length.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
-# Serialize the supported local single-process action path.
-_ACTION_LOCK = threading.RLock()
 # Keep one operation's optimistic comparison snapshot outside persistent state.
 _ATOMIC_BASELINE_KEY = "_acey_deucey_atomic_baseline"
 # Name every state field owned by Acey-Deucey transitions.
@@ -243,7 +241,7 @@ class AceyDeuceyService:
     # Read reload-safe state for one authenticated player.
     def state(self, player_id: str) -> dict:
         # Serialize recovery with local action handling.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the player-scoped state document.
             state = self._load(player_id)
             # Recover any committed ledger markers.
@@ -262,7 +260,7 @@ class AceyDeuceyService:
         # Fingerprint the deal stage without caller identity fields.
         fingerprint = request_fingerprint({"stage": "deal"})
         # Serialize state preparation and receipt persistence.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the bound player's latest document.
             state = self._load(player_id)
             # Recover retained markers before enforcing active-round rules.
@@ -320,7 +318,7 @@ class AceyDeuceyService:
         # Bind the play action to round and amount.
         fingerprint = request_fingerprint({"stage": "play", "round_id": round_id, "wager": wager})
         # Serialize reveal and wallet movements.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the bound player's state.
             state = self._load(player_id)
             # Recover previous ledger markers first.
@@ -397,7 +395,7 @@ class AceyDeuceyService:
         # Bind the pass to the target round.
         fingerprint = request_fingerprint({"stage": "pass", "round_id": round_id})
         # Serialize terminal state persistence.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the bound player's state.
             state = self._load(player_id)
             # Recover any retained ledger markers first.

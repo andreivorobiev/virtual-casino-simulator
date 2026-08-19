@@ -53,7 +53,7 @@ Game code never mutates a player balance directly.
 7. Pending crash markers search the complete same-player ledger history, while completed markers use durable cached proof and never authorize a replacement movement.
 8. Exact retries recover committed ledger events and state even after the round leaves public history. Reusing an action identity with conflicting settings fails closed.
 
-The private journal intentionally trades local state growth for durable action ownership. The read-before-write ledger guard is protected by one process-local lock and is appropriate for this local single-process simulator. A future multi-process deployment must add a durable storage-level unique idempotency constraint before claiming cross-process exactly-once behavior.
+The private journal intentionally trades local state growth for durable action ownership. A bounded player-scoped stripe orders each wallet's local state and recovery work; provider-enforced action identity supplies cross-process exactly-once settlement while unrelated MySQL wallets can proceed concurrently.
 
 ## Frontend and motion
 

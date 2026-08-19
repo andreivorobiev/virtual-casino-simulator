@@ -13048,6 +13048,28 @@
       "notes": "The retirement changes only the internal Python mutation boundary. Frozen API routes and envelopes, wallet timing, action identities, paytables, and historical ledger bytes remain unchanged."
     },
     {
+      "id": "GAMECORE-009",
+      "module": "Core",
+      "description": "Shared and legacy game settlement paths use one bounded deterministic player-lock stripe before local state, recovery, and provider work. Same-player actions remain serialized while unrelated players can enter independent MySQL row transactions concurrently. Lock order is player stripe then provider transaction or the unchanged JSON global gate, and a caller never acquires a second player stripe while holding the first.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/player_locks.py",
+        "casino/core/simple_game.py",
+        "casino/games/",
+        "docs/games/",
+        "tests/simple_game_tests.py",
+        "tests/mysql_migration_live.py"
+      ],
+      "introduced_in": "issue-715-player-lock-striping",
+      "changed_in": "issue-715-player-lock-striping",
+      "notes": "The fixed 257-stripe registry retains no player-keyed entries. Rare stripe collisions safely serialize unrelated players; JSON retains its existing cross-process global gate and MySQL retains provider row locking and action-identity enforcement."
+    },
+    {
       "id": "TEST-235",
       "module": "Tests",
       "description": "Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.",
@@ -13374,6 +13396,28 @@
       "introduced_in": "issue-714-provider-read-path-efficiency",
       "changed_in": "issue-714-provider-read-path-efficiency",
       "notes": "The measured fresh winning action performs one state load, two exactly-once money transactions, zero redundant proof reads, one atomic state update, and one player point read; replay retains only the two required immutable proof lookups. SQL fixtures allocate no connector or network resource."
+    },
+    {
+      "id": "TEST-246",
+      "module": "Tests",
+      "description": "Listener-free evidence proves fixed registry capacity, deterministic stripe selection, malformed identity refusal, documented lock ordering, concurrent completion for distinct player stripes, and strict same-player serialization. Disposable MySQL evidence uses two real wallets and a resolver rendezvous to prove unrelated player actions both reach settlement and commit exactly one debit and credit without changing the JSON global gate.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/simple_game_tests.py",
+        "tests/mysql_migration_live.py",
+        "tests/cases/api/gamecore_mobile_foundation.py",
+        "tests/cases/api/storage_foundation.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/unit/request_latency_benchmark_tests.py"
+      ],
+      "introduced_in": "issue-715-player-lock-striping",
+      "changed_in": "issue-715-player-lock-striping",
+      "notes": "The distinct-player rendezvous would time out under the retired process-wide game lock. Same-player transfer is explicitly held until the first resolver releases, and the live matrix verifies final MySQL balances and immutable movement order for both wallets."
     }
   ]
 }

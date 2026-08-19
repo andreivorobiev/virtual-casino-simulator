@@ -32,7 +32,7 @@ Deal and guess commands each require a bounded `action_id`. Reusing an action wi
 - Every wager uses `HI_LO_WAGER_DEBIT` through `casino/core/ledger.py`.
 - Correct guesses use `HI_LO_PAYOUT_CREDIT`; equal ranks use `HI_LO_REFUND_CREDIT`; incorrect guesses create no zero-value ledger row.
 - Ledger events include player, game, round, transaction type, amount, stage, action identity, request fingerprint, and revealed result context where applicable.
-- A process-local reentrant lock, durable player-state action receipts, and ledger action scanning prevent duplicate movements in the supported one-process simulator and recover markers after interrupted saves.
+- A bounded player-scoped reentrant stripe, durable player-state action receipts, and provider-enforced ledger action identity prevent duplicate movements while allowing unrelated MySQL wallets to settle concurrently.
 - Game code never mutates player balances or storage-provider balance fields directly.
 
 A future multi-process deployment must add an atomic unique idempotency key to the shared ledger provider before claiming the same guarantee across processes. That shared-core follow-up is outside issue #85.

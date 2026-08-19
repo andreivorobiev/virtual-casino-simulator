@@ -10,8 +10,8 @@ import json
 import hashlib
 # Import bounded action identity validation.
 import re
-# Import process-local locks for one-server exactly-once sequences.
-import threading
+# Import bounded player-scoped serialization so unrelated wallets can proceed concurrently.
+from casino.core.player_locks import player_action_lock
 
 # Import the only approved wallet mutation service and player reader.
 from casino.core import players
@@ -29,8 +29,6 @@ from casino.games.caribbean_stud import engine
 # Require bounded log-safe action ids for every public movement or decision.
 ACTION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 # Scan enough local ledger history to recover supported simulator retries.
-# Serialize state and ledger read-before-write sections in the local process.
-_ACTION_LOCK = threading.RLock()
 # Keep the optimistic comparison snapshot private to one in-memory service operation.
 _ATOMIC_BASELINE_KEY = "_caribbean_stud_atomic_baseline"
 # Name only the game-owned fields that one transition may replace.
@@ -352,7 +350,7 @@ class CaribbeanStudService:
     # Read reload-safe state for one authenticated player.
     def state(self, player_id: str) -> dict:
         # Serialize recovery against concurrent actions for the same local process.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the newest player-scoped document inside the lock.
             state = self._load(player_id)
             # Recover committed or owed ledger movements before publishing state.
@@ -373,7 +371,7 @@ class CaribbeanStudService:
         # Bind the action identity to the exact normalized ante.
         fingerprint = request_fingerprint({"stage": "deal", "ante": ante})
         # Serialize state preparation, debit, and marker persistence.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the current player's state inside the critical section.
             state = self._load(player_id)
             # Recover any interrupted prior action before enforcing active-round rules.
@@ -454,7 +452,7 @@ class CaribbeanStudService:
         # Bind the action identity to the exact round and call stage.
         fingerprint = request_fingerprint({"stage": "call", "round_id": round_id})
         # Serialize reveal, archive, call debit, and returned-token settlement.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the current player's state inside the critical section.
             state = self._load(player_id)
             # Recover any interrupted movements before a new decision.
@@ -539,7 +537,7 @@ class CaribbeanStudService:
         # Bind the action identity to the exact round and fold stage.
         fingerprint = request_fingerprint({"stage": "fold", "round_id": round_id})
         # Serialize terminal state updates.
-        with _ACTION_LOCK:
+        with player_action_lock(player_id):
             # Load the current player's state inside the critical section.
             state = self._load(player_id)
             # Recover any interrupted ante before permitting a fold.

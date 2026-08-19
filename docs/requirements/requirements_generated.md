@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.70.10
-- core: 10.9.0
+- core: 10.10.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.4
@@ -23,36 +23,36 @@ Historical source baseline: 9.1.0
 - baccarat: 9.2.1
 - keno: 9.4.1
 - bingo: 9.3.8
-- multi_hand_video_poker: 1.1.3
-- casino_war: 1.2.1
+- multi_hand_video_poker: 1.1.4
+- casino_war: 1.2.2
 - big_six_wheel: 1.2.0
-- red_dog: 1.1.3
+- red_dog: 1.1.4
 - dragon_tiger: 1.2.0
-- hi_lo: 1.1.5
-- three_card_poker: 1.1.4
-- jacks_or_better_video_poker: 1.1.4
-- deuces_wild_video_poker: 1.1.5
-- scratch_cards: 1.1.4
+- hi_lo: 1.1.6
+- three_card_poker: 1.1.5
+- jacks_or_better_video_poker: 1.1.5
+- deuces_wild_video_poker: 1.1.6
+- scratch_cards: 1.1.5
 - sic_bo: 1.2.0
 - chuck_a_luck: 1.2.0
-- craps: 1.1.3
+- craps: 1.1.4
 - crown_and_anchor: 1.2.0
 - over_under_7: 1.2.0
-- plinko: 1.1.4
+- plinko: 1.1.5
 - fan_tan: 1.2.0
-- andar_bahar: 1.1.6
-- acey_deucey: 1.1.5
-- caribbean_stud: 1.1.4
-- let_it_ride: 1.1.3
-- casino_holdem: 1.1.4
-- double_bonus_video_poker: 1.1.5
-- mississippi_stud: 1.1.5
-- joker_poker: 1.1.4
-- texas_holdem_practice_table: 1.1.4
-- pai_gow_poker: 1.1.5
-- teen_patti: 1.1.5
-- tests: 1.111.0
-- docs: 1.107.0
+- andar_bahar: 1.1.7
+- acey_deucey: 1.1.6
+- caribbean_stud: 1.1.5
+- let_it_ride: 1.1.4
+- casino_holdem: 1.1.5
+- double_bonus_video_poker: 1.1.6
+- mississippi_stud: 1.1.6
+- joker_poker: 1.1.5
+- texas_holdem_practice_table: 1.1.5
+- pai_gow_poker: 1.1.6
+- teen_patti: 1.1.6
+- tests: 1.112.0
+- docs: 1.108.0
 - contracts: 1.62.4
 - tooling: 1.43.0
 - commenting_policy: 2.1.0
@@ -67,7 +67,7 @@ Historical source baseline: 9.1.0
 - pattern_draw: 1.1.5
 - lucky_grid: 1.1.5
 - daily_draw_lab: 1.1.6
-- four_card_poker: 1.1.6
+- four_card_poker: 1.1.7
 
 ## Requirements
 
@@ -731,6 +731,7 @@ Historical source baseline: 9.1.0
 - **TEST-234** (Tests) - PASS: Focused SimpleWagerGame and Big Six Wheel evidence proves unchanged default helper behavior, exact legacy request and round identities, canonical and historical ledger-proof recovery, frozen action/state rows, 100-round retention, no direct Big Six settlement gateway call, and two-process provider-current preservation of two distinct rounds plus an unrelated sibling.
 - **GAMECORE-007** (Core) - PASS: SimpleWagerGame exposes one optional prepared-state lifecycle protocol that can durably prepare private entropy, reconcile wager failure, publish immutable wager proof, publish deterministic settlement intent, publish optional credit proof, and freeze terminal fields before the helper archives its provider-current round. Ordinary helper games retain their established default path, and an incomplete lifecycle fails before silently skipping a money-sensitive stage.
 - **GAMECORE-008** (Core) - PASS: GameSettlementGateway.apply_once exposes one keyword-only mutation vocabulary: authenticated player_id, finite non-zero signed_amount, transaction_type, stable round_id, stable action_key, deterministic request_fingerprint, and optional details. The retired amount, drop_id, card_id, ledger_action_id, action_id, and fingerprint aliases are rejected before provider access; new events omit configured legacy action-detail keys while immutable predecessor rows remain read-compatible.
+- **GAMECORE-009** (Core) - PASS: Shared and legacy game settlement paths use one bounded deterministic player-lock stripe before local state, recovery, and provider work. Same-player actions remain serialized while unrelated players can enter independent MySQL row transactions concurrently. Lock order is player stripe then provider transaction or the unchanged JSON global gate, and a caller never acquires a second player stripe while holding the first.
 - **TEST-235** (Tests) - PASS: Focused SimpleWagerGame and Sic Bo evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct fifty-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-236** (Tests) - PASS: Focused SimpleWagerGame and Chuck-a-Luck evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
 - **TEST-237** (Tests) - PASS: Focused SimpleWagerGame and Over/Under 7 evidence proves unchanged default-helper behavior, exact lifecycle stage ordering, no retry entropy redraw, frozen action and response shapes, old ledger-proof recovery, every historical crash window, direct one-hundred-round retention, one helper construction with no game-local settlement call, and real two-process provider-current preparation serialization with sibling preservation.
@@ -743,6 +744,7 @@ Historical source baseline: 9.1.0
 - **TEST-244** (Tests) - PASS: Listener-free policy evidence proves the current reviewed baseline, independent line and byte thresholds, exact-versus-greater-than-twenty-percent growth behavior, stale-entry rejection, generated, vendored, and data exclusions, and fail-closed register schema, ordering, and duplication diagnostics without mutating checked source.
 - **STORAGE-017** (Storage) - PASS: Provider read paths avoid unrelated durable material: JSON history uses a stat-guarded incremental CSV tail cache with per-game indexing and reset invalidation, MySQL player reads use the player primary key, MySQL game economics aggregates inside the newest bounded SQL window, JSON economics iterates the cached ledger snapshot, and shared simple-game responses reuse provider-committed state and ledger events.
 - **TEST-245** (Tests) - PASS: Listener-free provider evidence proves warmed history reads decode only appended CSV bytes while matching a cache-free reader, JSON and MySQL player point-read parity and SQL shape, MySQL economics aggregation and detail bounds, and shared-game provider-call reduction with exact response, state, ledger, replay, and reset behavior preserved.
+- **TEST-246** (Tests) - PASS: Listener-free evidence proves fixed registry capacity, deterministic stripe selection, malformed identity refusal, documented lock ordering, concurrent completion for distinct player stripes, and strict same-player serialization. Disposable MySQL evidence uses two real wallets and a resolver rendezvous to prove unrelated player actions both reach settlement and commit exactly one debit and credit without changing the JSON global gate.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

@@ -4,15 +4,24 @@
 
 # Import deep-copy support for provider-shaped state fixtures.
 import copy
+# Import paths for catalog-wide player-lock and unchanged JSON-gate source evidence.
+from pathlib import Path
+# Import bounded thread coordination for same-player and cross-player lock evidence.
+import threading
 # Import the standard unittest framework used by the repository's focused suites.
 import unittest
 
 # Import the authoritative ledger and player boundaries for balance assertions.
 from casino.core import ledger, players
+# Import the bounded registry and shared action-lock seam under test. (GAMECORE-009)
+from casino.core.player_locks import PlayerLockStriper, player_action_lock
 # Import the shared wager-and-settle core under test.
 from casino.core.simple_game import SimpleWagerGame, round_id_for
 # Import the standard bounded application errors every rejection uses.
 from casino.errors import ConflictError, ValidationError
+
+# Resolve the checked repository root for source-boundary evidence.
+ROOT = Path(__file__).resolve().parents[1]
 
 
 # Draw one deterministic die from an injected random function for a stable test.
@@ -140,6 +149,239 @@ class SimpleGameCoreTests(unittest.TestCase):
     def _balance(self) -> float:
         # Return the player's current wallet balance.
         return players.get_player(self.pid)["balance"]
+
+    # Prove the shared lock registry remains bounded and deterministically player-scoped. (TEST-246)
+    def test_player_lock_registry_is_bounded_and_validated(self) -> None:
+        # Build a deliberately small registry so bounded allocation is directly observable.
+        registry = PlayerLockStriper(stripe_count=7)
+        # Select the same identity twice without retaining any player-keyed mapping.
+        first_index = registry.stripe_index("bounded-player")
+        # Require stable selection, fixed capacity, and the same reusable lock object.
+        self.assertEqual((7, first_index, registry.lock_for("bounded-player") is registry.lock_for("bounded-player")), (registry.stripe_count, registry.stripe_index("bounded-player"), True))
+        # Reject boolean and non-positive registry sizes rather than allocating an unsafe fallback.
+        for invalid_count in (True, 0, -1):
+            # Require every invalid fixed-size configuration to fail at construction.
+            with self.subTest(invalid_count=invalid_count), self.assertRaises(ValueError):
+                # Exercise the configuration guard without allocating a registry.
+                PlayerLockStriper(stripe_count=invalid_count)
+        # Reject absent or empty identities before lock selection.
+        for invalid_player in (None, ""):
+            # Require malformed internal identities to fail closed.
+            with self.subTest(invalid_player=invalid_player), self.assertRaises(ValueError):
+                # Exercise the player-identity guard.
+                registry.lock_for(invalid_player)
+        # Bind the documented deadlock rule to the public lock seam.
+        self.assertIn("before provider/JSON locks; never acquire a second player stripe", player_action_lock.__doc__)
+
+    # Prove every legacy gateway migrated and the JSON provider retained its global gate. (TEST-246)
+    def test_gateway_inventory_uses_player_stripes_and_json_gate_survives(self) -> None:
+        # Bind the exact legacy gateway source inventory approved by issue 715.
+        gateway_paths = (
+            "casino/games/acey_deucey/service.py",
+            "casino/games/andar_bahar/service.py",
+            "casino/games/caribbean_stud/service.py",
+            "casino/games/casino_holdem/service.py",
+            "casino/games/casino_war/api.py",
+            "casino/games/craps/api.py",
+            "casino/games/deuces_wild_video_poker/api.py",
+            "casino/games/double_bonus_video_poker/service.py",
+            "casino/games/four_card_poker/service.py",
+            "casino/games/hi_lo/service.py",
+            "casino/games/jacks_or_better_video_poker/api.py",
+            "casino/games/joker_poker/service.py",
+            "casino/games/let_it_ride/api.py",
+            "casino/games/mississippi_stud/service.py",
+            "casino/games/multi_hand_video_poker/api.py",
+            "casino/games/pai_gow_poker/service.py",
+            "casino/games/plinko/service.py",
+            "casino/games/red_dog/api.py",
+            "casino/games/scratch_cards/service.py",
+            "casino/games/teen_patti/service.py",
+            "casino/games/texas_holdem_practice_table/api.py",
+            "casino/games/three_card_poker/service.py",
+        )
+        # Require the reviewed inventory to remain exact rather than silently shrinking.
+        self.assertEqual(len(gateway_paths), 22)
+        # Inspect every migrated legacy action owner.
+        for relative_path in gateway_paths:
+            # Name the active file in any focused failure.
+            with self.subTest(relative_path=relative_path):
+                # Read the complete checked source without importing route modules.
+                source = (ROOT / relative_path).read_text(encoding="utf-8")
+                # Require shared player stripes and reject both retired module-lock identities.
+                self.assertIn("from casino.core.player_locks import player_action_lock", source)
+                # Require at least one actual protected action, not an unused import.
+                self.assertIn("with player_action_lock(player_id):", source)
+                # Reject reintroduction of either retired process-wide game lock.
+                self.assertNotIn("threading.RLock", source)
+                # Reject the historical action-lock symbol.
+                self.assertNotIn("_ACTION_LOCK", source)
+                # Reject the historical settlement-lock symbol.
+                self.assertNotIn("_SETTLEMENT_LOCK", source)
+        # Read only the unchanged JSON provider source for its money-path gate proof.
+        json_source = (ROOT / "casino/core/storage/json_provider.py").read_text(encoding="utf-8")
+        # Isolate the exactly-once ledger mutation method from the following method.
+        json_transaction = json_source.split("    def transact_ledger_once", 1)[1].split("\n    def ", 1)[0]
+        # Require the existing in-process and cross-process JSON gates in their established order.
+        self.assertLess(json_transaction.index("with self.lock:"), json_transaction.index("with self._ledger_process_lock():"))
+
+    # Prove different player wallets can reach settlement concurrently without a process-wide gate. (TEST-246)
+    def test_different_players_settle_concurrently(self) -> None:
+        # Use the production stripe count to choose two identities that cannot share a stripe by accident.
+        registry = PlayerLockStriper()
+        # Fix one synthetic player identity.
+        first_player = "stripe-player-a"
+        # Select the first deterministic identity mapped to another stripe.
+        second_player = next(candidate for candidate in (f"stripe-player-{index}" for index in range(1000)) if registry.stripe_index(candidate) != registry.stripe_index(first_player))
+        # Require both resolver calls to rendezvous while their player stripes are held.
+        resolver_barrier = threading.Barrier(2, timeout=3)
+        # Protect only the synthetic provider document fixture, never the game settlement path.
+        state_lock = threading.Lock()
+        # Retain detached state documents by synthetic player id.
+        documents = {}
+        # Use one immutable fake gateway whose distinct action keys model MySQL row-level writes.
+        gateway = CountingLedgerGateway()
+        # Collect thread results without leaking exceptions across the assertion boundary.
+        results = {}
+        # Retain unexpected failures for the parent thread.
+        errors = []
+
+        # Load one detached provider-shaped state document.
+        def load_state(player_id):
+            # Serialize only fixture dictionary access.
+            with state_lock:
+                # Return the current detached state or one fresh game document.
+                return copy.deepcopy(documents.get(player_id, {"game": "unit_flip", "recent_rounds": []}))
+
+        # Publish one state mutation against fixture-current authority.
+        def update_state(player_id, mutator):
+            # Serialize only the in-memory provider callback.
+            with state_lock:
+                # Apply the production callback to a detached current document.
+                updated = mutator(copy.deepcopy(documents.get(player_id, {"game": "unit_flip", "recent_rounds": []})))
+                # Retain the committed detached document.
+                documents[player_id] = copy.deepcopy(updated)
+                # Return detached provider authority.
+                return copy.deepcopy(updated)
+
+        # Resolve only after both distinct players entered the protected action path.
+        def resolve_concurrently(wager, entropy):
+            # Fail the test if a process-wide lock prevents the second player from arriving.
+            resolver_barrier.wait()
+            # Reuse the deterministic production-shaped resolver.
+            return _resolve(wager, entropy)
+
+        # Return one synthetic point-read wallet for the response envelope.
+        def get_player(player_id):
+            # Preserve the requested identity and a deterministic post-settlement balance.
+            return {"player_id": player_id, "balance": 14.0}
+
+        # Build one helper shared by both distinct player requests.
+        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=resolve_concurrently, validate_bet=_validate_bet, entropy_source=lambda _n: 2, ledger_gateway=gateway, state_loader=load_state, state_updater=update_state, get_player=get_player)
+
+        # Execute one distinct player action and retain its result or error.
+        def execute(player_id, request_id):
+            try:
+                # Run the complete wager, resolver rendezvous, settlement, and publication path.
+                results[player_id] = game.play(player_id, {"request_id": request_id, "face": 3, "stake": 1})
+            # Retain any failure for exact parent-thread handling.
+            except BaseException as exc:
+                # Preserve only the in-memory exception object.
+                errors.append(exc)
+
+        # Create both player workers before starting either one.
+        threads = (threading.Thread(target=execute, args=(first_player, "stripe-a")), threading.Thread(target=execute, args=(second_player, "stripe-b")))
+        # Start both different-player actions.
+        for thread in threads:
+            # Allow each player stripe to progress independently.
+            thread.start()
+        # Join both actions within one bounded evidence window.
+        for thread in threads:
+            # Wait for wallet and state publication to finish.
+            thread.join(5)
+        # Require both actions to finish without a broken rendezvous or hidden failure.
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        # Require no thread failure and one complete winning result per player.
+        self.assertEqual((errors, set(results), gateway.apply_calls), ([], {first_player, second_player}, 4))
+
+    # Prove two actions for the same player retain strict local serialization. (TEST-246)
+    def test_same_player_actions_remain_serialized(self) -> None:
+        # Signal when the first request reaches its resolver while holding the player stripe.
+        first_entered = threading.Event()
+        # Detect any second resolver entry before the first request releases the stripe.
+        second_entered = threading.Event()
+        # Release the first resolver only after the serialization assertion.
+        release_first = threading.Event()
+        # Protect the resolver-entry counter used only by this concurrency fixture.
+        resolver_lock = threading.Lock()
+        # Retain resolver entry count without relying on thread scheduling order.
+        resolver_calls = []
+        # Reuse one provider-shaped state fixture and one immutable ledger gateway.
+        state = MemoryState()
+        # Retain unexpected worker failures.
+        errors = []
+
+        # Block the first resolver and flag any premature second entry.
+        def resolve_serially(wager, entropy):
+            # Assign one stable entry ordinal under the fixture lock.
+            with resolver_lock:
+                # Record this resolver arrival.
+                resolver_calls.append(threading.current_thread().name)
+                # Capture the one-based arrival ordinal.
+                ordinal = len(resolver_calls)
+            # Hold only the first action while the parent probes the second.
+            if ordinal == 1:
+                # Tell the parent the player stripe is occupied inside resolution.
+                first_entered.set()
+                # Wait for the bounded parent-controlled release.
+                if not release_first.wait(3):
+                    # Fail explicitly instead of allowing a hung test.
+                    raise AssertionError("same-player resolver release timed out")
+            # Flag the second arrival only after it actually acquires the same player stripe.
+            if ordinal == 2:
+                # Publish proof that the second request reached resolution.
+                second_entered.set()
+            # Return one deterministic losing result so no credit path is required.
+            return _resolve(wager, {"face": 1})
+
+        # Return one synthetic point-read wallet after each debit.
+        def get_player(player_id):
+            # Preserve the exact same-player identity in the response envelope.
+            return {"player_id": player_id, "balance": 8.0}
+
+        # Build one helper whose two requests share a single player stripe.
+        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=resolve_serially, validate_bet=_validate_bet, entropy_source=lambda _n: 0, ledger_gateway=CountingLedgerGateway(), state_loader=state.load, state_updater=state.update, get_player=get_player)
+
+        # Execute one same-player request and retain any failure.
+        def execute(request_id):
+            try:
+                # Run the complete request under the shared player stripe.
+                game.play("same-player", {"request_id": request_id, "face": 3, "stake": 1})
+            # Retain any failure for the parent assertion.
+            except BaseException as exc:
+                # Preserve only the in-memory exception object.
+                errors.append(exc)
+
+        # Start the first request and wait until it owns the stripe inside resolution.
+        first_thread = threading.Thread(name="same-player-first", target=execute, args=("same-a",))
+        # Launch the first request.
+        first_thread.start()
+        # Require the first action to reach the controlled resolver.
+        self.assertTrue(first_entered.wait(3))
+        # Start a second request for the exact same wallet.
+        second_thread = threading.Thread(name="same-player-second", target=execute, args=("same-b",))
+        # Launch the serialized contender.
+        second_thread.start()
+        # Require the second resolver to remain unreachable while the first holds the stripe.
+        self.assertFalse(second_entered.wait(0.25))
+        # Release the first request so the second can acquire the same stripe.
+        release_first.set()
+        # Join both requests within the bounded evidence window.
+        first_thread.join(5)
+        # Join the second request after ownership transfers.
+        second_thread.join(5)
+        # Require both threads to finish, no hidden errors, and exact entry order.
+        self.assertEqual((first_thread.is_alive(), second_thread.is_alive(), errors, resolver_calls), (False, False, [], ["same-player-first", "same-player-second"]))
 
     # Require a winning round to debit the stake and credit the full return once.
     def test_winning_round_settles_once(self) -> None:

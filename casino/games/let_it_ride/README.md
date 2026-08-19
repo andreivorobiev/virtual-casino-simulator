@@ -18,7 +18,7 @@ Let It Ride is distinct from the existing poker/card modules because its rule nu
 - Each pulled wager prepares one `LET_IT_RIDE_REFUND_CREDIT`.
 - One optional `LET_IT_RIDE_PAYOUT_CREDIT` returns active riding stakes plus qualifying profit after the final reveal.
 - State is persisted before any play-token movement, and retry recovery searches ledger events by player, game, round, and game-owned action id before issuing a movement.
-- A process-local settlement lock serializes the state/ledger recovery path used by this local simulator.
+- A bounded player-scoped stripe serializes each wallet's state/ledger recovery path without blocking unrelated MySQL wallets.
 - The game module never mutates `player.balance` or any storage-provider balance field directly.
 
 ## Public Actions

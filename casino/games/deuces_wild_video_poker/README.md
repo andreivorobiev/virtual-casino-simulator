@@ -15,7 +15,7 @@ The engine reuses `casino.core.cards` for card normalization, deck construction,
 - The wager fingerprint includes a private digest of that complete deal plan. Hold and draw actions revalidate the debit, and a new deal cannot enter while any retained payout still needs recovery.
 - One `DWVP_WAGER_DEBIT` covers the round wager. At most one `DWVP_PAYOUT_CREDIT` returns qualifying credits; losing rounds never create a zero ledger event.
 - Recovery scans only the resolved player's ledger and validates game, round, transaction type, signed amount, idempotency key, and semantic fingerprint before accepting a prior event.
-- The process-local lock makes the read-before-write recovery path exactly once for the supported single-process local simulator. A future multi-process deployment must add a shared unique ledger idempotency constraint before extending that claim.
+- A bounded player-scoped stripe serializes local recovery for one wallet, while the provider's shared unique action identity enforces cross-process exactly-once settlement and permits unrelated MySQL wallets to proceed concurrently.
 - The game never mutates a player balance or storage-provider balance field directly.
 
 ## Public actions

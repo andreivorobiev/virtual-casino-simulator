@@ -6,6 +6,8 @@
 from datetime import datetime, timedelta, timezone
 # Import process isolation for advisory-lock and runtime transaction evidence.
 from concurrent.futures import ProcessPoolExecutor
+# Import detached state snapshots for the real different-player settlement race.
+import copy
 # Import SHA-256 for canonical receipt-byte verification.
 import hashlib
 # Import JSON for synthetic proof files.
@@ -27,6 +29,10 @@ import time
 from casino.core import auth, mysql_migrations, players, storage
 # Import immutable game-action values for real disposable-provider lifecycle proof.
 from casino.core.game_action import GameActionIdentity, GameActionMovement, GameActionPlan, GameActionResolution, GameActionResources
+# Import the shared per-player settlement helper for real MySQL concurrency evidence. (GAMECORE-009)
+from casino.core.simple_game import SimpleWagerGame
+# Import the canonical game-money gateway bound directly to the disposable provider.
+from casino.core.settlement import GameSettlementGateway
 # Import the stable conflict boundary for resolver-first refusal.
 from casino.errors import ConflictError
 # Import the established live provider restart and two-process DML matrix.
@@ -428,6 +434,114 @@ def _exercise_game_action_provider() -> None:
         )
         # Require the exact inserted wallet identity and balance.
         assert player["player_id"] == "lifecycle_204" and player["balance"] == 10.0
+        # Name two separate wallets whose upper game locks must not serialize MySQL row transactions.
+        striped_players = ("striped_a_204", "striped_b_204")
+        # Create both synthetic wallets through the production provider seam.
+        for striped_player in striped_players:
+            # Seed one exact active wallet for the rendezvous action.
+            provider.ensure_player({"player_id": striped_player, "display_name": striped_player, "type": "human", "balance": 10.0, "created_at": "2026-01-01T00:00:00+00:00", "updated_at": "2026-01-01T00:00:00+00:00", "status": "active"})
+        # Retain route-free per-player state while real wallet writes use MySQL.
+        striped_documents = {}
+        # Protect only the disposable state fixture, never provider settlement.
+        striped_state_lock = threading.Lock()
+        # Require both player resolvers to rendezvous after their independent wager commits.
+        striped_resolver_barrier = threading.Barrier(2, timeout=5)
+        # Retain successful results by player identity.
+        striped_results = {}
+        # Retain any concurrency failure for the parent-thread assertion.
+        striped_errors = []
+
+        # Commit one provider-atomic debit with the canonical action identity.
+        def striped_debit_once(**context):
+            # Translate the gateway's positive debit magnitude into a negative provider movement.
+            return provider.transact_ledger_once(context["player_id"], -abs(context["amount"]), context["transaction_type"], context["action_key"], context["game"], context["round_id"], context["details"])
+
+        # Commit one provider-atomic credit with the canonical action identity.
+        def striped_credit_once(**context):
+            # Preserve the gateway's positive credit magnitude at the provider boundary.
+            return provider.transact_ledger_once(context["player_id"], abs(context["amount"]), context["transaction_type"], context["action_key"], context["game"], context["round_id"], context["details"])
+
+        # Load one detached current document for the requested synthetic player.
+        def striped_state_loader(player_id):
+            # Serialize only fixture dictionary access.
+            with striped_state_lock:
+                # Return current state or one fresh shared-helper document.
+                return copy.deepcopy(striped_documents.get(player_id, {"game": "mysql_lock_striping", "recent_rounds": []}))
+
+        # Publish one callback against fixture-current state authority.
+        def striped_state_updater(player_id, mutator):
+            # Serialize only the in-memory document callback.
+            with striped_state_lock:
+                # Apply the production mutator to a detached current document.
+                updated = mutator(copy.deepcopy(striped_documents.get(player_id, {"game": "mysql_lock_striping", "recent_rounds": []})))
+                # Retain a detached committed document.
+                striped_documents[player_id] = copy.deepcopy(updated)
+                # Return detached provider authority.
+                return copy.deepcopy(updated)
+
+        # Return the exact real MySQL wallet through the point-read seam.
+        def striped_get_player(player_id):
+            # Use an empty fallback that can never satisfy either seeded identity.
+            return provider.get_player(player_id, lambda: {"players": []})
+
+        # Validate one bounded deterministic winning request.
+        def striped_validate_bet(request):
+            # Normalize the fixture wager to one token.
+            stake = int(request.get("stake", 0))
+            # Reject any unexpected fixture mutation before provider access.
+            if stake != 1:
+                # Surface one stable fixture failure.
+                raise AssertionError("striped MySQL fixture stake changed")
+            # Return canonical wager, total, and request fingerprint.
+            return {"stake": stake}, float(stake), "stake:1"
+
+        # Draw one deterministic winning face.
+        def striped_entropy(randbelow):
+            # Exercise the injected bound while returning a fixed face.
+            return {"face": randbelow(1)}
+
+        # Rendezvous two different players inside the old process-wide critical section location.
+        def striped_resolve(wager, entropy):
+            # Fail closed if an upper global lock prevents both MySQL-capable actions from arriving.
+            striped_resolver_barrier.wait()
+            # Return one exact five-token settlement for the one-token wager.
+            return {"outcome": "win", "total_return": wager["stake"] * 5, "detail": {"face": entropy["face"]}}
+
+        # Bind the canonical money adapter directly to the disposable least-privilege provider.
+        striped_gateway = GameSettlementGateway("mysql_lock_striping", debit_once=striped_debit_once, credit_once=striped_credit_once, find_action=provider.find_ledger_action)
+        # Build one shared helper whose upper lock is the behavior under test.
+        striped_game = SimpleWagerGame(game_id="mysql_lock_striping", wager_transaction_type="MYSQL_STRIPED_WAGER_DEBIT", settlement_transaction_type="MYSQL_STRIPED_SETTLEMENT_CREDIT", entropy=striped_entropy, resolve=striped_resolve, validate_bet=striped_validate_bet, entropy_source=lambda _bound: 0, ledger_gateway=striped_gateway, state_loader=striped_state_loader, state_updater=striped_state_updater, get_player=striped_get_player)
+
+        # Execute one complete different-player MySQL settlement.
+        def execute_striped_player(player_id):
+            try:
+                # Run wager, rendezvous, payout, and state publication under one player stripe.
+                striped_results[player_id] = striped_game.play(player_id, {"request_id": f"request-{player_id}", "stake": 1})
+            # Retain any failure without exposing connector configuration.
+            except BaseException as exc:
+                # Preserve only the in-memory exception object.
+                striped_errors.append(exc)
+
+        # Construct both workers before starting either action.
+        striped_threads = tuple(threading.Thread(target=execute_striped_player, args=(player_id,)) for player_id in striped_players)
+        # Start both distinct wallet actions.
+        for striped_thread in striped_threads:
+            # Allow MySQL row-level concurrency beneath distinct player stripes.
+            striped_thread.start()
+        # Join both bounded actions after settlement and state publication.
+        for striped_thread in striped_threads:
+            # Wait for each action to finish without opening another connection.
+            striped_thread.join(10)
+        # Require the rendezvous, both terminal results, and no hidden worker failure.
+        assert all(not striped_thread.is_alive() for striped_thread in striped_threads) and striped_errors == [] and set(striped_results) == set(striped_players)
+        # Prove each real wallet committed exactly one debit and one credit independently.
+        for striped_player in striped_players:
+            # Read final point authority from MySQL.
+            striped_wallet = provider.get_player(striped_player, lambda: {"players": []})
+            # Read only this player's two new immutable rows.
+            striped_rows = provider.read_ledger_recent(player_id=striped_player, limit=10)
+            # Require the exact final balance and movement order without duplicate writes.
+            assert striped_wallet["balance"] == 14.0 and [row["amount"] for row in striped_rows] == [-1.0, 5.0]
         # Declare one wallet and one route-free state resource.
         resources = GameActionResources(wallet_ids=("lifecycle_204",), state_keys=("game_action:lifecycle_204",))
         # Bind canonical action semantics to the declared resources.
