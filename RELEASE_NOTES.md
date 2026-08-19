@@ -1,3 +1,18 @@
+# Virtual Casino Simulator v0.9.5.82 Release Notes
+
+## Atomic foundations and maintainable application surfaces
+
+- Packages every accepted protected-main change since v0.9.5.81, including provider-owned storage routing, cents-safe wallet handling, per-player settlement locks, atomic state publication, shared settlement helpers, and guest-lifecycle integrity.
+- Completes the governed `run_tests.py`, storage-provider, Admin-tab, and application-view modularization programs while preserving the compatibility CLI, provider parity, Browser affinity, and public routes.
+- Adopts escape-by-default browser templates, faster lobby updates, scoped semantic game colors, and file/comment governance ratchets without changing the restricted-preview admission policy.
+- Preserves frozen API compatibility, the exact 46-game catalog, paytables, wager acceptance, and external game behavior; the internal safety and maintainability changes retain the same public envelopes.
+- Keeps production and application-only rollback at exact MySQL schema 2 while the catalog remains minimum 2, expected 4, and apply held; no migration, grant mutation, database rollback, provider activation, public signup, live OAuth, billing, DNS, or secret mutation is authorized.
+- Adds no release-only requirement identifier; the governed total remains exactly 1104 permanent requirements.
+- Records the exact canonical package inventory as 816 regular files: current source selection 815 plus this v0.9.5.82 compatibility record.
+- Initializes the canonical exact-HEAD API-validation extraction with a complete disposable Git index, so tracked-only repository gates remain authoritative without a filesystem fallback or source-byte mutation.
+- Advances release-owned application, contracts, tests, and docs revisions plus bounded tooling `1.43.2`; accepted Core `10.11.0`, Players `9.1.4`, Ledger `9.1.2`, and all other content-owned module revisions remain exact.
+- Retains exact immutable v0.9.5.81 as the application-only schema-two rollback predecessor. The installed host poller owns checksum-bound activation and fail-closed rollback; this packet closes only release-builder issue #985.
+
 # Virtual Casino Simulator v0.9.5.81 Release Notes
 
 ## Poller lag-monitor cleanup and production completion

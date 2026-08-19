@@ -17,12 +17,16 @@ import unittest
 # Import ZIP inspection for negative private-content assertions.
 import zipfile
 
+# Import the canonical release driver for exact-copy inventory initialization evidence.
+from scripts import make_release
 # Import the release implementation under test from the repository scripts namespace.
 from scripts import package_app
 # Import the protected predecessor receipt helper for exact fail-closed recovery tests.
 from scripts import bootstrap_predecessor
 # Import compatibility-owned predecessor resolution for the live release-policy regression.
 from scripts import resolve_release_predecessor
+# Import the file-length policy consumer that requires authoritative tracked-source inventory.
+from scripts import validate_file_length
 
 
 # Exercise deterministic packaging, exclusion, verification, and rollback behavior.
@@ -105,6 +109,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         ):
             # Read exact source text from the checkout under test.
             self.files[relative_path] = (package_app.ROOT / relative_path).read_text(encoding="utf-8")
+
         # Write every fixture file beneath its canonical repository-relative path.
         for relative_path, contents in self.files.items():
             # Resolve the current fixture file without using host-specific paths in data.
@@ -119,6 +124,39 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.commit_sha = "a" * 40
         # Use one fixed source timestamp across equivalent test builds.
         self.commit_epoch = 1_700_000_000
+
+    # Prove the trusted exact-HEAD copy receives a complete index without weakening non-Git refusal.
+    def test_isolated_api_copy_initializes_exact_tracked_inventory(self):
+        # Allocate one disposable archive-like source root independent of the packaging fixture.
+        with tempfile.TemporaryDirectory(prefix="casino-release-index-") as temporary:
+            # Resolve the exact extracted-copy root used by the production helper.
+            root = pathlib.Path(temporary)
+            # Create the register parent required by the file-length validator.
+            (root / "docs").mkdir()
+            # Provide an empty canonical review register for the compact source fixtures.
+            (root / "docs" / "file_length_register.json").write_text('{"schema_version": 1, "entries": []}\n', encoding="utf-8")
+            # Create one Python source from the hypothetical trusted archive.
+            (root / "exact.py").write_text("# Exact archived source.\n", encoding="utf-8")
+            # Create one nested JavaScript source from the same archive.
+            (root / "web").mkdir()
+            # Preserve one compact executable-source fixture beneath its canonical area.
+            (root / "web" / "exact.js").write_text("// Exact archived source.\n", encoding="utf-8")
+            # Retain one non-source archive member to prove the complete extraction is indexed.
+            (root / "README.md").write_text("# Exact archive\n", encoding="utf-8")
+            # Model a tracked source that also matches a repository ignore rule.
+            (root / ".gitignore").write_text("exact.py\n", encoding="utf-8")
+            # Initialize only the disposable index through the production release seam.
+            make_release.initialize_validation_index(root)
+            # Ask Git for the complete indexed inventory using the production separator format.
+            indexed = make_release.subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode("utf-8").split("\0")
+            # Require every exact archive member and no metadata path in canonical order.
+            self.assertEqual([path for path in indexed if path], [".gitignore", "README.md", "docs/file_length_register.json", "exact.py", "web/exact.js"])
+            # Add a late runtime-like source after indexing to prove it cannot enter policy scope.
+            (root / "late.py").write_text("# Untracked late source.\n", encoding="utf-8")
+            # Require the production file-length inventory to see only indexed first-party sources.
+            self.assertEqual(validate_file_length.tracked_source_paths(root), ("exact.py", "web/exact.js"))
+            # Require the complete policy gate to pass without a filesystem-walk bypass.
+            self.assertEqual(validate_file_length.validate_file_lengths(root), ())
 
     # Build a fixture release with optional tag and prior rollback provenance.
     def build(self, output_name, release_tag=None, previous_manifest=None):
@@ -527,19 +565,19 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.81.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.82.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.81", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.82", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
         self.assertEqual(
             compatibility["predecessor"],
             {
-                "app_version": "0.9.5.80",
-                "compatibility_record": "contracts/compatibility/app-0.9.5.80.json",
+                "app_version": "0.9.5.81",
+                "compatibility_record": "contracts/compatibility/app-0.9.5.81.json",
                 "required_artifact": "release-manifest.json",
-                "source_commit_sha": "bd3985f195622e32403b41a7bdc4005a2cb195ba",
-                "artifact_sha256": "1d9a973ce7120328d80d86de9387f09668c8e335f25266e34a757754349e2aee",
-                "manifest_sha256": "a93374e14dbce11aa63fbb27ec9a910fccef03ab0b7ac674657ca5a51b795f1c",
+                "source_commit_sha": "abfd0f0a99427af3fbb15db412933dc41208c172",
+                "artifact_sha256": "5fb04b073a294c2057381ea92fc325fe21bfaced623c1c8ad26a3d16f51afbb8",
+                "manifest_sha256": "1e6c86939c9e0d7f555b3beabe8bc033352ec0a4d559628333c3c322b94d4dd1",
             },
         )
         # Require both retained release-asset identities to remain exact lowercase SHA-256 values.
@@ -547,7 +585,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Reject truncated, uppercase, or otherwise noncanonical live predecessor pins.
             self.assertRegex(compatibility["predecessor"][identity_name], r"^[0-9a-f]{64}$")
         # Require the exact current candidate policy to resolve its retained immutable predecessor.
-        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.81"), "v0.9.5.80")
+        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.82"), "v0.9.5.81")
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
         self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
         # Require all broader enrollment surfaces to remain disabled for this release channel.

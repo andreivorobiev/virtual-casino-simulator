@@ -1830,7 +1830,7 @@
     {
       "id": "TOOL-003",
       "module": "Tooling",
-      "description": "Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, extracted-host command inventory enforcement, protected publication gate, and application-only prior-artifact rollback mapping.",
+      "description": "Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, an authoritative complete disposable Git index for exact-HEAD API validation, fail-closed private-content exclusion, extracted-host command inventory enforcement, protected publication gate, and application-only prior-artifact rollback mapping.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [],
@@ -1917,12 +1917,13 @@
         "contracts/compatibility/app-0.9.5.79.json",
         "contracts/compatibility/app-0.9.5.80.json",
         "contracts/compatibility/app-0.9.5.81.json",
+        "contracts/compatibility/app-0.9.5.82.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "0.9.5.81",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.81 publication derives exact retained immutable v0.9.5.80 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. The release declares rollback at unchanged MySQL schema 2 inside both runtime windows; rollback is application-only and never reverses the MySQL schema. v0.9.6.0 remains reserved for a separately accepted product wave."
+      "changed_in": "issue-985-release-copy-inventory",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.82 publication derives exact retained immutable v0.9.5.81 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Its Git-archive API copy receives a complete disposable index before repository gates run, preserving tracked-only inventory without a filesystem fallback, source-byte mutation, user Git templates, or remote contact. The release declares rollback at unchanged MySQL schema 2 inside both runtime windows; rollback is application-only and never reverses the MySQL schema. v0.9.6.0 remains reserved for a separately accepted product wave."
     },
     {
       "id": "BOT-001",
@@ -7622,7 +7623,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.81 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.82 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -7659,7 +7660,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.81 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.82 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -9388,7 +9389,7 @@
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
       "changed_in": "issue-430-mysql-schema-rollback-bridge",
-      "notes": "The bridge rejects an exact-schema-three or exact-schema-four candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three or schema-four release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.81 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three or schema-four production activation, or issue closure."
+      "notes": "The bridge rejects an exact-schema-three or exact-schema-four candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three or schema-four release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.82 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three or schema-four production activation, or issue closure."
     },
     {
       "id": "UX-023",
@@ -13322,12 +13323,13 @@
         "docs/file_length_register.json",
         ".github/workflows/module-boundaries.yml",
         "scripts/bootstrap_repo.py",
+        "scripts/make_release.py",
         "AGENTS.md",
         "ENGINEERING_PRACTICES.md"
       ],
       "introduced_in": "issue-731-file-length-standard",
-      "changed_in": "issue-731-file-length-standard",
-      "notes": "The register is an accountable audit decision, not a permanent exception. The four original #727 through #730 monolith paths are absent after their completed splits; all current protected-main offenders are reviewed on their actual successor paths and must remove their row when both thresholds are satisfied."
+      "changed_in": "issue-985-release-copy-inventory",
+      "notes": "The register is an accountable audit decision, not a permanent exception. The four original #727 through #730 monolith paths are absent after their completed splits; all current protected-main offenders are reviewed on their actual successor paths and must remove their row when both thresholds are satisfied. Canonical release validation reconstructs an authoritative complete index from the trusted exact-HEAD archive before this gate runs, including tracked members that also match ignore rules; non-Git source roots still fail closed."
     },
     {
       "id": "TEST-244",
@@ -13340,12 +13342,13 @@
       "browser_tests": [],
       "implementation_files": [
         "tests/file_length_policy_tests.py",
+        "tests/release_artifact_tests.py",
         "tests/cases/api/governance.py",
         "tests/api_case_inventory.json"
       ],
       "introduced_in": "issue-731-file-length-standard",
-      "changed_in": "issue-731-file-length-standard",
-      "notes": "Every mutation-focused case uses a disposable Git worktree so source selection is exercised through the production inventory boundary, while the checked-repository case binds all current register rows and retired split paths."
+      "changed_in": "issue-985-release-copy-inventory",
+      "notes": "Every mutation-focused case uses a disposable Git worktree so source selection is exercised through the production inventory boundary, while the checked-repository case binds all current register rows and retired split paths. Release evidence also proves the exact archive copy indexes every member, includes a tracked source matched by an ignore rule, excludes a later untracked source from policy scope, and passes the unchanged validator without a filesystem fallback."
     },
     {
       "id": "STORAGE-017",

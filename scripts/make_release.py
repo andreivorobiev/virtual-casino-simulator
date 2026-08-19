@@ -83,6 +83,14 @@ def run(command):
     subprocess.check_call(command, cwd=ROOT)
 
 
+# Give one trusted Git-archive extraction an authoritative tracked-file index for repository gates.
+def initialize_validation_index(source_root):
+    # Create repository metadata without copying user templates or contacting any remote.
+    subprocess.check_call(["git", "init", "--quiet", "--template="], cwd=source_root)
+    # Index every already validated archive member while leaving its working-tree bytes unchanged.
+    subprocess.check_call(["git", "add", "--all", "--force"], cwd=source_root)
+
+
 # Run API tests from an exact tracked archive so resets cannot touch repository runtime fixtures.
 def run_api_isolated(command):
     # Print the same portable command label recorded in release provenance.
@@ -106,6 +114,8 @@ def run_api_isolated(command):
                 raise ValueError("exact-HEAD API validation archive contains an unsafe path")
             # Extract the already validated tracked source into the disposable target.
             archive.extractall(source_root)
+        # Restore tracked-inventory semantics required by repository gates inside the exact copy.
+        initialize_validation_index(source_root)
         # Execute the full API suite where resets and generated runtime files are disposable.
         subprocess.check_call(command, cwd=source_root)
 

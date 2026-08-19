@@ -4,6 +4,8 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
+The v0.9.5.82 release line retains the exact 46-game catalog, paytables, wager acceptance, entropy seams, round identities, and public behavior. It packages accepted atomic publication, settlement-helper, provider, runner, storage, Admin, application-view, template-safety, frontend-performance, and governance work without changing game mathematics, routes, outcomes, wallet actions, or frozen API envelopes.
+
 The v0.9.5.81 release line retains the exact 46-game catalog, paytables, wager acceptance, entropy seams, round identities, and ledger behavior. It repairs only the pull-poller lag-check cleanup scope after v0.9.5.80 activation, without changing game mathematics, routes, outcomes, wallet actions, or frozen API envelopes.
 
 The v0.9.5.80 release line retains the exact 46-game catalog, paytables, wager acceptance, entropy seams, round identities, and ledger behavior. It supersedes the failed-closed v0.9.5.79 production-delivery attempt with immutable-root bytecode isolation without changing game mathematics, routes, outcomes, wallet actions, or frozen API envelopes.
