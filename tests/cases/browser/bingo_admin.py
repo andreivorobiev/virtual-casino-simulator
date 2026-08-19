@@ -13,10 +13,16 @@ import re
 from tests.browser_timing import WAIT_MS
 
 
-# Execute the complete producer/consumer family under one deterministic shard owner.
+# Execute the reduced table-game, Admin-core, and Admin-presentation families under independent shard owners.
 def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots):
-    # Run the Bingo-through-Admin producer/consumer chain only on its declared owner.
-    if browser_shard_owns_group('bingo_admin'):
+    # Resolve each contiguous affinity exactly once so source guards and skip accounting stay reviewable.
+    table_games_owner=browser_shard_owns_group('table_games')
+    # Keep feedback production and every consuming Admin operational case on one owner.
+    feedback_admin_owner=browser_shard_owns_group('feedback_admin')
+    # Keep the final Admin audio and localization presentation chain on one owner.
+    admin_presentation_owner=browser_shard_owns_group('admin_presentation')
+    # Run Bingo, Blackjack, Baccarat, route localization, and wellness only on their declared owner.
+    if table_games_owner:
         # Navigate to Bingo before exercising the real card-purchase mutation boundary.
         page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('premium-bingo').wait_for(timeout=WAIT_MS)
         # Read the current player's ledger before the one visible card purchase.
@@ -415,6 +421,18 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             page.get_by_test_id('wellness-dismiss').click(); page.unroute('**/api/v2/me/wellness/summary'); page.unroute('**/api/v2/me/wellness')
         # Execute the permanent hosted browser case under the existing wellness requirements.
         run_case('BR-WELLNESS-001',['WELL-001','WELL-002','TEST-105'],session_wellness_browser)
+    # Preserve exact table-game case accounting on non-owning shards.
+    else:
+        # Advance only the Bingo-through-wellness affinity range.
+        skip_browser_affinity('table_games')
+    # Run feedback production and its complete Admin consumer chain only on the declared owner.
+    if feedback_admin_owner:
+        # Install the normal-player session needed by both feedback submission and role-boundary evidence.
+        feedback_login=page.request.post(base+'/api/v2/auth/login',data={'email':'demo@example.local','password':'password'})
+        # Fail before either producer or consumer can run under an invalid identity.
+        if not feedback_login.ok or feedback_login.json().get('ok') is not True: raise AssertionError('feedback/Admin affinity login failed')
+        # Mount a canonical English desktop lobby independently from the preceding table-game owner.
+        page.set_viewport_size({'width':1920,'height':1080}); page.emulate_media(reduced_motion='no-preference'); page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS); page.get_by_test_id('shell-locale-select').select_option('en-US')
         # Preserve the stable internal reference created by the player flow for later Admin acceptance.
         feedback_report_reference={'value':''}
         # Define registered-user submission, bilingual layout, image normalization, and retry acceptance. (issue #349)
@@ -1244,6 +1262,18 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
         # Execute authenticated Operations UI, EN/RU, responsive, degraded, and down gates.
         run_case('BR-OPS-001',['OPS-004','OPS-005','TEST-044'],admin_operations_browser)
+    # Preserve exact feedback/Admin operational case accounting on non-owning shards.
+    else:
+        # Advance only the feedback-through-operations affinity range.
+        skip_browser_affinity('feedback_admin')
+    # Run practice-opponent, user, Guest Trials, audio, and localization presentation on their declared Admin owner.
+    if admin_presentation_owner:
+        # Install an Admin session without depending on the operational Admin affinity owner.
+        presentation_login=page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD})
+        # Refuse to render presentation cases without exact protected-route authority.
+        if not presentation_login.ok or presentation_login.json().get('ok') is not True: raise AssertionError('Admin presentation affinity login failed')
+        # Mount the protected Admin document at its canonical English desktop starting state.
+        page.set_viewport_size({'width':1920,'height':1080}); page.emulate_media(reduced_motion='no-preference'); page.goto(base+'/admin',wait_until='networkidle'); page.get_by_test_id('admin-tab-audio').wait_for(timeout=WAIT_MS)
         # Define the funded practice-opponent Admin browser acceptance check.
         def admin_practice_opponents_browser():
             # Open the Players & Bots control-plane surface.
@@ -1867,7 +1897,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Clear the test preference so later manual sessions start from defaults.
             page.evaluate("localStorage.removeItem('casino.locale.settings.v1')")
         run_case('BR-I18N-ADMIN-001',['I18N-001','I18N-003','I18N-014','TEST-187'],admin_i18n)
-    # Preserve exact case accounting when the active shard does not own Admin state.
+    # Preserve exact Admin-presentation case accounting on non-owning shards.
     else:
-        # Advance every contiguous Bingo, Blackjack, Baccarat, feedback, and Admin case.
-        skip_browser_affinity('bingo_admin')
+        # Advance only the audio and localization presentation range.
+        skip_browser_affinity('admin_presentation')

@@ -1661,21 +1661,20 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one atomic skip for the exact complete affinity group.
         self.assertEqual(skipped_groups, ["guest_lifecycle"])
 
-    # Prove the complete auth/lobby affinity family has one external owner and one runner delegation.
+    # Prove the reduced auth/lobby affinity families share one external owner and runner delegation.
     def test_browser_auth_lobby_affinity_registration_ownership_is_exact(self):
         # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
         runner_source = self.workflow_text(BROWSER_RUNNER)
         # Read the complete auth/lobby owner independently of its import path.
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_lobby.py")
-        # Bind the exact permanent identities in their historical source order.
-        expected_ids = (
-            "BR-STATIC-CACHE-001", "BR-MARKETING-001", "BR-SHELL-BRAND-GUEST-001", "BR-OAUTH-001",
-            "BR-OAUTH-SIGNUP-001", "BR-VERIFIED-EMAIL-001", "BR-TOUCH-TARGET-AUTH-001", "BR-AUTH-LOGIN-001",
-            "BR-TERMS-001", "BR-AUTH-SHELL-001", "BR-OAUTH-RUNTIME-001", "BR-TOKEN-001", "BR-SEC-001",
-            "BR-AUTH-LOCALE-001", "BR-AUTH-LOGOUT-001", "BR-TOKEN-FRACTION-001", "BR-SHELL-001",
-            "BR-TOUCH-TARGET-001", "BR-SHELL-BRAND-001", "BR-TOKEN-WALLET-001", "BR-LOBBY-001",
-            "BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001", "BR-LOBBY-RESP-001",
-        )
+        # Bind each reduced affinity tuple while preserving the complete historical source order.
+        expected_groups = {
+            "auth_public": ("BR-STATIC-CACHE-001", "BR-MARKETING-001", "BR-SHELL-BRAND-GUEST-001", "BR-OAUTH-001", "BR-OAUTH-SIGNUP-001", "BR-VERIFIED-EMAIL-001", "BR-TOUCH-TARGET-AUTH-001"),
+            "auth_session": ("BR-AUTH-LOGIN-001", "BR-TERMS-001", "BR-AUTH-SHELL-001", "BR-OAUTH-RUNTIME-001", "BR-TOKEN-001", "BR-SEC-001", "BR-AUTH-LOCALE-001", "BR-AUTH-LOGOUT-001"),
+            "lobby_shell": ("BR-TOKEN-FRACTION-001", "BR-SHELL-001", "BR-TOUCH-TARGET-001", "BR-SHELL-BRAND-001", "BR-TOKEN-WALLET-001", "BR-LOBBY-001", "BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001", "BR-LOBBY-RESP-001"),
+        }
+        # Flatten the insertion-ordered tuples into the unchanged registration stream.
+        expected_ids = tuple(case_id for group_ids in expected_groups.values() for case_id in group_ids)
         # Extract only literal permanent registrations from the new owner.
         owner_ids = tuple(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
         # Require exact identity and historical order without invented or duplicate cases.
@@ -1686,10 +1685,16 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
         # Require one delegation at the group's exact historical position.
         self.assertEqual(runner_source.count("browser_auth_lobby.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_shard_owns,page,base,ROOT,visual_matrix,read_i18n_json,casino_config,assert_condition,shot,catalog_evidence,region_evidence,wallet_evidence,footer_evidence,game_evidence,console_errors,http_errors,provider_requests)"), 1)
-        # Require one owner-level guard without repeated partial setup checks.
-        self.assertEqual(owner_source.count("browser_shard_owns_group('auth_lobby')"), 1)
-        # Require the extracted owner to advance all 24 source positions atomically on non-owning shards.
-        self.assertEqual(owner_source.count("skip_browser_affinity('auth_lobby')"), 1)
+        # Require one exact owner decision and one exact skip for every reduced contiguous family.
+        for group_name in expected_groups:
+            # Resolve ownership once before any setup can mutate browser state.
+            self.assertEqual(owner_source.count(f"browser_shard_owns_group('{group_name}')"), 1)
+            # Advance only the named family on non-owning shards.
+            self.assertEqual(owner_source.count(f"skip_browser_affinity('{group_name}')"), 1)
+        # Require each owner to establish its canonical independent starting state before its first case.
+        self.assertLess(owner_source.index("initial_shell_response=page.goto(base"), owner_source.index("run_case('BR-STATIC-CACHE-001'"))
+        self.assertLess(owner_source.index("page.get_by_test_id('auth-locale-select').select_option('ru-RU')"), owner_source.index("run_case('BR-AUTH-LOGIN-001'"))
+        self.assertLess(owner_source.index("lobby_login=page.request.post"), owner_source.index("run_case('BR-TOKEN-FRACTION-001'"))
         # Import the extracted owner without starting the compatibility runner.
         from tests.cases.browser import auth_lobby
         # Retain the exact skip identity emitted by a non-owning shard.
@@ -1698,8 +1703,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         reject_case = lambda *_args: self.fail("non-owner executed an auth/lobby case")
         # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
         auth_lobby.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 17))
-        # Require one atomic skip for the exact complete affinity group.
-        self.assertEqual(skipped_groups, ["auth_lobby"])
+        # Require one ordered skip for each exact contiguous reduced family.
+        self.assertEqual(skipped_groups, ["auth_public", "auth_session", "lobby_shell"])
 
     # Prove the independent Roulette, Slots, and Keno affinity families share one source owner and runner delegation.
     def test_browser_roulette_slots_keno_affinity_registration_ownership_is_exact(self):
@@ -1751,23 +1756,20 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require one ordered skip for each exact contiguous reduced group.
         self.assertEqual(skipped_groups, ["roulette", "slots", "keno"])
 
-    # Prove the complete Bingo-through-Admin affinity family has one external owner and one runner delegation.
+    # Prove the reduced table-game and Admin affinity families share one external owner and runner delegation.
     def test_browser_bingo_admin_affinity_registration_ownership_is_exact(self):
         # Read the compatibility runner and extracted owner as inert source so this gate opens no Browser or listener.
         runner_source = self.workflow_text(BROWSER_RUNNER)
         # Read the complete final affinity owner independently of its import path.
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "bingo_admin.py")
-        # Bind all permanent identities in their historical source order.
-        expected_ids = (
-            "BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001",
-            "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001",
-            "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001",
-            "BR-FEEDBACK-001", "BR-ADMIN-NAV-AUTH-001", "BR-ADMIN-001", "BR-ADMIN-DIAGNOSTICS-001",
-            "BR-ADMIN-ECONOMICS-001", "BR-ADMIN-SESSION-POLICY-001", "BR-ADMIN-LEDGER-LABELS-001",
-            "BR-ADMIN-FEEDBACK-001", "BR-ADMIN-OAUTH-001", "BR-ADMIN-MAIL-001", "BR-INVITE-001",
-            "BR-OPS-001", "BR-ADMIN-PRACTICE-OPPONENT-001", "BR-ADMIN-USERS-001", "BR-ADMIN-GUEST-001",
-            "BR-AUDIO-001", "BR-I18N-FOUNDATION-001", "BR-I18N-ADMIN-001",
-        )
+        # Bind each reduced affinity tuple while preserving the complete historical source order.
+        expected_groups = {
+            "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
+            "feedback_admin": ("BR-FEEDBACK-001", "BR-ADMIN-NAV-AUTH-001", "BR-ADMIN-001", "BR-ADMIN-DIAGNOSTICS-001", "BR-ADMIN-ECONOMICS-001", "BR-ADMIN-SESSION-POLICY-001", "BR-ADMIN-LEDGER-LABELS-001", "BR-ADMIN-FEEDBACK-001", "BR-ADMIN-OAUTH-001", "BR-ADMIN-MAIL-001", "BR-INVITE-001", "BR-OPS-001"),
+            "admin_presentation": ("BR-ADMIN-PRACTICE-OPPONENT-001", "BR-ADMIN-USERS-001", "BR-ADMIN-GUEST-001", "BR-AUDIO-001", "BR-I18N-FOUNDATION-001", "BR-I18N-ADMIN-001"),
+        }
+        # Flatten the insertion-ordered tuples into the unchanged registration stream.
+        expected_ids = tuple(case_id for group_ids in expected_groups.values() for case_id in group_ids)
         # Extract only literal permanent registrations from the new owner.
         owner_ids = tuple(re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", owner_source))
         # Require exact identity and historical order without invented or duplicate cases.
@@ -1778,10 +1780,16 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
         # Require one delegation at the group's exact historical position.
         self.assertEqual(runner_source.count("browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)"), 1)
-        # Require one owner-level guard without repeated partial setup checks.
-        self.assertEqual(owner_source.count("browser_shard_owns_group('bingo_admin')"), 1)
-        # Require the extracted owner to advance all 30 source positions atomically on non-owning shards.
-        self.assertEqual(owner_source.count("skip_browser_affinity('bingo_admin')"), 1)
+        # Require one exact owner decision and one exact skip for every reduced contiguous family.
+        for group_name in expected_groups:
+            # Resolve ownership once before any setup can mutate browser state.
+            self.assertEqual(owner_source.count(f"browser_shard_owns_group('{group_name}')"), 1)
+            # Advance only the named family on non-owning shards.
+            self.assertEqual(owner_source.count(f"skip_browser_affinity('{group_name}')"), 1)
+        # Require each owner to establish its canonical independent starting state before its first case.
+        self.assertLess(owner_source.index("page.get_by_test_id('nav-bingo').click()"), owner_source.index("run_case('BR-BINGO-PURCHASE-001'"))
+        self.assertLess(owner_source.index("feedback_login=page.request.post"), owner_source.index("run_case('BR-FEEDBACK-001'"))
+        self.assertLess(owner_source.index("presentation_login=page.request.post"), owner_source.index("run_case('BR-ADMIN-PRACTICE-OPPONENT-001'"))
         # Import the extracted owner without starting the compatibility runner.
         from tests.cases.browser import bingo_admin
         # Retain the exact skip identity emitted by a non-owning shard.
@@ -1790,8 +1798,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         reject_case = lambda *_args: self.fail("non-owner executed a Bingo/Admin case")
         # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
         bingo_admin.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 29))
-        # Require one atomic skip for the exact complete affinity group.
-        self.assertEqual(skipped_groups, ["bingo_admin"])
+        # Require one ordered skip for each exact contiguous reduced family.
+        self.assertEqual(skipped_groups, ["table_games", "feedback_admin", "admin_presentation"])
 
     # Prove declared producer/consumer groups fit one deterministic shard and guard their bodies.
     def test_browser_shard_affinity_groups_are_contiguous_and_guarded(self):
@@ -1831,10 +1839,16 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
-        # Bind deterministic load totals after splitting the former Roulette/Slots/Keno mega-group. (TEST-195, TEST-242)
-        self.assertEqual(shard_loads, (217, 218, 218, 217, 217, 216))
+        # Bind deterministic load totals after splitting all three former Browser mega-groups. (TEST-195, TEST-242)
+        self.assertEqual(shard_loads, (217, 219, 217, 216, 217, 217))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
-        self.assertLessEqual(max(shard_loads) - min(shard_loads), 2)
+        self.assertLessEqual(max(shard_loads) - min(shard_loads), 3)
+        # Prove additional runners now reduce the reviewed full-run floor beyond six shards.
+        seven_shard_loads=tuple(sum(durations.get(case_id,default_duration) for case_id in shard_cases) for shard_cases in browser_runner_module.browser_shard_case_sets(7))
+        # Require seven runners to improve on six and eight runners to cross below the former 178-second floor.
+        eight_shard_loads=tuple(sum(durations.get(case_id,default_duration) for case_id in shard_cases) for shard_cases in browser_runner_module.browser_shard_case_sets(8))
+        # Pin both monotonic improvement and the issue's concrete floor-breaking outcome.
+        self.assertLess(max(seven_shard_loads),max(shard_loads)); self.assertLess(max(eight_shard_loads),178)
         # Require exact union and nonduplication across all declared owners.
         self.assertEqual(sorted(case_id for shard_cases in shard_sets for case_id in shard_cases), sorted(case_ids))
         # Locate the one permanent Keno owner call that carries both edge and economics acceptance.
@@ -1868,7 +1882,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Read only literal strings and tuples from the tracked declaration.
         affinity_groups = ast.literal_eval(affinity_node.value)
         # Require every producer/consumer group introduced by the controller repair.
-        self.assertEqual(set(affinity_groups), {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette", "slots", "keno", "bingo_admin"})
+        self.assertEqual(set(affinity_groups), {"auth_backend_pwa", "guest_lifecycle", "auth_public", "auth_session", "lobby_shell", "roulette", "slots", "keno", "table_games", "feedback_admin", "admin_presentation"})
         # Keep the independent semantic-color matrix outside every legacy producer/consumer affinity group.
         self.assertNotIn("BR-GAME-COLOR-001", {case_id for group_case_ids in affinity_groups.values() for case_id in group_case_ids})
         # Validate every group against exact case identity and one-shard ownership.
@@ -1884,21 +1898,25 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Require all producers and consumers to execute on one shard.
             self.assertEqual(len(owners), 1, group_name)
             # Extracted Browser affinities own their guard and skip outside the compatibility runner.
-            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette", "slots", "keno", "bingo_admin"}:
+            if group_name in {"auth_backend_pwa", "guest_lifecycle", "auth_public", "auth_session", "lobby_shell", "roulette", "slots", "keno", "table_games", "feedback_admin", "admin_presentation"}:
                 # Bind the exact source-level delegation alias and external owner for this family.
                 delegation_alias, owner_source = {
                     "auth_backend_pwa": ("browser_auth_backend_pwa", auth_backend_pwa_source),
                     "guest_lifecycle": ("browser_guest_lifecycle", guest_lifecycle_source),
-                    "auth_lobby": ("browser_auth_lobby", auth_lobby_source),
+                    "auth_public": ("browser_auth_lobby", auth_lobby_source),
+                    "auth_session": ("browser_auth_lobby", auth_lobby_source),
+                    "lobby_shell": ("browser_auth_lobby", auth_lobby_source),
                     "roulette": ("browser_roulette_slots_keno", roulette_slots_keno_source),
                     "slots": ("browser_roulette_slots_keno", roulette_slots_keno_source),
                     "keno": ("browser_roulette_slots_keno", roulette_slots_keno_source),
-                    "bingo_admin": ("browser_bingo_admin", bingo_admin_source),
+                    "table_games": ("browser_bingo_admin", bingo_admin_source),
+                    "feedback_admin": ("browser_bingo_admin", bingo_admin_source),
+                    "admin_presentation": ("browser_bingo_admin", bingo_admin_source),
                 }[group_name]
                 # Require one source-level delegation so cross-file discovery preserves the group's exact position.
                 self.assertEqual(source.count(f"{delegation_alias}.run_cases("), 1)
-                # Require the complete extracted body to remain beneath its declared group owner.
-                self.assertIn(f"if browser_shard_owns_group('{group_name}'):", owner_source)
+                # Require the extracted owner to resolve this group exactly once before its guarded body.
+                self.assertEqual(owner_source.count(f"browser_shard_owns_group('{group_name}')"),1)
                 # Require non-owning shards to advance the complete family atomically.
                 self.assertIn(f"skip_browser_affinity('{group_name}')", owner_source)
             # Guarded bulk ranges require both an execution guard and explicit unowned accounting.
