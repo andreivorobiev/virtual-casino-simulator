@@ -1,3 +1,4 @@
+/* CSS namespace gate (#717): bare `.red`, `.black`, and `.green` rules are forbidden; route and card scopes own semantic game colors. */
 /* Bundled native-label subsets keep the locked localization registry legible without network fonts. */
 @font-face {
   font-family: "Casino Locale CJK";
@@ -2512,30 +2513,6 @@ h3 {
   transform: translateY(-2px);
 }
 
-.red {
-  /* Render semantic game red as a real table color without recoloring the rose brand chrome. */
-  background: #a91622 !important;
-}
-
-.black {
-  background: var(--black) !important;
-}
-
-.green {
-  /* Render semantic game green as felt rather than the mint accent reserved for brand chrome. */
-  background: var(--felt-green) !important;
-}
-
-/* Preserve Color Wheel's route-owned real-red gradient over the shared semantic fallback. */
-.color-wheel .cw-bet.red {
-  background: linear-gradient(180deg, #d6323d, #8e1822) !important;
-}
-
-/* Preserve Color Wheel's route-owned felt-green gradient over the shared semantic fallback. */
-.color-wheel .cw-bet.green {
-  background: linear-gradient(180deg, #0f9c4c, #0a5f2e) !important;
-}
-
 /* Roulette table, wheel, chips, and statistics primitives. */
 .roulette-stage {
   display: grid;
@@ -2766,7 +2743,7 @@ h3 {
 
 .playing-card.red {
   color: #b10020;
-  background: #fbf7e9 !important;
+  background: #fbf7e9;
 }
 
 .playing-card.back {
