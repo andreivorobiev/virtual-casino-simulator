@@ -1695,6 +1695,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertLess(owner_source.index("initial_shell_response=page.goto(base"), owner_source.index("run_case('BR-STATIC-CACHE-001'"))
         self.assertLess(owner_source.index("page.get_by_test_id('auth-locale-select').select_option('ru-RU')"), owner_source.index("run_case('BR-AUTH-LOGIN-001'"))
         self.assertLess(owner_source.index("lobby_login=page.request.post"), owner_source.index("run_case('BR-TOKEN-FRACTION-001'"))
+        # Require teardown to persist the neutral locale so a later full-page game reload cannot inherit owner-specific Russian state.
+        self.assertIn("page.get_by_test_id('personal-settings-locale').select_option('en-US')", owner_source)
+        self.assertIn("with page.expect_response(lambda response: response.url.endswith('/api/v2/me/settings') and response.request.method=='PATCH') as post_affinity_settings_info:", owner_source)
+        self.assertIn("assert post_affinity_settings_info.value.json()['data']['settings']['locale']=='en-US'", owner_source)
         # Import the extracted owner without starting the compatibility runner.
         from tests.cases.browser import auth_lobby
         # Retain the exact skip identity emitted by a non-owning shard.

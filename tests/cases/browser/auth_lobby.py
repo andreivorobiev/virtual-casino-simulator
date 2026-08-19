@@ -1397,7 +1397,23 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             if not restore_login.ok or restore_login.json().get('ok') is not True: raise AssertionError('post-affinity login failed')
             # Reload the shell after the authenticated cookie is installed.
             page.goto(base,wait_until='networkidle')
-        # Require and normalize the stable downstream shell state.
-        page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS); page.set_viewport_size({'width':1920,'height':1080}); page.emulate_media(reduced_motion='no-preference'); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+        # Require the restored authenticated shell before neutralizing owner-specific preferences.
+        page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+        # Open the real personal-settings route so the downstream locale survives full-page reloads.
+        page.get_by_test_id('nav-settings').click(); page.get_by_test_id('my-settings').wait_for(timeout=WAIT_MS)
+        # Select the canonical downstream locale through the durable preference control.
+        page.get_by_test_id('personal-settings-locale').select_option('en-US')
+        # Observe the exact persisted update rather than accepting a browser-local locale switch.
+        with page.expect_response(lambda response: response.url.endswith('/api/v2/me/settings') and response.request.method=='PATCH') as post_affinity_settings_info:
+            # Submit the visible settings form with its server-owned optimistic revision.
+            page.get_by_test_id('personal-settings-save').click()
+        # Require the server envelope to prove the neutral English preference committed.
+        assert post_affinity_settings_info.value.json()['data']['settings']['locale']=='en-US'
+        # Wait until the accepted durable preference owns the active browser runtime.
+        page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+        # Return to the canonical lobby before later independent Browser cases execute.
+        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+        # Restore the primary desktop and normal-motion environment expected by downstream cases.
+        page.set_viewport_size({'width':1920,'height':1080}); page.emulate_media(reduced_motion='no-preference')
         # Remove only expected unauthenticated bootstrap diagnostics after the authenticated shell is restored.
         console_errors.clear(); http_errors.clear()
