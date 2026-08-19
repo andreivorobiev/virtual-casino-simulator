@@ -138,7 +138,7 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
     # Require the Bingo Browser chain to remount through an observed state response.
     def test_bingo_terminal_gate_uses_authoritative_route_readiness(self) -> None:
         # Slice the exact Bingo producer-consumer chain without constraining later games.
-        bingo_source = BINGO_ADMIN_OWNER_SOURCE.partition("if browser_shard_owns_group('bingo_admin'):")[2].partition("# Seed one isolated deferred natural")[0]
+        bingo_source = BINGO_ADMIN_OWNER_SOURCE.partition("if table_games_owner:")[2].partition("# Seed one isolated deferred natural")[0]
         # Preserve the two permanent case ids and their exact existing requirement mappings.
         self.assertEqual(bingo_source.count("run_case('BR-BINGO-PURCHASE-001',['BINGO-012','BINGO-022','LEDGER-020','TEST-010','TEST-012']"), 1)
         # Preserve the premium terminal case identity and mapping byte-for-byte.

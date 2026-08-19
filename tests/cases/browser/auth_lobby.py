@@ -9,10 +9,16 @@ import re
 from tests.browser_timing import WAIT_MS
 
 
-# Execute the complete producer/consumer family under one deterministic shard owner.
+# Execute the reduced auth and lobby producer/consumer families under independent deterministic shard owners.
 def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_shard_owns,page,base,ROOT,visual_matrix,read_i18n_json,casino_config,assert_condition,shot,catalog_evidence,region_evidence,wallet_evidence,footer_evidence,game_evidence,console_errors,http_errors,provider_requests):
-    # Run visible auth, wallet, shell, catalog, and lobby state only on the declared owner.
-    if browser_shard_owns_group('auth_lobby'):
+    # Resolve each contiguous affinity exactly once so structural ownership remains auditable.
+    auth_public_owner=browser_shard_owns_group('auth_public')
+    # Keep the authenticated terms, wallet, security, locale, and logout chain on one owner.
+    auth_session_owner=browser_shard_owns_group('auth_session')
+    # Keep the fractional wallet, shared shell, catalog, and responsive lobby chain on one owner.
+    lobby_shell_owner=browser_shard_owns_group('lobby_shell')
+    # Run public Auth and restricted-preview state only on its declared owner.
+    if auth_public_owner:
         initial_shell_response=page.goto(base, wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
         # Define development-adapter HTML and lazy-module cache parity through a real browser reload. (CORE-026, TEST-068)
         def static_cache_parity():
@@ -338,6 +344,18 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'ru-RU' && document.querySelector('[data-testid=\"login-email\"]')")
         # Execute Auth touch-target acceptance under the adopted governance requirements.
         run_case('BR-TOUCH-TARGET-AUTH-001',['UX-018','UX-028','TEST-087','TEST-176'],auth_touch_target_floor)
+        # Discard only the controlled anonymous-policy and mocked-provider diagnostics asserted inside this owner.
+        console_errors.clear(); http_errors.clear()
+    # Preserve exact public-Auth case accounting on non-owning shards.
+    else:
+        # Advance only the public Auth affinity range.
+        skip_browser_affinity('auth_public')
+    # Run the authenticated terms, wallet, security, locale, and logout chain on its declared owner.
+    if auth_session_owner:
+        # Start from one canonical Russian login gate without relying on the public-Auth owner.
+        page.set_viewport_size({'width':1920,'height':1080}); page.emulate_media(reduced_motion='no-preference'); page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS); page.get_by_test_id('auth-locale-select').select_option('ru-RU')
+        # Wait until the visible form and runtime share the session chain's required starting locale.
+        page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'ru-RU' && document.querySelector('[data-testid=\"login-email\"]')")
         # Define the auth_login_gate function used by this module.
         def auth_login_gate():
             # Verify the login panel is visible before casino routes mount.
@@ -668,8 +686,18 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         # Reload the browser document to prove current-user bootstrapping does not resurrect the old session.
         page.reload(wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
         run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001','SESSION-006'],lambda: logout_me_status['status']==401 and logout_me_status['ok'] is False and page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
-        # Re-login after logout so the existing browser suite can continue authenticated.
-        page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+    # Preserve exact authenticated-session case accounting on non-owning shards.
+    else:
+        # Advance only the terms-through-logout affinity range.
+        skip_browser_affinity('auth_session')
+    # Run fractional-wallet, shared-shell, catalog, and responsive-lobby state on its declared owner.
+    if lobby_shell_owner:
+        # Establish an authenticated session independently from the logout-ending session group.
+        lobby_login=page.request.post(base+'/api/v2/auth/login',data={'email':'demo@example.local','password':'password'})
+        # Fail before any lobby case consumes an invalid or terms-gated session.
+        if not lobby_login.ok or lobby_login.json().get('ok') is not True: raise AssertionError('lobby affinity login failed')
+        # Mount the canonical lobby and require the independently seeded fractional wallet fixture.
+        page.set_viewport_size({'width':1920,'height':1080}); page.emulate_media(reduced_motion='no-preference'); page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS); assert page.locator('#balance').inner_text()=='5,250.50'
         # Establish the English oracle explicitly because re-authentication correctly restores a previously saved locale preference.
         page.get_by_test_id('shell-locale-select').select_option('en-US')
         # Wait until the shared runtime and mounted shell both own the English locale before asserting English token copy.
@@ -1353,7 +1381,39 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             reset_lobby_scroll()
         # Execute the full locale, viewport, state, and interaction matrix under the permanent requirement mapping.
         run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076','UX-016','TEST-085'],responsive_lobby)
-    # Preserve exact case accounting without replaying shard-zero browser state.
+    # Preserve exact lobby-shell case accounting on non-owning shards.
     else:
-        # Advance the complete contiguous auth/lobby affinity range.
-        skip_browser_affinity('auth_lobby')
+        # Advance only the fractional-wallet-through-responsive-lobby affinity range.
+        skip_browser_affinity('lobby_shell')
+    # Restore the authenticated English lobby contract for later independent Browser owners.
+    if auth_public_owner or auth_session_owner or lobby_shell_owner:
+        # Load the shared shell so the current session can be inspected without relying on a prior owner.
+        page.goto(base,wait_until='networkidle')
+        # Re-authenticate after public-only or logout-ending owners while preserving already-authenticated sessions.
+        if page.get_by_test_id('login-gate').is_visible():
+            # Use the isolated request context so restoration does not create an unregistered visible Auth case.
+            restore_login=page.request.post(base+'/api/v2/auth/login',data={'email':'demo@example.local','password':'password'})
+            # Fail closed if the shared downstream session cannot be restored.
+            if not restore_login.ok or restore_login.json().get('ok') is not True: raise AssertionError('post-affinity login failed')
+            # Reload the shell after the authenticated cookie is installed.
+            page.goto(base,wait_until='networkidle')
+        # Require the restored authenticated shell before neutralizing owner-specific preferences.
+        page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+        # Open the real personal-settings route so the downstream locale survives full-page reloads.
+        page.get_by_test_id('nav-settings').click(); page.get_by_test_id('my-settings').wait_for(timeout=WAIT_MS)
+        # Select the canonical downstream locale through the durable preference control.
+        page.get_by_test_id('personal-settings-locale').select_option('en-US')
+        # Observe the exact persisted update rather than accepting a browser-local locale switch.
+        with page.expect_response(lambda response: response.url.endswith('/api/v2/me/settings') and response.request.method=='PATCH') as post_affinity_settings_info:
+            # Submit the visible settings form with its server-owned optimistic revision.
+            page.get_by_test_id('personal-settings-save').click()
+        # Require the server envelope to prove the neutral English preference committed.
+        assert post_affinity_settings_info.value.json()['data']['settings']['locale']=='en-US'
+        # Wait until the accepted durable preference owns the active browser runtime.
+        page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+        # Return to the canonical lobby before later independent Browser cases execute.
+        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+        # Restore the primary desktop and normal-motion environment expected by downstream cases.
+        page.set_viewport_size({'width':1920,'height':1080}); page.emulate_media(reduced_motion='no-preference')
+        # Remove only expected unauthenticated bootstrap diagnostics after the authenticated shell is restored.
+        console_errors.clear(); http_errors.clear()

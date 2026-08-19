@@ -2411,10 +2411,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
         api(base,'/api/v1/casino/reset','POST',{})
         # Call an asynchronous API/helper and wait for the result before continuing.
         login_default_user(base)
-        # Preserve the visible terms/locale setup only on the owning auth shard.
-        auth_lobby_owner=browser_shard_owns_group('auth_lobby')
-        # Create one deterministic normal user while non-auth shards receive a case-neutral accepted fixture.
-        api(base,'/api/v1/admin/users','POST',{'email':'demo@example.local','password':'password','display_name':'Demo Player','initial_tokens':5000,'terms_accepted':not auth_lobby_owner,'language':'ru-RU' if auth_lobby_owner else 'en-US','format_locale':'browser' if auth_lobby_owner else 'en-US'})
+        # Preserve the visible terms/locale setup only on the authenticated-session shard.
+        auth_session_owner=browser_shard_owns_group('auth_session')
+        # Track public Auth ownership because it must also begin before neutral session bootstrap.
+        auth_public_owner=browser_shard_owns_group('auth_public')
+        # Seed the lobby-only owner at the fractional balance produced by the independent session chain.
+        lobby_shell_owner=browser_shard_owns_group('lobby_shell')
+        # Keep neutral bootstrap disabled only while an owned visible Auth family requires the anonymous shell.
+        visible_auth_owner=auth_public_owner or auth_session_owner
+        # Create one deterministic normal user with owner-specific terms, locale, and wallet prerequisites.
+        api(base,'/api/v1/admin/users','POST',{'email':'demo@example.local','password':'password','display_name':'Demo Player','initial_tokens':5000 if auth_session_owner or not lobby_shell_owner else 5250.5,'terms_accepted':not auth_session_owner,'language':'ru-RU' if auth_session_owner else 'en-US','format_locale':'browser' if auth_session_owner else 'en-US'})
         # Define the listener-free real browser-helper security contract for permanent browser discovery.
         def browser_security_contract():
             # Execute the focused wrapper with the active interpreter and no credential output.
@@ -2646,7 +2652,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Initialize the shared player identity before either visible auth coverage or neutral shard bootstrap.
                 browser_player_id=None
                 # Establish only the minimum authenticated shell needed by non-auth shards.
-                if not auth_lobby_owner:
+                if not visible_auth_owner:
                     # Login through the isolated Playwright request context without replaying visible auth cases.
                     shard_fixture_login=page.request.post(base+'/api/v2/auth/login',data={'email':'demo@example.local','password':'password'})
                     # Fail the shard bootstrap before any owned case can consume an invalid session.
@@ -2693,6 +2699,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     return {'results':normal_results,'viewports':viewports,'route_restored':route_restored,'html':html_result,'js':js_result,'api':api_result}
                 # Delegate the complete auth, wallet, shell, catalog, and responsive-lobby affinity family without transferring page ownership.
                 browser_auth_lobby.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_shard_owns,page,base,ROOT,visual_matrix,read_i18n_json,casino_config,assert_condition,shot,catalog_evidence,region_evidence,wallet_evidence,footer_evidence,game_evidence,console_errors,http_errors,provider_requests)
+                # Resolve the player identity after every owned auth/lobby path restores the shared authenticated shell.
+                browser_player_id=page.evaluate("window.CasinoCurrentUser.player.player_id")
                 # Prove semantic game colors remain distinct from shared brand chrome and playing-card suit styling. (UX-024, TEST-149)
                 def semantic_game_colors():
                     # Resolve the exact governed viewport dimensions from the visual matrix.
