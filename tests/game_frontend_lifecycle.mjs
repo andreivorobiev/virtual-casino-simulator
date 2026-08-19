@@ -182,5 +182,16 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let drawBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(dailySource.includes(duplicate), false, duplicate);
 // Require the previously inline selectors to remain present in the formatted game CSS.
 for (const selector of ['.daily {', '.dd-board {', '.dd-num.hit {', '.dd-go {', '.dd-repeat {', '@media (max-width: 900px)']) assert.ok(dailyCss.includes(selector), selector);
+
+// Read the exact second-adopter source for per-slice duplicate-helper deletion evidence.
+const faroSource = await readFile(new URL('../web/games/faro.js', import.meta.url), 'utf8');
+// Read Faro's formatted external stylesheet for ownership and tooling visibility.
+const faroCss = await readFile(new URL('../web/games/faro.css', import.meta.url), 'utf8');
+// Require Faro to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "href: '/games/faro.css'"]) assert.ok(faroSource.includes(marker), marker);
+// Reject Faro's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let dealBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(faroSource.includes(duplicate), false, duplicate);
+// Require every representative Faro selector, animation, and responsive rule to survive extraction.
+for (const selector of ['.faro {', '.fr-card.dealing {', '@keyframes fr-flip {', '.fr-ranks {', '.fr-deal {', '.fr-repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 900px)', '@media (max-width: 430px)']) assert.ok(faroCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

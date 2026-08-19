@@ -5,13 +5,15 @@
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, style, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/faro';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'faro-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'fr', stylesheet: { id: 'faro-styles', href: '/games/faro.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Mirror the backend's thirteen ranks in ascending faro order.
 export const RANKS = Object.freeze(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']);
 // Publish the chip denominations offered for the stake.
@@ -19,42 +21,18 @@ const CHIPS = [1, 5, 25, 100];
 // Fix the decorative deal duration; the outcome is already server-authoritative.
 const DEAL_MS = 700;
 
-// Store the current route outlet, chosen rank, chosen stake, and in-flight guard.
-let root = null;
+// Store the chosen rank and stake while the shared lifecycle owns route and busy state.
 let selectedRank = 1;
 let stake = 5;
-let dealBusy = false;
-let localeUnsubscribe = null;
 // Retain the last dealt cards so a repaint after the deal keeps showing the result.
 let shownCards = null;
 // Retain the last settled rank and stake so one click can repeat the same bet.
 let lastBet = null;
 
-// Translate one game-domain key through the shared installed-locale fallback chain.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
-
-// Install compact game-owned styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.faro{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .fr-stage{display:grid;justify-items:center;gap:18px;padding:12px;min-width:0;} .fr-cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;min-width:0;} .fr-slot{display:grid;justify-items:center;gap:6px;} .fr-slot span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);font-weight:700;} .fr-card{width:76px;height:104px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(160deg,#fbf3dd,#e2cf9d);color:#241006;font-weight:900;font-size:32px;box-shadow:0 8px 20px rgba(0,0,0,.4),inset 0 0 0 2px #a9791f;} .fr-card.dealing{animation:fr-flip .35s ease;} @keyframes fr-flip{from{transform:rotateY(90deg);}to{transform:rotateY(0);}} .fr-ranks{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;width:100%;max-width:420px;min-width:0;} .fr-rank{min-height:44px;min-width:0;padding:0;border:2px solid transparent;border-radius:10px;background:rgba(255,255,255,.06);color:var(--text);font-weight:900;cursor:pointer;} .fr-rank[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 2px rgba(255,59,107,.5);} .fr-panel{display:grid;gap:12px;min-width:0;} .fr-card-box{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .fr-card-box h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .fr-odds{display:grid;gap:6px;font-size:13px;font-weight:700;} .fr-odds div{display:flex;justify-content:space-between;} .fr-odds span:last-child{color:var(--gold);} .fr-chips{display:flex;flex-wrap:wrap;gap:8px;} .fr-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .fr-chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(255,59,107,.16);color:var(--text);} .fr-deal{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,var(--brand),var(--brand-strong));color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .fr-deal:disabled{opacity:.55;cursor:not-allowed;} .fr-result{min-height:44px;font-size:15px;color:var(--text);text-align:center;} .fr-result .net{font-weight:900;} @media (prefers-reduced-motion:reduce){.fr-card.dealing{animation:none;}} @media (max-width:900px){.faro{grid-template-columns:1fr;}} @media (max-width:430px){.fr-ranks{grid-template-columns:repeat(5,minmax(0,1fr));}}.fr-repeat{width:100%;min-height:46px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;font-size:16px;cursor:pointer;}.fr-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.appendChild(style);
-}
-
-// Generate one caller-stable retry identity for exactly-once settlement.
-function newRequestId() {
-  // Prefer a real UUID when the platform provides one.
-  return (globalThis.crypto?.randomUUID?.() || `fr-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
-}
-
 // Render the complete Faro route into the outlet.
 function render(resultText) {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Read the dealt card faces or neutral placeholders before the first deal.
@@ -65,7 +43,7 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="fr-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="faro" data-testid="faro"><div class="fr-stage"><div class="fr-cards"><div class="fr-slot"><span>${safe(tx('card.banker'))}</span><div class="fr-card${dealBusy ? ' dealing' : ''}" data-testid="faro-banker">${safe(banker)}</div></div><div class="fr-slot"><span>${safe(tx('card.player'))}</span><div class="fr-card${dealBusy ? ' dealing' : ''}" data-testid="faro-player">${safe(player)}</div></div></div><div class="fr-ranks">${ranks}</div><p class="fr-result" data-testid="faro-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="fr-panel"><div class="fr-card-box"><h3>${safe(tx('odds.title'))}</h3><div class="fr-odds"><div><span>${safe(tx('odds.win'))}</span><span>2x</span></div><div><span>${safe(tx('odds.push'))}</span><span>1x</span></div><div><span>${safe(tx('odds.split'))}</span><span>0.5x</span></div><div><span>${safe(tx('odds.lose'))}</span><span>0x</span></div></div></div><div class="fr-card-box"><h3>${safe(tx('stake.title'))}</h3><div class="fr-chips">${chips}</div></div><button class="fr-deal" data-testid="faro-deal" type="button" ${dealBusy ? 'disabled' : ''}>${safe(dealBusy ? tx('action.dealing') : tx('action.deal'))}</button><button class="fr-repeat" data-testid="faro-repeat" type="button" ${dealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
+  root.innerHTML = `<section class="faro" data-testid="faro"><div class="fr-stage"><div class="fr-cards"><div class="fr-slot"><span>${safe(tx('card.banker'))}</span><div class="fr-card${lifecycle.isBusy() ? ' dealing' : ''}" data-testid="faro-banker">${safe(banker)}</div></div><div class="fr-slot"><span>${safe(tx('card.player'))}</span><div class="fr-card${lifecycle.isBusy() ? ' dealing' : ''}" data-testid="faro-player">${safe(player)}</div></div></div><div class="fr-ranks">${ranks}</div><p class="fr-result" data-testid="faro-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="fr-panel"><div class="fr-card-box"><h3>${safe(tx('odds.title'))}</h3><div class="fr-odds"><div><span>${safe(tx('odds.win'))}</span><span>2x</span></div><div><span>${safe(tx('odds.push'))}</span><span>1x</span></div><div><span>${safe(tx('odds.split'))}</span><span>0.5x</span></div><div><span>${safe(tx('odds.lose'))}</span><span>0x</span></div></div></div><div class="fr-card-box"><h3>${safe(tx('stake.title'))}</h3><div class="fr-chips">${chips}</div></div><button class="fr-deal" data-testid="faro-deal" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(lifecycle.isBusy() ? tx('action.dealing') : tx('action.deal'))}</button><button class="fr-repeat" data-testid="faro-repeat" type="button" ${lifecycle.isBusy() || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the rank cells.
   root.querySelectorAll('[data-rank]').forEach(btn => { btn.onclick = () => { selectedRank = Number(btn.dataset.rank); render(); }; });
   // Wire the chip buttons.
@@ -100,15 +78,15 @@ async function load() {
 
 // Execute one atomic wager, deal, and settlement.
 async function deal() {
-  // Ignore repeated clicks while a deal is resolving.
-  if (dealBusy || !root) return;
+  // Ignore repeated clicks or teardown through shared lifecycle state.
+  if (lifecycle.isBusy() || !lifecycle.isMounted()) return;
   // Mark the deal busy and disable the control before the request.
-  dealBusy = true;
+  lifecycle.setBusy(true);
   render();
   // Start protected settlement so the busy flag is always released.
   try {
     // Post the exactly-once deal with a caller-stable retry id and the chosen rank.
-    const response = await post('/api/v1/games/faro/deals', { request_id: newRequestId(), rank: selectedRank, stake });
+    const response = await post('/api/v1/games/faro/deals', { request_id: lifecycle.nextRequestId(), rank: selectedRank, stake });
     // Show the committed debit before the banker and player cards are revealed. (LEDGER-031, issue #594)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
@@ -126,12 +104,12 @@ async function deal() {
     // Compose the localized result copy from the authoritative outcome and net.
     const text = `${safe(tx('outcome.' + round.outcome))} <span class="net">${net > 0 ? '+' + net : net}</span>`;
     // Release the guard before the final repaint.
-    dealBusy = false;
+    lifecycle.setBusy(false);
     // Repaint with the dealt cards and result.
     render(text);
   } catch (err) {
     // Release the guard and report a bounded error.
-    dealBusy = false;
+    lifecycle.setBusy(false);
     // Surface the failure without leaking internal detail.
     toast(err?.message || tx('error.deal'), 'error');
     // Repaint the unlocked controls.
@@ -142,7 +120,7 @@ async function deal() {
 // Re-apply the last settled bet and re-fire one deal without a timer.
 async function repeat() {
   // Ignore repeat while a deal resolves, after teardown, or before any settled bet.
-  if (dealBusy || !root || !lastBet) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || !lastBet) return;
   // Restore the previously settled rank into the local configuration.
   selectedRank = lastBet.rank;
   // Restore the previously settled stake into the local configuration.
@@ -157,29 +135,19 @@ export const FaroGame = {
   id: 'faro',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet.
-    root = node;
     // Reset any repeatable bet so a new mount never inherits a stale one before load recovers history.
     lastBet = null;
-    // Install game-owned styles.
-    ensureStyles();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings on a locale change unless a deal owns the table.
-    localeUnsubscribe = onLocaleChange(() => { if (!dealBusy) render(); });
+    // Establish shared route, stylesheet, localization, and locale-subscription ownership.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released the route during asynchronous locale initialization.
+    if (!mounted) return;
     // Load session-bound state and render the first frame.
     await load();
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    dealBusy = false;
+    // Release route, locale-subscription, and in-flight lifecycle ownership.
+    lifecycle.unmount();
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
   },

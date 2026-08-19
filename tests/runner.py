@@ -3112,10 +3112,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Exercise Faro through its real deal endpoint and reload-safe recent-round state.
                 def faro_browser_acceptance():
-                    # Use the default rank and five-token chip for one real settled deal.
-                    newest_simple_game_acceptance('faro','faro','/api/v1/games/faro/deals',lambda: page.get_by_test_id('faro-deal').click(),'faro-result','faro-repeat')
+                    # Bind exact external-style and ready-layout evidence before the real deal mutates the cards.
+                    def deal_once():
+                        # Restore the governed primary desktop viewport and route top after preceding shared cases.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate('window.scrollTo(0,0)'); page.wait_for_timeout(100)
+                        # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                        style_link=page.locator('link#faro-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/faro.css'
+                        # Prove the migrated asset loaded by binding the unchanged desktop route and rank-grid layout.
+                        assert page.get_by_test_id('faro').evaluate("el => { const route=getComputedStyle(el); const ranks=getComputedStyle(el.querySelector('.fr-ranks')); return route.display==='grid' && route.gridTemplateColumns.split(' ').length===2 && ranks.display==='grid' && ranks.gridTemplateColumns.split(' ').length===7; }")
+                        # Capture after-pass second-adopter evidence before the real settled action mutates the cards.
+                        page.locator('#view').screenshot(path=str(screenshots/'after-pass-faro-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Use the default rank and five-token chip for one real settled deal.
+                        page.get_by_test_id('faro-deal').click()
+                    # Bind the deal response, terminal wallet, and recovered repeat control.
+                    newest_simple_game_acceptance('faro','faro','/api/v1/games/faro/deals',deal_once,'faro-result','faro-repeat')
                 # Record Faro's dedicated affected-game acceptance case.
-                run_case('BR-FARO-001',['FARO-001','FARO-002','TEST-185'],faro_browser_acceptance)
+                run_case('BR-FARO-001',['FARO-001','FARO-002','CORE-034','TEST-185','TEST-248'],faro_browser_acceptance)
                 # Exercise Trente et Quarante through its real coup endpoint and reload-safe recent-round state.
                 def trente_et_quarante_browser_acceptance():
                     # Use the default rouge bet and five-token chip for one real settled coup.
