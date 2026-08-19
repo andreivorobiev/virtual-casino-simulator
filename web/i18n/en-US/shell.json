@@ -334,6 +334,8 @@
   "whatsNew.entry.0_9_5_80.body": "This release prevents deployment probes from writing Python bytecode into verified release roots so pull delivery can complete without weakening integrity checks.",
   "whatsNew.entry.0_9_5_81.title": "Reliable release monitoring",
   "whatsNew.entry.0_9_5_81.body": "This release scopes lag-check cleanup to one poller invocation so production monitoring completes without weakening delivery, rollback, or integrity checks.",
+  "whatsNew.entry.0_9_5_82.title": "Safer foundations and faster screens",
+  "whatsNew.entry.0_9_5_82.body": "This release strengthens atomic game and wallet foundations while making the lobby, Admin, and application screens easier to maintain and faster to update.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
