@@ -6,6 +6,8 @@
 from copy import deepcopy
 # Import cookie parsing for a minimal authenticated browser-session boundary.
 from http.cookies import SimpleCookie
+# Import a direct loopback client for fail-closed fixture probes without a browser.
+from http.client import HTTPConnection
 # Import the standard loopback HTTP server without starting the shared application.
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 # Import JSON encoding for API envelopes and locale fixtures.
@@ -42,10 +44,15 @@ PROTECTED_LIVE_PORT = 8765
 SESSION_COOKIE = "dwvp_diagnostic_session"
 # Name the browser-readable production CSRF cookie required before unsafe API fetches.
 CSRF_COOKIE = "casino_csrf"
-# Use one bounded non-secret proof because the diagnostic server never reaches live authentication.
-DIAGNOSTIC_CSRF_TOKEN = "dwvp-diagnostic-csrf-proof-0001"
 # Allow only the two locale-specific fake session players used by this diagnostic.
 SESSION_PLAYERS = frozenset({"browser-en", "browser-ru"})
+# Publish only the public bootstrap path consumed by the shared browser API helper.
+CSRF_BOOTSTRAP_PATH = "/api/v2/auth/csrf"
+# Bind one bounded non-secret proof to each isolated diagnostic session.
+SESSION_CSRF_TOKENS = {
+    "browser-en": "dwvp-diagnostic-browser-en-csrf-proof",  # Separate the English browser proof.
+    "browser-ru": "dwvp-diagnostic-browser-ru-csrf-proof",  # Separate the Russian browser proof.
+}
 
 # Build one minimal route outlet that imports the actual locale and game modules.
 DIAGNOSTIC_INDEX = (
@@ -245,7 +252,7 @@ def content_type(path):
 
 
 # Build one HTTP handler bound to the actual game router and in-memory ports.
-def handler_for(router, backend, http_errors):
+def handler_for(router, backend, http_errors, csrf_events):
     # Define a closure-owned handler so no shared application globals are changed.
     class DiagnosticHandler(BaseHTTPRequestHandler):
         # Suppress default access logging so only listener evidence reaches test output.
@@ -264,8 +271,44 @@ def handler_for(router, backend, http_errors):
             # Return only an explicitly provisioned authenticated test player.
             return candidate if candidate in SESSION_PLAYERS else "browser-anonymous"
 
+        # Issue one browser-readable CSRF cookie for the bound diagnostic session.
+        def _issue_csrf(self, player_id):
+            # Resolve only the proof owned by this authenticated fake session.
+            token = SESSION_CSRF_TOKENS.get(player_id)
+            # Reject anonymous or unrecognized session cookies without issuing a proof.
+            if token is None:
+                # Record only low-cardinality rejection evidence, never cookie material.
+                csrf_events.append({"event": "bootstrap_rejected", "player_id": player_id})
+                # Return the standard bounded failure envelope.
+                self._send_json(403, {"ok": False, "error": {"code": "FORBIDDEN", "message": "Request could not be verified.", "details": {}}})
+                # Stop before any cookie header can be emitted.
+                return
+            # Record issuance without retaining the proof value in diagnostics.
+            csrf_events.append({"event": "issued", "player_id": player_id})
+            # Return an empty success envelope while the proof travels only in Set-Cookie.
+            self._send_json(200, {"ok": True, "data": {}}, headers=(("Set-Cookie", f"{CSRF_COOKIE}={token}; Path=/; SameSite=Strict"),))
+
+        # Validate the unsafe-request cookie/header pair against its bound session.
+        def _csrf_is_valid(self, player_id):
+            # Parse only this request's cookie header through the standard implementation.
+            cookies = SimpleCookie(self.headers.get("Cookie", ""))
+            # Read the browser cookie proof without accepting a missing morsel.
+            cookie_morsel = cookies.get(CSRF_COOKIE)
+            # Normalize the cookie value to one bounded scalar.
+            cookie_token = cookie_morsel.value if cookie_morsel is not None else ""
+            # Read the matching double-submit header supplied by the shared API helper.
+            header_token = self.headers.get("X-CSRF-Token", "")
+            # Resolve the sole expected proof for this authenticated fake session.
+            expected_token = SESSION_CSRF_TOKENS.get(player_id, "")
+            # Require a nonempty session proof and exact cookie/header equality.
+            valid = bool(expected_token and cookie_token == expected_token and header_token == expected_token)
+            # Record only the acceptance class and bound identity, never proof bytes.
+            csrf_events.append({"event": "accepted" if valid else "rejected", "player_id": player_id})
+            # Return the complete session-bound double-submit verdict.
+            return valid
+
         # Send one complete response and record every non-success status.
-        def _send_bytes(self, status, payload, media_type):
+        def _send_bytes(self, status, payload, media_type, *, headers=()):
             # Record status failures for the final no-HTTP-errors assertion.
             if status >= 400:
                 # Preserve the method, path, and status without response-body secrets.
@@ -276,6 +319,10 @@ def handler_for(router, backend, http_errors):
             self.send_header("Content-Type", media_type)
             # Prevent browser caching from hiding repeat resource requests.
             self.send_header("Cache-Control", "no-store")
+            # Emit only explicitly supplied fixture headers such as Set-Cookie.
+            for name, value in headers:
+                # Preserve the caller's exact header name and bounded value.
+                self.send_header(name, value)
             # Publish the exact response length before writing bytes.
             self.send_header("Content-Length", str(len(payload)))
             # Complete the response header section.
@@ -286,11 +333,11 @@ def handler_for(router, backend, http_errors):
                 self.wfile.write(payload)
 
         # Serialize a standard success or error envelope as UTF-8 JSON.
-        def _send_json(self, status, payload):
+        def _send_json(self, status, payload, *, headers=()):
             # Preserve paired-locale characters while encoding the API document.
             encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
             # Send the JSON document through the common response boundary.
-            self._send_bytes(status, encoded, "application/json; charset=utf-8")
+            self._send_bytes(status, encoded, "application/json; charset=utf-8", headers=headers)
 
         # Parse one JSON action body without introducing form or multipart behavior.
         def _read_json(self):
@@ -311,6 +358,18 @@ def handler_for(router, backend, http_errors):
             path = urlparse(self.path).path
             # Resolve the only session-authorized player for this request.
             player_id = self._bound_player()
+            # Serve the same public bootstrap path requested by the shared API helper.
+            if path == CSRF_BOOTSTRAP_PATH and self.command == "GET":
+                # Issue a cookie only for the bound diagnostic session.
+                self._issue_csrf(player_id)
+                # Stop after the bootstrap envelope and cookie are complete.
+                return
+            # Reject every state-changing request without an exact session-bound pair.
+            if self.command == "POST" and not self._csrf_is_valid(player_id):
+                # Return a standard error without dispatching any wallet or game action.
+                self._send_json(403, {"ok": False, "error": {"code": "FORBIDDEN", "message": "Request could not be verified.", "details": {}}})
+                # Stop before reading or routing attacker-controlled mutation input.
+                return
             # Start standard API error handling around actual game dispatch.
             try:
                 # Read JSON only for mutation requests.
@@ -391,8 +450,10 @@ def handler_for(router, backend, http_errors):
 def start_harness(router, backend):
     # Collect every server-side HTTP status failure for post-browser assertions.
     http_errors = []
+    # Collect token-free bootstrap and validation decisions for focused evidence.
+    csrf_events = []
     # Build a handler that cannot reach shared application state.
-    handler = handler_for(router, backend, http_errors)
+    handler = handler_for(router, backend, http_errors, csrf_events)
     # Retry port-zero allocation only if the protected live port is ever selected.
     for _attempt in range(10):
         # Ask the operating system for an available loopback ephemeral port.
@@ -418,7 +479,7 @@ def start_harness(router, backend):
     # Record the required PID and exact non-live port in direct test output.
     print(f"DWVP_DIAGNOSTIC_LISTENER_START pid={os.getpid()} host={LOOPBACK_HOST} port={port}", flush=True)
     # Return every lifecycle object needed for deterministic teardown.
-    return server, thread, port, http_errors
+    return server, thread, port, http_errors, csrf_events
 
 
 # Poll briefly until a closed loopback listener refuses new connections.
@@ -475,6 +536,104 @@ def watch_page(page, browser_errors):
     page.on("response", on_response)
 
 
+# Send one bounded JSON request to the ephemeral fixture without browser state.
+def loopback_json_request(port, method, path, *, headers=None, body=None):
+    # Open one short-lived connection to the exact loopback harness port.
+    connection = HTTPConnection(LOOPBACK_HOST, port, timeout=2)
+    # Serialize optional JSON input through the same UTF-8 wire shape as browser fetch.
+    encoded_body = None if body is None else json.dumps(body, sort_keys=True).encode("utf-8")
+    # Copy caller headers so content metadata can be added without mutation.
+    request_headers = dict(headers or {})
+    # Declare JSON only when the focused probe carries a body.
+    if encoded_body is not None:
+        # Match the shared browser helper's JSON content type.
+        request_headers["Content-Type"] = "application/json"
+    # Always close the direct client even when the fixture rejects or disconnects.
+    try:
+        # Send exactly one request without redirects, retries, or external transport.
+        connection.request(method, path, body=encoded_body, headers=request_headers)
+        # Read the complete diagnostic response before closing its socket.
+        response = connection.getresponse()
+        # Decode the standard JSON envelope returned by every focused probe.
+        payload = json.loads(response.read().decode("utf-8"))
+        # Preserve response headers so Set-Cookie can be verified exactly.
+        response_headers = response.getheaders()
+        # Return the status, decoded envelope, and ordered headers.
+        return response.status, payload, response_headers
+    # Release the one direct loopback socket on every outcome.
+    finally:
+        # Close the client without affecting the independently owned server.
+        connection.close()
+
+
+# Prove the test-only CSRF endpoint and mutation guard fail closed without Playwright.
+class DeucesWildVideoPokerDiagnosticCsrfTests(unittest.TestCase):
+    # Cover bootstrap issuance plus missing, mismatched, and cross-session rejection.
+    def test_session_bound_csrf_fixture(self):
+        # Start the smallest handler with no registered game routes or external state.
+        server, server_thread, port, http_errors, csrf_events = start_harness(Router(), InMemoryCasino())
+        # Always close the ephemeral listener even when an assertion fails.
+        try:
+            # Bootstrap and verify one distinct proof for each allowed session.
+            for player_id in sorted(SESSION_PLAYERS):
+                # Preserve the bound identity in assertion diagnostics.
+                with self.subTest(bootstrap_player=player_id):
+                    # Request the public bootstrap route with only the fake session cookie.
+                    status, payload, headers = loopback_json_request(port, "GET", CSRF_BOOTSTRAP_PATH, headers={"Cookie": f"{SESSION_COOKIE}={player_id}"})
+                    # Require an empty standard success envelope with no token in JSON.
+                    self.assertEqual((200, {"ok": True, "data": {}}), (status, payload))
+                    # Parse the sole CSRF Set-Cookie response through the standard cookie parser.
+                    issued = SimpleCookie(next(value for name, value in headers if name.lower() == "set-cookie"))
+                    # Require the browser-readable cookie to carry only this session's proof.
+                    self.assertEqual(SESSION_CSRF_TOKENS[player_id], issued[CSRF_COOKIE].value)
+                    # Require root-path scope so every diagnostic game mutation receives the proof.
+                    self.assertEqual("/", issued[CSRF_COOKIE]["path"])
+            # Prove an unknown session cannot obtain any diagnostic CSRF cookie.
+            anonymous_status, anonymous_payload, anonymous_headers = loopback_json_request(port, "GET", CSRF_BOOTSTRAP_PATH)
+            # Require the stable fail-closed envelope for an unbound bootstrap.
+            self.assertEqual((403, "FORBIDDEN"), (anonymous_status, anonymous_payload["error"]["code"]))
+            # Require the rejection to omit every Set-Cookie header.
+            self.assertFalse(any(name.lower() == "set-cookie" for name, _value in anonymous_headers))
+            # Enumerate every unsafe proof failure required by issue #828.
+            rejection_cases = {
+                "missing": {"Cookie": f"{SESSION_COOKIE}=browser-en"},  # Omit both double-submit values.
+                "mismatched": {"Cookie": f"{SESSION_COOKIE}=browser-en; {CSRF_COOKIE}={SESSION_CSRF_TOKENS['browser-en']}", "X-CSRF-Token": "wrong-proof"},  # Split the pair.
+                "cross-session": {"Cookie": f"{SESSION_COOKIE}=browser-en; {CSRF_COOKIE}={SESSION_CSRF_TOKENS['browser-ru']}", "X-CSRF-Token": SESSION_CSRF_TOKENS["browser-ru"]},  # Reuse another session's pair.
+            }
+            # Probe every invalid pair against a state-changing game-shaped route.
+            for name, headers in rejection_cases.items():
+                # Preserve the rejection class in assertion diagnostics.
+                with self.subTest(rejection=name):
+                    # Send one unsafe request whose route must never be dispatched.
+                    status, payload, _response_headers = loopback_json_request(port, "POST", "/api/v1/games/deuces_wild_video_poker/deals", headers=headers, body={})
+                    # Require one standard forbidden response before any game action.
+                    self.assertEqual((403, "FORBIDDEN"), (status, payload["error"]["code"]))
+            # Require exactly the two successful session-bound issuance decisions.
+            self.assertEqual(sorted(SESSION_PLAYERS), sorted(event["player_id"] for event in csrf_events if event["event"] == "issued"))
+            # Require all three unsafe cases to terminate in the token-free rejection class.
+            self.assertEqual(3, sum(event["event"] == "rejected" for event in csrf_events))
+            # Require one separate rejection for the anonymous bootstrap request.
+            self.assertEqual([{"event": "bootstrap_rejected", "player_id": "browser-anonymous"}], [event for event in csrf_events if event["event"] == "bootstrap_rejected"])
+            # Bind the expected four intentional HTTP failures and no hidden route errors.
+            self.assertEqual(4, len(http_errors))
+        # Shut down the listener and prove exact port cleanup on success or failure.
+        finally:
+            # Stop accepting new diagnostic HTTP connections.
+            server.shutdown()
+            # Close the loopback listening socket.
+            server.server_close()
+            # Wait briefly for the background server loop to exit.
+            server_thread.join(timeout=5)
+            # Probe the exact prior port until it refuses new connections.
+            closed = listener_is_closed(port)
+            # Record the same bounded listener teardown evidence as the browser flow.
+            print(f"DWVP_DIAGNOSTIC_LISTENER_STOP pid={os.getpid()} host={LOOPBACK_HOST} port={port} closed={str(closed).lower()}", flush=True)
+            # Fail if the serving thread survived explicit shutdown.
+            self.assertFalse(server_thread.is_alive(), "diagnostic HTTP thread did not stop")
+            # Fail if the exact ephemeral port still accepts connections.
+            self.assertTrue(closed, f"diagnostic listener remained open on {LOOPBACK_HOST}:{port}")
+
+
 # Exercise the actual game module through a real browser and isolated real API adapter.
 class DeucesWildVideoPokerDiagnosticBrowserTests(unittest.TestCase):
     # Open one authenticated locale page with optional narrow and reduced-motion settings.
@@ -484,7 +643,6 @@ class DeucesWildVideoPokerDiagnosticBrowserTests(unittest.TestCase):
         # Bind subsequent same-origin API requests to the selected session player.
         context.add_cookies([
             {"name": SESSION_COOKIE, "value": player_id, "url": base_url},  # Bind the fake authenticated player.
-            {"name": CSRF_COOKIE, "value": DIAGNOSTIC_CSRF_TOKEN, "url": base_url},  # Model the paired browser proof issued with a real session.
         ])
         # Create the actual page after authentication state is installed.
         page = context.new_page()
@@ -676,7 +834,7 @@ class DeucesWildVideoPokerDiagnosticBrowserTests(unittest.TestCase):
         # Register only the actual issue #92 additive-v1 routes.
         game_api.register(router, service=service)
         # Start the isolated non-8765 loopback harness.
-        server, server_thread, port, http_errors = start_harness(router, backend)
+        server, server_thread, port, http_errors, csrf_events = start_harness(router, backend)
         # Build the same-origin diagnostic base URL from the selected ephemeral port.
         base_url = f"http://{LOOPBACK_HOST}:{port}"
         # Collect browser console, execution, network, and response failures.
@@ -731,6 +889,18 @@ class DeucesWildVideoPokerDiagnosticBrowserTests(unittest.TestCase):
             self.assertEqual([], browser_errors)
             # Verify the loopback handler produced no failing HTTP status.
             self.assertEqual([], http_errors)
+            # Require the shared helper to bootstrap one cookie for each browser session.
+            self.assertEqual(sorted(SESSION_PLAYERS), sorted(event["player_id"] for event in csrf_events if event["event"] == "issued"))
+            # Require each session's deal, hold, and draw to pass the exact double-submit guard.
+            for player_id in sorted(SESSION_PLAYERS):
+                # Preserve the session identity in assertion diagnostics.
+                with self.subTest(csrf_player=player_id):
+                    # Count only accepted unsafe requests for this bound player.
+                    accepted = [event for event in csrf_events if event == {"event": "accepted", "player_id": player_id}]
+                    # Require all three real browser actions to reach the game adapter.
+                    self.assertEqual(3, len(accepted))
+            # Prove the successful browser flow never relied on a rejected proof.
+            self.assertFalse(any(event["event"] in {"rejected", "bootstrap_rejected"} for event in csrf_events))
         # Always stop Chromium and the isolated loopback listener.
         finally:
             # Close Chromium if an assertion or availability path left it open.
