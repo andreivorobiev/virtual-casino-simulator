@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "casino/admin.py",
+      "lines_at_review": 1504,
+      "justification": "The module is a cohesive owner for the frozen Admin route surface and its shared authorization, validation, and response-envelope rules; splitting those routes without an independently filed boundary design would increase security-policy drift, so this baseline remains reviewable under the growth ratchet.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "casino/core/auth.py",
+      "lines_at_review": 1903,
+      "justification": "Authentication, session, invitation, verification, reset, and conversion invariants currently share one security-sensitive state machine; a future split needs its own contract and threat-model ticket rather than a mechanical move, while the twenty-percent ratchet prevents silent continued growth.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "casino/core/recovery.py",
+      "lines_at_review": 1544,
+      "justification": "Recovery verification, evidence classification, and guarded repair orchestration form one fail-closed operator boundary whose sequencing is more important than file size alone; retain the cohesive owner until a dedicated recovery-package design preserves every forensic and rollback invariant.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "scripts/audit_multiprocess_safety.py",
+      "lines_at_review": 1478,
+      "justification": "This standalone audit intentionally keeps discovery, classification, evidence rendering, and its deterministic safety model together so one operator command owns the complete decision; splitting it is deferred until a separate ticket can preserve its one-command fail-closed evidence contract.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/cases/browser/auth_lobby.py",
+      "lines_at_review": 1346,
+      "justification": "This Browser owner keeps the complete auth-and-lobby affinity family atomic for shard safety; issue #722 owns the follow-up decomposition into smaller affinity-safe groups, so the file stays registered until that work proves unchanged case inventory and producer-consumer ownership.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/cases/browser/bingo_admin.py",
+      "lines_at_review": 1870,
+      "justification": "This Browser owner preserves the complete Bingo, shared-shell, and Admin producer-consumer affinity family as one shard unit; issue #722 owns safe decomposition, and the register prevents further material growth before that case-inventory and affinity proof lands.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/cases/browser/roulette_slots_keno.py",
+      "lines_at_review": 1640,
+      "justification": "This Browser owner keeps the complete Roulette, Slots, and Keno affinity family together so setup and settlement consumers cannot land on different shards; issue #722 owns its affinity-safe decomposition and must preserve exact sorted Browser case identities.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/cicd_deployment_tests.py",
+      "lines_at_review": 2272,
+      "justification": "The suite is the single source for deployment-workflow, pull-poller, release, residue, and fail-closed qualification assertions; its scenarios share exact workflow literals and operator boundaries, so a later split requires a dedicated inventory-preserving test-ownership ticket.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/concurrent_browser_138.py",
+      "lines_at_review": 1543,
+      "justification": "The sustained concurrent Browser harness intentionally owns one coordinated server, worker, telemetry, and teardown lifecycle whose failures must be interpreted together; keep it cohesive until a separate harness decomposition can prove identical concurrency and cleanup evidence.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/json_game_action_provider_tests.py",
+      "lines_at_review": 1948,
+      "justification": "The suite is a single fault-matrix for JSON game-action claims, receipts, journals, epochs, reset rollback, and crash recovery; keeping schedules adjacent makes cross-window omissions visible, while any future split must preserve the named lifecycle matrix and restart coverage.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/mysql_migration_live.py",
+      "lines_at_review": 1289,
+      "justification": "The disposable MySQL harness owns one privilege-bounded migration, provider, reset, locking, and cleanup lifecycle against a single temporary target; retaining one owner prevents partial cleanup and grant evidence from drifting across independently invoked integration files.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/runner.py",
+      "lines_at_review": 5257,
+      "justification": "Issue #727 deliberately reduced tests/run_tests.py to a compatibility shim and moved unified discovery, listener, reset, execution, reporting, and teardown lifecycle here; those shared mutable seams remain one orchestrator pending a separately designed runner-package split with exact CLI and case inventories.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/storage_tests.py",
+      "lines_at_review": 2017,
+      "justification": "The suite provides the broad provider-contract and storage-failure matrix used to compare JSON and connector-free MySQL behavior; its shared fixtures and mutation assertions remain cohesive until a dedicated provider-area test split can preserve every parity seam.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/ui_50000.py",
+      "lines_at_review": 1336,
+      "justification": "The large-UI stress harness owns one deterministic catalog, render, navigation, and resource-budget scenario whose measurements are meaningful only as a complete run; retain it as one bounded acceptance owner until a dedicated fixture-generator design proves byte-equivalent inputs.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/unit/concurrent_browser_138_tests.py",
+      "lines_at_review": 1404,
+      "justification": "These unit fixtures mirror the complete concurrent Browser harness safety envelope, including worker coordination, timeouts, telemetry, and cleanup; keeping the oracle together avoids mismatched fixture assumptions until the production harness itself receives a governed split.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/unit/payload_frontend_budget_tests.py",
+      "lines_at_review": 1362,
+      "justification": "The suite is the cohesive exact-source oracle for payload, linked-asset, frontend, archive, and index budgets; shared synthetic Git objects and closure assertions make a mechanical split risk divergent fixture semantics, so growth is ratcheted pending a dedicated design.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "tests/unit/request_latency_benchmark_tests.py",
+      "lines_at_review": 1677,
+      "justification": "The benchmark oracle keeps JSON and MySQL request grids, statistical acceptance, governance bindings, and fixture construction in one deterministic model; separating it without a dedicated plan could make provider evidence incomparable, so the review ratchet bounds interim growth.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    },
+    {
+      "path": "web/games/roulette.js",
+      "lines_at_review": 1627,
+      "justification": "Roulette currently owns one tightly coupled table, bet-map, motion, result, chip, accessibility, and settlement presentation lifecycle; issue #718 is the governed incremental frontend-lifecycle path, and a direct split before its shared seams land would increase cross-module game risk.",
+      "reviewed_by": "Andrei Vorobiev (#731)",
+      "review_date": "2026-08-19",
+      "revisit_after": "2026-11-19"
+    }
+  ]
+}

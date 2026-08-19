@@ -111,6 +111,14 @@ GitHub is the source of truth after this payload is pushed. Work must happen thr
 - HTML/CSS/YAML/OpenAPI files require clear section-level comments where comments are syntactically legal.
 - When you touch a file, improve comment clarity in that file.
 
+## Source file-length review policy
+
+- A tracked first-party `.py` or `.js` file exceeding 1,200 physical lines or 96 KiB must be split or have a current entry in `docs/file_length_register.json`.
+- A register entry is the audit decision: it names the path, reviewed line count, substantive justification, reviewer, review date, and revisit date.
+- A registered file that grows more than 20 percent beyond `lines_at_review` must be re-audited before merge.
+- Remove a register entry as soon as its file is below both thresholds; completed splits must not leave stale exceptions behind.
+- Run `python scripts/validate_file_length.py` after adding, moving, splitting, or materially growing Python or JavaScript source.
+
 ## Visual UI policy
 
 - `docs/visual_design_standard.md` is authoritative for browser-visible layout, wallet, scrolling, hierarchy, responsive behavior, accessibility, and evidence quality.

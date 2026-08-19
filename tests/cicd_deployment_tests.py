@@ -859,7 +859,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     def test_api_governance_area_registration_ownership_is_exact(self):
         # Define the exact reviewed registrations moved by this slice in historical execution order.
         expected_ids = (
-            "FILE-HEADER-POLICY-001", "PERF-PAYLOAD-BUDGET-001", "PERF-PAYLOAD-PROJECTION-001", "PERF-TARGET-GATE-001", "PERF-MULTIPROCESS-SAFETY-001",
+            "FILE-HEADER-POLICY-001", "GOV-FILE-LENGTH-001", "PERF-PAYLOAD-BUDGET-001", "PERF-PAYLOAD-PROJECTION-001", "PERF-TARGET-GATE-001",
+            "PERF-MULTIPROCESS-SAFETY-001",
             "GOV-GAME-SUITE-DISCOVERY-001", "GOV-GAME-SUITES-001", "GOV-REQUIREMENT-SHARDS-001", "GOV-DEAD-ARTIFACTS-001", "UI-ROULETTE-I18N-DIAGNOSTICS-001",
             "UI-I18N-SINGLE-SOURCE-001", "UI-BROWSER-WAIT-001", "CI-COMPUTE-001", "GOV-MODULE-VERSIONS-001", "GOV-NEWEST-GAME-BROWSER-COVERAGE-001",
         )
