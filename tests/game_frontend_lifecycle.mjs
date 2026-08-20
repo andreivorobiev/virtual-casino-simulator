@@ -328,5 +328,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(doubleBonusSource.includes(duplicate), false, duplicate);
 // Require representative route, hand, hold, action, wager, paytable, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.dbvp {', '.db-header {', '.db-stage {', '.db-hand {', '.db-holdbtn[aria-pressed="true"] {', '.db-actions {', '.db-btn.draw {', '.db-btn.deal {', '.db-field input {', '.db-pays {', '.db-result {', '.db-repeat {', '@media (max-width: 1200px)', '@media (max-width: 900px)']) assert.ok(doubleBonusCss.includes(selector), selector);
+// Read the exact sixteenth-adopter source for per-slice duplicate-helper deletion evidence.
+const fourCardPokerSource = await readFile(new URL('../web/games/four_card_poker.js', import.meta.url), 'utf8');
+// Read Four Card Poker's formatted external stylesheet for ownership and tooling visibility.
+const fourCardPokerCss = await readFile(new URL('../web/games/four_card_poker.css', import.meta.url), 'utf8');
+// Require Four Card Poker to delegate shared lifecycle ownership while retaining action-scoped retry identities.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "lifecycle.nextRequestId('deal')", "lifecycle.nextRequestId('decision')", "requestPrefix: 'fcp'", "href: '/games/four_card_poker.css'"]) assert.ok(fourCardPokerSource.includes(marker), marker);
+// Reject Four Card Poker's migrated root, busy, locale, generation, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(fourCardPokerSource.includes(duplicate), false, duplicate);
+// Require representative route, card, decision, wager, paytable, result, repeat, and responsive rules to survive extraction.
+for (const selector of ['.fourcp {', '.fcp-stage {', '.fcp-heading {', '.fcp-row {', '.fcp-cards {', '.fcp-hand {', '.fcp-actions {', '.fcp-btn.play {', '.fcp-btn.fold {', '.fcp-btn.deal {', '.fcp-field input {', '.fcp-pays {', '.fcp-result {', '.fcp-repeat {', '@media (max-width: 900px)']) assert.ok(fourCardPokerCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

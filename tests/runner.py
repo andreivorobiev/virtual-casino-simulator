@@ -3560,7 +3560,35 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Exercise Four Card Poker's two-step real deal and decision lifecycle.
                 def four_card_poker_browser_acceptance():
                     # Enter the catalog-owned route and wait for the stable game root.
-                    page.get_by_test_id('nav-four_card_poker').click(); page.get_by_test_id('four-card-poker').wait_for(timeout=WAIT_MS * 2)
+                    page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('nav-four_card_poker').click(); page.get_by_test_id('four-card-poker').wait_for(timeout=WAIT_MS * 2)
+                    # Require one exact external game-owned stylesheet and the independently reused shared card stylesheet.
+                    route_style=page.locator('link#four-card-poker-styles'); card_style=page.locator('link#casino-shared-card-styles'); assert route_style.count()==1 and route_style.get_attribute('href')=='/games/four_card_poker.css' and card_style.count()==1 and card_style.get_attribute('href')=='/core/cards.css'
+                    # Prove the migrated asset loaded while preserving the desktop rail, touch target, and ten combined paytable rows.
+                    assert page.get_by_test_id('four-card-poker').evaluate("el => { const route=getComputedStyle(el); const tracks=route.gridTemplateColumns.split(' ').map(parseFloat); const deal=getComputedStyle(el.querySelector('[data-deal]')); return route.display==='grid' && tracks.length===2 && tracks[0]>tracks[1] && Math.round(tracks[1])===300 && parseFloat(deal.minHeight)>=44 && el.querySelectorAll('.fcp-pays div').length===10; }")
+                    # Enumerate every viewport governed by the Four Card Poker visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact title expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'four_card_poker.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian resources without discarding the active round.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the exact localized title rather than a fallback key or stale English.
+                            assert page.locator('.fcp-heading').inner_text()==resources[locale]['title']
+                            # Validate containment and capture after-pass evidence at every registered viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual-matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and incomplete route or paytable rendering.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('four-card-poker').is_visible() and page.locator('.fcp-pays div').count()==10
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-four-card-poker-{prefix}-{locale.lower()}-{viewport_id}.png','four_card_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready route before the ledger-backed deal.
+                    localized_evidence('ready',['ready'])
                     # Set a small legal ante and explicitly dispatch change before starting the round.
                     page.locator('[data-ante]').fill('2'); page.locator('[data-ante]').dispatch_event('change')
                     # Start one real deal and wait for the player decision stage.
@@ -3573,14 +3601,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     expected=float(response_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=WAIT_MS * 2)
                     # Require the settled result and enabled repeat action.
                     page.get_by_test_id('four-card-poker-result').wait_for(timeout=WAIT_MS * 2); assert page.locator('[data-action="repeat"]').is_enabled()
+                    # Capture the terminal route with the registered repeat-available state.
+                    localized_evidence('repeat-available',['repeat_available'])
                     # Reload and require the exact settled route, wallet, and repeat state to recover without another wager.
                     page.reload(wait_until='networkidle'); page.get_by_test_id('four-card-poker').wait_for(timeout=WAIT_MS * 2); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=WAIT_MS * 2)
                     # Prove both authoritative terminal result and repeat controls survived the reload.
                     assert page.get_by_test_id('four-card-poker-result').inner_text().strip() and page.locator('[data-action="repeat"]').is_enabled() and newest_game_wallet_value()==expected
+                    # Require both reusable stylesheets to remain singleton external links after route restoration.
+                    assert page.locator('link#four-card-poker-styles').count()==1 and page.locator('link#casino-shared-card-styles').count()==1
                     # Return to the lobby for the next independent Browser case.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+                    # Require shared lifecycle teardown to release the game DOM while retaining reusable external stylesheets.
+                    assert page.get_by_test_id('four-card-poker').count()==0 and page.locator('link#four-card-poker-styles').count()==1 and page.locator('link#casino-shared-card-styles').count()==1
                 # Record Four Card Poker's dedicated affected-game acceptance case.
-                run_case('BR-FOUR-CARD-POKER-001',['FOURCP-001','FOURCP-002','TEST-185'],four_card_poker_browser_acceptance)
+                run_case('BR-FOUR-CARD-POKER-001',['FOURCP-001','FOURCP-002','CORE-034','TEST-185','TEST-248'],four_card_poker_browser_acceptance)
                 # Prove every catalog game keeps its enabled controls vertically reachable in the fixed-height shell. (issue #221, CORE-015, UX-004, TEST-139)
                 def control_reachability():
                     # Pin the two governed desktop viewports where clipped controls were originally reported.

@@ -1,0 +1,207 @@
+/* Preserve Four Card Poker's dominant stage and fixed desktop support rail. */
+.fourcp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  color: var(--text, #f5ead6);
+  align-items: start;
+}
+
+/* Stack the heading, card rows, result, and public decisions in the primary stage. */
+.fcp-stage {
+  display: grid;
+  gap: 16px;
+  padding: 12px;
+  min-width: 0;
+}
+
+/* Preserve the locale-owned game title hierarchy. */
+.fcp-heading {
+  margin: 0;
+  color: var(--gold);
+  font-size: clamp(24px, 3vw, 38px);
+  line-height: 1.1;
+}
+
+/* Group each labelled player or dealer card collection. */
+.fcp-row {
+  display: grid;
+  gap: 6px;
+}
+
+/* Keep card-row labels compact and visually subordinate. */
+.fcp-row h4 {
+  margin: 0;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+/* Let shared semantic cards wrap without widening the route. */
+.fcp-cards {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Mark the authoritative best-four terminal hand without replacing card semantics. */
+.fcp-hand {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* Keep play, fold, deal, and repeat controls in a wrapping action row. */
+.fcp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Preserve the established action touch target and typography. */
+.fcp-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+/* Keep play decisions distinct with the established felt-green treatment. */
+.fcp-btn.play {
+  background: var(--felt-green);
+  color: #fff;
+}
+
+/* Retain the neutral fold gradient independently from positive play controls. */
+.fcp-btn.fold {
+  background: linear-gradient(180deg, #6b6b76, #3a3a42);
+  color: #fff;
+}
+
+/* Retain the full-width primary deal action. */
+.fcp-btn.deal {
+  background: var(--brand);
+  color: #fff;
+  width: 100%;
+}
+
+/* Make blocked actions visibly unavailable. */
+.fcp-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+/* Stack wager and paytable cards inside the fixed support rail. */
+.fcp-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Preserve the bordered translucent support-card treatment. */
+.fcp-card {
+  padding: 14px;
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, .22);
+}
+
+/* Keep support-card headings compact and clearly subordinate. */
+.fcp-card h3 {
+  margin: 0 0 10px;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+/* Group each wager label and numeric control vertically. */
+.fcp-field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+/* Preserve the compact wager-label hierarchy. */
+.fcp-field label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Retain the ledger-compatible wager-input touch target. */
+.fcp-field input {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  background: rgba(255, 255, 255, .05);
+  color: var(--text);
+  padding: 0 10px;
+  font-weight: 800;
+}
+
+/* Keep authoritative Ante Bonus and Aces Up rows compact. */
+.fcp-pays {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Align each hand label against its one-to-one multiplier. */
+.fcp-pays div {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Emphasize authoritative return values. */
+.fcp-pays span:last-child {
+  color: var(--gold);
+}
+
+/* Reserve one stable result row for idle, decision, and settlement copy. */
+.fcp-result {
+  min-height: 24px;
+  font-size: 15px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Make the signed terminal movement visually prominent. */
+.fcp-result .net {
+  font-weight: 900;
+}
+
+/* Preserve one-click repeat as a secondary action. */
+.fcp-repeat {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+/* Keep blocked repeat controls readable but visibly inactive. */
+.fcp-repeat:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* Stack the stage and support rail at the established responsive breakpoint. */
+@media (max-width: 900px) {
+  /* Replace the desktop split with one contained route column. */
+  .fourcp {
+    grid-template-columns: 1fr;
+  }
+}
