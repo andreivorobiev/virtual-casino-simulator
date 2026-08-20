@@ -18,11 +18,12 @@
       "implementation_files": [
         "casino/games/over_under_7/engine.py",
         "casino/games/over_under_7/rules.py",
-        "web/games/over_under_7.js"
+        "web/games/over_under_7.js",
+        "web/games/over_under_7.css"
       ],
       "introduced_in": "game-expansion-over-under-7",
-      "changed_in": "game-expansion-over-under-7",
-      "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #135."
+      "changed_in": "issue-1031-over-under-7-lifecycle-slice",
+      "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #135. Issue #1031 preserves those rules while delegating frontend request identity and busy ownership to the shared lifecycle controller."
     },
     {
       "id": "OU7-002",
@@ -40,11 +41,13 @@
         "casino/games/over_under_7/api.py",
         "casino/games/over_under_7/service.py",
         "web/app.js",
+        "web/core/game_lifecycle.js",
+        "web/games/over_under_7.js",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-over-under-7",
-      "changed_in": "issue-865-over-under-7-simple-wager",
-      "notes": "Session context overrides caller player ids, and the SimpleWagerGame lifecycle adapter keeps prepared dice private until immutable wager proof exists."
+      "changed_in": "issue-1031-over-under-7-lifecycle-slice",
+      "notes": "Session context overrides caller player ids, and the SimpleWagerGame lifecycle adapter keeps prepared dice private until immutable wager proof exists. Shared mount ownership rejects stale initial-state, action, and reveal completions after route teardown or remount."
     },
     {
       "id": "OU7-003",
@@ -76,14 +79,17 @@
       ],
       "implementation_files": [
         "web/games/over_under_7.js",
+        "web/games/over_under_7.css",
         "web/i18n/en-US/games/over_under_7.json",
         "web/i18n/ru-RU/games/over_under_7.json",
+        "tests/games/over_under_7/test_frontend.mjs",
         "tests/visual/visual_matrix.json",
+        "docs/evidence/over_under_7/README.md",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-over-under-7",
-      "changed_in": "game-expansion-over-under-7",
-      "notes": "Evidence covers both locales and every governed viewport."
+      "changed_in": "issue-1031-over-under-7-lifecycle-slice",
+      "notes": "Evidence covers both locales and every governed viewport. Issue #1031 adds reusable external stylesheet, computed three-column hierarchy, touch-target, route teardown, and after-pass evidence without changing the visual matrix."
     },
     {
       "id": "OU7-005",
@@ -104,11 +110,14 @@
         "contracts/compatibility/module-api-matrix.json",
         "tests/game_drivers/over_under_7.py",
         "tests/visual/visual_matrix.json",
+        "tests/game_frontend_lifecycle.mjs",
+        "tests/games/over_under_7/test_frontend.mjs",
+        "docs/evidence/over_under_7/README.md",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-over-under-7",
-      "changed_in": "game-expansion-over-under-7",
-      "notes": "Descriptor sort order 220 and the catalog-discovered long driver are canonical."
+      "changed_in": "issue-1031-over-under-7-lifecycle-slice",
+      "notes": "Descriptor sort order 220 and the catalog-discovered long driver are canonical. Issue #1031 adds shared lifecycle, external-style, teardown, and visual evidence traceability without changing discovery."
     },
     {
       "id": "OU7-006",
@@ -121,12 +130,13 @@
       ],
       "implementation_files": [
         "web/games/over_under_7.js",
+        "web/games/over_under_7.css",
         "web/i18n/en-US/games/over_under_7.json",
         "web/i18n/ru-RU/games/over_under_7.json"
       ],
       "introduced_in": "issue-255-over-under-7-payout-convention",
-      "changed_in": "issue-255-over-under-7-payout-convention",
-      "notes": "Issue #255: paytable rows now render net odds sourced from the same backend field the wager list uses, unifying the two conventions."
+      "changed_in": "issue-1031-over-under-7-lifecycle-slice",
+      "notes": "Issue #255: paytable rows render net odds sourced from the same backend field the wager list uses, unifying the two conventions. Issue #1031 preserves that rendered convention while moving presentation rules to the external game stylesheet."
     },
     {
       "id": "OU7-007",

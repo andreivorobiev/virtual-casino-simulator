@@ -4803,6 +4803,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def over_under_7_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-over_under_7').click(); page.get_by_test_id('over-under-7').wait_for(timeout=WAIT_MS)
+                    # Require the game-owned stylesheet to be installed once through a reusable external link.
+                    assert page.locator('link#over-under-7-styles[href="/games/over_under_7.css"]').count()==1 and page.locator('style#over-under-7-styles').count()==0
+                    # Bind the dominant desktop dice stage and minimum control targets to computed external CSS.
+                    ou7_layout=page.evaluate("""() => { const layout=getComputedStyle(document.querySelector('.ou7-layout')); const play=getComputedStyle(document.querySelector('.ou7-play')); const repeat=getComputedStyle(document.querySelector('.ou7-repeat')); const input=getComputedStyle(document.querySelector('.ou7-bet input')); return {columns:layout.gridTemplateColumns.split(' ').map(value=>Number.parseFloat(value)),play:Number.parseFloat(play.minHeight),repeat:Number.parseFloat(repeat.minHeight),input:Number.parseFloat(input.minHeight)}; }""")
+                    # Require three columns with a dominant center stage and established 44/46-pixel targets.
+                    assert len(ou7_layout['columns'])==3 and ou7_layout['columns'][1]>ou7_layout['columns'][0] and ou7_layout['columns'][1]>ou7_layout['columns'][2] and ou7_layout['play']>=46 and ou7_layout['repeat']>=46 and ou7_layout['input']>=44,ou7_layout
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4847,10 +4853,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="over"]').fill('1'); page.locator('[data-play]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
                     page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('over-under-7').wait_for(timeout=WAIT_MS); assert page.locator('.ou7-history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    # Require reload restoration to retain one reusable external stylesheet link.
+                    assert page.locator('link#over-under-7-styles[href="/games/over_under_7.css"]').count()==1 and page.locator('style#over-under-7-styles').count()==0
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+                    # Require route teardown to remove mounted game DOM while retaining the reusable stylesheet.
+                    assert page.locator('.over-under-7').count()==0 and page.locator('link#over-under-7-styles').count()==1
                 # Execute the integrated Over/Under 7 browser and visual gate.
-                run_case('BR-OU7-001',['OU7-001','OU7-002','OU7-004','OU7-005','OU7-006','TEST-067'],over_under_7_acceptance)
+                run_case('BR-OU7-001',['CORE-034','OU7-001','OU7-002','OU7-004','OU7-005','OU7-006','TEST-067','TEST-248'],over_under_7_acceptance)
                 # Define real-backend Plinko localization, drop, responsive, motion, and route acceptance.
                 def plinko_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.

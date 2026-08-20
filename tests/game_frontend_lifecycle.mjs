@@ -348,5 +348,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let dealing =', 'mountIdentity', 'unsubscribeLocale', 'function ensureGameStyles', 'const GAME_CSS', 'style.textContent', 'onLocaleChange', 'loadI18nDomain', 'function text(']) assert.equal(dragonTigerSource.includes(duplicate), false, duplicate);
 // Require representative route, rail, stage, selection, card, summary, history, focus, motion, and responsive rules to survive extraction.
 for (const selector of ['.dragon-tiger {', '.dt-header {', '.dt-phase {', '.dt-layout {', '.dt-panel {', '.dt-bets {', '.dt-bet.is-selected {', '.dt-stage {', '.dt-repeat {', '.dt-hands {', '.dt-hand {', '.dt-summary {', '.dt-history-row {', '.dragon-tiger button:focus-visible,', '@media (max-width: 1200px)', '@media (max-width: 520px)', '@media (prefers-reduced-motion: reduce)']) assert.ok(dragonTigerCss.includes(selector), selector);
+// Read the exact eighteenth-adopter source for per-slice duplicate-helper deletion evidence.
+const overUnder7Source = await readFile(new URL('../web/games/over_under_7.js', import.meta.url), 'utf8');
+// Read Over/Under 7's formatted external stylesheet for ownership and tooling visibility.
+const overUnder7Css = await readFile(new URL('../web/games/over_under_7.css', import.meta.url), 'utf8');
+// Require Over/Under 7 to delegate shared lifecycle ownership while preserving its frozen ou7-prefixed identity seam.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "requestPrefix: 'ou7'", 'uuidFactory: () => createActionId()', "href: '/games/over_under_7.css'"]) assert.ok(overUnder7Source.includes(marker), marker);
+// Reject Over/Under 7's migrated root, busy, locale, and opaque style-text ownership.
+for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'const ROUTE_CSS', 'style.textContent', 'onLocaleChange', 'initI18n', 'function text(']) assert.equal(overUnder7Source.includes(duplicate), false, duplicate);
+// Require representative route, rail, dice, animation, result, history, motion, and responsive rules to survive extraction.
+for (const selector of ['.over-under-7 {', '.ou7-header {', '.ou7-phase {', '.ou7-layout {', '.ou7-panel {', '.ou7-bet {', '.ou7-play {', '.ou7-repeat {', '.ou7-stage {', '.ou7-dice {', '.ou7-die.rolling {', '@keyframes ou7-roll {', '.ou7-result {', '.ou7-history {', '@media (max-width: 1200px)', '@media (max-width: 560px)', '@media (prefers-reduced-motion: reduce)']) assert.ok(overUnder7Css.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

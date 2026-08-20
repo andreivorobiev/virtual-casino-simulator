@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 // Read the production browser module.
 const source = await readFile(path.join(root, 'web', 'games', 'over_under_7.js'), 'utf8');
+// Read the extracted game stylesheet for responsive and reduced-motion assertions.
+const stylesheet = await readFile(path.join(root, 'web', 'games', 'over_under_7.css'), 'utf8');
 // Read the English game-owned dictionary.
 const englishSource = await readFile(path.join(root, 'web', 'i18n', 'en-US', 'games', 'over_under_7.json'), 'utf8');
 // Read the Russian game-owned dictionary.
@@ -49,16 +51,24 @@ assert.match(source, /data-testid="over-under-7"/);
 assert.match(source, /import \{ createMotionTimerScope \} from '\.\.\/core\/motion\.js'/);
 // Verify dice reveal scheduling goes through the motion scope.
 assert.match(source, /scheduleDiceReveal[\s\S]*timerScope\.schedule/);
-// Verify reduced-motion CSS exists.
-assert.match(source, /prefers-reduced-motion:reduce/);
+// Require route, locale, style, busy, and request identity to delegate to the shared lifecycle.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "requestPrefix: 'ou7'", 'uuidFactory: () => createActionId()', "href: '/games/over_under_7.css'"]) assert.ok(source.includes(marker), marker);
+// Reject superseded root, busy, locale-subscription, and opaque style ownership.
+for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'style.textContent', 'onLocaleChange', 'initI18n', 'ROUTE_CSS']) assert.equal(source.includes(duplicate), false, duplicate);
+// Require a mount-specific token and lifecycle outlet before adopting asynchronous responses.
+assert.match(source, /routeSession !== session \|\| lifecycle\.root\(\) !== ownedRoot/);
+// Preserve the frozen ou7-UUID seam while allocating production identities through the shared controller.
+assert.match(source, /uuidFactory:\s*\(\) => createActionId\(\)[\s\S]*pendingRequestId = lifecycle\.nextRequestId\(\)/);
+// Verify reduced-motion CSS remains external and route-scoped.
+assert.match(stylesheet, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.over-under-7 \*/);
 // Verify API calls send no caller-owned player identity.
 assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath|player_id\s*:/);
 // Verify primary controls meet minimum touch target height.
-assert.match(source, /min-height:44px/);
+assert.match(stylesheet, /\.ou7-bet input\s*\{[\s\S]*min-height:\s*44px;/);
 // Verify responsive stacking preserves control, stage, then data order.
-assert.match(source, /\.ou7-controls\{order:1\}[\s\S]*\.ou7-stage\{order:2\}[\s\S]*\.ou7-data\{order:3\}/);
+assert.match(stylesheet, /@media \(max-width: 1200px\)[\s\S]*\.ou7-controls\s*\{[\s\S]*order:\s*1;[\s\S]*\.ou7-stage\s*\{[\s\S]*order:\s*2;[\s\S]*\.ou7-data\s*\{[\s\S]*order:\s*3;/);
 // Verify route teardown disposes timers and locale subscription.
-assert.match(source, /motionScope\?\.dispose\(\)/);
+assert.match(source, /motionScope\?\.dispose\(\)[\s\S]*lifecycle\.unmount\(\)/);
 // Verify wallet refresh follows successful ledger movement.
 assert.match(source, /await refreshBalance\(\)/);
 // Reject direct hard-coded English labels inside generated markup.
