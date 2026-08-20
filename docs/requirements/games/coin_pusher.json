@@ -13,18 +13,23 @@
         "API-COIN-PUSHER-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-COIN-PUSHER-001"
       ],
       "implementation_files": [
         "casino/games/coin_pusher/rules.py",
         "casino/games/coin_pusher/engine.py",
         "casino/games/coin_pusher/api.py",
         "web/games/coin_pusher.js",
+        "web/games/coin_pusher.css",
+        "tests/games/coin_pusher/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/coin_pusher/README.md",
         "contracts/openapi/coin_pusher.v1.yaml"
       ],
       "introduced_in": "issue-156-coin-pusher",
-      "changed_in": "issue-156-coin-pusher",
-      "notes": "Allocated for GitHub issue #156, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1007-coin-pusher-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #156, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1007 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing the machine, payout table, 700 ms cascade timing, settlement, DOM, or visible layout."
     },
     {
       "id": "COINP-002",
@@ -35,17 +40,21 @@
         "API-COIN-PUSHER-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-COIN-PUSHER-001"
       ],
       "implementation_files": [
         "casino/games/coin_pusher/api.py",
         "casino/core/simple_game.py",
+        "web/games/coin_pusher.js",
         "tests/coin_pusher_tests.py",
-        "tests/game_drivers/coin_pusher.py"
+        "tests/game_drivers/coin_pusher.py",
+        "tests/games/coin_pusher/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-156-coin-pusher",
-      "changed_in": "issue-156-coin-pusher",
-      "notes": "Allocated for GitHub issue #156."
+      "changed_in": "issue-1007-coin-pusher-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #156. Issue #1007 preserves the exact state and drops endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, and real repeat flow while removing duplicate frontend lifecycle helpers."
     }
   ]
 }
