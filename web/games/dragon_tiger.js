@@ -8,8 +8,10 @@ import { api, post } from '../core/api.js';
 import { refreshBalance, safe, toast } from '../core/ui.js';
 // Import the merged #96 accessible card renderer.
 import { renderCard } from '../core/cards.js';
-// Import locale loading, formatting, lookup, and subscription helpers.
-import { formatNumber, loadI18nDomain, onLocaleChange, t } from '../core/i18n.js';
+// Import number formatting independently from route lifecycle ownership.
+import { formatNumber } from '../core/i18n.js';
+// Import the shared controller for route, locale, style, busy, and request ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Address the additive frozen-v1 API through one stable root.
 const API_ROOT = '/api/v1/games/dragon-tiger';
@@ -17,37 +19,21 @@ const API_ROOT = '/api/v1/games/dragon-tiger';
 const DOMAIN = 'games/dragon_tiger';
 // Identify shared card styles so repeated mounts install them once.
 const CARD_STYLE_ID = 'casino-shared-card-styles';
-// Identify game-owned styles so repeated mounts remain idempotent.
-const GAME_STYLE_ID = 'dragon-tiger-styles';
 // Preserve canonical wager ordering across renders and locales.
 export const BETS = Object.freeze(['dragon', 'tiger', 'tie']);
 
-// Retain the active route outlet without owning shared shell state.
-let root = null;
-// Retain a mount identity so late promises cannot repaint another route.
-let mountIdentity = null;
 // Retain the latest session-bound backend state for reload and locale rendering.
 let gameState = { shoe: {}, rules: {}, recent_rounds: [] };
 // Retain the locally selected wager target.
 let selectedBet = 'dragon';
 // Retain the locally selected play-token amount.
 let wager = 5;
-// Retain request-bound dealing state without allocating a presentation timer.
-let dealing = false;
 // Block player actions until the initial session-bound snapshot resolves.
 let initialLoading = false;
 // Retain the complete unresolved request so retries reuse its action id and payload.
 let pendingAction = null;
 // Retain the last committed bet target and stake so one click can repeat it.
 let lastBet = null;
-// Retain locale cleanup so unmount releases its subscription.
-let unsubscribeLocale = null;
-
-// Resolve one game-owned localized string.
-function text(key, params = {}) {
-  // Delegate every visible and accessible label to the active game domain.
-  return t(key, params, DOMAIN);
-}
 
 // Generate one replay-safe action id through an injectable deterministic seam.
 export function createActionId(randomUUID = globalThis.crypto?.randomUUID?.bind(globalThis.crypto)) {
@@ -56,6 +42,22 @@ export function createActionId(randomUUID = globalThis.crypto?.randomUUID?.bind(
   // Prefix the opaque UUID for readable game-local diagnostics.
   return `dt-${randomUUID()}`;
 }
+
+// Delegate route-local lifecycle ownership to the shared bounded controller.
+const lifecycle = createGameLifecycle({
+  // Bind every translation to the existing game-owned domain.
+  domain: DOMAIN,
+  // Scope the fallback identity without player, bet, wager, or shoe data.
+  requestPrefix: 'dt',
+  // Preserve the frozen production dt-UUID identity through the shared allocator.
+  uuidFactory: () => createActionId(),
+  // Install the formatted route stylesheet exactly once across remounts.
+  stylesheet: { id: 'dragon-tiger-styles', href: '/games/dragon_tiger.css' },
+});
+// Read localized copy directly through the shared domain owner.
+const tx = lifecycle.tx;
+// Identify the exact mount that may adopt asynchronous responses into the shared outlet.
+let routeSession = null;
 
 // Merge GET and POST payloads into the route's stable render state.
 export function normalizeStatePayload(payload = {}) {
@@ -91,44 +93,8 @@ function ensureCardStyles() {
   document.head.append(link);
 }
 
-// Store compact game-owned CSS without editing the shared stylesheet.
-const GAME_CSS = [
-  '.dragon-tiger{display:grid;gap:14px;min-width:0}', // Establish one stable route surface.
-  '.dt-header{display:flex;align-items:end;justify-content:space-between;gap:14px}.dt-header h1{margin:0}', // Keep title and phase compact.
-  '.dt-phase{min-height:38px;padding:8px 12px;border:1px solid var(--gold);border-radius:999px}', // Reserve status space.
-  '.dt-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(520px,2.25fr) minmax(230px,.72fr);gap:16px;align-items:start}', // Make the stage wider than both rails.
-  '.dt-panel{min-width:0;padding:16px;border:1px solid var(--border);border-radius:16px;background:rgba(20,10,34,.86)}', // Distinguish each zone.
-  '.dt-controls,.dt-data{display:grid;align-content:start;gap:12px}.dt-bets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}', // Organize control and data rails.
-  '.dt-bet,.dt-deal{min-height:46px}.dt-bet.is-selected{outline:3px solid var(--gold);outline-offset:2px}.dt-deal{background:#a51f2d;color:#fff}', // Preserve touch size and non-color selection.
-  '.dt-stage{display:grid;gap:18px;min-height:430px;background:radial-gradient(circle at 50% 45%,rgba(35,17,61,.5),rgba(21,10,36,.96) 70%)}.dt-repeat{min-height:46px}.dt-repeat{background:transparent;color:var(--gold);border:1px solid var(--gold)}.dt-repeat:disabled{opacity:.5}', // Provide a dominant table stage.
-  '.dt-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.dt-stage-head h2{margin:0}', // Keep result and bet context aligned.
-  '.dt-hands{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,5vw,70px);align-items:center;min-height:250px}', // Balance both card sides.
-  '.dt-hand{display:grid;justify-items:center;gap:12px;padding:18px;border:1px solid rgba(255,255,255,.14);border-radius:14px}.dt-hand h3{margin:0}', // Give each side a labeled card bay.
-  '.dt-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.dt-stat{padding:10px;border-radius:10px;background:rgba(0,0,0,.2)}.dt-stat span{display:block;color:var(--muted,#b8c8c1);font-size:.78rem}', // Align wager results.
-  '.dt-history{display:grid;gap:8px}.dt-history-row{display:grid;grid-template-columns:1fr auto;gap:5px;padding:9px;border-radius:9px;background:rgba(0,0,0,.18)}.dt-history-row small{display:block}', // Keep bounded history readable.
-  '.dt-muted{color:var(--muted,#b8c8c1)}.dt-selected{display:block;font-size:.72rem}', // Style secondary localized copy.
-  '.dragon-tiger button:focus-visible,.dragon-tiger input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}', // Preserve keyboard focus.
-  '@media(max-width:1200px){.dt-layout{grid-template-columns:1fr}.dt-controls{order:1}.dt-stage{order:2}.dt-data{order:3}.dt-stage{min-height:auto}}', // Stack control, stage, then data.
-  '@media(max-width:520px){.dt-header{align-items:start;flex-direction:column}.dt-panel{padding:12px}.dt-hands,.dt-summary{grid-template-columns:1fr}.dt-bets{grid-template-columns:1fr}.dt-stage{min-height:0}}', // Prevent mobile clipping.
-  '@media(prefers-reduced-motion:reduce){.dragon-tiger *{animation:none!important;scroll-behavior:auto!important;transition:none!important}}', // Remove decorative motion.
-].join(''); // Combine the documented route-local rules into one style payload.
-
-// Install game-owned CSS once per document.
-function ensureGameStyles() {
-  // Reuse the existing route style node after remount.
-  if (document.getElementById(GAME_STYLE_ID)) return;
-  // Create one scoped style node.
-  const style = document.createElement('style');
-  // Assign its stable route-local identity.
-  style.id = GAME_STYLE_ID;
-  // Apply the documented responsive CSS.
-  style.textContent = GAME_CSS;
-  // Install styles before rendering the route.
-  document.head.append(style);
-}
-
 // Format one ledger amount with localized play-token terminology.
-function tokenAmount(value, translate = text) {
+function tokenAmount(value, translate = tx) {
   // Format the numeric portion without a currency or replacement-looking glyph.
   const amount = formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   // Interpolate the amount into game-owned fake-token copy.
@@ -136,7 +102,7 @@ function tokenAmount(value, translate = text) {
 }
 
 // Render a shared card while replacing every default English accessible label.
-export function localizedCard(card, { hidden = false, translate = text } = {}) {
+export function localizedCard(card, { hidden = false, translate = tx } = {}) {
   // Render a localized face-down primitive for empty or request-bound card bays.
   if (hidden || !card) return renderCard('??', { hidden: true }).replace(/aria-label="[^"]*"/, `aria-label="${safe(translate('cards.faceDown'))}"`);
   // Read the compact rank from every character except the suit code.
@@ -164,7 +130,7 @@ function winnerKey(round) {
 }
 
 // Render all route markup through an injectable translation seam.
-export function viewMarkup({ snapshot = gameState, translate = text, selected = selectedBet, wagerValue = wager, isDealing = dealing, isLoading = initialLoading, pending = pendingAction, repeatable = lastBet } = {}) {
+export function viewMarkup({ snapshot = gameState, translate = tx, selected = selectedBet, wagerValue = wager, isDealing = lifecycle.isBusy(), isLoading = initialLoading, pending = pendingAction, repeatable = lastBet } = {}) {
   // Resolve the newest completed round once for a consistent frame.
   const round = currentRound(snapshot);
   // Resolve the request-bound or settled player-facing phase.
@@ -201,12 +167,14 @@ export function viewMarkup({ snapshot = gameState, translate = text, selected = 
 
 // Render current state and reconnect semantic controls.
 function render() {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Ignore locale callbacks and promises after route teardown.
   if (!root) return;
   // Replace the isolated route atomically.
   root.innerHTML = viewMarkup();
   // Bind each wager target to local unsent configuration.
-  root.querySelectorAll('[data-bet]').forEach(button => { button.onclick = () => { if (!initialLoading && !dealing && !pendingAction) { selectedBet = button.dataset.bet; render(); } }; });
+  root.querySelectorAll('[data-bet]').forEach(button => { button.onclick = () => { if (!initialLoading && !lifecycle.isBusy() && !pendingAction) { selectedBet = button.dataset.bet; render(); } }; });
   // Read and bind the wager input created by this render.
   const wagerInput = root.querySelector('#dt-wager');
   // Preserve a positive normalized wager without moving tokens.
@@ -217,10 +185,16 @@ function render() {
   root.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
 }
 
+// Report whether one asynchronous operation still belongs to the exact mounted route session.
+function ownsAction(session, root) {
+  // Require both the game-specific session token and lifecycle-owned outlet to remain unchanged.
+  return routeSession === session && lifecycle.root() === root;
+}
+
 // Re-apply the last committed bet and re-fire one deal without a timer.
 async function repeat() {
   // Ignore repeat while loading, dealing, or holding an unresolved retry, or without a prior bet.
-  if (initialLoading || dealing || pendingAction || !lastBet) return;
+  if (initialLoading || lifecycle.isBusy() || pendingAction || !lastBet) return;
   // Restore the previous bet target into the local configuration.
   selectedBet = lastBet.bet;
   // Restore the previous stake into the local configuration.
@@ -232,13 +206,17 @@ async function repeat() {
 // Submit or retry one exactly-once Dragon Tiger round.
 async function deal() {
   // Ignore overlapping clicks while the POST request is active.
-  if (initialLoading || dealing) return;
+  if (initialLoading || lifecycle.isBusy()) return;
+  // Capture the lifecycle-owned route outlet before any asynchronous boundary.
+  const ownedRoot = lifecycle.root();
+  // Capture the mount-specific token because the shell reuses one persistent outlet across routes.
+  const ownedSession = routeSession;
+  // Refuse synthetic actions after teardown or before the shared mount completes.
+  if (!ownedRoot || !ownedSession) return;
   // Capture one immutable request and retain it through any failed response.
-  pendingAction = pendingAction || { action_id: createActionId(), bet: selectedBet, wager };
-  // Capture route identity so late completions remain inert.
-  const identity = mountIdentity;
+  pendingAction = pendingAction || { action_id: lifecycle.nextRequestId('round'), bet: selectedBet, wager };
   // Enter request-bound dealing state without starting a timer.
-  dealing = true;
+  lifecycle.setBusy(true);
   // Render face-down cards and disabled controls during the request.
   render();
   // Run the action while preserving the retry payload on errors.
@@ -246,7 +224,7 @@ async function deal() {
     // Post only the documented session-bound action fields.
     const payload = await post(`${API_ROOT}/rounds`, pendingAction);
     // Stop if navigation replaced this route while the request completed.
-    if (!root || identity !== mountIdentity) return;
+    if (!ownsAction(ownedSession, ownedRoot)) return;
     // Merge returned state, rules, and round for immediate and reload-consistent rendering.
     gameState = normalizeStatePayload(payload);
     // Remember the settled bet and stake so the next round can repeat with one click.
@@ -262,18 +240,18 @@ async function deal() {
     // Keep the settled round while reporting only the secondary wallet refresh failure.
     } catch (_) {
       // Notify only while this mount still owns the route.
-      if (root && identity === mountIdentity) toast(text('errors.balanceRefreshFailed'));
+      if (ownsAction(ownedSession, ownedRoot)) toast(tx('errors.balanceRefreshFailed'));
     }
   // Translate request failures instead of exposing server English in the route.
   } catch (_) {
     // Show localized retry guidance only while this mount still owns the route.
-    if (root && identity === mountIdentity) toast(text('errors.dealFailed'));
+    if (ownsAction(ownedSession, ownedRoot)) toast(tx('errors.dealFailed'));
   // Always leave request-bound dealing state for the active mount.
   } finally {
     // Stop when teardown already cleared route ownership.
-    if (!root || identity !== mountIdentity) return;
+    if (!ownsAction(ownedSession, ownedRoot)) return;
     // Release the request guard while preserving any unresolved retry payload.
-    dealing = false;
+    lifecycle.setBusy(false);
     // Render either the settled round or localized retry action.
     render();
   }
@@ -285,32 +263,24 @@ export const DragonTigerGame = {
   id: 'dragon_tiger',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the route outlet before asynchronous initialization.
-    root = node;
-    // Create a unique identity for late-promise protection.
-    mountIdentity = {};
-    // Capture this mount identity for the initial state request.
-    const identity = mountIdentity;
     // Reset player-local transient state before loading session data.
     gameState = { shoe: {}, rules: {}, recent_rounds: [] };
     // Reset request state so another user never inherits an action id.
     pendingAction = null;
     // Reset the repeatable bet so another session never inherits it.
     lastBet = null;
-    // Reset the request-bound phase.
-    dealing = false;
     // Hold every player action until the session-bound GET finishes.
     initialLoading = true;
-    // Install shared and route-local presentation once.
+    // Install the shared semantic card stylesheet independently from route-local presentation.
     ensureCardStyles();
-    // Install the responsive game presentation.
-    ensureGameStyles();
-    // Load active and fallback game resources before visible text.
-    await loadI18nDomain(DOMAIN);
-    // Stop if navigation replaced this mount during locale loading.
-    if (!root || identity !== mountIdentity) return;
-    // Subscribe to live locale changes without losing backend state.
-    unsubscribeLocale = onLocaleChange(() => render());
+    // Establish route, stylesheet, locale, and repaint ownership through the shared controller.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released this route during asynchronous locale loading.
+    if (!mounted) return;
+    // Create one mount-specific token so later remounts of the persistent shell outlet reject stale responses.
+    const session = Object.freeze({});
+    // Publish the token only after the shared lifecycle owns the route completely.
+    routeSession = session;
     // Render a localized inert loading frame while backend state loads.
     render();
     // Load the authenticated player's reload-safe state.
@@ -318,7 +288,7 @@ export const DragonTigerGame = {
       // Fetch state without a caller-selected player identity.
       const payload = await api(`${API_ROOT}/state`);
       // Stop if navigation replaced this route during the request.
-      if (!root || identity !== mountIdentity) return;
+      if (!ownsAction(session, node)) return;
       // Store the documented state and top-level rules.
       gameState = normalizeStatePayload(payload);
       // Recover a repeatable bet from the newest settled round so repeat survives a reload.
@@ -336,38 +306,32 @@ export const DragonTigerGame = {
       // Report only the secondary wallet refresh failure.
       } catch (_) {
         // Notify only while this mount still owns the route.
-        if (root && identity === mountIdentity) toast(text('errors.balanceRefreshFailed'));
+        if (ownsAction(session, node)) toast(tx('errors.balanceRefreshFailed'));
       }
     // Surface a localized load failure while leaving a retry-safe ready frame.
     } catch (_) {
       // Stop a late rejection from releasing a newer mount's initial-load guard.
-      if (!root || identity !== mountIdentity) return;
+      if (!ownsAction(session, node)) return;
       // Release the guard because the failed GET can no longer overwrite a later action.
       initialLoading = false;
       // Re-render one actionable retry-safe frame after the failed snapshot request.
       render();
       // Notify only while this mount still owns the route.
-      if (root && identity === mountIdentity) toast(text('errors.loadFailed'));
+      if (ownsAction(session, node)) toast(tx('errors.loadFailed'));
     }
   },
   // Release every game-owned lifecycle resource on route exit.
   unmount() {
-    // Release the locale subscription when it exists.
-    unsubscribeLocale?.();
-    // Clear the callback reference for a future mount.
-    unsubscribeLocale = null;
-    // Invalidate every in-flight async completion.
-    mountIdentity = null;
-    // Release the DOM outlet before any late promise settles.
-    root = null;
+    // Invalidate game-specific state adoption before releasing the shared route owner.
+    routeSession = null;
+    // Release route, locale, and busy ownership idempotently.
+    lifecycle.unmount();
     // Clear player state so another session cannot inherit it.
     gameState = { shoe: {}, rules: {}, recent_rounds: [] };
     // Clear any unresolved action identity at the session boundary.
     pendingAction = null;
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
-    // Release request-bound presentation state; this module owns no timers.
-    dealing = false;
     // Release initial-load presentation state at the session boundary.
     initialLoading = false;
   },

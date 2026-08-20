@@ -4253,6 +4253,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.wait_for_function("() => document.querySelector('.dt-phase')?.textContent === 'Accepting wagers'",timeout=WAIT_MS)
                     # Require the canonical route, complete English title, and initial ready phase.
                     assert page.url.split('?',1)[0].endswith('/games/dragon_tiger') and page.locator('.dt-header h1').inner_text()=='Dragon Tiger' and page.locator('.dt-phase').inner_text()=='Accepting wagers'
+                    # Require the game-owned and shared-card stylesheets to be installed through reusable external links.
+                    assert page.locator('link#dragon-tiger-styles[href="/games/dragon_tiger.css"]').count()==1 and page.locator('link#casino-shared-card-styles[href="/core/cards.css"]').count()==1
+                    # Bind the dominant desktop table geometry and minimum touch-target dimensions to computed CSS.
+                    dragon_tiger_layout=page.evaluate("""() => { const layout=getComputedStyle(document.querySelector('.dt-layout')); const deal=getComputedStyle(document.querySelector('.dt-deal')); const bet=getComputedStyle(document.querySelector('.dt-bet')); const stage=getComputedStyle(document.querySelector('.dt-stage')); return {columns:layout.gridTemplateColumns.split(' ').map(value=>Number.parseFloat(value)),deal:Number.parseFloat(deal.minHeight),bet:Number.parseFloat(bet.minHeight),stage:Number.parseFloat(stage.minHeight),inlineStyles:document.querySelectorAll('.dragon-tiger style').length}; }""")
+                    # Require three desktop columns with a dominant center stage, 46px controls, and no inline game stylesheet.
+                    assert len(dragon_tiger_layout['columns'])==3 and dragon_tiger_layout['columns'][1]>dragon_tiger_layout['columns'][0] and dragon_tiger_layout['columns'][1]>dragon_tiger_layout['columns'][2] and dragon_tiger_layout['deal']>=46 and dragon_tiger_layout['bet']>=46 and dragon_tiger_layout['stage']>=430 and dragon_tiger_layout['inlineStyles']==0,dragon_tiger_layout
                     # Define every named viewport required by the Dragon Tiger visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Define a helper that captures one registered live state in both supported locales and every governed viewport.
@@ -4333,12 +4339,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.emulate_media(reduced_motion='no-preference')
                     # Reload the canonical deep link and require private terminal history to restore.
                     page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=WAIT_MS)
+                    # Require reload restoration to retain one reusable link for each Dragon Tiger stylesheet.
+                    assert page.locator('link#dragon-tiger-styles[href="/games/dragon_tiger.css"]').count()==1 and page.locator('link#casino-shared-card-styles[href="/core/cards.css"]').count()==1
                     # Capture route restoration in both locales and every governed viewport.
                     localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby so established downstream browser cases start normally.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+                    # Require route teardown to remove mounted game DOM while retaining reusable external stylesheet links.
+                    assert page.locator('.dragon-tiger').count()==0 and page.locator('link#dragon-tiger-styles').count()==1 and page.locator('link#casino-shared-card-styles').count()==1
                 # Execute Dragon Tiger rules, session route, localization, replay, responsive, and visual gates.
-                run_case('BR-DT-001',['DT-001','DT-002','DT-004','DT-005'],dragon_tiger_acceptance)
+                run_case('BR-DT-001',['CORE-034','DT-001','DT-002','DT-004','DT-005','TEST-248'],dragon_tiger_acceptance)
                 # Define real-backend Hi-Lo browser, localization, responsive, decision, and visual acceptance coverage.
                 def hi_lo_acceptance():
                     # Open the catalog-generated route and wait for the game-owned readiness selector.

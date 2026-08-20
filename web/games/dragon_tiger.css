@@ -1,0 +1,259 @@
+/* Establish one stable Dragon Tiger route surface. */
+.dragon-tiger {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Keep the localized title and active phase compact. */
+.dt-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+/* Remove default heading margin without affecting the shared shell. */
+.dt-header h1 {
+  margin: 0;
+}
+
+/* Reserve stable space for the localized phase status. */
+.dt-phase {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+}
+
+/* Keep the card stage wider than both support rails on desktop. */
+.dt-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, .72fr) minmax(520px, 2.25fr) minmax(230px, .72fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* Distinguish each control, stage, and data zone. */
+.dt-panel {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(20, 10, 34, .86);
+}
+
+/* Stack control and data rail content without nested scrolling. */
+.dt-controls,
+.dt-data {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+/* Present the three wager targets at equal desktop width. */
+.dt-bets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+/* Preserve the established high-frequency touch target. */
+.dt-bet,
+.dt-deal {
+  min-height: 46px;
+}
+
+/* Communicate wager selection outside color alone. */
+.dt-bet.is-selected {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Retain the dominant primary deal treatment. */
+.dt-deal {
+  background: #a51f2d;
+  color: #fff;
+}
+
+/* Provide a dominant table stage with stable card space. */
+.dt-stage {
+  display: grid;
+  gap: 18px;
+  min-height: 430px;
+  background: radial-gradient(circle at 50% 45%, rgba(35, 17, 61, .5), rgba(21, 10, 36, .96) 70%);
+}
+
+/* Preserve one-click repeat as a secondary action. */
+.dt-repeat {
+  min-height: 46px;
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+
+/* Keep unavailable repeat controls visibly inert. */
+.dt-repeat:disabled {
+  opacity: .5;
+}
+
+/* Align the authoritative result and selected-bet context. */
+.dt-stage-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Remove default result-heading margin inside the stage. */
+.dt-stage-head h2 {
+  margin: 0;
+}
+
+/* Balance Dragon and Tiger card bays around the center line. */
+.dt-hands {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(18px, 5vw, 70px);
+  align-items: center;
+  min-height: 250px;
+}
+
+/* Give each labeled side an independent semantic card bay. */
+.dt-hand {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 14px;
+}
+
+/* Remove default margins from card-bay headings. */
+.dt-hand h3 {
+  margin: 0;
+}
+
+/* Align wager, return, and net result summaries. */
+.dt-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+
+/* Preserve the compact telemetry-card treatment. */
+.dt-stat {
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .2);
+}
+
+/* Keep telemetry labels subordinate to authoritative values. */
+.dt-stat span {
+  display: block;
+  color: var(--muted, #b8c8c1);
+  font-size: .78rem;
+}
+
+/* Keep bounded settled history readable without a nested rail. */
+.dt-history {
+  display: grid;
+  gap: 8px;
+}
+
+/* Align each historical outcome against its net result. */
+.dt-history-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px;
+  padding: 9px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, .18);
+}
+
+/* Keep historical bet context on its own line. */
+.dt-history-row small {
+  display: block;
+}
+
+/* Apply the shared muted copy color to secondary context. */
+.dt-muted {
+  color: var(--muted, #b8c8c1);
+}
+
+/* Keep the explicit selected label compact inside wager buttons. */
+.dt-selected {
+  display: block;
+  font-size: .72rem;
+}
+
+/* Preserve keyboard-visible focus for every game-owned control. */
+.dragon-tiger button:focus-visible,
+.dragon-tiger input:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Stack control, stage, then data when three dominant columns no longer fit. */
+@media (max-width: 1200px) {
+  /* Collapse the desktop rail composition to one contained column. */
+  .dt-layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* Keep wager controls first in the stacked journey. */
+  .dt-controls {
+    order: 1;
+  }
+
+  /* Keep the card stage immediately after its controls. */
+  .dt-stage {
+    order: 2;
+    min-height: auto;
+  }
+
+  /* Keep shoe and history data after the playable stage. */
+  .dt-data {
+    order: 3;
+  }
+}
+
+/* Compress labels, cards, and bets without horizontal overflow on phones. */
+@media (max-width: 520px) {
+  /* Stack title and phase so neither is clipped. */
+  .dt-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  /* Reclaim safe mobile width inside each panel. */
+  .dt-panel {
+    padding: 12px;
+  }
+
+  /* Stack both card bays and all settlement summaries. */
+  .dt-hands,
+  .dt-summary {
+    grid-template-columns: 1fr;
+  }
+
+  /* Give each wager target the full available width. */
+  .dt-bets {
+    grid-template-columns: 1fr;
+  }
+
+  /* Let the vertically stacked stage size to its content. */
+  .dt-stage {
+    min-height: 0;
+  }
+}
+
+/* Remove every decorative transition under the platform motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  /* Preserve state changes while suppressing route-owned motion. */
+  .dragon-tiger * {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
