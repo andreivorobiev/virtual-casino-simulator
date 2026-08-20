@@ -16,6 +16,8 @@ globalThis.window = {};
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 // Read production source for ownership and timer assertions.
 const source = await readFile(path.join(root, 'web', 'games', 'dragon_tiger.js'), 'utf8');
+// Read the extracted route stylesheet for responsive and reduced-motion assertions.
+const stylesheet = await readFile(path.join(root, 'web', 'games', 'dragon_tiger.css'), 'utf8');
 // Read the complete English game-owned dictionary.
 const english = JSON.parse(await readFile(path.join(root, 'web', 'i18n', 'en-US', 'games', 'dragon_tiger.json'), 'utf8'));
 // Read the complete Russian game-owned dictionary.
@@ -75,7 +77,7 @@ assert.match(loadingMarkup, /id="dt-wager"[^>]* disabled/);
 // Expose localized loading status and action copy instead of claiming wagers are accepted.
 assert.match(loadingMarkup, /RU:phases\.loading/);
 // Preserve a direct runtime guard even if a synthetic click bypasses disabled markup.
-assert.match(source, /if \(initialLoading \|\| dealing\) return/);
+assert.match(source, /if \(initialLoading \|\| lifecycle\.isBusy\(\)\) return/);
 // Render a saved exactly-once request after a simulated POST failure.
 const retryMarkup = frontend.viewMarkup({ snapshot, translate, pending: { action_id: 'dt-retry', bet: 'tiger', wager: 7 } });
 // Keep the retry action enabled so the same action id can reach the server again.
@@ -86,9 +88,21 @@ assert.doesNotMatch(retryMarkup, /data-action="deal" disabled/);
 assert.match(retryMarkup, /RU:stage\.selectedBet:RU:bets\.tiger/);
 // Verify the shared #96 renderer and stylesheet are consumed.
 assert.match(source, /import \{ renderCard \} from '\.\.\/core\/cards\.js'/);
+// Require route, locale, style, busy state, and production request identity to delegate to the shared lifecycle.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "lifecycle.nextRequestId('round')", "requestPrefix: 'dt'", "href: '/games/dragon_tiger.css'"]) assert.ok(source.includes(marker), marker);
+// Reject superseded route, busy, locale, identity, and opaque-style ownership.
+for (const duplicate of ['let root =', 'let dealing =', 'mountIdentity', 'unsubscribeLocale', 'function ensureGameStyles', 'const GAME_CSS', 'style.textContent', 'onLocaleChange', 'loadI18nDomain', 'function text(']) assert.equal(source.includes(duplicate), false, duplicate);
+// Require exact remount ownership before any asynchronous response is adopted.
+assert.match(source, /function ownsAction\(session, root\)[\s\S]*routeSession === session && lifecycle\.root\(\) === root/);
+// Preserve the frozen dt-UUID seam while allocating production identities through the shared lifecycle.
+assert.match(source, /uuidFactory:\s*\(\) => createActionId\(\)[\s\S]*lifecycle\.nextRequestId\('round'\)/);
 // Verify the module never uses the legacy glyph-based money formatter.
 assert.doesNotMatch(source, /formatMoney/);
 // Verify the game owns no timer or animation-frame callback.
 assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
 // Verify CSS explicitly collapses decorative reduced motion.
-assert.match(source, /prefers-reduced-motion:reduce/);
+assert.match(stylesheet, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.dragon-tiger \*/);
+// Preserve the exact desktop hierarchy, control targets, and responsive breakpoints after extraction.
+assert.match(stylesheet, /\.dt-layout\s*\{[\s\S]*grid-template-columns:\s*minmax\(220px, \.72fr\) minmax\(520px, 2\.25fr\) minmax\(230px, \.72fr\);/);
+assert.match(stylesheet, /\.dt-bet,[\s\S]*\.dt-deal\s*\{[\s\S]*min-height:\s*46px;/);
+assert.match(stylesheet, /@media \(max-width: 1200px\)[\s\S]*\.dt-layout\s*\{[\s\S]*grid-template-columns:\s*1fr;/);

@@ -1,9 +1,10 @@
 {
   "module": "dragon_tiger",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "paths": [
     "casino/games/dragon_tiger/",
     "web/games/dragon_tiger.js",
+    "web/games/dragon_tiger.css",
     "web/i18n/en-US/games/dragon_tiger.json",
     "web/i18n/ru-RU/games/dragon_tiger.json"
   ],

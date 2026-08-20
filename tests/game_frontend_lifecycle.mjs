@@ -338,5 +338,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(fourCardPokerSource.includes(duplicate), false, duplicate);
 // Require representative route, card, decision, wager, paytable, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.fourcp {', '.fcp-stage {', '.fcp-heading {', '.fcp-row {', '.fcp-cards {', '.fcp-hand {', '.fcp-actions {', '.fcp-btn.play {', '.fcp-btn.fold {', '.fcp-btn.deal {', '.fcp-field input {', '.fcp-pays {', '.fcp-result {', '.fcp-repeat {', '@media (max-width: 900px)']) assert.ok(fourCardPokerCss.includes(selector), selector);
+// Read the exact seventeenth-adopter source for per-slice duplicate-helper deletion evidence.
+const dragonTigerSource = await readFile(new URL('../web/games/dragon_tiger.js', import.meta.url), 'utf8');
+// Read Dragon Tiger's formatted external stylesheet for ownership and tooling visibility.
+const dragonTigerCss = await readFile(new URL('../web/games/dragon_tiger.css', import.meta.url), 'utf8');
+// Require Dragon Tiger to delegate shared lifecycle ownership while preserving its frozen dt-prefixed identity seam.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "lifecycle.nextRequestId('round')", "requestPrefix: 'dt'", 'uuidFactory: () => createActionId()', "href: '/games/dragon_tiger.css'"]) assert.ok(dragonTigerSource.includes(marker), marker);
+// Reject Dragon Tiger's migrated root, busy, locale, mount-identity, and opaque style-text ownership.
+for (const duplicate of ['let root =', 'let dealing =', 'mountIdentity', 'unsubscribeLocale', 'function ensureGameStyles', 'const GAME_CSS', 'style.textContent', 'onLocaleChange', 'loadI18nDomain', 'function text(']) assert.equal(dragonTigerSource.includes(duplicate), false, duplicate);
+// Require representative route, rail, stage, selection, card, summary, history, focus, motion, and responsive rules to survive extraction.
+for (const selector of ['.dragon-tiger {', '.dt-header {', '.dt-phase {', '.dt-layout {', '.dt-panel {', '.dt-bets {', '.dt-bet.is-selected {', '.dt-stage {', '.dt-repeat {', '.dt-hands {', '.dt-hand {', '.dt-summary {', '.dt-history-row {', '.dragon-tiger button:focus-visible,', '@media (max-width: 1200px)', '@media (max-width: 520px)', '@media (prefers-reduced-motion: reduce)']) assert.ok(dragonTigerCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

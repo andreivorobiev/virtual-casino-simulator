@@ -17,11 +17,12 @@
       ],
       "implementation_files": [
         "casino/games/dragon_tiger/engine.py",
-        "web/games/dragon_tiger.js"
+        "web/games/dragon_tiger.js",
+        "web/games/dragon_tiger.css"
       ],
       "introduced_in": "game-expansion-dragon-tiger",
-      "changed_in": "game-expansion-dragon-tiger",
-      "notes": "Allocated by GitHub issue #77 for issue #83; deterministic tests cover eight-deck shoe creation, three-card burn, 52-card reserve, Dragon-first dealing, ace-low rank comparison, 1:1 main returns, 11:1 Tie, and half-loss rounding."
+      "changed_in": "issue-1029-dragon-tiger-lifecycle-slice",
+      "notes": "Allocated by GitHub issue #77 for issue #83; deterministic tests cover eight-deck shoe creation, three-card burn, 52-card reserve, Dragon-first dealing, ace-low rank comparison, 1:1 main returns, 11:1 Tie, and half-loss rounding. Issue #1029 preserves those rules while delegating frontend request identity and busy ownership to the shared lifecycle controller."
     },
     {
       "id": "DT-002",
@@ -39,11 +40,13 @@
         "casino/games/dragon_tiger/api.py",
         "casino/core/request_player.py",
         "web/app.js",
+        "web/core/game_lifecycle.js",
+        "web/games/dragon_tiger.js",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-dragon-tiger",
-      "changed_in": "game-expansion-dragon-tiger",
-      "notes": "Normal-user session context overrides caller-supplied player ids, and settled Dragon Tiger history and shoe metadata survive backend restart."
+      "changed_in": "issue-1029-dragon-tiger-lifecycle-slice",
+      "notes": "Normal-user session context overrides caller-supplied player ids, and settled Dragon Tiger history and shoe metadata survive backend restart. Shared mount ownership now rejects stale initial-state and action completions after route teardown."
     },
     {
       "id": "DT-003",
@@ -75,6 +78,7 @@
       ],
       "implementation_files": [
         "web/games/dragon_tiger.js",
+        "web/games/dragon_tiger.css",
         "web/i18n/en-US/games/dragon_tiger.json",
         "web/i18n/ru-RU/games/dragon_tiger.json",
         "web/i18n/en-US/shell.json",
@@ -83,8 +87,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-dragon-tiger",
-      "changed_in": "game-expansion-dragon-tiger",
-      "notes": "Acceptance covers both locales, all four named viewports, ready and settled play, tie half-loss, exact replay, reduced motion, route restoration, localized persistent shell copy, and active-route navigation visibility."
+      "changed_in": "issue-1029-dragon-tiger-lifecycle-slice",
+      "notes": "Acceptance covers both locales, all four named viewports, ready and settled play, tie half-loss, exact replay, reduced motion, route restoration, localized persistent shell copy, active-route navigation visibility, reusable external stylesheet links, computed three-column dominance, and 46-pixel controls."
     },
     {
       "id": "DT-005",
@@ -105,11 +109,14 @@
         "contracts/compatibility/module-api-matrix.json",
         "tests/game_drivers/dragon_tiger.py",
         "tests/visual/visual_matrix.json",
+        "tests/game_frontend_lifecycle.mjs",
+        "tests/games/dragon_tiger/test_frontend.mjs",
+        "docs/evidence/dragon_tiger/README.md",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-dragon-tiger",
-      "changed_in": "game-expansion-dragon-tiger",
-      "notes": "The descriptor uses sort order 100 and the normalized tests.game_drivers.dragon_tiger:play driver reference released by issue #77."
+      "changed_in": "issue-1029-dragon-tiger-lifecycle-slice",
+      "notes": "The descriptor uses sort order 100 and the normalized tests.game_drivers.dragon_tiger:play driver reference released by issue #77. Issue #1029 adds shared lifecycle, external-style, teardown, and visual evidence traceability without changing discovery."
     },
     {
       "id": "DT-006",
