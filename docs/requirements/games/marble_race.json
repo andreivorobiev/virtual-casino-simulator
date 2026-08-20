@@ -13,18 +13,23 @@
         "API-MARBLE-RACE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-MARBLE-RACE-001"
       ],
       "implementation_files": [
         "casino/games/marble_race/rules.py",
         "casino/games/marble_race/engine.py",
         "casino/games/marble_race/api.py",
         "web/games/marble_race.js",
+        "web/games/marble_race.css",
+        "tests/games/marble_race/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/marble_race/README.md",
         "contracts/openapi/marble_race.v1.yaml"
       ],
       "introduced_in": "issue-157-marble-race",
-      "changed_in": "issue-157-marble-race",
-      "notes": "Allocated for GitHub issue #157, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1009-marble-race-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #157, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1009 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing the track, markets, semantic marble colors, 1,300 ms race timing, settlement, DOM, or visible layout."
     },
     {
       "id": "MARBLE-002",
@@ -35,17 +40,21 @@
         "API-MARBLE-RACE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-MARBLE-RACE-001"
       ],
       "implementation_files": [
         "casino/games/marble_race/api.py",
         "casino/core/simple_game.py",
+        "web/games/marble_race.js",
         "tests/marble_race_tests.py",
-        "tests/game_drivers/marble_race.py"
+        "tests/game_drivers/marble_race.py",
+        "tests/games/marble_race/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-157-marble-race",
-      "changed_in": "issue-157-marble-race",
-      "notes": "Allocated for GitHub issue #157."
+      "changed_in": "issue-1009-marble-race-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #157. Issue #1009 preserves the exact state and races endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, and real repeat flow while removing duplicate frontend lifecycle helpers."
     }
   ]
 }

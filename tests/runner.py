@@ -3230,6 +3230,50 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.remove_listener('request',record_drop_request)
                 # Record Coin Pusher's dedicated affected-game lifecycle and real-settlement case.
                 run_case('BR-COIN-PUSHER-001',['COINP-001','COINP-002','CORE-034','TEST-185','TEST-248'],coin_pusher_browser_acceptance)
+                # Exercise Marble Race through its real race endpoint, reload recovery, and repeated wager.
+                def marble_race_browser_acceptance():
+                    # Retain every observed Marble Race mutation so the case proves one request per visible action.
+                    race_requests=[]
+                    # Record only the exact game-owned POST route without inspecting sensitive headers or session state.
+                    def record_race_request(request):
+                        # Append one bounded marker for each Marble Race mutation request.
+                        if request.method=='POST' and request.url.endswith('/api/v1/games/marble-race/races'): race_requests.append(request.url)
+                    # Observe both real actions for exact request-count evidence.
+                    page.on('request',record_race_request)
+                    # Keep listener cleanup deterministic even when any browser assertion fails closed.
+                    try:
+                        # Prove one real post-reload repeat performs a second independent authoritative race.
+                        def repeat_race(expected_before_repeat):
+                            # Observe the second mutation response while the recovered repeat control re-fires the committed market, marble, and stake.
+                            with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/marble-race/races'),timeout=WAIT_MS * 2) as response_info: page.get_by_test_id('marble-race-repeat').click()
+                            # Bind the second visible wallet to the repeated race's exact authoritative player snapshot.
+                            repeated_expected=float(response_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=repeated_expected,timeout=WAIT_MS * 2)
+                            # Wait for the decorative race to terminalize and require the result and repeat control to remain usable.
+                            page.wait_for_function("() => { const result=document.querySelector('[data-testid=\"marble-race-result\"]'); const repeat=document.querySelector('[data-testid=\"marble-race-repeat\"]'); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",timeout=WAIT_MS * 2)
+                            # Require numeric before/after wallet observations and the exact repeated response-owned terminal value.
+                            assert isinstance(expected_before_repeat,(int,float)) and isinstance(repeated_expected,(int,float)) and newest_game_wallet_value()==repeated_expected
+                            # Capture ninth-adopter evidence only after the repeated real race is visibly terminal.
+                            page.locator('#view').screenshot(path=str(screenshots/'after-pass-marble-race-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Bind exact external-style and ready-layout evidence before the real race mutates the track.
+                        def race_once():
+                            # Restore the governed primary desktop viewport and route top after preceding shared cases.
+                            page.set_viewport_size({'width':1920,'height':1080}); page.evaluate('window.scrollTo(0,0)'); page.wait_for_timeout(100)
+                            # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                            style_link=page.locator('link#marble-race-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/marble_race.css'
+                            # Prove the migrated asset loaded while preserving the dominant stage, 300-pixel rail, track layout, and semantic game colors.
+                            assert page.get_by_test_id('marble-race').evaluate("el => { const route=getComputedStyle(el); const tracks=route.gridTemplateColumns.split(' ').map(parseFloat); const lane=getComputedStyle(el.querySelector('.mr-lane')); const marbles=[...el.querySelectorAll('.mr-marble')].map(node => getComputedStyle(node).backgroundColor); return route.display==='grid' && tracks.length===2 && tracks[0]>tracks[1] && Math.round(tracks[1])===300 && lane.display==='flex' && marbles[0]==='rgb(214, 50, 61)' && marbles[2]==='rgb(15, 156, 76)'; }")
+                            # Use the default win market, red marble, and five-token chip for one real settled race.
+                            page.get_by_test_id('marble-race-go').click()
+                        # Bind the first race response, settled wallet, recovered route, and second repeated race.
+                        newest_simple_game_acceptance('marble_race','marble-race','/api/v1/games/marble-race/races',race_once,'marble-race-result','marble-race-repeat',after_reload=repeat_race)
+                        # Require exactly the two intended real actions and no duplicate listener or request side effect.
+                        assert len(race_requests)==2,race_requests
+                    # Remove the exact observer before any downstream Browser case starts.
+                    finally:
+                        # Release the request observer even when the lifecycle proof fails closed.
+                        page.remove_listener('request',record_race_request)
+                # Record Marble Race's dedicated affected-game lifecycle, semantic-color, and real-settlement case.
+                run_case('BR-MARBLE-RACE-001',['MARBLE-001','MARBLE-002','CORE-034','TEST-122','TEST-185','TEST-248','UX-024'],marble_race_browser_acceptance)
                 # Exercise Faro through its real deal endpoint and reload-safe recent-round state.
                 def faro_browser_acceptance():
                     # Bind exact external-style and ready-layout evidence before the real deal mutates the cards.

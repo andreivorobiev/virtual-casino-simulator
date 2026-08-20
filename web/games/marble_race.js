@@ -5,13 +5,15 @@
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, stylesheet, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/marble_race';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'marble-race-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'mr', stylesheet: { id: 'marble-race-styles', href: '/games/marble_race.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Mirror the backend's six marbles and their display colours in index order.
 export const MARBLES = Object.freeze(['red', 'blue', 'green', 'yellow', 'purple', 'orange']);
 // Map each marble to a concrete rendered fill.
@@ -21,46 +23,22 @@ const CHIPS = [1, 5, 25, 100];
 // Fix the decorative race duration; the outcome is already server-authoritative.
 const RACE_MS = 1300;
 
-// Store the current route outlet, chosen bet, chosen marble, chosen stake, and in-flight guard.
-let root = null;
+// Store the chosen bet, chosen marble, and chosen stake while the shared lifecycle owns route state.
 let selectedBet = 'win';
 let selectedMarble = 0;
 let stake = 5;
-let raceBusy = false;
-let localeUnsubscribe = null;
 // Retain the last settled finishing order so a repaint after the race keeps the result.
 let shownOrder = null;
 // Retain the last settled bet so one click can repeat the same marble and stake.
 let lastBet = null;
 
-// Translate one game-domain key through the shared installed-locale fallback chain.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
-
 // Read the localized display name for a marble index.
 const marbleName = index => tx('marble.' + MARBLES[index]);
 
-// Install compact game-owned styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.marble{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .mr-stage{display:grid;gap:10px;padding:12px;min-width:0;} .mr-track{display:grid;gap:6px;min-width:0;} .mr-lane{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.05);min-width:0;} .mr-lane.win{outline:2px solid var(--gold);outline-offset:2px;} .mr-marble{width:26px;height:26px;border-radius:50%;flex:0 0 auto;box-shadow:inset -3px -3px 6px rgba(0,0,0,.4),0 2px 4px rgba(0,0,0,.35);} .mr-name{font-weight:900;text-transform:capitalize;min-width:64px;} .mr-place{margin-left:auto;font-weight:900;color:var(--gold);font-size:13px;} .mr-panel{display:grid;gap:12px;min-width:0;} .mr-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);min-width:0;} .mr-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .mr-bets{display:flex;gap:8px;} .mr-bet{flex:1;min-width:0;padding:10px;border:2px solid transparent;border-radius:12px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .mr-bet small{display:block;font-weight:700;opacity:.8;font-size:11px;} .mr-bet[aria-pressed="true"]{border-color:var(--brand);box-shadow:0 0 0 2px rgba(255,59,107,.5);} .mr-picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;} .mr-pick{display:flex;align-items:center;gap:6px;min-width:0;padding:8px;border:2px solid transparent;border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:800;cursor:pointer;text-transform:capitalize;overflow-wrap:anywhere;} .mr-pick .dot{width:16px;height:16px;border-radius:50%;flex:0 0 auto;} .mr-pick[aria-pressed="true"]{border-color:var(--brand);box-shadow:0 0 0 2px rgba(255,59,107,.5);} .mr-chips{display:flex;flex-wrap:wrap;gap:8px;} .mr-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .mr-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:var(--text);} .mr-go{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,var(--brand),#d21f4f);color:var(--text);font-weight:900;font-size:16px;cursor:pointer;} .mr-go:disabled{opacity:.55;cursor:not-allowed;} .mr-result{min-height:24px;font-size:15px;color:var(--text);} .mr-result .net{font-weight:900;} @media (max-width:900px){.marble{grid-template-columns:1fr;}}.mr-repeat{width:100%;min-height:44px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;font-size:15px;cursor:pointer;}.mr-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.appendChild(style);
-}
-
-// Generate one caller-stable retry identity for exactly-once settlement.
-function newRequestId() {
-  // Prefer a real UUID when the platform provides one.
-  return (globalThis.crypto?.randomUUID?.() || `mr-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
-}
-
 // Render the complete Marble Race route into the outlet.
 function render(resultText) {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Compute each marble's finishing place from the settled order, if any.
@@ -76,7 +54,7 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="mr-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="marble" data-testid="marble-race"><div class="mr-stage"><div class="mr-track" data-testid="marble-race-track">${lanes}</div><p class="mr-result" data-testid="marble-race-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="mr-panel"><div class="mr-card"><h3>${safe(tx('bet.title'))}</h3><div class="mr-bets">${bets}</div></div><div class="mr-card"><h3>${safe(tx('pick.title'))}</h3><div class="mr-picks">${picks}</div></div><div class="mr-card"><h3>${safe(tx('stake.title'))}</h3><div class="mr-chips">${chips}</div></div><button class="mr-go" data-testid="marble-race-go" type="button" ${raceBusy ? 'disabled' : ''}>${safe(raceBusy ? tx('action.racing') : tx('action.race'))}</button><button class="mr-repeat" data-testid="marble-race-repeat" type="button" ${raceBusy || !lastBet ? 'disabled' : ''}>${safe(tx('action.repeat'))}</button></div></section>`;
+  root.innerHTML = `<section class="marble" data-testid="marble-race"><div class="mr-stage"><div class="mr-track" data-testid="marble-race-track">${lanes}</div><p class="mr-result" data-testid="marble-race-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="mr-panel"><div class="mr-card"><h3>${safe(tx('bet.title'))}</h3><div class="mr-bets">${bets}</div></div><div class="mr-card"><h3>${safe(tx('pick.title'))}</h3><div class="mr-picks">${picks}</div></div><div class="mr-card"><h3>${safe(tx('stake.title'))}</h3><div class="mr-chips">${chips}</div></div><button class="mr-go" data-testid="marble-race-go" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(lifecycle.isBusy() ? tx('action.racing') : tx('action.race'))}</button><button class="mr-repeat" data-testid="marble-race-repeat" type="button" ${(lifecycle.isBusy() || !lastBet) ? 'disabled' : ''}>${safe(tx('action.repeat'))}</button></div></section>`;
   // Wire the bet-market buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = btn.dataset.bet; render(); }; });
   // Wire the marble pick buttons.
@@ -114,7 +92,7 @@ async function load() {
 // Re-apply the last settled bet and re-race with one click, adding no timer.
 async function repeat() {
   // Ignore repeat while a race is resolving, after teardown, or without a prior settled bet.
-  if (raceBusy || !root || !lastBet) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || !lastBet) return;
   // Restore the previous bet market into the local configuration.
   selectedBet = lastBet.bet;
   // Restore the previous marble pick into the local configuration.
@@ -128,14 +106,14 @@ async function repeat() {
 // Execute one atomic wager, race, and settlement.
 async function race() {
   // Ignore repeated clicks while a race is resolving.
-  if (raceBusy || !root) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted()) return;
   // Mark the race busy and disable the control before the request.
-  raceBusy = true;
+  lifecycle.setBusy(true);
   render();
   // Start protected settlement so the busy flag is always released.
   try {
     // Post the exactly-once race with a caller-stable retry id and the chosen bet.
-    const response = await post('/api/v1/games/marble-race/races', { request_id: newRequestId(), bet: selectedBet, marble: selectedMarble, stake });
+    const response = await post('/api/v1/games/marble-race/races', { request_id: lifecycle.nextRequestId(), bet: selectedBet, marble: selectedMarble, stake });
     // Show the committed debit before the finishing order becomes visible. (LEDGER-031, issue #596)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
@@ -153,12 +131,12 @@ async function race() {
     // Compose the localized result copy naming the winning marble and the net.
     const text = `${safe(tx('result.finish', { winner: marbleName(round.detail.winner) }))} <span class="net">${win ? '+' + (round.total_return - round.wager_total) : round.net}</span>`;
     // Release the guard before the final repaint.
-    raceBusy = false;
+    lifecycle.setBusy(false);
     // Repaint with the finishing order and result.
     render(text);
   } catch (err) {
     // Release the guard and report a bounded error.
-    raceBusy = false;
+    lifecycle.setBusy(false);
     // Surface the failure without leaking internal detail.
     toast(err?.message || tx('error.race'), 'error');
     // Repaint the unlocked controls.
@@ -172,29 +150,19 @@ export const MarbleRaceGame = {
   id: 'marble_race',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet.
-    root = node;
     // Reset the repeatable bet so another session never inherits it before state loads.
     lastBet = null;
-    // Install game-owned styles.
-    ensureStyles();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings on a locale change unless a race owns the track.
-    localeUnsubscribe = onLocaleChange(() => { if (!raceBusy) render(); });
+    // Establish route, stylesheet, locale, and repaint ownership through the shared controller.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released this route during asynchronous locale loading.
+    if (!mounted) return;
     // Load session-bound state and render the first frame.
     await load();
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    raceBusy = false;
+    // Release route, locale, and busy ownership idempotently.
+    lifecycle.unmount();
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
   },
