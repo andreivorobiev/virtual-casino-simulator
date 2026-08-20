@@ -8124,15 +8124,18 @@
         "API-MARBLE-RACE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-MARBLE-RACE-001"
       ],
       "implementation_files": [
         "tests/marble_race_tests.py",
+        "tests/games/marble_race/test_frontend.mjs",
+        "tests/runner.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-157-marble-race",
-      "changed_in": "issue-157-marble-race",
-      "notes": "Allocated for GitHub issue #157."
+      "changed_in": "issue-1009-marble-race-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #157. Issue #1009 adds listener-free frontend lifecycle and real two-action Browser evidence without changing the existing race-math, validation, retry, or house-edge proof."
     },
     {
       "id": "TEST-123",
@@ -9426,19 +9429,23 @@
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-GAME-COLOR-001"
+        "BR-GAME-COLOR-001",
+        "BR-MARBLE-RACE-001"
       ],
       "implementation_files": [
         "web/styles.css",
         "web/games/roulette.js",
+        "web/games/marble_race.js",
+        "web/games/marble_race.css",
         "tests/run_tests.py",
+        "tests/runner.py",
         "tests/cicd_deployment_tests.py",
         "tests/visual/visual_matrix.json",
         "docs/evidence/semantic-game-colors/README.md"
       ],
       "introduced_in": "issue-554-semantic-game-colors",
-      "changed_in": "issue-717-css-brand-scope",
-      "notes": "Issue #717 removes the bare global red, black, and green fallbacks, keeps semantic colors under route or card namespaces, and removes only the counter-important declarations that the leak required. The rendered gradients, suit colors, brand chrome, wagers, payouts, results, economy, ledger, API, contracts, providers, and public policy remain unchanged. Hosted exact-head evidence computes the rendered semantic colors in English and Russian at all four governed viewports, checks brand and playing-card invariants, and restores route, locale, and viewport state."
+      "changed_in": "issue-1009-marble-race-lifecycle-slice",
+      "notes": "Issue #717 removes the bare global red, black, and green fallbacks, keeps semantic colors under route or card namespaces, and removes only the counter-important declarations that the leak required. Issue #1009 extracts Marble Race route styling without changing its exact rendered red and casino-felt green marbles, and adds dedicated computed-style Browser evidence. The rendered gradients, suit colors, brand chrome, wagers, payouts, results, economy, ledger, API, contracts, providers, and public policy remain unchanged. Hosted matrix evidence continues to compute the rendered semantic colors in English and Russian at all four governed viewports, checks brand and playing-card invariants, and restores route, locale, and viewport state."
     },
     {
       "id": "TEST-149",
@@ -13496,7 +13503,8 @@
         "BR-FAN-TAN-001",
         "BR-POKER-DICE-001",
         "BR-PATTERN-DRAW-001",
-        "BR-COIN-PUSHER-001"
+        "BR-COIN-PUSHER-001",
+        "BR-MARBLE-RACE-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
@@ -13516,6 +13524,8 @@
         "web/games/pattern_draw.css",
         "web/games/coin_pusher.js",
         "web/games/coin_pusher.css",
+        "web/games/marble_race.js",
+        "web/games/marble_race.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
@@ -13525,6 +13535,7 @@
         "docs/evidence/poker_dice/README.md",
         "docs/evidence/pattern_draw/README.md",
         "docs/evidence/coin_pusher/README.md",
+        "docs/evidence/marble_race/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
         "modules/faro.json",
@@ -13533,16 +13544,17 @@
         "modules/fan_tan.json",
         "modules/poker_dice.json",
         "modules/pattern_draw.json",
-        "modules/coin_pusher.json"
+        "modules/coin_pusher.json",
+        "modules/marble_race.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1007-coin-pusher-lifecycle-slice",
-      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, and Coin Pusher are the first eight adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape."
+      "changed_in": "issue-1009-marble-race-lifecycle-slice",
+      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, and Marble Race are the first nine adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, and Coin Pusher browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, and Marble Race browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
@@ -13555,13 +13567,15 @@
         "BR-FAN-TAN-001",
         "BR-POKER-DICE-001",
         "BR-PATTERN-DRAW-001",
-        "BR-COIN-PUSHER-001"
+        "BR-COIN-PUSHER-001",
+        "BR-MARBLE-RACE-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
         "tests/games/poker_dice/test_frontend.mjs",
         "tests/games/pattern_draw/test_frontend.mjs",
         "tests/games/coin_pusher/test_frontend.mjs",
+        "tests/games/marble_race/test_frontend.mjs",
         "tests/cases/api/frontend_presentation.py",
         "tests/cicd_deployment_tests.py",
         "tests/api_case_inventory.json",
@@ -13569,7 +13583,7 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1007-coin-pusher-lifecycle-slice",
+      "changed_in": "issue-1009-marble-race-lifecycle-slice",
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {
@@ -21332,18 +21346,23 @@
         "API-MARBLE-RACE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-MARBLE-RACE-001"
       ],
       "implementation_files": [
         "casino/games/marble_race/rules.py",
         "casino/games/marble_race/engine.py",
         "casino/games/marble_race/api.py",
         "web/games/marble_race.js",
+        "web/games/marble_race.css",
+        "tests/games/marble_race/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/marble_race/README.md",
         "contracts/openapi/marble_race.v1.yaml"
       ],
       "introduced_in": "issue-157-marble-race",
-      "changed_in": "issue-157-marble-race",
-      "notes": "Allocated for GitHub issue #157, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1009-marble-race-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #157, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1009 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing the track, markets, semantic marble colors, 1,300 ms race timing, settlement, DOM, or visible layout."
     },
     {
       "id": "MARBLE-002",
@@ -21354,17 +21373,21 @@
         "API-MARBLE-RACE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-MARBLE-RACE-001"
       ],
       "implementation_files": [
         "casino/games/marble_race/api.py",
         "casino/core/simple_game.py",
+        "web/games/marble_race.js",
         "tests/marble_race_tests.py",
-        "tests/game_drivers/marble_race.py"
+        "tests/game_drivers/marble_race.py",
+        "tests/games/marble_race/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-157-marble-race",
-      "changed_in": "issue-157-marble-race",
-      "notes": "Allocated for GitHub issue #157."
+      "changed_in": "issue-1009-marble-race-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #157. Issue #1009 preserves the exact state and races endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, and real repeat flow while removing duplicate frontend lifecycle helpers."
     },
     {
       "id": "PATTERN-001",

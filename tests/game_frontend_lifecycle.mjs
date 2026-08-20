@@ -258,5 +258,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let dropBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(coinPusherSource.includes(duplicate), false, duplicate);
 // Require representative route, machine, cascade, selection, control, result, repeat, motion, and responsive rules to survive extraction.
 for (const selector of ['.coinp {', '.cp-machine {', '.cp-coin.drop {', '@keyframes cp-fall {', '.cp-chip[aria-pressed="true"] {', '.cp-drop {', '.cp-result {', '.cp-repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 900px)']) assert.ok(coinPusherCss.includes(selector), selector);
+// Read the exact ninth-adopter source for per-slice duplicate-helper deletion evidence.
+const marbleRaceSource = await readFile(new URL('../web/games/marble_race.js', import.meta.url), 'utf8');
+// Read Marble Race's formatted external stylesheet for ownership and tooling visibility.
+const marbleRaceCss = await readFile(new URL('../web/games/marble_race.css', import.meta.url), 'utf8');
+// Require Marble Race to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "href: '/games/marble_race.css'"]) assert.ok(marbleRaceSource.includes(marker), marker);
+// Reject Marble Race's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let raceBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(marbleRaceSource.includes(duplicate), false, duplicate);
+// Require representative route, lane, semantic-color, selection, control, result, repeat, and responsive rules to survive extraction.
+for (const selector of ['.marble {', '.mr-lane {', '.mr-lane.win {', '.mr-marble {', '.mr-pick[aria-pressed="true"] {', '.mr-go {', '.mr-result {', '.mr-repeat {', '@media (max-width: 900px)']) assert.ok(marbleRaceCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');
