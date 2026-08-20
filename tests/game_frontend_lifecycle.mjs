@@ -248,5 +248,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let drawBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(patternDrawSource.includes(duplicate), false, duplicate);
 // Require representative route, grid, lit-cell, selection, control, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.pattern {', '.pd-grid {', '.pd-cell.on {', '.pd-bet[aria-pressed="true"] {', '.pd-draw {', '.pd-result {', '.pd-repeat {', '@media (max-width: 900px)']) assert.ok(patternDrawCss.includes(selector), selector);
+// Read the exact eighth-adopter source for per-slice duplicate-helper deletion evidence.
+const coinPusherSource = await readFile(new URL('../web/games/coin_pusher.js', import.meta.url), 'utf8');
+// Read Coin Pusher's formatted external stylesheet for ownership and tooling visibility.
+const coinPusherCss = await readFile(new URL('../web/games/coin_pusher.css', import.meta.url), 'utf8');
+// Require Coin Pusher to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "href: '/games/coin_pusher.css'"]) assert.ok(coinPusherSource.includes(marker), marker);
+// Reject Coin Pusher's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let dropBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(coinPusherSource.includes(duplicate), false, duplicate);
+// Require representative route, machine, cascade, selection, control, result, repeat, motion, and responsive rules to survive extraction.
+for (const selector of ['.coinp {', '.cp-machine {', '.cp-coin.drop {', '@keyframes cp-fall {', '.cp-chip[aria-pressed="true"] {', '.cp-drop {', '.cp-result {', '.cp-repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 900px)']) assert.ok(coinPusherCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');
