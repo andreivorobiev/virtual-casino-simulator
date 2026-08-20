@@ -20,13 +20,17 @@
         "casino/games/mississippi_stud/service.py",
         "casino/games/mississippi_stud/api.py",
         "web/games/mississippi_stud.js",
+        "web/games/mississippi_stud.css",
+        "tests/games/mississippi_stud/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/mississippi_stud/README.md",
         "contracts/openapi/mississippi_stud.v1.yaml",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-143-mississippi-stud",
-      "changed_in": "issue-143-mississippi-stud",
-      "notes": "Allocated for GitHub issue #143, a catalog-expansion poker variant. The service reuses shared card primitives, the five-card evaluator, and the ledger for its three-street state machine. Exact-head browser evidence covers ready, all three decision streets, settlement, reduced motion, and route restoration in EN/RU at all four governed viewports."
+      "changed_in": "issue-1021-mississippi-stud-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #143, a catalog-expansion poker variant. The service reuses shared card primitives, the five-card evaluator, and the ledger for its three-street state machine. Issue #1021 delegates route, busy, locale, action-id, and external stylesheet ownership to the shared lifecycle while retaining a mount-specific response-adoption guard for the shell's persistent outlet. Exact-head browser evidence covers ready, all three decision streets, settlement, reduced motion, route restoration, stylesheet reuse, and teardown in EN/RU at all four governed viewports."
     },
     {
       "id": "MSTUD-002",
@@ -42,14 +46,16 @@
       "implementation_files": [
         "casino/games/mississippi_stud/service.py",
         "casino/games/mississippi_stud/api.py",
+        "web/games/mississippi_stud.js",
         "tests/mississippi_stud_tests.py",
+        "tests/games/mississippi_stud/test_frontend.mjs",
         "tests/game_drivers/mississippi_stud.py",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-143-mississippi-stud",
-      "changed_in": "issue-143-mississippi-stud",
-      "notes": "Allocated for GitHub issue #143."
+      "changed_in": "issue-1021-mississippi-stud-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #143. Issue #1021 preserves the exact state, rounds, and decisions routes; unresolved deal and street-decision action-id reuse; public request fields; reload recovery; progressive privacy; settlement; wallet refresh; and one-click repeat behavior while removing duplicate frontend lifecycle helpers."
     },
     {
       "id": "MSTUD-003",
