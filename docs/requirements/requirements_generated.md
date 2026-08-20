@@ -25,7 +25,7 @@ Historical source baseline: 9.1.0
 - bingo: 9.3.8
 - multi_hand_video_poker: 1.1.4
 - casino_war: 1.2.2
-- big_six_wheel: 1.2.0
+- big_six_wheel: 1.2.1
 - red_dog: 1.1.4
 - dragon_tiger: 1.2.0
 - hi_lo: 1.1.6
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.6
-- tests: 1.114.13
-- docs: 1.110.13
+- tests: 1.114.14
+- docs: 1.110.14
 - contracts: 1.62.6
 - tooling: 1.43.4
 - commenting_policy: 2.1.0
@@ -748,7 +748,7 @@ Historical source baseline: 9.1.0
 - **STORAGE-018** (Storage) - PASS: The state_store compatibility API is a thin provider facade: ordinary and strict reads, complete writes, and atomic updates unconditionally delegate key resolution, locking, recovery, validation, rollback, and publication to the selected storage provider. JSON preserves exact injectable filesystem paths, while non-filesystem providers reject paths outside the configured data root before any operation.
 - **TEST-247** (Tests) - PASS: Listener-free facade evidence runs the identical absent-read, write, ordinary read, atomic update, strict read, and strict update sequence through production JSON and transaction-shaped database providers; binds exact portable keys; proves injectable JSON paths; rejects out-of-root database paths; preserves rollback and concurrency; and statically prevents selector or sidecar-lock reintroduction. Disposable MySQL coverage continues to exercise production state_store callers against real provider rows.
 - **CORE-034** (Application) - PASS: Isolated browser games may delegate route ownership, asynchronous mount cancellation, busy-state coordination, lazy locale initialization and teardown, domain-bound translation, external same-origin stylesheet ownership, and opaque request identities to one shared lifecycle controller without changing game DOM, actions, settlement, localization, or visible layout.
-- **TEST-248** (Tests) - PASS: Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, and Boule browser cases preserve their real settled-round and repeat flows.
+- **TEST-248** (Tests) - PASS: Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, and Big Six Wheel browser cases preserve their real settled-round and repeat flows.
 - **TEST-249** (Tests) - PASS: The standalone Deuces Wild diagnostic issues a distinct browser-readable CSRF cookie only after a valid session-bound bootstrap, accepts exact cookie/header pairs for real English and Russian deal, hold, and draw actions, and rejects anonymous bootstrap plus missing, mismatched, or cross-session proofs before game dispatch. Both focused and browser paths close their ephemeral non-production listener on success or failure.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.

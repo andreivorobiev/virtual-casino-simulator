@@ -8030,7 +8030,8 @@
       ],
       "browser_tests": [
         "BR-CATALOG-EXPANSION-001",
-        "BR-BOULE-001"
+        "BR-BOULE-001",
+        "BR-BIG-SIX-001"
       ],
       "implementation_files": [
         "tests/boule_tests.py",
@@ -13532,6 +13533,8 @@
         "web/games/marble_race.css",
         "web/games/boule.js",
         "web/games/boule.css",
+        "web/games/big_six_wheel.js",
+        "web/games/big_six_wheel.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
@@ -13543,6 +13546,7 @@
         "docs/evidence/coin_pusher/README.md",
         "docs/evidence/marble_race/README.md",
         "docs/evidence/boule/README.md",
+        "docs/evidence/big_six_wheel/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
         "modules/faro.json",
@@ -13553,16 +13557,17 @@
         "modules/pattern_draw.json",
         "modules/coin_pusher.json",
         "modules/marble_race.json",
-        "modules/boule.json"
+        "modules/boule.json",
+        "modules/big_six_wheel.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1011-boule-lifecycle-slice",
-      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, and Boule are the first ten adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, and Big Six Wheel are the first eleven adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, and Boule browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, and Big Six Wheel browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
@@ -13577,7 +13582,8 @@
         "BR-PATTERN-DRAW-001",
         "BR-COIN-PUSHER-001",
         "BR-MARBLE-RACE-001",
-        "BR-BOULE-001"
+        "BR-BOULE-001",
+        "BR-BIG-SIX-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
@@ -13586,6 +13592,7 @@
         "tests/games/coin_pusher/test_frontend.mjs",
         "tests/games/marble_race/test_frontend.mjs",
         "tests/games/boule/test_frontend.mjs",
+        "tests/unit/big_six_wheel_frontend.test.mjs",
         "tests/cases/api/frontend_presentation.py",
         "tests/cicd_deployment_tests.py",
         "tests/api_case_inventory.json",
@@ -13593,7 +13600,7 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1011-boule-lifecycle-slice",
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {
@@ -17776,11 +17783,14 @@
       "implementation_files": [
         "casino/games/big_six_wheel/engine.py",
         "casino/games/big_six_wheel/rules.py",
-        "web/games/big_six_wheel.js"
+        "web/games/big_six_wheel.js",
+        "web/games/big_six_wheel.css",
+        "tests/unit/big_six_wheel_frontend.test.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "game-expansion-big-six",
-      "changed_in": "game-expansion-big-six",
-      "notes": "Allocated by GitHub issue #77 for issue #86; focused tests cover all legal targets, segment boundaries, normalization, and payout calculation."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "Allocated by GitHub issue #77 for issue #86; focused tests cover all legal targets, segment boundaries, normalization, payout calculation, and issue #1013 shared-lifecycle ownership without changing the 54-segment profile."
     },
     {
       "id": "BIG-SIX-002",
@@ -17798,11 +17808,12 @@
         "casino/games/big_six_wheel/api.py",
         "casino/core/request_player.py",
         "web/app.js",
+        "web/games/big_six_wheel.js",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-big-six",
-      "changed_in": "game-expansion-big-six",
-      "notes": "Normal-user session context overrides caller-supplied player ids, and settled round history survives backend restart."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "Normal-user session context overrides caller-supplied player ids, settled round history survives backend restart, and shared route teardown prevents stale asynchronous repaint after navigation."
     },
     {
       "id": "BIG-SIX-003",
@@ -17834,14 +17845,16 @@
       ],
       "implementation_files": [
         "web/games/big_six_wheel.js",
+        "web/games/big_six_wheel.css",
         "web/i18n/en-US/games/big_six_wheel.json",
         "web/i18n/ru-RU/games/big_six_wheel.json",
+        "docs/evidence/big_six_wheel/README.md",
         "tests/visual/visual_matrix.json",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-big-six",
-      "changed_in": "issue-223-big-six-motion",
-      "notes": "Acceptance evidence covers both locales, all four named viewports, active and settled play, cumulative pointer alignment, reduced motion, and canonical route restoration."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "Acceptance evidence covers both locales, all four named viewports, active and settled play, cumulative pointer alignment, reduced motion, canonical route restoration, and the issue #1013 external stylesheet identity."
     },
     {
       "id": "BIG-SIX-005",
@@ -17880,14 +17893,15 @@
       ],
       "implementation_files": [
         "web/games/big_six_wheel.js",
+        "web/games/big_six_wheel.css",
         "tests/unit/big_six_wheel_frontend.test.mjs",
         "tests/browser/big_six_wheel_motion_soak.py",
         "tests/browser/big_six_wheel_wsgi_asset_probe.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-223-big-six-motion",
-      "changed_in": "issue-223-big-six-motion",
-      "notes": "The exact-head long gate performs 100 consecutive real UI spins at each governed viewport, covers EN/RU, resize, background/foreground lifecycle suspension, four-times CPU throttling, reduced motion, cache-safe production asset reload, scroll reachability, and paired top/stage/lower visual review."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "The exact-head long gate performs 100 consecutive real UI spins at each governed viewport, covers EN/RU, resize, background/foreground lifecycle suspension, four-times CPU throttling, reduced motion, cache-safe production asset reload, scroll reachability, and paired top/stage/lower visual review. Issue #1013 retains the strict secure bsw-prefixed identity and motion timer scope while delegating route ownership."
     },
     {
       "id": "BIG-SIX-007",

@@ -3830,6 +3830,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def big_six_acceptance():
                     # Open the catalog-generated route and wait for the game-owned readiness selector.
                     page.get_by_test_id('nav-big_six_wheel').click(); page.get_by_test_id('big-six-wheel').wait_for(timeout=WAIT_MS)
+                    # Require the shared lifecycle to install the exact external stylesheet without retaining an inline style owner.
+                    assert page.locator('link#big-six-wheel-styles[rel="stylesheet"]').get_attribute('href')=='/games/big_six_wheel.css' and page.locator('style#big-six-wheel-styles').count()==0
                     # Require the canonical route, English title, and ready phase from the live backend mount.
                     assert page.url.split('?',1)[0].endswith('/games/big_six_wheel') and page.locator('.big-six-wheel__header h1').inner_text()=='Big Six Wheel' and page.get_by_test_id('big-six-wheel-phase').inner_text()=='Accepting wagers'
                     # Require the complete code-native stage to remain painted inside its panel and every hidden ancestor.

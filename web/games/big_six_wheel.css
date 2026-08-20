@@ -1,0 +1,265 @@
+/* Preserve the stable Big Six route surface extracted from the game module. */
+.big-six-wheel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+  min-height: 100%;
+  color: var(--text, #f5ead6);
+}
+
+/* Keep player-facing title and phase hierarchy compact above the stage. */
+.big-six-wheel__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 2px;
+}
+
+.big-six-wheel__header h1 {
+  margin: 0;
+  color: var(--gold, #f2c55c);
+  font-size: clamp(30px, 4vw, 52px);
+}
+
+.big-six-wheel__phase {
+  padding: 7px 12px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  background: var(--panel-strong);
+}
+
+/* Preserve the desktop three-zone layout with a visually dominant wheel stage. */
+.big-six-wheel__layout {
+  display: grid;
+  grid-template-columns: minmax(220px, .72fr) minmax(420px, 1.8fr) minmax(220px, .72fr);
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.big-six-wheel__panel {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel-strong);
+}
+
+.big-six-wheel__controls {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+/* Align each localized wager target with its bounded input. */
+.big-six-wheel__bet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 8px;
+  align-items: center;
+}
+
+.big-six-wheel__bet input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  min-width: 0;
+}
+
+/* Preserve primary and repeat action hierarchy and busy-state feedback. */
+.big-six-wheel__spin {
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  color: white;
+  background: #a71922;
+  font-weight: 800;
+}
+
+.big-six-wheel__spin:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+}
+
+.big-six-wheel__repeat {
+  min-height: 46px;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 800;
+}
+
+.big-six-wheel__repeat:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* Keep the code-native wheel, pointer, and hub complete inside the dominant stage. */
+.big-six-wheel__stage {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.big-six-wheel__wheel-shell {
+  position: relative;
+  width: min(62vh, 520px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.big-six-wheel__pointer {
+  position: absolute;
+  z-index: 3;
+  top: -4px;
+  width: 0;
+  height: 0;
+  border-left: 16px solid transparent;
+  border-right: 16px solid transparent;
+  border-top: 34px solid #d4a941;
+  filter: drop-shadow(0 3px 2px #000);
+}
+
+.big-six-wheel__wheel {
+  width: 90%;
+  aspect-ratio: 1;
+  border: 12px solid #8d681f;
+  border-radius: 50%;
+  background: repeating-conic-gradient(#d4a941 0 6.666deg, #173f31 6.666deg 13.333deg);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .48), inset 0 0 0 8px #071d14;
+  transform: rotate(var(--wheel-angle, 0deg));
+  transition: transform 1.4s cubic-bezier(.16, .76, .2, 1);
+}
+
+.big-six-wheel__wheel[data-reduced-motion="true"] {
+  transition: none;
+}
+
+.big-six-wheel__hub {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 34%;
+  aspect-ratio: 1;
+  border: 7px solid #d4a941;
+  border-radius: 50%;
+  background: #071d14;
+  color: #f3d784;
+  text-align: center;
+  font-weight: 900;
+}
+
+.big-six-wheel__result {
+  display: grid;
+  gap: 5px;
+  text-align: center;
+  min-height: 54px;
+}
+
+/* Preserve the paytable and intentional keyboard-focusable history rail. */
+.big-six-wheel__data {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.big-six-wheel__payrow,
+.big-six-wheel__history-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px 10px;
+  min-width: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.big-six-wheel__payrow span,
+.big-six-wheel__history-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.big-six-wheel__history {
+  max-height: 260px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.big-six-wheel__error {
+  min-height: 20px;
+  color: var(--bad);
+}
+
+/* Compress the wheel theater while retaining the three-zone desktop-compact layout. */
+@media (max-width: 1500px) and (min-width: 1201px) {
+  .big-six-wheel__wheel-shell {
+    width: min(54vh, 480px);
+  }
+}
+
+/* Stack at the shared document-scroll transition without clipping stage geometry. */
+@media (max-width: 1200px) {
+  .big-six-wheel__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .big-six-wheel__controls {
+    order: 1;
+  }
+
+  .big-six-wheel__stage {
+    order: 2;
+    grid-template-rows: auto auto;
+    align-content: start;
+    overflow: visible;
+  }
+
+  .big-six-wheel__data {
+    order: 3;
+  }
+
+  .big-six-wheel__wheel-shell {
+    width: min(70vw, 480px);
+  }
+}
+
+/* Preserve controls, data values, and wheel containment on mobile. */
+@media (max-width: 560px) {
+  .big-six-wheel__header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .big-six-wheel__panel {
+    padding: 12px;
+  }
+
+  .big-six-wheel__bet {
+    grid-template-columns: minmax(0, 1fr) minmax(72px, 84px);
+    width: 100%;
+  }
+
+  .big-six-wheel__payrow,
+  .big-six-wheel__history-row {
+    flex-wrap: wrap;
+  }
+
+  .big-six-wheel__payrow span:last-child,
+  .big-six-wheel__history-row span:last-child {
+    text-align: right;
+  }
+
+  .big-six-wheel__wheel-shell {
+    width: min(86vw, 100%);
+  }
+
+  .big-six-wheel__wheel {
+    border-width: 8px;
+  }
+}
