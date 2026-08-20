@@ -4474,6 +4474,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def fan_tan_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-fan_tan').click(); page.get_by_test_id('fan-tan').wait_for(timeout=WAIT_MS)
+                    # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                    style_link=page.locator('link#fan-tan-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/fan_tan.css'
+                    # Prove the migrated stylesheet loaded by binding the unchanged desktop three-zone layout and dominant stage track.
+                    assert page.get_by_test_id('fan-tan').evaluate("el => { const layout=getComputedStyle(el.querySelector('.fan-tan__layout')); const tracks=layout.gridTemplateColumns.split(' ').map(parseFloat); return layout.display==='grid' && tracks.length===3 && tracks[1]>tracks[0] && tracks[1]>tracks[2]; }")
+                    # Capture after-pass fifth-adopter evidence before any real settlement changes the ready frame.
+                    page.locator('#view').screenshot(path=str(screenshots/'after-pass-fan-tan-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4508,10 +4514,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="4"]').fill('1'); page.locator('[data-play]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=WAIT_MS * 2); assert page.locator('.fan-tan__tray').get_attribute('data-reduced-motion')=='true'; localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
                     page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('fan-tan').wait_for(timeout=WAIT_MS); assert page.locator('.fan-tan__history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    # Re-fire the newest settled wager through the visible repeat action and require one additional authoritative history row.
+                    prior_rounds=page.locator('.fan-tan__history-row').count(); repeat_button=page.locator('[data-action="repeat"]'); assert repeat_button.is_enabled(); repeat_button.click(); page.wait_for_function("count => document.querySelectorAll('.fan-tan__history-row').length > count",arg=prior_rounds,timeout=WAIT_MS * 2)
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Fan-Tan browser and visual gate.
-                run_case('BR-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-004','FAN-TAN-005'],fan_tan_acceptance)
+                run_case('BR-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-004','FAN-TAN-005','CORE-034','TEST-248'],fan_tan_acceptance)
                 # Define the lost-response idempotency regression proving a retry replays one identity and body with exactly one debit. (issue #261)
                 def fan_tan_lost_response_idempotency():
                     # Open the Fan-Tan route and wait for the stable game surface.

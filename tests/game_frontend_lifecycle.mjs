@@ -215,5 +215,16 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let dropBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(pachinkoSource.includes(duplicate), false, duplicate);
 // Require representative board, ball, pocket, control, repeat, timing, and responsive rules to survive extraction.
 for (const selector of ['.pachinko {', '.pk-board {', '.pk-ball {', 'transition: top 0.07s linear, left 0.07s linear;', '.pk-pockets {', '.pk-pocket.hit {', '.pk-drop {', '.pk-repeat {', '@media (max-width: 900px)']) assert.ok(pachinkoCss.includes(selector), selector);
+
+// Read the exact fifth-adopter source for per-slice duplicate-helper deletion evidence.
+const fanTanSource = await readFile(new URL('../web/games/fan_tan.js', import.meta.url), 'utf8');
+// Read Fan-Tan's formatted external stylesheet for ownership and tooling visibility.
+const fanTanCss = await readFile(new URL('../web/games/fan_tan.css', import.meta.url), 'utf8');
+// Require Fan-Tan to delegate route, busy, locale, translation, and stylesheet ownership while retaining its secure replay identity contract.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "requestPrefix: 'ft'", "href: '/games/fan_tan.css'", 'export function createActionId']) assert.ok(fanTanSource.includes(marker), marker);
+// Reject Fan-Tan's migrated root, busy, locale, and style-text wrappers.
+for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'style.textContent', 'onLocaleChange', 'initI18n', 'ROUTE_CSS']) assert.equal(fanTanSource.includes(duplicate), false, duplicate);
+// Require representative layout, stage, residue, control, repeat, motion, and responsive rules to survive extraction.
+for (const selector of ['.fan-tan {', '.fan-tan__layout {', '.fan-tan__tray {', '.fan-tan__bean[data-residue="true"] {', '.fan-tan__play {', '.fan-tan__repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 1200px)', '@media (max-width: 560px)']) assert.ok(fanTanCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

@@ -255,6 +255,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/evidence/craps/README.md`](docs/evidence/craps/README.md) — Craps canonical integration evidence
 - [`docs/evidence/daily_draw_lab/README.md`](docs/evidence/daily_draw_lab/README.md) — Daily Draw Lab lifecycle-adopter evidence
 - [`docs/evidence/dragon_tiger/README.md`](docs/evidence/dragon_tiger/README.md) — Dragon Tiger isolated real-backend evidence
+- [`docs/evidence/fan_tan/README.md`](docs/evidence/fan_tan/README.md) — Fan-Tan lifecycle-adopter evidence
 - [`docs/evidence/faro/README.md`](docs/evidence/faro/README.md) — Faro lifecycle-adopter evidence
 - [`docs/evidence/pachinko/README.md`](docs/evidence/pachinko/README.md) — Pachinko lifecycle-adopter evidence
 - [`docs/evidence/roulette/README.md`](docs/evidence/roulette/README.md) — Roulette evidence status
