@@ -1,0 +1,228 @@
+/* Copyright 2026 Andrei Vorobiev and Virtual Casino Simulator contributors */
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Formatted route-local Over/Under 7 presentation owned by issue #1031 and CORE-034. */
+.over-under-7 {
+  display: grid;
+  gap: 12px;
+  min-height: 100%;
+  color: var(--text, #f5ead6);
+}
+
+.ou7-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 2px;
+}
+
+.ou7-header h1 {
+  margin: 0;
+  color: var(--gold, #f2c55c);
+  font-size: clamp(30px, 4vw, 52px);
+}
+
+.ou7-phase {
+  padding: 7px 12px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  background: var(--panel-strong);
+}
+
+.ou7-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, .72fr) minmax(420px, 1.8fr) minmax(220px, .72fr);
+  gap: 14px;
+  min-height: 0;
+}
+
+.ou7-panel {
+  padding: 16px;
+  border: 1px solid var(--gold);
+  border-radius: 18px;
+  background: var(--panel-strong);
+}
+
+.ou7-controls {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.ou7-bet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 8px;
+  align-items: center;
+}
+
+.ou7-bet input {
+  min-height: 44px;
+  min-width: 0;
+}
+
+.ou7-play {
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  color: white;
+  background: #a71922;
+  font-weight: 800;
+}
+
+.ou7-play:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+}
+
+.ou7-repeat {
+  min-height: 46px;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.ou7-repeat:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.ou7-stage {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  place-items: center;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.ou7-dice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  min-height: 240px;
+}
+
+.ou7-die {
+  display: grid;
+  place-items: center;
+  width: min(30vw, 150px);
+  aspect-ratio: 1;
+  border: 3px solid #f0cf74;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #f9f1d5, #d7ba70);
+  color: #10271d;
+  font-size: clamp(44px, 8vw, 84px);
+  font-weight: 1000;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .38);
+}
+
+.ou7-die.rolling {
+  animation: ou7-roll .18s linear infinite;
+}
+
+.ou7-result {
+  display: grid;
+  gap: 4px;
+  min-height: 70px;
+  text-align: center;
+}
+
+.ou7-total {
+  font-size: clamp(34px, 6vw, 64px);
+  font-weight: 1000;
+  color: var(--text);
+}
+
+.ou7-data {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.ou7-payrow,
+.ou7-history-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.ou7-history {
+  max-height: 260px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.ou7-error {
+  min-height: 20px;
+  color: #ffb9b9;
+}
+
+@keyframes ou7-roll {
+  from {
+    transform: translateY(-3px) rotate(-2deg);
+  }
+
+  to {
+    transform: translateY(3px) rotate(2deg);
+  }
+}
+
+@media (max-width: 1200px) {
+  .ou7-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ou7-controls {
+    order: 1;
+  }
+
+  .ou7-stage {
+    order: 2;
+  }
+
+  .ou7-data {
+    order: 3;
+  }
+
+  .ou7-dice {
+    min-height: 210px;
+  }
+}
+
+@media (max-width: 560px) {
+  .ou7-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .ou7-panel {
+    padding: 12px;
+  }
+
+  .ou7-bet {
+    grid-template-columns: minmax(0, 1fr) 84px;
+  }
+
+  .ou7-die {
+    border-radius: 14px;
+  }
+
+  .ou7-dice {
+    gap: 10px;
+    min-height: 170px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .over-under-7 * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
