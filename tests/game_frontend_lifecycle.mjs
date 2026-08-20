@@ -358,5 +358,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'const ROUTE_CSS', 'style.textContent', 'onLocaleChange', 'initI18n', 'function text(']) assert.equal(overUnder7Source.includes(duplicate), false, duplicate);
 // Require representative route, rail, dice, animation, result, history, motion, and responsive rules to survive extraction.
 for (const selector of ['.over-under-7 {', '.ou7-header {', '.ou7-phase {', '.ou7-layout {', '.ou7-panel {', '.ou7-bet {', '.ou7-play {', '.ou7-repeat {', '.ou7-stage {', '.ou7-dice {', '.ou7-die.rolling {', '@keyframes ou7-roll {', '.ou7-result {', '.ou7-history {', '@media (max-width: 1200px)', '@media (max-width: 560px)', '@media (prefers-reduced-motion: reduce)']) assert.ok(overUnder7Css.includes(selector), selector);
+// Read the exact nineteenth-adopter source for per-slice duplicate-helper deletion evidence.
+const teenPattiSource = await readFile(new URL('../web/games/teen_patti.js', import.meta.url), 'utf8');
+// Read Teen Patti's formatted external stylesheet for ownership and tooling visibility.
+const teenPattiCss = await readFile(new URL('../web/games/teen_patti.css', import.meta.url), 'utf8');
+// Require Teen Patti to delegate shared lifecycle ownership while retaining action-scoped retry identities.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "lifecycle.nextRequestId('deal')", "lifecycle.nextRequestId('decision')", "requestPrefix: 'tp'", "href: '/games/teen_patti.css'"]) assert.ok(teenPattiSource.includes(marker), marker);
+// Reject Teen Patti's migrated root, busy, locale, generation, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(teenPattiSource.includes(duplicate), false, duplicate);
+// Require representative route, card, decision, wager, paytable, result, repeat, and responsive rules to survive extraction.
+for (const selector of ['.teenp {', '.tp-stage {', '.tp-row h4 {', '.tp-cards {', '.tp-cards.win {', '.tp-actions {', '.tp-btn.play {', '.tp-btn.fold {', '.tp-btn.deal {', '.tp-field input {', '.tp-pays {', '.tp-rank {', '.tp-result {', '.tp-repeat {', '@media (max-width: 900px)', '@media (max-width: 640px)', '@media (prefers-reduced-motion: reduce)']) assert.ok(teenPattiCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

@@ -20,13 +20,17 @@
         "casino/games/teen_patti/service.py",
         "casino/games/teen_patti/api.py",
         "web/games/teen_patti.js",
+        "web/games/teen_patti.css",
+        "tests/games/teen_patti/test_frontend.mjs",
+        "tests/game_frontend_lifecycle.mjs",
+        "docs/evidence/teen_patti/README.md",
         "contracts/openapi/teen_patti.v1.yaml",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-150-teen-patti",
-      "changed_in": "issue-150-teen-patti",
-      "notes": "Allocated for GitHub issue #150, a catalog-expansion poker variant (#73). The service reuses shared card primitives and the ledger with its own three-card evaluator where a sequence outranks a colour."
+      "changed_in": "issue-1033-teen-patti-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #150, a catalog-expansion poker variant (#73). The service reuses shared card primitives and the ledger with its own three-card evaluator where a sequence outranks a colour. Issue #1033 delegates route, busy, locale, action-id, and external stylesheet ownership to the shared lifecycle while retaining a mount-specific response-adoption guard for the shell's persistent outlet. Exact-head Browser evidence covers ready, decision, play settlement, folded privacy, reduced motion, route restoration, repeat availability, stylesheet reuse, and teardown in EN/RU at all four governed viewports."
     },
     {
       "id": "TEENP-002",
@@ -45,12 +49,14 @@
         "tests/teen_patti_tests.py",
         "tests/game_drivers/teen_patti.py",
         "web/games/teen_patti.js",
+        "web/games/teen_patti.css",
+        "tests/games/teen_patti/test_frontend.mjs",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-150-teen-patti",
-      "changed_in": "issue-150-teen-patti",
-      "notes": "Allocated for GitHub issue #150. The governed Browser case exercises real authenticated routes through the public game controls and rejects page overflow or fixed-feedback occlusion at all standard viewports."
+      "changed_in": "issue-1033-teen-patti-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #150. Issue #1033 preserves the exact state, rounds, and decisions routes; unresolved deal and decision action-id reuse; public request fields; reload recovery; card privacy; settlement; wallet refresh; and one-click repeat behavior while removing duplicate frontend lifecycle helpers. The governed Browser case exercises real authenticated routes through the public game controls and rejects page overflow or fixed-feedback occlusion at all standard viewports."
     },
     {
       "id": "TEENP-003",

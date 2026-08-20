@@ -13541,7 +13541,8 @@
         "BR-DBVP-001",
         "BR-FOUR-CARD-POKER-001",
         "BR-DT-001",
-        "BR-OU7-001"
+        "BR-OU7-001",
+        "BR-TEEN-PATTI-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
@@ -13581,6 +13582,8 @@
         "web/games/dragon_tiger.css",
         "web/games/over_under_7.js",
         "web/games/over_under_7.css",
+        "web/games/teen_patti.js",
+        "web/games/teen_patti.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
@@ -13600,6 +13603,7 @@
         "docs/evidence/four_card_poker/README.md",
         "docs/evidence/dragon_tiger/README.md",
         "docs/evidence/over_under_7/README.md",
+        "docs/evidence/teen_patti/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
         "modules/faro.json",
@@ -13618,16 +13622,17 @@
         "modules/double_bonus_video_poker.json",
         "modules/four_card_poker.json",
         "modules/dragon_tiger.json",
-        "modules/over_under_7.json"
+        "modules/over_under_7.json",
+        "modules/teen_patti.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1031-over-under-7-lifecycle-slice",
-      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, and Over/Under 7 are the first eighteen adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal; Lucky Grid retains its established lg fallback identity shape and 600 ms reveal; Color Wheel retains its established cw fallback identity shape, cumulative forward motion, and 3.2-second spin; Mississippi Stud retains distinct ms-deal and ms-decision fallback identity scopes, unresolved-response replay bindings, and mount-specific stale-response refusal; Double Bonus retains distinct dbvp-deal and dbvp-draw fallback identity scopes, unresolved-response replay bindings, sorted hold fingerprints, and mount-specific stale-response refusal; Four Card Poker retains distinct fcp-deal and fcp-decision fallback identity scopes, two-wager and decision retry bindings, card privacy, and mount-specific stale-response refusal; Dragon Tiger retains its dt-prefixed identity, pending-action replay payload, initial-state protection, and mount-specific stale-response refusal; Over/Under 7 retains its ou7-prefixed identity, immutable wager replay payload, scoped dice reveal, and mount-specific stale-response refusal."
+      "changed_in": "issue-1033-teen-patti-lifecycle-slice",
+      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, and Teen Patti are the first nineteen adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal; Lucky Grid retains its established lg fallback identity shape and 600 ms reveal; Color Wheel retains its established cw fallback identity shape, cumulative forward motion, and 3.2-second spin; Mississippi Stud retains distinct ms-deal and ms-decision fallback identity scopes, unresolved-response replay bindings, and mount-specific stale-response refusal; Double Bonus retains distinct dbvp-deal and dbvp-draw fallback identity scopes, unresolved-response replay bindings, sorted hold fingerprints, and mount-specific stale-response refusal; Four Card Poker retains distinct fcp-deal and fcp-decision fallback identity scopes, two-wager and decision retry bindings, card privacy, and mount-specific stale-response refusal; Dragon Tiger retains its dt-prefixed identity, pending-action replay payload, initial-state protection, and mount-specific stale-response refusal; Over/Under 7 retains its ou7-prefixed identity, immutable wager replay payload, scoped dice reveal, and mount-specific stale-response refusal; Teen Patti retains distinct tp-deal and tp-decision fallback identity scopes, unresolved-response retry bindings, card privacy, and mount-specific stale-response refusal."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, and Over/Under 7 browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, and Teen Patti browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
@@ -13650,7 +13655,8 @@
         "BR-DBVP-001",
         "BR-FOUR-CARD-POKER-001",
         "BR-DT-001",
-        "BR-OU7-001"
+        "BR-OU7-001",
+        "BR-TEEN-PATTI-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
@@ -13667,6 +13673,7 @@
         "tests/games/four_card_poker/test_frontend.mjs",
         "tests/games/dragon_tiger/test_frontend.mjs",
         "tests/games/over_under_7/test_frontend.mjs",
+        "tests/games/teen_patti/test_frontend.mjs",
         "tests/cases/api/frontend_presentation.py",
         "tests/cicd_deployment_tests.py",
         "tests/api_case_inventory.json",
@@ -13674,7 +13681,7 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1031-over-under-7-lifecycle-slice",
+      "changed_in": "issue-1033-teen-patti-lifecycle-slice",
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {
@@ -21915,13 +21922,17 @@
         "casino/games/teen_patti/service.py",
         "casino/games/teen_patti/api.py",
         "web/games/teen_patti.js",
+        "web/games/teen_patti.css",
+        "tests/games/teen_patti/test_frontend.mjs",
+        "tests/game_frontend_lifecycle.mjs",
+        "docs/evidence/teen_patti/README.md",
         "contracts/openapi/teen_patti.v1.yaml",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-150-teen-patti",
-      "changed_in": "issue-150-teen-patti",
-      "notes": "Allocated for GitHub issue #150, a catalog-expansion poker variant (#73). The service reuses shared card primitives and the ledger with its own three-card evaluator where a sequence outranks a colour."
+      "changed_in": "issue-1033-teen-patti-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #150, a catalog-expansion poker variant (#73). The service reuses shared card primitives and the ledger with its own three-card evaluator where a sequence outranks a colour. Issue #1033 delegates route, busy, locale, action-id, and external stylesheet ownership to the shared lifecycle while retaining a mount-specific response-adoption guard for the shell's persistent outlet. Exact-head Browser evidence covers ready, decision, play settlement, folded privacy, reduced motion, route restoration, repeat availability, stylesheet reuse, and teardown in EN/RU at all four governed viewports."
     },
     {
       "id": "TEENP-002",
@@ -21940,12 +21951,14 @@
         "tests/teen_patti_tests.py",
         "tests/game_drivers/teen_patti.py",
         "web/games/teen_patti.js",
+        "web/games/teen_patti.css",
+        "tests/games/teen_patti/test_frontend.mjs",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-150-teen-patti",
-      "changed_in": "issue-150-teen-patti",
-      "notes": "Allocated for GitHub issue #150. The governed Browser case exercises real authenticated routes through the public game controls and rejects page overflow or fixed-feedback occlusion at all standard viewports."
+      "changed_in": "issue-1033-teen-patti-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #150. Issue #1033 preserves the exact state, rounds, and decisions routes; unresolved deal and decision action-id reuse; public request fields; reload recovery; card privacy; settlement; wallet refresh; and one-click repeat behavior while removing duplicate frontend lifecycle helpers. The governed Browser case exercises real authenticated routes through the public game controls and rejects page overflow or fixed-feedback occlusion at all standard viewports."
     },
     {
       "id": "TEENP-003",
