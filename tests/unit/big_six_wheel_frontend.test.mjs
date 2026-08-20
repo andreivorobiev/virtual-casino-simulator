@@ -146,12 +146,26 @@ test('issue 86 EN and RU resources have exact clean coverage', async () => {
 
 // Verify responsive ownership aligns stacking with the shared document-scroll transition.
 test('issue 227 Big Six keeps essential stage complete across compact and stacked layouts', async () => {
-  // Read the game-owned source so the embedded route CSS remains observable without a browser.
-  const source = await readFile(new URL('../../web/games/big_six_wheel.js', import.meta.url), 'utf8');
+  // Read the external game-owned stylesheet so responsive ownership remains observable without a browser.
+  const source = await readFile(new URL('../../web/games/big_six_wheel.css', import.meta.url), 'utf8');
   // Keep desktop compact in the three-zone layout while shrinking only its wheel theater.
-  assert.match(source, /@media\(max-width:1500px\) and \(min-width:1201px\).*wheel-shell\{width:min\(54vh,480px\)/);
+  assert.match(source, /@media \(max-width: 1500px\) and \(min-width: 1201px\)[\s\S]*wheel-shell[\s\S]*width: min\(54vh, 480px\)/);
   // Stack only at the same 1200-pixel boundary where the shared shell enables document scrolling.
-  assert.match(source, /@media\(max-width:1200px\).*layout\{grid-template-columns:1fr/);
+  assert.match(source, /@media \(max-width: 1200px\)[\s\S]*layout[\s\S]*grid-template-columns: 1fr/);
   // Make the stacked stage contribute complete intrinsic rows instead of clipping the pointer, wheel, or hub.
-  assert.match(source, /stage\{order:2;grid-template-rows:auto auto;align-content:start;overflow:visible\}/);
+  assert.match(source, /stage[\s\S]*order: 2;[\s\S]*grid-template-rows: auto auto;[\s\S]*align-content: start;[\s\S]*overflow: visible/);
+});
+
+// Verify issue #1013 delegates shared responsibilities without weakening strict action identity or wheel motion.
+test('issue 1013 Big Six adopts shared lifecycle and external stylesheet ownership', async () => {
+  // Read the production module for exact lifecycle delegation and duplicate-helper deletion evidence.
+  const source = await readFile(new URL('../../web/games/big_six_wheel.js', import.meta.url), 'utf8');
+  // Read the extracted stylesheet for representative stage, motion, control, and responsive ownership.
+  const stylesheet = await readFile(new URL('../../web/games/big_six_wheel.css', import.meta.url), 'utf8');
+  // Require every shared route responsibility while retaining the strict secure request-id export and motion scope.
+  for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "requestPrefix: 'bsw'", "href: '/games/big_six_wheel.css'", 'export function createClientRequestId', 'createMotionTimerScope']) assert.ok(source.includes(marker), marker);
+  // Reject the migrated route, busy, locale, style-text, and inline-style ownership helpers.
+  for (const duplicate of ['let root =', 'let spinPending =', 'localeUnsubscribe', 'function ensureStyles', 'style.textContent', 'onLocaleChange', 'initI18n', 'ROUTE_CSS']) assert.equal(source.includes(duplicate), false, duplicate);
+  // Require representative layout, wheel, reduced-motion, action, history, and breakpoint rules after extraction.
+  for (const selector of ['.big-six-wheel {', '.big-six-wheel__layout {', '.big-six-wheel__wheel {', '.big-six-wheel__wheel[data-reduced-motion="true"] {', '.big-six-wheel__spin {', '.big-six-wheel__repeat {', '.big-six-wheel__history {', '@media (max-width: 1500px)', '@media (max-width: 1200px)', '@media (max-width: 560px)']) assert.ok(stylesheet.includes(selector), selector);
 });

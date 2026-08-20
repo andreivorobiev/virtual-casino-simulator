@@ -18,11 +18,14 @@
       "implementation_files": [
         "casino/games/big_six_wheel/engine.py",
         "casino/games/big_six_wheel/rules.py",
-        "web/games/big_six_wheel.js"
+        "web/games/big_six_wheel.js",
+        "web/games/big_six_wheel.css",
+        "tests/unit/big_six_wheel_frontend.test.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "game-expansion-big-six",
-      "changed_in": "game-expansion-big-six",
-      "notes": "Allocated by GitHub issue #77 for issue #86; focused tests cover all legal targets, segment boundaries, normalization, and payout calculation."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "Allocated by GitHub issue #77 for issue #86; focused tests cover all legal targets, segment boundaries, normalization, payout calculation, and issue #1013 shared-lifecycle ownership without changing the 54-segment profile."
     },
     {
       "id": "BIG-SIX-002",
@@ -40,11 +43,12 @@
         "casino/games/big_six_wheel/api.py",
         "casino/core/request_player.py",
         "web/app.js",
+        "web/games/big_six_wheel.js",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-big-six",
-      "changed_in": "game-expansion-big-six",
-      "notes": "Normal-user session context overrides caller-supplied player ids, and settled round history survives backend restart."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "Normal-user session context overrides caller-supplied player ids, settled round history survives backend restart, and shared route teardown prevents stale asynchronous repaint after navigation."
     },
     {
       "id": "BIG-SIX-003",
@@ -76,14 +80,16 @@
       ],
       "implementation_files": [
         "web/games/big_six_wheel.js",
+        "web/games/big_six_wheel.css",
         "web/i18n/en-US/games/big_six_wheel.json",
         "web/i18n/ru-RU/games/big_six_wheel.json",
+        "docs/evidence/big_six_wheel/README.md",
         "tests/visual/visual_matrix.json",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-big-six",
-      "changed_in": "issue-223-big-six-motion",
-      "notes": "Acceptance evidence covers both locales, all four named viewports, active and settled play, cumulative pointer alignment, reduced motion, and canonical route restoration."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "Acceptance evidence covers both locales, all four named viewports, active and settled play, cumulative pointer alignment, reduced motion, canonical route restoration, and the issue #1013 external stylesheet identity."
     },
     {
       "id": "BIG-SIX-005",
@@ -122,14 +128,15 @@
       ],
       "implementation_files": [
         "web/games/big_six_wheel.js",
+        "web/games/big_six_wheel.css",
         "tests/unit/big_six_wheel_frontend.test.mjs",
         "tests/browser/big_six_wheel_motion_soak.py",
         "tests/browser/big_six_wheel_wsgi_asset_probe.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-223-big-six-motion",
-      "changed_in": "issue-223-big-six-motion",
-      "notes": "The exact-head long gate performs 100 consecutive real UI spins at each governed viewport, covers EN/RU, resize, background/foreground lifecycle suspension, four-times CPU throttling, reduced motion, cache-safe production asset reload, scroll reachability, and paired top/stage/lower visual review."
+      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "notes": "The exact-head long gate performs 100 consecutive real UI spins at each governed viewport, covers EN/RU, resize, background/foreground lifecycle suspension, four-times CPU throttling, reduced motion, cache-safe production asset reload, scroll reachability, and paired top/stage/lower visual review. Issue #1013 retains the strict secure bsw-prefixed identity and motion timer scope while delegating route ownership."
     },
     {
       "id": "BIG-SIX-007",

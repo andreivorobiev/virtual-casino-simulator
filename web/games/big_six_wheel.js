@@ -7,13 +7,15 @@ import { api, post } from '../core/api.js';
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
 // Import the merged #97 motion scope so every spin timer has lifecycle cleanup.
 import { createMotionTimerScope } from '../core/motion.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, stylesheet, and busy-state ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/big_six_wheel';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'big-six-wheel-styles';
+// Create the route controller with the external stylesheet and established diagnostic prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'bsw', stylesheet: { id: 'big-six-wheel-styles', href: '/games/big_six_wheel.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Store the canonical wheel size shared with the backend profile.
 export const WHEEL_SIZE = 54;
 // Store stable outcome order for controls and deterministic test fixtures.
@@ -22,40 +24,6 @@ export const OUTCOME_IDS = Object.freeze(['one', 'two', 'five', 'ten', 'twenty',
 export const SPIN_DURATION_MS = 1400;
 // Require each normal spin to advance through enough complete turns to remain visibly unambiguous.
 export const MIN_SPIN_REVOLUTIONS = 6;
-// Define compact game-owned styles without modifying the shared stylesheet.
-const ROUTE_CSS = [
-  '.big-six-wheel{display:grid;gap:12px;min-width:0;width:100%;min-height:100%;color:var(--text,#f5ead6);}', // Establish a stable route-local surface without allowing min-content overflow.
-  '.big-six-wheel__header{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:4px 2px;}', // Keep title and phase compact above the stage.
-  '.big-six-wheel__header h1{margin:0;color:var(--gold,#f2c55c);font-size:clamp(30px,4vw,52px);}', // Make the game title the first hierarchy level.
-  '.big-six-wheel__phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;background:var(--panel-strong);}', // Reserve a concise player-facing phase chip.
-  '.big-six-wheel__layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(420px,1.8fr) minmax(220px,.72fr);gap:14px;min-width:0;min-height:0;}', // Keep the wheel stage visually dominant on desktop without inheriting rail min-content width.
-  '.big-six-wheel__panel{min-width:0;padding:16px;border:1px solid var(--border);border-radius:18px;background:var(--panel-strong);}', // Separate controls, stage, and results while allowing responsive grid shrinkage.
-  '.big-six-wheel__controls{display:grid;align-content:start;gap:12px;}', // Keep wagering actions in one predictable control rail.
-  '.big-six-wheel__bet{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:center;}', // Align each localized outcome with its wager amount.
-  '.big-six-wheel__bet input{box-sizing:border-box;width:100%;min-height:42px;min-width:0;}', // Preserve keyboard and touch usability without pushing the mobile wager grid outside its panel.
-  '.big-six-wheel__spin{min-height:46px;border:0;border-radius:12px;color:white;background:#a71922;font-weight:800;}', // Use the shared red primary-action convention.
-  '.big-six-wheel__spin:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state readable.
-  '.big-six-wheel__repeat{min-height:46px;border:1px solid var(--gold);border-radius:12px;background:transparent;color:var(--gold);font-weight:800;}', // Present the repeat action as a secondary gold-outline control beside the primary spin.
-  '.big-six-wheel__repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the unavailable repeat state readable.
-  '.big-six-wheel__stage{display:grid;place-items:center;gap:14px;overflow:hidden;}', // Center the wheel without introducing a nested scroll surface.
-  '.big-six-wheel__wheel-shell{position:relative;width:min(62vh,520px);max-width:100%;aspect-ratio:1;display:grid;place-items:center;}', // Keep the code-native wheel responsive and square.
-  '.big-six-wheel__pointer{position:absolute;z-index:3;top:-4px;width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:34px solid #d4a941;filter:drop-shadow(0 3px 2px #000);}', // Render a reliable pointer without a special-font glyph.
-  '.big-six-wheel__wheel{width:90%;aspect-ratio:1;border:12px solid #8d681f;border-radius:50%;background:repeating-conic-gradient(#d4a941 0 6.666deg,#173f31 6.666deg 13.333deg);box-shadow:0 18px 42px rgba(0,0,0,.48),inset 0 0 0 8px #071d14;transform:rotate(var(--wheel-angle,0deg));transition:transform 1.4s cubic-bezier(.16,.76,.2,1);}', // Draw and rotate the 54-pocket wheel using code-native CSS.
-  '.big-six-wheel__wheel[data-reduced-motion="true"]{transition:none;}', // Remove decorative interpolation when the platform requests reduced motion.
-  '.big-six-wheel__hub{position:absolute;display:grid;place-items:center;width:34%;aspect-ratio:1;border:7px solid #d4a941;border-radius:50%;background:#071d14;color:#f3d784;text-align:center;font-weight:900;}', // Cover the geometric center with a legible localized result hub.
-  '.big-six-wheel__result{display:grid;gap:5px;text-align:center;min-height:54px;}', // Reserve result space so settling never shifts the stage.
-  '.big-six-wheel__data{display:grid;align-content:start;gap:12px;}', // Keep paytable and recent results distinct from controls.
-  '.big-six-wheel__payrow,.big-six-wheel__history-row{display:flex;justify-content:space-between;gap:6px 10px;min-width:0;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);}', // Align compact game data rows without forcing the stacked route wider than the viewport.
-  '.big-six-wheel__payrow span,.big-six-wheel__history-row span{min-width:0;overflow-wrap:anywhere;}', // Allow localized values to wrap instead of clipping adjacent controls and panels.
-  '.big-six-wheel__history{max-height:260px;overflow:auto;scrollbar-width:thin;}', // Give the data rail one intentional keyboard-focusable scroll region.
-  '.big-six-wheel__error{min-height:20px;color:var(--bad);}', // Reserve localized validation and API error feedback.
-  '@media(max-width:1500px) and (min-width:1201px){.big-six-wheel__wheel-shell{width:min(54vh,480px);}}', // Compress the complete three-zone stage at desktop compact without stacking it inside the fixed-height shared outlet.
-  '@media(max-width:1200px){.big-six-wheel__layout{grid-template-columns:1fr;}.big-six-wheel__controls{order:1}.big-six-wheel__stage{order:2;grid-template-rows:auto auto;align-content:start;overflow:visible}.big-six-wheel__data{order:3}.big-six-wheel__wheel-shell{width:min(70vw,480px);}}', // Stack only when the shared shell also enables document scrolling, then preserve the complete intrinsic wheel stage.
-  '@media(max-width:560px){.big-six-wheel__header{align-items:start;flex-direction:column}.big-six-wheel__panel{padding:12px}.big-six-wheel__bet{grid-template-columns:minmax(0,1fr) minmax(72px,84px);width:100%}.big-six-wheel__payrow,.big-six-wheel__history-row{flex-wrap:wrap}.big-six-wheel__payrow span:last-child,.big-six-wheel__history-row span:last-child{text-align:right}.big-six-wheel__wheel-shell{width:min(86vw,100%)}.big-six-wheel__wheel{border-width:8px}}', // Preserve complete controls, data values, and wheel containment on mobile.
-].join(''); // Combine route-local CSS chunks into one injected style payload.
-
-// Store the current route outlet while this lazy game is mounted.
-let root = null;
 // Store the latest backend-owned state payload.
 let gameState = { outcomes: [], recent_rounds: [] };
 // Store locally edited wagers until one atomic spin is submitted.
@@ -66,8 +34,6 @@ let phase = 'phase.ready';
 let latestRound = null;
 // Store the authoritative response that remains hidden until wheel motion finishes.
 let pendingRound = null;
-// Store a request guard so duplicate clicks cannot create new client identities.
-let spinPending = false;
 // Store the disposable timer scope owned by the current route mount.
 let motionScope = null;
 // Store the current wheel transform in degrees across rerenders.
@@ -76,14 +42,6 @@ let wheelAngle = 0;
 let reducedMotionActive = false;
 // Retain the last committed wager map so one click can repeat the same spin.
 let lastBet = null;
-// Store the locale subscription cleanup callback.
-let localeUnsubscribe = null;
-
-// Resolve one game-owned string from the active locale dictionary.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
-// Escape one localized string before inserting it into route markup.
-const text = (key, params = {}) => safe(tx(key, params));
-
 // Calculate a deterministic landing angle that centers one wheel segment below the pointer.
 export function rotationForIndex(resultIndex, revolutions = MIN_SPIN_REVOLUTIONS, currentAngle = 0) {
   // Reject invalid indices so broken API data cannot produce misleading wheel motion.
@@ -202,20 +160,6 @@ function activeWagers() {
   return pendingPayload?.wagers || wagers;
 }
 
-// Install the game-owned style block once per document.
-function ensureStyles() {
-  // Reuse an existing route-local style node after remount.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create the style node through the platform DOM API.
-  const style = document.createElement('style');
-  // Assign the stable id used by later mounts.
-  style.id = STYLE_ID;
-  // Apply the game-owned CSS without touching the shared stylesheet.
-  style.textContent = ROUTE_CSS;
-  // Attach styles before first paint.
-  document.head.append(style);
-}
-
 // Format a play-token amount without any real-money or currency symbol.
 function tokenAmount(value, translate = tx) {
   // Format through the active document locale while keeping two-decimal ledger precision.
@@ -227,7 +171,7 @@ function tokenAmount(value, translate = tx) {
 // Return localized markup for every wager input.
 function wagerControlsHtml(translate = tx) {
   // Render controls from backend metadata while retaining stable catalog ordering.
-  return (gameState.outcomes || []).map(outcome => `<label class="big-six-wheel__bet"><span>${safe(translate(`outcome.${outcome.id}`))} <small>${safe(translate('odds.net', { odds: outcome.net_odds }))}</small></span><input type="number" min="0" step="1" inputmode="decimal" data-wager="${safe(outcome.id)}" value="${safe(activeWagers()[outcome.id] || '')}" aria-label="${safe(translate('wager.input', { outcome: translate(`outcome.${outcome.id}`) }))}"${spinPending ? ' disabled' : ''}></label>`).join('');
+  return (gameState.outcomes || []).map(outcome => `<label class="big-six-wheel__bet"><span>${safe(translate(`outcome.${outcome.id}`))} <small>${safe(translate('odds.net', { odds: outcome.net_odds }))}</small></span><input type="number" min="0" step="1" inputmode="decimal" data-wager="${safe(outcome.id)}" value="${safe(activeWagers()[outcome.id] || '')}" aria-label="${safe(translate('wager.input', { outcome: translate(`outcome.${outcome.id}`) }))}"${lifecycle.isBusy() ? ' disabled' : ''}></label>`).join('');
 }
 
 // Return localized paytable rows from the immutable backend catalog.
@@ -251,17 +195,19 @@ export function viewMarkup({ translate = tx } = {}) {
   // Resolve and escape through an injected translator for deterministic locale tests.
   const translated = (key, params = {}) => safe(translate(key, params));
   // Resolve the visible settled outcome or a localized waiting label.
-  const outcomeLabel = spinPending ? translated('action.spinning') : latestRound ? translated(`outcome.${latestRound.outcome}`) : translated('result.waiting');
+  const outcomeLabel = lifecycle.isBusy() ? translated('action.spinning') : latestRound ? translated(`outcome.${latestRound.outcome}`) : translated('result.waiting');
   // Resolve net result detail only when a backend settlement exists.
-  const resultDetail = spinPending ? translated('result.hint') : latestRound ? translated('result.net', { amount: tokenAmount(latestRound.net, translate) }) : translated('result.hint');
+  const resultDetail = lifecycle.isBusy() ? translated('result.hint') : latestRound ? translated('result.net', { amount: tokenAmount(latestRound.net, translate) }) : translated('result.hint');
   // Enable the one-click repeat only when a prior wager map exists and no spin or unresolved retry is active.
-  const repeatDisabled = spinPending || Boolean(pendingRequestId) || !lastBet;
+  const repeatDisabled = lifecycle.isBusy() || Boolean(pendingRequestId) || !lastBet;
   // Return a three-zone layout aligned with the visual-design standard.
-  return `<section class="big-six-wheel" data-testid="big-six-wheel"><header class="big-six-wheel__header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="big-six-wheel__phase" data-testid="big-six-wheel-phase">${translated(phase)}</span></header><div class="big-six-wheel__layout"><section class="big-six-wheel__panel big-six-wheel__controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="big-six-wheel__spin" data-spin type="button"${spinPending ? ' disabled' : ''}>${translated(spinPending ? 'action.spinning' : 'action.spin')}</button><button type="button" class="big-six-wheel__repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${translated('controls.repeat')}</button><p class="big-six-wheel__error" data-error aria-live="polite"></p></section><section class="big-six-wheel__panel big-six-wheel__stage" aria-label="${translated('stage.aria')}"><div class="big-six-wheel__wheel-shell"><span class="big-six-wheel__pointer" aria-hidden="true"></span><div class="big-six-wheel__wheel" data-wheel data-reduced-motion="${reducedMotionActive}" style="--wheel-angle:${wheelAngle}deg" aria-hidden="true"></div><div class="big-six-wheel__hub"><span>${outcomeLabel}</span></div></div><div class="big-six-wheel__result" aria-live="polite"><strong>${outcomeLabel}</strong><span>${resultDetail}</span></div></section><aside class="big-six-wheel__panel big-six-wheel__data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="big-six-wheel__history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
+  return `<section class="big-six-wheel" data-testid="big-six-wheel"><header class="big-six-wheel__header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="big-six-wheel__phase" data-testid="big-six-wheel-phase">${translated(phase)}</span></header><div class="big-six-wheel__layout"><section class="big-six-wheel__panel big-six-wheel__controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="big-six-wheel__spin" data-spin type="button"${lifecycle.isBusy() ? ' disabled' : ''}>${translated(lifecycle.isBusy() ? 'action.spinning' : 'action.spin')}</button><button type="button" class="big-six-wheel__repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${translated('controls.repeat')}</button><p class="big-six-wheel__error" data-error aria-live="polite"></p></section><section class="big-six-wheel__panel big-six-wheel__stage" aria-label="${translated('stage.aria')}"><div class="big-six-wheel__wheel-shell"><span class="big-six-wheel__pointer" aria-hidden="true"></span><div class="big-six-wheel__wheel" data-wheel data-reduced-motion="${reducedMotionActive}" style="--wheel-angle:${wheelAngle}deg" aria-hidden="true"></div><div class="big-six-wheel__hub"><span>${outcomeLabel}</span></div></div><div class="big-six-wheel__result" aria-live="polite"><strong>${outcomeLabel}</strong><span>${resultDetail}</span></div></section><aside class="big-six-wheel__panel big-six-wheel__data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="big-six-wheel__history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
 }
 
 // Render the route and reconnect its game-owned inputs after DOM replacement.
 function render() {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Stop stale async callbacks after route unmount.
   if (!root) return;
   // Replace the isolated route atomically so phase and stage regions stay stable.
@@ -277,7 +223,7 @@ function render() {
 // Re-apply the last committed wager map and re-fire one spin without a timer.
 async function repeat() {
   // Ignore repeat while spinning, holding an unresolved retry, or without a prior wager map.
-  if (spinPending || pendingRequestId || !lastBet) return;
+  if (lifecycle.isBusy() || pendingRequestId || !lastBet) return;
   // Restore the previous wager map into the local control state.
   wagers = { ...lastBet.wagers };
   // Fire the shared exactly-once spin action with the restored wagers.
@@ -301,7 +247,7 @@ async function load() {
   // Clear transient presentation state because persisted history is authoritative on mount.
   pendingRound = null;
   // Clear the action guard before the reconciled route becomes interactive.
-  spinPending = false;
+  lifecycle.setBusy(false);
   // Render restored state without claiming that a new reduced-motion action is active.
   reducedMotionActive = false;
   // Render after rules and history resources are available.
@@ -311,7 +257,11 @@ async function load() {
 // Submit one complete wager map and present the settled backend result.
 async function spin() {
   // Ignore duplicate clicks while the existing client identity is in flight.
-  if (spinPending) return;
+  if (lifecycle.isBusy()) return;
+  // Read the currently owned route before validation or request work.
+  const root = lifecycle.root();
+  // Ignore a stale action after shell navigation released this game.
+  if (!root) return;
   // Require at least one positive local wager before contacting the ledger endpoint.
   if (!Object.keys(activeWagers()).length) {
     // Show localized player guidance in the reserved error region.
@@ -320,7 +270,7 @@ async function spin() {
     return;
   }
   // Guard controls before generating and sending one atomic action.
-  spinPending = true;
+  lifecycle.setBusy(true);
   // Move the phase to an understandable in-progress state.
   phase = 'phase.spinning';
   // Cancel any prior presentation callback before scheduling a new result.
@@ -328,7 +278,7 @@ async function spin() {
   // Render the disabled action and stable spinning phase.
   render();
   // Capture the current mount so a completed request cannot repaint a later route.
-  const mountedRoot = root;
+  const mountedRoot = lifecycle.root();
   // Capture the current timer scope so teardown can invalidate this presentation path.
   const activeScope = motionScope;
   // Start protected API work so failures restore controls without leaked timers.
@@ -340,7 +290,7 @@ async function spin() {
     // Clear the retained identity only after the server has confirmed this spin.
     clearPendingRequest();
     // Stop presentation when shell navigation unmounted or replaced this route during the request.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (lifecycle.root() !== mountedRoot || motionScope !== activeScope) return;
     // Show the committed debit while the wheel still conceals its authoritative result. (LEDGER-031, issue #584)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Hold the authoritative settlement out of visible result regions until motion completes.
@@ -352,7 +302,7 @@ async function spin() {
     // Define one settlement callback that publishes the result only after presentation completes.
     const revealSettlement = async () => {
       // Ignore a cancelled, replaced, or stale presentation callback after route ownership changes.
-      if (root !== mountedRoot || motionScope !== activeScope || pendingRound !== response.round) return;
+      if (lifecycle.root() !== mountedRoot || motionScope !== activeScope || pendingRound !== response.round) return;
       // Publish the server-authoritative outcome only after the wheel reaches its target.
       latestRound = pendingRound;
       // Clear hidden response state before controls become available for another spin.
@@ -360,7 +310,7 @@ async function spin() {
       // Move the visible phase to its completed state.
       phase = 'phase.settled';
       // Release the atomic-action guard after both server settlement and presentation finish.
-      spinPending = false;
+      lifecycle.setBusy(false);
       // Append the authoritative response to in-memory history without another fallible state request.
       gameState = { ...gameState, recent_rounds: [...(gameState.recent_rounds || []).filter(round => round.round_id !== latestRound.round_id), latestRound].slice(-100) };
       // Repaint result, history, locale, and enabled controls at the same final wheel orientation.
@@ -375,7 +325,7 @@ async function spin() {
     // Treat a zero-delay scheduled reveal as reduced motion for route CSS evidence.
     reducedMotionActive = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
     // Resolve the already-painted wheel element that still owns the starting transform.
-    const wheel = root.querySelector('[data-wheel]');
+    const wheel = mountedRoot.querySelector('[data-wheel]');
     // Expose reduced-motion state before changing transform so CSS applies the correct transition policy.
     wheel.dataset.reducedMotion = String(reducedMotionActive);
     // Force the browser to commit the starting frame before receiving the cumulative target.
@@ -385,7 +335,7 @@ async function spin() {
   // Handle API or validation failures with localized feedback and restored controls.
   } catch (error) {
     // Ignore late failures after navigation because teardown already restored route ownership.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (lifecycle.root() !== mountedRoot || motionScope !== activeScope) return;
     // Discard the pending identity only when the server definitively resolved it; retain it after an ambiguous failure for a safe replay. (issue #261)
     if (isDefinitiveRejection(error)) clearPendingRequest();
     // Restore the ready phase after a failed atomic request.
@@ -393,11 +343,11 @@ async function spin() {
     // Remove any response that failed presentation validation before it can leak into a later spin.
     pendingRound = null;
     // Re-enable controls for a corrected request.
-    spinPending = false;
+    lifecycle.setBusy(false);
     // Rerender before writing into the reserved error region.
     render();
     // Show a localized game-specific failure message.
-    root.querySelector('[data-error]').textContent = tx('error.spinFailed');
+    mountedRoot.querySelector('[data-error]').textContent = tx('error.spinFailed');
     // Also use the shared non-blocking feedback surface.
     toast(tx('error.spinFailed'), 'error');
   }
@@ -409,23 +359,14 @@ export const BigSixWheelGame = {
   id: 'big_six_wheel',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet before asynchronous initialization.
-    root = node;
     // Reset any repeatable wager map so a new mount never inherits a stale one before load reconciles history.
     lastBet = null;
-    // Install game-owned styles without changing shared CSS.
-    ensureStyles();
-    // Create one lifecycle-bound timer scope for this mount.
+    // Establish shared route, stylesheet, localization, and locale-subscription ownership.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released the route during asynchronous locale initialization.
+    if (!mounted) return;
+    // Create one lifecycle-bound timer scope after the route owns its locale resources.
     motionScope = createMotionTimerScope();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings without losing local wagers or backend state.
-    localeUnsubscribe = onLocaleChange(() => {
-      // Defer full DOM replacement during active motion so the wheel keeps its continuous frame history.
-      if (spinPending) return;
-      // Repaint immediately whenever no atomic spin presentation owns the wheel element.
-      render();
-    });
     // Load session-bound state and render the first frame.
     await load();
   },
@@ -435,16 +376,10 @@ export const BigSixWheelGame = {
     motionScope?.dispose();
     // Clear the disposed scope reference for the next mount.
     motionScope = null;
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
+    // Release route, locale-subscription, and in-flight lifecycle ownership.
+    lifecycle.unmount();
     // Restore the initial phase so remount never inherits an abandoned spinning label.
     phase = 'phase.ready';
-    // Reset the in-flight guard because teardown cancelled presentation.
-    spinPending = false;
     // Drop any hidden response because remount will reconcile it from server-owned history.
     pendingRound = null;
     // Clear the repeatable wager map so the next session starts fresh.
