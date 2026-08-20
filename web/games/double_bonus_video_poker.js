@@ -8,8 +8,8 @@ import { api, currentPlayerPath, post, withCurrentPlayer } from '../core/api.js'
 import { refreshBalance, safe, toast } from '../core/ui.js';
 // Import the shared semantic card renderer instead of game-owned card markup.
 import { renderCard } from '../core/cards.js';
-// Import locale loading, formatting, and lifecycle subscription helpers.
-import { loadI18nDomain, onLocaleChange, t } from '../core/i18n.js';
+// Import the shared controller for route, locale, style, busy, and request ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the game-owned locale domain used by every visible and accessible string.
 const DOMAIN = 'games/double_bonus_video_poker';
@@ -17,13 +17,20 @@ const DOMAIN = 'games/double_bonus_video_poker';
 const API_ROOT = '/api/v1/games/double-bonus-video-poker';
 // Identify the reusable shared stylesheet so card games install it only once.
 const CARD_STYLE_ID = 'casino-shared-card-styles';
-// Preserve the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'double-bonus-video-poker-styles';
 // Preserve the paytable order independently of object insertion behavior.
 const PAYTABLE_ORDER = ['royal_flush', 'straight_flush', 'four_aces', 'four_2s_4s', 'four_5s_ks', 'full_house', 'flush', 'straight', 'three_of_a_kind', 'two_pair', 'jacks_or_better'];
+// Delegate route-local lifecycle ownership to the shared bounded controller.
+const lifecycle = createGameLifecycle({
+  // Bind every translation to the existing game-owned domain.
+  domain: DOMAIN,
+  // Scope fallback request identities without player or round data.
+  requestPrefix: 'dbvp',
+  // Install the formatted route stylesheet exactly once across remounts.
+  stylesheet: { id: 'double-bonus-video-poker-styles', href: '/games/double_bonus_video_poker.css' },
+});
+// Read localized copy directly through the shared domain owner.
+const tx = lifecycle.tx;
 
-// Store the mounted route outlet for deterministic rerenders.
-let root = null;
 // Store the latest authenticated-player state returned by the backend.
 let state = null;
 // Store authoritative game rules for the paytable display.
@@ -32,14 +39,8 @@ let rules = {};
 let bet = 5;
 // Track which dealt positions the player has toggled to hold during the draw phase.
 let held = new Set();
-// Prevent overlapping atomic browser actions.
-let busy = false;
-// Store the locale cleanup callback so unmount releases subscriptions.
-let unsubscribeLocale = null;
-// Track mount generations so late network responses cannot revive an old route.
-let mountGeneration = 0;
-// Store a fallback retry-id counter for browsers without randomUUID support.
-let requestCounter = 0;
+// Identify the exact mount that may adopt asynchronous responses into the shared outlet.
+let routeSession = null;
 // Retain an unresolved deal retry id until the backend confirms its response.
 let pendingDealId = null;
 // Bind the unresolved deal retry id to one bet.
@@ -50,12 +51,6 @@ let pendingDrawId = null;
 let pendingDrawContext = null;
 // Retain the last settled bet so one click can start an identical new deal.
 let lastBet = null;
-
-// Resolve one owned localized string without a visible hard-coded fallback.
-function text(key, params = {}) {
-  // Delegate every player-visible and accessible label to the EN/RU domain.
-  return t(key, params, DOMAIN);
-}
 
 // Install the shared card stylesheet without changing the global shell files.
 function ensureSharedCardStyles() {
@@ -71,30 +66,6 @@ function ensureSharedCardStyles() {
   link.href = '/core/cards.css';
   // Add the shared stylesheet to document metadata once.
   document.head.append(link);
-}
-
-// Install compact route-local styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.dbvp{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .db-header{grid-column:1/-1;display:flex;align-items:end;justify-content:space-between;gap:12px;padding:0 12px;min-width:0;} .db-header h1{margin:0;font-size:clamp(24px,3vw,38px);line-height:1.05;} .db-phase{margin:0;padding:6px 10px;border:1px solid var(--gold);border-radius:999px;color:var(--text);font-size:12px;font-weight:800;} .db-stage{display:grid;gap:16px;padding:12px;min-width:0;justify-items:start;} .db-hand{display:flex;gap:8px;flex-wrap:wrap;min-width:0;} .db-slot{display:grid;justify-items:center;gap:4px;} .db-holdbtn{background:none;border:none;cursor:pointer;padding:0;border-radius:10px;} .db-holdbtn[aria-pressed="true"]{outline:2px solid var(--gold);outline-offset:3px;} .db-tag{font-size:11px;font-weight:900;color:var(--gold);text-transform:uppercase;min-height:14px;} .db-actions{display:flex;flex-wrap:wrap;gap:8px;} .db-btn{min-height:44px;padding:0 18px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .db-btn.draw{background:var(--felt-green);color:#fff;} .db-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .db-btn:disabled{opacity:.55;cursor:not-allowed;} .db-panel{display:grid;gap:12px;min-width:0;} .db-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .db-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .db-field{display:grid;gap:4px;margin-bottom:10px;} .db-field label{font-size:12px;font-weight:700;} .db-field input{width:100%;max-width:100%;min-width:0;min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--text);padding:0 10px;font-weight:800;} .db-pays{display:grid;max-width:100%;min-width:0;gap:3px;font-size:12px;font-weight:700;} .db-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .db-pays span{min-width:0;overflow-wrap:anywhere;} .db-pays span:last-child{color:var(--gold);} .db-result{min-height:24px;font-size:15px;color:var(--text);font-weight:800;} .db-result .net{font-weight:900;} @media (max-width:1200px){.db-card>h3,.db-card>.db-field,.db-card>.db-btn,.db-card>.db-pays{width:calc(100% - 160px);max-width:calc(100% - 160px);} body:has(.dbvp) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}} @media (max-width:900px){.dbvp{grid-template-columns:1fr;}.db-header{align-items:start;flex-direction:column;}.db-header,.db-stage{padding-inline:0;}}.db-repeat{width:100%;margin-top:8px;min-height:44px;padding:0 18px;border:1px solid var(--gold);border-radius:12px;background:transparent;color:var(--gold);font-weight:900;font-size:15px;cursor:pointer;}.db-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.append(style);
-}
-
-// Create one bounded client retry id for exactly-once public actions.
-function nextActionId(prefix) {
-  // Prefer the browser cryptographic UUID source when available.
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  // Increment the fallback counter so same-millisecond actions remain distinct.
-  requestCounter += 1;
-  // Combine a namespaced prefix, timestamp, and counter without exposing it to players.
-  return `${prefix}-${Date.now().toString(36)}-${requestCounter.toString(36)}`;
 }
 
 // Normalize a bet to the ledger-compatible bounds.
@@ -137,11 +108,13 @@ function adoptPayload(payload) {
 // Render the paytable rows for the total-return hand table.
 function paytableRows() {
   // Build one row per listed hand tier present in the authoritative table.
-  return PAYTABLE_ORDER.filter(name => rules.paytable && rules.paytable[name] !== undefined).map(name => `<div><span>${safe(text('hand.' + name))}</span><span>${rules.paytable[name]}</span></div>`).join('');
+  return PAYTABLE_ORDER.filter(name => rules.paytable && rules.paytable[name] !== undefined).map(name => `<div><span>${safe(tx('hand.' + name))}</span><span>${rules.paytable[name]}</span></div>`).join('');
 }
 
 // Render the complete Double Bonus route into the outlet.
 function render() {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Read the newest round to decide which stage to present.
@@ -157,7 +130,7 @@ function render() {
   // Build the side panel with the bet input and the paytable.
   const panel = sidePanel(drawing, settled);
   // Paint the whole route.
-  root.innerHTML = `<section class="dbvp" data-testid="double-bonus-video-poker"><header class="db-header"><h1>${safe(text('title'))}</h1><p class="db-phase" data-testid="double-bonus-video-poker-phase" aria-live="polite">${safe(text('phase.' + phaseKey))}</p></header><div class="db-stage">${stage}</div><div class="db-panel">${panel}</div></section>`;
+  root.innerHTML = `<section class="dbvp" data-testid="double-bonus-video-poker"><header class="db-header"><h1>${safe(tx('title'))}</h1><p class="db-phase" data-testid="double-bonus-video-poker-phase" aria-live="polite">${safe(tx('phase.' + phaseKey))}</p></header><div class="db-stage">${stage}</div><div class="db-panel">${panel}</div></section>`;
   // Wire the interactive controls for the current stage.
   bindEvents();
 }
@@ -165,15 +138,15 @@ function render() {
 // Build the idle stage shown before the first deal.
 function idleStage() {
   // Prompt the player to set the bet and deal.
-  return `<p class="db-result" data-testid="double-bonus-video-poker-result">${safe(text('result.idle'))}</p>`;
+  return `<p class="db-result" data-testid="double-bonus-video-poker-result">${safe(tx('result.idle'))}</p>`;
 }
 
 // Build the draw stage with each dealt card tappable to hold.
 function drawStage(round) {
   // Build one tappable held-card slot per dealt card.
-  const cards = round.hand.map((card, index) => `<div class="db-slot"><button class="db-holdbtn" data-hold="${index}" type="button" aria-pressed="${held.has(index)}" ${busy ? 'disabled' : ''}>${renderCard(card)}</button><span class="db-tag">${held.has(index) ? safe(text('label.held')) : ''}</span></div>`).join('');
+  const cards = round.hand.map((card, index) => `<div class="db-slot"><button class="db-holdbtn" data-hold="${index}" type="button" aria-pressed="${held.has(index)}" ${lifecycle.isBusy() ? 'disabled' : ''}>${renderCard(card)}</button><span class="db-tag">${held.has(index) ? safe(tx('label.held')) : ''}</span></div>`).join('');
   // Return the hand, the prompt, and the draw control.
-  return `<div class="db-hand" data-testid="double-bonus-video-poker-hand">${cards}</div><p class="db-result">${safe(text('result.draw'))}</p><div class="db-actions"><button class="db-btn draw" data-draw="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.draw'))}</button></div>`;
+  return `<div class="db-hand" data-testid="double-bonus-video-poker-hand">${cards}</div><p class="db-result">${safe(tx('result.draw'))}</p><div class="db-actions"><button class="db-btn draw" data-draw="1" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(tx('action.draw'))}</button></div>`;
 }
 
 // Build the settled stage revealing the final hand and the result.
@@ -183,9 +156,9 @@ function settledStage(round) {
   // Read the settled net movement.
   const net = round.net || 0;
   // Compose the outcome and hand tier line.
-  const tier = round.hand_tier ? safe(text('hand.' + round.hand_tier)) : '';
+  const tier = round.hand_tier ? safe(tx('hand.' + round.hand_tier)) : '';
   // Build the outcome result line with a signed net amount.
-  const line = `${safe(text('outcome.' + round.outcome))} ${tier} <span class="net">${net >= 0 ? '+' + net : net}</span>`;
+  const line = `${safe(tx('outcome.' + round.outcome))} ${tier} <span class="net">${net >= 0 ? '+' + net : net}</span>`;
   // Return the revealed hand, the result, and a deal-again control.
   return `<div class="db-hand">${cards}</div><p class="db-result" data-testid="double-bonus-video-poker-result">${line}</p>`;
 }
@@ -193,19 +166,23 @@ function settledStage(round) {
 // Build the side panel with the bet input and the paytable.
 function sidePanel(drawing, settled) {
   // Select a next-round label only after a completed hand exists.
-  const dealLabel = settled ? text('action.deal_again') : text('action.deal');
+  const dealLabel = settled ? tx('action.deal_again') : tx('action.deal');
   // Enable the one-click repeat only when a prior bet exists and no request or retry is active.
-  const repeatDisabled = busy || Boolean(pendingDealId) || Boolean(pendingDrawId) || !lastBet;
+  const repeatDisabled = lifecycle.isBusy() || Boolean(pendingDealId) || Boolean(pendingDrawId) || !lastBet;
   // Hide the bet input while a draw is pending.
-  const wagerCard = drawing ? '' : `<div class="db-card"><h3>${safe(text('label.bet'))}</h3><div class="db-field"><label for="db-bet">${safe(text('label.bet'))}</label><input id="db-bet" data-bet type="number" min="1" step="1" value="${bet}"></div><button class="db-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(dealLabel)}</button><button type="button" class="db-repeat" data-action="repeat" ${repeatDisabled ? 'disabled' : ''}>${safe(text('controls.repeat'))}</button></div>`;
+  const wagerCard = drawing ? '' : `<div class="db-card"><h3>${safe(tx('label.bet'))}</h3><div class="db-field"><label for="db-bet">${safe(tx('label.bet'))}</label><input id="db-bet" data-bet type="number" min="1" step="1" value="${bet}"></div><button class="db-btn deal" data-deal="1" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(dealLabel)}</button><button type="button" class="db-repeat" data-action="repeat" ${repeatDisabled ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div>`;
   // Build the paytable card.
-  const paytable = `<div class="db-card db-paytable"><h3>${safe(text('label.paytable'))}</h3><div class="db-pays">${paytableRows()}</div></div>`;
+  const paytable = `<div class="db-card db-paytable"><h3>${safe(tx('label.paytable'))}</h3><div class="db-pays">${paytableRows()}</div></div>`;
   // Return the stacked side panel.
   return `${wagerCard}${paytable}`;
 }
 
 // Attach event handlers to the current stage controls.
 function bindEvents() {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
+  // Stop when teardown released the outlet between render and binding.
+  if (!root) return;
   // Bind the bet input to the cached wager.
   const betInput = root.querySelector('[data-bet]');
   // Update the cached bet on input.
@@ -227,7 +204,7 @@ function bindEvents() {
 // Toggle one dealt card position in or out of the held set.
 function toggleHold(index) {
   // Ignore toggles while an action is resolving.
-  if (busy) return;
+  if (lifecycle.isBusy()) return;
   // Remove a held position or add a new one.
   if (held.has(index)) held.delete(index);
   // Add the newly held position.
@@ -236,27 +213,39 @@ function toggleHold(index) {
   render();
 }
 
-// Run one guarded atomic action while blocking overlapping requests.
-async function runAction(worker) {
+// Report whether one asynchronous action still belongs to the exact mounted route session.
+function ownsAction(session, root) {
+  // Require both the game-specific session token and lifecycle-owned outlet to remain unchanged.
+  return routeSession === session && lifecycle.root() === root;
+}
+
+// Run one guarded atomic action while blocking overlaps and adopting only current-mount responses.
+async function runAction(worker, adopter) {
+  // Capture the lifecycle-owned route outlet before any asynchronous boundary.
+  const ownedRoot = lifecycle.root();
+  // Capture the mount-specific token because the shell reuses one persistent outlet across routes.
+  const ownedSession = routeSession;
   // Ignore repeated actions while one is already resolving.
-  if (busy || !root) return;
-  // Capture the mount generation so a stale response cannot revive the route.
-  const generation = mountGeneration;
+  if (lifecycle.isBusy() || !ownedRoot || !ownedSession) return;
   // Mark the route busy and disable controls.
-  busy = true;
+  lifecycle.setBusy(true);
   render();
   // Execute the protected worker and always release the guard.
   try {
-    // Perform the network action.
-    await worker();
+    // Perform only the network request before route ownership is checked again.
+    const payload = await worker();
+    // Ignore a response that completed after teardown or a later remount of the persistent outlet.
+    if (!ownsAction(ownedSession, ownedRoot)) return;
+    // Adopt the response only after proving it belongs to this exact mount.
+    adopter(payload);
   } catch (error) {
     // Surface a bounded error to the player.
-    if (generation === mountGeneration) toast(error?.message || text('error.action'), 'error');
+    if (ownsAction(ownedSession, ownedRoot)) toast(error?.message || tx('error.action'), 'error');
   } finally {
     // Release the guard only for the still-mounted route.
-    if (generation === mountGeneration) {
+    if (ownsAction(ownedSession, ownedRoot)) {
       // Clear the busy flag.
-      busy = false;
+      lifecycle.setBusy(false);
       // Repaint the refreshed state.
       render();
       // Refresh the shell wallet after any movement.
@@ -274,13 +263,14 @@ function deal() {
     // Reuse an unresolved deal id or mint a fresh one bound to the current bet.
     if (!pendingDealId || pendingDealBet !== bet) {
       // Mint a fresh deal retry id.
-      pendingDealId = nextActionId('db-deal');
+      pendingDealId = lifecycle.nextRequestId('deal');
       // Bind the retry id to the exact bet.
       pendingDealBet = bet;
     }
     // Post the exactly-once deal with the current bet.
-    const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ action_id: pendingDealId, bet }));
-    // Adopt the returned state and reveal the dealt hand.
+    return post(`${API_ROOT}/rounds`, withCurrentPlayer({ action_id: pendingDealId, bet }));
+  }, payload => {
+    // Adopt the returned state and reveal the dealt hand only for the current mount.
     adoptPayload(payload);
   });
 }
@@ -300,13 +290,14 @@ function draw() {
     // Rebind the retry id when the round or hold selection changes.
     if (!pendingDrawId || pendingDrawContext?.round_id !== round.round_id || pendingDrawContext?.hold !== holdKey) {
       // Mint a fresh draw retry id.
-      pendingDrawId = nextActionId('db-draw');
+      pendingDrawId = lifecycle.nextRequestId('draw');
       // Bind the retry id to the exact round and hold selection.
       pendingDrawContext = { round_id: round.round_id, hold: holdKey };
     }
     // Post the exactly-once draw with the held positions.
-    const payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(round.round_id)}/decisions`, withCurrentPlayer({ action_id: pendingDrawId, hold }));
-    // Adopt the settled result.
+    return post(`${API_ROOT}/rounds/${encodeURIComponent(round.round_id)}/decisions`, withCurrentPlayer({ action_id: pendingDrawId, hold }));
+  }, payload => {
+    // Adopt the settled result only for the current mount.
     adoptPayload(payload);
     // Release the resolved draw retry binding.
     pendingDrawId = null;
@@ -324,7 +315,7 @@ async function repeat() {
   // Read the current round to block a repeat during an unsettled hand.
   const round = currentRound();
   // Ignore repeat while busy, holding an unresolved retry, mid-hand, or without a prior bet.
-  if (busy || pendingDealId || pendingDrawId || !lastBet || (round && round.phase === 'draw')) return;
+  if (lifecycle.isBusy() || pendingDealId || pendingDrawId || !lastBet || (round && round.phase === 'draw')) return;
   // Restore the previous bet so the fresh deal commits the same wager.
   bet = lastBet.bet;
   // Fire the shared exactly-once deal action with the restored bet.
@@ -339,28 +330,24 @@ export const DoubleBonusVideoPokerGame = {
   label: '',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Advance the mount generation so late responses from a prior mount are ignored.
-    mountGeneration += 1;
-    // Store the current route outlet.
-    root = node;
     // Reset the repeatable bet so another session never inherits a prior wager.
     lastBet = null;
-    // Install shared and route-local styles.
+    // Install the shared semantic card stylesheet independently from route-local presentation.
     ensureSharedCardStyles();
-    // Install the compact route-local styles.
-    ensureStyles();
-    // Capture the generation for guarding the async load.
-    const generation = mountGeneration;
-    // Load both locales through the game-owned lazy domain before visible render.
-    await loadI18nDomain(DOMAIN);
-    // Stop when the route was replaced during locale loading.
-    if (generation !== mountGeneration) return;
-    // Repaint localized strings on a locale change unless an action owns the table.
-    unsubscribeLocale = onLocaleChange(() => { if (!busy) render(); });
+    // Establish route, stylesheet, locale, and repaint ownership through the shared controller.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released this route during asynchronous locale loading.
+    if (!mounted) return;
+    // Create one mount-specific token so later remounts of the persistent shell outlet reject stale responses.
+    const session = Object.freeze({});
+    // Publish the token only after the shared lifecycle owns the route completely.
+    routeSession = session;
     // Read reload-safe state so a pending draw or settled result is restored.
     try {
       // Fetch the current player's game state.
       const payload = await api(currentPlayerPath(`${API_ROOT}/state`));
+      // Stop when navigation replaced this mount while state was loading.
+      if (!ownsAction(session, node)) return;
       // Adopt the loaded state.
       adoptPayload(payload);
       // Read the newest reload-safe round to recover a repeatable bet.
@@ -369,10 +356,10 @@ export const DoubleBonusVideoPokerGame = {
       if (restored && restored.phase === 'settled') lastBet = { bet: restored.bet };
     } catch (error) {
       // Surface a load failure without breaking the shell.
-      if (generation === mountGeneration) toast(text('error.load'), 'error');
+      if (ownsAction(session, node)) toast(tx('error.load'), 'error');
     }
-    // Stop when the route was replaced during the state load.
-    if (generation !== mountGeneration) return;
+    // Stop when the route was replaced during the state load or error handling.
+    if (!ownsAction(session, node)) return;
     // Render the first frame.
     render();
     // Refresh the shell wallet after mounting.
@@ -380,26 +367,24 @@ export const DoubleBonusVideoPokerGame = {
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Advance the generation so in-flight responses cannot repaint another route.
-    mountGeneration += 1;
-    // Remove the locale subscription when it was registered.
-    unsubscribeLocale?.();
-    // Clear the subscription reference for the next mount.
-    unsubscribeLocale = null;
+    // Invalidate game-specific state adoption before releasing the shared route owner.
+    routeSession = null;
+    // Release route, locale, and busy ownership idempotently.
+    lifecycle.unmount();
     // Clear cached state.
     state = null;
     // Clear cached rules.
     rules = {};
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    busy = false;
     // Reset the held selection.
     held = new Set();
     // Clear any pending retry ids so a later mount starts clean.
     pendingDealId = null;
+    // Clear the pending deal context with its retry id.
+    pendingDealBet = null;
     // Clear the pending draw id.
     pendingDrawId = null;
+    // Clear the pending draw context with its retry id.
+    pendingDrawContext = null;
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
   },

@@ -1,0 +1,279 @@
+/* Preserve the established dominant hand stage and fixed desktop paytable rail. */
+.dbvp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  color: var(--text, #f5ead6);
+  align-items: start;
+}
+
+/* Keep the game title and authoritative phase on one bounded header row. */
+.db-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  min-width: 0;
+}
+
+/* Preserve the responsive title hierarchy without forcing horizontal overflow. */
+.db-header h1 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 38px);
+  line-height: 1.05;
+}
+
+/* Retain the compact outlined phase pill beside the title. */
+.db-phase {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Stack hand, prompt, and action content in the primary stage. */
+.db-stage {
+  display: grid;
+  gap: 16px;
+  padding: 12px;
+  min-width: 0;
+  justify-items: start;
+}
+
+/* Allow the five shared semantic cards to wrap at narrow widths. */
+.db-hand {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Align each tappable card with its reserved held-state label. */
+.db-slot {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+/* Preserve the transparent card toggle and visible focus geometry. */
+.db-holdbtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 10px;
+}
+
+/* Mark a held card with an outline in addition to its text label. */
+.db-holdbtn[aria-pressed="true"] {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+/* Reserve stable space for the localized held-state label. */
+.db-tag {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--gold);
+  text-transform: uppercase;
+  min-height: 14px;
+}
+
+/* Keep draw controls in a wrapping action row. */
+.db-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Preserve the existing action touch target and typography. */
+.db-btn {
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+/* Keep draw distinct with the established felt-green treatment. */
+.db-btn.draw {
+  background: var(--felt-green);
+  color: #fff;
+}
+
+/* Retain the full-width primary deal action and red gradient. */
+.db-btn.deal {
+  background: linear-gradient(180deg, #d6323d, #8e1822);
+  color: #fff;
+  width: 100%;
+}
+
+/* Make blocked actions visibly unavailable. */
+.db-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+/* Stack the wager and paytable cards inside the fixed side rail. */
+.db-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Preserve the bordered translucent support-card treatment. */
+.db-card {
+  padding: 14px;
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, .22);
+}
+
+/* Keep support-card headings compact and clearly subordinate. */
+.db-card h3 {
+  margin: 0 0 10px;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+/* Group the bet label and numeric control vertically. */
+.db-field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+/* Preserve the compact bet-label hierarchy. */
+.db-field label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Retain the bounded ledger-compatible bet input. */
+.db-field input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  background: rgba(255, 255, 255, .05);
+  color: var(--text);
+  padding: 0 10px;
+  font-weight: 800;
+}
+
+/* Keep all eleven authoritative paytable bands compact and bounded. */
+.db-pays {
+  display: grid;
+  max-width: 100%;
+  min-width: 0;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Align each hand label against its total-return multiplier. */
+.db-pays div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Let translated paytable text wrap rather than expanding the rail. */
+.db-pays span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Emphasize the authoritative return values. */
+.db-pays span:last-child {
+  color: var(--gold);
+}
+
+/* Reserve one stable result row for idle, draw, and settlement copy. */
+.db-result {
+  min-height: 24px;
+  font-size: 15px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Make the signed terminal movement visually prominent. */
+.db-result .net {
+  font-weight: 900;
+}
+
+/* Preserve one-click repeat as a secondary full-width action. */
+.db-repeat {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+/* Keep blocked repeat controls readable but visibly inactive. */
+.db-repeat:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* Reserve mobile feedback width before the single-column breakpoint. */
+@media (max-width: 1200px) {
+  /* Keep support content clear of the fixed report-problem control. */
+  .db-card > h3,
+  .db-card > .db-field,
+  .db-card > .db-btn,
+  .db-card > .db-pays {
+    width: calc(100% - 160px);
+    max-width: calc(100% - 160px);
+  }
+
+  /* Preserve the established compact feedback-control footprint on this route. */
+  body:has(.dbvp) .report-problem-fab {
+    width: 144px;
+    max-width: 144px;
+    white-space: normal;
+    line-height: 1.1;
+  }
+}
+
+/* Stack the stage and support rail at the governed responsive breakpoint. */
+@media (max-width: 900px) {
+  /* Replace the desktop split with one contained route column. */
+  .dbvp {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stack title and phase without collision. */
+  .db-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  /* Let the shared shell own narrow horizontal padding. */
+  .db-header,
+  .db-stage {
+    padding-inline: 0;
+  }
+}

@@ -318,5 +318,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(mississippiStudSource.includes(duplicate), false, duplicate);
 // Require representative route, card, decision, wager, paytable, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.msstud {', '.ms-stage {', '.ms-cards {', '.ms-actions {', '.ms-btn.bet {', '.ms-btn.fold {', '.ms-btn.deal {', '.ms-field input {', '.ms-pays {', '.ms-result {', '.ms-repeat {', '@media (max-width: 900px)', '@media (max-width: 640px)']) assert.ok(mississippiStudCss.includes(selector), selector);
+// Read the exact fifteenth-adopter source for per-slice duplicate-helper deletion evidence.
+const doubleBonusSource = await readFile(new URL('../web/games/double_bonus_video_poker.js', import.meta.url), 'utf8');
+// Read Double Bonus Video Poker's formatted external stylesheet for ownership and tooling visibility.
+const doubleBonusCss = await readFile(new URL('../web/games/double_bonus_video_poker.css', import.meta.url), 'utf8');
+// Require Double Bonus to delegate shared lifecycle ownership while retaining action-scoped retry identities.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "lifecycle.nextRequestId('deal')", "lifecycle.nextRequestId('draw')", "requestPrefix: 'dbvp'", "href: '/games/double_bonus_video_poker.css'"]) assert.ok(doubleBonusSource.includes(marker), marker);
+// Reject Double Bonus's migrated root, busy, locale, generation, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(doubleBonusSource.includes(duplicate), false, duplicate);
+// Require representative route, hand, hold, action, wager, paytable, result, repeat, and responsive rules to survive extraction.
+for (const selector of ['.dbvp {', '.db-header {', '.db-stage {', '.db-hand {', '.db-holdbtn[aria-pressed="true"] {', '.db-actions {', '.db-btn.draw {', '.db-btn.deal {', '.db-field input {', '.db-pays {', '.db-result {', '.db-repeat {', '@media (max-width: 1200px)', '@media (max-width: 900px)']) assert.ok(doubleBonusCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

@@ -20,13 +20,17 @@
         "casino/games/double_bonus_video_poker/service.py",
         "casino/games/double_bonus_video_poker/api.py",
         "web/games/double_bonus_video_poker.js",
+        "web/games/double_bonus_video_poker.css",
+        "tests/games/double_bonus_video_poker/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/double_bonus_video_poker/README.md",
         "contracts/openapi/double_bonus_video_poker.v1.yaml",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-131-double-bonus-video-poker",
-      "changed_in": "issue-131-double-bonus-video-poker",
-      "notes": "Allocated for GitHub issue #131, a catalog-expansion poker variant (#73). The service reuses the shared card primitives, five-card evaluator, and ledger with the nine-six house-positive Double Bonus paytable. Exact-head browser evidence covers ready, hold selection, settlement, reduced-motion, and route-restored states in EN/RU at all four governed viewports."
+      "changed_in": "issue-1025-double-bonus-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #131, a catalog-expansion poker variant (#73). The service reuses the shared card primitives, five-card evaluator, and ledger with the nine-six house-positive Double Bonus paytable. Issue #1025 delegates route, busy, locale, action-id, and external stylesheet ownership to the shared lifecycle while retaining a mount-specific response-adoption guard for the shell's persistent outlet. Exact-head browser evidence covers ready, hold selection, settlement, reduced-motion, route restoration, stylesheet reuse, and teardown in EN/RU at all four governed viewports."
     },
     {
       "id": "DBVP-002",
@@ -42,14 +46,16 @@
       "implementation_files": [
         "casino/games/double_bonus_video_poker/service.py",
         "casino/games/double_bonus_video_poker/api.py",
+        "web/games/double_bonus_video_poker.js",
         "tests/double_bonus_video_poker_tests.py",
+        "tests/games/double_bonus_video_poker/test_frontend.mjs",
         "tests/game_drivers/double_bonus_video_poker.py",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-131-double-bonus-video-poker",
-      "changed_in": "issue-131-double-bonus-video-poker",
-      "notes": "Allocated for GitHub issue #131."
+      "changed_in": "issue-1025-double-bonus-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #131. Issue #1025 preserves the exact state, rounds, and decisions routes; unresolved deal and draw action-id reuse; sorted hold request; public request fields; reload recovery; card privacy; settlement; wallet refresh; and one-click repeat behavior while removing duplicate frontend lifecycle helpers."
     },
     {
       "id": "DBVP-003",
