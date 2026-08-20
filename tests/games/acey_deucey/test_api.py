@@ -12,6 +12,9 @@ import json
 import os
 # Import repository-relative path resolution for tracked contract evidence.
 from pathlib import Path
+
+# Import deterministic ownership for every fresh-process race worker.
+from tests.process_race import ProcessRacePool
 # Import child-process execution for true cross-process races.
 import subprocess
 # Import the active interpreter for exact worker parity.
@@ -237,7 +240,7 @@ class AceyDeuceyApiTests(unittest.TestCase):
     # Prove stale fresh processes preserve siblings and expose one pass winner.
     def test_fresh_process_pass_race_has_one_state_winner(self):
         # Own every provider and rendezvous byte inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve this exact checkout for child imports.
             repository_root = Path(__file__).resolve().parents[3]
             # Bind provider state to the task-owned disposable root.
@@ -306,7 +309,7 @@ except ConflictError:
                 # Allocate task-owned readiness and release gates.
                 ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
                 # Launch without a shell so interpreter and arguments remain exact.
-                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), round_id, f"pass-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                process = process_pool.spawn([sys.executable, "-c", worker_source, str(ready_path), str(release_path), round_id, f"pass-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Retain process and gate ownership.
                 workers.append((process, ready_path, release_path))
             # Bound the stale-load rendezvous.
@@ -320,7 +323,7 @@ except ConflictError:
                 # Yield briefly without starting another action.
                 time.sleep(0.01)
             # Require both stale snapshots before publishing a concurrent sibling.
-            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            process_pool.wait_until_ready([(process, ready) for process, ready, _release in workers], timeout=0)
             # Define one unrelated provider-atomic sibling update.
             sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.acey_deucey import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('acey_deucey', 'session-player', add, engine.default_state)\n"
             # Commit the sibling after both workers captured stale baselines.

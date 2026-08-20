@@ -19,6 +19,9 @@ import unittest
 # Import portable paths for repository and fixture identities.
 from pathlib import Path
 
+# Import deterministic ownership for every fresh-process race worker.
+from tests.process_race import ProcessRacePool
+
 # Import the production engine used to build exact persisted state.
 from casino.games.joker_poker import engine
 # Import the production request fingerprint used by terminal draws.
@@ -53,7 +56,7 @@ class JokerPokerAtomicStateTests(unittest.TestCase):
     # Prove two stale fresh processes produce one terminal winner and one conflict.
     def test_fresh_process_terminal_race_preserves_sibling_and_never_resurrects(self) -> None:
         # Own every provider and rendezvous byte inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve the disposable JSON provider data root.
             data_root = Path(temporary) / "data"
             # Resolve this player's exact game-state document.
@@ -114,7 +117,7 @@ else:
                 # Allocate one readiness marker for this child.
                 ready_path = Path(temporary) / f"ready-{mode}"
                 # Start the exact interpreter with bounded pipe capture.
-                process = subprocess.Popen([sys.executable, "-c", worker_source, mode, str(ready_path), str(go_path)], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                process = process_pool.spawn([sys.executable, "-c", worker_source, mode, str(ready_path), str(go_path)], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Retain the process and marker for rendezvous validation.
                 processes.append((process, ready_path))
             # Bound the stale-load rendezvous so a broken child cannot hang CI.
@@ -128,7 +131,7 @@ else:
                 # Yield briefly without changing worker order.
                 time.sleep(0.01)
             # Require a complete stale-state rendezvous before release.
-            self.assertTrue(all(ready.exists() for _, ready in processes))
+            process_pool.wait_until_ready([(process, ready) for process, ready in processes], timeout=0)
             # Read the still-unmodified game document after both stale loads.
             sibling_state = json.loads(state_path.read_text(encoding="utf-8"))
             # Add unrelated provider metadata that both game publications must preserve.

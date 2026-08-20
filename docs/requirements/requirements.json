@@ -10527,7 +10527,7 @@
     {
       "id": "TEST-161",
       "module": "Tests",
-      "description": "Descriptor-owned game suite declarations are parsed through a strict dotted-module boundary, one shared requirement-mapped API case executes every browser-free Python game suite without a per-game registration, and dependency-complete CI discovers the remaining Browser-owned modules generically.",
+      "description": "Descriptor-owned game suite declarations are parsed through a strict dotted-module boundary, one shared requirement-mapped API case executes every browser-free Python game suite without a per-game registration, dependency-complete CI discovers the remaining Browser-owned modules generically, and every fresh-process race owns and reaps its child processes and capture pipes before disposable state is removed.",
       "status": "PASS",
       "api_tests": [
         "GOV-GAME-SUITE-DISCOVERY-001",
@@ -10537,12 +10537,15 @@
       "implementation_files": [
         "tests/game_suite_discovery.py",
         "tests/game_suite_discovery_tests.py",
+        "tests/process_race.py",
+        "tests/process_race_tests.py",
+        "tests/windows_game_discovery_resource_tests.py",
         "tests/run_tests.py",
         ".github/workflows/ci.yml"
       ],
       "introduced_in": "top-half-portfolio-v61",
-      "changed_in": "issue-434-requirement-shards",
-      "notes": "Existing focused cases remain as additional integration evidence, while complete suite execution and future-game discovery no longer require a shared run_tests.py registration."
+      "changed_in": "issue-1022-windows-process-race-lifecycle",
+      "notes": "Existing focused cases remain as additional integration evidence, while complete suite execution and future-game discovery no longer require a shared run_tests.py registration. Twenty-nine cross-process game fixtures create their task-owned JSON control topology before simultaneous first access, register workers before assertion code can fail, close every standard stream, terminate and reap incomplete children before their temporary roots unwind, and preserve the established ten-second fail-closed readiness bound with worker-specific diagnostics."
     },
     {
       "id": "STORAGE-012",

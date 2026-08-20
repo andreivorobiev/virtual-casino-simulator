@@ -10,6 +10,9 @@ import json
 import os
 # Import filesystem paths for process rendezvous gates and state inspection.
 from pathlib import Path
+
+# Import deterministic ownership for every fresh-process race worker.
+from tests.process_race import ProcessRacePool
 # Import child processes for fresh-interpreter race evidence.
 import subprocess
 # Import the current interpreter for exact child-runtime selection.
@@ -259,7 +262,7 @@ class CrapsApiTests(unittest.TestCase):
     # Prove stale fresh processes preserve siblings and debit only one prepared round.
     def test_fresh_process_start_race_has_one_winner_and_zero_loser_ledger_calls(self):
         # Own every provider and rendezvous byte inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve this exact checkout for child imports.
             repository_root = Path(__file__).resolve().parents[3]
             # Bind provider state to the task-owned disposable root.
@@ -314,7 +317,7 @@ except ConflictError:
                 # Allocate task-owned readiness and release gates.
                 ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
                 # Launch without a shell so interpreter and arguments remain exact.
-                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), f"atomic-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                process = process_pool.spawn([sys.executable, "-c", worker_source, str(ready_path), str(release_path), f"atomic-process-{index}"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Retain process and gate ownership.
                 workers.append((process, ready_path, release_path))
             # Bound the stale-load rendezvous.
@@ -328,7 +331,7 @@ except ConflictError:
                 # Yield briefly without starting another action.
                 time.sleep(0.01)
             # Require both stale snapshots before publishing a concurrent sibling.
-            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            process_pool.wait_until_ready([(process, ready) for process, ready, _release in workers], timeout=0)
             # Define one unrelated provider-atomic sibling update.
             sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.craps import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('craps', 'session-player', add, engine.default_state)\n"
             # Commit the sibling after both workers captured their stale baselines.

@@ -20,6 +20,9 @@ import time
 import unittest
 # Import portable paths for exact checkout and worker files.
 from pathlib import Path
+
+# Import deterministic ownership for every fresh-process race worker.
+from tests.process_race import ProcessRacePool
 # Import focused patching for deterministic provider and settlement seams.
 from unittest import mock
 
@@ -137,7 +140,7 @@ class BingoAtomicStateTests(unittest.TestCase):
         return repository_root, environment, state_path
 
     # Start two workers after both preload one stale Bingo snapshot.
-    def _start_call_workers(self, repository_root: Path, environment: dict, temporary_root: Path):
+    def _start_call_workers(self, repository_root: Path, environment: dict, temporary_root: Path, process_pool: ProcessRacePool):
         # Define one worker whose mutation refreshes provider authority after its stale preload.
         worker_source = r"""
 import sys
@@ -172,7 +175,7 @@ print(calls[0])
             # Give each child an independently ordered release gate.
             go_path = temporary_root / f"go-call-{index}"
             # Launch without a shell so interpreter and arguments remain exact.
-            process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(go_path)], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            process = process_pool.spawn([sys.executable, "-c", worker_source, str(ready_path), str(go_path)], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             # Retain the complete control tuple.
             workers.append((process, ready_path, go_path))
         # Bound rendezvous so a child failure cannot hang the suite.
@@ -186,7 +189,7 @@ print(calls[0])
             # Yield briefly while retaining deterministic gate ownership.
             time.sleep(0.01)
         # Require both workers to preload before provider ordering begins.
-        self.assertTrue(all(ready.exists() for _process, ready, _go in workers))
+        process_pool.wait_until_ready([(process, ready) for process, ready, _go in workers], timeout=0)
         # Return live workers for ordered release.
         return workers
 
@@ -204,7 +207,7 @@ print(calls[0])
     # Prove two stale fresh processes publish distinct balls in provider order.
     def test_fresh_process_calls_preserve_order_without_marker_residue(self) -> None:
         # Own every provider and gate byte inside one temporary root.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve isolated process, environment, and durable state.
             repository_root, environment, state_path = self._environment(temporary)
             # Create the game-state directory before writing the baseline.
@@ -212,7 +215,7 @@ print(calls[0])
             # Publish one active session both workers will preload.
             state_path.write_text(json.dumps(self._active_state(), sort_keys=True), encoding="utf-8")
             # Start exactly two stale-load call workers.
-            workers = self._start_call_workers(repository_root, environment, Path(temporary))
+            workers = self._start_call_workers(repository_root, environment, Path(temporary), process_pool)
             # Release and complete the first call before the second refreshes authority.
             workers[0][2].write_text("go", encoding="utf-8")
             # Require the first provider-ordered ball.

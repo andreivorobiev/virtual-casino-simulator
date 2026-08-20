@@ -19,6 +19,9 @@ import unittest
 # Import portable paths for repository and fixture identities.
 from pathlib import Path
 
+# Import deterministic ownership for every fresh-process race worker.
+from tests.process_race import ProcessRacePool
+
 # Import the production engine used for exact persisted state.
 from casino.games.dragon_tiger import engine
 
@@ -28,7 +31,7 @@ class DragonTigerAtomicStateTests(unittest.TestCase):
     # Confirm two contenders deal one private result and preserve a concurrent sibling.
     def test_fresh_process_preparation_race_has_one_shoe_winner(self) -> None:
         # Own every provider and rendezvous byte inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve this exact checkout for child imports.
             repository_root = Path(__file__).resolve().parents[3]
             # Bind provider state to the task-owned disposable root.
@@ -81,7 +84,7 @@ print('PASS:' + str(len(draws)) + ':' + result['entropy']['dragon_card'] + ':' +
                 # Allocate task-owned readiness and release gates.
                 ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
                 # Launch without a shell so interpreter and arguments remain exact.
-                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), "atomic-preparation"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                process = process_pool.spawn([sys.executable, "-c", worker_source, str(ready_path), str(release_path), "atomic-preparation"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Retain process and gate ownership.
                 workers.append((process, ready_path, release_path))
             # Bound the pre-preparation rendezvous.
@@ -95,7 +98,7 @@ print('PASS:' + str(len(draws)) + ':' + result['entropy']['dragon_card'] + ':' +
                 # Yield briefly without starting another action.
                 time.sleep(0.01)
             # Require both contenders before publishing a concurrent sibling.
-            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            process_pool.wait_until_ready([(process, ready) for process, ready, _release in workers], timeout=0)
             # Define one unrelated provider-atomic sibling update.
             sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.dragon_tiger import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('dragon_tiger', 'atomic-player', add, engine.default_state)\n"
             # Commit the sibling before either preparation enters provider state.
