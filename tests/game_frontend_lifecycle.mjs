@@ -298,5 +298,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let revealBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(luckyGridSource.includes(duplicate), false, duplicate);
 // Require representative route, grid, cell-state, selection, control, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.lucky {', '.lg-grid {', '.lg-cell[aria-pressed="true"] {', '.lg-cell.prize {', '.lg-cell.matched {', '.lg-chip[aria-pressed="true"] {', '.lg-go {', '.lg-result {', '.lg-repeat {', '@media (max-width: 900px)']) assert.ok(luckyGridCss.includes(selector), selector);
+// Read the exact thirteenth-adopter source for per-slice duplicate-helper deletion evidence.
+const colorWheelSource = await readFile(new URL('../web/games/color_wheel.js', import.meta.url), 'utf8');
+// Read Color Wheel's formatted external stylesheet for ownership and tooling visibility.
+const colorWheelCss = await readFile(new URL('../web/games/color_wheel.css', import.meta.url), 'utf8');
+// Require Color Wheel to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "requestPrefix: 'cw'", "href: '/games/color_wheel.css'"]) assert.ok(colorWheelSource.includes(marker), marker);
+// Reject Color Wheel's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let spinBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(colorWheelSource.includes(duplicate), false, duplicate);
+// Require representative route, wheel, semantic-color, selection, control, result, repeat, and responsive rules to survive extraction.
+for (const selector of ['.color-wheel {', '.cw-wheel {', '.cw-pointer {', '.cw-bet.red {', '.cw-bet.black {', '.cw-bet.green {', '.cw-bet.gold {', '.cw-bet[aria-pressed="true"] {', '.cw-chip[aria-pressed="true"] {', '.cw-spin {', '.cw-result {', '.cw-repeat {', '@media (max-width: 900px)', '@media (max-width: 640px)']) assert.ok(colorWheelCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

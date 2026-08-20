@@ -1,5 +1,5 @@
 {
-  "count": 129,
+  "count": 130,
   "case_ids": [
     "BR-AB-001",
     "BR-ACTION-STABILITY-001",
@@ -44,6 +44,7 @@
     "BR-CH-001",
     "BR-CHUCK-001",
     "BR-COIN-PUSHER-001",
+    "BR-COLOR-WHEEL-001",
     "BR-CONTROL-REACH-001",
     "BR-CRAPS-001",
     "BR-CS-001",

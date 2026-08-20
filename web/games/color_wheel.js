@@ -5,13 +5,15 @@
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, stylesheet, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/color_wheel';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'color-wheel-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'cw', stylesheet: { id: 'color-wheel-styles', href: '/games/color_wheel.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Mirror the backend's fixed twenty-segment colour layout so the render and the result agree exactly.
 export const SEGMENTS = Object.freeze(['red', 'black', 'red', 'black', 'green', 'red', 'black', 'red', 'black', 'gold', 'red', 'black', 'red', 'black', 'green', 'red', 'black', 'red', 'black', 'green']);
 // Publish the selectable colour bets in stable order.
@@ -25,33 +27,13 @@ const MIN_TURNS = 5;
 // Map each segment colour to its rendered fill.
 const FILLS = { red: '#b41b29', black: '#161616', green: '#0a7d3c', gold: '#e7bd58' };
 
-// Store the current route outlet, selected bet, chosen stake, and in-flight guard.
-let root = null;
+// Store the selected bet and chosen stake while the shared lifecycle owns route state.
 let selectedColor = 'red';
 let stake = 5;
-let spinBusy = false;
-let localeUnsubscribe = null;
 // Track the wheel's current angle so each spin continues from where the last one stopped.
 let wheelAngle = 0;
 // Retain the last committed colour and stake so one click can repeat the same spin.
 let lastBet = null;
-
-// Translate one game-domain key through the shared installed-locale fallback chain.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
-
-// Install compact game-owned styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.color-wheel{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .cw-stage{display:grid;justify-items:center;gap:14px;padding:12px;min-width:0;} .cw-wheel-wrap{position:relative;width:min(340px,72vw);aspect-ratio:1;} .cw-wheel{width:100%;height:100%;border-radius:50%;border:8px solid #e7bd58;box-shadow:0 12px 40px rgba(0,0,0,.45),inset 0 0 0 3px #4d2707;transition:transform ' + (SPIN_MS/1000) + 's cubic-bezier(.15,.6,.15,1);} .cw-pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:22px solid #f1ca62;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));z-index:2;} .cw-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 38% 34%,#fff5bd,#6b350d);border:2px solid #f2d77d;} .cw-panel{display:grid;gap:12px;min-width:0;} .cw-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .cw-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .cw-bets{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .cw-bet{display:grid;gap:2px;padding:10px;border:2px solid transparent;border-radius:12px;color:#fff;font-weight:900;cursor:pointer;text-align:left;} .cw-bet small{font-weight:700;opacity:.85;font-size:11px;} .cw-bet.red{background:linear-gradient(180deg,#d6323d,#8e1822);} .cw-bet.black{background:linear-gradient(180deg,#2a2a2a,#0e0e0e);} .cw-bet.green{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);} .cw-bet.gold{background:linear-gradient(180deg,#f0c45d,#a9791f);color:#241006;} .cw-bet[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px rgba(34,224,195,.5);} .cw-chips{display:flex;flex-wrap:wrap;gap:8px;} .cw-chip{min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .cw-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:var(--text);} .cw-spin{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .cw-spin:disabled{opacity:.55;cursor:not-allowed;} .cw-result{min-height:66px;font-size:15px;color:var(--text);} .cw-result .net{font-weight:900;} @media (max-width:900px){.color-wheel{grid-template-columns:1fr;}} @media (max-width:640px){.cw-panel{padding-right:160px;}body:has(.color-wheel) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}}.cw-repeat{width:100%;min-height:46px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;font-size:15px;cursor:pointer;}.cw-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.appendChild(style);
-}
 
 // Build the CSS conic-gradient that paints the twenty segments in order.
 function wheelGradient() {
@@ -75,14 +57,10 @@ function rotationForSegment(index) {
   return base + MIN_TURNS * 360 + target;
 }
 
-// Generate one caller-stable retry identity for exactly-once settlement.
-function newRequestId() {
-  // Prefer a real UUID when the platform provides one.
-  return (globalThis.crypto?.randomUUID?.() || `cw-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
-}
-
 // Render the complete Color Wheel route into the outlet.
 function render(resultText) {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Build the bet buttons with localized labels and payout hints.
@@ -97,7 +75,7 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="cw-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="color-wheel" data-testid="color-wheel"><div class="cw-stage"><div class="cw-wheel-wrap"><div class="cw-pointer"></div><div class="cw-wheel" data-testid="color-wheel-disc" style="background:${wheelGradient()};transform:rotate(${wheelAngle}deg);"></div><div class="cw-hub"></div></div><p class="cw-result" data-testid="color-wheel-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="cw-panel"><div class="cw-card"><h3>${safe(tx('bet.title'))}</h3><div class="cw-bets">${bets}</div></div><div class="cw-card"><h3>${safe(tx('stake.title'))}</h3><div class="cw-chips">${chips}</div></div><button class="cw-spin" data-testid="color-wheel-spin" type="button" ${spinBusy ? 'disabled' : ''}>${safe(spinBusy ? tx('action.spinning') : tx('action.spin'))}</button><button class="cw-repeat" data-testid="color-wheel-repeat" type="button" ${(spinBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
+  root.innerHTML = `<section class="color-wheel" data-testid="color-wheel"><div class="cw-stage"><div class="cw-wheel-wrap"><div class="cw-pointer"></div><div class="cw-wheel" data-testid="color-wheel-disc" style="background:${wheelGradient()};transform:rotate(${wheelAngle}deg);"></div><div class="cw-hub"></div></div><p class="cw-result" data-testid="color-wheel-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="cw-panel"><div class="cw-card"><h3>${safe(tx('bet.title'))}</h3><div class="cw-bets">${bets}</div></div><div class="cw-card"><h3>${safe(tx('stake.title'))}</h3><div class="cw-chips">${chips}</div></div><button class="cw-spin" data-testid="color-wheel-spin" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(lifecycle.isBusy() ? tx('action.spinning') : tx('action.spin'))}</button><button class="cw-repeat" data-testid="color-wheel-repeat" type="button" ${(lifecycle.isBusy() || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the bet colour buttons.
   root.querySelectorAll('[data-color]').forEach(btn => { btn.onclick = () => { selectedColor = btn.dataset.color; render(); }; });
   // Wire the chip buttons.
@@ -133,7 +111,7 @@ async function load() {
 // Re-place the previous colour and stake and re-fire one spin without a timer.
 async function repeat() {
   // Ignore repeat while a spin is resolving, after teardown, or without a prior bet.
-  if (spinBusy || !root || !lastBet) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || !lastBet) return;
   // Restore the previous colour into the local configuration.
   selectedColor = lastBet.color;
   // Restore the previous stake into the local configuration.
@@ -145,14 +123,14 @@ async function repeat() {
 // Execute one atomic wager, spin, and settlement.
 async function spin() {
   // Ignore repeated clicks while a spin is resolving.
-  if (spinBusy || !root) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted()) return;
   // Mark the spin busy and disable the control before the request.
-  spinBusy = true;
+  lifecycle.setBusy(true);
   render();
   // Start protected settlement so the busy flag is always released.
   try {
     // Post the exactly-once spin with a caller-stable retry id.
-    const response = await post('/api/v1/games/color-wheel/spins', { request_id: newRequestId(), color: selectedColor, stake });
+    const response = await post('/api/v1/games/color-wheel/spins', { request_id: lifecycle.nextRequestId(), color: selectedColor, stake });
     // Show the committed debit before the wheel exposes its landed color. (LEDGER-031, issue #592)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative landed segment and outcome.
@@ -162,7 +140,7 @@ async function spin() {
     // Animate the wheel to the winning segment.
     wheelAngle = rotationForSegment(round.detail.segment);
     // Apply the rotation to the disc immediately for the CSS transition.
-    const disc = root.querySelector('[data-testid="color-wheel-disc"]');
+    const disc = lifecycle.root()?.querySelector('[data-testid="color-wheel-disc"]');
     // Rotate the disc when it is present.
     if (disc) disc.style.transform = `rotate(${wheelAngle}deg)`;
     // Wait for the decorative spin to finish before revealing the outcome.
@@ -174,12 +152,12 @@ async function spin() {
     // Compose the result line with the landed colour and the net.
     const text = `${safe(tx('result.landed', { color: tx('bet.' + round.detail.color) }))} <span class="net">${win ? '+' + (round.total_return - round.wager_total) : round.net}</span>`;
     // Announce the result via voice-neutral status copy.
-    spinBusy = false;
+    lifecycle.setBusy(false);
     // Repaint with the result.
     render(text);
   } catch (err) {
     // Release the guard and report a bounded error.
-    spinBusy = false;
+    lifecycle.setBusy(false);
     // Surface the failure without leaking internal detail.
     toast(err?.message || tx('error.spin'), 'error');
     // Repaint the unlocked controls.
@@ -193,29 +171,19 @@ export const ColorWheelGame = {
   id: 'color_wheel',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet.
-    root = node;
     // Reset any repeatable bet so a new mount never inherits a stale one before load reconciles history.
     lastBet = null;
-    // Install game-owned styles.
-    ensureStyles();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings on a locale change unless a spin owns the wheel.
-    localeUnsubscribe = onLocaleChange(() => { if (!spinBusy) render(); });
+    // Establish route, stylesheet, locale, and repaint ownership through the shared controller.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released this route during asynchronous locale loading.
+    if (!mounted) return;
     // Load session-bound state and render the first frame.
     await load();
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    spinBusy = false;
+    // Release route, locale, and busy ownership idempotently.
+    lifecycle.unmount();
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
   },

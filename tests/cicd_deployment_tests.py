@@ -1543,8 +1543,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     def test_semantic_game_color_namespaces_are_scoped_without_important(self):
         # Read each production style owner as inert text so this focused oracle opens no listener or browser.
         stylesheet = self.workflow_text(ROOT / "web" / "styles.css")
-        # Read Color Wheel's route-owned style source independently from the shared stylesheet.
-        color_wheel_source = self.workflow_text(ROOT / "web" / "games" / "color_wheel.js")
+        # Read Color Wheel's external route-owned stylesheet independently from the shared stylesheet.
+        color_wheel_styles = self.workflow_text(ROOT / "web" / "games" / "color_wheel.css")
         # Read Roulette's route-owned style source independently from other game modules.
         roulette_source = self.workflow_text(ROOT / "web" / "games" / "roulette.js")
         # Read Trente et Quarante's external card-style owner after its lifecycle-adopter extraction.
@@ -1563,13 +1563,13 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject a priority override on the scoped card face because no global color fallback remains.
         self.assertNotIn("!important", playing_card_rule)
         # Bind Color Wheel's route-owned gradients to their exact production stops.
-        for color_rule in (
-            ".cw-bet.red{background:linear-gradient(180deg,#d6323d,#8e1822);}",
-            ".cw-bet.black{background:linear-gradient(180deg,#2a2a2a,#0e0e0e);}",
-            ".cw-bet.green{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);}",
+        for selector, start, end in (
+            ("red", "#d6323d", "#8e1822"),
+            ("black", "#2a2a2a", "#0e0e0e"),
+            ("green", "#0f9c4c", "#0a5f2e"),
         ):
-            # Require every Color Wheel semantic control to remain owned by its route source.
-            self.assertIn(color_rule, color_wheel_source)
+            # Require every Color Wheel semantic control to remain owned by its formatted external stylesheet.
+            self.assertRegex(color_wheel_styles, rf"\.cw-bet\.{selector}\s*\{{\s*background:\s*linear-gradient\(180deg,\s*{start},\s*{end}\);\s*\}}")
         # Bind the exact red card foreground to the formatted game-owned stylesheet.
         self.assertRegex(trente_styles, r"\.teq-card\.red\s*\{\s*color:\s*#b41b29;\s*\}")
         # Bind the exact black card foreground to the same route-owned stylesheet.
@@ -1824,8 +1824,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         from tests import runner as browser_runner_module
         # Discover inline and extracted permanent IDs at their exact cross-file source positions.
         case_ids = browser_runner_module.browser_case_ids()
-        # Bind the complete inventory after adding dedicated Lucky Grid lifecycle acceptance. (TEST-248)
-        self.assertEqual(len(case_ids), 129)
+        # Bind the complete inventory after adding dedicated Color Wheel lifecycle acceptance. (TEST-248)
+        self.assertEqual(len(case_ids), 130)
         # Read the first extracted Browser affinity owner for guard-location checks below.
         auth_backend_pwa_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
         # Read the extracted disposable guest-lifecycle owner for guard-location checks below.
@@ -1852,8 +1852,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
-        # Bind deterministic load totals after packing the new dedicated Lucky Grid case. (TEST-242, TEST-248)
-        self.assertEqual(shard_loads, (224, 223, 222, 224, 223, 224))
+        # Bind deterministic load totals after packing the new dedicated Color Wheel case. (TEST-242, TEST-248)
+        self.assertEqual(shard_loads, (225, 226, 224, 224, 224, 225))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 3)
         # Prove additional runners now reduce the reviewed full-run floor beyond six shards.
