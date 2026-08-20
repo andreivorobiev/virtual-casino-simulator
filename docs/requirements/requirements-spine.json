@@ -8449,12 +8449,15 @@
       ],
       "implementation_files": [
         "tests/mississippi_stud_tests.py",
+        "tests/games/mississippi_stud/test_frontend.mjs",
+        "tests/game_frontend_lifecycle.mjs",
+        "tests/runner.py",
         "tests/run_tests.py",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-143-mississippi-stud",
-      "changed_in": "issue-143-mississippi-stud",
-      "notes": "Allocated after Keno TEST-113 and Double Bonus TEST-114. The governed browser corpus contains exactly forty-eight after-pass Mississippi Stud images: six evidence moments by two locales by four standard viewports; the settled reduced-motion moment maps to both matrix states."
+      "changed_in": "issue-1021-mississippi-stud-lifecycle-slice",
+      "notes": "Allocated after Keno TEST-113 and Double Bonus TEST-114. Issue #1021 adds listener-free lifecycle, external-style, response-ownership, and unresolved-action identity evidence while preserving the governed Browser corpus of forty-eight after-pass Mississippi Stud images: six evidence moments by two locales by four standard viewports; the settled reduced-motion moment maps to both matrix states."
     },
     {
       "id": "TEST-116",
@@ -13522,7 +13525,8 @@
         "BR-MARBLE-RACE-001",
         "BR-BOULE-001",
         "BR-LUCKY-GRID-001",
-        "BR-COLOR-WHEEL-001"
+        "BR-COLOR-WHEEL-001",
+        "BR-MSTUD-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
@@ -13552,6 +13556,8 @@
         "web/games/lucky_grid.css",
         "web/games/color_wheel.js",
         "web/games/color_wheel.css",
+        "web/games/mississippi_stud.js",
+        "web/games/mississippi_stud.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
@@ -13566,6 +13572,7 @@
         "docs/evidence/big_six_wheel/README.md",
         "docs/evidence/lucky_grid/README.md",
         "docs/evidence/color_wheel/README.md",
+        "docs/evidence/mississippi_stud/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
         "modules/faro.json",
@@ -13579,16 +13586,17 @@
         "modules/boule.json",
         "modules/big_six_wheel.json",
         "modules/lucky_grid.json",
-        "modules/color_wheel.json"
+        "modules/color_wheel.json",
+        "modules/mississippi_stud.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1019-color-wheel-lifecycle-slice",
-      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, and Color Wheel are the first thirteen adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal; Lucky Grid retains its established lg fallback identity shape and 600 ms reveal; Color Wheel retains its established cw fallback identity shape, cumulative forward motion, and 3.2-second spin."
+      "changed_in": "issue-1021-mississippi-stud-lifecycle-slice",
+      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, and Mississippi Stud are the first fourteen adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal; Lucky Grid retains its established lg fallback identity shape and 600 ms reveal; Color Wheel retains its established cw fallback identity shape, cumulative forward motion, and 3.2-second spin; Mississippi Stud retains distinct ms-deal and ms-decision fallback identity scopes, unresolved-response replay bindings, and mount-specific stale-response refusal."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, and Color Wheel browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, and Mississippi Stud browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
@@ -13606,7 +13614,8 @@
         "BR-BOULE-001",
         "BR-BIG-SIX-001",
         "BR-LUCKY-GRID-001",
-        "BR-COLOR-WHEEL-001"
+        "BR-COLOR-WHEEL-001",
+        "BR-MSTUD-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
@@ -13618,6 +13627,7 @@
         "tests/unit/big_six_wheel_frontend.test.mjs",
         "tests/games/lucky_grid/test_frontend.mjs",
         "tests/games/color_wheel/test_frontend.mjs",
+        "tests/games/mississippi_stud/test_frontend.mjs",
         "tests/cases/api/frontend_presentation.py",
         "tests/cicd_deployment_tests.py",
         "tests/api_case_inventory.json",
@@ -13625,7 +13635,7 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1019-color-wheel-lifecycle-slice",
+      "changed_in": "issue-1021-mississippi-stud-lifecycle-slice",
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {

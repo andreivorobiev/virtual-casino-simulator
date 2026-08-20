@@ -8,8 +8,8 @@ import { api, currentPlayerPath, post, withCurrentPlayer } from '../core/api.js'
 import { refreshBalance, safe, toast } from '../core/ui.js';
 // Import the shared semantic card renderer instead of game-owned card markup.
 import { renderCard } from '../core/cards.js';
-// Import locale loading, formatting, and lifecycle subscription helpers.
-import { formatNumber, loadI18nDomain, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, stylesheet, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the game-owned locale domain used by every visible and accessible string.
 const DOMAIN = 'games/mississippi_stud';
@@ -17,15 +17,15 @@ const DOMAIN = 'games/mississippi_stud';
 const API_ROOT = '/api/v1/games/mississippi-stud';
 // Identify the reusable shared stylesheet so card games install it only once.
 const CARD_STYLE_ID = 'casino-shared-card-styles';
-// Preserve the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'mississippi-stud-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: DOMAIN, requestPrefix: 'ms', stylesheet: { id: 'mississippi-stud-styles', href: '/games/mississippi_stud.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Preserve the paytable order independently of object insertion behavior.
 const PAYTABLE_ORDER = ['royal_flush', 'straight_flush', 'four_of_a_kind', 'full_house', 'flush', 'straight', 'three_of_a_kind', 'two_pair', 'pair_jacks_plus'];
 // Offer the three documented street bet sizes.
 const BET_MULTIPLIERS = [1, 2, 3];
 
-// Store the mounted route outlet for deterministic rerenders.
-let root = null;
 // Store the latest authenticated-player state returned by the backend.
 let state = null;
 // Store authoritative game rules for paytable displays.
@@ -34,14 +34,8 @@ let rules = {};
 let ante = 5;
 // Retain the last committed ante so one click can repeat the same round.
 let lastBet = null;
-// Prevent overlapping atomic browser actions.
-let busy = false;
-// Store the locale cleanup callback so unmount releases subscriptions.
-let unsubscribeLocale = null;
-// Track mount generations so late network responses cannot revive an old route.
-let mountGeneration = 0;
-// Store a fallback retry-id counter for browsers without randomUUID support.
-let requestCounter = 0;
+// Retain one mount-specific token so a late action response cannot contaminate a later remount of the shared outlet.
+let routeSession = null;
 // Retain an unresolved deal retry id until the backend confirms its response.
 let pendingDealId = null;
 // Bind the unresolved deal retry id to one ante.
@@ -50,12 +44,6 @@ let pendingDealAnte = null;
 let pendingDecisionId = null;
 // Bind the unresolved decision retry id to one round, street, and choice.
 let pendingDecisionContext = null;
-
-// Resolve one owned localized string without a visible hard-coded fallback.
-function text(key, params = {}) {
-  // Delegate every player-visible and accessible label to the EN/RU domain.
-  return t(key, params, DOMAIN);
-}
 
 // Install the shared card stylesheet without changing the global shell files.
 function ensureSharedCardStyles() {
@@ -71,30 +59,6 @@ function ensureSharedCardStyles() {
   link.href = '/core/cards.css';
   // Add the shared stylesheet to document metadata once.
   document.head.append(link);
-}
-
-// Install compact route-local styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.msstud{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .ms-stage{display:grid;gap:16px;padding:12px;min-width:0;} .ms-row{display:grid;gap:6px;} .ms-row h4{margin:0;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .ms-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .ms-street{font-weight:900;color:var(--gold);} .ms-actions{display:flex;flex-wrap:wrap;gap:8px;} .ms-btn{min-height:44px;padding:0 16px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .ms-btn.bet{background:linear-gradient(180deg,var(--felt-green),#065c33);color:var(--text);} .ms-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .ms-btn.deal{background:linear-gradient(180deg,var(--brand),#c72d54);color:var(--text);width:100%;} .ms-btn:disabled{opacity:.55;cursor:not-allowed;} .ms-panel{display:grid;gap:12px;min-width:0;} .ms-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .ms-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .ms-field{display:grid;gap:4px;margin-bottom:10px;} .ms-field label{font-size:12px;font-weight:700;} .ms-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--text);padding:0 10px;font-weight:800;} .ms-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .ms-pays div{display:flex;justify-content:space-between;} .ms-pays span:last-child{color:var(--gold);} .ms-result{min-height:24px;font-size:15px;color:var(--text);font-weight:800;} .ms-result .net{font-weight:900;} @media (max-width:900px){.msstud{grid-template-columns:1fr;}} @media (max-width:640px){.ms-stage{gap:10px;padding:8px;} .ms-panel{gap:8px;} .ms-card{padding:10px;} .ms-card h3{margin-bottom:6px;} .ms-field{margin-bottom:6px;} .ms-pays{width:calc(100% - 160px);max-width:calc(100% - 160px);gap:2px;line-height:1.15;} .ms-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .ms-pays span{min-width:0;overflow-wrap:anywhere;} body:has(.msstud) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}}.ms-repeat{width:100%;background:transparent;color:var(--gold);border:1px solid var(--gold);}';
-  // Attach the game-owned styles to the document head.
-  document.head.append(style);
-}
-
-// Create one bounded client retry id for exactly-once public actions.
-function nextActionId(prefix) {
-  // Prefer the browser cryptographic UUID source when available.
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  // Increment the fallback counter so same-millisecond actions remain distinct.
-  requestCounter += 1;
-  // Combine a namespaced prefix, timestamp, and counter without exposing it to players.
-  return `${prefix}-${Date.now().toString(36)}-${requestCounter.toString(36)}`;
 }
 
 // Normalize an ante to the ledger-compatible bounds.
@@ -139,17 +103,19 @@ function cardRow(titleKey, cards) {
   // Render each card through the shared renderer.
   const rendered = (cards || []).map(card => renderCard(card)).join('');
   // Return one titled card row.
-  return `<div class="ms-row"><h4>${safe(text(titleKey))}</h4><div class="ms-cards">${rendered}</div></div>`;
+  return `<div class="ms-row"><h4>${safe(tx(titleKey))}</h4><div class="ms-cards">${rendered}</div></div>`;
 }
 
 // Render the paytable rows for the to-one hand table.
 function paytableRows() {
   // Build one row per listed hand tier present in the authoritative table.
-  return PAYTABLE_ORDER.filter(name => rules.paytable && rules.paytable[name] !== undefined).map(name => `<div><span>${safe(text('hand.' + name))}</span><span>${rules.paytable[name]}:1</span></div>`).join('');
+  return PAYTABLE_ORDER.filter(name => rules.paytable && rules.paytable[name] !== undefined).map(name => `<div><span>${safe(tx('hand.' + name))}</span><span>${rules.paytable[name]}:1</span></div>`).join('');
 }
 
 // Render the complete Mississippi Stud route into the outlet.
 function render() {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Read the newest round to decide which stage to present.
@@ -169,7 +135,7 @@ function render() {
 // Build the idle stage shown before the first deal.
 function idleStage() {
   // Prompt the player to set the ante and deal.
-  return `<p class="ms-result" data-testid="mississippi-stud-result">${safe(text('result.idle'))}</p>`;
+  return `<p class="ms-result" data-testid="mississippi-stud-result">${safe(tx('result.idle'))}</p>`;
 }
 
 // Build the decision stage showing the hole cards, revealed community, and bet or fold controls.
@@ -179,17 +145,17 @@ function decisionStage(round) {
   // Render the community cards revealed so far.
   const community = cardRow('label.community_cards', round.community_revealed);
   // Build one bet button per multiplier.
-  const bets = BET_MULTIPLIERS.map(multiplier => `<button class="ms-btn bet" data-bet="${multiplier}" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.bet', { multiplier }))}</button>`).join('');
+  const bets = BET_MULTIPLIERS.map(multiplier => `<button class="ms-btn bet" data-bet="${multiplier}" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(tx('action.bet', { multiplier }))}</button>`).join('');
   // Return the cards, the street label, and the decision controls.
-  return `${hole}${community}<p class="ms-street">${safe(text('label.street', { street: round.street }))}</p><div class="ms-actions"><button class="ms-btn fold" data-fold="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.fold'))}</button>${bets}</div>`;
+  return `${hole}${community}<p class="ms-street">${safe(tx('label.street', { street: round.street }))}</p><div class="ms-actions"><button class="ms-btn fold" data-fold="1" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(tx('action.fold'))}</button>${bets}</div>`;
 }
 
 // Build the secondary one-click repeat control that opens a new round with the last committed ante.
 function repeatButton() {
   // Disable repeat while busy, without a stored ante, or while a round is still active.
-  const disabled = busy || !lastBet || Boolean(state?.active_round);
+  const disabled = lifecycle.isBusy() || !lastBet || Boolean(state?.active_round);
   // Return the secondary repeat control rendered after the primary deal button.
-  return `<button class="ms-btn ms-repeat" data-repeat="1" type="button" ${disabled ? 'disabled' : ''}>${safe(text('controls.repeat'))}</button>`;
+  return `<button class="ms-btn ms-repeat" data-repeat="1" type="button" ${disabled ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button>`;
 }
 
 // Build the settled stage revealing the completed hand and the result.
@@ -201,25 +167,29 @@ function settledStage(round) {
   // Read the settled net movement.
   const net = round.net || 0;
   // Compose the outcome and hand tier line.
-  const tier = round.hand_tier ? safe(text('hand.' + round.hand_tier)) : '';
+  const tier = round.hand_tier ? safe(tx('hand.' + round.hand_tier)) : '';
   // Build the outcome result line with a signed net amount.
-  const line = `${safe(text('outcome.' + round.outcome))} ${tier} <span class="net">${net >= 0 ? '+' + net : net}</span>`;
+  const line = `${safe(tx('outcome.' + round.outcome))} ${tier} <span class="net">${net >= 0 ? '+' + net : net}</span>`;
   // Return the revealed hand, the result, and a deal-again control with a one-click repeat.
-  return `${hole}${community}<p class="ms-result" data-testid="mississippi-stud-result">${line}</p><div class="ms-actions"><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal_again'))}</button>${repeatButton()}</div>`;
+  return `${hole}${community}<p class="ms-result" data-testid="mississippi-stud-result">${line}</p><div class="ms-actions"><button class="ms-btn deal" data-deal="1" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(tx('action.deal_again'))}</button>${repeatButton()}</div>`;
 }
 
 // Build the side panel with the ante input and the paytable.
 function sidePanel(hideWager) {
   // Hide the ante input while a decision is pending or the settled stage owns the replay action.
-  const wagerCard = hideWager ? '' : `<div class="ms-card"><h3>${safe(text('label.ante'))}</h3><div class="ms-field"><label for="ms-ante">${safe(text('label.ante'))}</label><input id="ms-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button>${repeatButton()}</div>`;
+  const wagerCard = hideWager ? '' : `<div class="ms-card"><h3>${safe(tx('label.ante'))}</h3><div class="ms-field"><label for="ms-ante">${safe(tx('label.ante'))}</label><input id="ms-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="ms-btn deal" data-deal="1" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(tx('action.deal'))}</button>${repeatButton()}</div>`;
   // Build the paytable card.
-  const paytable = `<div class="ms-card"><h3>${safe(text('label.paytable'))}</h3><div class="ms-pays">${paytableRows()}</div></div>`;
+  const paytable = `<div class="ms-card"><h3>${safe(tx('label.paytable'))}</h3><div class="ms-pays">${paytableRows()}</div></div>`;
   // Return the stacked side panel.
   return `${wagerCard}${paytable}`;
 }
 
 // Attach event handlers to the current stage controls.
 function bindEvents() {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
+  // Stop when teardown released the outlet between render and binding.
+  if (!root) return;
   // Bind the ante input to the cached wager.
   const anteInput = root.querySelector('[data-ante]');
   // Update the cached ante on input.
@@ -238,34 +208,43 @@ function bindEvents() {
   root.querySelectorAll('[data-bet]').forEach(button => { button.onclick = () => decide('bet', Number(button.dataset.bet)); });
 }
 
-// Run one guarded atomic action while blocking overlapping requests.
-async function runAction(worker) {
+// Report whether one asynchronous action still belongs to the exact mounted route session.
+function ownsAction(session, root) {
+  // Require both the game-specific session token and lifecycle-owned outlet to remain unchanged.
+  return routeSession === session && lifecycle.root() === root;
+}
+
+// Run one guarded atomic action while blocking overlapping requests and deferring response adoption until ownership is rechecked.
+async function runAction(worker, adopter) {
+  // Capture the lifecycle-owned route outlet before any asynchronous boundary.
+  const ownedRoot = lifecycle.root();
+  // Capture the mount-specific token because the shell reuses one persistent outlet across routes.
+  const ownedSession = routeSession;
   // Ignore repeated actions while one is already resolving.
-  if (busy || !root) return;
-  // Capture the mount generation so a stale response cannot revive the route.
-  const generation = mountGeneration;
+  if (lifecycle.isBusy() || !ownedRoot || !ownedSession) return;
   // Mark the route busy and disable controls.
-  busy = true;
+  lifecycle.setBusy(true);
   render();
   // Execute the protected worker and always release the guard.
   try {
-    // Perform the network action.
-    await worker();
+    // Perform only the network request before route ownership is checked again.
+    const payload = await worker();
+    // Ignore a response that completed after teardown or a later remount of the persistent outlet.
+    if (!ownsAction(ownedSession, ownedRoot)) return;
+    // Adopt the response only after proving it belongs to this exact mount.
+    adopter(payload);
     // Capture the committed ante after a successful settle so one click can repeat the same round.
-    if (generation === mountGeneration) {
-      // Read the newest round the action produced.
-      const settledRound = currentRound();
-      // Remember the ante only when the newest round has settled, never during an open decision.
-      if (settledRound && settledRound.phase === 'settled') lastBet = { ante: settledRound.ante };
-    }
+    const settledRound = currentRound();
+    // Remember the ante only when the newest round has settled, never during an open decision.
+    if (settledRound && settledRound.phase === 'settled') lastBet = { ante: settledRound.ante };
   } catch (error) {
     // Surface a bounded error to the player.
-    if (generation === mountGeneration) toast(error?.message || text('error.action'), 'error');
+    if (ownsAction(ownedSession, ownedRoot)) toast(error?.message || tx('error.action'), 'error');
   } finally {
     // Release the guard only for the still-mounted route.
-    if (generation === mountGeneration) {
+    if (ownsAction(ownedSession, ownedRoot)) {
       // Clear the busy flag.
-      busy = false;
+      lifecycle.setBusy(false);
       // Repaint the refreshed state.
       render();
       // Refresh the shell wallet after any movement.
@@ -281,13 +260,14 @@ function deal() {
     // Reuse an unresolved deal id or mint a fresh one bound to the current ante.
     if (!pendingDealId || pendingDealAnte !== ante) {
       // Mint a fresh deal retry id.
-      pendingDealId = nextActionId('ms-deal');
+      pendingDealId = lifecycle.nextRequestId('deal');
       // Bind the retry id to the exact ante.
       pendingDealAnte = ante;
     }
     // Post the exactly-once deal with the current ante.
-    const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ action_id: pendingDealId, ante }));
-    // Adopt the returned state and reveal the first street.
+    return post(`${API_ROOT}/rounds`, withCurrentPlayer({ action_id: pendingDealId, ante }));
+  }, payload => {
+    // Adopt the returned state and reveal the first street only for the current mount.
     adoptPayload(payload);
   });
 }
@@ -295,7 +275,7 @@ function deal() {
 // Re-apply the last committed ante and open one identical round without replaying any street decision.
 async function repeat() {
   // Ignore repeat while busy, mid-retry, without a stored ante, or during an active round.
-  if (busy || pendingDealId || pendingDecisionId || !lastBet || state?.active_round) return;
+  if (lifecycle.isBusy() || pendingDealId || pendingDecisionId || !lastBet || state?.active_round) return;
   // Restore the committed ante so the shared deal path reads the repeated stake.
   ante = normalizedAnte(lastBet.ante);
   // Open one identical round through the shared deal action, never replaying a bet or fold.
@@ -313,13 +293,14 @@ function decide(decision, multiplier) {
     // Reuse an unresolved decision id or mint one bound to this exact street decision.
     if (!pendingDecisionId || pendingDecisionContext?.round_id !== round.round_id || pendingDecisionContext?.street !== round.street || pendingDecisionContext?.decision !== decision || pendingDecisionContext?.multiplier !== multiplier) {
       // Mint a fresh decision retry id.
-      pendingDecisionId = nextActionId('ms-decision');
+      pendingDecisionId = lifecycle.nextRequestId('decision');
       // Bind the retry id to the exact round, street, and decision.
       pendingDecisionContext = { round_id: round.round_id, street: round.street, decision, multiplier };
     }
     // Post the exactly-once decision to the round-scoped route.
-    const payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(round.round_id)}/decisions`, withCurrentPlayer({ action_id: pendingDecisionId, decision, multiplier }));
-    // Adopt the advanced or settled result.
+    return post(`${API_ROOT}/rounds/${encodeURIComponent(round.round_id)}/decisions`, withCurrentPlayer({ action_id: pendingDecisionId, decision, multiplier }));
+  }, payload => {
+    // Adopt the advanced or settled result only for the current mount.
     adoptPayload(payload);
     // Release the resolved decision retry binding so the next street mints a new id.
     pendingDecisionId = null;
@@ -336,28 +317,24 @@ export const MississippiStudGame = {
   label: '',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Advance the mount generation so late responses from a prior mount are ignored.
-    mountGeneration += 1;
-    // Store the current route outlet.
-    root = node;
     // Reset the repeatable ante so a new session never inherits a prior bet.
     lastBet = null;
-    // Install shared and route-local styles.
+    // Install the shared semantic card stylesheet independently from route-local presentation.
     ensureSharedCardStyles();
-    // Install the compact route-local styles.
-    ensureStyles();
-    // Capture the generation for guarding the async load.
-    const generation = mountGeneration;
-    // Load both locales through the game-owned lazy domain before visible render.
-    await loadI18nDomain(DOMAIN);
-    // Stop when the route was replaced during locale loading.
-    if (generation !== mountGeneration) return;
-    // Repaint localized strings on a locale change unless an action owns the table.
-    unsubscribeLocale = onLocaleChange(() => { if (!busy) render(); });
+    // Establish route, stylesheet, locale, and repaint ownership through the shared controller.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released this route during asynchronous locale loading.
+    if (!mounted) return;
+    // Create one mount-specific token so later remounts of the persistent shell outlet reject stale responses.
+    const session = Object.freeze({});
+    // Publish the token only after the shared lifecycle owns the route completely.
+    routeSession = session;
     // Read reload-safe state so a pending street or settled result is restored.
     try {
       // Fetch the current player's game state.
       const payload = await api(currentPlayerPath(`${API_ROOT}/state`));
+      // Stop when navigation replaced this mount while state was loading.
+      if (!ownsAction(session, node)) return;
       // Adopt the loaded state.
       adoptPayload(payload);
       // Recover a repeatable ante from the newest settled round so repeat survives a reload.
@@ -366,10 +343,10 @@ export const MississippiStudGame = {
       if (recovered?.phase === 'settled' && recovered.ante != null) lastBet = { ante: Number(recovered.ante) };
     } catch (error) {
       // Surface a load failure without breaking the shell.
-      if (generation === mountGeneration) toast(text('error.load'), 'error');
+      if (ownsAction(session, node)) toast(tx('error.load'), 'error');
     }
-    // Stop when the route was replaced during the state load.
-    if (generation !== mountGeneration) return;
+    // Stop when the route was replaced during the state load or error handling.
+    if (!ownsAction(session, node)) return;
     // Render the first frame.
     render();
     // Refresh the shell wallet after mounting.
@@ -377,25 +354,23 @@ export const MississippiStudGame = {
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Advance the generation so in-flight responses cannot repaint another route.
-    mountGeneration += 1;
-    // Remove the locale subscription when it was registered.
-    unsubscribeLocale?.();
-    // Clear the subscription reference for the next mount.
-    unsubscribeLocale = null;
+    // Invalidate game-specific state adoption before releasing the shared route owner.
+    routeSession = null;
+    // Release route, locale, and busy ownership idempotently.
+    lifecycle.unmount();
     // Clear cached state.
     state = null;
     // Clear cached rules.
     rules = {};
     // Clear the repeatable ante so the next session starts fresh.
     lastBet = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    busy = false;
     // Clear any pending retry ids so a later mount starts clean.
     pendingDealId = null;
+    // Clear the pending deal context with its retry id.
+    pendingDealAnte = null;
     // Clear the pending decision id.
     pendingDecisionId = null;
+    // Clear the pending decision context with its retry id.
+    pendingDecisionContext = null;
   },
 };

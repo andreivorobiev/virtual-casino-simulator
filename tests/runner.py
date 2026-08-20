@@ -5372,6 +5372,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def mississippi_stud_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-mississippi_stud').click(); page.get_by_test_id('mississippi-stud').wait_for(timeout=WAIT_MS)
+                    # Require one exact external game-owned stylesheet and the independently reused shared card stylesheet.
+                    route_style=page.locator('link#mississippi-stud-styles'); card_style=page.locator('link#casino-shared-card-styles'); assert route_style.count()==1 and route_style.get_attribute('href')=='/games/mississippi_stud.css' and card_style.count()==1 and card_style.get_attribute('href')=='/core/cards.css'
+                    # Prove the migrated asset loaded while preserving the dominant stage, 300-pixel rail, and nine-row paytable.
+                    assert page.get_by_test_id('mississippi-stud').evaluate("el => { const route=getComputedStyle(el); const tracks=route.gridTemplateColumns.split(' ').map(parseFloat); const deal=getComputedStyle(el.querySelector('[data-deal]')); return route.display==='grid' && tracks.length===2 && tracks[0]>tracks[1] && Math.round(tracks[1])===300 && parseFloat(deal.minHeight)>=44 && el.querySelectorAll('.ms-pays div').length===9; }")
                     # Enumerate every viewport governed by the Mississippi Stud visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 expectations from both canonical locale resources.
@@ -5420,8 +5424,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.locator('[data-bet="1"]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS * 2); page.emulate_media(reduced_motion='reduce'); localized_evidence('settled-reduced-motion',['settled','reduced_motion'],None,3)
                     # Reload the canonical route and require restored player-owned terminal state.
                     page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('mississippi-stud').wait_for(timeout=WAIT_MS); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'],None,3)
+                    # Require both reusable stylesheets to remain singleton external links after route restoration.
+                    assert page.locator('link#mississippi-stud-styles').count()==1 and page.locator('link#casino-shared-card-styles').count()==1
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+                    # Require shared lifecycle teardown to release the game DOM while retaining only reusable external stylesheets.
+                    assert page.get_by_test_id('mississippi-stud').count()==0 and page.locator('link#mississippi-stud-styles').count()==1 and page.locator('link#casino-shared-card-styles').count()==1
                 # Execute the integrated Mississippi Stud browser and governed visual gate.
                 run_case('BR-MSTUD-001',['MSTUD-001','MSTUD-002','TEST-115'],mississippi_stud_acceptance)
                 # Define real-backend Teen Patti localization, decision, settlement, privacy, motion, and route acceptance.

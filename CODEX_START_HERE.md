@@ -262,6 +262,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/evidence/faro/README.md`](docs/evidence/faro/README.md) — Faro lifecycle-adopter evidence
 - [`docs/evidence/lucky_grid/README.md`](docs/evidence/lucky_grid/README.md) — Lucky Grid shared-lifecycle evidence
 - [`docs/evidence/marble_race/README.md`](docs/evidence/marble_race/README.md) — Marble Race shared-lifecycle evidence
+- [`docs/evidence/mississippi_stud/README.md`](docs/evidence/mississippi_stud/README.md) — Mississippi Stud shared-lifecycle evidence
 - [`docs/evidence/pachinko/README.md`](docs/evidence/pachinko/README.md) — Pachinko lifecycle-adopter evidence
 - [`docs/evidence/pattern_draw/README.md`](docs/evidence/pattern_draw/README.md) — Pattern Draw shared-lifecycle evidence
 - [`docs/evidence/poker_dice/README.md`](docs/evidence/poker_dice/README.md) — Poker Dice shared-lifecycle evidence

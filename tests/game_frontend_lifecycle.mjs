@@ -308,5 +308,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let spinBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(colorWheelSource.includes(duplicate), false, duplicate);
 // Require representative route, wheel, semantic-color, selection, control, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.color-wheel {', '.cw-wheel {', '.cw-pointer {', '.cw-bet.red {', '.cw-bet.black {', '.cw-bet.green {', '.cw-bet.gold {', '.cw-bet[aria-pressed="true"] {', '.cw-chip[aria-pressed="true"] {', '.cw-spin {', '.cw-result {', '.cw-repeat {', '@media (max-width: 900px)', '@media (max-width: 640px)']) assert.ok(colorWheelCss.includes(selector), selector);
+// Read the exact fourteenth-adopter source for per-slice duplicate-helper deletion evidence.
+const mississippiStudSource = await readFile(new URL('../web/games/mississippi_stud.js', import.meta.url), 'utf8');
+// Read Mississippi Stud's formatted external stylesheet for ownership and tooling visibility.
+const mississippiStudCss = await readFile(new URL('../web/games/mississippi_stud.css', import.meta.url), 'utf8');
+// Require Mississippi Stud to delegate shared lifecycle ownership while retaining action-scoped retry identities.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "lifecycle.nextRequestId('deal')", "lifecycle.nextRequestId('decision')", "requestPrefix: 'ms'", "href: '/games/mississippi_stud.css'"]) assert.ok(mississippiStudSource.includes(marker), marker);
+// Reject Mississippi Stud's migrated root, busy, locale, generation, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(mississippiStudSource.includes(duplicate), false, duplicate);
+// Require representative route, card, decision, wager, paytable, result, repeat, and responsive rules to survive extraction.
+for (const selector of ['.msstud {', '.ms-stage {', '.ms-cards {', '.ms-actions {', '.ms-btn.bet {', '.ms-btn.fold {', '.ms-btn.deal {', '.ms-field input {', '.ms-pays {', '.ms-result {', '.ms-repeat {', '@media (max-width: 900px)', '@media (max-width: 640px)']) assert.ok(mississippiStudCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');
