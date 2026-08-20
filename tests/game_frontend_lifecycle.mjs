@@ -204,5 +204,16 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let dealBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(teqSource.includes(duplicate), false, duplicate);
 // Require every representative row, card, control, result, repeat, and responsive selector to survive extraction.
 for (const selector of ['.teq {', '.teq-row.win {', '.teq-card {', '.teq-bets {', '.teq-deal {', '.teq-result {', '.teq-repeat {', '@media (max-width: 900px)']) assert.ok(teqCss.includes(selector), selector);
+
+// Read the exact fourth-adopter source for per-slice duplicate-helper deletion evidence.
+const pachinkoSource = await readFile(new URL('../web/games/pachinko.js', import.meta.url), 'utf8');
+// Read Pachinko's formatted external stylesheet for ownership and tooling visibility.
+const pachinkoCss = await readFile(new URL('../web/games/pachinko.css', import.meta.url), 'utf8');
+// Require Pachinko to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "href: '/games/pachinko.css'"]) assert.ok(pachinkoSource.includes(marker), marker);
+// Reject Pachinko's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let dropBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(pachinkoSource.includes(duplicate), false, duplicate);
+// Require representative board, ball, pocket, control, repeat, timing, and responsive rules to survive extraction.
+for (const selector of ['.pachinko {', '.pk-board {', '.pk-ball {', 'transition: top 0.07s linear, left 0.07s linear;', '.pk-pockets {', '.pk-pocket.hit {', '.pk-drop {', '.pk-repeat {', '@media (max-width: 900px)']) assert.ok(pachinkoCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

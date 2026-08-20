@@ -256,6 +256,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/evidence/daily_draw_lab/README.md`](docs/evidence/daily_draw_lab/README.md) — Daily Draw Lab lifecycle-adopter evidence
 - [`docs/evidence/dragon_tiger/README.md`](docs/evidence/dragon_tiger/README.md) — Dragon Tiger isolated real-backend evidence
 - [`docs/evidence/faro/README.md`](docs/evidence/faro/README.md) — Faro lifecycle-adopter evidence
+- [`docs/evidence/pachinko/README.md`](docs/evidence/pachinko/README.md) — Pachinko lifecycle-adopter evidence
 - [`docs/evidence/roulette/README.md`](docs/evidence/roulette/README.md) — Roulette evidence status
 - [`docs/evidence/scratch_cards/README.md`](docs/evidence/scratch_cards/README.md) — Scratch Cards evidence status
 - [`docs/evidence/semantic-game-colors/README.md`](docs/evidence/semantic-game-colors/README.md) — Semantic game-color evidence
