@@ -80,7 +80,12 @@ for (const game of repeatGames) {
     assert.ok(safeStyleCalls.length >= 2, `${game}: repeat CSS correction wiring`);
   }
   // Preserve the fixed feedback lane for Teen Patti's bottom-most repeat control on mobile.
-  if (game === 'teen_patti') assert.match(source, /@media \(max-width:640px\)\{\.tp-repeat\{width:calc\(100% - 160px\);max-width:calc\(100% - 160px\);\}\}/, `${game}: mobile feedback clearance`);
+  if (game === 'teen_patti') {
+    // Read the external Teen Patti stylesheet that now owns route geometry.
+    const styles = await readFile(path.join(root, 'web', 'games', 'teen_patti.css'), 'utf8');
+    // Require both mobile action rows to preserve the fixed feedback-button lane.
+    assert.match(styles, /\.tp-actions,\s*\.tp-repeat\s*\{\s*width:\s*calc\(100% - 160px\);\s*max-width:\s*calc\(100% - 160px\);\s*\}/, `${game}: mobile feedback clearance`);
+  }
   // Extract only the game-owned repeat action for focused safety assertions.
   const repeatBody = functionBody(source, game);
   // Require every repeat action to depend on a previously committed wager snapshot.

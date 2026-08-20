@@ -27,8 +27,8 @@ const bingoSource = await readFile(path.join(root, 'web', 'games', 'bingo.js'), 
 const kenoSource = await readFile(path.join(root, 'web', 'games', 'keno.js'), 'utf8');
 // Read Roulette's guarded action wiring source.
 const rouletteSource = await readFile(path.join(root, 'web', 'games', 'roulette.js'), 'utf8');
-// Read Teen Patti's mobile action-rail source.
-const teenPattiSource = await readFile(path.join(root, 'web', 'games', 'teen_patti.js'), 'utf8');
+// Read Teen Patti's external stylesheet for its mobile feedback-clearance contract.
+const teenPattiStyles = await readFile(path.join(root, 'web', 'games', 'teen_patti.css'), 'utf8');
 // Read the shared autoplay lifecycle for reconciliation and server-tick contracts.
 const autoplaySource = await readFile(path.join(root, 'web', 'core', 'autoplay.js'), 'utf8');
 // Read the extracted Language tab that owns formatter option composition. (CORE-033)
@@ -226,7 +226,7 @@ for (const action of guardedActions) assert.equal(rouletteSource.includes(action
 // Require the guard to emit both localized feedback and low-cardinality telemetry.
 assert.match(rouletteSource, /toast\(error\?\.errorKey \? rt\(error\.errorKey\) : \(error\?\.playerSafe \? error\.message : rt\('errors\.actionFailed'\)\)\);[\s\S]*?logClient\('roulette_action_failed', \{ code: error\?\.code \|\| null \}\);/);
 // Require the mobile Teen Patti action rail to leave the fixed feedback control unobscured.
-assert.match(teenPattiSource, /\.tp-actions\{width:calc\(100% - 160px\);max-width:calc\(100% - 160px\);\}/);
+assert.match(teenPattiStyles, /\.tp-actions,\s*\.tp-repeat\s*\{\s*width:\s*calc\(100% - 160px\);\s*max-width:\s*calc\(100% - 160px\);\s*\}/);
 
 // Require the browser-free guards of the render-stability helpers to fail closed without a DOM. (UX-027)
 assert.equal(uiModule.installStableRouteRenders(null, () => 'lobby'), false);
