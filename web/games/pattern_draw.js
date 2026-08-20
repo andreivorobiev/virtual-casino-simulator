@@ -5,13 +5,15 @@
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, stylesheet, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/pattern_draw';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'pattern-draw-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'pd', stylesheet: { id: 'pattern-draw-styles', href: '/games/pattern_draw.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Mirror the backend pattern bets and their multipliers in stable order.
 export const BETS = Object.freeze([['line', 1.75], ['cross', 30], ['full', 480]]);
 // Publish the chip denominations offered for the stake.
@@ -19,42 +21,18 @@ const CHIPS = [1, 5, 25, 100];
 // Fix the decorative reveal duration; the outcome is already server-authoritative.
 const DRAW_MS = 600;
 
-// Store the current route outlet, chosen bet, chosen stake, and in-flight guard.
-let root = null;
+// Store the chosen bet and stake while the shared lifecycle owns route and busy state.
 let selectedBet = 'line';
 let stake = 5;
-let drawBusy = false;
-let localeUnsubscribe = null;
 // Retain the last settled grid so a repaint after the draw keeps showing the pattern.
 let shownGrid = null;
 // Retain the last committed pattern and stake so one click can repeat the same draw.
 let lastBet = null;
 
-// Translate one game-domain key through the shared installed-locale fallback chain.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
-
-// Install compact game-owned styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.pattern{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .pd-stage{display:grid;justify-items:center;gap:14px;padding:12px;min-width:0;} .pd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(280px,72vw);} .pd-cell{aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);transition:background .2s ease,box-shadow .2s ease;} .pd-cell.on{background:radial-gradient(circle at 40% 34%,#fff3bd,#e7bd58);box-shadow:0 0 12px rgba(231,189,88,.6);} .pd-panel{display:grid;gap:12px;min-width:0;} .pd-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .pd-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .pd-bets{display:grid;gap:8px;} .pd-bet{display:flex;justify-content:space-between;padding:10px;border:2px solid transparent;border-radius:12px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;text-transform:capitalize;} .pd-bet small{font-weight:700;color:var(--gold);} .pd-bet[aria-pressed="true"]{border-color:var(--brand);box-shadow:0 0 0 2px rgba(255,59,107,.5);} .pd-chips{display:flex;flex-wrap:wrap;gap:8px;} .pd-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .pd-chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(231,189,88,.16);color:var(--text);} .pd-draw{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,var(--brand),var(--brand-strong));color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .pd-draw:disabled{opacity:.55;cursor:not-allowed;} .pd-result{min-height:24px;font-size:15px;color:var(--text);text-align:center;} .pd-result .net{font-weight:900;} @media (max-width:900px){.pattern{grid-template-columns:1fr;}}.pd-repeat{width:100%;min-height:46px;border:1px solid var(--gold);border-radius:12px;background:transparent;color:var(--gold);font-weight:900;cursor:pointer;}.pd-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.appendChild(style);
-}
-
-// Generate one caller-stable retry identity for exactly-once settlement.
-function newRequestId() {
-  // Prefer a real UUID when the platform provides one.
-  return (globalThis.crypto?.randomUUID?.() || `pd-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
-}
-
 // Render the complete Pattern Draw route into the outlet.
 function render(resultText) {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Build the nine grid cells, lighting the ones the committed grid turned on.
@@ -64,7 +42,7 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="pd-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="pattern" data-testid="pattern-draw"><div class="pd-stage"><div class="pd-grid" data-testid="pattern-draw-grid">${cells}</div><p class="pd-result" data-testid="pattern-draw-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('bet.title'))}</h3><div class="pd-bets">${bets}</div></div><div class="pd-card"><h3>${safe(tx('stake.title'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-draw" data-testid="pattern-draw-draw" type="button" ${drawBusy ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing') : tx('action.draw'))}</button><button class="pd-repeat" data-testid="pattern-draw-repeat" type="button" ${(drawBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
+  root.innerHTML = `<section class="pattern" data-testid="pattern-draw"><div class="pd-stage"><div class="pd-grid" data-testid="pattern-draw-grid">${cells}</div><p class="pd-result" data-testid="pattern-draw-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('bet.title'))}</h3><div class="pd-bets">${bets}</div></div><div class="pd-card"><h3>${safe(tx('stake.title'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-draw" data-testid="pattern-draw-draw" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(lifecycle.isBusy() ? tx('action.drawing') : tx('action.draw'))}</button><button class="pd-repeat" data-testid="pattern-draw-repeat" type="button" ${(lifecycle.isBusy() || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the pattern bet buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = btn.dataset.bet; render(); }; });
   // Wire the chip buttons.
@@ -100,14 +78,14 @@ async function load() {
 // Execute one atomic wager, draw, and settlement.
 async function draw() {
   // Ignore repeated clicks while a draw is resolving.
-  if (drawBusy || !root) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted()) return;
   // Mark the draw busy and disable the control before the request.
-  drawBusy = true;
+  lifecycle.setBusy(true);
   render();
   // Start protected settlement so the busy flag is always released.
   try {
     // Post the exactly-once draw with a caller-stable retry id and the chosen pattern.
-    const response = await post('/api/v1/games/pattern-draw/draws', { request_id: newRequestId(), bet: selectedBet, stake });
+    const response = await post('/api/v1/games/pattern-draw/draws', { request_id: lifecycle.nextRequestId(), bet: selectedBet, stake });
     // Show the committed debit before the completed grid becomes visible. (LEDGER-031, issue #598)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
@@ -129,12 +107,12 @@ async function draw() {
       ? `${safe(tx('result.hit', { bet: tx('bet.' + round.detail.bet) }))} <span class="net">+${round.total_return - round.wager_total}</span>`
       : `${safe(tx('result.miss'))} <span class="net">${round.net}</span>`;
     // Release the guard before the final repaint.
-    drawBusy = false;
+    lifecycle.setBusy(false);
     // Repaint with the drawn grid and result.
     render(text);
   } catch (err) {
     // Release the guard and report a bounded error.
-    drawBusy = false;
+    lifecycle.setBusy(false);
     // Surface the failure without leaking internal detail.
     toast(err?.message || tx('error.draw'), 'error');
     // Repaint the unlocked controls.
@@ -145,7 +123,7 @@ async function draw() {
 // Replay the last committed pattern and stake with one click.
 async function repeat() {
   // Ignore repeat while a draw is running or before any prior round has settled.
-  if (drawBusy || !root || !lastBet) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || !lastBet) return;
   // Restore the previous pattern selection into the local control state.
   selectedBet = lastBet.bet;
   // Restore the previous stake into the local control state.
@@ -160,29 +138,19 @@ export const PatternDrawGame = {
   id: 'pattern_draw',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet.
-    root = node;
     // Reset the repeatable bet so a new mount never inherits a stale one before load reconciles history.
     lastBet = null;
-    // Install game-owned styles.
-    ensureStyles();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings on a locale change unless a draw owns the grid.
-    localeUnsubscribe = onLocaleChange(() => { if (!drawBusy) render(); });
+    // Establish route, stylesheet, locale, and repaint ownership through the shared controller.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released this route during asynchronous locale loading.
+    if (!mounted) return;
     // Load session-bound state and render the first frame.
     await load();
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    drawBusy = false;
+    // Release route, locale, and busy ownership idempotently.
+    lifecycle.unmount();
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
   },

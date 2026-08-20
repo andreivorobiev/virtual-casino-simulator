@@ -3142,6 +3142,50 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     newest_simple_game_acceptance('poker_dice','poker-dice','/api/v1/games/poker-dice/rolls',roll_once,'poker-dice-result','poker-dice-repeat',after_reload=repeat_roll)
                 # Record Poker Dice's dedicated affected-game lifecycle and real-settlement case.
                 run_case('BR-POKER-DICE-001',['PDICE-001','PDICE-002','CORE-034','TEST-185','TEST-248'],poker_dice_browser_acceptance)
+                # Exercise Pattern Draw through its real draw endpoint, reload recovery, and repeated wager.
+                def pattern_draw_browser_acceptance():
+                    # Retain every observed Pattern Draw mutation so the case proves one request per visible action.
+                    draw_requests=[]
+                    # Record only the exact game-owned POST route without inspecting sensitive headers or session state.
+                    def record_draw_request(request):
+                        # Append one bounded marker for each Pattern Draw mutation request.
+                        if request.method=='POST' and request.url.endswith('/api/v1/games/pattern-draw/draws'): draw_requests.append(request.url)
+                    # Observe both real actions for exact request-count evidence.
+                    page.on('request',record_draw_request)
+                    # Keep listener cleanup deterministic even when any browser assertion fails closed.
+                    try:
+                        # Prove one real post-reload repeat performs a second independent authoritative draw.
+                        def repeat_draw(expected_before_repeat):
+                            # Observe the second mutation response while the recovered repeat control re-fires the committed pattern and stake.
+                            with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/pattern-draw/draws'),timeout=WAIT_MS * 2) as response_info: page.get_by_test_id('pattern-draw-repeat').click()
+                            # Bind the second visible wallet to the repeated draw's exact authoritative player snapshot.
+                            repeated_expected=float(response_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=repeated_expected,timeout=WAIT_MS * 2)
+                            # Wait for the decorative reveal to terminalize and require the result and repeat control to remain usable.
+                            page.wait_for_function("() => { const result=document.querySelector('[data-testid=\"pattern-draw-result\"]'); const repeat=document.querySelector('[data-testid=\"pattern-draw-repeat\"]'); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",timeout=WAIT_MS * 2)
+                            # Require numeric before/after wallet observations and the exact repeated response-owned terminal value.
+                            assert isinstance(expected_before_repeat,(int,float)) and isinstance(repeated_expected,(int,float)) and newest_game_wallet_value()==repeated_expected
+                            # Capture seventh-adopter evidence only after the repeated real draw is visibly terminal.
+                            page.locator('#view').screenshot(path=str(screenshots/'after-pass-pattern-draw-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Bind exact external-style and ready-layout evidence before the real draw mutates the grid.
+                        def draw_once():
+                            # Restore the governed primary desktop viewport and route top after preceding shared cases.
+                            page.set_viewport_size({'width':1920,'height':1080}); page.evaluate('window.scrollTo(0,0)'); page.wait_for_timeout(100)
+                            # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                            style_link=page.locator('link#pattern-draw-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/pattern_draw.css'
+                            # Prove the migrated asset loaded by binding the unchanged dominant stage, 300-pixel rail, and three-column grid.
+                            assert page.get_by_test_id('pattern-draw').evaluate("el => { const route=getComputedStyle(el); const tracks=route.gridTemplateColumns.split(' ').map(parseFloat); const grid=getComputedStyle(el.querySelector('.pd-grid')); return route.display==='grid' && tracks.length===2 && tracks[0]>tracks[1] && Math.round(tracks[1])===300 && grid.display==='grid' && grid.gridTemplateColumns.split(' ').length===3; }")
+                            # Use the default line pattern and five-token chip for one real settled draw.
+                            page.get_by_test_id('pattern-draw-draw').click()
+                        # Bind the first draw response, settled wallet, recovered route, and second repeated draw.
+                        newest_simple_game_acceptance('pattern_draw','pattern-draw','/api/v1/games/pattern-draw/draws',draw_once,'pattern-draw-result','pattern-draw-repeat',after_reload=repeat_draw)
+                        # Require exactly the two intended real actions and no duplicate listener or request side effect.
+                        assert len(draw_requests)==2,draw_requests
+                    # Remove the exact observer before any downstream Browser case starts.
+                    finally:
+                        # Release the request observer even when the lifecycle proof fails closed.
+                        page.remove_listener('request',record_draw_request)
+                # Record Pattern Draw's dedicated affected-game lifecycle and real-settlement case.
+                run_case('BR-PATTERN-DRAW-001',['PATTERN-001','PATTERN-002','CORE-034','TEST-185','TEST-248'],pattern_draw_browser_acceptance)
                 # Exercise Faro through its real deal endpoint and reload-safe recent-round state.
                 def faro_browser_acceptance():
                     # Bind exact external-style and ready-layout evidence before the real deal mutates the cards.

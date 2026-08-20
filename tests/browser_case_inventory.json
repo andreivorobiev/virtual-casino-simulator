@@ -1,5 +1,5 @@
 {
-  "count": 124,
+  "count": 125,
   "case_ids": [
     "BR-AB-001",
     "BR-ACTION-STABILITY-001",
@@ -83,6 +83,7 @@
     "BR-OPS-001",
     "BR-OU7-001",
     "BR-PACHINKO-001",
+    "BR-PATTERN-DRAW-001",
     "BR-PGP-001",
     "BR-PLINKO-001",
     "BR-POKER-DICE-001",

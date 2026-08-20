@@ -13,18 +13,23 @@
         "API-PATTERN-DRAW-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-PATTERN-DRAW-001"
       ],
       "implementation_files": [
         "casino/games/pattern_draw/rules.py",
         "casino/games/pattern_draw/engine.py",
         "casino/games/pattern_draw/api.py",
         "web/games/pattern_draw.js",
+        "web/games/pattern_draw.css",
+        "tests/games/pattern_draw/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/pattern_draw/README.md",
         "contracts/openapi/pattern_draw.v1.yaml"
       ],
       "introduced_in": "issue-155-pattern-draw",
-      "changed_in": "issue-155-pattern-draw",
-      "notes": "Allocated for GitHub issue #155, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1005-pattern-draw-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #155, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1005 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing the grid, pattern catalog, 600 ms reveal timing, settlement, DOM, or visible layout."
     },
     {
       "id": "PATTERN-002",
@@ -35,17 +40,21 @@
         "API-PATTERN-DRAW-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-PATTERN-DRAW-001"
       ],
       "implementation_files": [
         "casino/games/pattern_draw/api.py",
         "casino/core/simple_game.py",
+        "web/games/pattern_draw.js",
         "tests/pattern_draw_tests.py",
-        "tests/game_drivers/pattern_draw.py"
+        "tests/game_drivers/pattern_draw.py",
+        "tests/games/pattern_draw/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-155-pattern-draw",
-      "changed_in": "issue-155-pattern-draw",
-      "notes": "Allocated for GitHub issue #155."
+      "changed_in": "issue-1005-pattern-draw-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #155. Issue #1005 preserves the exact state and draws endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, and real repeat flow while removing duplicate frontend lifecycle helpers."
     }
   ]
 }
