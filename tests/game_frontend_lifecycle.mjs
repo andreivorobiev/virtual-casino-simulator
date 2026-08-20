@@ -268,5 +268,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let raceBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(marbleRaceSource.includes(duplicate), false, duplicate);
 // Require representative route, lane, semantic-color, selection, control, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.marble {', '.mr-lane {', '.mr-lane.win {', '.mr-marble {', '.mr-pick[aria-pressed="true"] {', '.mr-go {', '.mr-result {', '.mr-repeat {', '@media (max-width: 900px)']) assert.ok(marbleRaceCss.includes(selector), selector);
+// Read the exact tenth-adopter source for per-slice duplicate-helper deletion evidence.
+const bouleSource = await readFile(new URL('../web/games/boule.js', import.meta.url), 'utf8');
+// Read Boule's formatted external stylesheet for ownership and tooling visibility.
+const bouleCss = await readFile(new URL('../web/games/boule.css', import.meta.url), 'utf8');
+// Require Boule to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "href: '/games/boule.css'"]) assert.ok(bouleSource.includes(marker), marker);
+// Reject Boule's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let spinBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(bouleSource.includes(duplicate), false, duplicate);
+// Require representative route, drum, board, house, selection, control, result, repeat, motion, and responsive rules to survive extraction.
+for (const selector of ['.boule {', '.bl-drum {', '.bl-drum.rolling {', '@keyframes bl-pulse {', '.bl-numbers {', '.bl-num.house {', '.bl-bet[aria-pressed="true"] {', '.bl-spin {', '.bl-result {', '.bl-repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 900px)', '@media (max-width: 430px)']) assert.ok(bouleCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

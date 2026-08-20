@@ -1,0 +1,227 @@
+/* Preserve the Boule stage-and-control-rail layout extracted from the route module. */
+.boule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  color: var(--text, #f5ead6);
+  align-items: start;
+}
+
+/* Keep the authoritative drum and nine-number board visually dominant. */
+.bl-stage {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 12px;
+  min-width: 0;
+}
+
+.bl-drum {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 38% 32%, var(--felt2), var(--felt));
+  border: 6px solid var(--metal-gold);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .45);
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.bl-drum.rolling {
+  animation: bl-pulse .3s linear infinite;
+}
+
+@keyframes bl-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.bl-numbers {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+}
+
+.bl-num {
+  min-height: 44px;
+  min-width: 0;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .06);
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.bl-num.house {
+  background: rgba(255, 59, 107, .16);
+  color: var(--brand);
+}
+
+.bl-num[aria-pressed="true"] {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px rgba(255, 59, 107, .5);
+}
+
+/* Preserve the 300-pixel wager rail and its grouped cards. */
+.bl-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bl-card {
+  padding: 14px;
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, .22);
+}
+
+.bl-card h3 {
+  margin: 0 0 10px;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+/* Keep the four honest even-money markets compact and distinct. */
+.bl-bets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.bl-bet {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .05);
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bl-bet small {
+  font-weight: 700;
+  opacity: .8;
+  font-size: 11px;
+}
+
+.bl-bet[aria-pressed="true"] {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px rgba(255, 59, 107, .5);
+}
+
+/* Retain the established bounded stake-chip controls. */
+.bl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bl-chip {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border-soft, rgba(255, 255, 255, .18));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .05);
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.bl-chip[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: rgba(255, 59, 107, .16);
+  color: var(--text);
+}
+
+/* Preserve primary-action hierarchy, busy feedback, and terminal result space. */
+.bl-spin {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.bl-spin:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.bl-result {
+  min-height: 44px;
+  font-size: 15px;
+  color: var(--text);
+  text-align: center;
+}
+
+.bl-result .net {
+  font-weight: 900;
+}
+
+/* Suppress decorative drum motion for the governed reduced-motion state. */
+@media (prefers-reduced-motion: reduce) {
+  .bl-drum.rolling {
+    animation: none;
+  }
+}
+
+/* Stack the stage and wager rail at the established compact breakpoint. */
+@media (max-width: 900px) {
+  .boule {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Preserve a usable straight-number grid on narrow mobile screens. */
+@media (max-width: 430px) {
+  .bl-numbers {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Keep one-click repeat visually secondary to the primary spin action. */
+.bl-repeat {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 8px;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.bl-repeat:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
