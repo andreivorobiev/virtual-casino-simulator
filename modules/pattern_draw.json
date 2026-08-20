@@ -1,7 +1,7 @@
 {
   "module": "pattern_draw",
-  "version": "1.1.5",
-  "paths": ["casino/games/pattern_draw/", "web/games/pattern_draw.js", "web/i18n/en-US/games/pattern_draw.json", "web/i18n/ru-RU/games/pattern_draw.json"],
+  "version": "1.1.6",
+  "paths": ["casino/games/pattern_draw/", "web/games/pattern_draw.js", "web/games/pattern_draw.css", "web/i18n/en-US/games/pattern_draw.json", "web/i18n/ru-RU/games/pattern_draw.json"],
   "requirements_prefixes": ["PATTERN"],
   "contracts": ["contracts/openapi/pattern_draw.v1.yaml"],
   "game": {

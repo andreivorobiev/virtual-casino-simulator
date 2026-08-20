@@ -237,5 +237,16 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let rollBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(pokerDiceSource.includes(duplicate), false, duplicate);
 // Require representative route, dice, animation, control, result, repeat, motion, and responsive rules to survive extraction.
 for (const selector of ['.poker-dice {', '.pd-dice {', '.pd-die.rolling {', '@keyframes pd-tumble {', '.pd-roll {', '.pd-result {', '.pd-repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 900px)']) assert.ok(pokerDiceCss.includes(selector), selector);
+
+// Read the exact seventh-adopter source for per-slice duplicate-helper deletion evidence.
+const patternDrawSource = await readFile(new URL('../web/games/pattern_draw.js', import.meta.url), 'utf8');
+// Read Pattern Draw's formatted external stylesheet for ownership and tooling visibility.
+const patternDrawCss = await readFile(new URL('../web/games/pattern_draw.css', import.meta.url), 'utf8');
+// Require Pattern Draw to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "href: '/games/pattern_draw.css'"]) assert.ok(patternDrawSource.includes(marker), marker);
+// Reject Pattern Draw's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let drawBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(patternDrawSource.includes(duplicate), false, duplicate);
+// Require representative route, grid, lit-cell, selection, control, result, repeat, and responsive rules to survive extraction.
+for (const selector of ['.pattern {', '.pd-grid {', '.pd-cell.on {', '.pd-bet[aria-pressed="true"] {', '.pd-draw {', '.pd-result {', '.pd-repeat {', '@media (max-width: 900px)']) assert.ok(patternDrawCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');
