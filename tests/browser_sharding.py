@@ -39,6 +39,16 @@ BROWSER_CASE_AFFINITY_GROUPS = {
     "admin_presentation": ("BR-ADMIN-PRACTICE-OPPONENT-001", "BR-ADMIN-USERS-001", "BR-ADMIN-GUEST-001", "BR-AUDIO-001", "BR-I18N-FOUNDATION-001", "BR-I18N-ADMIN-001"),
 }
 
+# Map single-game stateful families so affected-game runs keep or skip each complete group atomically. (TEST-242)
+BROWSER_GAME_AFFINITY_GROUPS = {
+    # Keep Roulette's complete producer/consumer family only when Roulette is selected.
+    "roulette": "roulette",
+    # Keep Slots' complete producer/consumer family only when Slots is selected.
+    "slots": "slots",
+    # Keep Keno's complete producer/consumer family only when Keno is selected.
+    "keno": "keno",
+}
+
 # Map each game to its one dedicated deep Browser case for affected-game selection.
 BROWSER_GAME_ACCEPTANCE_CASES = {
     "acey_deucey": "BR-AD-001", "andar_bahar": "BR-AB-001", "big_six_wheel": "BR-BIG-SIX-001", "boule": "BR-BOULE-001", "caribbean_stud": "BR-CS-001", "casino_holdem": "BR-CH-001", "casino_war": "BR-CW-001", "chuck_a_luck": "BR-CHUCK-001", "coin_pusher": "BR-COIN-PUSHER-001", "craps": "BR-CRAPS-001", "crown_and_anchor": "BR-CAA-001", "daily_draw_lab": "BR-DAILY-DRAW-LAB-001", "deuces_wild_video_poker": "BR-DWVP-001", "double_bonus_video_poker": "BR-DBVP-001", "dragon_tiger": "BR-DT-001", "fan_tan": "BR-FAN-TAN-001", "faro": "BR-FARO-001", "four_card_poker": "BR-FOUR-CARD-POKER-001", "hi_lo": "BR-HILO-001", "jacks_or_better_video_poker": "BR-JOBVP-001", "joker_poker": "BR-JP-001", "let_it_ride": "BR-LIR-001", "marble_race": "BR-MARBLE-RACE-001", "mississippi_stud": "BR-MSTUD-001", "multi_hand_video_poker": "BR-MHVP-001", "over_under_7": "BR-OU7-001", "pachinko": "BR-PACHINKO-001", "pai_gow_poker": "BR-PGP-001", "pattern_draw": "BR-PATTERN-DRAW-001", "plinko": "BR-PLINKO-001", "poker_dice": "BR-POKER-DICE-001", "red_dog": "BR-RD-001", "scratch_cards": "BR-SCRATCH-001", "sic_bo": "BR-SIC-BO-001", "teen_patti": "BR-TEEN-PATTI-001", "texas_holdem_practice_table": "BR-THPT-001", "three_card_poker": "BR-TCP-001", "trente_et_quarante": "BR-TEQ-001",
@@ -46,6 +56,10 @@ BROWSER_GAME_ACCEPTANCE_CASES = {
 
 # Invert the acceptance map once so selection checks remain deterministic and constant-time.
 BROWSER_ACCEPTANCE_CASE_GAME = {case_id: game_id for game_id, case_id in BROWSER_GAME_ACCEPTANCE_CASES.items()}
+# Invert the game-family declaration once so guarded owners and individual cases share one selection decision.
+BROWSER_AFFINITY_GROUP_GAME = {group_name: game_id for game_id, group_name in BROWSER_GAME_AFFINITY_GROUPS.items()}
+# Resolve every member of a single-game family to its game without splitting producer/consumer ownership.
+BROWSER_AFFINITY_CASE_GAME = {case_id: game_id for game_id, group_name in BROWSER_GAME_AFFINITY_GROUPS.items() for case_id in BROWSER_CASE_AFFINITY_GROUPS[group_name]}
 # Bound reviewed profile bytes so malformed evidence cannot consume unbounded memory.
 BROWSER_DURATION_PROFILE_MAX_BYTES = 64 * 1024
 # Bound one ordinary Browser case to the existing suite timeout budget.
@@ -293,7 +307,7 @@ def validate_browser_shard_affinity(case_ids, shard_sets, affinity_groups=BROWSE
 
 
 # Validate the game-to-case map against the exact catalog and source inventory.
-def validate_browser_affected_games(case_ids, catalog_ids, affinity_groups=BROWSER_CASE_AFFINITY_GROUPS, game_cases=BROWSER_GAME_ACCEPTANCE_CASES):
+def validate_browser_affected_games(case_ids, catalog_ids, affinity_groups=BROWSER_CASE_AFFINITY_GROUPS, game_cases=BROWSER_GAME_ACCEPTANCE_CASES, game_affinity_groups=BROWSER_GAME_AFFINITY_GROUPS):
     # Flatten declared affinity cases so dedicated deselection cannot bypass shared state.
     affinity_case_ids = {case_id for group_case_ids in affinity_groups.values() for case_id in group_case_ids}
     # Reject a map pairing two games with one case because selection would be ambiguous.
@@ -315,15 +329,44 @@ def validate_browser_affected_games(case_ids, catalog_ids, affinity_groups=BROWS
             # Keep the reviewed case identity in the deterministic diagnostic.
             raise AssertionError(f"affected-game case {case_id} absent from browser inventory")
 
+    # Reject duplicate family ownership because one group cannot be selected by two games deterministically.
+    if len(set(game_affinity_groups.values())) != len(game_affinity_groups):
+        # Preserve one fixed governance diagnostic without reflecting dynamic source content.
+        raise AssertionError("duplicate affected-game affinity group")
+    # Validate every single-game family against the same catalog and complete affinity declarations.
+    for game_id, group_name in game_affinity_groups.items():
+        # Fail closed when a family owner is not a current catalog game.
+        if game_id not in catalog_ids:
+            # Keep the reviewed identity available for deterministic maintenance.
+            raise AssertionError(f"affected-game affinity references unknown game {game_id}")
+        # Reject a family mapping that does not name one complete declared group.
+        if group_name not in affinity_groups:
+            # Keep the reviewed group name available for deterministic maintenance.
+            raise AssertionError(f"affected-game affinity references unknown group {group_name}")
+
+
+# Report whether detector-owned game selection excludes one complete single-game affinity family.
+def affinity_group_deselected(group_name, affected_games, affinity_group_game=BROWSER_AFFINITY_GROUP_GAME):
+    # Keep every stateful family when no affected-game restriction is active.
+    if affected_games is None:
+        # Preserve full coverage for main, shared, unknown, and manual inputs.
+        return False
+    # Resolve only explicitly single-game families; cross-game common groups always remain selected.
+    game_id = affinity_group_game.get(group_name)
+    # Skip the complete family only when its reviewed game is outside the detector-owned set.
+    return game_id is not None and game_id not in affected_games
+
 
 # Report whether detector-owned game selection excludes one dedicated case.
-def case_deselected(case_id, affected_games, acceptance_case_game=BROWSER_ACCEPTANCE_CASE_GAME):
+def case_deselected(case_id, affected_games, acceptance_case_game=BROWSER_ACCEPTANCE_CASE_GAME, affinity_case_game=BROWSER_AFFINITY_CASE_GAME):
     # Keep every case when no affected-game restriction is active.
     if affected_games is None:
         # Preserve full coverage for main, shared, unknown, and manual inputs.
         return False
-    # Skip only dedicated cases whose game is outside the detector-owned set.
-    return case_id in acceptance_case_game and acceptance_case_game[case_id] not in affected_games
+    # Resolve a dedicated case or one member of a complete single-game affinity family.
+    game_id = acceptance_case_game.get(case_id) or affinity_case_game.get(case_id)
+    # Skip only reviewed game-owned cases whose game is outside the detector-owned set.
+    return game_id is not None and game_id not in affected_games
 
 
 # List source-ordered cases one ownership set executes after game deselection.

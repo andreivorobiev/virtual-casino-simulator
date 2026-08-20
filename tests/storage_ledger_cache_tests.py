@@ -22,6 +22,8 @@ from casino.core import players
 from casino.core import storage
 # Import the standard fail-closed error used for corrupt money-action journals.
 from casino.errors import ConflictError
+# Import Browser-only isolation helpers without importing the listener-owning runner. (TEST-242)
+from tests.browser_process_state import prepare_browser_data_environment, run_fresh_json_fixture_write
 
 
 # Build one canonical CSV history event for incremental cache fixtures.
@@ -40,6 +42,103 @@ def _seed_row(ledger_id: str, player_id: str, index: int) -> dict:
 def _seed_line(event: dict) -> bytes:
     # Encode the sorted single-line JSON row with a plain newline terminator.
     return (json.dumps(event, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+
+
+# Prove Browser harness isolation and parent fixture writes without weakening production caches. (TEST-242)
+class BrowserHarnessProcessSafetyTests(unittest.TestCase):
+    # Prove each Browser process receives one distinct disposable JSON root before casino imports.
+    def test_browser_invocations_receive_distinct_disposable_roots(self):
+        # Build independent environment mappings so the helper cannot share mutable state between invocations.
+        first_environment = {"CASINO_STORAGE_PROVIDER": "mysql", "CASINO_DATA_DIR": "retained-first"}
+        # Seed a second mapping with different prior values to prove deterministic Browser overrides.
+        second_environment = {"CASINO_STORAGE_PROVIDER": "mysql", "CASINO_DATA_DIR": "retained-second"}
+        # Allocate the first real temporary owner through the production Browser helper.
+        first_owner = prepare_browser_data_environment(["tests/run_tests.py", "--browser"], first_environment)
+        # Allocate the second owner independently to model a consecutive clean Browser invocation.
+        second_owner = prepare_browser_data_environment(["tests/run_tests.py", "--browser"], second_environment)
+        # Register both owners for cleanup even when a following assertion fails.
+        self.addCleanup(second_owner.cleanup)
+        # Register the first owner after the second so cleanup order cannot affect distinctness.
+        self.addCleanup(first_owner.cleanup)
+        # Resolve both generated roots before checking their configured child directories.
+        first_root, second_root = Path(first_owner.name), Path(second_owner.name)
+        # Require unique invocation ownership instead of a checkout-global data directory.
+        self.assertNotEqual(first_root, second_root)
+        # Require both Browser processes to select only the JSON provider addressed by this harness contract.
+        self.assertEqual((first_environment["CASINO_STORAGE_PROVIDER"], second_environment["CASINO_STORAGE_PROVIDER"]), ("json", "json"))
+        # Require each configured data directory to stay beneath only its own disposable owner.
+        self.assertEqual((Path(first_environment["CASINO_DATA_DIR"]), Path(second_environment["CASINO_DATA_DIR"])), (first_root / "data", second_root / "data"))
+        # Require each configured log directory to stay beside only its own disposable data.
+        self.assertEqual((Path(first_environment["CASINO_LOG_DIR"]), Path(second_environment["CASINO_LOG_DIR"])), (first_root / "logs", second_root / "logs"))
+
+    # Prove non-Browser imports preserve the caller environment and allocate no disposable owner.
+    def test_non_browser_process_does_not_rewrite_environment(self):
+        # Seed exact caller-owned values whose byte strings must survive ordinary API selection.
+        environment = {"CASINO_STORAGE_PROVIDER": "mysql", "CASINO_DATA_DIR": "operator-data", "CASINO_LOG_DIR": "operator-logs"}
+        # Invoke the same helper without the Browser selector.
+        owner = prepare_browser_data_environment(["tests/run_tests.py", "--api"], environment)
+        # Require no hidden resource allocation outside Browser acceptance.
+        self.assertIsNone(owner)
+        # Require exact caller environment preservation for every non-Browser process.
+        self.assertEqual(environment, {"CASINO_STORAGE_PROVIDER": "mysql", "CASINO_DATA_DIR": "operator-data", "CASINO_LOG_DIR": "operator-logs"})
+
+    # Prove a fixture write reopens child-owned current bytes instead of reusing a stale parent registry.
+    def test_fresh_fixture_write_observes_child_replacement(self):
+        # Create one isolated shared root for parent and child provider instances.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Resolve the shared JSON data directory beneath the disposable owner.
+            data_root = Path(temporary) / "data"
+            # Build and bootstrap the parent provider whose registry cache will become stale.
+            parent = storage.JsonStorageProvider(data_root)
+            # Seed the standard player wallet required by exact-once action commits.
+            parent.bootstrap_players(players.default_players())
+            # Commit one parent action so its registry cache records a nonzero journal offset.
+            parent.transact_ledger_once("human", -1, "TEST_BROWSER_PARENT", "parent-key", "storage", "parent-round", {"writer": "parent"})
+            # Warm and retain the parent action registry before the child resets durable state.
+            self.assertIsNotNone(parent.find_ledger_action("human", "storage", "parent-key"))
+            # Build the independent child provider used to model the loopback server process.
+            child = storage.JsonStorageProvider(data_root)
+            # Replace the complete durable namespace exactly like the Browser reset endpoint.
+            child.reset()
+            # Recreate the standard wallet after the child-owned reset boundary.
+            child.bootstrap_players(players.default_players())
+            # Commit two child actions so the replacement journal grows beyond the parent's stale offset.
+            child.transact_ledger_once("human", -1, "TEST_BROWSER_CHILD", "child-key-a", "storage", "child-round-a", {"writer": "child", "index": "a" * 32})
+            # Commit a second current child identity to guarantee a complete larger replacement journal.
+            child.transact_ledger_once("human", -1, "TEST_BROWSER_CHILD", "child-key-b", "storage", "child-round-b", {"writer": "child", "index": "b" * 32})
+            # Require the deliberately stale instance to reject rather than silently accept replacement bytes.
+            with self.assertRaises(ConflictError):
+                # Exercise the exact parent document-write recovery boundary from the Browser failure.
+                parent.write_document("browser-fixture", {"writer": "stale-parent"})
+            # Execute one fixture publication through a cache-free provider over the current durable bytes.
+            run_fresh_json_fixture_write(lambda: storage.get_storage_provider().write_document("browser-fixture", {"writer": "fresh-parent"}), data_dir=data_root, provider_factory=storage.JsonStorageProvider, install_provider=storage.set_provider_for_tests)
+            # Read through another fresh instance so success cannot depend on the injected provider cache.
+            observed = storage.JsonStorageProvider(data_root).read_document("browser-fixture", {})
+            # Require the one current fixture write to publish exactly after complete journal validation.
+            self.assertEqual(observed, {"writer": "fresh-parent"})
+
+    # Prove reopening the provider never converts genuine divergent journal bytes into a retry or success.
+    def test_fresh_fixture_write_preserves_divergent_journal_failure(self):
+        # Create one isolated root whose malformed bytes remain available for exact preservation checks.
+        with tempfile.TemporaryDirectory() as temporary:
+            # Resolve and initialize the provider-owned directory layout.
+            data_root = Path(temporary) / "data"
+            # Build one provider only to create the reviewed directory structure.
+            provider = storage.JsonStorageProvider(data_root)
+            # Materialize the data directory before writing hostile journal bytes.
+            provider.ensure_ready()
+            # Persist one newline-terminated but structurally incomplete commit record.
+            hostile = b'{"op":"commit"}\n'
+            # Write the exact hostile bytes without invoking provider normalization.
+            provider.ledger_action_journal_path().write_bytes(hostile)
+            # Require the fresh fixture boundary to surface the production conflict without retrying.
+            with self.assertRaises(ConflictError):
+                # Attempt one ordinary fixture document write through a newly constructed provider.
+                run_fresh_json_fixture_write(lambda: storage.get_storage_provider().write_document("browser-fixture", {"writer": "forbidden"}), data_dir=data_root, provider_factory=storage.JsonStorageProvider, install_provider=storage.set_provider_for_tests)
+            # Require the operator evidence to remain byte-identical after the rejected fixture write.
+            self.assertEqual(provider.ledger_action_journal_path().read_bytes(), hostile)
+            # Require no destination document to appear after fail-closed validation.
+            self.assertFalse(provider.document_path("browser-fixture").exists())
 
 
 # Group cache-equivalence proofs for the incremental JSON ledger reader. (issue #412)

@@ -1758,7 +1758,7 @@
     {
       "id": "TOOL-002",
       "module": "Tooling",
-      "description": "GitHub Actions exposes fail-closed sharded qualification: Suite 100 runs on pull requests, Suite 300 or 500 is manually selected, and Browser pull requests select only unambiguously affected game-owned cases while shared, unknown, protected-main, release, and manual inputs retain complete coverage.",
+      "description": "GitHub Actions exposes fail-closed sharded qualification: Suite 100 runs on pull requests, Suite 300 or 500 is manually selected, and Browser pull requests select only unambiguously affected dedicated cases and complete single-game affinity families while shared, unknown, protected-main, release, and manual inputs retain complete coverage.",
       "status": "PASS",
       "api_tests": [
         "CI-QUALIFICATION-001"
@@ -1809,6 +1809,7 @@
         "tests/cases/browser/auth_lobby.py",
         "tests/cases/browser/roulette_slots_keno.py",
         "tests/cases/browser/bingo_admin.py",
+        "tests/browser_process_state.py",
         "tests/runner.py",
         "tests/account_spine_tests.py",
         "tests/browser_wait_governance_tests.py",
@@ -1824,8 +1825,8 @@
         "docs/long_test_suites.md"
       ],
       "introduced_in": "9.1.2",
-      "changed_in": "issue-722-browser-affinity-split",
-      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Browser pull requests may omit only dedicated cases owned by unaffected games; shared or unknown changes, protected-main pushes, and authorized manual profiles run complete coverage. Pure Browser discovery, affinity data, duration packing, affected-game selection, and aggregate ownership verification live in tests/browser_sharding.py; tests/runner.py owns active execution state; and tests/run_tests.py retains the byte-compatible CLI. Checked-in count plus sorted case-ID baselines must match all 123 Browser and 209 non-Browser API-lane registrations before listener or provider startup. Cross-file discovery expands every reviewed area owner at its historical delegation point, while exact source order, one-shard affinity, fail-closed shard union, affected-game selection, workflow commands, and listener teardown stay enforced. Browser state is now bounded by independent public-Auth, authenticated-session, lobby-shell, Roulette, Slots, Keno, table-game, feedback/Admin, and Admin-presentation families, each with a canonical starting state and atomic non-owner skip. Feedback remains beside its Admin consumer, and practice-opponent funding remains beside its localized Admin consumer. The reviewed maximum duration load falls from 219 seconds at six shards to 187 at seven and 165 at eight. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
+      "changed_in": "issue-1014-browser-json-process-safe",
+      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Browser pull requests may omit only dedicated cases and complete single-game affinity families owned by unaffected games; shared or unknown changes, protected-main pushes, and authorized manual profiles run complete coverage. Pure Browser discovery, affinity data, duration packing, affected-game selection, and aggregate ownership verification live in tests/browser_sharding.py; tests/runner.py owns active execution state; and tests/run_tests.py retains the byte-compatible CLI. Checked-in count plus sorted case-ID baselines must match all 128 Browser and 210 non-Browser API-lane registrations before listener or provider startup. Each Browser invocation owns a fresh JSON data root shared with its child server, and parent-process fixtures reopen current durable bytes before each write so process isolation never weakens journal validation. Cross-file discovery expands every reviewed area owner at its historical delegation point, while exact source order, one-shard affinity, fail-closed shard union, affected-game selection, workflow commands, and listener teardown stay enforced. Browser state is bounded by independent public-Auth, authenticated-session, lobby-shell, Roulette, Slots, Keno, table-game, feedback/Admin, and Admin-presentation families, each with a canonical starting state and atomic non-owner skip. Feedback remains beside its Admin consumer, and practice-opponent funding remains beside its localized Admin consumer. The reviewed maximum duration load falls from 219 seconds at six shards to 187 at seven and 165 at eight. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
     },
     {
       "id": "TOOL-003",
@@ -2371,6 +2372,8 @@
         "casino/core/autoplay.py",
         "web/core/autoplay.js",
         "web/admin.js",
+        "web/admin/administrators.js",
+        "web/styles.css",
         "web/admin/autoplay.js",
         "tests/unit/admin_autoplay_module.test.mjs"
       ],
@@ -10172,8 +10175,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-351-admin-lifecycle-rbac",
-      "changed_in": "issue-351-admin-lifecycle-rbac",
-      "notes": "Generic v1 creation and v2 user lifecycle updates cannot grant Admin; #351 is complete only after this exact-head PR passes review and merges."
+      "changed_in": "issue-1014-browser-json-process-safe",
+      "notes": "Generic v1 creation and v2 user lifecycle updates cannot grant Admin. Owner delegation controls remain bounded inside their responsive card for every governed locale and viewport even when eligible-account labels are long; transient password values stay absent from retained evidence."
     },
     {
       "id": "ADMIN-034",
@@ -13286,6 +13289,7 @@
         "tests/api_case_inventory.json",
         "tests/api_case_inventory.py",
         "tests/browser_case_inventory.json",
+        "tests/browser_process_state.py",
         "tests/browser_sharding.py",
         "tests/browser_timing.py",
         "tests/cases/api/admin_guest.py",
@@ -13328,14 +13332,15 @@
         "tests/cases/browser/__init__.py",
         "tests/cases/__init__.py",
         "tests/cicd_deployment_tests.py",
+        "tests/storage_ledger_cache_tests.py",
         "tests/newest_game_browser_coverage_tests.py",
         "tests/pwa_tests.py",
         "tests/unit/request_latency_benchmark_tests.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-727-browser-sharding-extraction",
-      "changed_in": "issue-722-browser-affinity-split",
-      "notes": "The baselines record count and sorted IDs rather than set-only digests. Runtime validation checks 123 Browser registrations across tests/runner.py plus reviewed tests/cases/browser area owners before Browser startup and 209 non-Browser API-lane registrations across tests/runner.py plus tests/cases/api before any listener or provider opens. The CI policy independently compares both dimensions, rejects duplicate, ordering, type, and packet-shape drift, binds the 15 governance registrations to one ordered owner, binds the twelve listener-free atomic game-state registrations to a second ordered owner without transferring fresh-process execution, binds the four listener-free storage and legacy-settlement registrations to a third ordered owner without transferring fresh-process execution, binds the five listener-free Admin policy registrations to a fourth ordered owner without transferring fresh-process execution, binds the 24 listener-free game lifecycle registrations to a fifth ordered owner without transferring fresh-process execution, binds the eight listener-free authentication infrastructure registrations plus their focused unittest adapters to a sixth ordered owner, binds the one listener-free feedback registration plus its focused unittest adapter to a seventh ordered owner, binds the three listener-free Guest Trial registrations to an eighth ordered owner, binds the one live Guest/Admin registration to a ninth owner without transferring listener or validator state, binds the seven listener-free edge, release, monitor, deployment, poller, and qualification registrations plus their focused unittest adapters to a tenth ordered owner, binds the four Roulette motion, game presentation, and wallet timing registrations to an eleventh ordered owner while the runner retains unittest and Node subprocess execution, binds the three documentation, settings, and receipt registrations plus their focused unittest adapters to a twelfth ordered owner, binds the five specialized-game and cross-game-polish registrations plus their focused unittest adapters to a thirteenth ordered owner, binds the eight player-foundation registrations plus their focused unittest adapters to a fourteenth ordered owner while the runner retains Node subprocess execution, binds the twelve listener-free catalog-expansion registrations plus their focused unittest adapters to a fifteenth ordered owner, binds the five listener-free security and UI-foundation registrations plus their focused unittest adapters to a sixteenth ordered owner, binds the three listener-free Keno and Admin-foundation registrations plus their focused unittest adapters to a seventeenth ordered owner, binds the seven listener-free GameCore and mobile-foundation registrations plus their six focused unittest adapters to an eighteenth ordered owner, binds the five listener-free harness-foundation registrations plus their five focused unittest adapters to a nineteenth ordered owner, binds the six live infrastructure registrations plus their callbacks to a twentieth ordered owner while the runner retains listener, reset, login, and teardown lifecycle, binds the nineteen default/explicit-live storage and MySQL registrations plus their focused adapters to a twenty-first ordered owner while the runner retains CLI selector and callback wiring, binds the thirty live session/wallet-integrity registrations plus their shared-state predicates to a twenty-second ordered owner while the runner retains backend setup, process restart, and listener lifecycle, binds the seven post-restart platform-foundation registrations plus their explicit callbacks to a twenty-third ordered owner while the runner retains backend restart, listener, and mutable setup lifecycle, binds the ten core live-game, cross-player isolation, and Admin registrations plus their explicit callbacks to a twenty-fourth ordered owner while the runner retains HTTP, mutable state, listener, and teardown lifecycle, and binds the final live authentication registration plus its explicit callback to a twenty-fifth ordered owner while the runner retains listener, login, session mutation, and teardown lifecycle. Cross-file Browser discovery expands each reviewed Browser area owner at its exact implementation delegation point, preserving permanent registration order and complete producer-consumer affinity. tests/run_tests.py is now an under-300-line compatibility shim with the byte-identical CLI and selected helper exports; tests/runner.py owns discovery, execution, listener, reporting, reset/login, and teardown behavior, and implementation-level policy tests read that owner directly. The 123 Browser and 209 API baselines, fail-closed shard union, affinity validation, affected-game selection, and workflow command paths remain unchanged. Issue #721 derives every synthetic shard filename, packet field, CLI argument, and expected matrix from one BROWSER_SHARD_COUNT constant; one named assertion is the sole workflow-alignment failure when that constant changes. Issue #722 splits the three former Browser mega-groups into public Auth, authenticated session, lobby shell, Roulette, Slots, Keno, table games, feedback/Admin operations, and Admin presentation families. Each family owns an explicit canonical bootstrap and atomic non-owner skip; the feedback producer remains beside its Admin consumer, and practice-opponent funding remains beside its localized Admin consumer. The reviewed duration model lowers the maximum packed load from 219 seconds at six shards to 187 at seven and 165 at eight while every count, sorted-ID, source-order, affinity, and shard-union gate remains fail closed."
+      "changed_in": "issue-1014-browser-json-process-safe",
+      "notes": "The baselines record count and sorted IDs rather than set-only digests. Runtime validation checks 128 Browser registrations across tests/runner.py plus reviewed tests/cases/browser area owners before Browser startup and 210 non-Browser API-lane registrations across tests/runner.py plus tests/cases/api before any listener or provider opens. The CI policy independently compares both dimensions, rejects duplicate, ordering, type, and packet-shape drift, and keeps every extracted owner bound to its reviewed registration sequence without transferring listener, provider, reset, login, or teardown lifecycle. Cross-file Browser discovery expands each reviewed Browser area owner at its exact implementation delegation point, preserving permanent registration order and complete producer-consumer affinity. tests/run_tests.py remains the under-300-line compatibility shim with the byte-identical CLI; tests/runner.py owns discovery, execution, listener, reporting, reset/login, and teardown behavior. Issue #1014 gives every Browser invocation a unique disposable JSON data root inherited by its child server, routes parent fixture writes through a fresh provider over current durable bytes, and proves malformed or divergent journal bytes still fail closed. The runner passes its authenticated player identity explicitly to stateful fixture owners, and affected-game selection skips a deselected Roulette, Slots, or Keno family only as one complete affinity unit while fail-closed shard union and ownership validation remain unchanged. Two consecutive unfiltered 128-case runs complete without manual data cleanup. Issue #721 derives every synthetic shard filename, packet field, CLI argument, and expected matrix from one BROWSER_SHARD_COUNT constant; one named assertion is the sole workflow-alignment failure when that constant changes. Issue #722 retains the public Auth, authenticated session, lobby shell, Roulette, Slots, Keno, table games, feedback/Admin operations, and Admin presentation families, with feedback beside its Admin consumer and practice-opponent funding beside its localized Admin consumer."
     },
     {
       "id": "TOOL-020",

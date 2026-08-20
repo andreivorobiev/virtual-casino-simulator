@@ -1739,7 +1739,11 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Keep each permanent identity under exactly one executable source owner.
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
         # Require one delegation at the group's exact historical position.
-        self.assertEqual(runner_source.count("browser_roulette_slots_keno.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,visual_matrix,save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots)"), 1)
+        self.assertEqual(runner_source.count("browser_roulette_slots_keno.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,browser_save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots)"), 1)
+        # Require every parent fixture to use the server-authenticated runner identity instead of browser-global fallback state. (issue #1014)
+        self.assertEqual(owner_source.count("=browser_player_id"), 5)
+        # Reject the historical localStorage/default-human identity fallback from the fixture owner.
+        self.assertNotIn("casino.currentPlayerId", owner_source)
         # Require one exact owner guard and one exact skip for each reduced contiguous group.
         for group_name in expected_groups:
             # Keep every producer/consumer family behind one owner decision.
@@ -1757,7 +1761,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject any accidental case execution on a shard that owns none of the reduced groups.
         reject_case = lambda *_args: self.fail("non-owner executed a Roulette/Slots/Keno case")
         # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
-        roulette_slots_keno.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 18))
+        roulette_slots_keno.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 19))
         # Require one ordered skip for each exact contiguous reduced group.
         self.assertEqual(skipped_groups, ["roulette", "slots", "keno"])
 
@@ -1784,7 +1788,11 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             # Keep each permanent identity under exactly one executable source owner.
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
         # Require one delegation at the group's exact historical position.
-        self.assertEqual(runner_source.count("browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)"), 1)
+        self.assertEqual(runner_source.count("browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,casino_config.DATA_DIR,browser_player_id,visual_matrix,browser_save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,browser_write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)"), 1)
+        # Require Operations degradation to target the invocation-scoped provider root instead of checkout data. (issue #1014)
+        self.assertIn("players_path=browser_data_dir/'players.json'", owner_source)
+        # Reject the historical checkout-relative fixture mutation from the extracted owner.
+        self.assertNotIn("ROOT/'data'/'players.json'", owner_source)
         # Require one exact owner decision and one exact skip for every reduced contiguous family.
         for group_name in expected_groups:
             # Resolve ownership once before any setup can mutate browser state.
@@ -1802,7 +1810,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject any accidental case execution on a shard that does not own the complete group.
         reject_case = lambda *_args: self.fail("non-owner executed a Bingo/Admin case")
         # Execute the non-owner path with every page dependency absent so setup access fails the test immediately.
-        bingo_admin.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 29))
+        bingo_admin.run_cases(reject_case, lambda group_name: False, skipped_groups.append, *([None] * 30))
         # Require one ordered skip for each exact contiguous reduced family.
         self.assertEqual(skipped_groups, ["table_games", "feedback_admin", "admin_presentation"])
 
@@ -1888,6 +1896,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         affinity_groups = ast.literal_eval(affinity_node.value)
         # Require every producer/consumer group introduced by the controller repair.
         self.assertEqual(set(affinity_groups), {"auth_backend_pwa", "guest_lifecycle", "auth_public", "auth_session", "lobby_shell", "roulette", "slots", "keno", "table_games", "feedback_admin", "admin_presentation"})
+        # Locate the reviewed game-to-affinity declaration used only for detector-scoped Browser runs. (issue #1014)
+        game_affinity_node = next(node for node in sharding_tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_GAME_AFFINITY_GROUPS" for target in node.targets))
+        # Require only complete single-game Roulette, Slots, and Keno families to be detector-selectable.
+        self.assertEqual(ast.literal_eval(game_affinity_node.value), {"roulette": "roulette", "slots": "slots", "keno": "keno"})
         # Keep the independent semantic-color matrix outside every legacy producer/consumer affinity group.
         self.assertNotIn("BR-GAME-COLOR-001", {case_id for group_case_ids in affinity_groups.values() for case_id in group_case_ids})
         # Validate every group against exact case identity and one-shard ownership.
@@ -2264,8 +2276,12 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         mapping_node = next(node for node in sharding_tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_GAME_ACCEPTANCE_CASES" for target in node.targets))
         # Read only the literal game-to-case mapping.
         game_cases = ast.literal_eval(mapping_node.value)
-        # Keep shared cases and the one selected game's dedicated case.
-        expected = [case_id for case_id in case_ids if case_id not in set(game_cases.values()) or case_id == game_cases["acey_deucey"]]
+        # Derive exact selection through the production classifier so game-owned affinity families cannot drift from the aggregate oracle.
+        expected = browser_runner_module.browser_expected_case_ids({"acey_deucey"})
+        # Require the selected game's dedicated case to remain present.
+        self.assertIn(game_cases["acey_deucey"], expected)
+        # Require every unselected Roulette, Slots, and Keno affinity member to be absent atomically.
+        self.assertFalse(set(expected) & {case_id for group_name in ("roulette", "slots", "keno") for case_id in browser_runner_module.BROWSER_CASE_AFFINITY_GROUPS[group_name]})
         # Compute the exact governed ownership declarations from the sole test oracle.
         shard_sets = browser_runner_module.browser_shard_case_sets(BROWSER_SHARD_COUNT)
         # Create one disposable complete-shard result packet.
@@ -2320,6 +2336,33 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             self.assertNotEqual(duplicate_owner.returncode, 0, duplicate_owner.stdout + duplicate_owner.stderr)
             # Pin the fixed declaration diagnostic.
             self.assertIn("invalid owned_cases", duplicate_owner.stdout)
+
+    # Prove a single affected game skips every unselected single-game affinity family before setup executes. (issue #1014)
+    def test_affected_game_selection_skips_complete_game_affinities(self):
+        # Import the listener-free runner so production discovery and selection stay single-sourced.
+        from tests import runner as browser_runner_module
+        # Select Big Six Wheel exactly like the affected-game workflow argument.
+        selected = browser_runner_module.browser_expected_case_ids({"big_six_wheel"})
+        # Require the dedicated Big Six case and a common security case to remain selected.
+        self.assertIn("BR-BIG-SIX-001", selected)
+        # Require shared cross-game qualification to remain present rather than over-filtering the suite.
+        self.assertIn("BR-SEC-PREVIEW-001", selected)
+        # Inspect each reviewed single-game stateful family independently.
+        for group_name in ("roulette", "slots", "keno"):
+            # Require the complete family to be absent, never only one producer or consumer.
+            self.assertFalse(set(selected) & set(browser_runner_module.BROWSER_CASE_AFFINITY_GROUPS[group_name]), group_name)
+            # Require the guarded owner predicate to report deselection before any setup body can execute.
+            original_games = browser_runner_module.BROWSER_AFFECTED_GAMES
+            # Preserve shared runner state even when one group assertion fails.
+            try:
+                # Install the exact detector-owned game set used by this proof.
+                browser_runner_module.BROWSER_AFFECTED_GAMES = {"big_six_wheel"}
+                # Require the complete guarded owner to take its skip path.
+                self.assertFalse(browser_runner_module.browser_shard_owns_group(group_name), group_name)
+            # Restore the imported runner's global selection for every later test.
+            finally:
+                # Rebind the exact prior selection object.
+                browser_runner_module.BROWSER_AFFECTED_GAMES = original_games
 
     # Prove ordinary sharding does not alter formal 50k or sustained Baccarat governance.
     def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
