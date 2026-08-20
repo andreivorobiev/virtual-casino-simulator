@@ -23,6 +23,8 @@ const { BET_IDS, ROLL_REVEAL_MS, createDecorativeDice, isDefinitiveRollRejection
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 // Read the production browser module as UTF-8 text for boundary assertions.
 const source = await readFile(path.join(root, 'web', 'games', 'chuck_a_luck.js'), 'utf8');
+// Read the extracted game stylesheet for representative selector preservation.
+const stylesheet = await readFile(path.join(root, 'web', 'games', 'chuck_a_luck.css'), 'utf8');
 // Read the complete English game-owned resource domain.
 const english = JSON.parse(await readFile(path.join(root, 'web', 'i18n', 'en-US', 'games', 'chuck_a_luck.json'), 'utf8'));
 // Read the complete Russian game-owned resource domain.
@@ -132,4 +134,14 @@ test('module boundary remains game-local and primitive-backed', () => {
   assert.doesNotMatch(source, /\bsetTimeout\s*\(|\bsetInterval\s*\(|\brequestAnimationFrame\s*\(/); // Prohibit unmanaged route timers.
   assert.match(source, /post\(`\$\{API_ROOT\}\/rolls`, pendingPayload\)/); // Send the immutable retry payload without caller-selected identity.
   assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath/); // Keep authenticated identity owned by the session-bound router.
+});
+
+// Verify issue #718 delegates route ownership without changing the strict retry identity contract.
+test('CORE-034 shared lifecycle owns the Chuck-a-Luck route', () => {
+  // Require shared mount, busy, locale, external-style, identity, motion, and stale-session ownership.
+  for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "requestPrefix: 'cal'", "href: '/games/chuck_a_luck.css'", 'export function createRequestId', 'createMotionTimerScope', 'routeSession']) assert.ok(source.includes(marker), marker);
+  // Reject migrated route, busy, locale-subscription, and opaque inline-style owners.
+  for (const duplicate of ['let root =', 'let rolling =', 'unsubscribeLocale', 'function ensureStyles', 'const ROUTE_CSS', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(source.includes(duplicate), false, duplicate);
+  // Require representative controls, stage, dice, data, responsive, and reduced-motion rules in external CSS.
+  for (const selector of ['.cal-shell {', '.cal-layout {', '.cal-roll {', '.cal-repeat {', '.cal-stage {', '.cal-dice-tray {', '.cal-die.is-rolling {', '.cal-data {', '.cal-paytable {', '.cal-history-row {', '@media (max-width: 1200px)', '@media (max-width: 560px)', '@media (prefers-reduced-motion: reduce)']) assert.ok(stylesheet.includes(selector), selector);
 });

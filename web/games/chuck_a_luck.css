@@ -1,0 +1,86 @@
+/* Contain the complete Chuck-a-Luck route inside the shared game outlet. */
+.cal-shell { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; width: 100%; height: 100%; min-width: 0; min-height: 0; color: var(--text, #f5ead6); }
+
+/* Keep localized heading and phase status compact above the three-zone table. */
+.cal-header { display: flex; align-items: end; justify-content: space-between; gap: 16px; min-width: 0; padding: 2px; }
+.cal-header h1 { margin: 0; color: var(--gold, #f2c55c); font-family: var(--font-display, serif); font-size: clamp(30px, 3.5vw, 50px); line-height: 1; }
+.cal-header p { max-width: 760px; margin: 7px 0 0; color: var(--muted, #b8c8c1); }
+.cal-phase { flex: 0 0 auto; min-width: 132px; padding: 8px 12px; border: 1px solid var(--gold); border-radius: 999px; background: var(--felt); color: var(--text); text-align: center; font-weight: 850; }
+
+/* Keep the dice stage dominant between the wager and information rails. */
+.cal-layout { display: grid; grid-template-columns: minmax(220px, .72fr) minmax(460px, 1.9fr) minmax(220px, .72fr); gap: 14px; min-width: 0; min-height: 0; }
+.cal-panel { min-width: 0; border-color: var(--gold); border-radius: 18px; background: linear-gradient(150deg, var(--felt), var(--bg)); }
+.cal-controls { display: grid; align-content: start; gap: 12px; }
+.cal-controls fieldset { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.cal-controls legend { margin-bottom: 8px; color: var(--text); font-weight: 850; }
+.cal-help, .cal-retry-note { margin: 0; color: var(--muted, #b8c8c1); font-size: 13px; line-height: 1.4; }
+
+/* Align six bounded wagers with readable payout summaries and touch targets. */
+.cal-wager { display: grid; grid-template-columns: minmax(0, 1fr) 88px; gap: 8px; align-items: center; min-height: 46px; }
+.cal-wager-copy { display: grid; gap: 2px; min-width: 0; }
+.cal-wager-copy strong { color: var(--text); }
+.cal-wager-copy small { color: var(--muted, #b8c8c1); line-height: 1.25; }
+.cal-wager input { width: 100%; min-width: 0; min-height: 42px; }
+.cal-wager-total { display: flex; justify-content: space-between; gap: 8px; min-height: 42px; padding: 10px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 11px; background: rgba(255, 255, 255, .04); }
+.cal-roll { width: 100%; min-height: 48px; border: 0; border-radius: 12px; background: #a7192b; color: #fff; font-weight: 900; }
+.cal-roll:disabled { opacity: .58; cursor: not-allowed; }
+.cal-error { min-height: 38px; margin: 0; color: var(--bad); line-height: 1.35; }
+.cal-repeat { width: 100%; min-height: 46px; border: 1px solid var(--gold); border-radius: 12px; background: transparent; color: var(--gold); font-weight: 800; }
+.cal-repeat:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Present three code-native dice as the dominant authoritative stage. */
+.cal-stage { display: grid; grid-template-rows: auto minmax(220px, 1fr) auto; gap: 14px; overflow: hidden; place-items: stretch; }
+.cal-stage-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cal-stage-heading h2 { margin: 0; color: var(--text); }
+.cal-total-chip { min-width: 92px; padding: 8px 10px; border: 1px solid rgba(255, 255, 255, .14); border-radius: 999px; text-align: center; }
+.cal-dice-tray { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(10px, 2vw, 24px); place-items: center; width: 100%; min-width: 0; padding: clamp(16px, 3vw, 34px); border: 2px solid var(--gold); border-radius: 24px; background: radial-gradient(circle at 50% 40%, var(--felt2), var(--felt) 68%); box-shadow: inset 0 0 54px rgba(255, 230, 155, .05); }
+.cal-die { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); width: min(100%, 150px); aspect-ratio: 1; padding: 15%; border: 3px solid #cfb97b; border-radius: 22%; background: linear-gradient(145deg, #fffdf2, #e7dcb9); box-shadow: 0 16px 28px rgba(0, 0, 0, .38), inset 0 -8px 16px rgba(91, 65, 19, .13); transform: translateZ(0); }
+.cal-die.is-rolling { animation: cal-tumble .56s cubic-bezier(.2, .75, .25, 1) infinite alternate; }
+.cal-pip { align-self: center; justify-self: center; width: clamp(8px, 1.2vw, 17px); aspect-ratio: 1; border-radius: 50%; background: #152019; box-shadow: inset 0 2px 2px rgba(255, 255, 255, .25); }
+.cal-pip--1 { grid-area: 1 / 1; } .cal-pip--2 { grid-area: 1 / 2; } .cal-pip--3 { grid-area: 1 / 3; }
+.cal-pip--4 { grid-area: 2 / 1; } .cal-pip--5 { grid-area: 2 / 2; } .cal-pip--6 { grid-area: 2 / 3; }
+.cal-pip--7 { grid-area: 3 / 1; } .cal-pip--8 { grid-area: 3 / 2; } .cal-pip--9 { grid-area: 3 / 3; }
+.cal-result { display: grid; gap: 5px; align-content: center; min-height: 92px; padding: 13px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 14px; background: rgba(0, 0, 0, .18); text-align: center; }
+.cal-result strong { color: var(--text); font-size: 19px; }
+.cal-result span { color: var(--muted, #b8c8c1); }
+
+/* Keep paytable and history in the single governed desktop data rail. */
+.cal-data { display: grid; align-content: start; gap: 16px; min-height: 0; overflow: auto; }
+.cal-data section { display: grid; gap: 8px; }
+.cal-data h2 { margin: 0; color: var(--text); }
+.cal-paytable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cal-paytable th, .cal-paytable td { padding: 8px 4px; border-bottom: 1px solid rgba(255, 255, 255, .1); text-align: left; vertical-align: top; }
+.cal-history { display: grid; gap: 7px; }
+.cal-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 9px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 10px; background: rgba(0, 0, 0, .14); }
+.cal-history-row span:last-child { font-weight: 800; }
+.cal-shell button:focus-visible, .cal-shell input:focus-visible { outline: 3px solid var(--gold, #f2c55c); outline-offset: 2px; }
+
+/* Animate preview-only dice with transform and opacity. */
+@keyframes cal-tumble { 0% { opacity: .72; transform: translateY(-7px) rotate(-5deg) scale(.96); } 100% { opacity: 1; transform: translateY(7px) rotate(5deg) scale(1.03); } }
+
+/* Collapse to document-scrolling control, stage, and data regions below desktop. */
+@media (max-width: 1200px) {
+  .cal-shell { height: auto; }
+  .cal-layout { grid-template-columns: 1fr; }
+  .cal-controls { order: 1; }
+  .cal-stage { order: 2; min-height: 470px; }
+  .cal-data { order: 3; overflow: visible; }
+}
+
+/* Preserve complete touch controls without horizontal overflow on narrow screens. */
+@media (max-width: 560px) {
+  .cal-header { align-items: start; flex-direction: column; }
+  .cal-phase { min-width: 0; }
+  .cal-panel { padding: 12px; }
+  .cal-wager { grid-template-columns: minmax(0, 1fr) 82px; }
+  .cal-stage { min-height: 390px; }
+  .cal-dice-tray { gap: 8px; padding: 14px; }
+  .cal-die { padding: 13%; border-width: 2px; }
+  .cal-pip { width: 9px; }
+  .cal-history-row { grid-template-columns: 1fr; }
+}
+
+/* Remove decorative motion when the platform preference requests it. */
+@media (prefers-reduced-motion: reduce) {
+  .cal-shell * { animation: none !important; scroll-behavior: auto !important; transition: none !important; }
+}
