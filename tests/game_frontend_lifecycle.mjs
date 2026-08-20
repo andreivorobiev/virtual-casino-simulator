@@ -288,5 +288,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let spinPending =', 'localeUnsubscribe', 'function ensureStyles', 'style.textContent', 'onLocaleChange', 'initI18n', 'ROUTE_CSS']) assert.equal(bigSixSource.includes(duplicate), false, duplicate);
 // Require representative layout, wheel, reduced-motion, controls, history, and responsive rules to survive extraction.
 for (const selector of ['.big-six-wheel {', '.big-six-wheel__layout {', '.big-six-wheel__wheel {', '.big-six-wheel__wheel[data-reduced-motion="true"] {', '.big-six-wheel__spin {', '.big-six-wheel__repeat {', '.big-six-wheel__history {', '@media (max-width: 1500px)', '@media (max-width: 1200px)', '@media (max-width: 560px)']) assert.ok(bigSixCss.includes(selector), selector);
+// Read the exact twelfth-adopter source for per-slice duplicate-helper deletion evidence.
+const luckyGridSource = await readFile(new URL('../web/games/lucky_grid.js', import.meta.url), 'utf8');
+// Read Lucky Grid's formatted external stylesheet for ownership and tooling visibility.
+const luckyGridCss = await readFile(new URL('../web/games/lucky_grid.css', import.meta.url), 'utf8');
+// Require Lucky Grid to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "requestPrefix: 'lg'", "href: '/games/lucky_grid.css'"]) assert.ok(luckyGridSource.includes(marker), marker);
+// Reject Lucky Grid's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let revealBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(luckyGridSource.includes(duplicate), false, duplicate);
+// Require representative route, grid, cell-state, selection, control, result, repeat, and responsive rules to survive extraction.
+for (const selector of ['.lucky {', '.lg-grid {', '.lg-cell[aria-pressed="true"] {', '.lg-cell.prize {', '.lg-cell.matched {', '.lg-chip[aria-pressed="true"] {', '.lg-go {', '.lg-result {', '.lg-repeat {', '@media (max-width: 900px)']) assert.ok(luckyGridCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

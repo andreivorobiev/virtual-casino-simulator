@@ -3359,6 +3359,60 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.remove_listener('request',record_spin_request)
                 # Record Boule's dedicated affected-game lifecycle and real two-spin case.
                 run_case('BR-BOULE-001',['BOULE-001','BOULE-002','CORE-034','TEST-130','TEST-185','TEST-248'],boule_browser_acceptance)
+                # Exercise Lucky Grid through its real reveal endpoint, reload recovery, and repeated picks.
+                def lucky_grid_browser_acceptance():
+                    # Retain each bounded mutation payload so two visible actions prove distinct exactly-once identities.
+                    reveal_payloads=[]
+                    # Record only the exact game-owned POST route and its bounded public request body.
+                    def record_reveal_request(request):
+                        # Append one payload for each Lucky Grid mutation request.
+                        if request.method=='POST' and request.url.endswith('/api/v1/games/lucky-grid/reveals'): reveal_payloads.append(request.post_data_json)
+                    # Observe both real actions for exact request-count and identity evidence.
+                    page.on('request',record_reveal_request)
+                    # Keep listener cleanup deterministic even when any browser assertion fails closed.
+                    try:
+                        # Enter the catalog-owned route and wait for the stable Lucky Grid marker.
+                        page.get_by_test_id('nav-lucky_grid').click(); page.get_by_test_id('lucky-grid').wait_for(timeout=WAIT_MS * 2)
+                        # Restore the governed primary desktop viewport and route top after preceding shared cases.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate('window.scrollTo(0,0)'); page.wait_for_timeout(100)
+                        # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                        style_link=page.locator('link#lucky-grid-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/lucky_grid.css'
+                        # Prove the migrated asset loaded while preserving the dominant stage, 300-pixel rail, and three-by-three board.
+                        assert page.get_by_test_id('lucky-grid').evaluate("el => { const route=getComputedStyle(el); const tracks=route.gridTemplateColumns.split(' ').map(parseFloat); const grid=getComputedStyle(el.querySelector('.lg-grid')); const cells=[...el.querySelectorAll('.lg-cell')]; return route.display==='grid' && tracks.length===2 && tracks[0]>tracks[1] && Math.round(tracks[1])===300 && grid.display==='grid' && grid.gridTemplateColumns.split(' ').length===3 && cells.length===9; }")
+                        # Capture the pre-action wallet so a stale rendered value cannot satisfy settlement evidence accidentally.
+                        before=newest_game_wallet_value()
+                        # Select exactly the first three cells through the real accessible controls.
+                        for cell in (0,1,2): page.locator(f'[data-cell="{cell}"]').click()
+                        # Observe the first real reveal response while the default five-token stake commits.
+                        with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/lucky-grid/reveals'),timeout=WAIT_MS * 2) as first_info: page.get_by_test_id('lucky-grid-go').click()
+                        # Bind the visible wallet to the first reveal's authoritative player snapshot.
+                        first_expected=float(first_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=first_expected,timeout=WAIT_MS * 2)
+                        # Wait for the result and repeat control to become terminal after the fixed 600 ms presentation.
+                        page.wait_for_function("() => { const result=document.querySelector('[data-testid=\"lucky-grid-result\"]'); const repeat=document.querySelector('[data-testid=\"lucky-grid-repeat\"]'); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",timeout=WAIT_MS * 2)
+                        # Require the response-owned wallet while allowing every legitimate outcome.
+                        assert isinstance(before,(int,float)) and newest_game_wallet_value()==first_expected
+                        # Reload the canonical deep link and require server-owned repeat and wallet recovery without another mutation.
+                        page.reload(wait_until='networkidle'); page.get_by_test_id('lucky-grid').wait_for(timeout=WAIT_MS * 2); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=first_expected,timeout=WAIT_MS * 2)
+                        # Require the exact route and repeat control to survive reload.
+                        assert page.url.split('?',1)[0].endswith('/games/lucky_grid') and page.get_by_test_id('lucky-grid-repeat').is_enabled() and newest_game_wallet_value()==first_expected
+                        # Observe one post-reload repeat response while the recovered picks and stake re-fire independently.
+                        with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/lucky-grid/reveals'),timeout=WAIT_MS * 2) as second_info: page.get_by_test_id('lucky-grid-repeat').click()
+                        # Bind the second visible wallet to the repeated reveal's exact authoritative player snapshot.
+                        second_expected=float(second_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=second_expected,timeout=WAIT_MS * 2)
+                        # Wait for the second decorative reveal to terminalize and restore the repeat action.
+                        page.wait_for_function("() => { const result=document.querySelector('[data-testid=\"lucky-grid-result\"]'); const repeat=document.querySelector('[data-testid=\"lucky-grid-repeat\"]'); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",timeout=WAIT_MS * 2)
+                        # Require exactly two intended actions with identical picks and stake but distinct bounded request identities.
+                        assert len(reveal_payloads)==2 and all(item.get('picks')==[0,1,2] and item.get('stake')==5 and isinstance(item.get('request_id'),str) and item['request_id'] for item in reveal_payloads) and reveal_payloads[0]['request_id']!=reveal_payloads[1]['request_id'],reveal_payloads
+                        # Capture twelfth-adopter after-pass evidence only after the second real reveal is visibly terminal.
+                        page.locator('#view').screenshot(path=str(screenshots/'after-pass-lucky-grid-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Return to the lobby for downstream Browser cases.
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+                    # Remove the exact observer before any downstream Browser case starts.
+                    finally:
+                        # Release the request observer even when the lifecycle proof fails closed.
+                        page.remove_listener('request',record_reveal_request)
+                # Record Lucky Grid's dedicated affected-game lifecycle and real two-reveal case.
+                run_case('BR-LUCKY-GRID-001',['LGRID-001','LGRID-002','CORE-034','TEST-124','TEST-248'],lucky_grid_browser_acceptance)
                 # Exercise Faro through its real deal endpoint and reload-safe recent-round state.
                 def faro_browser_acceptance():
                     # Bind exact external-style and ready-layout evidence before the real deal mutates the cards.

@@ -1,0 +1,190 @@
+/* Preserve Lucky Grid's dominant board and fixed desktop control rail. */
+.lucky {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  color: var(--text, #f5ead6);
+  align-items: start;
+}
+
+/* Center the interactive prize board and result feedback. */
+.lg-stage {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 12px;
+  min-width: 0;
+}
+
+/* Retain the exact three-by-three board within narrow viewports. */
+.lg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: min(300px, 74vw);
+}
+
+/* Preserve the neutral selectable cell geometry and affordance. */
+.lg-cell {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .06);
+  border: 2px solid rgba(255, 255, 255, .12);
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Keep selected cells visually distinct before reveal. */
+.lg-cell[aria-pressed="true"] {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(255, 59, 107, .5);
+  background: rgba(231, 189, 88, .14);
+}
+
+/* Mark revealed prizes the player did not match. */
+.lg-cell.prize {
+  background: radial-gradient(circle at 40% 34%, #fff3bd, #e7bd58);
+  color: #241006;
+}
+
+/* Mark matched prizes with the established semantic success treatment. */
+.lg-cell.matched {
+  background: radial-gradient(circle at 40% 34%, #bff0cf, #0f9c4c);
+  color: #052312;
+  box-shadow: 0 0 0 2px var(--brand);
+}
+
+/* Stack payout, stake, reveal, and repeat controls in the side rail. */
+.lg-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Retain the bordered translucent control-card treatment. */
+.lg-card {
+  padding: 14px;
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, .22);
+}
+
+/* Preserve compact uppercase card headings. */
+.lg-card h3 {
+  margin: 0 0 10px;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+/* Retain compact payout-row spacing and emphasis. */
+.lg-pays {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Keep each match count aligned with its multiplier. */
+.lg-pays div {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Emphasize the immutable payout multipliers. */
+.lg-pays span:last-child {
+  color: var(--gold);
+}
+
+/* Permit stake chips to wrap without horizontal overflow. */
+.lg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Preserve the established bounded stake control geometry. */
+.lg-chip {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border-soft, rgba(255, 255, 255, .18));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .05);
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* Highlight only the selected stake. */
+.lg-chip[aria-pressed="true"] {
+  border-color: #e7bd58;
+  background: rgba(231, 189, 88, .16);
+  color: var(--text);
+}
+
+/* Preserve the full-width primary reveal action. */
+.lg-go {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* Make a blocked reveal visibly unavailable. */
+.lg-go:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+/* Reserve stable space for ready and settlement feedback. */
+.lg-result {
+  min-height: 24px;
+  font-size: 15px;
+  color: var(--text);
+  text-align: center;
+}
+
+/* Emphasize the authoritative terminal net amount. */
+.lg-result .net {
+  font-weight: 900;
+}
+
+/* Preserve the full-width secondary repeat control. */
+.lg-repeat {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* Make an unavailable repeat visibly inert. */
+.lg-repeat:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* Stack the route without changing controls at the established breakpoint. */
+@media (max-width: 900px) {
+  /* Let the board precede the full-width control panel on compact screens. */
+  .lucky {
+    grid-template-columns: 1fr;
+  }
+}
