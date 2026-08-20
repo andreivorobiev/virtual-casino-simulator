@@ -14,6 +14,10 @@ VERSION_MANIFEST = json.loads((ROOT/'modules'/'module-manifest.json').read_text(
 EXPECTED_MODULE_ROWS = [{'module':module,'revision':revision} for module,revision in VERSION_MANIFEST['modules'].items()]
 # Add the repository root so direct module imports work from this script.
 sys.path.insert(0, str(ROOT))
+# Import the Browser-only environment and fixture-write owner before casino modules capture runtime paths. (TEST-242)
+from tests.browser_process_state import prepare_browser_data_environment, run_fresh_json_fixture_write
+# Allocate one disposable Browser persistence root before importing configuration or provider singletons.
+_BROWSER_DATA_OWNER=prepare_browser_data_environment(sys.argv,os.environ)
 # Import Blackjack helpers so deterministic API-suite checks can cover table rules.
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
 # Import Slots rules so deterministic browser evidence is derived from the authoritative twenty-payline table.
@@ -36,6 +40,8 @@ from casino import config as casino_config
 from casino.core.request_player import resolve_authenticated_player
 # Import isolated state writers for deterministic game and Guest Trials browser setup.
 from casino.core.state_store import save_player_game_state, write_json
+# Import the JSON provider and injection seam used only to refresh parent-process Browser fixture writes.
+from casino.core.storage import JsonStorageProvider, set_provider_for_tests, storage_provider_name
 # Import stable public error classes for focused guest authorization assertions.
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import pure Browser discovery, affinity packing, and shard verification outside the compatibility runner. (TEST-242)
@@ -225,6 +231,25 @@ def login_default_user(base):
     SESSION_TOKEN=session['token']
     return SESSION_TOKEN
 
+# Execute one parent-owned Browser fixture write against current child-server JSON state. (TEST-242)
+def browser_parent_fixture_write(callback):
+    # Preserve an explicitly selected non-JSON provider without installing a mismatched local provider.
+    if storage_provider_name()!='json':
+        # Delegate once because only JSON owns the append-only registry cache addressed by issue #1014.
+        return callback()
+    # Reopen the configured Browser data root before validating and executing the fixture mutation exactly once.
+    return run_fresh_json_fixture_write(callback,data_dir=casino_config.DATA_DIR,provider_factory=JsonStorageProvider,install_provider=set_provider_for_tests)
+
+# Publish one player-game fixture through the fresh parent-provider boundary.
+def browser_save_player_game_state(game_id,player_id,state):
+    # Preserve the established state_store schema and timestamp behavior inside the cache-free callback.
+    return browser_parent_fixture_write(lambda: save_player_game_state(game_id,player_id,state))
+
+# Publish one ordinary Browser fixture document through the same current-byte boundary.
+def browser_write_json(path,data):
+    # Preserve the established provider-owned document mapping inside the cache-free callback.
+    return browser_parent_fixture_write(lambda: write_json(path,data))
+
 # Define the start_server function used by this module.
 def start_server():
     # Set port to the value needed for the next operation.
@@ -365,6 +390,10 @@ def browser_shard_owns(case_id):
 
 # Report whether the active shard owns every producer and consumer in one declared group.
 def browser_shard_owns_group(group_name):
+    # Treat a detector-deselected single-game family exactly like an unowned packed group.
+    if browser_sharding.affinity_group_deselected(group_name,BROWSER_AFFECTED_GAMES):
+        # Force the reviewed owner to advance its complete contiguous range without setup or callbacks.
+        return False
     # Delegate the pure group predicate while the runner retains active state.
     return browser_sharding.shard_owns_group(BROWSER_SHARD_CASES,group_name)
 
@@ -5400,9 +5429,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Execute the browser lifecycle restoration gate.
                 run_case('BR-ROUTE-RESTORE-001',['CORE-022','MOTION-002'],route_restoration)
                 # Delegate the complete Roulette, autoplay, Slots, and Keno affinity chain without transferring shared page ownership.
-                browser_roulette_slots_keno.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,visual_matrix,save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots)
+                browser_roulette_slots_keno.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,browser_save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots)
                 # Delegate the complete Bingo-through-Admin affinity chain without transferring shared Browser lifecycle.
-                browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)
+                browser_bingo_admin.run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,casino_config.DATA_DIR,browser_player_id,visual_matrix,browser_save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,browser_write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots)
                 if console_errors or page_errors or http_errors: raise AssertionError('Browser errors: '+str(console_errors+page_errors+http_errors))
             # Handle the expected failure path for the protected logic.
             except Exception:

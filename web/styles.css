@@ -3110,6 +3110,20 @@ h3 {
   color: var(--gold);
 }
 
+/* Bound owner-only delegation fields when a state-rich Browser run supplies long eligible-account labels. (ADMIN-033) */
+[data-testid="admin-administrator-grant"] label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Keep native delegation controls inside the Admin card without truncating their selected accessible value. */
+[data-testid="admin-administrator-grant"] :is(input, select, button) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* Own the dense managed-account table inside one named keyboard-scrollable region. (USER-004) */
 .admin-users-table-scroll {
   width: 100%;

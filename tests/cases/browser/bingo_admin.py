@@ -14,7 +14,7 @@ from tests.browser_timing import WAIT_MS
 
 
 # Execute the reduced table-game, Admin-core, and Admin-presentation families under independent shard owners.
-def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots):
+def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_data_dir,browser_player_id,visual_matrix,save_player_game_state,blackjack_engine,wait_for_bingo_terminal_render,require_bingo_terminal_auto_payload,require_bingo_terminal_reload_payload,guest_analytics,prepare_admin_feedback_draft,save_admin_feedback_triage,collect_normal_admin_navigation,assert_route_i18n,auth_core,DEFAULT_AUTH_EMAIL,DEFAULT_AUTH_PASSWORD,EXPECTED_MODULE_ROWS,VERSION_MANIFEST,read_i18n_json,write_json,shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,screenshots):
     # Resolve each contiguous affinity exactly once so source guards and skip accounting stay reviewable.
     table_games_owner=browser_shard_owns_group('table_games')
     # Keep feedback production and every consuming Admin operational case on one owner.
@@ -1215,7 +1215,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Define real-backend Operations states, localization, responsive layout, and evidence.
         def admin_operations_browser():
             # Cache the isolated backend's primary storage document for reversible degradation.
-            players_path=ROOT/'data'/'players.json'; unavailable_path=ROOT/'data'/'players.operations-browser-unavailable.json'
+            players_path=browser_data_dir/'players.json'; unavailable_path=browser_data_dir/'players.operations-browser-unavailable.json'
             # Define every governed Admin viewport for this Operations surface.
             viewports={'desktop-primary':{'width':1920,'height':1080},'desktop-compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900}}
             # Exercise both installed locales on the same authenticated real backend.
@@ -1441,9 +1441,11 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                 # Exercise every governed responsive viewport without allowing horizontal page overflow.
                 for viewport_id,viewport in account_viewports.items():
                     # Apply the exact matrix viewport and wait for layout to settle.
-                    page.set_viewport_size(viewport); page.wait_for_timeout(50)
-                    # Require all three privilege cards to remain contained and password values to remain absent.
-                    assert page.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1") and page.locator('#administrator-password').input_value()==''
+                    page.set_viewport_size(viewport); page.wait_for_timeout(75)
+                    # Capture exact containment, transient-secret state, and any widest escaping element after the responsive render settles.
+                    administrator_geometry=page.evaluate("""() => { const escaping=[...document.querySelectorAll('*')].map(element => { const rect=element.getBoundingClientRect(); return {testid:element.getAttribute('data-testid'),id:element.id,tag:element.tagName,right:Math.round(rect.right),width:Math.round(rect.width)}; }).filter(row => row.right > innerWidth + 1).sort((left,right) => right.right-left.right).slice(0,5); return {scrollWidth:document.documentElement.scrollWidth,innerWidth,passwordEmpty:document.querySelector('#administrator-password')?.value === '',escaping}; }""")
+                    # Require all three privilege cards to remain contained and password values to remain absent with actionable evidence.
+                    assert administrator_geometry['scrollWidth']<=administrator_geometry['innerWidth']+1 and administrator_geometry['passwordEmpty'],{'locale':locale,'viewport':viewport_id,**administrator_geometry}
                     # Capture exact-head after-pass privilege-management evidence.
                     game_evidence(f'after-pass-admin-administrators-{locale}-{viewport_id}.png','BR-ADMIN-USERS-001',['administrator_list','owner_reauthentication','immutable_audit'],locale,viewport_id)
             # Restore English and desktop geometry through one completed render before revoking the temporary grant.

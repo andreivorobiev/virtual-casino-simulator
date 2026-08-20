@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.71.1
+- application: 9.71.2
 - core: 10.11.0
 - mobile: 1.0.0
 - ledger: 9.1.2
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.6
-- tests: 1.114.14
-- docs: 1.110.14
+- tests: 1.114.15
+- docs: 1.110.15
 - contracts: 1.62.6
 - tooling: 1.43.4
 - commenting_policy: 2.1.0
@@ -185,7 +185,7 @@ Historical source baseline: 9.1.0
 - **DOC-015** (Documentation) - PASS: Known limitations are documented when applicable.
 - **DOC-016** (Documentation) - PASS: Parallel-agent workflow documentation defines coordinator and worker responsibilities for humans, Claude, Codex, and other automation.
 - **TOOL-001** (Tooling) - PASS: Agent task packets and pull-request templates preserve author, coordinator, merge executor, scope, file ownership, validation, dependency, exact-head, and handback context.
-- **TOOL-002** (Tooling) - PASS: GitHub Actions exposes fail-closed sharded qualification: Suite 100 runs on pull requests, Suite 300 or 500 is manually selected, and Browser pull requests select only unambiguously affected game-owned cases while shared, unknown, protected-main, release, and manual inputs retain complete coverage.
+- **TOOL-002** (Tooling) - PASS: GitHub Actions exposes fail-closed sharded qualification: Suite 100 runs on pull requests, Suite 300 or 500 is manually selected, and Browser pull requests select only unambiguously affected dedicated cases and complete single-game affinity families while shared, unknown, protected-main, release, and manual inputs retain complete coverage.
 - **TOOL-003** (Tooling) - PASS: Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, an authoritative complete disposable Git index for exact-HEAD API validation, fail-closed private-content exclusion, extracted-host command inventory enforcement, protected publication gate, and application-only prior-artifact rollback mapping.
 - **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
 - **BOT-002** (Bots) - PASS: Game modules must not import bot strategy modules.

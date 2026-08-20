@@ -14,7 +14,7 @@ from tests.browser_timing import WAIT_MS
 
 
 # Execute each game-local producer/consumer family under its deterministic shard owner.
-def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,visual_matrix,save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots):
+def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,ROOT,browser_player_id,visual_matrix,save_player_game_state,roulette_i18n_failure_diagnostic,slots_engine,keno_engine,shot,viewport_shot,region_evidence,game_evidence,console_errors,page_errors,http_errors,evidence_commit,evidence_branch,screenshots):
     # Run only the stateful Roulette producer/consumer chain on its declared owner.
     if browser_shard_owns_group('roulette'):
         # Normalize viewport and motion state before mounting Roulette independently of prior groups.
@@ -804,7 +804,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Build the persisted spin shape consumed by the normal Slots route loader.
             payline_spin={'round_id':'slot-payline-acceptance','timestamp':'2026-07-20T00:00:00Z','stops':[0,0,0,0,0],'grid':payline_grid,'active_lines':20,'line_bet':1,'cost':20,**payline_result,'free_spin':False,'free_spins_remaining':0,'progressive_eligible':True,'progressive_before':slots_engine.PROGRESSIVE_SEED,'progressive_contribution':0.2,'progressive_hit':0.0,'progressive':slots_engine.PROGRESSIVE_SEED+0.2}
             # Resolve the authenticated browser player before writing isolated deterministic game state.
-            payline_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+            payline_player=browser_player_id
             # Persist the authoritative result through the same state store the Slots route reads after refresh.
             save_player_game_state('slots',payline_player,{'last_spins':[payline_spin],'progressive':slots_engine.PROGRESSIVE_SEED+0.2,'progressive_basis':{'active_lines':slots_engine.PROGRESSIVE_QUALIFYING_LINES,'line_bet':slots_engine.PROGRESSIVE_QUALIFYING_LINE_BET},'free_spins':0})
             # Reload the real route so the overlay, result text, and history all recover from one authoritative state.
@@ -1016,7 +1016,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Define the complete governed Slots economics and visual-state matrix for SLOT-036.
         def slots_economics_visual_matrix():
             # Resolve the authenticated player whose isolated Slots state drives deterministic evidence.
-            matrix_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+            matrix_player=browser_player_id
             # Read every exact viewport from the authoritative visual matrix.
             matrix_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
             # Require the complete governed viewport vocabulary before any evidence capture.
@@ -1293,7 +1293,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
         def keno_edge_containment():
             # Resolve the authenticated player whose disposable Keno state drives deterministic edge evidence.
-            edge_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+            edge_player=browser_player_id
             # Define the exact governed viewport matrix from the visual standard.
             edge_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
             # Pin the complete eight-state by two-locale by four-viewport evidence count.
@@ -1422,8 +1422,12 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     assert float(edge_ticket_body['amount'])==0.01 and edge_ticket_body['spots']==[1,5,10,71,80],edge_ticket_body
                     # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
                     save_player_game_state('keno',edge_player,final_edge_state)
-                    # Reconstruct the route from authoritative history and wait for all twenty final balls.
-                    page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=WAIT_MS)
+                    # Reconstruct the route from authoritative history before reapplying this matrix cell's visible locale.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
+                    # Select the evidence locale again because an earlier full-suite durable account preference may intentionally win during reload.
+                    page.get_by_test_id('shell-locale-select').select_option(edge_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale)
+                    # Require the child server to expose the parent-written authoritative draw through the reconstructed public route.
+                    page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=WAIT_MS)
                     # Require the seeded result to render every draw plus all caught cells and the latest bottom-right edge.
                     assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==20 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
                     # Require the restored live amount and enabled repeat action to match the settled authoritative ticket.
@@ -1466,8 +1470,10 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     save_player_game_state('keno',edge_player,final_edge_state)
                     # Reconstruct the route independently from the persisted result instead of reusing the result DOM.
                     page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
-                    # Wait for the requested locale and all authoritative result balls after reconstruction.
-                    page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=WAIT_MS)
+                    # Reapply the matrix locale because the durable account preference correctly owns each reload in an unfiltered run.
+                    page.get_by_test_id('shell-locale-select').select_option(edge_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale)
+                    # Require the child server to expose the same parent-written draw after a second independent reconstruction.
+                    page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=WAIT_MS)
                     # Read the exact state returned by the frozen public route after reconstruction.
                     restored_edge_state=page.request.get(base+'/api/v1/games/keno/state').json()['data']['state']
                     # Resolve the exact authoritative terminal draw and ticket used by the restored surface.
@@ -1497,7 +1503,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Prove restored ticket authority, repeat, autoplay, and aligned history through public controls. (issue #472)
         def keno_economics_route_behavior():
             # Resolve the authenticated player whose isolated state drives this current-route proof.
-            behavior_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+            behavior_player=browser_player_id
             # Build one settled result whose amount intentionally differs from the Keno default.
             settled_spots=[2,4,6,8,10]
             # Apply the exact production one-cent payout expression for the no-catch fixture.
@@ -1635,7 +1641,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Verify the board height remains stable from selection to final result.
             assert abs(keno_selection_box['height']-keno_result_box['height'])<2
             # Resolve the browser shell's active player id before seeding focused evidence.
-            keno_singular_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+            keno_singular_player=browser_player_id
             # Seed deterministic one-catch Keno state so singular copy is proven without relying on a random draw.
             keno_singular_state={'open_tickets':[],'last_draws':[{'round_id':'keno-singular-copy','timestamp':'2026-07-19T00:00:00Z','drawn':list(range(1,21)),'results':[{'ticket':{'ticket_id':'keno-one-catch','player_id':keno_singular_player,'spots':[1],'amount':1,'source':'browser-test','created_at':'2026-07-19T00:00:00Z'},'catches':[1],'catch_count':1,'multiplier':keno_engine.PAYTABLE[1][1],'payout':round(1.0*keno_engine.PAYTABLE[1][1],2)}]}]}
             # Persist the focused state through the same test data store used by the browser server.
