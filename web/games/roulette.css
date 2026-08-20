@@ -1,0 +1,975 @@
+/* Roulette-owned premium route presentation extracted for lifecycle-owned external loading. */
+.roulette-premium {
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+  gap:12px;
+  height:100%;
+  min-height:0;
+  container-type:inline-size;
+}
+.roulette-premium .roulette-header {
+  display:grid;
+  align-items:end;
+  min-height:66px;
+}
+.roulette-premium .roulette-kicker {
+  margin:0 0 2px;
+  color:var(--muted);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.14em;
+}
+.roulette-premium h1 {
+  margin:0;
+  color:var(--gold);
+  font-family:var(--font-display);
+  font-size:46px;
+  line-height:.92;
+  text-shadow:0 2px 22px rgba(255,217,120,.2);
+}
+.roulette-premium .game-layout {
+  grid-template-columns:340px minmax(0,1fr) 355px;
+  height:100%;
+  min-height:0;
+}
+.roulette-premium .panel {
+  border-color:var(--gold);
+  box-shadow:inset 0 1px rgba(255,255,255,.035),0 18px 44px rgba(0,0,0,.24);
+}
+.roulette-premium .control-rail,.roulette-premium .details-drawer {
+  padding:13px;
+  background:linear-gradient(155deg,rgba(20,10,34,.97),rgba(20,10,34,.96));
+  scrollbar-color:var(--gold) transparent;
+}
+.roulette-premium .game-title {
+  margin:0 0 10px;
+  color:var(--gold);
+  font-size:24px;
+}
+.roulette-control-section {
+  margin-top:10px;
+}
+.roulette-control-section h3 {
+  margin:0 0 6px;
+  color:var(--gold);
+  text-transform:uppercase;
+  font-size:12px;
+  letter-spacing:.08em;
+}
+.roulette-settings {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+.roulette-settings label {
+  display:grid;
+  gap:5px;
+  min-width:0;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.11);
+  border-radius:10px;
+  background:rgba(255,255,255,.035);
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+}
+.roulette-settings select,.roulette-call-input {
+  width:100%;
+  min-width:0;
+  min-height:34px;
+  border-color:var(--border);
+  background:var(--felt);
+}
+.roulette-premium .chip-row {
+  gap:5px;
+}
+.roulette-premium .chip {
+  width:42px;
+  height:42px;
+  min-height:42px;
+  font-size:10px;
+  box-shadow:0 5px 13px rgba(0,0,0,.42);
+}
+.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+}
+.roulette-fast-grid button,.roulette-call-grid button,.roulette-secondary-actions button {
+  min-height:42px;
+  padding:6px 7px;
+  border-color:rgba(255,255,255,.14);
+  border-radius:8px;
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));
+  font-size:11px;
+}
+.roulette-fast-grid button[data-outbtn="red"] {
+  background:linear-gradient(180deg,#b72835,#75141d);
+}
+.roulette-fast-grid button[data-outbtn="black"] {
+  background:linear-gradient(180deg,#252a28,#080b0a);
+}
+.roulette-advanced {
+  margin-top:9px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:rgba(0,0,0,.14);
+}
+.roulette-advanced summary {
+  padding:9px 10px;
+  color:var(--gold);
+  cursor:pointer;
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.roulette-advanced[open] summary {
+  border-bottom:1px solid var(--border);
+}
+.roulette-advanced-body {
+  padding:8px;
+}
+.roulette-call-number {
+  display:grid;
+  gap:5px;
+  margin:8px 0;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+}
+.roulette-control-plane {
+  margin-top:8px;
+  padding:10px;
+  border:1px solid rgba(255,59,107,.32);
+  border-radius:10px;
+  background:linear-gradient(135deg,rgba(20,10,34,.17),rgba(0,0,0,.12));
+}
+.roulette-control-plane b {
+  display:block;
+  color:var(--gold);
+}
+.roulette-control-plane span {
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:11px;
+}
+.roulette-premium #botPanel {
+  overflow:visible;
+}
+.roulette-premium #botPanel .mini-table {
+  font-size:10px;
+}
+.roulette-premium .game-stage {
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+  gap:10px;
+  padding:13px;
+  overflow:hidden;
+  background:radial-gradient(circle at 42% 10%,rgba(20,10,34,.25),transparent 42%),linear-gradient(150deg,rgba(20,10,34,.98),rgba(20,10,34,.98));
+}
+.roulette-stage-toolbar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:58px;
+  padding:0 2px;
+}
+.roulette-stage-toolbar .eyebrow {
+  margin:0;
+  color:var(--muted);
+  font-size:11px;
+  letter-spacing:.08em;
+}
+.roulette-stage-toolbar h2 {
+  margin:2px 0 0;
+  color:var(--gold);
+  font-family:var(--font-display);
+  font-size:30px;
+  line-height:1;
+}
+.roulette-stage-toolbar button {
+  min-width:112px;
+  min-height:42px;
+}
+.roulette-stage-toolbar .primary {
+  border-color:var(--gold);
+  background:linear-gradient(180deg,#d6323d,#8e1822);
+  box-shadow:0 10px 24px rgba(128,14,24,.28),inset 0 1px rgba(255,255,255,.2);
+}
+.roulette-premium .roulette-stage {
+  grid-template-columns:minmax(300px,360px) minmax(0,1fr);
+  gap:12px;
+  align-items:stretch;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+}
+.roulette-premium .wheel-card {
+  position:relative;
+  display:grid;
+  grid-template-rows:minmax(0,1fr) 118px;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+  border:1px solid var(--gold);
+  border-radius:14px;
+  background:radial-gradient(circle at 50% 34%,rgba(20,10,34,.28),transparent 42%),linear-gradient(180deg,var(--felt),var(--bg));
+}
+.roulette-premium .wheel-card::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,.06),transparent 24%,transparent 74%,rgba(218,175,70,.045));
+}
+.roulette-premium .wheel-card.reveal-glow {
+  box-shadow:inset 0 0 64px rgba(244,194,79,.13),0 18px 38px rgba(0,0,0,.36);
+}
+.roulette-premium .wheel-card.result-glow {
+  box-shadow:inset 0 0 70px rgba(244,194,79,.18),0 18px 38px rgba(0,0,0,.36);
+}
+.roulette-wheel-frame {
+  position:relative;
+  z-index:1;
+  display:grid;
+  place-items:center;
+  min-height:0;
+  padding:14px 8px 4px;
+  perspective:850px;
+}
+.roulette-wheel-frame::after {
+  content:"";
+  position:absolute;
+  left:15%;
+  right:15%;
+  bottom:5%;
+  height:10%;
+  border-radius:50%;
+  background:rgba(0,0,0,.42);
+  filter:blur(14px);
+  z-index:-1;
+}
+.roulette-premium .roulette-wheel {
+  width:min(100%,360px);
+  max-width:360px;
+  filter:drop-shadow(0 22px 26px rgba(0,0,0,.58));
+}
+.roulette-wheel .wheel-rim-highlight {
+  opacity:.68;
+}
+.roulette-wheel .wheel-ball {
+  filter:drop-shadow(0 3px 3px rgba(0,0,0,.75));
+}
+.roulette-premium .wheel-ring.spinning {
+  animation:roulettePremiumWheelSpin var(--roulette-reveal-ms,16500ms) linear;
+  will-change:transform;
+}
+.roulette-premium .ball-dot.spinning {
+  animation:roulettePremiumBallSpin var(--roulette-reveal-ms,16500ms) linear;
+  will-change:transform;
+}
+.roulette-wheel .wheel-orient,.roulette-wheel .ball-orbit,.roulette-wheel .ball-radial {
+  transform-origin:150px 150px;
+  will-change:transform;
+}
+.roulette-wheel .ball-trail {
+  opacity:0;
+  transition:opacity .4s;
+}
+.roulette-premium .ball-dot.spinning .ball-trail {
+  opacity:.55;
+}
+.roulette-wheel .ball-radial.descending {
+  animation:roulettePremiumBallDescent var(--rou-descent-ms,1500ms) linear forwards;
+}
+.roulette-wheel .ball-dot.settled {
+  animation:rouletteBallSettle .52s cubic-bezier(.2,.8,.2,1);
+}
+.roulette-wheel .ball-dot.parked {
+  opacity:.72;
+}
+.roulette-premium.just-settled .fixed-result.win .roulette-result-pocket {
+  animation:rouletteResultBloom .72s cubic-bezier(.2,.8,.2,1);
+}
+.roulette-premium.just-settled .table-cell.result-cell,.roulette-premium.just-settled .outside-cell.result-cell {
+  animation:rouletteCellReveal .9s cubic-bezier(.2,.8,.2,1);
+}
+.roulette-premium.just-settled .roulette-history-pills span.result-cell {
+  animation:roulettePillPop .5s cubic-bezier(.2,.8,.2,1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .roulette-premium .wheel-ring.spinning,.roulette-premium .ball-dot.spinning {
+  animation:none;
+}
+.roulette-wheel .ball-dot.settled {
+  animation:none;
+}
+.roulette-spin-orbit::after {
+  animation:none;
+}
+.roulette-wheel .wheel-orient,.roulette-wheel .ball-orbit,.roulette-wheel .ball-radial {
+  transition:none!important;
+  animation:none!important;
+}
+.roulette-wheel .ball-trail {
+  opacity:0!important;
+}
+.roulette-premium.just-settled .fixed-result.win .roulette-result-pocket,.roulette-premium.just-settled .table-cell.result-cell,.roulette-premium.just-settled .outside-cell.result-cell,.roulette-premium.just-settled .roulette-history-pills span.result-cell {
+  animation:none;
+}
+
+}
+.roulette-premium .fixed-result {
+  position:relative;
+  z-index:2;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:12px;
+  min-height:100px;
+  margin:0 12px 12px;
+  padding:12px 14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:11px;
+  background:linear-gradient(135deg,rgba(0,0,0,.36),rgba(255,255,255,.025));
+}
+.roulette-result-pocket {
+  display:grid;
+  place-items:center;
+  width:58px;
+  height:58px;
+  border:2px solid rgba(255,238,183,.68);
+  border-radius:50%;
+  color:#fff5d5;
+  font-family:var(--font-display);
+  font-size:26px;
+  font-weight:1000;
+  box-shadow:0 8px 18px rgba(0,0,0,.42),inset 0 0 18px rgba(255,255,255,.12);
+}
+.roulette-result-copy {
+  display:grid;
+  gap:3px;
+  min-width:0;
+}
+.roulette-result-copy b {
+  color:var(--gold);
+  font-size:16px;
+}
+.roulette-result-copy span {
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.35;
+}
+.roulette-spin-orbit {
+  position:relative;
+  width:52px;
+  height:52px;
+  border:2px solid var(--border);
+  border-radius:50%;
+}
+.roulette-spin-orbit::after {
+  content:"";
+  position:absolute;
+  inset:6px;
+  border-top:3px solid var(--gold);
+  border-radius:50%;
+  animation:rouletteOrbit 1s linear infinite;
+}
+.roulette-premium .fixed-result.win {
+  border-color:var(--gold);
+  background:linear-gradient(135deg,rgba(117,25,31,.34),rgba(222,177,70,.09));
+}
+.roulette-table-shell {
+  display:grid;
+  place-items:start;
+  width:100%;
+  min-width:0;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+  border-radius:13px;
+}
+.roulette-premium .roulette-table-board {
+  flex:none;
+  width:760px;
+  height:590px;
+  border:2px solid var(--gold);
+  border-radius:12px;
+  background:radial-gradient(circle at 45% 14%,rgba(255,255,255,.09),transparent 38%),radial-gradient(circle at 50% 115%,rgba(0,0,0,.5),transparent 55%),linear-gradient(145deg,var(--felt2),var(--felt));
+  box-shadow:inset 0 0 60px rgba(0,0,0,.5),inset 0 0 0 6px rgba(255,217,120,.05),0 14px 30px rgba(0,0,0,.28);
+}
+.roulette-table-board.roulette-board-dimmed {
+  filter:saturate(.72) brightness(.78);
+}
+.roulette-premium .table-cell,.roulette-premium .outside-cell {
+  border-color:rgba(255,245,218,.55);
+  border-radius:5px;
+  box-shadow:inset 0 1px rgba(255,255,255,.1),inset 0 -6px 12px rgba(0,0,0,.22);
+}
+.roulette-premium .table-cell.red {
+  background:linear-gradient(165deg,#c22433,#7c1220 78%);
+}
+.roulette-premium .table-cell.black {
+  background:linear-gradient(165deg,#2b2f2e,#0a0d0c 78%);
+}
+.roulette-premium .table-cell.green {
+  background:linear-gradient(165deg,#0f9152,#065a31 78%);
+}
+.roulette-premium .outside-cell {
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.26));
+  font-size:12px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.roulette-premium .table-cell button:hover,.roulette-premium .outside-cell button:hover {
+  box-shadow:inset 0 0 22px rgba(255,218,119,.28),inset 0 0 0 1px rgba(255,218,119,.5);
+}
+.roulette-premium .bet-chip {
+  border:3px dashed #fff6da;
+  background:radial-gradient(circle,#fffdf4 0 24%,#e4b12f 25% 54%,#8a5c07 55% 72%,#5d3c03 73%);
+  box-shadow:0 5px 12px rgba(0,0,0,.55),inset 0 0 0 2px rgba(90,50,0,.55),inset 0 2px 3px rgba(255,255,255,.6);
+}
+.roulette-result-pocket.red {
+  background:linear-gradient(160deg,#c22433,#6d0f1b);
+}
+.roulette-result-pocket.black {
+  background:linear-gradient(160deg,#333836,#070908);
+}
+.roulette-result-pocket.green {
+  background:linear-gradient(160deg,#0f9152,#04492a);
+}
+.roulette-premium .table-cell.result-cell,.roulette-premium .outside-cell.result-cell {
+  outline:3px solid var(--gold);
+  box-shadow:inset 0 0 26px rgba(255,217,120,.4),0 0 22px rgba(255,217,120,.3);
+}
+.roulette-result-marker {
+  position:absolute;
+  right:5px;
+  bottom:3px;
+  color:var(--gold);
+  font-size:9px;
+  font-weight:1000;
+}
+.roulette-premium .spot {
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border:0;
+  background:transparent;
+  opacity:1;
+}
+.roulette-premium .spot::after {
+  content:"";
+  width:15px;
+  height:15px;
+  border:1px solid rgba(255,217,120,.66);
+  border-radius:50%;
+  background:rgba(255,217,120,.38);
+  opacity:.32;
+}
+.roulette-premium .spot:hover::after,.roulette-premium .spot:focus-visible::after {
+  opacity:1;
+}
+.roulette-premium .roulette-table-board.hide-spots .spot {
+  visibility:hidden;
+  pointer-events:none;
+  opacity:0;
+}
+.roulette-premium .bet-chip {
+  animation:rouletteChipPop .18s ease-out;
+}
+@keyframes rouletteChipPop {
+  from {
+  transform:scale(.82);
+  opacity:.5;
+}
+to {
+  transform:scale(1);
+  opacity:1;
+}
+
+}
+@keyframes rouletteOrbit {
+  to {
+  transform:rotate(360deg);
+}
+
+}
+@keyframes roulettePremiumWheelSpin {
+  0% {
+  transform:rotate(0deg);
+}
+5% {
+  transform:rotate(70.2deg);
+}
+10% {
+  transform:rotate(136.8deg);
+}
+15% {
+  transform:rotate(199.8deg);
+}
+20% {
+  transform:rotate(259.2deg);
+}
+25% {
+  transform:rotate(315deg);
+}
+30% {
+  transform:rotate(367.2deg);
+}
+35% {
+  transform:rotate(415.8deg);
+}
+40% {
+  transform:rotate(460.8deg);
+}
+45% {
+  transform:rotate(502.2deg);
+}
+50% {
+  transform:rotate(540deg);
+}
+55% {
+  transform:rotate(574.2deg);
+}
+60% {
+  transform:rotate(604.8deg);
+}
+65% {
+  transform:rotate(631.8deg);
+}
+70% {
+  transform:rotate(655.2deg);
+}
+75% {
+  transform:rotate(675deg);
+}
+80% {
+  transform:rotate(691.2deg);
+}
+85% {
+  transform:rotate(703.8deg);
+}
+90% {
+  transform:rotate(712.8deg);
+}
+95% {
+  transform:rotate(718.2deg);
+}
+100% {
+  transform:rotate(720deg);
+}
+
+}
+@keyframes roulettePremiumBallSpin {
+  0% {
+  transform:rotate(0deg) scale(1);
+}
+5% {
+  transform:rotate(-140.4deg) scale(1);
+}
+10% {
+  transform:rotate(-273.6deg) scale(1);
+}
+15% {
+  transform:rotate(-399.6deg) scale(1);
+}
+20% {
+  transform:rotate(-518.4deg) scale(1);
+}
+25% {
+  transform:rotate(-630deg) scale(1);
+}
+30% {
+  transform:rotate(-734.4deg) scale(1);
+}
+35% {
+  transform:rotate(-831.6deg) scale(1);
+}
+40% {
+  transform:rotate(-921.6deg) scale(1);
+}
+45% {
+  transform:rotate(-1004.4deg) scale(1);
+}
+50% {
+  transform:rotate(-1080deg) scale(1);
+}
+55% {
+  transform:rotate(-1148.4deg) scale(1);
+}
+60% {
+  transform:rotate(-1209.6deg) scale(1);
+}
+65% {
+  transform:rotate(-1263.6deg) scale(1);
+}
+70% {
+  transform:rotate(-1310.4deg) scale(1);
+}
+75% {
+  transform:rotate(-1350deg) scale(1);
+}
+80% {
+  transform:rotate(-1382.4deg) scale(1);
+}
+85% {
+  transform:rotate(-1407.6deg) scale(.98);
+}
+90% {
+  transform:rotate(-1425.6deg) scale(1.03);
+}
+95% {
+  transform:rotate(-1436.4deg) scale(1);
+}
+100% {
+  transform:rotate(-1440deg) scale(1);
+}
+
+}
+@keyframes rouletteBallSettle {
+  0% {
+  transform:scale(.72);
+  opacity:.35;
+}
+58% {
+  transform:scale(1.14);
+  opacity:1;
+}
+100% {
+  transform:scale(1);
+  opacity:1;
+}
+
+}
+@keyframes roulettePremiumBallDescent {
+  0% {
+  transform:translateY(0px);
+}
+46% {
+  transform:translateY(0px);
+}
+60% {
+  transform:translateY(12px);
+}
+70% {
+  transform:translateY(27px);
+}
+77% {
+  transform:translateY(18px);
+}
+85% {
+  transform:translateY(26px);
+}
+91% {
+  transform:translateY(21px);
+}
+96% {
+  transform:translateY(24.5px);
+}
+100% {
+  transform:translateY(24px);
+}
+
+}
+@keyframes rouletteResultBloom {
+  0% {
+  transform:scale(.6);
+  opacity:.2;
+}
+55% {
+  transform:scale(1.16);
+  opacity:1;
+}
+100% {
+  transform:scale(1);
+  opacity:1;
+}
+
+}
+@keyframes rouletteCellReveal {
+  0% {
+  filter:brightness(2.1);
+}
+100% {
+  filter:brightness(1);
+}
+
+}
+@keyframes roulettePillPop {
+  0% {
+  transform:scale(.4);
+  opacity:0;
+}
+70% {
+  transform:scale(1.18);
+  opacity:1;
+}
+100% {
+  transform:scale(1);
+  opacity:1;
+}
+
+}
+.roulette-drawer-title {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.roulette-drawer-title h3 {
+  margin:0;
+  color:var(--gold);
+  font-family:var(--font-display);
+  font-size:24px;
+}
+.roulette-phase-badge {
+  padding:4px 8px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:rgba(218,175,70,.07);
+  color:var(--muted);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.roulette-premium .stable-list {
+  min-height:92px;
+  max-height:154px;
+  overflow:auto;
+}
+.roulette-settlement-card {
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  min-height:66px;
+  margin:8px 0;
+  padding:11px;
+  border:1px solid var(--gold);
+  border-radius:10px;
+  background:linear-gradient(135deg,rgba(255,217,120,.1),rgba(118,25,31,.14));
+}
+.roulette-settlement-card b {
+  display:block;
+  color:var(--gold);
+}
+.roulette-settlement-card span {
+  display:block;
+  margin-top:0;
+  color:var(--gold);
+  font-size:15px;
+  font-weight:1000;
+}
+.roulette-spark-bars {
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  align-items:end;
+  gap:6px;
+  height:62px;
+  margin:7px 0;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:9px;
+  background:rgba(0,0,0,.18);
+}
+.roulette-spark-bars i {
+  display:block;
+  min-height:8px;
+  border-radius:5px 5px 2px 2px;
+  background:linear-gradient(180deg,#e8c760,#8e1822);
+  box-shadow:0 3px 8px rgba(0,0,0,.28);
+}
+.roulette-history-pills {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:7px;
+}
+.roulette-history-pills span {
+  display:grid;
+  place-items:center;
+  width:29px;
+  height:29px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:50%;
+  color:var(--text);
+  font-size:10px;
+}
+.roulette-history-pills span.red {
+  background:linear-gradient(160deg,#c22433,#7c1220);
+}
+.roulette-history-pills span.black {
+  background:linear-gradient(160deg,#2b2f2e,#0a0d0c);
+}
+.roulette-history-pills span.green {
+  background:linear-gradient(160deg,#0f9152,#065a31);
+}
+.roulette-history-pills span.result-cell {
+  border-color:#e8c760;
+  background:#e8c760;
+  color:#1f1400;
+  font-weight:1000;
+}
+.roulette-premium .details-drawer>h3,.roulette-premium .details-drawer>h4 {
+  color:var(--gold);
+  text-transform:uppercase;
+  font-size:11px;
+  letter-spacing:.08em;
+}
+.roulette-premium .details-drawer .mini-table {
+  font-size:11px;
+}
+.roulette-premium .details-drawer .stat-bars {
+  max-height:110px;
+  overflow:auto;
+}
+.roulette-premium .danger {
+  min-width:64px;
+}
+@media (min-width:1201px) {
+  .roulette-premium .stable-list,.roulette-premium .details-drawer .stat-bars {
+  max-height:none;
+  overflow:visible;
+}
+
+}
+@media (max-width:1800px) {
+  .roulette-premium .game-layout {
+  grid-template-columns:220px minmax(0,1fr) 235px;
+  gap:12px;
+}
+.roulette-premium .roulette-stage {
+  grid-template-columns:220px minmax(0,1fr);
+}
+.roulette-premium .wheel-card {
+  grid-template-columns:1fr;
+  grid-template-rows:minmax(0,1fr) 104px;
+}
+.roulette-premium .roulette-wheel {
+  max-width:214px;
+}
+.roulette-premium .control-rail,.roulette-premium .details-drawer {
+  padding:10px;
+}
+.roulette-premium .game-title,.roulette-drawer-title h3 {
+  font-size:20px;
+}
+.roulette-control-section {
+  margin-top:7px;
+}
+.roulette-advanced {
+  margin-top:6px;
+}
+.roulette-advanced summary {
+  padding:7px 8px;
+}
+.roulette-premium .stable-list {
+  min-height:70px;
+}
+
+}
+@media (min-width:1201px) and (max-width:1500px) and (max-height:820px) {
+  .roulette-premium .roulette-header {
+  min-height:54px;
+}
+.roulette-premium h1 {
+  font-size:40px;
+}
+
+}
+@media (max-width:1200px) {
+  .casino-page:has(.roulette-premium) {
+  overflow:auto;
+}
+.game-screen:has(.roulette-premium) {
+  height:auto;
+  min-height:calc(100vh - 146px);
+  overflow:visible;
+}
+.roulette-premium {
+  height:auto;
+}
+.roulette-premium .game-layout {
+  grid-template-columns:1fr;
+  grid-template-rows:auto;
+  height:auto;
+  overflow:visible;
+  contain:none;
+}
+.roulette-premium .game-stage {
+  grid-template-rows:auto auto;
+  overflow:visible;
+}
+.roulette-premium .roulette-stage {
+  grid-template-columns:1fr;
+  height:auto;
+  min-height:590px;
+  overflow:visible;
+}
+.roulette-premium .wheel-card {
+  grid-template-columns:300px minmax(0,1fr);
+  grid-template-rows:1fr;
+  height:auto;
+  min-height:300px;
+}
+.roulette-premium .roulette-wheel {
+  max-width:286px;
+}
+.roulette-table-shell {
+  height:590px;
+}
+.roulette-premium .control-rail,.roulette-premium .details-drawer {
+  overflow:visible;
+}
+
+}
+@media (max-width:900px) {
+  .roulette-premium .roulette-stage {
+  grid-template-columns:1fr;
+}
+.roulette-premium .wheel-card {
+  grid-template-columns:280px minmax(0,1fr);
+  grid-template-rows:1fr;
+  min-height:290px;
+}
+.roulette-premium .roulette-wheel {
+  max-width:270px;
+}
+.roulette-table-shell {
+  height:520px;
+}
+.roulette-premium h1 {
+  font-size:38px;
+}
+
+}
+@media (max-width:720px) {
+  .roulette-premium .wheel-card {
+  grid-template-columns:1fr;
+  grid-template-rows:minmax(260px,1fr) 110px;
+}
+.roulette-table-shell {
+  height:461px;
+}
+.roulette-settings {
+  grid-template-columns:1fr;
+}
+
+}
+@media (max-width:560px) {
+  .roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions {
+  grid-template-columns:1fr 1fr;
+}
+.roulette-table-shell {
+  height:340px;
+}
+.roulette-premium .fixed-result {
+  margin-inline:8px;
+}
+
+}

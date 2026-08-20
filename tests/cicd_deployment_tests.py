@@ -1545,8 +1545,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         stylesheet = self.workflow_text(ROOT / "web" / "styles.css")
         # Read Color Wheel's external route-owned stylesheet independently from the shared stylesheet.
         color_wheel_styles = self.workflow_text(ROOT / "web" / "games" / "color_wheel.css")
-        # Read Roulette's route-owned style source independently from other game modules.
-        roulette_source = self.workflow_text(ROOT / "web" / "games" / "roulette.js")
+        # Read Roulette's external route-owned stylesheet independently from other game modules.
+        roulette_styles = self.workflow_text(ROOT / "web" / "games" / "roulette.css")
         # Read Trente et Quarante's external card-style owner after its lifecycle-adopter extraction.
         trente_styles = self.workflow_text(ROOT / "web" / "games" / "trente_et_quarante.css")
         # Bind the source header to the permanent grep-policy explanation requested by issue #717.
@@ -1589,10 +1589,12 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         )
         # Check every formerly conflicting Roulette rule through one exact scoped oracle.
         for selector in roulette_selectors:
-            # Require the route source to retain exactly one owner for the semantic selector.
-            self.assertEqual(roulette_source.count(f"'{selector}{{"), 1)
-            # Isolate only the selected rule body from the compact production style table.
-            rule_body = roulette_source.split(f"'{selector}{{", 1)[1].split("}", 1)[0]
+            # Require the external route stylesheet to retain exactly one owner for the semantic selector.
+            matching_rules = re.findall(rf"(?m)^{re.escape(selector)}\s*\{{([^}}]*)\}}", roulette_styles)
+            # Reject missing or duplicate selector ownership after the lifecycle stylesheet extraction.
+            self.assertEqual(len(matching_rules), 1)
+            # Isolate only the selected external rule body for the priority assertion.
+            rule_body = matching_rules[0]
             # Reject all important priority from the former global-color cascade war.
             self.assertNotIn("!important", rule_body)
 

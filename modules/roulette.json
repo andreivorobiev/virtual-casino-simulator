@@ -1,9 +1,10 @@
 {
   "module": "roulette",
-  "version": "9.7.5",
+  "version": "9.7.6",
   "paths": [
     "casino/games/roulette/",
     "web/games/roulette.js",
+    "web/games/roulette.css",
     "web/i18n/en-US/games/roulette.json",
     "web/i18n/ru-RU/games/roulette.json"
   ],

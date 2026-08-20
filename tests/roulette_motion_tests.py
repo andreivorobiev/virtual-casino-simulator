@@ -18,8 +18,8 @@ import unittest
 
 # Resolve the repository root without depending on the process working directory.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-# Point at the tracked Roulette client module that owns the spin animation.
-ROULETTE_PATH = ROOT / "web" / "games" / "roulette.js"
+# Point at the tracked Roulette stylesheet that owns the spin animation.
+ROULETTE_PATH = ROOT / "web" / "games" / "roulette.css"
 # Assume the refresh rate the motion budget is expressed against.
 FRAMES_PER_SECOND = 60
 # Derive one pocket of angular width from the canonical 37-pocket European wheel.
@@ -28,24 +28,56 @@ POCKET_DEGREES = 360 / 37
 SPIN_SECONDS = 16.5
 
 
-# Read the tracked Roulette client once for every assertion.
+# Read the tracked Roulette stylesheet once for every assertion.
 def source() -> str:
-    # Return the module text without executing it.
+    # Return the stylesheet text without loading it in a browser.
     return ROULETTE_PATH.read_text(encoding="utf-8")
+
+
+# Extract one balanced CSS block by its exact declaration prefix.
+def css_block(declaration: str) -> str:
+    # Read the external stylesheet once for this focused lookup.
+    text = source()
+    # Locate the declaration whose block owns the guarded behavior.
+    declaration_index = text.find(declaration)
+    # Fail loudly when the tracked rule or at-rule has moved or disappeared.
+    if declaration_index < 0:
+        # Name the missing declaration in the deterministic assertion failure.
+        raise AssertionError(f"{declaration} is missing from the tracked Roulette stylesheet")
+    # Locate the opening brace after the exact declaration.
+    opening_index = text.find("{", declaration_index + len(declaration))
+    # Reject a malformed declaration instead of scanning into a later rule.
+    if opening_index < 0:
+        # Name the declaration that lacks a block opener.
+        raise AssertionError(f"{declaration} has no CSS block")
+    # Track nested keyframe and media-rule braces from the owning opener.
+    depth = 0
+    # Walk each remaining stylesheet character in source order.
+    for index in range(opening_index, len(text)):
+        # Increase nesting when a child rule begins.
+        if text[index] == "{":
+            # Count the newly opened block.
+            depth += 1
+        # Decrease nesting when the current rule ends.
+        elif text[index] == "}":
+            # Count the block that just closed.
+            depth -= 1
+            # Return only the declaration's body when its owner closes.
+            if depth == 0:
+                # Exclude the owning braces while preserving child rules.
+                return text[opening_index + 1:index]
+    # Reject unterminated CSS instead of returning a partial motion profile.
+    raise AssertionError(f"{declaration} CSS block is unterminated")
 
 
 # Extract the ordered (offset, degrees) stops of one named keyframe block.
 def keyframe_stops(name: str) -> list:
-    # Locate the tracked keyframe declaration.
-    block = re.search(r"@keyframes " + name + r"\{(.+?)\}'", source(), re.S)
-    # Fail loudly when the animation this suite guards has been renamed or removed.
-    if not block:
-        # Signal a missing animation rather than silently passing.
-        raise AssertionError(f"{name} keyframes are missing from the tracked Roulette client")
+    # Locate the tracked keyframe declaration in the external stylesheet.
+    block = css_block(f"@keyframes {name}")
     # Collect every percentage stop and its rotation.
     stops = []
     # Walk each declared stop in source order.
-    for percent, body in re.findall(r"(\d+)%\{([^}]*)\}", block.group(1)):
+    for percent, body in re.findall(r"(\d+)%\s*\{([^}]*)\}", block):
         # Read the rotation this stop declares.
         rotation = re.search(r"rotate\((-?[\d.]+)deg\)", body)
         # Keep only stops that actually declare a rotation.
@@ -122,14 +154,12 @@ class RouletteMotionTests(unittest.TestCase):
 
     # Require the keyframes rather than a timing function to carry the deceleration.
     def test_timing_function_does_not_reshape_the_curve(self) -> None:
-        # Read the tracked module once.
-        text = source()
         # Check both spin declarations.
         for selector in (".wheel-ring.spinning", ".ball-dot.spinning"):
             # Isolate each declaration so a failure names it.
             with self.subTest(selector=selector):
-                # Locate the tracked animation shorthand for this selector.
-                rule = re.search(re.escape(selector) + r"\{animation:([^;}]+)", text)
+                # Locate the tracked animation shorthand inside this external selector rule.
+                rule = re.search(r"animation:\s*([^;}]+)", css_block(selector))
                 # Require the declaration to exist.
                 self.assertIsNotNone(rule, f"{selector} no longer declares a spin animation")
                 # Require linear timing so the sampled keyframes above are the real motion profile.
@@ -137,18 +167,14 @@ class RouletteMotionTests(unittest.TestCase):
 
     # Require the spin to be suppressed for players who ask for reduced motion.
     def test_reduced_motion_disables_the_spin(self) -> None:
-        # Read the tracked module once.
-        text = source()
-        # Locate the reduced-motion block.
-        block = re.search(r"@media \(prefers-reduced-motion: reduce\)\{(.+?)\}'", text, re.S)
-        # Require the block to exist at all.
-        self.assertIsNotNone(block, "Roulette ships no reduced-motion rule for its spin animations")
+        # Locate the complete nested reduced-motion block in the external stylesheet.
+        block = css_block("@media (prefers-reduced-motion: reduce)")
         # Require every tracked decorative animation channel to be switched off inside it.
         for selector in ("wheel-ring.spinning", "ball-dot.spinning", "ball-dot.settled", "roulette-spin-orbit::after"):
             # Isolate each selector so a failure names it.
             with self.subTest(selector=selector):
                 # Require the selector to appear in the tracked reduced-motion block.
-                self.assertIn(selector, block.group(1))
+                self.assertIn(selector, block)
 
     # Require the curve to be sampled finely enough that linear interpolation stays smooth.
     def test_curve_is_finely_sampled(self) -> None:

@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.71.2
-- core: 10.11.0
+- core: 10.11.1
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.4
@@ -17,12 +17,12 @@ Historical source baseline: 9.1.0
 - admin: 1.20.13
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.7.5
+- roulette: 9.7.6
 - slots: 9.5.2
 - blackjack: 9.1.13
 - baccarat: 9.2.1
-- keno: 9.4.1
-- bingo: 9.3.8
+- keno: 9.4.2
+- bingo: 9.3.9
 - multi_hand_video_poker: 1.1.4
 - casino_war: 1.2.2
 - big_six_wheel: 1.2.1
@@ -34,8 +34,8 @@ Historical source baseline: 9.1.0
 - deuces_wild_video_poker: 1.1.6
 - scratch_cards: 1.1.5
 - sic_bo: 1.2.0
-- chuck_a_luck: 1.2.0
-- craps: 1.1.4
+- chuck_a_luck: 1.2.1
+- craps: 1.1.5
 - crown_and_anchor: 1.2.1
 - over_under_7: 1.2.1
 - plinko: 1.1.5
@@ -748,7 +748,7 @@ Historical source baseline: 9.1.0
 - **STORAGE-018** (Storage) - PASS: The state_store compatibility API is a thin provider facade: ordinary and strict reads, complete writes, and atomic updates unconditionally delegate key resolution, locking, recovery, validation, rollback, and publication to the selected storage provider. JSON preserves exact injectable filesystem paths, while non-filesystem providers reject paths outside the configured data root before any operation.
 - **TEST-247** (Tests) - PASS: Listener-free facade evidence runs the identical absent-read, write, ordinary read, atomic update, strict read, and strict update sequence through production JSON and transaction-shaped database providers; binds exact portable keys; proves injectable JSON paths; rejects out-of-root database paths; preserves rollback and concurrency; and statically prevents selector or sidecar-lock reintroduction. Disposable MySQL coverage continues to exercise production state_store callers against real provider rows.
 - **CORE-034** (Application) - PASS: Isolated browser games may delegate route ownership, asynchronous mount cancellation, busy-state coordination, lazy locale initialization and teardown, domain-bound translation, external same-origin stylesheet ownership, and opaque request identities to one shared lifecycle controller without changing game DOM, actions, settlement, localization, or visible layout.
-- **TEST-248** (Tests) - PASS: Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, Teen Patti, and Crown and Anchor browser cases preserve their real settled-round and repeat flows.
+- **TEST-248** (Tests) - PASS: Listener-free lifecycle evidence proves exact root and busy ownership, lazy primary and reviewed shared-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, Teen Patti, Crown and Anchor, Chuck-a-Luck, Bingo, Craps, Keno, and Roulette browser cases preserve their real settled-round and repeat flows.
 - **TEST-249** (Tests) - PASS: The standalone Deuces Wild diagnostic issues a distinct browser-readable CSRF cookie only after a valid session-bound bootstrap, accepts exact cookie/header pairs for real English and Russian deal, hold, and draw actions, and rejects anonymous bootstrap plus missing, mismatched, or cross-session proofs before game dispatch. Both focused and browser paths close their ephemeral non-production listener on success or failure.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.

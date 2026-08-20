@@ -10,8 +10,10 @@ import { renderAutoplay } from '../core/autoplay.js';
 import { speak, clickSound, rouletteRollSound } from '../core/voice.js';
 // Import bot helpers so bots continue to act through the documented controller path.
 import { botPanelHtml, playBotRound } from '../core/bots.js';
-// Import i18n helpers so visible Roulette-owned strings refresh without remounting gameplay state.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import the shared-domain translator used by Roulette's autoplay and bot control labels.
+import { t } from '../core/i18n.js';
+// Import the shared route lifecycle so root, locale, busy, style, and generation ownership stay centralized.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 // Import shared motion helpers so spin timers honor reduced motion and route-teardown cleanup. (MOTION-001, MOTION-002)
 import { prefersReducedMotion, createMotionTimerScope } from '../core/motion.js';
 // Import the seeded generator so decorative landing scatter stays deterministic per committed round.
@@ -23,8 +25,6 @@ const GAME_DOMAIN = 'games/roulette';
 const AUTOPLAY_DOMAIN = 'core/autoplay';
 // Store the shared bots domain so the collapsed controller label remains localized.
 const BOTS_DOMAIN = 'core/bots';
-// Store the local style element id so repeated mounts do not duplicate Roulette-only CSS.
-const PREMIUM_STYLE_ID = 'roulette-premium-style';
 // Store chip denominations so the control rail remains stable across rerenders.
 const CHIP_VALUES = [1, 5, 25, 100, 500, 1000];
 // Store the rendered premium hotspot diameter so inline positions stay centered on their canonical point.
@@ -55,132 +55,10 @@ export const WHEEL_EXTRA_TURNS = 5;
 export const BALL_EXTRA_TURNS = 18;
 // Export the minimum wrapper travel time so a slow backend can never produce a teleporting landing.
 export const MIN_LANDING_MS = 900;
-// Store premium Roulette CSS inside the owned module so shared foundation styles stay untouched.
-const PREMIUM_STYLE = [
-  '.roulette-premium{display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px;height:100%;min-height:0;container-type:inline-size;}', // Keep the complete table route stable inside the shared shell.
-  '.roulette-premium .roulette-header{display:grid;align-items:end;min-height:66px;}', // Keep the route title compact and free of internal lifecycle diagnostics.
-  '.roulette-premium .roulette-kicker{margin:0 0 2px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.14em;}', // Present the table category as a restrained casino eyebrow.
-  '.roulette-premium h1{margin:0;color:var(--gold);font-family:var(--font-display);font-size:46px;line-height:.92;text-shadow:0 2px 22px rgba(255,217,120,.2);}', // Give Roulette a strong but space-conscious route title.
-  '.roulette-premium .game-layout{grid-template-columns:340px minmax(0,1fr) 355px;height:100%;min-height:0;}', // Match the governed premium rail widths while leaving the center stage dominant at primary desktop size.
-  '.roulette-premium .panel{border-color:var(--gold);box-shadow:inset 0 1px rgba(255,255,255,.035),0 18px 44px rgba(0,0,0,.24);}', // Add consistent gold-edged table furniture depth.
-  '.roulette-premium .control-rail,.roulette-premium .details-drawer{padding:13px;background:linear-gradient(155deg,rgba(20,10,34,.97),rgba(20,10,34,.96));scrollbar-color:var(--gold) transparent;}', // Keep supporting rails dark, compact, and subordinate to gameplay.
-  '.roulette-premium .game-title{margin:0 0 10px;color:var(--gold);font-size:24px;}', // Make the control heading feel like table signage.
-  '.roulette-control-section{margin-top:10px;}', // Space control groups without changing their footprint across phases.
-  '.roulette-control-section h3{margin:0 0 6px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;}', // Use small gold rail labels instead of debug-like headings.
-  '.roulette-settings{display:grid;grid-template-columns:1fr 1fr;gap:7px;}', // Pair table settings to save vertical space.
-  '.roulette-settings label{display:grid;gap:5px;min-width:0;padding:8px;border:1px solid rgba(255,255,255,.11);border-radius:10px;background:rgba(255,255,255,.035);color:var(--muted);font-size:11px;font-weight:800;}', // Frame settings as compact dealer controls.
-  '.roulette-settings select,.roulette-call-input{width:100%;min-width:0;min-height:34px;border-color:var(--border);background:var(--felt);}', // Keep native fields inside the premium surface palette.
-  '.roulette-premium .chip-row{gap:5px;}', // Keep all chip values available without an oversized control band.
-  '.roulette-premium .chip{width:42px;height:42px;min-height:42px;font-size:10px;box-shadow:0 5px 13px rgba(0,0,0,.42);}', // Give chip selectors a physical table-chip scale.
-  '.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;}', // Keep secondary choices aligned in predictable lanes.
-  '.roulette-fast-grid button,.roulette-call-grid button,.roulette-secondary-actions button{min-height:42px;padding:6px 7px;border-color:rgba(255,255,255,.14);border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));font-size:11px;}', // Keep every high-frequency utility bet at the owner-approved 42px touch floor. (UX-018)
-  '.roulette-fast-grid button[data-outbtn="red"]{background:linear-gradient(180deg,#b72835,#75141d);}', // Give the red shortcut its casino color cue.
-  '.roulette-fast-grid button[data-outbtn="black"]{background:linear-gradient(180deg,#252a28,#080b0a);}', // Give the black shortcut its casino color cue.
-  '.roulette-advanced{margin-top:9px;border:1px solid var(--border);border-radius:10px;background:rgba(0,0,0,.14);}', // Contain advanced rules and automation without making them dominate the rail.
-  '.roulette-advanced summary{padding:9px 10px;color:var(--gold);cursor:pointer;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;}', // Present optional controls as intentional expandable casino features.
-  '.roulette-advanced[open] summary{border-bottom:1px solid var(--border);}', // Separate the advanced heading from its opened contents.
-  '.roulette-advanced-body{padding:8px;}', // Keep advanced bet controls comfortably inset.
-  '.roulette-call-number{display:grid;gap:5px;margin:8px 0;color:var(--muted);font-size:11px;font-weight:800;}', // Present the call number as a labeled table field.
-  '.roulette-control-plane{margin-top:8px;padding:10px;border:1px solid rgba(255,59,107,.32);border-radius:10px;background:linear-gradient(135deg,rgba(20,10,34,.17),rgba(0,0,0,.12));}', // Give bot and autoplay status a quiet control-plane treatment.
-  '.roulette-control-plane b{display:block;color:var(--gold);}', // Keep controller headings readable.
-  '.roulette-control-plane span{display:block;margin-top:4px;color:var(--muted);font-size:11px;}', // Keep controller details visually secondary.
-  '.roulette-premium #botPanel{overflow:visible;}', // Let bot rows expand into the single intentional control-rail scroll region.
-  '.roulette-premium #botPanel .mini-table{font-size:10px;}', // Keep bot controller data legible in the compact rail.
-  '.roulette-premium .game-stage{display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;padding:13px;overflow:hidden;background:radial-gradient(circle at 42% 10%,rgba(20,10,34,.25),transparent 42%),linear-gradient(150deg,rgba(20,10,34,.98),rgba(20,10,34,.98));}', // Give the dealer toolbar a fixed row and the complete wheel/table stage the exact remaining desktop height. (UX-026)
-  '.roulette-stage-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:0 2px;}', // Reserve the same dealer action bar in every phase without double-counting a margin outside the stage grid.
-  '.roulette-stage-toolbar .eyebrow{margin:0;color:var(--muted);font-size:11px;letter-spacing:.08em;}', // Keep localized round metadata understated without altering its rendered case.
-  '.roulette-stage-toolbar h2{margin:2px 0 0;color:var(--gold);font-family:var(--font-display);font-size:30px;line-height:1;}', // Make the current phase immediately scannable.
-  '.roulette-stage-toolbar button{min-width:112px;min-height:42px;}', // Stabilize the clear and spin controls.
-  '.roulette-stage-toolbar .primary{border-color:var(--gold);background:linear-gradient(180deg,#d6323d,#8e1822);box-shadow:0 10px 24px rgba(128,14,24,.28),inset 0 1px rgba(255,255,255,.2);}', // Give the spin action a premium dealer-button finish.
-  '.roulette-premium .roulette-stage{grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:12px;align-items:stretch;height:100%;min-height:0;overflow:hidden;}', // Fit wheel and betting board into the exact remaining desktop stage instead of forcing a clipped fixed minimum. (UX-026)
-  '.roulette-premium .wheel-card{position:relative;display:grid;grid-template-rows:minmax(0,1fr) 118px;height:100%;min-height:0;overflow:hidden;border:1px solid var(--gold);border-radius:14px;background:radial-gradient(circle at 50% 34%,rgba(20,10,34,.28),transparent 42%),linear-gradient(180deg,var(--felt),var(--bg));}', // Build a dedicated wheel plinth that contracts with the governed desktop stage.
-  '.roulette-premium .wheel-card::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.06),transparent 24%,transparent 74%,rgba(218,175,70,.045));}', // Add soft directional table lighting.
-  '.roulette-premium .wheel-card.reveal-glow{box-shadow:inset 0 0 64px rgba(244,194,79,.13),0 18px 38px rgba(0,0,0,.36);}', // Illuminate the wheel plinth during the reveal arc.
-  '.roulette-premium .wheel-card.result-glow{box-shadow:inset 0 0 70px rgba(244,194,79,.18),0 18px 38px rgba(0,0,0,.36);}', // Hold a warmer settled-state glow without resizing the stage.
-  '.roulette-wheel-frame{position:relative;z-index:1;display:grid;place-items:center;min-height:0;padding:14px 8px 4px;perspective:850px;}', // Provide a dimensional viewing angle and stable wheel envelope.
-  '.roulette-wheel-frame::after{content:"";position:absolute;left:15%;right:15%;bottom:5%;height:10%;border-radius:50%;background:rgba(0,0,0,.42);filter:blur(14px);z-index:-1;}', // Ground the wheel with a soft table shadow.
-  '.roulette-premium .roulette-wheel{width:min(100%,360px);max-width:360px;filter:drop-shadow(0 22px 26px rgba(0,0,0,.58));}', // Make the vector wheel large and weighty without a fragile 3D compositor layer.
-  '.roulette-wheel .wheel-rim-highlight{opacity:.68;}', // Add a polished metal reflection to the outer rim.
-  '.roulette-wheel .wheel-ball{filter:drop-shadow(0 3px 3px rgba(0,0,0,.75));}', // Separate the ivory ball from the track during motion and settlement.
-  '.roulette-premium .wheel-ring.spinning{animation:roulettePremiumWheelSpin var(--roulette-reveal-ms,16500ms) linear;will-change:transform;}', // Keep the rotor moving throughout the selected complete physical sequence.
-  '.roulette-premium .ball-dot.spinning{animation:roulettePremiumBallSpin var(--roulette-reveal-ms,16500ms) linear;will-change:transform;}', // Counter-rotate the ball throughout the selected complete physical sequence.
-  '.roulette-wheel .wheel-orient,.roulette-wheel .ball-orbit,.roulette-wheel .ball-radial{transform-origin:150px 150px;will-change:transform;}', // Pivot every honest-landing wrapper on the wheel hub so composed rotations stay concentric.
-  '.roulette-wheel .ball-trail{opacity:0;transition:opacity .4s;}', // Hide the ivory motion streak until the ball is actually travelling.
-  '.roulette-premium .ball-dot.spinning .ball-trail{opacity:.55;}', // Reveal the streak only while the counter-rotation curve is live.
-  '.roulette-wheel .ball-radial.descending{animation:roulettePremiumBallDescent var(--rou-descent-ms,1500ms) linear forwards;}', // Drop the ball from the rim into its authoritative pocket with the descent shape carried by sampled stops.
-  '.roulette-wheel .ball-dot.settled{animation:rouletteBallSettle .52s cubic-bezier(.2,.8,.2,1);}', // Give the authoritative result a short physical settle rather than an abrupt swap.
-  '.roulette-wheel .ball-dot.parked{opacity:.72;}', // Show an unassigned ball without implying a fake result pocket.
-  '.roulette-premium.just-settled .fixed-result.win .roulette-result-pocket{animation:rouletteResultBloom .72s cubic-bezier(.2,.8,.2,1);}', // Bloom the settled pocket badge once on the fresh settle render only.
-  '.roulette-premium.just-settled .table-cell.result-cell,.roulette-premium.just-settled .outside-cell.result-cell{animation:rouletteCellReveal .9s cubic-bezier(.2,.8,.2,1);}', // Flash the winning felt region once on the fresh settle render only.
-  '.roulette-premium.just-settled .roulette-history-pills span.result-cell{animation:roulettePillPop .5s cubic-bezier(.2,.8,.2,1);}', // Pop the newest history pocket once on the fresh settle render only.
-  '@media (prefers-reduced-motion: reduce){.roulette-premium .wheel-ring.spinning,.roulette-premium .ball-dot.spinning{animation:none;}.roulette-wheel .ball-dot.settled{animation:none;}.roulette-spin-orbit::after{animation:none;}.roulette-wheel .wheel-orient,.roulette-wheel .ball-orbit,.roulette-wheel .ball-radial{transition:none!important;animation:none!important;}.roulette-wheel .ball-trail{opacity:0!important;}.roulette-premium.just-settled .fixed-result.win .roulette-result-pocket,.roulette-premium.just-settled .table-cell.result-cell,.roulette-premium.just-settled .outside-cell.result-cell,.roulette-premium.just-settled .roulette-history-pills span.result-cell{animation:none;}}', // Present the authoritative pocket without rotation when the player asks for reduced motion.
-  '.roulette-premium .fixed-result{position:relative;z-index:2;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;min-height:100px;margin:0 12px 12px;padding:12px 14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:linear-gradient(135deg,rgba(0,0,0,.36),rgba(255,255,255,.025));}', // Integrate result presentation into the wheel console.
-  '.roulette-result-pocket{display:grid;place-items:center;width:58px;height:58px;border:2px solid rgba(255,238,183,.68);border-radius:50%;color:#fff5d5;font-family:var(--font-display);font-size:26px;font-weight:1000;box-shadow:0 8px 18px rgba(0,0,0,.42),inset 0 0 18px rgba(255,255,255,.12);}', // Present the winning pocket as the primary settlement signal.
-  '.roulette-result-copy{display:grid;gap:3px;min-width:0;}', // Keep result headline and supporting value aligned.
-  '.roulette-result-copy b{color:var(--gold);font-size:16px;}', // Emphasize the authoritative rolled number.
-  '.roulette-result-copy span{color:var(--muted);font-size:11px;line-height:1.35;}', // Keep net and state details compact and readable.
-  '.roulette-spin-orbit{position:relative;width:52px;height:52px;border:2px solid var(--border);border-radius:50%;}', // Reserve a motion indicator in the result console while the outcome is hidden.
-  '.roulette-spin-orbit::after{content:"";position:absolute;inset:6px;border-top:3px solid var(--gold);border-radius:50%;animation:rouletteOrbit 1s linear infinite;}', // Animate only transform to signal the reveal phase.
-  '.roulette-premium .fixed-result.win{border-color:var(--gold);background:linear-gradient(135deg,rgba(117,25,31,.34),rgba(222,177,70,.09));}', // Give the settled result a composed burgundy-and-gold treatment.
-  '.roulette-table-shell{display:grid;place-items:start;width:100%;min-width:0;height:100%;min-height:0;overflow:hidden;border-radius:13px;}', // Give continuous board fitting the real remaining height instead of a fixed shell that can escape below the stage. (UX-026)
-  '.roulette-premium .roulette-table-board{flex:none;width:760px;height:590px;border:2px solid var(--gold);border-radius:12px;background:radial-gradient(circle at 45% 14%,rgba(255,255,255,.09),transparent 38%),radial-gradient(circle at 50% 115%,rgba(0,0,0,.5),transparent 55%),linear-gradient(145deg,var(--felt2),var(--felt));box-shadow:inset 0 0 60px rgba(0,0,0,.5),inset 0 0 0 6px rgba(255,217,120,.05),0 14px 30px rgba(0,0,0,.28);}', // Give the betting layout deep-pile felt, table lighting, a vignette, and a double gold trim.
-  '.roulette-table-board.roulette-board-dimmed{filter:saturate(.72) brightness(.78);}', // Dim the table during the reveal without layout motion.
-  '.roulette-premium .table-cell,.roulette-premium .outside-cell{border-color:rgba(255,245,218,.55);border-radius:5px;box-shadow:inset 0 1px rgba(255,255,255,.1),inset 0 -6px 12px rgba(0,0,0,.22);}', // Bevel cell edges like stitched felt lanes while preserving every existing hit target.
-  '.roulette-premium .table-cell.red{background:linear-gradient(165deg,#c22433,#7c1220 78%);}', // Scope red pocket lacquer to Roulette without relying on a global semantic-color fallback.
-  '.roulette-premium .table-cell.black{background:linear-gradient(165deg,#2b2f2e,#0a0d0c 78%);}', // Scope black pocket graphite to Roulette without relying on a global semantic-color fallback.
-  '.roulette-premium .table-cell.green{background:linear-gradient(165deg,#0f9152,#065a31 78%);}', // Scope zero-pocket emerald to Roulette without relying on a global semantic-color fallback.
-  '.roulette-premium .outside-cell{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.26));font-size:12px;letter-spacing:.05em;text-transform:uppercase;}', // Present outside lanes as etched glass plaques with confident lettering.
-  '.roulette-premium .table-cell button:hover,.roulette-premium .outside-cell button:hover{box-shadow:inset 0 0 22px rgba(255,218,119,.28),inset 0 0 0 1px rgba(255,218,119,.5);}', // Add a gold-ring felt hover cue.
-  '.roulette-premium .bet-chip{border:3px dashed #fff6da;background:radial-gradient(circle,#fffdf4 0 24%,#e4b12f 25% 54%,#8a5c07 55% 72%,#5d3c03 73%);box-shadow:0 5px 12px rgba(0,0,0,.55),inset 0 0 0 2px rgba(90,50,0,.55),inset 0 2px 3px rgba(255,255,255,.6);}', // Layer the wager chip like a real edge-striped casino check without moving its center.
-  '.roulette-result-pocket.red{background:linear-gradient(160deg,#c22433,#6d0f1b);}', // Match the settled badge to its scoped red pocket color.
-  '.roulette-result-pocket.black{background:linear-gradient(160deg,#333836,#070908);}', // Match the settled badge to its scoped black pocket color.
-  '.roulette-result-pocket.green{background:linear-gradient(160deg,#0f9152,#04492a);}', // Match the settled badge to its scoped zero-pocket color.
-  '.roulette-premium .table-cell.result-cell,.roulette-premium .outside-cell.result-cell{outline:3px solid var(--gold);box-shadow:inset 0 0 26px rgba(255,217,120,.4),0 0 22px rgba(255,217,120,.3);}', // Lock the settled result visibly to the winning table area.
-  '.roulette-result-marker{position:absolute;right:5px;bottom:3px;color:var(--gold);font-size:9px;font-weight:1000;}', // Keep the table WIN marker inside its pocket.
-  '.roulette-premium .spot{display:grid;place-items:center;width:24px;height:24px;border:0;background:transparent;opacity:1;}', // Provide a reliable touch target while the visible marker stays compact. (UX-025)
-  '.roulette-premium .spot::after{content:"";width:15px;height:15px;border:1px solid rgba(255,217,120,.66);border-radius:50%;background:rgba(255,217,120,.38);opacity:.32;}', // Preserve the original unobtrusive marker inside the larger hit area. (UX-025)
-  '.roulette-premium .spot:hover::after,.roulette-premium .spot:focus-visible::after{opacity:1;}', // Reveal inside-bet precision on pointer or keyboard intent.
-  '.roulette-premium .roulette-table-board.hide-spots .spot{visibility:hidden;pointer-events:none;opacity:0;}', // Remove hidden inside spots from pointer and accessibility actionability instead of leaving invisible controls live.
-  '.roulette-premium .bet-chip{animation:rouletteChipPop .18s ease-out;}', // Make placed chips feel physical without layout-changing animation.
-  '@keyframes rouletteChipPop{from{transform:scale(.82);opacity:.5;}to{transform:scale(1);opacity:1;}}', // Animate chips with transform and opacity only.
-  '@keyframes rouletteOrbit{to{transform:rotate(360deg);}}', // Spin the result-console orbit without triggering layout.
-  '@keyframes roulettePremiumWheelSpin{0%{transform:rotate(0deg);}5%{transform:rotate(70.2deg);}10%{transform:rotate(136.8deg);}15%{transform:rotate(199.8deg);}20%{transform:rotate(259.2deg);}25%{transform:rotate(315deg);}30%{transform:rotate(367.2deg);}35%{transform:rotate(415.8deg);}40%{transform:rotate(460.8deg);}45%{transform:rotate(502.2deg);}50%{transform:rotate(540deg);}55%{transform:rotate(574.2deg);}60%{transform:rotate(604.8deg);}65%{transform:rotate(631.8deg);}70%{transform:rotate(655.2deg);}75%{transform:rotate(675deg);}80%{transform:rotate(691.2deg);}85%{transform:rotate(703.8deg);}90%{transform:rotate(712.8deg);}95%{transform:rotate(718.2deg);}100%{transform:rotate(720deg);}}', // Sample a constant-deceleration coast-down so no frame advances more than about two thirds of a pocket.
-  '@keyframes roulettePremiumBallSpin{0%{transform:rotate(0deg) scale(1);}5%{transform:rotate(-140.4deg) scale(1);}10%{transform:rotate(-273.6deg) scale(1);}15%{transform:rotate(-399.6deg) scale(1);}20%{transform:rotate(-518.4deg) scale(1);}25%{transform:rotate(-630deg) scale(1);}30%{transform:rotate(-734.4deg) scale(1);}35%{transform:rotate(-831.6deg) scale(1);}40%{transform:rotate(-921.6deg) scale(1);}45%{transform:rotate(-1004.4deg) scale(1);}50%{transform:rotate(-1080deg) scale(1);}55%{transform:rotate(-1148.4deg) scale(1);}60%{transform:rotate(-1209.6deg) scale(1);}65%{transform:rotate(-1263.6deg) scale(1);}70%{transform:rotate(-1310.4deg) scale(1);}75%{transform:rotate(-1350deg) scale(1);}80%{transform:rotate(-1382.4deg) scale(1);}85%{transform:rotate(-1407.6deg) scale(.98);}90%{transform:rotate(-1425.6deg) scale(1.03);}95%{transform:rotate(-1436.4deg) scale(1);}100%{transform:rotate(-1440deg) scale(1);}}', // Coast the ball down over exactly four turns so it lands on its authoritative pocket without an end-of-animation pop.
-  '@keyframes rouletteBallSettle{0%{transform:scale(.72);opacity:.35;}58%{transform:scale(1.14);opacity:1;}100%{transform:scale(1);opacity:1;}}', // Ease the ball into its authoritative pocket.
-  '@keyframes roulettePremiumBallDescent{0%{transform:translateY(0px);}46%{transform:translateY(0px);}60%{transform:translateY(12px);}70%{transform:translateY(27px);}77%{transform:translateY(18px);}85%{transform:translateY(26px);}91%{transform:translateY(21px);}96%{transform:translateY(24.5px);}100%{transform:translateY(24px);}}', // Sample the rim departure, two pocket-separator bounces, and final capture as translate-only stops.
-  '@keyframes rouletteResultBloom{0%{transform:scale(.6);opacity:.2;}55%{transform:scale(1.16);opacity:1;}100%{transform:scale(1);opacity:1;}}', // Scale the settled pocket badge in with transform and opacity only.
-  '@keyframes rouletteCellReveal{0%{filter:brightness(2.1);}100%{filter:brightness(1);}}', // Fade the winning-cell flash back to the held outline highlight.
-  '@keyframes roulettePillPop{0%{transform:scale(.4);opacity:0;}70%{transform:scale(1.18);opacity:1;}100%{transform:scale(1);opacity:1;}}', // Pop the newest history pill without moving neighbouring pills.
-  '.roulette-drawer-title{display:flex;align-items:center;justify-content:space-between;gap:8px;}', // Keep drawer heading and phase badge aligned.
-  '.roulette-drawer-title h3{margin:0;color:var(--gold);font-family:var(--font-display);font-size:24px;}', // Treat the bet slip or settlement as premium table furniture.
-  '.roulette-phase-badge{padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:rgba(218,175,70,.07);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;}', // Add a compact table-state badge.
-  '.roulette-premium .stable-list{min-height:92px;max-height:154px;overflow:auto;}', // Reserve slip height while containing long bet histories.
-  '.roulette-settlement-card{display:grid;grid-template-columns:1fr auto;align-items:center;min-height:66px;margin:8px 0;padding:11px;border:1px solid var(--gold);border-radius:10px;background:linear-gradient(135deg,rgba(255,217,120,.1),rgba(118,25,31,.14));}', // Integrate settlement value as a compact ledger-backed card.
-  '.roulette-settlement-card b{display:block;color:var(--gold);}', // Keep the settlement heading readable.
-  '.roulette-settlement-card span{display:block;margin-top:0;color:var(--gold);font-size:15px;font-weight:1000;}', // Elevate the human net above raw log detail.
-  '.roulette-spark-bars{display:grid;grid-template-columns:repeat(8,1fr);align-items:end;gap:6px;height:62px;margin:7px 0;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(0,0,0,.18);}', // Reserve the recent-stats chart inside a compact rail card.
-  '.roulette-spark-bars i{display:block;min-height:8px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#e8c760,#8e1822);box-shadow:0 3px 8px rgba(0,0,0,.28);}', // Render live frequency bars with casino gold-to-red depth.
-  '.roulette-history-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}', // Keep recent pockets in a stable wrapping row.
-  '.roulette-history-pills span{display:grid;place-items:center;width:29px;height:29px;border:1px solid rgba(255,255,255,.14);border-radius:50%;color:var(--text);font-size:10px;}', // Render results as compact physical pocket tokens.
-  '.roulette-history-pills span.red{background:linear-gradient(160deg,#c22433,#7c1220);}', // Paint red history pockets with Roulette-scoped lacquered red.
-  '.roulette-history-pills span.black{background:linear-gradient(160deg,#2b2f2e,#0a0d0c);}', // Paint black history pockets with Roulette-scoped graphite black.
-  '.roulette-history-pills span.green{background:linear-gradient(160deg,#0f9152,#065a31);}', // Paint zero history pockets with Roulette-scoped emerald green.
-  '.roulette-history-pills span.result-cell{border-color:#e8c760;background:#e8c760;color:#1f1400;font-weight:1000;}', // Highlight the latest settled pocket without a global semantic-color conflict.
-  '.roulette-premium .details-drawer>h3,.roulette-premium .details-drawer>h4{color:var(--gold);text-transform:uppercase;font-size:11px;letter-spacing:.08em;}', // Give secondary drawer sections one quiet hierarchy.
-  '.roulette-premium .details-drawer .mini-table{font-size:11px;}', // Keep scoreboard rows compact.
-  '.roulette-premium .details-drawer .stat-bars{max-height:110px;overflow:auto;}', // Contain long hot-number output inside the drawer.
-  '.roulette-premium .danger{min-width:64px;}', // Keep localized remove controls explicit.
-  '@media (min-width:1201px){.roulette-premium .stable-list,.roulette-premium .details-drawer .stat-bars{max-height:none;overflow:visible;}}', // Let drawer data expand into its single governed desktop rail scroll surface.
-  '@media (max-width:1800px){.roulette-premium .game-layout{grid-template-columns:220px minmax(0,1fr) 235px;gap:12px;}.roulette-premium .roulette-stage{grid-template-columns:220px minmax(0,1fr);}.roulette-premium .wheel-card{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 104px;}.roulette-premium .roulette-wheel{max-width:214px;}.roulette-premium .control-rail,.roulette-premium .details-drawer{padding:10px;}.roulette-premium .game-title,.roulette-drawer-title h3{font-size:20px;}.roulette-control-section{margin-top:7px;}.roulette-advanced{margin-top:6px;}.roulette-advanced summary{padding:7px 8px;}.roulette-premium .stable-list{min-height:70px;}}', // Compact mid-desktop rails while the stage-owned height continuously fits the fixed betting board. (UX-026)
-  '@media (min-width:1201px) and (max-width:1500px) and (max-height:820px){.roulette-premium .roulette-header{min-height:54px;}.roulette-premium h1{font-size:40px;}}', // Compress only the compact-desktop header because the board now derives its height from the remaining stage.
-  '@media (max-width:1200px){.casino-page:has(.roulette-premium){overflow:auto;}.game-screen:has(.roulette-premium){height:auto;min-height:calc(100vh - 146px);overflow:visible;}.roulette-premium{height:auto;}.roulette-premium .game-layout{grid-template-columns:1fr;grid-template-rows:auto;height:auto;overflow:visible;contain:none;}.roulette-premium .game-stage{grid-template-rows:auto auto;overflow:visible;}.roulette-premium .roulette-stage{grid-template-columns:1fr;height:auto;min-height:590px;overflow:visible;}.roulette-premium .wheel-card{grid-template-columns:300px minmax(0,1fr);grid-template-rows:1fr;height:auto;min-height:300px;}.roulette-premium .roulette-wheel{max-width:286px;}.roulette-table-shell{height:590px;}.roulette-premium .control-rail,.roulette-premium .details-drawer{overflow:visible;}}', // Restore intrinsic document-scrolling geometry only at the shared stacked-layout breakpoint.
-  '@media (max-width:900px){.roulette-premium .roulette-stage{grid-template-columns:1fr;}.roulette-premium .wheel-card{grid-template-columns:280px minmax(0,1fr);grid-template-rows:1fr;min-height:290px;}.roulette-premium .roulette-wheel{max-width:270px;}.roulette-table-shell{height:520px;}.roulette-premium h1{font-size:38px;}}', // Recompose the wheel console and fit the complete table on tablet widths.
-  '@media (max-width:720px){.roulette-premium .wheel-card{grid-template-columns:1fr;grid-template-rows:minmax(260px,1fr) 110px;}.roulette-table-shell{height:461px;}.roulette-settings{grid-template-columns:1fr;}}', // Keep Roulette functional on small responsive viewports without page overflow.
-  '@media (max-width:560px){.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions{grid-template-columns:1fr 1fr;}.roulette-table-shell{height:340px;}.roulette-premium .fixed-result{margin-inline:8px;}}', // Scale the fixed hit-map board while retaining every existing selector on narrow screens.
-].join(''); // Combine Roulette-only CSS chunks into one style payload.
 
-// Store the route root so async callbacks can rerender the currently mounted view.
-let root = null;
+// Create the single Roulette route owner, including its reviewed shared control-plane domains.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, additionalDomains: [AUTOPLAY_DOMAIN, BOTS_DOMAIN], requestPrefix: 'roulette', stylesheet: { id: 'roulette-styles', href: '/games/roulette.css' } });
+
 // Store the latest Roulette state payload from the frozen API.
 let state = null;
 // Store the active bet catalog so click handlers can place documented bet types.
@@ -215,10 +93,6 @@ let activeRevealMs = SPIN_REVEAL_MS;
 let lastSettlements = [];
 // Store the latest human net based on existing debits plus settlement credits.
 let lastHumanNet = 0;
-// Store the current spin guard so duplicate spin requests cannot start.
-let spinBusy = false;
-// Store the i18n unsubscribe callback so unmount does not leak locale listeners.
-let localeUnsubscribe = null;
 // Store player-opened progressive disclosure ids across spin-driven rerenders.
 const openDisclosures = new Set();
 // Store the persistent rotor rest angle so the wheel keeps orientation continuity between spins.
@@ -229,12 +103,10 @@ let ballOrbitAngle = 0;
 let ballDepth = 0;
 // Store the route-owned motion timer scope so spin timers cancel on navigation and reload. (MOTION-002)
 let motionScope = null;
-// Store a deferred locale repaint request raised while a spin animation owns the live DOM.
-let pendingLocaleRender = false;
 // Store the round whose settled render is fresh so settle choreography plays once and never on repaints.
 let freshSettleRoundId = null;
-// Store a monotonically increasing route generation so abandoned async work cannot target a remount.
-let mountGeneration = 0;
+// Store one opaque mount token so abandoned async work cannot target a later Roulette route.
+let routeSession = null;
 // Store the one active spin completion so unmount can abort it exactly once.
 let activeSpinCompletion = null;
 // Store pending motion-promise resolvers so timer cancellation also releases awaiting game code.
@@ -360,7 +232,7 @@ async function refreshBalanceForCompletion(completion) {
 }
 
 // Resolve a Roulette-owned localized string from the game domain.
-const rt = (key, params = {}) => t(key, params, GAME_DOMAIN);
+const rt = lifecycle.tx;
 // Wrap an action handler so a rejected request reaches the player instead of vanishing.
 // Every wagering control here posted with no catch, so a rejection (most commonly INSUFFICIENT_FUNDS)
 // became an unhandled promise rejection that only reached admin telemetry: the player clicked Bet or
@@ -387,7 +259,7 @@ const sharedText = (key, domain) => safe(t(key, {}, domain));
 // Return an open attribute when the player left one optional control group expanded.
 const disclosureOpen = id => (openDisclosures.has(id) ? ' open' : '');
 // Return a disabled attribute while a spin is in progress.
-const disabledWhenSpinning = () => (spinBusy ? ' disabled' : '');
+const disabledWhenSpinning = () => (lifecycle.isBusy() ? ' disabled' : '');
 // Return a locale-aware numeric amount without a currency or legacy token glyph.
 const amountNumber = amount => Number(amount || 0).toLocaleString(document.documentElement.lang || undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // Return an explicit localized play-token amount for Roulette-owned value displays.
@@ -396,20 +268,6 @@ const tokenMoney = amount => `${amountNumber(amount)} ${text('units.playTokens')
 const signedTokenMoney = amount => `${Number(amount || 0) >= 0 ? '+' : '-'}${tokenMoney(Math.abs(Number(amount || 0)))}`;
 // Return a compact denomination for physical chip faces whose heading supplies the token context.
 const chipMoney = amount => Number(amount || 0).toLocaleString(document.documentElement.lang || undefined, { maximumFractionDigits: 0 });
-
-// Ensure the local premium CSS is available exactly once per document.
-function ensurePremiumStyle() {
-  // Branch when another mount already installed the Roulette style block.
-  if (document.getElementById(PREMIUM_STYLE_ID)) return;
-  // Create a style node owned by this module.
-  const style = document.createElement('style');
-  // Set the id so future mounts can find the existing style block.
-  style.id = PREMIUM_STYLE_ID;
-  // Set the CSS text without touching the shared stylesheet.
-  style.textContent = PREMIUM_STYLE;
-  // Attach the style block to the document head before the first render.
-  document.head.append(style);
-}
 
 // Render the localized placeholder shown while bot controller data loads.
 function loadingBotPanelHtml() {
@@ -473,25 +331,33 @@ async function ensureCatalog(mode) {
 }
 
 // Fetch state, catalog, stats, players, and bot presentation for the initial mount.
-async function load() {
+async function load(session, mountedRoot) {
   // Initialize the localized bot placeholder before the first visible render.
   botPanelCache = loadingBotPanelHtml();
   // Load player-specific state without retransmitting the static bet catalog. (TEST-166)
   const payload = await api(currentPlayerPath(compactPath('/api/v1/games/roulette/state')));
+  // Stop when navigation released this exact mount during the state request.
+  if (routeSession !== session || lifecycle.root() !== mountedRoot) return false;
   // Apply the response to local render caches.
   applyPayload(payload);
   // Load the current mode's immutable catalog once before rendering any wager controls.
   await ensureCatalog(payload?.state?.mode);
+  // Stop when navigation released this exact mount during catalog loading.
+  if (routeSession !== session || lifecycle.root() !== mountedRoot) return false;
   // Render the game before slower bot markup resolves.
   render();
   // Refresh bot panel markup through the shared bot controller helper.
-  await updateBotPanel();
+  await updateBotPanel({ expectedRoot: mountedRoot, expectedSession: session });
+  // Stop when navigation released this exact mount during bot-controller loading.
+  if (routeSession !== session || lifecycle.root() !== mountedRoot) return false;
   // Refresh the shared shell wallet after game state loads.
   await refreshBalance();
+  // Confirm that the same route completed its initial load.
+  return routeSession === session && lifecycle.root() === mountedRoot;
 }
 
 // Refresh the bot panel inside the exact captured route generation without remounting the whole game.
-async function updateBotPanel({ expectedRoot = root, expectedGeneration = mountGeneration } = {}) {
+async function updateBotPanel({ expectedRoot = lifecycle.root(), expectedSession = routeSession } = {}) {
   // Retain the awaited bot markup without publishing it through the mutable global route.
   let nextBotPanel;
   // Protect the rejection path so stale cleanup cannot escape to the generic player-feedback wrapper.
@@ -501,12 +367,12 @@ async function updateBotPanel({ expectedRoot = root, expectedGeneration = mountG
   // Distinguish an abandoned route failure from a genuine current-route failure.
   } catch (error) {
     // Suppress a failure that returned only after teardown or a distinct remount.
-    if (root !== expectedRoot || mountGeneration !== expectedGeneration) return false;
+    if (lifecycle.root() !== expectedRoot || routeSession !== expectedSession) return false;
     // Preserve existing feedback and telemetry behavior for the still-current route.
     throw error;
   }
   // Reject markup that returned after teardown or after a distinct route generation remounted.
-  if (root !== expectedRoot || mountGeneration !== expectedGeneration) return false;
+  if (lifecycle.root() !== expectedRoot || routeSession !== expectedSession) return false;
   // Publish the markup cache only while the captured route still owns it.
   botPanelCache = nextBotPanel;
   // Find the bot panel only inside the captured route root.
@@ -665,7 +531,7 @@ async function placeBet(bet, expected = null, source = null, amount = chip) {
 // Place a racetrack or call bet through the documented API.
 async function placeCall(type) {
   // Read the optional call/final number from the current control rail.
-  const number = root.querySelector('#callNumber')?.value || undefined;
+  const number = lifecycle.root()?.querySelector('#callNumber')?.value || undefined;
   // Post the call bet using the existing v1 payload shape.
   const payload = await post(compactPath('/api/v1/games/roulette/call-bet'), withCurrentPlayer({ amount: chip, call_type: type, number }));
   // Apply returned state, catalog, players, and stats.
@@ -735,9 +601,9 @@ async function rebet() {
 // Persist Roulette mode and zero-rule settings through the documented endpoint.
 async function settings() {
   // Read the selected wheel mode from the control rail.
-  const mode = root.querySelector('#mode')?.value;
+  const mode = lifecycle.root()?.querySelector('#mode')?.value;
   // Read the selected zero rule from the control rail.
-  const zeroRule = root.querySelector('#zero')?.value;
+  const zeroRule = lifecycle.root()?.querySelector('#zero')?.value;
   // Post settings without adding or changing any payload fields.
   const payload = await post(compactPath('/api/v1/games/roulette/settings'), withCurrentPlayer({ mode, zero_rule: zeroRule }));
   // Apply returned state, catalog, players, and stats.
@@ -787,11 +653,11 @@ function setPresentationPhase(phase) {
   // Retain the phase across compatible locale repaints and deterministic diagnostics.
   presentationPhase = phase;
   // Resolve the mounted game root without assuming a live route during teardown.
-  const game = root?.querySelector('[data-testid="roulette-premium"]');
+  const game = lifecycle.root()?.querySelector('[data-testid="roulette-premium"]');
   // Publish the closed-vocabulary phase for browser acceptance when the route still exists.
   if (game) game.dataset.motionPhase = phase;
   // Resolve the reserved player-facing phase copy inside the settlement card.
-  const status = root?.querySelector('[data-testid="roulette-motion-phase"]');
+  const status = lifecycle.root()?.querySelector('[data-testid="roulette-motion-phase"]');
   // Update the live region without resizing or rerendering the wheel.
   if (status) status.textContent = rt(`motion.${phase}`);
 }
@@ -815,7 +681,7 @@ function schedulePresentationPhases(revealMs) {
 // Lift the captured ball back onto the outer track the moment a spin's first frame is live.
 function liftBallOffPocket() {
   // Find the radial wrapper in the freshly rendered spinning wheel.
-  const radial = root?.querySelector('.ball-radial');
+  const radial = lifecycle.root()?.querySelector('.ball-radial');
   // Skip safely when the wheel is not mounted.
   if (!radial) return;
   // Arm the short rim-lift transition on the live wrapper.
@@ -835,13 +701,15 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   // Locate the winning pocket on the rendered wheel.
   const targetIndex = nums.indexOf(resultPocket);
   // Skip wrapper travel rather than inventing a pocket when the result is not on this wheel. (ROU-051)
-  if (targetIndex < 0 || !root) return 0;
+  const mountedRoot = lifecycle.root();
+  // Stop when the result cannot map to a currently mounted Roulette route.
+  if (targetIndex < 0 || !mountedRoot) return 0;
   // Find the rotor-orientation wrapper installed by the spinning render.
-  const orient = root.querySelector('.wheel-orient');
+  const orient = mountedRoot.querySelector('.wheel-orient');
   // Find the ball's orbital wrapper.
-  const orbit = root.querySelector('.ball-orbit');
+  const orbit = mountedRoot.querySelector('.ball-orbit');
   // Find the ball's radial-depth wrapper.
-  const radial = root.querySelector('.ball-radial');
+  const radial = mountedRoot.querySelector('.ball-radial');
   // Stop safely when a rerender or route transition removed the animated wheel.
   if (!orient || !orbit || !radial) return 0;
   // Seed decorative pocket scatter from the committed round id so one round always lands the same way.
@@ -886,9 +754,9 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
     // Begin the required pocket-relative co-rotation after visible capture completes.
     motionScope.schedule(() => {
       // Pause the independent decorative curves so the captured ball can share the rotor's final velocity.
-      const rotor = root?.querySelector('.wheel-ring');
+      const rotor = lifecycle.root()?.querySelector('.wheel-ring');
       // Resolve the live ball marker owned by the same route generation.
-      const ball = root?.querySelector('.ball-dot');
+      const ball = lifecycle.root()?.querySelector('.ball-dot');
       // Freeze the decorative rotor curve at capture before wrapper co-rotation takes ownership.
       if (rotor) rotor.style.animationPlayState = 'paused';
       // Freeze the counter-orbit curve at capture before wrapper co-rotation takes ownership.
@@ -916,19 +784,19 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
 // Spin the Roulette wheel using the existing engine, bot, ledger, and settlement path.
 async function spin(show = true) {
   // Branch when a spin is already in progress.
-  if (spinBusy) return;
+  if (lifecycle.isBusy()) return;
   // Capture the mounted route identity before any asynchronous work begins.
-  const mountedRoot = root;
-  // Capture the current generation so a remount cannot inherit this continuation.
-  const generation = mountGeneration;
+  const mountedRoot = lifecycle.root();
+  // Capture the opaque route session so a remount cannot inherit this continuation.
+  const session = routeSession;
   // Create one exactly-once terminal guard bound to this route generation.
-  const completion = createRouletteSpinCompletion({ isCurrent: () => root === mountedRoot && mountGeneration === generation, onComplete: reportRoulettePresentationCompletion });
+  const completion = createRouletteSpinCompletion({ isCurrent: () => lifecycle.root() === mountedRoot && routeSession === session, onComplete: reportRoulettePresentationCompletion });
   // Publish the active completion so unmount can abort it before releasing the route.
   activeSpinCompletion = completion;
   // Store the pre-spin stake after any autoplay rebet completes.
   let stakeBeforeSpin = 0;
   // Mark the spin as busy before rerendering disabled controls.
-  spinBusy = true;
+  lifecycle.setBusy(true);
   // Start protected spin flow so the busy flag is always released.
   try {
     // Recreate a saved template for autoplay when needed.
@@ -1018,9 +886,9 @@ async function spin(show = true) {
     // Release active ownership only when this action is still the published spin.
     if (activeSpinCompletion === completion) activeSpinCompletion = null;
     // Stop all cleanup DOM work when this action belongs to an abandoned route generation.
-    if (root !== mountedRoot || mountGeneration !== generation) return;
+    if (lifecycle.root() !== mountedRoot || routeSession !== session) return;
     // Release the busy flag even if the API or animation flow fails.
-    spinBusy = false;
+    lifecycle.setBusy(false);
     // Branch when a failed spin left the UI in the temporary spinning phase.
     if (uiPhase === 'spinning') {
       // Return to betting mode so controls are usable again.
@@ -1028,16 +896,14 @@ async function spin(show = true) {
       // Expose the stable failed state until the betting rerender restores an actionable surface.
       presentationPhase = 'failed';
     }
-    // Clear any locale repaint deferred during the animation because the rerender below applies it.
-    pendingLocaleRender = false;
     // Rerender the unlocked controls after both success and failure.
     render();
     // Start the one-shot settle choreography on the live DOM so later repaints can never replay or cut it.
-    if (freshSettleRoundId !== null && uiPhase === 'settled' && root) root.querySelector('.roulette-premium')?.classList.add('just-settled');
+    if (freshSettleRoundId !== null && uiPhase === 'settled' && mountedRoot) mountedRoot.querySelector('.roulette-premium')?.classList.add('just-settled');
     // Consume the fresh-settle marker after its single choreography start.
     freshSettleRoundId = null;
     // Refresh the bot panel only for the same route identity captured before the spin began.
-    await updateBotPanel({ expectedRoot: mountedRoot, expectedGeneration: generation });
+    await updateBotPanel({ expectedRoot: mountedRoot, expectedSession: session });
   }
 }
 
@@ -1362,7 +1228,7 @@ function headerHtml() {
 // Render the control rail with settings, chips, fast bets, autoplay, and bots.
 function controlRailHtml() {
   // Store the template availability state for the rebet button.
-  const canRebet = (state.last_bet_template || []).length > 0 && !spinBusy;
+  const canRebet = (state.last_bet_template || []).length > 0 && !lifecycle.isBusy();
   // Store the spot toggle label.
   const spotLabel = showSpots ? text('controls.hideSpots') : text('controls.showSpots');
   // Store the localized shared autoplay heading for its disclosure control.
@@ -1378,11 +1244,11 @@ function stageHtml() {
   // Store the current phase title.
   const phaseTitle = uiPhase === 'spinning' ? text('stage.spinning') : uiPhase === 'settled' ? text('stage.settled') : text('stage.placeBets');
   // Store the primary button label.
-  const primaryLabel = spinBusy ? text('controls.resolving') : text('controls.spin');
+  const primaryLabel = lifecycle.isBusy() ? text('controls.resolving') : text('controls.spin');
   // Store the wheel panel state class.
   const wheelState = uiPhase === 'spinning' ? ' reveal-glow' : uiPhase === 'settled' ? ' result-glow' : '';
   // Store the clear disabled state.
-  const clearDisabled = humanBets().length === 0 || spinBusy ? ' disabled' : '';
+  const clearDisabled = humanBets().length === 0 || lifecycle.isBusy() ? ' disabled' : '';
   // Return the complete central game stage.
   return `<section class="panel game-stage" data-testid="roulette-premium-stage"><div class="roulette-stage-toolbar"><div><p class="eyebrow">${text('header.kicker')}</p><h2>${phaseTitle}</h2></div><div class="row"><button type="button" id="clear"${clearDisabled}>${text('controls.clearBets')}</button><button type="button" id="spin" data-testid="roulette-spin" class="primary"${disabledWhenSpinning()}>${primaryLabel}</button></div></div><div class="roulette-stage"><div class="wheel-card${wheelState}"><div class="roulette-wheel-frame" data-testid="roulette-wheel-frame">${wheelSvg()}</div>${resultHtml()}</div><div class="roulette-table-shell">${tableHtml()}</div></div></section>`;
 }
@@ -1438,7 +1304,7 @@ function drawerHtml() {
   // Store the phase badge.
   const badge = uiPhase === 'spinning' ? text('phase.spinning') : uiPhase === 'settled' ? text('phase.settled') : text('phase.betting');
   // Store the slip rows for open bets or settlement rows for settled results.
-  const rows = settlementMode ? lastSettlements.map(row => `<div class="bet-item"><span>${safe(row.label)}</span><b>${safe(outcomeLabel(row.outcome))}</b></div>`).join('') : bets.map(bet => `<div class="bet-item"><span>${safe(bet.label)}</span><b class="money">${tokenMoney(bet.amount)}</b><button type="button" class="danger" data-clear="${safe(bet.bet_id)}"${(spinBusy || uiPhase !== 'betting') ? ' disabled' : ''}>${text('controls.remove')}</button></div>`).join('');
+  const rows = settlementMode ? lastSettlements.map(row => `<div class="bet-item"><span>${safe(row.label)}</span><b>${safe(outcomeLabel(row.outcome))}</b></div>`).join('') : bets.map(bet => `<div class="bet-item"><span>${safe(bet.label)}</span><b class="money">${tokenMoney(bet.amount)}</b><button type="button" class="danger" data-clear="${safe(bet.bet_id)}"${(lifecycle.isBusy() || uiPhase !== 'betting') ? ' disabled' : ''}>${text('controls.remove')}</button></div>`).join('');
   // Store the metric label.
   const metricLabel = uiPhase === 'spinning' ? text('betSlip.lockedTotal') : settlementMode ? text('settlement.humanNet') : text('betSlip.openTotal');
   // Store the metric value.
@@ -1455,6 +1321,10 @@ function statsCount(value) {
 
 // Wire all event handlers after a full rerender.
 function wireControls() {
+  // Resolve the current lifecycle-owned route after each full render.
+  const root = lifecycle.root();
+  // Stop safely when teardown won the race before event wiring.
+  if (!root) return;
   // Add the presentation-only speed selector beside the server-owned table settings. (ROU-064)
   root.querySelector('.roulette-settings')?.insertAdjacentHTML?.('beforeend', `<label>${text('controls.presentation')}<select id="presentationMode" data-testid="roulette-presentation-mode"${disabledWhenSpinning()}><option value="authentic">${text('settings.presentation.authentic')}</option><option value="quick">${text('settings.presentation.quick')}</option></select></label>`);
   // Set the mode select to the current backend state value.
@@ -1505,7 +1375,7 @@ let boardFitListener = null;
 // Fit the fixed-geometry betting board to its shell continuously so no viewport can clip it. (UX-026)
 function fitTableBoard() {
   // Stop when the route is unmounted or the premium table is not on this render.
-  const shell = root?.querySelector('.roulette-table-shell');
+  const shell = lifecycle.root()?.querySelector('.roulette-table-shell');
   // Read the fixed-size board inside the measured shell.
   const board = shell?.querySelector('.roulette-table-board');
   // Stop safely when either element is absent, for example before the first table render.
@@ -1531,6 +1401,8 @@ function scheduleBoardFit() {
   boardFitTimer = setTimeout(fitTableBoard, 120);
 }
 function render() {
+  // Resolve the route root through the shared lifecycle owner.
+  const root = lifecycle.root();
   // Stop when the module has not mounted yet.
   if (!root || !state) return;
   // Preserve the focused roulette control through the full-root render. (UX-025)
@@ -1553,61 +1425,47 @@ export const RouletteGame = {
   label: 'Roulette',
   // Mount Roulette into the shared #view route outlet.
   async mount(node) {
-    // Store the route root for future renders.
-    root = node;
-    // Advance route identity so callbacks from any older mount remain permanently stale.
-    mountGeneration += 1;
-    // Install Roulette-only premium styles.
-    ensurePremiumStyle();
-    // Initialize the Roulette resource domain before rendering visible strings.
-    await initI18n({ domains: [GAME_DOMAIN, AUTOPLAY_DOMAIN, BOTS_DOMAIN] });
+    // Establish shared root, locale, busy, and external stylesheet ownership before game loading.
+    if (!await lifecycle.mount(node, render)) return;
+    // Publish a fresh opaque session so callbacks from any older mount remain permanently stale.
+    routeSession = Object.freeze({});
     // Create the route-owned timer scope so every spin timer cancels on navigation or reload. (MOTION-002)
     motionScope = createMotionTimerScope();
-    // Reset presentation guards in case a prior mount was torn down mid-spin.
-    spinBusy = false;
     // Return the phase to betting because no spin can be live on a fresh mount.
     uiPhase = 'betting';
     // Return named presentation state to idle because no visual action survives a route mount.
     presentationPhase = 'idle';
     // Restore the selected manual profile's exact budget before the first render.
     activeRevealMs = presentationMode === 'quick' ? QUICK_REVEAL_MS : SPIN_REVEAL_MS;
-    // Clear any stale deferred locale repaint from a prior mount.
-    pendingLocaleRender = false;
     // Clear any stale terminal guard because a new mount owns future spins.
     activeSpinCompletion = null;
-    // Subscribe to locale changes while deferring repaints that would destroy a live spin animation.
-    localeUnsubscribe = onLocaleChange(() => { if (spinBusy) { pendingLocaleRender = true; return; } render(); });
     // Refit the fixed board whenever the viewport changes while this route owns the outlet. (UX-026)
     boardFitListener = scheduleBoardFit;
     // Attach the route-owned resize listener that unmount removes symmetrically.
     window.addEventListener('resize', boardFitListener);
     // Load backend state and render the premium Roulette surface.
-    await load();
+    await load(routeSession, node);
   },
   // Unmount Roulette and clean up local loops/listeners.
   unmount() {
     // Stop autoplay when the route is leaving.
     if (autoBox?._stop) autoBox._stop();
-    // Remove the locale listener when mounted.
-    if (localeUnsubscribe) localeUnsubscribe();
-    // Clear the locale unsubscribe handle.
-    localeUnsubscribe = null;
     // Capture whether a spin was resolving so the refund guard below keeps its issue-246 meaning.
-    const wasSpinning = spinBusy;
+    const wasSpinning = lifecycle.isBusy();
     // Abort the active spin exactly once before invalidating its route identity. (ROU-072)
     if (activeSpinCompletion) activeSpinCompletion.abort();
     // Release the active completion handle so a remount cannot inherit it.
     activeSpinCompletion = null;
-    // Advance route identity before releasing any awaiting continuation.
-    mountGeneration += 1;
+    // Invalidate the opaque route identity before releasing any awaiting continuation.
+    routeSession = null;
+    // Release shared root, locale, and busy ownership before deferred work can continue.
+    lifecycle.unmount();
     // Cancel every pending spin timer owned by this route before the view disappears. (MOTION-002)
     if (motionScope) motionScope.dispose();
     // Resolve canceled timer promises so guarded async functions can finish as aborted.
     releaseMotionWaiters();
     // Clear the disposed scope handle so a later mount builds a fresh one.
     motionScope = null;
-    // Release the spin guard because a cancelled reveal can never finish its finally block.
-    spinBusy = false;
     // Normalize the phase so a remount never resumes a phantom spin presentation.
     if (uiPhase === 'spinning') uiPhase = 'betting';
     // Mark the abandoned presentation as aborted without exposing a stale spinning phase on remount.
@@ -1621,7 +1479,5 @@ export const RouletteGame = {
       // Fire the documented clear/refund endpoint best-effort; the route is leaving, so do not await or rerender, and refresh only the shared wallet.
       post('/api/v1/games/roulette/clear', withCurrentPlayer()).then(() => refreshBalance()).catch(() => {});
     }
-    // Clear the route root to prevent async rerenders after unmount.
-    root = null;
   },
 };

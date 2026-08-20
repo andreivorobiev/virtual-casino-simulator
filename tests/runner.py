@@ -4653,6 +4653,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def chuck_a_luck_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-chuck_a_luck').click(); page.get_by_test_id('chuck-a-luck').wait_for(timeout=WAIT_MS)
+                    # Require one lifecycle-owned external stylesheet and no retained inline owner.
+                    assert page.locator('link#chuck-a-luck-styles[href="/games/chuck_a_luck.css"]').count()==1 and page.locator('style#chuck-a-luck-styles').count()==0
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture one mounted state across both locales and every viewport.
@@ -4686,11 +4688,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Chuck-a-Luck browser and visual gate.
-                run_case('BR-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-004','CHUCK-005'],chuck_a_luck_acceptance)
+                run_case('BR-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-004','CHUCK-005','CORE-034'],chuck_a_luck_acceptance)
                 # Define real-backend Craps localization, point-play, responsive, motion, and route acceptance.
                 def craps_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-craps').click(); page.get_by_test_id('craps').wait_for(timeout=WAIT_MS)
+                    # Require one lifecycle-owned external stylesheet and no retained inline owner.
+                    assert page.locator('link#craps-game-styles[href="/games/craps.css"]').count()==1 and page.locator('style#craps-game-styles').count()==0
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture one mounted state across both locales and every viewport.
@@ -4752,7 +4756,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Craps browser and visual gate.
-                run_case('BR-CRAPS-001',['CRAPS-001','CRAPS-002','CRAPS-004','CRAPS-005'],craps_acceptance)
+                run_case('BR-CRAPS-001',['CRAPS-001','CRAPS-002','CRAPS-004','CRAPS-005','CORE-034'],craps_acceptance)
                 # Define real-backend Crown and Anchor localization, wager, responsive, motion, and route acceptance.
                 def crown_and_anchor_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
