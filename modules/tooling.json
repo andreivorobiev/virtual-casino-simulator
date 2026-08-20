@@ -1,6 +1,6 @@
 {
   "module": "tooling",
-  "version": "1.43.4",
+  "version": "1.43.5",
   "paths": [
     "scripts/",
     ".github/",

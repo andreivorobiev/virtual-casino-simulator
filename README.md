@@ -26,6 +26,8 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 Runtime version metadata is loaded by `casino/module_versions.py`; `scripts/validate_versions.py` rejects drift between the aggregate manifest, module manifests, runtime values, package metadata, README, and starter documentation.
 
+See [`VERSIONING.md`](VERSIONING.md) for the one-page explanation of the scheme: what the packaged release number means, why the numbering lineage changed from `v9.x` to `0.9.5.x`, what the historical baseline denotes, how module revisions relate, and which surface shows which number. The version validator asserts the numbers stated there match the manifest so it cannot rot.
+
 ## Legal and play-token status
 
 The repository source code is licensed under the Apache License, Version 2.0. See `LICENSE` and `NOTICE`.

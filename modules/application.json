@@ -1,11 +1,12 @@
 {
   "module": "application",
-  "version": "9.71.2",
+  "version": "9.71.3",
   "paths": [
     "run.py",
     "pyproject.toml",
     "deploy/",
     "README.md",
+    "VERSIONING.md",
     "modules/__init__.py",
     "web/app.js",
     "web/styles.css",
