@@ -13,18 +13,23 @@
         "API-LUCKY-GRID-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-LUCKY-GRID-001"
       ],
       "implementation_files": [
         "casino/games/lucky_grid/rules.py",
         "casino/games/lucky_grid/engine.py",
         "casino/games/lucky_grid/api.py",
         "web/games/lucky_grid.js",
+        "web/games/lucky_grid.css",
+        "tests/games/lucky_grid/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/lucky_grid/README.md",
         "contracts/openapi/lucky_grid.v1.yaml"
       ],
       "introduced_in": "issue-153-lucky-grid",
-      "changed_in": "issue-153-lucky-grid",
-      "notes": "Allocated for GitHub issue #153, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1017-lucky-grid-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #153, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1017 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing the nine-cell board, three-pick control, 600 ms reveal timing, settlement, DOM, or visible layout."
     },
     {
       "id": "LGRID-002",
@@ -35,17 +40,21 @@
         "API-LUCKY-GRID-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-LUCKY-GRID-001"
       ],
       "implementation_files": [
         "casino/games/lucky_grid/api.py",
         "casino/core/simple_game.py",
+        "web/games/lucky_grid.js",
         "tests/lucky_grid_tests.py",
-        "tests/game_drivers/lucky_grid.py"
+        "tests/game_drivers/lucky_grid.py",
+        "tests/games/lucky_grid/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-153-lucky-grid",
-      "changed_in": "issue-153-lucky-grid",
-      "notes": "Allocated for GitHub issue #153."
+      "changed_in": "issue-1017-lucky-grid-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #153. Issue #1017 preserves the exact state and reveals endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, and real repeat flow while removing duplicate frontend lifecycle helpers."
     }
   ]
 }

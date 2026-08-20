@@ -8172,15 +8172,18 @@
         "API-LUCKY-GRID-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-LUCKY-GRID-001"
       ],
       "implementation_files": [
         "tests/lucky_grid_tests.py",
+        "tests/games/lucky_grid/test_frontend.mjs",
+        "tests/runner.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-153-lucky-grid",
-      "changed_in": "issue-153-lucky-grid",
-      "notes": "Allocated for GitHub issue #153."
+      "changed_in": "issue-1017-lucky-grid-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #153. Issue #1017 adds listener-free frontend lifecycle and real two-reveal Browser evidence without changing the existing game math, validation, retry, or house-edge proof."
     },
     {
       "id": "TEST-125",
@@ -13514,7 +13517,8 @@
         "BR-PATTERN-DRAW-001",
         "BR-COIN-PUSHER-001",
         "BR-MARBLE-RACE-001",
-        "BR-BOULE-001"
+        "BR-BOULE-001",
+        "BR-LUCKY-GRID-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
@@ -13540,6 +13544,8 @@
         "web/games/boule.css",
         "web/games/big_six_wheel.js",
         "web/games/big_six_wheel.css",
+        "web/games/lucky_grid.js",
+        "web/games/lucky_grid.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
@@ -13552,6 +13558,7 @@
         "docs/evidence/marble_race/README.md",
         "docs/evidence/boule/README.md",
         "docs/evidence/big_six_wheel/README.md",
+        "docs/evidence/lucky_grid/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
         "modules/faro.json",
@@ -13563,16 +13570,17 @@
         "modules/coin_pusher.json",
         "modules/marble_race.json",
         "modules/boule.json",
-        "modules/big_six_wheel.json"
+        "modules/big_six_wheel.json",
+        "modules/lucky_grid.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1013-big-six-lifecycle-slice",
-      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, and Big Six Wheel are the first eleven adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal."
+      "changed_in": "issue-1017-lucky-grid-lifecycle-slice",
+      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, and Lucky Grid are the first twelve adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal; Lucky Grid retains its established lg fallback identity shape and 600 ms reveal."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, and Big Six Wheel browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, and Lucky Grid browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
@@ -13588,7 +13596,8 @@
         "BR-COIN-PUSHER-001",
         "BR-MARBLE-RACE-001",
         "BR-BOULE-001",
-        "BR-BIG-SIX-001"
+        "BR-BIG-SIX-001",
+        "BR-LUCKY-GRID-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
@@ -13598,6 +13607,7 @@
         "tests/games/marble_race/test_frontend.mjs",
         "tests/games/boule/test_frontend.mjs",
         "tests/unit/big_six_wheel_frontend.test.mjs",
+        "tests/games/lucky_grid/test_frontend.mjs",
         "tests/cases/api/frontend_presentation.py",
         "tests/cicd_deployment_tests.py",
         "tests/api_case_inventory.json",
@@ -13605,7 +13615,7 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1013-big-six-lifecycle-slice",
+      "changed_in": "issue-1017-lucky-grid-lifecycle-slice",
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {

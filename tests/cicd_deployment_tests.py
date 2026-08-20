@@ -1824,8 +1824,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         from tests import runner as browser_runner_module
         # Discover inline and extracted permanent IDs at their exact cross-file source positions.
         case_ids = browser_runner_module.browser_case_ids()
-        # Bind the complete inventory after adding dedicated Boule lifecycle acceptance. (TEST-248)
-        self.assertEqual(len(case_ids), 128)
+        # Bind the complete inventory after adding dedicated Lucky Grid lifecycle acceptance. (TEST-248)
+        self.assertEqual(len(case_ids), 129)
         # Read the first extracted Browser affinity owner for guard-location checks below.
         auth_backend_pwa_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
         # Read the extracted disposable guest-lifecycle owner for guard-location checks below.
@@ -1852,8 +1852,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
-        # Bind deterministic load totals after packing the new dedicated Boule case. (TEST-242, TEST-248)
-        self.assertEqual(shard_loads, (222, 223, 222, 223, 223, 222))
+        # Bind deterministic load totals after packing the new dedicated Lucky Grid case. (TEST-242, TEST-248)
+        self.assertEqual(shard_loads, (224, 223, 222, 224, 223, 224))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 3)
         # Prove additional runners now reduce the reviewed full-run floor beyond six shards.
