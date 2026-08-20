@@ -5,13 +5,15 @@
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, style, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/poker_dice';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'poker-dice-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'pd', stylesheet: { id: 'poker-dice-styles', href: '/games/poker_dice.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Mirror the backend's six poker-rank faces in ascending order for display.
 export const FACES = Object.freeze(['9', '10', 'J', 'Q', 'K', 'A']);
 // Publish the chip denominations offered for the stake.
@@ -21,53 +23,29 @@ export const PAYTABLE = Object.freeze([['five_of_a_kind', 80], ['four_of_a_kind'
 // Fix the decorative roll duration; the outcome is already server-authoritative.
 const ROLL_MS = 900;
 
-// Store the current route outlet, chosen stake, and in-flight guard.
-let root = null;
+// Store the chosen stake while the shared lifecycle owns route and busy state.
 let stake = 5;
-let rollBusy = false;
-let localeUnsubscribe = null;
 // Retain the last settled faces so a repaint after the roll keeps showing the result.
 let shownFaces = ['9', '9', '9', '9', '9'];
 // Retain the last committed stake so one click can repeat the same wager.
 let lastBet = null;
 
-// Translate one game-domain key through the shared installed-locale fallback chain.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
-
-// Install compact game-owned styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.poker-dice{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .pd-stage{display:grid;justify-items:center;gap:18px;padding:12px;min-width:0;} .pd-dice{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;min-width:0;} .pd-die{width:64px;height:64px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(160deg,#fbf3dd,#d9c391);color:#241006;font-weight:900;font-size:26px;box-shadow:0 8px 18px rgba(0,0,0,.4),inset 0 0 0 2px #a9791f;} .pd-die.rolling{animation:pd-tumble .3s linear infinite;} @keyframes pd-tumble{0%{transform:translateY(0) rotate(0);}25%{transform:translateY(-8px) rotate(-8deg);}75%{transform:translateY(6px) rotate(8deg);}100%{transform:translateY(0) rotate(0);}} .pd-panel{display:grid;gap:12px;min-width:0;} .pd-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .pd-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .pd-paytable{display:grid;gap:6px;} .pd-payrow{display:flex;justify-content:space-between;font-weight:700;font-size:13px;} .pd-payrow span:last-child{color:var(--gold);} .pd-chips{display:flex;flex-wrap:wrap;gap:8px;} .pd-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .pd-chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(231,189,88,.16);color:var(--text);} .pd-roll{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .pd-roll:disabled{opacity:.55;cursor:not-allowed;} .pd-result{min-height:44px;font-size:15px;color:var(--text);text-align:center;} .pd-result .net{font-weight:900;} @media (prefers-reduced-motion:reduce){.pd-die.rolling{animation:none;}} @media (max-width:900px){.poker-dice{grid-template-columns:1fr;}}.pd-repeat{width:100%;min-height:46px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;font-size:15px;cursor:pointer;}.pd-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.appendChild(style);
-}
-
-// Generate one caller-stable retry identity for exactly-once settlement.
-function newRequestId() {
-  // Prefer a real UUID when the platform provides one.
-  return (globalThis.crypto?.randomUUID?.() || `pd-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
-}
-
 // Render the complete Poker Dice route into the outlet.
 function render(resultText) {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Build the five dice faces, tumbling while a roll is resolving.
-  const dice = shownFaces.map(face => `<div class="pd-die${rollBusy ? ' rolling' : ''}" data-testid="poker-dice-die">${safe(face)}</div>`).join('');
+  const dice = shownFaces.map(face => `<div class="pd-die${lifecycle.isBusy() ? ' rolling' : ''}" data-testid="poker-dice-die">${safe(face)}</div>`).join('');
   // Build the honest paytable rows from the mirrored backend table.
   const pays = PAYTABLE.map(([hand, mult]) => `<div class="pd-payrow"><span>${safe(tx('hand.' + hand))}</span><span>${mult}x</span></div>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="pd-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Enable the one-click repeat only when a prior stake exists and no roll is resolving.
-  const repeatDisabled = rollBusy || !lastBet;
+  const repeatDisabled = lifecycle.isBusy() || !lastBet;
   // Paint the whole route.
-  root.innerHTML = `<section class="poker-dice" data-testid="poker-dice"><div class="pd-stage"><div class="pd-dice">${dice}</div><p class="pd-result" data-testid="poker-dice-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('paytable.title'))}</h3><div class="pd-paytable">${pays}</div></div><div class="pd-card"><h3>${safe(tx('stake.title'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-roll" data-testid="poker-dice-roll" type="button" ${rollBusy ? 'disabled' : ''}>${safe(rollBusy ? tx('action.rolling') : tx('action.roll'))}</button><button class="pd-repeat" data-testid="poker-dice-repeat" type="button" ${repeatDisabled ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
+  root.innerHTML = `<section class="poker-dice" data-testid="poker-dice"><div class="pd-stage"><div class="pd-dice">${dice}</div><p class="pd-result" data-testid="poker-dice-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('paytable.title'))}</h3><div class="pd-paytable">${pays}</div></div><div class="pd-card"><h3>${safe(tx('stake.title'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-roll" data-testid="poker-dice-roll" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(lifecycle.isBusy() ? tx('action.rolling') : tx('action.roll'))}</button><button class="pd-repeat" data-testid="poker-dice-repeat" type="button" ${repeatDisabled ? 'disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the chip buttons.
   root.querySelectorAll('[data-chip]').forEach(btn => { btn.onclick = () => { stake = Number(btn.dataset.chip); render(); }; });
   // Wire the roll action.
@@ -100,15 +78,15 @@ async function load() {
 
 // Execute one atomic wager, roll, and settlement.
 async function roll() {
-  // Ignore repeated clicks while a roll is resolving.
-  if (rollBusy || !root) return;
+  // Ignore repeated clicks or teardown through shared lifecycle state.
+  if (lifecycle.isBusy() || !lifecycle.isMounted()) return;
   // Mark the roll busy and disable the control before the request.
-  rollBusy = true;
+  lifecycle.setBusy(true);
   render();
   // Start protected settlement so the busy flag is always released.
   try {
     // Post the exactly-once roll with a caller-stable retry id.
-    const response = await post('/api/v1/games/poker-dice/rolls', { request_id: newRequestId(), stake });
+    const response = await post('/api/v1/games/poker-dice/rolls', { request_id: lifecycle.nextRequestId(), stake });
     // Show the committed debit before the authoritative dice hand appears. (LEDGER-031, issue #599)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
@@ -128,14 +106,14 @@ async function roll() {
       ? `${safe(tx('result.win', { hand: handName }))} <span class="net">+${round.total_return - round.wager_total}</span>`
       : `${safe(tx('result.lose'))} <span class="net">${round.net}</span>`;
     // Release the guard before the final repaint.
-    rollBusy = false;
+    lifecycle.setBusy(false);
     // Remember the settled stake so the next roll can repeat it with one click.
     lastBet = { stake };
     // Repaint with the settled faces and result.
     render(text);
   } catch (err) {
     // Release the guard and report a bounded error.
-    rollBusy = false;
+    lifecycle.setBusy(false);
     // Surface the failure without leaking internal detail.
     toast(err?.message || tx('error.roll'), 'error');
     // Repaint the unlocked controls.
@@ -146,7 +124,7 @@ async function roll() {
 // Re-apply the last committed stake and re-fire one roll without a timer.
 async function repeat() {
   // Ignore repeat while a roll is resolving, after teardown, or before any stake has been committed.
-  if (rollBusy || !root || !lastBet) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || !lastBet) return;
   // Restore the previous stake into the local configuration.
   stake = lastBet.stake;
   // Fire the shared exactly-once roll action with the restored stake.
@@ -159,29 +137,19 @@ export const PokerDiceGame = {
   id: 'poker_dice',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet.
-    root = node;
     // Reset the repeatable stake so a new session never inherits a prior bet.
     lastBet = null;
-    // Install game-owned styles.
-    ensureStyles();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings on a locale change unless a roll owns the dice.
-    localeUnsubscribe = onLocaleChange(() => { if (!rollBusy) render(); });
+    // Establish shared route, stylesheet, localization, and locale-subscription ownership.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released the route during asynchronous locale initialization.
+    if (!mounted) return;
     // Load session-bound state and render the first frame.
     await load();
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    rollBusy = false;
+    // Release route, locale-subscription, and in-flight lifecycle ownership.
+    lifecycle.unmount();
     // Clear the repeatable stake so the next session starts fresh.
     lastBet = null;
   },

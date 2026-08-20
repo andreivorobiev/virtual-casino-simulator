@@ -13,18 +13,23 @@
         "API-POKER-DICE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-POKER-DICE-001"
       ],
       "implementation_files": [
         "casino/games/poker_dice/rules.py",
         "casino/games/poker_dice/engine.py",
         "casino/games/poker_dice/api.py",
         "web/games/poker_dice.js",
+        "web/games/poker_dice.css",
+        "tests/games/poker_dice/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/poker_dice/README.md",
         "contracts/openapi/poker_dice.v1.yaml"
       ],
       "introduced_in": "issue-151-poker-dice",
-      "changed_in": "issue-151-poker-dice",
-      "notes": "Allocated for GitHub issue #151, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1003-poker-dice-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #151, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1003 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing faces, paytable, timing, settlement, DOM, or visible layout."
     },
     {
       "id": "PDICE-002",
@@ -35,17 +40,21 @@
         "API-POKER-DICE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-POKER-DICE-001"
       ],
       "implementation_files": [
         "casino/games/poker_dice/api.py",
         "casino/core/simple_game.py",
+        "web/games/poker_dice.js",
         "tests/poker_dice_tests.py",
-        "tests/game_drivers/poker_dice.py"
+        "tests/game_drivers/poker_dice.py",
+        "tests/games/poker_dice/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-151-poker-dice",
-      "changed_in": "issue-151-poker-dice",
-      "notes": "Allocated for GitHub issue #151."
+      "changed_in": "issue-1003-poker-dice-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #151. Issue #1003 preserves the exact state and roll endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, and real repeat flow while removing duplicate frontend lifecycle helpers."
     }
   ]
 }
