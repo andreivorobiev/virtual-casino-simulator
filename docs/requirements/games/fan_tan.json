@@ -76,14 +76,16 @@
       ],
       "implementation_files": [
         "web/games/fan_tan.js",
+        "web/games/fan_tan.css",
         "web/i18n/en-US/games/fan_tan.json",
         "web/i18n/ru-RU/games/fan_tan.json",
+        "docs/evidence/fan_tan/README.md",
         "tests/visual/visual_matrix.json",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-fan-tan",
-      "changed_in": "game-expansion-fan-tan",
-      "notes": "Evidence covers both locales and every governed viewport."
+      "changed_in": "issue-1001-fan-tan-lifecycle-slice",
+      "notes": "Evidence covers both locales and every governed viewport. Issue #1001 moves route, busy, locale, and stylesheet ownership into the shared lifecycle while preserving the motion scope, secure action ids, exactly-once replay, DOM, and visible layout."
     },
     {
       "id": "FAN-TAN-005",
@@ -107,8 +109,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-fan-tan",
-      "changed_in": "game-expansion-fan-tan",
-      "notes": "Descriptor sort order 240 and the catalog-discovered long driver are canonical."
+      "changed_in": "issue-1001-fan-tan-lifecycle-slice",
+      "notes": "Descriptor sort order 240 and the catalog-discovered long driver are canonical. The module descriptor owns the formatted route stylesheet and BR-FAN-TAN-001 binds shared-lifecycle, responsive, settlement, reduced-motion, reload, and repeat evidence."
     },
     {
       "id": "FAN-TAN-006",

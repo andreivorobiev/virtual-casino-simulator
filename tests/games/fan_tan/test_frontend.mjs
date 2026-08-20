@@ -9,10 +9,15 @@ import path from 'node:path';
 // Import URL conversion for stable Windows and POSIX execution.
 import { fileURLToPath } from 'node:url';
 
+// Provide the browser global assigned by shared i18n during module import.
+globalThis.window = {};
+
 // Resolve the repository root from this game-specific test directory.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 // Read the production browser module as UTF-8 text.
 const source = await readFile(path.join(root, 'web', 'games', 'fan_tan.js'), 'utf8');
+// Read the formatted route stylesheet as UTF-8 text.
+const stylesheet = await readFile(path.join(root, 'web', 'games', 'fan_tan.css'), 'utf8');
 // Read the English game-owned dictionary as UTF-8 text.
 const englishSource = await readFile(path.join(root, 'web', 'i18n', 'en-US', 'games', 'fan_tan.json'), 'utf8');
 // Read the Russian game-owned dictionary as UTF-8 text.
@@ -21,6 +26,8 @@ const russianSource = await readFile(path.join(root, 'web', 'i18n', 'ru-RU', 'ga
 const english = JSON.parse(englishSource);
 // Parse the Russian dictionary after retaining its encoding evidence.
 const russian = JSON.parse(russianSource);
+// Import public frontend seams after the minimal browser global exists.
+const frontend = await import('../../../web/games/fan_tan.js');
 
 // Extract named placeholders so both locales can be compared exactly.
 function placeholders(value) {
@@ -52,15 +59,19 @@ assert.match(source, /createMotionTimerScope/);
 // Verify route teardown disposes the retained motion scope.
 assert.match(source, /motionScope\?\.dispose\(\)/);
 // Verify reduced-motion behavior is included in game-owned styling.
-assert.match(source, /prefers-reduced-motion:reduce/);
+assert.match(stylesheet, /prefers-reduced-motion:\s*reduce/);
 // Verify primary controls meet the minimum touch-target height.
-assert.match(source, /min-height:44px/);
+assert.match(stylesheet, /min-height:\s*44px/);
 // Verify responsive stacking preserves control, stage, then data order.
-assert.match(source, /\.fan-tan__controls\{order:1\}[\s\S]*\.fan-tan__stage\{order:2[\s\S]*\.fan-tan__data\{order:3\}/);
-// Verify locale subscription and cleanup are both explicit.
-assert.match(source, /localeUnsubscribe = onLocaleChange\(\(\) => render\(\)\)/);
-// Verify route teardown invokes the retained locale unsubscribe callback.
-assert.match(source, /localeUnsubscribe\?\.\(\)/);
+assert.match(stylesheet, /\.fan-tan__controls\s*\{[\s\S]*?order:\s*1;[\s\S]*?\.fan-tan__stage\s*\{[\s\S]*?order:\s*2;[\s\S]*?\.fan-tan__data\s*\{[\s\S]*?order:\s*3;/);
+// Verify route, locale, style, and busy state delegate to the shared lifecycle.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "requestPrefix: 'ft'", "href: '/games/fan_tan.css'"]) assert.ok(source.includes(marker), marker);
+// Reject superseded game-local lifecycle and opaque-style ownership.
+for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'style.textContent', 'onLocaleChange', 'initI18n', 'ROUTE_CSS']) assert.equal(source.includes(duplicate), false, duplicate);
+// Preserve the strict secure action-identity helper and established readable prefix.
+assert.equal(frontend.createActionId(() => '00000000-0000-4000-8000-000000001001'), 'ft-00000000-0000-4000-8000-000000001001');
+// Fail closed when cryptographic UUID support is unavailable.
+assert.throws(() => frontend.createActionId(null), /A secure UUID generator is required for Fan-Tan rounds/);
 // Verify the ledger-moving action refreshes the authenticated wallet.
 assert.match(source, /await refreshBalance\(\)/);
 // Reject direct hard-coded English action labels inside generated markup.
