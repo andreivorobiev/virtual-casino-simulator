@@ -226,5 +226,16 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'style.textContent', 'onLocaleChange', 'initI18n', 'ROUTE_CSS']) assert.equal(fanTanSource.includes(duplicate), false, duplicate);
 // Require representative layout, stage, residue, control, repeat, motion, and responsive rules to survive extraction.
 for (const selector of ['.fan-tan {', '.fan-tan__layout {', '.fan-tan__tray {', '.fan-tan__bean[data-residue="true"] {', '.fan-tan__play {', '.fan-tan__repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 1200px)', '@media (max-width: 560px)']) assert.ok(fanTanCss.includes(selector), selector);
+
+// Read the exact sixth-adopter source for per-slice duplicate-helper deletion evidence.
+const pokerDiceSource = await readFile(new URL('../web/games/poker_dice.js', import.meta.url), 'utf8');
+// Read Poker Dice's formatted external stylesheet for ownership and tooling visibility.
+const pokerDiceCss = await readFile(new URL('../web/games/poker_dice.css', import.meta.url), 'utf8');
+// Require Poker Dice to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "href: '/games/poker_dice.css'"]) assert.ok(pokerDiceSource.includes(marker), marker);
+// Reject Poker Dice's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let rollBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(pokerDiceSource.includes(duplicate), false, duplicate);
+// Require representative route, dice, animation, control, result, repeat, motion, and responsive rules to survive extraction.
+for (const selector of ['.poker-dice {', '.pd-dice {', '.pd-die.rolling {', '@keyframes pd-tumble {', '.pd-roll {', '.pd-result {', '.pd-repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 900px)']) assert.ok(pokerDiceCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

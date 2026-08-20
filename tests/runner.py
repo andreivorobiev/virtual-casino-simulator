@@ -3087,7 +3087,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Strip grouping separators while retaining the exact fractional amount.
                     return page.evaluate("() => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, ''))")
                 # Require one simple settled-round game to wager, settle, refresh its wallet, and recover its repeat state after reload.
-                def newest_simple_game_acceptance(game_id, ready_testid, endpoint_suffix, action, result_testid, repeat_testid):
+                def newest_simple_game_acceptance(game_id, ready_testid, endpoint_suffix, action, result_testid, repeat_testid, after_reload=None):
                     # Enter the catalog-owned route and wait for its stable module marker.
                     page.get_by_test_id(f'nav-{game_id}').click(); page.get_by_test_id(ready_testid).wait_for(timeout=WAIT_MS * 2)
                     # Capture the pre-action wallet so a stale rendered value cannot satisfy settlement evidence accidentally.
@@ -3108,8 +3108,40 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.reload(wait_until='networkidle'); page.get_by_test_id(ready_testid).wait_for(timeout=WAIT_MS * 2); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=expected,timeout=WAIT_MS * 2)
                     # Require the route, repeat control, and authoritative wallet to survive the reload.
                     assert page.url.split('?',1)[0].endswith(f'/games/{game_id}') and page.get_by_test_id(repeat_testid).is_enabled() and newest_game_wallet_value()==expected
+                    # Run an optional game-owned post-reload proof before the shared helper restores the lobby.
+                    if after_reload is not None: after_reload(expected)
                     # Return to the lobby so every dedicated case begins from the same shell state.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+                # Exercise Poker Dice through its real roll endpoint and reload-safe repeated wager.
+                def poker_dice_browser_acceptance():
+                    # Prove one real post-reload repeat performs a second independent authoritative roll.
+                    def repeat_roll(expected_before_repeat):
+                        # Observe the second mutation response while the recovered repeat control re-fires the committed stake.
+                        with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/poker-dice/rolls'),timeout=WAIT_MS * 2) as response_info: page.get_by_test_id('poker-dice-repeat').click()
+                        # Bind the second visible wallet to the repeated roll's exact authoritative player snapshot.
+                        repeated_expected=float(response_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=repeated_expected,timeout=WAIT_MS * 2)
+                        # Wait for the decorative roll to terminalize and require the result and repeat control to remain usable.
+                        page.wait_for_function("() => { const result=document.querySelector('[data-testid=\"poker-dice-result\"]'); const repeat=document.querySelector('[data-testid=\"poker-dice-repeat\"]'); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",timeout=WAIT_MS * 2)
+                        # Require numeric before/after wallet observations and the exact repeated response-owned terminal value.
+                        assert isinstance(expected_before_repeat,(int,float)) and isinstance(repeated_expected,(int,float)) and newest_game_wallet_value()==repeated_expected
+                        # Capture after-pass sixth-adopter evidence only after the real repeated roll is visibly terminal.
+                        page.locator('#view').screenshot(path=str(screenshots/'after-pass-poker-dice-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Restore ordinary motion media for every downstream Browser case.
+                        page.emulate_media(reduced_motion='no-preference')
+                    # Bind exact external-style and ready-layout evidence before the real roll mutates the dice.
+                    def roll_once():
+                        # Restore the governed primary desktop viewport and route top after the expansion matrix.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate('window.scrollTo(0,0)'); page.wait_for_timeout(100)
+                        # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                        style_link=page.locator('link#poker-dice-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/poker_dice.css'
+                        # Prove the migrated asset loaded by binding the unchanged dominant stage, 300-pixel rail, and flex dice row.
+                        assert page.get_by_test_id('poker-dice').evaluate("el => { const route=getComputedStyle(el); const tracks=route.gridTemplateColumns.split(' ').map(parseFloat); const dice=getComputedStyle(el.querySelector('.pd-dice')); return route.display==='grid' && tracks.length===2 && tracks[0]>tracks[1] && Math.round(tracks[1])===300 && dice.display==='flex'; }")
+                        # Exercise the existing reduced-motion rule during the real roll presentation.
+                        page.emulate_media(reduced_motion='reduce'); page.get_by_test_id('poker-dice-roll').click(); page.wait_for_function("() => { const die=document.querySelector('.pd-die.rolling'); return Boolean(die) && getComputedStyle(die).animationName==='none'; }")
+                    # Bind the first roll response, settled wallet, recovered route, and second repeated roll.
+                    newest_simple_game_acceptance('poker_dice','poker-dice','/api/v1/games/poker-dice/rolls',roll_once,'poker-dice-result','poker-dice-repeat',after_reload=repeat_roll)
+                # Record Poker Dice's dedicated affected-game lifecycle and real-settlement case.
+                run_case('BR-POKER-DICE-001',['PDICE-001','PDICE-002','CORE-034','TEST-185','TEST-248'],poker_dice_browser_acceptance)
                 # Exercise Faro through its real deal endpoint and reload-safe recent-round state.
                 def faro_browser_acceptance():
                     # Bind exact external-style and ready-layout evidence before the real deal mutates the cards.

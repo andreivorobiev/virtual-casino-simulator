@@ -13493,7 +13493,8 @@
         "BR-FARO-001",
         "BR-TEQ-001",
         "BR-PACHINKO-001",
-        "BR-FAN-TAN-001"
+        "BR-FAN-TAN-001",
+        "BR-POKER-DICE-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
@@ -13507,27 +13508,31 @@
         "web/games/pachinko.css",
         "web/games/fan_tan.js",
         "web/games/fan_tan.css",
+        "web/games/poker_dice.js",
+        "web/games/poker_dice.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
         "docs/evidence/trente_et_quarante/README.md",
         "docs/evidence/pachinko/README.md",
         "docs/evidence/fan_tan/README.md",
+        "docs/evidence/poker_dice/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
         "modules/faro.json",
         "modules/trente_et_quarante.json",
         "modules/pachinko.json",
-        "modules/fan_tan.json"
+        "modules/fan_tan.json",
+        "modules/poker_dice.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1001-fan-tan-lifecycle-slice",
-      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, and Fan-Tan are the first five adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract."
+      "changed_in": "issue-1003-poker-dice-lifecycle-slice",
+      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, and Poker Dice are the first six adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice retains the established pd fallback identity shape."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, and Fan-Tan browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, and Poker Dice browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
@@ -13537,10 +13542,12 @@
         "BR-FARO-001",
         "BR-TEQ-001",
         "BR-PACHINKO-001",
-        "BR-FAN-TAN-001"
+        "BR-FAN-TAN-001",
+        "BR-POKER-DICE-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
+        "tests/games/poker_dice/test_frontend.mjs",
         "tests/cases/api/frontend_presentation.py",
         "tests/cicd_deployment_tests.py",
         "tests/api_case_inventory.json",
@@ -13548,7 +13555,7 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1001-fan-tan-lifecycle-slice",
+      "changed_in": "issue-1003-poker-dice-lifecycle-slice",
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {
