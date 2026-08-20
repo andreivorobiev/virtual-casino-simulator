@@ -13,18 +13,23 @@
         "API-FOUR-CARD-POKER-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-FOUR-CARD-POKER-001"
       ],
       "implementation_files": [
         "casino/games/four_card_poker/engine.py",
         "casino/games/four_card_poker/service.py",
         "casino/games/four_card_poker/api.py",
         "web/games/four_card_poker.js",
+        "web/games/four_card_poker.css",
+        "tests/games/four_card_poker/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/four_card_poker/README.md",
         "contracts/openapi/four_card_poker.v1.yaml"
       ],
       "introduced_in": "issue-141-four-card-poker",
-      "changed_in": "issue-141-four-card-poker",
-      "notes": "Allocated for GitHub issue #141, a catalog-expansion poker variant (#73). The service reuses the shared card primitives and ledger with its own four-card evaluator."
+      "changed_in": "issue-1027-four-card-poker-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #141, a catalog-expansion poker variant (#73). The service reuses the shared card primitives and ledger with its own four-card evaluator. Issue #1027 delegates route, busy, locale, action-id, and external stylesheet ownership to the shared lifecycle while retaining a mount-specific response-adoption guard for the shell's persistent outlet. Exact-head Browser evidence covers real deal/play settlement, repeat availability, reload restoration, responsive containment, stylesheet reuse, and teardown in EN/RU at all four governed viewports."
     },
     {
       "id": "FOURCP-002",
@@ -35,17 +40,20 @@
         "API-FOUR-CARD-POKER-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-FOUR-CARD-POKER-001"
       ],
       "implementation_files": [
         "casino/games/four_card_poker/service.py",
         "casino/games/four_card_poker/api.py",
+        "web/games/four_card_poker.js",
         "tests/games/four_card_poker/test_api.py",
+        "tests/games/four_card_poker/test_frontend.mjs",
         "tests/game_drivers/four_card_poker.py"
       ],
       "introduced_in": "issue-141-four-card-poker",
-      "changed_in": "issue-141-four-card-poker",
-      "notes": "Allocated for GitHub issue #141."
+      "changed_in": "issue-1027-four-card-poker-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #141. Issue #1027 preserves the exact state, rounds, and decisions routes; ante and Aces Up payloads; 1x-3x play and fold decisions; unresolved deal and decision action-id reuse; card privacy; reload recovery; settlement; wallet refresh; and one-click repeat behavior while removing duplicate frontend lifecycle helpers."
     },
     {
       "id": "FOURCP-003",

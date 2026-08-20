@@ -47,8 +47,8 @@ const voiceSource = await readFile(path.join(root, 'web', 'core', 'voice.js'), '
 const blackjackSource = await readFile(path.join(root, 'web', 'games', 'blackjack.js'), 'utf8');
 // Read Color Wheel's external route stylesheet for the older-game accessibility contract.
 const colorWheelStyles = await readFile(path.join(root, 'web', 'games', 'color_wheel.css'), 'utf8');
-// Read Four Card Poker input sizing for the same accessibility contract.
-const fourCardPokerSource = await readFile(path.join(root, 'web', 'games', 'four_card_poker.js'), 'utf8');
+// Read Four Card Poker's extracted route stylesheet for the same accessibility contract.
+const fourCardPokerStyles = await readFile(path.join(root, 'web', 'games', 'four_card_poker.css'), 'utf8');
 
 // Publish the minimal browser seams required by the real API helper.
 globalThis.document = { cookie: 'casino_csrf=frontend-safety-proof', getElementById: () => null };
@@ -204,7 +204,7 @@ for (const source of [rouletteSource, kenoSource, bingoSource, blackjackSource, 
 // Require Roulette precision controls to keep a 24-pixel hit area around the compact marker. (UX-025)
 assert.match(rouletteSource, /const SPOT_SIZE = 24;[\s\S]*\.spot\{display:grid;place-items:center;width:24px;height:24px/);
 // Require shared and route-local controls called out by UX-025 to preserve 44-pixel touch targets.
-assert.match(sharedStyles, /button\s*\{\s*min-height:\s*44px;/); assert.match(baccaratSource, /\.bac-rail-card select\{min-height:44px\}[\s\S]*\.bac-repeat-grid button\{min-height:44px/); assert.match(colorWheelStyles, /\.cw-chip\s*\{[\s\S]*?min-width:\s*44px;[\s\S]*?min-height:\s*44px;/); assert.match(fourCardPokerSource, /\.fcp-field input\{min-height:44px/);
+assert.match(sharedStyles, /button\s*\{\s*min-height:\s*44px;/); assert.match(baccaratSource, /\.bac-rail-card select\{min-height:44px\}[\s\S]*\.bac-repeat-grid button\{min-height:44px/); assert.match(colorWheelStyles, /\.cw-chip\s*\{[\s\S]*?min-width:\s*44px;[\s\S]*?min-height:\s*44px;/); assert.match(fourCardPokerStyles, /\.fcp-field input\s*\{[\s\S]*?min-height:\s*44px;/);
 // Require structured API failures to ignore raw server messages while preserving diagnostic fields. (I18N-011)
 assert.match(apiSource, /playerSafeError\(payload\.error\?\.code, res\.status\)[\s\S]*e\.details = payload\.error\?\.details/);
 // Require autoplay to reconcile authoritative sessions and separate game action from rate-limited tick retry. (AUTO-015)
