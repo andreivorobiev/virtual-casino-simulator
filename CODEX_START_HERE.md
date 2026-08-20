@@ -256,6 +256,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/evidence/coin_pusher/README.md`](docs/evidence/coin_pusher/README.md) — Coin Pusher shared-lifecycle evidence
 - [`docs/evidence/color_wheel/README.md`](docs/evidence/color_wheel/README.md) — Color Wheel shared-lifecycle evidence
 - [`docs/evidence/craps/README.md`](docs/evidence/craps/README.md) — Craps canonical integration evidence
+- [`docs/evidence/crown_and_anchor/README.md`](docs/evidence/crown_and_anchor/README.md) — Crown and Anchor shared-lifecycle evidence
 - [`docs/evidence/daily_draw_lab/README.md`](docs/evidence/daily_draw_lab/README.md) — Daily Draw Lab lifecycle-adopter evidence
 - [`docs/evidence/double_bonus_video_poker/README.md`](docs/evidence/double_bonus_video_poker/README.md) — Double Bonus Video Poker shared-lifecycle evidence
 - [`docs/evidence/dragon_tiger/README.md`](docs/evidence/dragon_tiger/README.md) — Dragon Tiger isolated real-backend evidence

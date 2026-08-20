@@ -1,9 +1,10 @@
 {
   "module": "crown_and_anchor",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "paths": [
     "casino/games/crown_and_anchor/",
     "web/games/crown_and_anchor.js",
+    "web/games/crown_and_anchor.css",
     "web/i18n/en-US/games/crown_and_anchor.json",
     "web/i18n/ru-RU/games/crown_and_anchor.json"
   ],

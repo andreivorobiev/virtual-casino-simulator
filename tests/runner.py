@@ -4757,6 +4757,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def crown_and_anchor_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-crown_and_anchor').click(); page.get_by_test_id('crown-and-anchor').wait_for(timeout=WAIT_MS)
+                    # Require the shared lifecycle to install exactly one external stylesheet and no retained inline style owner.
+                    assert page.locator('link#crown-and-anchor-styles[href="/games/crown_and_anchor.css"]').count()==1 and page.locator('style#crown-and-anchor-styles').count()==0
+                    # Bind dominant desktop stage columns and the established control target sizes to computed external CSS.
+                    crown_layout=page.evaluate("""() => { const layout=getComputedStyle(document.querySelector('.crown-anchor__layout')); const play=getComputedStyle(document.querySelector('.crown-anchor__play')); const repeat=getComputedStyle(document.querySelector('.crown-anchor__repeat')); const input=getComputedStyle(document.querySelector('.crown-anchor__bet input')); return {columns:layout.gridTemplateColumns.split(' ').map(value=>Number.parseFloat(value)),play:Number.parseFloat(play.minHeight),repeat:Number.parseFloat(repeat.minHeight),input:Number.parseFloat(input.minHeight)}; }""")
+                    # Require three desktop columns with a dominant center stage and unchanged 42/46-pixel target minima.
+                    assert len(crown_layout['columns'])==3 and crown_layout['columns'][1]>crown_layout['columns'][0] and crown_layout['columns'][1]>crown_layout['columns'][2] and crown_layout['play']>=46 and crown_layout['repeat']>=46 and crown_layout['input']>=42,crown_layout
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -4790,15 +4796,21 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the committed dice reveal while its managed timer remains active.
                     page.locator('.crown-anchor__die[data-rolling="true"]').first.wait_for(timeout=WAIT_MS); game_evidence('after-pass-crown-and-anchor-rolling-en-us-desktop_primary.png','crown_and_anchor',['rolling'],'en-US','desktop_primary')
                     # Wait for authoritative settlement and capture both locales and all viewports.
-                    page.wait_for_function("() => document.querySelector('[data-testid=\"crown-and-anchor-phase\"]')?.textContent === 'Settled'",timeout=WAIT_MS * 2); assert page.locator('.crown-anchor__die[data-rolling="false"]').count()==3; localized_evidence('settled',['settled'])
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"crown-and-anchor-phase\"]')?.textContent === 'Settled'",timeout=WAIT_MS * 2); assert page.locator('.crown-anchor__die[data-rolling="false"]').count()==3 and page.locator('[data-action="repeat"]').is_enabled(); localized_evidence('settled',['settled','repeat_available'])
                     # Commit another real round under reduced motion and require the presentation flag.
                     page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="anchor"]').fill('1'); page.locator('[data-play]').click(); page.locator('.crown-anchor__die[data-reduced-motion="true"]').first.wait_for(timeout=WAIT_MS * 2); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and capture restored private history.
-                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('crown-and-anchor').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored'])
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('crown-and-anchor').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['route_restored','repeat_available'])
+                    # Require reload to reuse the exact stylesheet singleton without restoring an inline owner.
+                    assert page.locator('link#crown-and-anchor-styles[href="/games/crown_and_anchor.css"]').count()==1 and page.locator('style#crown-and-anchor-styles').count()==0
+                    # Leave the route and require teardown to remove the mounted game surface.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS); assert page.get_by_test_id('crown-and-anchor').count()==0
+                    # Remount once to prove the reusable stylesheet and lifecycle route owner remain singleton-safe.
+                    page.get_by_test_id('nav-crown_and_anchor').click(); page.get_by_test_id('crown-and-anchor').wait_for(timeout=WAIT_MS); assert page.locator('link#crown-and-anchor-styles[href="/games/crown_and_anchor.css"]').count()==1 and page.locator('style#crown-and-anchor-styles').count()==0
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
                 # Execute the integrated Crown and Anchor browser and visual gate.
-                run_case('BR-CAA-001',['CAA-001','CAA-002','CAA-004','CAA-005'],crown_and_anchor_acceptance)
+                run_case('BR-CAA-001',['CAA-001','CAA-002','CAA-004','CAA-005','CORE-034','TEST-248'],crown_and_anchor_acceptance)
                 # Define real-backend Over/Under 7 localization, wager, responsive, motion, and route acceptance.
                 def over_under_7_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.

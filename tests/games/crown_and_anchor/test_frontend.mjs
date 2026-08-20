@@ -27,6 +27,10 @@ Object.defineProperty(globalThis, 'crypto', { value: { randomUUID: () => '000000
 
 // Resolve the production frontend module path.
 const modulePath = path.resolve('web/games/crown_and_anchor.js');
+// Read the exact production source for shared-lifecycle and duplicate-helper assertions.
+const source = readFileSync(modulePath, 'utf8');
+// Read the extracted game stylesheet for representative selector preservation.
+const stylesheet = readFileSync(path.resolve('web/games/crown_and_anchor.css'), 'utf8');
 // Import the isolated production browser module.
 const frontend = await import(pathToFileURL(modulePath).href);
 
@@ -36,6 +40,12 @@ assert.equal(frontend.CrownAndAnchorGame.id, 'crown_and_anchor');
 assert.equal(typeof frontend.CrownAndAnchorGame.mount, 'function');
 // Assert the catalog-facing unmount remains callable.
 assert.equal(typeof frontend.CrownAndAnchorGame.unmount, 'function');
+// Require shared route, busy, locale, and external-style ownership while retaining the strict retry identity export.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "requestPrefix: 'caa'", "href: '/games/crown_and_anchor.css'", 'export function createClientRequestId', 'createMotionTimerScope', 'routeSession']) assert.ok(source.includes(marker), marker);
+// Reject every migrated root, busy, locale, and opaque inline-style ownership helper.
+for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'const ROUTE_CSS', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(source.includes(duplicate), false, duplicate);
+// Require representative route, rail, stage, dice, result, history, control, and responsive rules in formatted CSS.
+for (const selector of ['.crown-anchor {', '.crown-anchor__layout {', '.crown-anchor__controls {', '.crown-anchor__play {', '.crown-anchor__repeat {', '.crown-anchor__stage {', '.crown-anchor__dice {', '.crown-anchor__die[data-rolling="true"] {', '.crown-anchor__table {', '.crown-anchor__result {', '.crown-anchor__history {', '@media (max-width: 1200px)', '@media (max-width: 560px)']) assert.ok(stylesheet.includes(selector), selector);
 // Assert issue #97 dice primitives are used through a deterministic preview helper.
 assert.equal(frontend.previewFaces('issue-133').length, 3);
 // Assert retry-safe client identities receive the game prefix.

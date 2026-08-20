@@ -368,5 +368,15 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(teenPattiSource.includes(duplicate), false, duplicate);
 // Require representative route, card, decision, wager, paytable, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.teenp {', '.tp-stage {', '.tp-row h4 {', '.tp-cards {', '.tp-cards.win {', '.tp-actions {', '.tp-btn.play {', '.tp-btn.fold {', '.tp-btn.deal {', '.tp-field input {', '.tp-pays {', '.tp-rank {', '.tp-result {', '.tp-repeat {', '@media (max-width: 900px)', '@media (max-width: 640px)', '@media (prefers-reduced-motion: reduce)']) assert.ok(teenPattiCss.includes(selector), selector);
+// Read the exact twentieth-adopter source for per-slice duplicate-helper deletion evidence.
+const crownAndAnchorSource = await readFile(new URL('../web/games/crown_and_anchor.js', import.meta.url), 'utf8');
+// Read Crown and Anchor's formatted external stylesheet for ownership and tooling visibility.
+const crownAndAnchorCss = await readFile(new URL('../web/games/crown_and_anchor.css', import.meta.url), 'utf8');
+// Require Crown and Anchor to delegate shared lifecycle ownership while retaining strict secure replay identity and motion scope contracts.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "requestPrefix: 'caa'", "href: '/games/crown_and_anchor.css'", 'export function createClientRequestId', 'createMotionTimerScope', 'routeSession']) assert.ok(crownAndAnchorSource.includes(marker), marker);
+// Reject Crown and Anchor's migrated root, busy, locale, style-text, and inline-style wrappers.
+for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'style.textContent', 'onLocaleChange', 'initI18n', 'ROUTE_CSS']) assert.equal(crownAndAnchorSource.includes(duplicate), false, duplicate);
+// Require representative layout, dice, reduced-motion, controls, history, and responsive rules to survive extraction.
+for (const selector of ['.crown-anchor {', '.crown-anchor__layout {', '.crown-anchor__play {', '.crown-anchor__repeat {', '.crown-anchor__stage {', '.crown-anchor__dice {', '.crown-anchor__die[data-rolling="true"] {', '.crown-anchor__die[data-reduced-motion="true"] {', '.crown-anchor__table {', '.crown-anchor__result {', '.crown-anchor__history {', '@media (max-width: 1200px)', '@media (max-width: 560px)']) assert.ok(crownAndAnchorCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');
