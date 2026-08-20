@@ -20,6 +20,9 @@ import time
 import unittest
 # Import portable paths for repository, state, and rendezvous ownership.
 from pathlib import Path
+
+# Import deterministic ownership for every fresh-process race worker.
+from tests.process_race import ProcessRacePool
 # Import focused patching support for deterministic in-memory provider seams.
 from unittest import mock
 
@@ -76,7 +79,7 @@ class RouletteAtomicStateTests(unittest.TestCase):
         return repository_root, environment, state_path
 
     # Start two stale-load workers and release them through independently owned gates.
-    def _start_workers(self, repository_root: Path, environment: dict, temporary_root: Path, modes: tuple[str, str]):
+    def _start_workers(self, repository_root: Path, environment: dict, temporary_root: Path, modes: tuple[str, str], process_pool: ProcessRacePool):
         # Define one worker that preloads state before its provider-owned transition.
         worker_source = r"""
 import sys
@@ -137,7 +140,7 @@ else:
             # Give each worker an independently releasable gate.
             go_path = temporary_root / f"go-{mode}-{index}"
             # Launch without a shell so interpreter and argument identity stay exact.
-            process = subprocess.Popen([sys.executable, "-c", worker_source, mode, str(ready_path), str(go_path)], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            process = process_pool.spawn([sys.executable, "-c", worker_source, mode, str(ready_path), str(go_path)], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             # Retain the complete worker control tuple.
             workers.append((process, ready_path, go_path))
         # Bound stale-load rendezvous so a failed child cannot hang the suite.
@@ -151,7 +154,7 @@ else:
             # Yield briefly without broadening the deterministic schedule.
             time.sleep(0.01)
         # Require both stale snapshots before the test selects provider order.
-        self.assertTrue(all(ready.exists() for _process, ready, _go in workers))
+        process_pool.wait_until_ready([(process, ready) for process, ready, _go in workers], timeout=0)
         # Return live workers so each test can release simultaneous or ordered schedules.
         return workers
 
@@ -169,7 +172,7 @@ else:
     # Prove a wager transition preserves one racing sibling update and debits once.
     def test_purchase_preserves_fresh_process_sibling_update(self) -> None:
         # Own all provider and rendezvous bytes inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve isolated process, environment, and state bindings.
             repository_root, environment, state_path = self._environment(temporary)
             # Bootstrap the wallet before any settlement action starts.
@@ -179,7 +182,7 @@ else:
             # Seed one complete empty Roulette state and sibling marker.
             state_path.write_text(json.dumps(self._state(), sort_keys=True), encoding="utf-8")
             # Start one purchase and one unrelated stale sibling transition.
-            workers = self._start_workers(repository_root, environment, Path(temporary), ("purchase", "purchase-sibling"))
+            workers = self._start_workers(repository_root, environment, Path(temporary), ("purchase", "purchase-sibling"), process_pool)
             # Release both stale workers against the provider lock.
             for _process, _ready, go_path in workers:
                 # Publish each independent release marker once.
@@ -206,7 +209,7 @@ else:
     # Prove provider order makes stale settings refuse after a committed wager.
     def test_provider_ordered_settings_cannot_erase_committed_bet(self) -> None:
         # Own all provider and rendezvous bytes inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve isolated process, environment, and state bindings.
             repository_root, environment, state_path = self._environment(temporary)
             # Bootstrap the wallet used by the winning purchase transition.
@@ -216,7 +219,7 @@ else:
             # Seed the exact no-bet state both workers preload.
             state_path.write_text(json.dumps(self._state(), sort_keys=True), encoding="utf-8")
             # Start purchase and settings workers from the same stale state.
-            workers = self._start_workers(repository_root, environment, Path(temporary), ("purchase", "settings"))
+            workers = self._start_workers(repository_root, environment, Path(temporary), ("purchase", "settings"), process_pool)
             # Release and complete the purchase first to define provider order.
             workers[0][2].write_text("go", encoding="utf-8")
             # Require the first action to publish its wager successfully.
@@ -233,7 +236,7 @@ else:
     # Prove committed spin and terminal result transitions preserve racing siblings.
     def test_spin_commit_and_finalization_preserve_process_siblings(self) -> None:
         # Own all provider and rendezvous bytes inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve isolated process, environment, and state bindings.
             repository_root, environment, state_path = self._environment(temporary)
             # Bootstrap the wallet read by zero-credit settlement history.
@@ -247,7 +250,7 @@ else:
             # Seed the exact wager set observed by both commit workers.
             state_path.write_text(json.dumps(self._state(bets=[bet]), sort_keys=True), encoding="utf-8")
             # Race entropy commitment against one unrelated stale sibling update.
-            commit_workers = self._start_workers(repository_root, environment, Path(temporary), ("spin-commit", "commit-sibling"))
+            commit_workers = self._start_workers(repository_root, environment, Path(temporary), ("spin-commit", "commit-sibling"), process_pool)
             # Release both provider transitions once.
             for _process, _ready, go_path in commit_workers:
                 # Publish each independent release marker.
@@ -259,7 +262,7 @@ else:
             # Require one exact pocket, preserved sibling, and no premature public result.
             self.assertEqual((committed[api.PENDING_SPIN_KEY]["round"]["result"], committed["atomic_markers"], committed["last_results"]), ("2", ["seed", "commit-sibling"], []))
             # Race two terminal settlement requests against the same zero-credit result.
-            finalize_workers = self._start_workers(repository_root, environment, Path(temporary), ("spin-settle", "spin-settle"))
+            finalize_workers = self._start_workers(repository_root, environment, Path(temporary), ("spin-settle", "spin-settle"), process_pool)
             # Release both settlement-stage transitions once.
             for _process, _ready, go_path in finalize_workers:
                 # Publish each independent release marker.

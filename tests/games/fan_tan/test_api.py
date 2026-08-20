@@ -10,6 +10,9 @@ import json
 import os
 # Import filesystem paths for task-owned rendezvous gates.
 from pathlib import Path
+
+# Import deterministic ownership for every fresh-process race worker.
+from tests.process_race import ProcessRacePool
 # Import child-process execution for true cross-process races.
 import subprocess
 # Import the active interpreter for exact worker parity.
@@ -238,7 +241,7 @@ class FanTanApiTests(unittest.TestCase):
     # Prove two real processes serialize one preparation and one entropy owner.
     def test_real_process_same_request_preparation_serializes_one_entropy_owner(self):
         # Own every provider and rendezvous byte inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Resolve this exact checkout for child imports.
             repository_root = Path(__file__).resolve().parents[3]
             # Bind provider state to the task-owned disposable root.
@@ -285,7 +288,7 @@ print('PASS:' + str(len(draws)) + ':' + str(result['entropy']) + ':' + str(int(r
                 # Allocate task-owned readiness and release gates.
                 ready_path, release_path = Path(temporary) / f"ready-{index}", Path(temporary) / f"release-{index}"
                 # Launch without a shell so interpreter and arguments remain exact.
-                process = subprocess.Popen([sys.executable, "-c", worker_source, str(ready_path), str(release_path), "atomic-preparation"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                process = process_pool.spawn([sys.executable, "-c", worker_source, str(ready_path), str(release_path), "atomic-preparation"], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Retain process and gate ownership.
                 workers.append((process, ready_path, release_path))
             # Bound the pre-preparation rendezvous.
@@ -299,7 +302,7 @@ print('PASS:' + str(len(draws)) + ':' + str(result['entropy']) + ':' + str(int(r
                 # Yield briefly without starting another request.
                 time.sleep(0.01)
             # Require both contenders before publishing a concurrent sibling.
-            self.assertTrue(all(ready.exists() for _process, ready, _release in workers))
+            process_pool.wait_until_ready([(process, ready) for process, ready, _release in workers], timeout=0)
             # Define one unrelated provider-atomic sibling update.
             sibling_source = "from casino.core.state_store import update_player_game_state\nfrom casino.games.fan_tan import engine\ndef add(state):\n    state.setdefault('atomic_markers', []).append('concurrent')\n    return state\nupdate_player_game_state('fan_tan', 'player-a', add, engine.default_state)\n"
             # Commit the sibling before either preparation enters provider state.

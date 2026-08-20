@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.6
-- tests: 1.114.18
-- docs: 1.110.18
+- tests: 1.114.19
+- docs: 1.110.19
 - contracts: 1.62.6
 - tooling: 1.43.4
 - commenting_policy: 2.1.0
@@ -617,7 +617,7 @@ Historical source baseline: 9.1.0
 - **TEST-158** (Tests) - PASS: Focused JSON/MySQL-capable API suites plus existing permanent Browser cases prove public recovery, owner-only administrator delegation and audit, lifecycle-only Users, enrollment readiness and fail-closed live enablement, read-only launch status, session enforcement/warning/provenance, personal settings with sound off by default, self-history, and the guest conversion offer across English, Russian, and all governed viewports.
 - **TEST-159** (Tests) - PASS: A listener-free exact-source payload and shipped-asset budget checkpoint accepts only bounded JSON and MySQL request-latency evidence, derives deterministic compression and asset composition facts, rejects hostile or mismatched inputs, and never starts a listener or contacts production.
 - **TEST-160** (Tests) - PASS: A fail-closed static multiprocess-safety audit inventories every registered game and reviewed session, autoplay, bot, limiter, operations, settlement-adapter, provider-cache, and MySQL-pool state owner before any worker-count change, and rejects unclassified entrypoints or mutable singleton state.
-- **TEST-161** (Tests) - PASS: Descriptor-owned game suite declarations are parsed through a strict dotted-module boundary, one shared requirement-mapped API case executes every browser-free Python game suite without a per-game registration, and dependency-complete CI discovers the remaining Browser-owned modules generically.
+- **TEST-161** (Tests) - PASS: Descriptor-owned game suite declarations are parsed through a strict dotted-module boundary, one shared requirement-mapped API case executes every browser-free Python game suite without a per-game registration, dependency-complete CI discovers the remaining Browser-owned modules generically, and every fresh-process race owns and reaps its child processes and capture pipes before disposable state is removed.
 - **STORAGE-012** (Storage) - PASS: Player persistence exposes only explicit row-scoped insertion and provider-owned idempotent bootstrap boundaries: JSON holds one cross-process wallet gate across the complete missing-row batch, MySQL inserts missing primary-key rows inside one rollback-safe transaction, existing wallet and lifecycle fields are never overwritten, player reads perform no seed or commit work, and the retired whole-document save and empty-check seams cannot reintroduce a read-before-write race.
 - **TEST-162** (Tests) - PASS: Browser-free JSON and fake-MySQL evidence proves thread- and process-racing player creation and bootstrap insert each missing identifier once, preserve committed balances and ledger rows, perform byte-identical no-op replay, roll back partial MySQL batches, leave MySQL reads write-free, and statically reject the retired public full-document save and empty-check interfaces.
 - **TEST-163** (Tests) - PASS: Listener-free and integrated API evidence proves descriptor-governed settings reject hostile allocation and settlement values before handlers run, canonicalize accepted values, repair poisoned persisted state to engine-owned defaults, publish exact generated request schemas and bounded-field authority evidence, and reject any return of duplicated per-game rule domains.

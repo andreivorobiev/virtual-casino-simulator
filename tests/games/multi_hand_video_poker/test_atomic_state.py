@@ -19,6 +19,9 @@ import unittest
 # Import portable paths for repository and fixture identities.
 from pathlib import Path
 
+# Import deterministic ownership for every fresh-process race worker.
+from tests.process_race import ProcessRacePool
+
 # Import the production engine for canonical round construction.
 from casino.games.multi_hand_video_poker import engine
 
@@ -74,7 +77,7 @@ class MultiHandVideoPokerAtomicStateTests(unittest.TestCase):
         return repository_root, state_path, environment
 
     # Start two fresh workers only after both own the same stale pre-release snapshot.
-    def _run_workers(self, repository_root: Path, environment: dict, temporary_root: Path, modes: tuple[str, str]) -> list[str]:
+    def _run_workers(self, repository_root: Path, environment: dict, temporary_root: Path, modes: tuple[str, str], process_pool: ProcessRacePool) -> list[str]:
         # Define a dependency-free worker using production state and engine boundaries.
         worker_source = """
 import sys
@@ -143,7 +146,7 @@ else:
             # Allocate one readiness marker for this child.
             ready_path = temporary_root / f"ready-{index}-{mode}"
             # Start the exact interpreter with bounded pipe capture.
-            process = subprocess.Popen([sys.executable, "-c", worker_source, mode, str(ready_path), str(go_path), str(sequence_path)], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            process = process_pool.spawn([sys.executable, "-c", worker_source, mode, str(ready_path), str(go_path), str(sequence_path)], cwd=repository_root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             # Retain the process and marker for rendezvous validation.
             processes.append((process, ready_path))
         # Bound the stale-load rendezvous so a broken child cannot hang CI.
@@ -157,7 +160,7 @@ else:
             # Yield briefly without changing worker order.
             time.sleep(0.01)
         # Require a complete stale-state rendezvous before release.
-        self.assertTrue(all(ready.exists() for _, ready in processes))
+        process_pool.wait_until_ready([(process, ready) for process, ready in processes], timeout=0)
         # Release both prepared workers exactly once.
         go_path.write_text("go", encoding="utf-8")
         # Collect bounded diagnostics and final exit codes.
@@ -172,11 +175,11 @@ else:
     # Prove a hold transition and unrelated sibling publication both survive stale loads.
     def test_hold_preserves_concurrent_sibling_update(self) -> None:
         # Own every provider and rendezvous byte inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Build exact checkout, state, and child environment bindings.
             repository_root, state_path, environment = self._fixture(temporary)
             # Race one real hold transition against an unrelated top-level marker.
-            self._run_workers(repository_root, environment, Path(temporary), ("hold", "sibling"))
+            self._run_workers(repository_root, environment, Path(temporary), ("hold", "sibling"), process_pool)
             # Read the single provider-authoritative document after both workers exit.
             final = json.loads(state_path.read_text(encoding="utf-8"))
             # Require the hold and sibling marker together with the unchanged wager proof.
@@ -185,11 +188,11 @@ else:
     # Prove a committed hold is consumed by a later draw despite both stale preloads.
     def test_hold_then_draw_uses_provider_latest_selection(self) -> None:
         # Own every provider and rendezvous byte inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Build exact checkout, state, and child environment bindings.
             repository_root, state_path, environment = self._fixture(temporary)
             # Force hold publication before the already-loaded draw request proceeds.
-            outcomes = self._run_workers(repository_root, environment, Path(temporary), ("hold-first", "draw-after-hold"))
+            outcomes = self._run_workers(repository_root, environment, Path(temporary), ("hold-first", "draw-after-hold"), process_pool)
             # Read the authoritative archived round after both transitions.
             final = json.loads(state_path.read_text(encoding="utf-8"))
             # Require both workers to complete without fallback output.
@@ -200,11 +203,11 @@ else:
     # Prove a committed draw makes an already-loaded stale hold non-actionable.
     def test_draw_then_hold_refuses_round_resurrection(self) -> None:
         # Own every provider and rendezvous byte inside one disposable directory.
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, ProcessRacePool() as process_pool:
             # Build exact checkout, state, and child environment bindings.
             repository_root, state_path, environment = self._fixture(temporary)
             # Force draw publication before the already-loaded hold request proceeds.
-            outcomes = self._run_workers(repository_root, environment, Path(temporary), ("draw-first", "hold-after-draw"))
+            outcomes = self._run_workers(repository_root, environment, Path(temporary), ("draw-first", "hold-after-draw"), process_pool)
             # Read the authoritative terminal document after the expected refusal.
             final = json.loads(state_path.read_text(encoding="utf-8"))
             # Require only the stale hold worker to report its fixed refusal marker.
