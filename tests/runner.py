@@ -3148,10 +3148,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-TEQ-001',['TEQ-001','TEQ-002','CORE-034','TEST-185','TEST-248'],trente_et_quarante_browser_acceptance)
                 # Exercise Pachinko through its real drop endpoint and reload-safe recent-round state.
                 def pachinko_browser_acceptance():
-                    # Use the default five-token chip for one real server-owned pin path.
-                    newest_simple_game_acceptance('pachinko','pachinko','/api/v1/games/pachinko/drops',lambda: page.get_by_test_id('pachinko-drop').click(),'pachinko-result','pachinko-repeat')
+                    # Bind exact external-style and ready-layout evidence before the real drop moves the ball.
+                    def drop_once():
+                        # Restore the governed primary desktop viewport and route top after preceding shared cases.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate('window.scrollTo(0,0)'); page.wait_for_timeout(100)
+                        # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                        style_link=page.locator('link#pachinko-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/pachinko.css'
+                        # Prove the migrated asset loaded by binding the unchanged desktop route and thirteen-pocket grid.
+                        assert page.get_by_test_id('pachinko').evaluate("el => { const route=getComputedStyle(el); const pockets=getComputedStyle(el.querySelector('.pk-pockets')); return route.display==='grid' && route.gridTemplateColumns.split(' ').length===2 && pockets.display==='grid' && pockets.gridTemplateColumns.split(' ').length===13; }")
+                        # Capture after-pass fourth-adopter evidence before the real settled action moves the ball.
+                        page.locator('#view').screenshot(path=str(screenshots/'after-pass-pachinko-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Use the default five-token chip for one real server-owned pin path.
+                        page.get_by_test_id('pachinko-drop').click()
+                    # Bind the drop response, terminal wallet, and recovered repeat control.
+                    newest_simple_game_acceptance('pachinko','pachinko','/api/v1/games/pachinko/drops',drop_once,'pachinko-result','pachinko-repeat')
                 # Record Pachinko's dedicated affected-game acceptance case.
-                run_case('BR-PACHINKO-001',['PACH-001','PACH-002','TEST-185'],pachinko_browser_acceptance)
+                run_case('BR-PACHINKO-001',['PACH-001','PACH-002','CORE-034','TEST-185','TEST-248'],pachinko_browser_acceptance)
                 # Exercise Daily Draw Lab through a marked number, real draw, and reload-safe recent-round state.
                 def daily_draw_lab_browser_acceptance():
                     # Mark number one before invoking the otherwise shared settled-round helper.
