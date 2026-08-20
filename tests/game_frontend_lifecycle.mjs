@@ -193,5 +193,16 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let dealBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(faroSource.includes(duplicate), false, duplicate);
 // Require every representative Faro selector, animation, and responsive rule to survive extraction.
 for (const selector of ['.faro {', '.fr-card.dealing {', '@keyframes fr-flip {', '.fr-ranks {', '.fr-deal {', '.fr-repeat {', '@media (prefers-reduced-motion: reduce)', '@media (max-width: 900px)', '@media (max-width: 430px)']) assert.ok(faroCss.includes(selector), selector);
+
+// Read the exact third-adopter source for per-slice duplicate-helper deletion evidence.
+const teqSource = await readFile(new URL('../web/games/trente_et_quarante.js', import.meta.url), 'utf8');
+// Read Trente et Quarante's formatted external stylesheet for ownership and tooling visibility.
+const teqCss = await readFile(new URL('../web/games/trente_et_quarante.css', import.meta.url), 'utf8');
+// Require Trente et Quarante to delegate every lifecycle responsibility named by issue #718.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', 'lifecycle.nextRequestId()', "href: '/games/trente_et_quarante.css'"]) assert.ok(teqSource.includes(marker), marker);
+// Reject Trente et Quarante's migrated root, busy, locale, style-text, request-id, and translation wrappers.
+for (const duplicate of ['let root =', 'let dealBusy =', 'localeUnsubscribe', 'function ensureStyles', 'function newRequestId', 'style.textContent', 'onLocaleChange', 'initI18n']) assert.equal(teqSource.includes(duplicate), false, duplicate);
+// Require every representative row, card, control, result, repeat, and responsive selector to survive extraction.
+for (const selector of ['.teq {', '.teq-row.win {', '.teq-card {', '.teq-bets {', '.teq-deal {', '.teq-result {', '.teq-repeat {', '@media (max-width: 900px)']) assert.ok(teqCss.includes(selector), selector);
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

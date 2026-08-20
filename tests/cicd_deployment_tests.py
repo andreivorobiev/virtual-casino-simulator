@@ -1547,8 +1547,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         color_wheel_source = self.workflow_text(ROOT / "web" / "games" / "color_wheel.js")
         # Read Roulette's route-owned style source independently from other game modules.
         roulette_source = self.workflow_text(ROOT / "web" / "games" / "roulette.js")
-        # Read Trente et Quarante's card owner to protect a representative non-shared card surface.
-        trente_source = self.workflow_text(ROOT / "web" / "games" / "trente_et_quarante.js")
+        # Read Trente et Quarante's external card-style owner after its lifecycle-adopter extraction.
+        trente_styles = self.workflow_text(ROOT / "web" / "games" / "trente_et_quarante.css")
         # Bind the source header to the permanent grep-policy explanation requested by issue #717.
         namespace_note = "/* CSS namespace gate (#717): bare `.red`, `.black`, and `.green` rules are forbidden; route and card scopes own semantic game colors. */"
         # Require the namespace rule to remain visible before every executable stylesheet rule.
@@ -1570,9 +1570,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         ):
             # Require every Color Wheel semantic control to remain owned by its route source.
             self.assertIn(color_rule, color_wheel_source)
-        # Bind representative playing-card colors to the game-owned Trente et Quarante surface.
-        self.assertIn(".teq-card.red{color:#b41b29;}", trente_source)
-        self.assertIn(".teq-card.black{color:#161616;}", trente_source)
+        # Bind the exact red card foreground to the formatted game-owned stylesheet.
+        self.assertRegex(trente_styles, r"\.teq-card\.red\s*\{\s*color:\s*#b41b29;\s*\}")
+        # Bind the exact black card foreground to the same route-owned stylesheet.
+        self.assertRegex(trente_styles, r"\.teq-card\.black\s*\{\s*color:\s*#161616;\s*\}")
         # Enumerate every Roulette selector that previously needed an important counter-override.
         roulette_selectors = (
             ".roulette-premium .table-cell.red",

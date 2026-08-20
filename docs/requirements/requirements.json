@@ -13490,7 +13490,8 @@
       ],
       "browser_tests": [
         "BR-DAILY-DRAW-LAB-001",
-        "BR-FARO-001"
+        "BR-FARO-001",
+        "BR-TEQ-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
@@ -13498,28 +13499,33 @@
         "web/games/daily_draw_lab.css",
         "web/games/faro.js",
         "web/games/faro.css",
+        "web/games/trente_et_quarante.js",
+        "web/games/trente_et_quarante.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
+        "docs/evidence/trente_et_quarante/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
-        "modules/faro.json"
+        "modules/faro.json",
+        "modules/trente_et_quarante.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-718-faro-lifecycle-slice",
-      "notes": "Daily Draw Lab and Faro are the first two adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged."
+      "changed_in": "issue-997-trente-et-quarante-lifecycle-slice",
+      "notes": "Daily Draw Lab, Faro, and Trente et Quarante are the first three adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab and Faro browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, and Trente et Quarante browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
       ],
       "browser_tests": [
         "BR-DAILY-DRAW-LAB-001",
-        "BR-FARO-001"
+        "BR-FARO-001",
+        "BR-TEQ-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
@@ -13530,7 +13536,7 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-718-faro-lifecycle-slice",
+      "changed_in": "issue-997-trente-et-quarante-lifecycle-slice",
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {

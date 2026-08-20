@@ -3130,10 +3130,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-FARO-001',['FARO-001','FARO-002','CORE-034','TEST-185','TEST-248'],faro_browser_acceptance)
                 # Exercise Trente et Quarante through its real coup endpoint and reload-safe recent-round state.
                 def trente_et_quarante_browser_acceptance():
-                    # Use the default rouge bet and five-token chip for one real settled coup.
-                    newest_simple_game_acceptance('trente_et_quarante','trente-et-quarante','/api/v1/games/trente-et-quarante/coups',lambda: page.get_by_test_id('teq-deal').click(),'teq-result','teq-repeat')
+                    # Bind exact external-style and ready-layout evidence before the real coup mutates the rows.
+                    def coup_once():
+                        # Restore the governed primary desktop viewport and route top after preceding shared cases.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate('window.scrollTo(0,0)'); page.wait_for_timeout(100)
+                        # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                        style_link=page.locator('link#teq-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/trente_et_quarante.css'
+                        # Prove the migrated asset loaded by binding the unchanged desktop route and two-column bet grid.
+                        assert page.get_by_test_id('trente-et-quarante').evaluate("el => { const route=getComputedStyle(el); const bets=getComputedStyle(el.querySelector('.teq-bets')); return route.display==='grid' && route.gridTemplateColumns.split(' ').length===2 && bets.display==='grid' && bets.gridTemplateColumns.split(' ').length===2; }")
+                        # Capture after-pass third-adopter evidence before the real settled action mutates the rows.
+                        page.locator('#view').screenshot(path=str(screenshots/'after-pass-trente-et-quarante-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Use the default rouge bet and five-token chip for one real settled coup.
+                        page.get_by_test_id('teq-deal').click()
+                    # Bind the coup response, terminal wallet, and recovered repeat control.
+                    newest_simple_game_acceptance('trente_et_quarante','trente-et-quarante','/api/v1/games/trente-et-quarante/coups',coup_once,'teq-result','teq-repeat')
                 # Record Trente et Quarante's dedicated affected-game acceptance case.
-                run_case('BR-TEQ-001',['TEQ-001','TEQ-002','TEST-185'],trente_et_quarante_browser_acceptance)
+                run_case('BR-TEQ-001',['TEQ-001','TEQ-002','CORE-034','TEST-185','TEST-248'],trente_et_quarante_browser_acceptance)
                 # Exercise Pachinko through its real drop endpoint and reload-safe recent-round state.
                 def pachinko_browser_acceptance():
                     # Use the default five-token chip for one real server-owned pin path.
