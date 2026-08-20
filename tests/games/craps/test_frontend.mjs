@@ -17,6 +17,8 @@ globalThis.window = {};
 const { CrapsGame, createClientRequestId, createCosmeticDiceFrames, isValidWager, pendingSettlementRecovery, scheduleRollPresentation, viewMarkup } = await import('../../../web/games/craps.js');
 // Read the production source for ownership and unmanaged-timer assertions.
 const source = await readFile(new URL('../../../web/games/craps.js', import.meta.url), 'utf8');
+// Read the extracted game stylesheet for representative selector preservation.
+const stylesheet = await readFile(new URL('../../../web/games/craps.css', import.meta.url), 'utf8');
 // Read the complete English game-owned resource domain as UTF-8.
 const english = JSON.parse(await readFile(new URL('../../../web/i18n/en-US/games/craps.json', import.meta.url), 'utf8'));
 // Read the complete Russian game-owned resource domain as UTF-8.
@@ -232,4 +234,14 @@ test('issue 90 source remains isolated, retry-safe, and free of raw timers', () 
   assert.match(source, /request_id: recovery\.request_id/);
   // Reject caller-selected player fields from public action bodies.
   assert.doesNotMatch(source, /player_id\s*:/);
+});
+
+// Verify issue #718 moves route ownership without changing strict start or roll identities.
+test('CORE-034 shared lifecycle owns the Craps route', () => {
+  // Require shared route, busy, locale, external-style, motion, and stale-session ownership.
+  for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "requestPrefix: 'craps'", "href: '/games/craps.css'", 'export function createClientRequestId', 'createMotionTimerScope', 'routeSession', 'ownsRoute']) assert.ok(source.includes(marker), marker);
+  // Reject migrated root, locale, inline style, and opaque style-payload helpers.
+  for (const duplicate of ['let root =', 'localeUnsubscribe', 'function ensureStyles', 'const ROUTE_CSS', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(source.includes(duplicate), false, duplicate);
+  // Require representative layout, control, felt, dice, result, history, responsive, and reduced-motion rules.
+  for (const selector of ['.craps-shell {', '.craps-layout {', '.craps-primary {', '.craps-repeat {', '.craps-stage {', '.craps-felt {', '.craps-die.is-rolling {', '.craps-result {', '.craps-history-row {', '@media(max-width:1200px)', '@media(max-width:560px)', '@media(prefers-reduced-motion:reduce)']) assert.ok(stylesheet.includes(selector), selector);
 });

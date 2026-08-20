@@ -10,15 +10,15 @@ import { refreshBalance, safe } from '../core/ui.js';
 import { createSeededRandom, rollDice } from '../core/dice.js';
 // Import the merged #97 lifecycle scope so no game timer survives route teardown.
 import { createMotionTimerScope, prefersReducedMotion } from '../core/motion.js';
-// Import locale loading, formatting, translation, and subscription helpers.
-import { formatNumber, loadI18nDomain, onLocaleChange, t } from '../core/i18n.js';
+// Import locale-aware number formatting while shared lifecycle owns translations.
+import { formatNumber } from '../core/i18n.js';
+// Import the shared frontend lifecycle for route, locale, busy, and stylesheet ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the game-owned resource domain used by every visible and accessible string.
 const DOMAIN = 'games/craps';
 // Store the additive frozen-v1 API root once so endpoint construction cannot drift.
 const API_ROOT = '/api/v1/games/craps';
-// Store the route-local style id so repeated mounts never duplicate the style node.
-const STYLE_ID = 'craps-game-styles';
 // Store the number of decorative frames shown before the authoritative server dice.
 export const COSMETIC_FRAME_COUNT = 4;
 // Store the spacing between cosmetic frames for normal-motion presentation.
@@ -27,62 +27,7 @@ export const ROLL_FRAME_DELAY_MS = 110;
 const DEFAULT_BET_TYPES = Object.freeze(['pass_line', 'dont_pass']);
 // Store CSS-grid positions for code-native die pips without special-font glyphs.
 const PIP_POSITIONS = Object.freeze({ 1: ['mc'], 2: ['tr', 'bl'], 3: ['tr', 'mc', 'bl'], 4: ['tl', 'tr', 'bl', 'br'], 5: ['tl', 'tr', 'mc', 'bl', 'br'], 6: ['tl', 'ml', 'bl', 'tr', 'mr', 'br'] });
-// Store route-owned responsive styling without changing the shared stylesheet.
-const ROUTE_CSS = [
-  '.craps-shell{display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px;height:100%;min-width:0;min-height:0;color:var(--text,#f7edda);}', // Keep the title compact above one stable game composition.
-  '.craps-header{display:flex;align-items:end;justify-content:space-between;gap:16px;min-width:0;padding:2px;}', // Place title and actionable phase in the first hierarchy level.
-  '.craps-header h1{margin:0;color:var(--gold,#ffd978);font-family:var(--font-display);font-size:clamp(34px,4vw,54px);line-height:1;}', // Give the game a strong localized title without consuming stage height.
-  '.craps-header p{max-width:760px;margin:5px 0 0;color:var(--muted,#b8c8c1);}', // Keep the localized explanation subordinate to the title.
-  '.craps-eyebrow{color:var(--gold)!important;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;}', // Present the table family as a restrained casino eyebrow.
-  '.craps-phase{flex:0 0 auto;padding:8px 13px;border:1px solid var(--gold);border-radius:999px;background:var(--panel-strong);color:var(--gold);font-weight:900;}', // Reserve a stable concise phase chip across every round state.
-  '.craps-layout{grid-template-columns:minmax(225px,.68fr) minmax(620px,2.55fr) minmax(245px,.74fr);gap:14px;}', // Keep the felt wider and visually stronger than both support rails combined.
-  '.craps-control,.craps-data{display:grid;align-content:start;gap:13px;padding:15px;}', // Separate controls and data into clear subordinate rail regions.
-  '.craps-control h2,.craps-data h2,.craps-data h3{margin:0;color:var(--gold);}', // Give every support region an explicit readable heading.
-  '.craps-field{display:grid;gap:6px;min-width:0;}', // Keep labels visibly connected to their semantic fields.
-  '.craps-field span{color:var(--muted,#b8c8c1);font-size:12px;font-weight:900;}', // Present configuration labels without debug-tool styling.
-  '.craps-field input,.craps-field select{width:100%;min-width:0;min-height:42px;}', // Preserve governed keyboard and touch target dimensions.
-  '.craps-primary{width:100%;min-height:48px;border-color:var(--gold);background:linear-gradient(180deg,#c72b38,#861620);color:#fff;font-weight:1000;}.craps-repeat{width:100%;min-height:44px;background:transparent;color:var(--gold);border:1px solid var(--gold);font-weight:900;}.craps-repeat:disabled{opacity:.5;cursor:not-allowed;}', // Use the governed red treatment for the one primary action.
-  '.craps-primary:disabled{opacity:.62;cursor:not-allowed;}', // Keep disabled controls readable while the phase explains why.
-  '.craps-retry-hint,.craps-rule-list{margin:0;color:var(--muted,#b8c8c1);font-size:12px;}', // Keep retry and rules guidance present but visually secondary.
-  '.craps-error{min-height:38px;margin:0;color:var(--bad);}', // Reserve error space so failures never resize the stage.
-  '.craps-stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:14px;padding:15px;overflow:hidden;background:radial-gradient(circle at 50% 45%,rgba(20,10,34,.38),transparent 58%),linear-gradient(155deg,var(--felt),var(--bg));}', // Make the code-native felt the dominant game surface.
-  '.craps-stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;}', // Keep table identity and point puck stable above the dice.
-  '.craps-stage-head h2{margin:0;color:var(--gold);font-family:var(--font-display);font-size:30px;}', // Emphasize the localized table label within the dominant stage.
-  '.craps-point{min-width:112px;padding:9px 12px;border:2px solid #efe8d8;border-radius:999px;background:var(--felt);color:#fff;text-align:center;font-weight:1000;}', // Use a text-bearing puck so point state never depends on color alone.
-  '.craps-point.is-on{background:#f1e8d0;color:#16120b;box-shadow:0 0 24px rgba(255,230,160,.34);}', // Reinforce an active point while preserving its visible text.
-  '.craps-felt{position:relative;display:grid;grid-template-rows:auto minmax(190px,1fr);gap:18px;min-height:420px;padding:24px;border:2px solid var(--gold);border-radius:22px;background:linear-gradient(145deg,var(--felt2),var(--felt));box-shadow:inset 0 0 70px rgba(0,0,0,.24);}', // Build one complete responsive table without a nested scroll surface.
-  '.craps-bet-zones{display:grid;grid-template-columns:1fr 1fr;gap:13px;}', // Keep the two supported contract bets equally discoverable.
-  '.craps-bet-zone{display:grid;place-items:center;min-height:86px;padding:12px;border:2px solid rgba(255,255,255,.22);border-radius:14px;color:var(--text);font-weight:1000;text-align:center;}', // Present wager areas as table furniture rather than raw fields.
-  '.craps-bet-zone.is-selected{border-color:var(--gold);outline:3px solid var(--border);outline-offset:2px;background:rgba(255,217,120,.13);}', // Show the active wager with outline and text beyond color alone.
-  '.craps-zone-marker{display:block;margin-top:5px;color:var(--muted);font-size:11px;font-weight:800;}', // Add a readable active-wager marker for non-color selection evidence.
-  '.craps-dice-bay{display:grid;place-items:center;align-content:center;gap:14px;min-height:220px;border:1px solid rgba(255,255,255,.15);border-radius:18px;background:rgba(0,0,0,.16);}', // Reserve a fixed dice area through ready, rolling, and settled phases.
-  '.craps-dice{display:flex;justify-content:center;gap:22px;min-height:112px;}', // Keep the authoritative pair centered and stable.
-  '.craps-die{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);width:104px;height:104px;padding:14px;border:3px solid #f3e9d2;border-radius:18px;background:linear-gradient(145deg,#fffdf5,#dbcda9);box-shadow:0 16px 28px rgba(0,0,0,.38);}', // Draw reliable dice through CSS and semantic markup.
-  '.craps-die.is-empty{border-style:dashed;background:rgba(255,255,255,.08);box-shadow:none;}', // Show a neutral waiting state without inventing a result.
-  '.craps-die.is-rolling{animation:crapsDieTumble .22s ease-in-out;}', // Animate only decorative transform and opacity during presentation.
-  '.craps-pip{align-self:center;justify-self:center;width:16px;height:16px;border-radius:50%;background:#16130f;box-shadow:inset 0 2px 2px rgba(255,255,255,.18);}', // Render each pip as a code-native circle.
-  '.craps-pip.tl{grid-area:1/1}.craps-pip.tc{grid-area:1/2}.craps-pip.tr{grid-area:1/3}.craps-pip.ml{grid-area:2/1}.craps-pip.mc{grid-area:2/2}.craps-pip.mr{grid-area:2/3}.craps-pip.bl{grid-area:3/1}.craps-pip.bc{grid-area:3/2}.craps-pip.br{grid-area:3/3}', // Map named pip positions onto the die grid.
-  '.craps-result{display:grid;place-items:center;gap:5px;min-height:74px;text-align:center;}', // Reserve one polite live result region without shifting the felt.
-  '.craps-result strong{color:var(--gold);font-size:22px;}', // Make the actionable result immediately scannable.
-  '.craps-settlement{display:grid;gap:4px;min-height:74px;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.18);}', // Keep the lower result summary fixed across phase changes.
-  '.craps-data-section{display:grid;gap:9px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.1);}', // Separate current wager, history, and rules without nested panels.
-  '.craps-data-section:last-child{padding-bottom:0;border-bottom:0;}', // Avoid an unnecessary terminal divider.
-  '.craps-metrics{display:grid;gap:7px;}', // Align current wager values in predictable rows.
-  '.craps-metric,.craps-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);}', // Align labels and values without creating another scroll container.
-  '.craps-metric:last-child,.craps-history-row:last-child{border-bottom:0;}', // Keep the final row visually clean.
-  '.craps-history{display:grid;gap:2px;}', // Let the parent data rail own all intentional scrolling.
-  '.craps-history-row span small{display:block;margin-top:3px;color:var(--muted,#b8c8c1);}', // Keep wager detail subordinate to the localized outcome.
-  '.craps-rule-list{display:grid;gap:8px;padding-left:18px;}', // Present the compact game rule summary as readable prose.
-  '.craps-shell button:focus-visible,.craps-shell input:focus-visible,.craps-shell select:focus-visible,.craps-control:focus-visible,.craps-data:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}', // Preserve clear keyboard focus on controls and scroll rails.
-  '@keyframes crapsDieTumble{0%{opacity:.62;transform:rotate(-7deg) scale(.92)}100%{opacity:1;transform:rotate(0) scale(1)}}', // Animate only transform and opacity to avoid layout movement.
-  '@media(max-width:1200px){.craps-shell{height:auto}.craps-layout{grid-template-columns:1fr;grid-template-rows:auto;height:auto;overflow:visible;contain:none}.craps-control{order:1}.craps-stage{order:2;min-height:620px}.craps-data{order:3}.craps-control,.craps-data{overflow:visible}}', // Switch to document scrolling in the governed control-stage-data order.
-  '@media(max-width:560px){.craps-header{align-items:start;flex-direction:column}.craps-layout{gap:12px}.craps-stage,.craps-control,.craps-data{padding:12px}.craps-felt{min-height:390px;padding:14px}.craps-bet-zones{grid-template-columns:1fr}.craps-die{width:82px;height:82px;padding:11px}.craps-pip{width:12px;height:12px}.craps-dice{gap:13px}.craps-stage-head{align-items:start;flex-direction:column}}', // Fit all essential controls and dice inside the required mobile viewport.
-  '@media(prefers-reduced-motion:reduce){.craps-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}.craps-die.is-rolling{transform:none!important}}', // Remove decorative motion while preserving asynchronous result semantics.
-  '.craps-shell[data-reduced-motion="true"] .craps-die{animation:none!important;transition:none!important;}', // Expose and enforce the runtime reduced-motion state for focused evidence.
-].join(''); // Combine scoped CSS fragments into one route-owned stylesheet.
 
-// Store the shared route outlet while this lazy module is mounted.
-let root = null;
 // Store the latest session-bound backend state for reload-safe rendering.
 let gameState = { active_round: null, recent_rounds: [] };
 // Store API-provided wager types while retaining a compatible initial control list.
@@ -109,18 +54,10 @@ let errorKey = null;
 let reducedMotionActive = false;
 // Store one disposable scope that owns every route timer and lifecycle listener.
 let motionScope = null;
-// Store the locale subscription cleanup callback for route teardown.
-let localeUnsubscribe = null;
 // Retain an unresolved start identity so an ambiguous retry cannot duplicate a wager.
 let pendingStartRequestId = null;
 // Retain an unresolved roll identity so an ambiguous retry cannot roll twice.
 let pendingRollRequestId = null;
-
-// Resolve one game-owned localized string after the domain has loaded.
-function tx(key, params = {}) {
-  // Delegate interpolation and fallback handling to the shared i18n runtime.
-  return t(key, params, DOMAIN);
-}
 
 // Return one stable retry identity through an injectable UUID source.
 export function createClientRequestId(action, randomUUID = globalThis.crypto?.randomUUID?.bind(globalThis.crypto)) {
@@ -131,6 +68,17 @@ export function createClientRequestId(action, randomUUID = globalThis.crypto?.ra
   // Prefix the opaque UUID without embedding player information.
   return `craps-${action}-${randomUUID()}`;
 }
+
+// Centralize route, locale, action, and external stylesheet ownership while preserving strict action ids.
+const lifecycle = createGameLifecycle({
+  domain: DOMAIN, // Load only the Craps locale domain for each mount.
+  requestPrefix: 'craps', // Preserve a stable lifecycle namespace for diagnostics.
+  stylesheet: { id: 'craps-game-styles', href: '/games/craps.css' }, // Reuse one external stylesheet across remounts.
+});
+// Reuse lifecycle-owned translation lookup throughout markup and feedback.
+const { tx } = lifecycle;
+// Bind late state, request, and timer work to the exact active route session.
+let routeSession = null;
 
 // Report whether one normalized wager satisfies the frozen OpenAPI amount domain.
 export function isValidWager(value) {
@@ -202,20 +150,6 @@ export function pendingSettlementRecovery(state) {
   if (!roll?.request_id) return null;
   // Return only the route and request fields needed by the public roll endpoint.
   return { round_id: roundItem.round_id, request_id: roll.request_id };
-}
-
-// Install the game-owned stylesheet once without touching shared CSS ownership.
-function ensureStyles() {
-  // Reuse the existing style node after route remounts.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one standard style element for scoped Craps selectors.
-  const style = document.createElement('style');
-  // Assign the stable id used by duplicate-mount protection.
-  style.id = STYLE_ID;
-  // Attach the complete route-owned CSS payload.
-  style.textContent = ROUTE_CSS;
-  // Install styles before the first visible render.
-  document.head.append(style);
 }
 
 // Format a play-token value without currency or special-font glyphs.
@@ -358,6 +292,7 @@ export function viewMarkup({ translate = tx, model = currentModel() } = {}) {
 
 // Replace the route atomically and reconnect semantic event handlers.
 function render() {
+  const root = lifecycle.root(); // Resolve the currently owned outlet before painting.
   // Ignore async completions after route teardown.
   if (!root) return;
   // Render every visible string from the active game-owned dictionary.
@@ -378,32 +313,36 @@ function render() {
   root.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
 }
 
+// Require exact session, outlet, and timer ownership before accepting late work.
+function ownsRoute(session, mountedRoot, activeScope) {
+  // Compare every route-owned identity rather than trusting DOM presence alone.
+  return routeSession === session && lifecycle.root() === mountedRoot && motionScope === activeScope;
+}
+
 // Load reload-safe state for the authenticated session and repaint the route.
-async function load() {
+async function load(session, mountedRoot, activeScope) {
   // Fetch the standard state payload without sending any caller-selected player id.
   let payload = await api(`${API_ROOT}/state`);
+  // Stop a late initial-state response from repainting another route.
+  if (!ownsRoute(session, mountedRoot, activeScope)) return false;
   // Apply player-scoped state and contract metadata.
   applyPayload(payload);
   // Select an interrupted settlement using only persisted server state.
   const recovery = pendingSettlementRecovery(gameState);
   // Replay the exact terminal roll identity without cosmetic motion or a new UUID.
   if (recovery) {
-    // Capture route ownership across the recovery request.
-    const mountedRoot = root;
-    // Capture lifecycle ownership across the recovery request.
-    const activeScope = motionScope;
     // Start protected recovery so a transient failure does not hide reload-safe state.
     try {
       // Ask the public roll action to complete or replay the pending settlement.
       payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(recovery.round_id)}/rolls`, { request_id: recovery.request_id });
       // Stop when navigation or remount replaced this recovery owner.
-      if (root !== mountedRoot || motionScope !== activeScope) return;
+      if (!ownsRoute(session, mountedRoot, activeScope)) return false;
       // Apply the recovered settlement and standard state payload.
       applyPayload(payload);
     // Preserve the stored round and expose localized retry guidance on recovery failure.
     } catch (error) {
       // Stop when navigation or remount already released route ownership.
-      if (root !== mountedRoot || motionScope !== activeScope) return;
+      if (!ownsRoute(session, mountedRoot, activeScope)) return false;
       // Show owned guidance while leaving the persisted identity available on reload.
       errorKey = 'errors.rollFailed';
     }
@@ -422,23 +361,24 @@ async function load() {
   if (recovered && recovered.bet_type && recovered.wager) lastBet = { bet_type: recovered.bet_type, wager: recovered.wager };
   // Render only after state and locale resources are ready.
   render();
+  return true; // Report that this route accepted the complete state load.
 }
 
 // Start one wagered round with a retry identity retained across ambiguous failures.
 // Start a fresh round re-using the previous bet type and wager with one click.
 async function repeat() {
   // Ignore repeat while an action is busy, a round is active, or no prior bet exists.
-  if (busyAction || gameState.active_round || !lastBet) return;
+  if (lifecycle.isBusy() || gameState.active_round || !lastBet) return;
   // Restore the previous bet type into local state and the mounted control.
   selectedBetType = lastBet.bet_type;
   // Restore the previous wager into local state and the mounted control.
   wager = lastBet.wager;
   // Reflect the restored bet type on the select so startRound re-reads it.
-  const betTypeField = root?.querySelector('#craps-bet-type');
+  const betTypeField = lifecycle.root()?.querySelector('#craps-bet-type');
   // Apply the restored bet type value when the control is present.
   if (betTypeField) betTypeField.value = selectedBetType;
   // Reflect the restored wager on the input so startRound re-reads it.
-  const wagerField = root?.querySelector('#craps-wager');
+  const wagerField = lifecycle.root()?.querySelector('#craps-wager');
   // Apply the restored wager value when the control is present.
   if (wagerField) wagerField.value = wager;
   // Fire the shared start path with the restored opening bet.
@@ -447,23 +387,26 @@ async function repeat() {
 
 async function startRound() {
   // Ignore overlapping or stale start events.
-  if (busyAction || gameState.active_round) return;
+  if (lifecycle.isBusy() || gameState.active_round) return;
+  const mountedRoot = lifecycle.root(); // Capture the active outlet before reading controls.
+  const activeScope = motionScope; // Capture timer ownership across the request.
+  const session = routeSession; // Capture exact route-session ownership across the request.
+  // Ignore stale events after teardown or remount.
+  if (!mountedRoot || !activeScope || !ownsRoute(session, mountedRoot, activeScope)) return;
   // Read the latest form values before rerender replaces the controls.
-  selectedBetType = root.querySelector('#craps-bet-type')?.value || selectedBetType;
+  selectedBetType = mountedRoot.querySelector('#craps-bet-type')?.value || selectedBetType;
   // Normalize the current wager from the semantic number input without accepting a stale fallback.
-  const candidateWager = Number(root.querySelector('#craps-wager')?.value);
+  const candidateWager = Number(mountedRoot.querySelector('#craps-wager')?.value);
   // Reject out-of-contract range or precision before creating an action identity.
   if (!isValidWager(candidateWager)) { errorKey = 'errors.wagerRequired'; render(); return; }
   // Commit the validated payload value only after all OpenAPI amount checks pass.
   wager = candidateWager;
   // Reuse an unresolved identity until the server confirms or recovers the debit.
   pendingStartRequestId = pendingStartRequestId || createClientRequestId('start');
-  // Capture this mount and scope so late responses cannot repaint another route.
-  const mountedRoot = root;
-  // Capture the active scope identity for the same late-response guard.
-  const activeScope = motionScope;
   // Lock controls in their stable positions while the request is in flight.
   busyAction = 'start';
+  // Reserve shared action ownership before contacting the endpoint.
+  lifecycle.setBusy(true);
   // Clear prior localized feedback before the new attempt.
   errorKey = null;
   // Render the disabled primary action and understandable phase.
@@ -473,7 +416,7 @@ async function startRound() {
     // Submit only the contract fields; session middleware owns player resolution.
     const payload = await post(`${API_ROOT}/rounds`, { request_id: pendingStartRequestId, bet_type: selectedBetType, wager });
     // Discard a response that completed after route or scope replacement.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (!ownsRoute(session, mountedRoot, activeScope)) return;
     // Apply the committed player-scoped round and state payload.
     applyPayload(payload);
     // Remember the committed opening bet so the next round can repeat it with one click.
@@ -486,6 +429,8 @@ async function startRound() {
     visibleDice = null;
     // Release the action lock after the wager is confirmed.
     busyAction = null;
+    // Release shared action ownership after acknowledgement.
+    lifecycle.setBusy(false);
     // Render the active come-out round.
     render();
     // Refresh the shared wallet without turning a confirmed debit into an action failure.
@@ -493,9 +438,11 @@ async function startRound() {
   // Convert failures into localized route-owned guidance without losing retry safety.
   } catch (error) {
     // Ignore failures delivered after this route lost ownership.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (!ownsRoute(session, mountedRoot, activeScope)) return;
     // Release the action lock while retaining pendingStartRequestId.
     busyAction = null;
+    // Release shared action ownership while retaining the retry identity.
+    lifecycle.setBusy(false);
     // Show owned localized retry guidance in the reserved region.
     errorKey = 'errors.startFailed';
     // Repaint the recovered controls without starting shared feedback timing.
@@ -508,17 +455,23 @@ async function rollRound() {
   // Read the current player-scoped active round once.
   const activeRound = gameState.active_round;
   // Ignore overlapping, settled, or stale roll events.
-  if (busyAction || !activeRound || activeRound.phase === 'settled') return;
+  if (lifecycle.isBusy() || !activeRound || activeRound.phase === 'settled') return;
   // Reuse an unresolved identity until the server confirms this exact roll.
   pendingRollRequestId = pendingRollRequestId || createClientRequestId('roll');
   // Capture this route outlet so late network work cannot repaint another screen.
-  const mountedRoot = root;
+  const mountedRoot = lifecycle.root();
   // Capture the current disposable scope so remounts invalidate this action.
   const activeScope = motionScope;
+  // Capture exact route-session ownership across network and presentation callbacks.
+  const session = routeSession;
+  // Ignore stale events after teardown or remount.
+  if (!mountedRoot || !activeScope || !ownsRoute(session, mountedRoot, activeScope)) return;
   // Cancel any abandoned decorative callbacks from an earlier presentation.
   activeScope.cancelAll();
   // Lock the one atomic action before contacting the ledger-backed endpoint.
   busyAction = 'roll';
+  // Reserve shared atomic-action ownership.
+  lifecycle.setBusy(true);
   // Show a player-facing rolling phase while preserving stage dimensions.
   presentationPhase = 'rolling';
   // Read the platform preference through the merged #97 helper.
@@ -532,7 +485,7 @@ async function rollRound() {
     // Submit only the roll retry identity to the active round endpoint.
     const payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(activeRound.round_id)}/rolls`, { request_id: pendingRollRequestId });
     // Discard a result delivered after navigation or remount.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (!ownsRoute(session, mountedRoot, activeScope)) return;
     // Snapshot the confirmed request identity before state reconciliation clears it.
     const confirmedRequestId = pendingRollRequestId;
     // Apply the authoritative round, roll, settlement, and reload-safe state.
@@ -547,15 +500,16 @@ async function rollRound() {
       frames, // Supply deterministic decorative pairs that never affect settlement.
       finalDice: payload.roll.dice, // Supply the authoritative server result separately.
       onFrame: frame => { // Repaint one transient pair only while this mount still owns the route.
-        if (root !== mountedRoot || motionScope !== activeScope) return; // Ignore callbacks after teardown or remount.
+        if (!ownsRoute(session, mountedRoot, activeScope)) return; // Ignore callbacks after teardown or remount.
         visibleDice = frame; // Store the current decorative pair for presentation only.
         render(); // Repaint without changing backend-owned round state.
       },
       onSettled: finalDice => { // Reveal and announce the authoritative pair at the final deadline.
-        if (root !== mountedRoot || motionScope !== activeScope) return; // Ignore settlement presentation after route exit.
+        if (!ownsRoute(session, mountedRoot, activeScope)) return; // Ignore settlement presentation after route exit.
         visibleDice = finalDice; // Store only the validated server pair at completion.
         presentationPhase = null; // Return phase ownership to committed backend state.
         busyAction = null; // Unlock the next legal action after presentation settles.
+        lifecycle.setBusy(false); // Release shared action ownership after authoritative reveal.
         render(); // Announce the authoritative result through the stable live region.
         refreshBalance().catch(() => {}); // Refresh wallet settlement while containing noncritical shell failures.
       },
@@ -563,11 +517,13 @@ async function rollRound() {
   // Convert API failures into localized route-owned guidance without starting another roll.
   } catch (error) {
     // Ignore a failure delivered after route ownership changed.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (!ownsRoute(session, mountedRoot, activeScope)) return;
     // Cancel decorative work associated with the failed presentation.
     activeScope.cancelAll();
     // Release controls while retaining pendingRollRequestId for exact replay.
     busyAction = null;
+    // Release shared action ownership while retaining the retry identity.
+    lifecycle.setBusy(false);
     // Return phase ownership to the last committed backend state.
     presentationPhase = null;
     // Show localized recovery guidance in the reserved control region.
@@ -585,47 +541,43 @@ export const CrapsGame = {
   label: '',
   // Mount the route, locale resources, lifecycle scope, and reload-safe state.
   async mount(node) {
-    // Store the current shared-shell route outlet.
-    root = node;
     // Clear any repeatable bet so a new session never inherits another player's opening bet.
     lastBet = null;
-    // Install route-owned styling before first paint.
-    ensureStyles();
+    // Acquire route, locale, action, and external stylesheet ownership.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation replaced this mount during shared initialization.
+    if (!mounted) return;
     // Dispose a defensive stale scope before creating this mount's owner.
     motionScope?.dispose();
     // Create one lifecycle-bound scope for every game-owned callback.
     motionScope = createMotionTimerScope();
     // Capture the mount identity across asynchronous locale loading.
-    const mountedRoot = root;
+    const mountedRoot = lifecycle.root();
     // Capture the scope identity across asynchronous initialization.
     const activeScope = motionScope;
-    // Load active and fallback Craps dictionaries before visible rendering.
-    await loadI18nDomain(DOMAIN);
-    // Stop initialization when navigation replaced this mount.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
-    // Subscribe to locale changes without resetting point or wager state.
-    localeUnsubscribe = onLocaleChange(() => render());
+    // Create an exact identity for this route session.
+    routeSession = Object.freeze({});
+    // Capture session ownership across state and wallet loading.
+    const session = routeSession;
     // Read reduced-motion state for the first rendered frame.
     reducedMotionActive = prefersReducedMotion();
     // Load the authenticated player's reload-safe round state.
-    await load();
+    await load(session, mountedRoot, activeScope);
     // Stop wallet work when route ownership changed during state loading.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (!ownsRoute(session, mountedRoot, activeScope)) return;
     // Refresh the shared wallet without rejecting an otherwise successful mount.
     await refreshBalance().catch(() => {});
   },
   // Release every game-owned lifecycle resource when navigation leaves Craps.
   unmount() {
+    // Invalidate late async work before disposing route resources.
+    routeSession = null;
     // Permanently cancel pending callbacks and lifecycle listeners.
     motionScope?.dispose();
     // Clear the disposed scope reference for the next mount.
     motionScope = null;
-    // Remove the locale callback when initialization completed.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for repeated teardown safety.
-    localeUnsubscribe = null;
-    // Clear the outlet first so late promises become inert.
-    root = null;
+    // Release outlet, locale, stylesheet, and shared action ownership.
+    lifecycle.unmount();
     // Release the local action lock without discarding unresolved retry identities.
     busyAction = null;
     // Clear decorative presentation state owned by the inactive route.
