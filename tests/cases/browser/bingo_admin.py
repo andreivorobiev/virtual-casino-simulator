@@ -25,6 +25,8 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
     if table_games_owner:
         # Navigate to Bingo before exercising the real card-purchase mutation boundary.
         page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('premium-bingo').wait_for(timeout=WAIT_MS)
+        # Require one lifecycle-owned external stylesheet and no retained inline owner.
+        assert page.locator('link#premium-bingo-styles[href="/games/bingo.css"]').count()==1 and page.locator('style#premium-bingo-styles').count()==0
         # Read the current player's ledger before the one visible card purchase.
         bingo_ledger_before=page.request.get(base+f'/api/v1/players/{browser_player_id}/ledger').json()['data']['ledger']
         # Store immutable ledger identities because response ordering is not a persistence contract.
@@ -94,7 +96,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         # Wait on the complete terminal render projection without extending the old five-second budget.
         bingo_terminal_render=wait_for_bingo_terminal_render(page,bingo_reload_terminal)
         # Preserve the existing premium Bingo acceptance after the new purchase boundary proof.
-        run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013'],lambda: bingo_terminal_render['winningCellCount']==bingo_terminal['winning_cell_count'] and page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
+        run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013','CORE-034'],lambda: bingo_terminal_render['winningCellCount']==bingo_terminal['winning_cell_count'] and page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
         # Seed one isolated deferred natural so the rendered Stand path is deterministic. (BJ-031, TEST-054)
         browser_blackjack_state=blackjack_engine.default_state(); browser_blackjack_state['shoe']=['2S']*52+['9D','AS','KH','AS']
         # Persist only the synthetic browser player's controlled Blackjack shoe before mounting the route.
