@@ -1,9 +1,10 @@
 {
   "module": "boule",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "paths": [
     "casino/games/boule/",
     "web/games/boule.js",
+    "web/games/boule.css",
     "web/i18n/en-US/games/boule.json",
     "web/i18n/ru-RU/games/boule.json"
   ],

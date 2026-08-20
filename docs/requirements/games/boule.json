@@ -13,18 +13,23 @@
         "API-BOULE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-BOULE-001"
       ],
       "implementation_files": [
         "casino/games/boule/rules.py",
         "casino/games/boule/engine.py",
         "casino/games/boule/api.py",
         "web/games/boule.js",
+        "web/games/boule.css",
+        "tests/games/boule/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/boule/README.md",
         "contracts/openapi/boule.v1.yaml"
       ],
       "introduced_in": "issue-148-boule",
-      "changed_in": "issue-148-boule",
-      "notes": "Allocated for GitHub issue #148, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1011-boule-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #148, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1011 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing the nine-number board, honest markets, 800 ms spin timing, settlement, DOM, or visible layout."
     },
     {
       "id": "BOULE-002",
@@ -35,17 +40,21 @@
         "API-BOULE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-BOULE-001"
       ],
       "implementation_files": [
         "casino/games/boule/api.py",
         "casino/core/simple_game.py",
+        "web/games/boule.js",
         "tests/boule_tests.py",
-        "tests/game_drivers/boule.py"
+        "tests/game_drivers/boule.py",
+        "tests/games/boule/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-148-boule",
-      "changed_in": "issue-148-boule",
-      "notes": "Allocated for GitHub issue #148."
+      "changed_in": "issue-1011-boule-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #148. Issue #1011 preserves the exact state and spins endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, and real repeat flow while removing duplicate frontend lifecycle helpers."
     }
   ]
 }

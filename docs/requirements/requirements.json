@@ -8029,15 +8029,18 @@
         "API-BOULE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-BOULE-001"
       ],
       "implementation_files": [
         "tests/boule_tests.py",
+        "tests/games/boule/test_frontend.mjs",
+        "tests/runner.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-148-boule",
-      "changed_in": "issue-148-boule",
-      "notes": "Allocated for GitHub issue #148."
+      "changed_in": "issue-1011-boule-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #148. Issue #1011 adds listener-free frontend lifecycle and real two-spin Browser evidence without changing the existing game math, validation, retry, or house-edge proof."
     },
     {
       "id": "TEST-131",
@@ -13504,7 +13507,8 @@
         "BR-POKER-DICE-001",
         "BR-PATTERN-DRAW-001",
         "BR-COIN-PUSHER-001",
-        "BR-MARBLE-RACE-001"
+        "BR-MARBLE-RACE-001",
+        "BR-BOULE-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
@@ -13526,6 +13530,8 @@
         "web/games/coin_pusher.css",
         "web/games/marble_race.js",
         "web/games/marble_race.css",
+        "web/games/boule.js",
+        "web/games/boule.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
@@ -13536,6 +13542,7 @@
         "docs/evidence/pattern_draw/README.md",
         "docs/evidence/coin_pusher/README.md",
         "docs/evidence/marble_race/README.md",
+        "docs/evidence/boule/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
         "modules/faro.json",
@@ -13545,16 +13552,17 @@
         "modules/poker_dice.json",
         "modules/pattern_draw.json",
         "modules/coin_pusher.json",
-        "modules/marble_race.json"
+        "modules/marble_race.json",
+        "modules/boule.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1009-marble-race-lifecycle-slice",
-      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, and Marble Race are the first nine adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors."
+      "changed_in": "issue-1011-boule-lifecycle-slice",
+      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, and Boule are the first ten adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, and Marble Race browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, and Boule browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
@@ -13568,7 +13576,8 @@
         "BR-POKER-DICE-001",
         "BR-PATTERN-DRAW-001",
         "BR-COIN-PUSHER-001",
-        "BR-MARBLE-RACE-001"
+        "BR-MARBLE-RACE-001",
+        "BR-BOULE-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
@@ -13576,6 +13585,7 @@
         "tests/games/pattern_draw/test_frontend.mjs",
         "tests/games/coin_pusher/test_frontend.mjs",
         "tests/games/marble_race/test_frontend.mjs",
+        "tests/games/boule/test_frontend.mjs",
         "tests/cases/api/frontend_presentation.py",
         "tests/cicd_deployment_tests.py",
         "tests/api_case_inventory.json",
@@ -13583,7 +13593,7 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1009-marble-race-lifecycle-slice",
+      "changed_in": "issue-1011-boule-lifecycle-slice",
       "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
     },
     {
@@ -21122,18 +21132,23 @@
         "API-BOULE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-BOULE-001"
       ],
       "implementation_files": [
         "casino/games/boule/rules.py",
         "casino/games/boule/engine.py",
         "casino/games/boule/api.py",
         "web/games/boule.js",
+        "web/games/boule.css",
+        "tests/games/boule/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/boule/README.md",
         "contracts/openapi/boule.v1.yaml"
       ],
       "introduced_in": "issue-148-boule",
-      "changed_in": "issue-148-boule",
-      "notes": "Allocated for GitHub issue #148, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1011-boule-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #148, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1011 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing the nine-number board, honest markets, 800 ms spin timing, settlement, DOM, or visible layout."
     },
     {
       "id": "BOULE-002",
@@ -21144,17 +21159,21 @@
         "API-BOULE-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-BOULE-001"
       ],
       "implementation_files": [
         "casino/games/boule/api.py",
         "casino/core/simple_game.py",
+        "web/games/boule.js",
         "tests/boule_tests.py",
-        "tests/game_drivers/boule.py"
+        "tests/game_drivers/boule.py",
+        "tests/games/boule/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-148-boule",
-      "changed_in": "issue-148-boule",
-      "notes": "Allocated for GitHub issue #148."
+      "changed_in": "issue-1011-boule-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #148. Issue #1011 preserves the exact state and spins endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, and real repeat flow while removing duplicate frontend lifecycle helpers."
     },
     {
       "id": "FARO-001",

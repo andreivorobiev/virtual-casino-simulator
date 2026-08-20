@@ -5,13 +5,15 @@
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.
 import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../core/ui.js';
-// Import game-domain localization and locale-change subscription helpers.
-import { initI18n, onLocaleChange, t } from '../core/i18n.js';
+// Import shared route, locale, stylesheet, busy-state, and request-identity ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the lazy-loaded resource domain owned by this game.
 const GAME_DOMAIN = 'games/boule';
-// Store the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'boule-styles';
+// Create the route controller with the external game stylesheet and established request prefix.
+const lifecycle = createGameLifecycle({ domain: GAME_DOMAIN, requestPrefix: 'bl', stylesheet: { id: 'boule-styles', href: '/games/boule.css' } });
+// Reuse the shared domain translator without defining a game-local wrapper.
+const { tx } = lifecycle;
 // Mirror the backend's nine drawable numbers in ascending order.
 export const NUMBERS = Object.freeze([1, 2, 3, 4, 5, 6, 7, 8, 9]);
 // Name the house number so the board can mark it distinctly.
@@ -23,19 +25,13 @@ const CHIPS = [1, 5, 25, 100];
 // Fix the decorative draw duration; the outcome is already server-authoritative.
 const DRAW_MS = 800;
 
-// Store the current route outlet, selected bet, chosen stake, and in-flight guard.
-let root = null;
+// Store the selected bet and chosen stake while the shared lifecycle owns route state.
 let selectedBet = { bet: 'even' };
 let stake = 5;
-let spinBusy = false;
-let localeUnsubscribe = null;
 // Retain the last drawn number so a repaint after the draw keeps showing the result.
 let shownNumber = null;
 // Retain the last settled bet config so one click can re-place and re-spin it.
 let lastBet = null;
-
-// Translate one game-domain key through the shared installed-locale fallback chain.
-const tx = (key, params = {}) => t(key, params, GAME_DOMAIN);
 
 // Compare the active selection against a candidate bet for pressed state.
 function isSelected(bet, number) {
@@ -45,28 +41,10 @@ function isSelected(bet, number) {
   return selectedBet.bet === 'number' && selectedBet.number === number;
 }
 
-// Install compact game-owned styles without modifying the shared stylesheet.
-function ensureStyles() {
-  // Skip installation when this route's styles are already present.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create one style element scoped to this game.
-  const style = document.createElement('style');
-  // Tag the element so repeated mounts detect and reuse it.
-  style.id = STYLE_ID;
-  // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.boule{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .bl-stage{display:grid;justify-items:center;gap:16px;padding:12px;min-width:0;} .bl-drum{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 38% 32%,var(--felt2),var(--felt));border:6px solid var(--metal-gold);box-shadow:0 12px 34px rgba(0,0,0,.45);font-size:48px;font-weight:900;color:var(--text);} .bl-drum.rolling{animation:bl-pulse .3s linear infinite;} @keyframes bl-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}} .bl-numbers{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px;width:100%;max-width:420px;min-width:0;} .bl-num{min-height:44px;min-width:0;padding:0;border:2px solid transparent;border-radius:10px;background:rgba(255,255,255,.06);color:var(--text);font-weight:900;cursor:pointer;} .bl-num.house{background:rgba(255,59,107,.16);color:var(--brand);} .bl-num[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 2px rgba(255,59,107,.5);} .bl-panel{display:grid;gap:12px;min-width:0;} .bl-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .bl-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .bl-bets{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .bl-bet{display:grid;gap:2px;padding:10px;border:2px solid transparent;border-radius:12px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;text-align:left;} .bl-bet small{font-weight:700;opacity:.8;font-size:11px;} .bl-bet[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 2px rgba(255,59,107,.5);} .bl-chips{display:flex;flex-wrap:wrap;gap:8px;} .bl-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .bl-chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(255,59,107,.16);color:var(--text);} .bl-spin{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,var(--brand),var(--brand-strong));color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .bl-spin:disabled{opacity:.55;cursor:not-allowed;} .bl-result{min-height:44px;font-size:15px;color:var(--text);text-align:center;} .bl-result .net{font-weight:900;} @media (prefers-reduced-motion:reduce){.bl-drum.rolling{animation:none;}} @media (max-width:900px){.boule{grid-template-columns:1fr;}} @media (max-width:430px){.bl-numbers{grid-template-columns:repeat(5,minmax(0,1fr));}}.bl-repeat{width:100%;min-height:46px;margin-top:8px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;font-size:15px;cursor:pointer;}.bl-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Attach the game-owned styles to the document head.
-  document.head.appendChild(style);
-}
-
-// Generate one caller-stable retry identity for exactly-once settlement.
-function newRequestId() {
-  // Prefer a real UUID when the platform provides one.
-  return (globalThis.crypto?.randomUUID?.() || `bl-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
-}
-
 // Render the complete Boule route into the outlet.
 function render(resultText) {
+  // Read the current route outlet through the shared teardown guard.
+  const root = lifecycle.root();
   // Do nothing when the route was already torn down.
   if (!root) return;
   // Build the drum face showing the last drawn number or a neutral placeholder.
@@ -78,9 +56,9 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="bl-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Enable the one-click repeat only when a prior settled bet exists and no spin is running.
-  const repeatDisabled = spinBusy || !lastBet;
+  const repeatDisabled = lifecycle.isBusy() || !lastBet;
   // Paint the whole route.
-  root.innerHTML = `<section class="boule" data-testid="boule"><div class="bl-stage"><div class="bl-drum${spinBusy ? ' rolling' : ''}" data-testid="boule-drum">${drum}</div><div class="bl-numbers">${numbers}</div><p class="bl-result" data-testid="boule-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="bl-panel"><div class="bl-card"><h3>${safe(tx('bet.title'))}</h3><div class="bl-bets">${bets}</div></div><div class="bl-card"><h3>${safe(tx('stake.title'))}</h3><div class="bl-chips">${chips}</div></div><button class="bl-spin" data-testid="boule-spin" type="button" ${spinBusy ? 'disabled' : ''}>${safe(spinBusy ? tx('action.spinning') : tx('action.spin'))}</button><button type="button" class="bl-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
+  root.innerHTML = `<section class="boule" data-testid="boule"><div class="bl-stage"><div class="bl-drum${lifecycle.isBusy() ? ' rolling' : ''}" data-testid="boule-drum">${drum}</div><div class="bl-numbers">${numbers}</div><p class="bl-result" data-testid="boule-result" role="status">${resultText || safe(tx('result.idle'))}</p></div><div class="bl-panel"><div class="bl-card"><h3>${safe(tx('bet.title'))}</h3><div class="bl-bets">${bets}</div></div><div class="bl-card"><h3>${safe(tx('stake.title'))}</h3><div class="bl-chips">${chips}</div></div><button class="bl-spin" data-testid="boule-spin" type="button" ${lifecycle.isBusy() ? 'disabled' : ''}>${safe(lifecycle.isBusy() ? tx('action.spinning') : tx('action.spin'))}</button><button type="button" class="bl-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(tx('controls.repeat'))}</button></div></section>`;
   // Wire the even-money bet buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = { bet: btn.dataset.bet }; render(); }; });
   // Wire the straight-number cells.
@@ -100,7 +78,7 @@ function render(resultText) {
 // Re-place the last settled bet and re-fire one spin without a timer.
 async function repeat() {
   // Ignore repeat while a spin is resolving or before any settled bet exists.
-  if (spinBusy || !root || !lastBet) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted() || !lastBet) return;
   // Restore the previous even-money family or straight-number selection.
   selectedBet = lastBet.number === undefined ? { bet: lastBet.bet } : { bet: lastBet.bet, number: lastBet.number };
   // Restore the previous stake.
@@ -130,14 +108,14 @@ async function load() {
 // Execute one atomic wager, spin, and settlement.
 async function spin() {
   // Ignore repeated clicks while a spin is resolving.
-  if (spinBusy || !root) return;
+  if (lifecycle.isBusy() || !lifecycle.isMounted()) return;
   // Mark the spin busy and disable the control before the request.
-  spinBusy = true;
+  lifecycle.setBusy(true);
   render();
   // Start protected settlement so the busy flag is always released.
   try {
     // Post the exactly-once spin with a caller-stable retry id and the current selection.
-    const response = await post('/api/v1/games/boule/spins', { request_id: newRequestId(), ...selectedBet, stake });
+    const response = await post('/api/v1/games/boule/spins', { request_id: lifecycle.nextRequestId(), ...selectedBet, stake });
     // Show the committed debit before the ball exposes the winning number. (LEDGER-031, issue #590)
     renderCommittedWagerBalance(response.ledger?.wager);
     // Read the authoritative settled round.
@@ -157,12 +135,12 @@ async function spin() {
       ? `${safe(tx('result.win', { number: shownNumber }))} <span class="net">+${round.total_return - round.wager_total}</span>`
       : `${safe(tx('result.lose', { number: shownNumber }))} <span class="net">${round.net}</span>`;
     // Release the guard before the final repaint.
-    spinBusy = false;
+    lifecycle.setBusy(false);
     // Repaint with the drawn number and result.
     render(text);
   } catch (err) {
     // Release the guard and report a bounded error.
-    spinBusy = false;
+    lifecycle.setBusy(false);
     // Surface the failure without leaking internal detail.
     toast(err?.message || tx('error.spin'), 'error');
     // Repaint the unlocked controls.
@@ -176,30 +154,20 @@ export const BouleGame = {
   id: 'boule',
   // Mount the isolated route into the shared shell outlet.
   async mount(node) {
-    // Store the current route outlet.
-    root = node;
     // Reset the repeatable bet so another session never inherits it before recovery.
     lastBet = null;
-    // Install game-owned styles.
-    ensureStyles();
-    // Load both locales through the game-owned lazy domain before visible render.
-    await initI18n({ domains: [GAME_DOMAIN] });
-    // Repaint localized strings on a locale change unless a spin owns the drum.
-    localeUnsubscribe = onLocaleChange(() => { if (!spinBusy) render(); });
+    // Establish route, stylesheet, locale, and repaint ownership through the shared controller.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation released this route during asynchronous locale loading.
+    if (!mounted) return;
     // Load session-bound state and render the first frame.
     await load();
   },
   // Release subscriptions whenever shell navigation leaves the game.
   unmount() {
-    // Remove the locale subscription when the route was initialized.
-    localeUnsubscribe?.();
-    // Clear the subscription reference for the next mount.
-    localeUnsubscribe = null;
-    // Clear the outlet so stale async work cannot repaint another route.
-    root = null;
+    // Release route, locale, and busy ownership idempotently.
+    lifecycle.unmount();
     // Clear the repeatable bet so the next session starts fresh.
     lastBet = null;
-    // Reset the in-flight guard because teardown cancelled any presentation.
-    spinBusy = false;
   },
 };

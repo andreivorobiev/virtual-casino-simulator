@@ -3274,6 +3274,62 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.remove_listener('request',record_race_request)
                 # Record Marble Race's dedicated affected-game lifecycle, semantic-color, and real-settlement case.
                 run_case('BR-MARBLE-RACE-001',['MARBLE-001','MARBLE-002','CORE-034','TEST-122','TEST-185','TEST-248','UX-024'],marble_race_browser_acceptance)
+                # Exercise Boule through its real spin endpoint, reload recovery, and repeated wager.
+                def boule_browser_acceptance():
+                    # Retain each bounded mutation payload so two visible actions prove distinct exactly-once identities.
+                    spin_payloads=[]
+                    # Record only the exact game-owned POST route and its bounded public request body.
+                    def record_spin_request(request):
+                        # Append one payload for each Boule mutation request.
+                        if request.method=='POST' and request.url.endswith('/api/v1/games/boule/spins'): spin_payloads.append(request.post_data_json)
+                    # Observe both real actions for exact request-count and identity evidence.
+                    page.on('request',record_spin_request)
+                    # Keep listener cleanup deterministic even when any browser assertion fails closed.
+                    try:
+                        # Enter the catalog-owned route and wait for the stable Boule marker.
+                        page.get_by_test_id('nav-boule').click(); page.get_by_test_id('boule').wait_for(timeout=WAIT_MS * 2)
+                        # Restore the governed primary desktop viewport and route top after preceding shared cases.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.evaluate('window.scrollTo(0,0)'); page.wait_for_timeout(100)
+                        # Require one exact external game-owned stylesheet rather than injected opaque CSS.
+                        style_link=page.locator('link#boule-styles'); assert style_link.count()==1 and style_link.get_attribute('href')=='/games/boule.css'
+                        # Prove the migrated asset loaded while preserving the dominant stage, 300-pixel rail, nine-number board, and 120-pixel drum.
+                        assert page.get_by_test_id('boule').evaluate("el => { const route=getComputedStyle(el); const tracks=route.gridTemplateColumns.split(' ').map(parseFloat); const numbers=getComputedStyle(el.querySelector('.bl-numbers')); const drum=getComputedStyle(el.querySelector('.bl-drum')); return route.display==='grid' && tracks.length===2 && tracks[0]>tracks[1] && Math.round(tracks[1])===300 && numbers.display==='grid' && numbers.gridTemplateColumns.split(' ').length===9 && Math.round(parseFloat(drum.width))===120 && Math.round(parseFloat(drum.height))===120; }")
+                        # Capture the pre-action wallet so a stale rendered value cannot satisfy settlement evidence accidentally.
+                        before=newest_game_wallet_value()
+                        # Exercise the reduced-motion state while starting the first real settled spin.
+                        page.emulate_media(reduced_motion='reduce')
+                        # Observe the first real spin response while the default even market and five-token chip commit.
+                        with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/boule/spins'),timeout=WAIT_MS * 2) as first_info: page.get_by_test_id('boule-spin').click()
+                        # Require the decorative rolling state to suppress animation under reduced motion.
+                        page.wait_for_function("() => { const drum=document.querySelector('.bl-drum.rolling'); return Boolean(drum) && getComputedStyle(drum).animationName==='none'; }")
+                        # Bind the visible wallet to the first spin's authoritative player snapshot.
+                        first_expected=float(first_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=first_expected,timeout=WAIT_MS * 2)
+                        # Wait for the result and repeat control to become terminal after the fixed 800 ms presentation.
+                        page.wait_for_function("() => { const result=document.querySelector('[data-testid=\"boule-result\"]'); const repeat=document.querySelector('[data-action=\"repeat\"]'); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",timeout=WAIT_MS * 2)
+                        # Require the response-owned wallet while allowing a legitimate push-equivalent outcome.
+                        assert isinstance(before,(int,float)) and newest_game_wallet_value()==first_expected
+                        # Reload the canonical deep link and require server-owned repeat and wallet recovery without another mutation.
+                        page.reload(wait_until='networkidle'); page.get_by_test_id('boule').wait_for(timeout=WAIT_MS * 2); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=first_expected,timeout=WAIT_MS * 2)
+                        # Require the exact route and existing data-action repeat control to survive reload.
+                        assert page.url.split('?',1)[0].endswith('/games/boule') and page.locator('[data-action="repeat"]').is_enabled() and newest_game_wallet_value()==first_expected
+                        # Observe one post-reload repeat response while the recovered bet re-fires independently.
+                        with page.expect_response(lambda response: response.request.method=='POST' and response.url.endswith('/api/v1/games/boule/spins'),timeout=WAIT_MS * 2) as second_info: page.locator('[data-action="repeat"]').click()
+                        # Bind the second visible wallet to the repeated spin's exact authoritative player snapshot.
+                        second_expected=float(second_info.value.json()['data']['player']['balance']); page.wait_for_function("expected => Number(String(document.querySelector('#balance')?.textContent || '').replace(/[^0-9.-]/g, '')) === expected",arg=second_expected,timeout=WAIT_MS * 2)
+                        # Wait for the second decorative spin to terminalize and restore the repeat action.
+                        page.wait_for_function("() => { const result=document.querySelector('[data-testid=\"boule-result\"]'); const repeat=document.querySelector('[data-action=\"repeat\"]'); return Boolean(result?.textContent?.trim()) && Boolean(repeat) && !repeat.disabled; }",timeout=WAIT_MS * 2)
+                        # Require exactly two intended actions with distinct bounded request identities.
+                        assert len(spin_payloads)==2 and all(isinstance(item.get('request_id'),str) and item['request_id'] for item in spin_payloads) and spin_payloads[0]['request_id']!=spin_payloads[1]['request_id'],spin_payloads
+                        # Capture tenth-adopter after-pass evidence only after the second real spin is visibly terminal.
+                        page.locator('#view').screenshot(path=str(screenshots/'after-pass-boule-lifecycle-desktop.png'),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Return to ordinary motion and the lobby for downstream Browser cases.
+                        page.emulate_media(reduced_motion='no-preference'); page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+                    # Remove the exact observer before any downstream Browser case starts.
+                    finally:
+                        # Release the request observer even when the lifecycle proof fails closed.
+                        page.remove_listener('request',record_spin_request)
+                # Record Boule's dedicated affected-game lifecycle and real two-spin case.
+                run_case('BR-BOULE-001',['BOULE-001','BOULE-002','CORE-034','TEST-130','TEST-185','TEST-248'],boule_browser_acceptance)
                 # Exercise Faro through its real deal endpoint and reload-safe recent-round state.
                 def faro_browser_acceptance():
                     # Bind exact external-style and ready-layout evidence before the real deal mutates the cards.

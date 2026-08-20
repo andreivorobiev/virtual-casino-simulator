@@ -250,6 +250,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/evidence/baccarat/README.md`](docs/evidence/baccarat/README.md) — Baccarat mutation-serialization evidence
 - [`docs/evidence/big_six_wheel/README.md`](docs/evidence/big_six_wheel/README.md) — Big Six Wheel evidence status
 - [`docs/evidence/bingo/README.md`](docs/evidence/bingo/README.md) — Bingo card-purchase guard evidence
+- [`docs/evidence/boule/README.md`](docs/evidence/boule/README.md) — Boule shared-lifecycle evidence
 - [`docs/evidence/casino_holdem/README.md`](docs/evidence/casino_holdem/README.md) — Casino Hold'em Evidence
 - [`docs/evidence/chuck_a_luck/README.md`](docs/evidence/chuck_a_luck/README.md) — Chuck-a-Luck after-pass evidence
 - [`docs/evidence/coin_pusher/README.md`](docs/evidence/coin_pusher/README.md) — Coin Pusher shared-lifecycle evidence
