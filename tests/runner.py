@@ -5326,6 +5326,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def double_bonus_video_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-double_bonus_video_poker').click(); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=WAIT_MS)
+                    # Require one exact external game-owned stylesheet and the independently reused shared card stylesheet.
+                    route_style=page.locator('link#double-bonus-video-poker-styles'); card_style=page.locator('link#casino-shared-card-styles'); assert route_style.count()==1 and route_style.get_attribute('href')=='/games/double_bonus_video_poker.css' and card_style.count()==1 and card_style.get_attribute('href')=='/core/cards.css'
+                    # Prove the migrated asset loaded while preserving the dominant stage, 300-pixel rail, action target, and eleven-row paytable.
+                    assert page.get_by_test_id('double-bonus-video-poker').evaluate("el => { const route=getComputedStyle(el); const tracks=route.gridTemplateColumns.split(' ').map(parseFloat); const deal=getComputedStyle(el.querySelector('[data-deal]')); return route.display==='grid' && tracks.length===2 && tracks[0]>tracks[1] && Math.round(tracks[1])===300 && parseFloat(deal.minHeight)>=44 && el.querySelectorAll('.db-pays div').length===11; }")
                     # Enumerate every viewport governed by the Double Bonus visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 expectations from both canonical locale resources.
@@ -5364,8 +5368,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['settled','reduced_motion'])
                     # Reload the canonical game route and require restored player-owned terminal state.
                     page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=WAIT_MS); page.locator('[data-deal]:not([disabled])').wait_for(timeout=WAIT_MS); localized_evidence('route-restored',['settled','route_restored'])
+                    # Require both reusable stylesheets to remain singleton external links after route restoration.
+                    assert page.locator('link#double-bonus-video-poker-styles').count()==1 and page.locator('link#casino-shared-card-styles').count()==1
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+                    # Require shared lifecycle teardown to release the game DOM while retaining only reusable external stylesheets.
+                    assert page.get_by_test_id('double-bonus-video-poker').count()==0 and page.locator('link#double-bonus-video-poker-styles').count()==1 and page.locator('link#casino-shared-card-styles').count()==1
                 # Execute the integrated Double Bonus browser and governed visual gate.
                 run_case('BR-DBVP-001',['DBVP-001','DBVP-002','TEST-114'],double_bonus_video_poker_acceptance)
                 # Define real-backend Mississippi Stud localization, progressive-reveal, settlement, motion, and route acceptance.
