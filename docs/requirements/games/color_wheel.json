@@ -13,18 +13,23 @@
         "API-COLOR-WHEEL-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-COLOR-WHEEL-001"
       ],
       "implementation_files": [
         "casino/games/color_wheel/rules.py",
         "casino/games/color_wheel/engine.py",
         "casino/games/color_wheel/api.py",
         "web/games/color_wheel.js",
+        "web/games/color_wheel.css",
+        "tests/games/color_wheel/test_frontend.mjs",
+        "tests/runner.py",
+        "docs/evidence/color_wheel/README.md",
         "contracts/openapi/color_wheel.v1.yaml"
       ],
       "introduced_in": "issue-152-color-wheel",
-      "changed_in": "issue-152-color-wheel",
-      "notes": "Allocated for GitHub issue #152, the first game of the catalog expansion (#73). The module supplies only pure rules; the shared core owns settlement."
+      "changed_in": "issue-1019-color-wheel-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #152, the first game of the catalog expansion (#73). The module supplies only pure rules; the shared core owns settlement. Issue #1019 delegates route, busy, locale, request-id, and external stylesheet ownership to the shared lifecycle without changing the twenty-segment wheel, four color bets, 3.2-second spin timing, cumulative motion, settlement, DOM, or visible layout."
     },
     {
       "id": "CWHEEL-002",
@@ -35,17 +40,21 @@
         "API-COLOR-WHEEL-001"
       ],
       "browser_tests": [
-        "BR-CATALOG-EXPANSION-001"
+        "BR-CATALOG-EXPANSION-001",
+        "BR-COLOR-WHEEL-001"
       ],
       "implementation_files": [
         "casino/games/color_wheel/api.py",
         "casino/core/simple_game.py",
+        "web/games/color_wheel.js",
         "tests/color_wheel_tests.py",
-        "tests/game_drivers/color_wheel.py"
+        "tests/game_drivers/color_wheel.py",
+        "tests/games/color_wheel/test_frontend.mjs",
+        "tests/runner.py"
       ],
       "introduced_in": "issue-152-color-wheel",
-      "changed_in": "issue-152-color-wheel",
-      "notes": "Allocated for GitHub issue #152."
+      "changed_in": "issue-1019-color-wheel-lifecycle-slice",
+      "notes": "Allocated for GitHub issue #152. Issue #1019 preserves the exact state and spins endpoints, caller-stable request payload, committed wager rendering, wallet refresh, reload recovery, cumulative wheel motion, and real repeat flow while removing duplicate frontend lifecycle helpers."
     }
   ]
 }
