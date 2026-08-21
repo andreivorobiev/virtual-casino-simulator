@@ -52,7 +52,7 @@ Historical source baseline: 9.1.0
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.7
 - tests: 1.116.2
-- docs: 1.112.2
+- docs: 1.113.0
 - contracts: 1.63.0
 - tooling: 1.45.1
 - commenting_policy: 2.1.0
