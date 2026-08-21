@@ -15,19 +15,52 @@ import re
 CLOSING_RE = re.compile(r"(?im)^\s*(?:[-*]\s*)?(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b")
 # Find the governed section without treating later template sections as issue references.
 SECTION_RE = re.compile(r"(?ims)^##\s+Issues resolved\s*$\n(.*?)(?=^##\s+|\Z)")
-# Permit standard release-only PRs to declare that they intentionally close no product ticket.
-RELEASE_ONLY_RE = re.compile(r"(?im)^\s*Release-only:\s*yes\s*$")
+# Parse the single explicit release-only declaration without accepting arbitrary values or duplicates.
+RELEASE_ONLY_RE = re.compile(r"(?im)^\s*Release-only:\s*(.*?)\s*$")
+# Bind the narrow exception to the repository's standard immutable release branch convention. (TOOL-012)
+RELEASE_HEAD_RE = re.compile(r"^codex/release-v(?P<version>\d+(?:\.\d+){2,})(?:-[a-z0-9][a-z0-9.-]*)?$")
+
+
+# Validate the standard release wrapper from immutable pull-request metadata rather than authored prose alone.
+def validate_release_only_exception(pull_request: dict) -> list[str]:
+    """Return deterministic errors unless this is a standard main-targeting release wrapper."""
+    # Read the immutable event fields without trusting missing or non-string values.
+    base_ref = str((pull_request.get("base") or {}).get("ref") or "")
+    head_ref = str((pull_request.get("head") or {}).get("ref") or "")
+    title = str(pull_request.get("title") or "")
+    # Require the protected integration base and canonical release branch before granting an exception.
+    head_match = RELEASE_HEAD_RE.fullmatch(head_ref)
+    if base_ref != "main" or head_match is None:
+        # Keep the repair message stable and free of user-authored branch or title text.
+        return ["'Release-only: yes' is permitted only for a codex/release-vN.N.N... head targeting main."]
+    # Require the human-facing title to carry the same numeric version as the immutable branch.
+    version = head_match.group("version")
+    title_re = re.compile(rf"(?i)\brelease\b.*\bv{re.escape(version)}(?:\b|-)")
+    if title_re.search(title) is None:
+        # Identify the expected public version without echoing the untrusted title.
+        return [f"Release-only PR title must identify branch version v{version}."]
+    # Accept only after every standard-wrapper identity check passes.
+    return []
 
 
 # Validate one already-parsed event independently from process environment for focused tests.
 def validate_pull_request_payload(payload: dict) -> list[str]:
     """Return deterministic lifecycle errors for one GitHub pull_request payload."""
-    # Read the authored PR body without trusting missing or non-string values.
-    body = str((payload.get("pull_request") or {}).get("body") or "")
-    # Allow an explicitly declared standard release PR to proceed without inventing a ticket.
-    if RELEASE_ONLY_RE.search(body):
-        # Return success for the explicit non-product release wrapper.
-        return []
+    # Read the immutable PR envelope and authored body without trusting missing shapes or values.
+    pull_request = payload.get("pull_request") or {}
+    body = str(pull_request.get("body") or "")
+    # Require at most one exact template declaration so duplicates and conflicts fail closed.
+    release_only_values = [value.strip().lower() for value in RELEASE_ONLY_RE.findall(body)]
+    if len(release_only_values) > 1:
+        # Reject duplicated `yes`, duplicated `no`, and conflicting declarations uniformly.
+        return ["PR body must contain at most one 'Release-only: yes|no' declaration."]
+    if release_only_values and release_only_values[0] not in {"yes", "no"}:
+        # Reject typos instead of silently treating an unknown exception request as ordinary metadata.
+        return ["PR body release-only declaration must be exactly 'Release-only: yes' or 'Release-only: no'."]
+    # Allow only an identity-bound standard release PR to proceed without inventing a ticket.
+    if release_only_values == ["yes"]:
+        # Return the immutable-metadata decision before examining product issue references.
+        return validate_release_only_exception(pull_request)
     # Require the stable section so ticket disposition is reviewable before merge.
     section = SECTION_RE.search(body)
     if not section:
