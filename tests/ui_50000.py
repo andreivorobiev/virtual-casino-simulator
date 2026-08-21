@@ -77,6 +77,12 @@ def safe_error(exc):
     return (message or exc.__class__.__name__)[:500]  # Bound artifacts while preserving the actionable prefix.
 
 
+# Reauthenticate the long-idle Admin evidence client before one post-soak privileged read. (TEST-092)
+def call_post_soak_admin_evidence(client, path):
+    client.login_default_user()  # Obtain a fresh session through the public login endpoint after the governed Admin idle window.
+    return client.call(path)  # Execute the requested evidence read only with the newly issued bearer session.
+
+
 # Resolve one ordinary timeout or the remaining task-local formal absolute window.
 def operation_timeout_ms(default_timeout_ms):
     deadline = FORMAL_OPERATION_DEADLINE.get()  # Read only the current asynchronous task's optional formal deadline.
@@ -1021,7 +1027,7 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
                     report["failed"] += 1  # Count one uncompleted global cycle after all bounded attempts.
                 if (ordinal + 1) % args.progress_every == 0 or ordinal + 1 == quota:  # Emit bounded progress for long monitoring.
                     print(f"UI50K game={game_id} replica={replica_index} assigned={ordinal + 1}/{quota} actions={report['attempted_actions']} completed={report['completed']} uncompleted={report['failed']} failed_attempts={report['failed_attempts']}", flush=True)  # Report only sanitized counts.
-            state = client.call(f"/api/v2/admin/users/{user['user_id']}/state")  # Read canonical post-run user state.
+            state = call_post_soak_admin_evidence(client, f"/api/v2/admin/users/{user['user_id']}/state")  # Reauthenticate after the long soak before reading canonical user state.
             report["isolation"] = {"player_match": state["player_id"] == user["player_id"], "nonnegative_balance": float(state["token_balance"]) >= 0, "ledger_events": int(state["recent_ledger_count"])}  # Store sanitized identity/wallet invariants.
             try:  # Capture one representative terminal surface even when some cycles failed.
                 await navigate_to_game(page, game_id, activated_counts)  # Re-enter the game through visible navigation.
@@ -1037,7 +1043,7 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
                 geometry = await geometry_scan(page)  # Inspect controls and document overflow without retaining scroll mutations.
                 geometry["essential_stage_failures"] = await essential_stage_scan(page, game_id)  # Reject clipped game theater that contains no enabled controls.
                 report["visuals"].append({"viewport": viewport, "geometry": geometry, "artifact": f"representative/{artifact_name}", "evidence_class": "after_failure_recovery" if failure_counts else "after_pass"})  # Store complete automated geometry evidence without private paths or mislabeled recovered failures.
-            post_operations = client.call("/api/v2/admin/operations")  # Recheck readiness after the complete shard.
+            post_operations = call_post_soak_admin_evidence(client, "/api/v2/admin/operations")  # Reauthenticate again before the terminal readiness proof.
             report["operations_ready_after"] = bool(post_operations.get("ready"))  # Preserve post-load readiness.
             report["status"] = "PASS" if report["completed"] == quota and not report["failed"] and not failure_counts and report["isolation"]["player_match"] and report["isolation"]["nonnegative_balance"] and report["isolation"]["ledger_events"] > 0 and report["operations_ready_after"] and not diagnostics["console_errors"] and not diagnostics["page_errors"] and not diagnostics["http_failures"] else "FAIL"  # Evaluate every gameplay, identity, readiness, and browser-diagnostic shard gate.
         except Exception as exc:  # Capture fatal setup, browser, or evidence failures.

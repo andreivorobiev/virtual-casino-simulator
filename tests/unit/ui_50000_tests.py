@@ -16,6 +16,46 @@ from tests import baccarat_sustained, ui_50000  # Exercise both public qualifica
 
 # Prove TEST-092 allocation, control classification, and exact-source resume invariants.
 class UI50000HarnessTests(unittest.TestCase):
+    # Prove an expired pre-soak Admin session is replaced before the first privileged evidence read. (TEST-092)
+    def test_post_soak_admin_evidence_reauthenticates_before_read(self):
+        events = []  # Record only public authentication and evidence-read boundaries.
+
+        class ExpiredAdminClient:  # Model the Admin client after a soak longer than its governed idle window.
+            def __init__(self):
+                self.session_token = "expired"  # Start with the unusable pre-soak bearer reproduced by run 32459496338.
+
+            def login_default_user(self):
+                events.append(("POST", "/api/v2/auth/login"))  # Record the required public reauthentication boundary.
+                self.session_token = "fresh"  # Model the new bearer returned by a successful login.
+                return self.session_token  # Preserve the production client method contract.
+
+            def call(self, path):
+                events.append(("GET", path, self.session_token))  # Record which bearer owns the privileged read.
+                if self.session_token != "fresh":  # Reproduce rejection of the expired session without weakening policy.
+                    raise AssertionError("Session is invalid or expired")  # Fail if the helper skips reauthentication.
+                return {"player_id": "player_test"}  # Return one minimal Admin evidence payload.
+
+        result = ui_50000.call_post_soak_admin_evidence(ExpiredAdminClient(), "/api/v2/admin/users/user_test/state")  # Exercise the exact post-soak seam without a browser.
+        self.assertEqual(result, {"player_id": "player_test"})  # Preserve the privileged endpoint payload unchanged.
+        self.assertEqual(events, [("POST", "/api/v2/auth/login"), ("GET", "/api/v2/admin/users/user_test/state", "fresh")])  # Require login before the first evidence read.
+
+    # Prove rejected reauthentication prevents every post-soak privileged read. (TEST-092)
+    def test_post_soak_admin_evidence_fails_closed_when_login_fails(self):
+        events = []  # Record whether the protected evidence endpoint was reached.
+
+        class RejectedAdminClient:  # Model invalid bootstrap credentials or another public login failure.
+            def login_default_user(self):
+                events.append("login")  # Record the sole allowed attempt before failure.
+                raise AssertionError("login rejected")  # Preserve fail-closed public authentication behavior.
+
+            def call(self, _path):
+                events.append("read")  # Expose any forbidden privileged read after failed login.
+                raise AssertionError("protected read must not run")  # Prevent a false-positive test result.
+
+        with self.assertRaisesRegex(AssertionError, "login rejected"):  # Require the login failure to remain terminal.
+            ui_50000.call_post_soak_admin_evidence(RejectedAdminClient(), "/api/v2/admin/operations")  # Exercise the terminal readiness evidence seam.
+        self.assertEqual(events, ["login"])  # Prove no privileged request followed the rejected reauthentication.
+
     # Build one complete focused Baccarat aggregate for listener-free profile tests.
     def passing_baccarat_sustained_report(self):
         deal_signature = 'baccarat::button[data-testid="baccarat-deal"]'  # Match the production control namespace and public test identity.
