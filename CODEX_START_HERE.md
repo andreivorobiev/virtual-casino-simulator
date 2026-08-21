@@ -215,6 +215,13 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`codex/tasks/blackjack-tests-coverage.md`](codex/tasks/blackjack-tests-coverage.md) — Blackjack Tests-First Coverage
 - [`codex/tasks/long-parallel-test-suites.md`](codex/tasks/long-parallel-test-suites.md) — Long Parallel Test Suites
 - [`codex/tasks/post-implementation-name-alignment.md`](codex/tasks/post-implementation-name-alignment.md) — Post-Implementation Naming Alignment Cleanup Proposal
+- [`codex/tasks/postgres-provider-01-pool.md`](codex/tasks/postgres-provider-01-pool.md) — PostgreSQL lane 1: bounded connection pool
+- [`codex/tasks/postgres-provider-02-registration.md`](codex/tasks/postgres-provider-02-registration.md) — PostgreSQL lane 2: configuration and provider registration
+- [`codex/tasks/postgres-provider-03-migrations.md`](codex/tasks/postgres-provider-03-migrations.md) — PostgreSQL lane 3: migrations and deployment-only runner
+- [`codex/tasks/postgres-provider-04-core.md`](codex/tasks/postgres-provider-04-core.md) — PostgreSQL lane 4: complete StorageProvider core parity
+- [`codex/tasks/postgres-provider-05-game-actions.md`](codex/tasks/postgres-provider-05-game-actions.md) — PostgreSQL lane 5: exactly-once game-action executor
+- [`codex/tasks/postgres-provider-06-conformance.md`](codex/tasks/postgres-provider-06-conformance.md) — PostgreSQL lane 6: provider-agnostic storage conformance kit
+- [`codex/tasks/postgres-provider-07-docs-metadata.md`](codex/tasks/postgres-provider-07-docs-metadata.md) — PostgreSQL lane 7: documentation and metadata integration
 - [`codex/tasks/premium-implementation-baccarat.md`](codex/tasks/premium-implementation-baccarat.md) — Premium Baccarat Frontend Implementation
 - [`codex/tasks/premium-implementation-bingo.md`](codex/tasks/premium-implementation-bingo.md) — Premium Bingo Frontend Implementation
 - [`codex/tasks/premium-implementation-blackjack.md`](codex/tasks/premium-implementation-blackjack.md) — Premium Blackjack Frontend Implementation
