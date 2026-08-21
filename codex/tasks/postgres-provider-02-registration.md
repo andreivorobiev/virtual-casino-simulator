@@ -10,7 +10,7 @@
 - Merge executor: Codex
 - Branch: `claude/1055-postgres-registration`
 - Base branch and commit: accepted protected-main descendant after PR #1051 and this Phase-A packet PR; intake baseline `667bdf2b4a0b3d997d5bf18f9bf158fa49749c01`
-- Dependency PRs and exact heads: PR #1051 exact proposed head `db0f4d08caa0e49199f7ab530d364709eea22ab2`, then this packet PR
+- Dependency PRs and exact heads: PR #1051 exact proposed head `db0f4d08caa0e49199f7ab530d364709eea22ab2`; then concurrently opened shared-docs PR #1063, currently `e298863324f9e69a7d7f91cf8257f8ff5c90bedf`; then this packet PR after both are accepted and its versions/catalog are regenerated
 - PR title: `feat: register PostgreSQL storage configuration`
 - Required owner approval or external gate: none beyond ordinary review; selecting PostgreSQL remains disabled/incomplete until provider core lands
 - Coordinator task: record the accepted base and release shared metadata ownership after packet integration
