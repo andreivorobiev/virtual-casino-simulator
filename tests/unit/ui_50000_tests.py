@@ -5,13 +5,14 @@
 import argparse  # Build narrow command namespaces without invoking the CLI parser.
 import asyncio  # Exercise the browser-free aggregate controller end to end.
 import json  # Persist synthetic shard reports for resume-policy tests.
+import math  # Verify each integer replica stays within its profiled UI target.
 import tempfile  # Own disposable report directories for every test.
 import unittest  # Integrate the focused proofs with the repository API runner.
 from collections import Counter  # Aggregate deterministic per-game allocation totals.
 from pathlib import Path  # Address temporary shard reports with platform-neutral paths.
 from unittest import mock  # Inject immutable provenance when release tests intentionally omit Git metadata.
 
-from tests import baccarat_sustained, ui_50000  # Exercise both public qualification profiles without starting Playwright.
+from tests import baccarat_sustained, formal_ui_profile, ui_50000  # Exercise both public qualification profiles without starting Playwright.
 
 
 # Prove TEST-092 allocation, control classification, and exact-source resume invariants.
@@ -107,7 +108,7 @@ class UI50000HarnessTests(unittest.TestCase):
         ordinary_job = workflow.split("  browser_tests:", 1)[1].split("  # Run the focused issue #265", 1)[0]  # Isolate the ordinary browser job from the sustained profile.
         self.assertIn("github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true", ordinary_job)  # Run ordinary coverage for pull requests, protected main, and formal dispatch while skipping sustained-only dispatches.
         self.assertNotIn("baccarat_sustained_2000", ordinary_job)  # Keep the focused run from starting a second browser suite.
-        sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Derive the formal issue #227", 1)[0]  # Isolate only the focused hosted job before formal planning begins.
+        sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Derive the formal TEST-092 matrix", 1)[0]  # Isolate only the focused hosted job before formal planning begins.
         self.assertIn("inputs.baccarat_sustained_2000 == true", sustained_job)  # Keep the expensive profile behind explicit authorization.
         self.assertIn("baccarat-sustained-${{ github.sha }}", sustained_job)  # Bind the terminal artifact name to the exact source head.
         self.assertNotIn("ui_50000.py", sustained_job)  # Prevent the focused dispatch from starting the unrelated 50,000-cycle controller.
@@ -151,7 +152,7 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove the formal catalog allocation assigns exactly 50,000 unique IDs and the required game floor.
     def test_formal_allocation_is_exact_and_balanced(self):
-        allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the formal deterministic assignment.
+        allocations = ui_50000.formal_allocations()  # Build the profiled formal deterministic assignment.
         per_game = Counter()  # Aggregate replica quotas back to canonical games.
         assigned_ids = []  # Reconstruct every global cycle ID for uniqueness evidence.
         for game_id, _game_index, _replica_index, quota, cycle_start in allocations:  # Inspect every bounded worker assignment.
@@ -163,7 +164,24 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertGreaterEqual(min(per_game.values()), expected_floor)  # Require every game to receive at least its exact balanced share.
         self.assertEqual(set(assigned_ids), set(range(50_000)))  # Require no missing or duplicate global identities.
         self.assertEqual(len(assigned_ids), len(set(assigned_ids)))  # Reject overlapping replica ranges.
-        self.assertEqual(len(allocations), len(ui_50000.GAME_IDS) + 3)  # Pin one shard per game plus three additional Roulette replicas.
+        self.assertEqual(len(allocations), 140)  # Pin the exact checked-in profile result under GitHub's 256-entry matrix ceiling.
+
+    # Prove profiled ranges retain duration headroom plus the special Roulette and draw-poker aggregate affinities. (TEST-092, issue #1053)
+    def test_formal_duration_profile_preserves_replica_affinities(self):
+        allocations = ui_50000.formal_allocations()  # Resolve the same canonical plan consumed by workflow workers and the aggregate.
+        entries = {entry["id"]: entry for entry in formal_ui_profile.FORMAL_DURATION_PROFILE["games"]}  # Index the immutable timing evidence by canonical game.
+        for game_id, _game_index, replica_index, quota, _cycle_start in allocations:  # Verify every integer range independently.
+            entry = entries[game_id]  # Read this allocation's measured cycles and conservative planning duration.
+            predicted_seconds = math.ceil(entry["planning_ui_seconds"] * quota / entry["measured_cycles"])  # Scale the source run without hiding range remainders.
+            self.assertLessEqual(predicted_seconds, formal_ui_profile.FORMAL_UI_STEP_TARGET_SECONDS, (game_id, replica_index, quota))  # Keep every range below the 18-minute UI target.
+            if not (game_id == "roulette" and replica_index == 0):  # Permit only the explicit primary Rebet affinity range to use reserved target headroom.
+                self.assertLessEqual(predicted_seconds, formal_ui_profile.FORMAL_PLANNING_TARGET_SECONDS, (game_id, replica_index, quota))  # Keep ordinary ranges at or below fifteen minutes.
+        roulette = [allocation for allocation in allocations if allocation[0] == "roulette"]  # Isolate the continuous table schedule.
+        self.assertEqual((len(roulette), roulette[0][2], roulette[0][3]), (12, 0, 101))  # Reserve one history seed plus one hundred real primary-shard Rebet activations.
+        draw_games = [game_id for game_id, family in ui_50000.UI_STRATEGY_FAMILIES.items() if family == "draw_poker"]  # Derive every five-position hold-balancing family member.
+        for game_id in draw_games:  # Prove replica-local deficit selection still exceeds the aggregate floor at every hold position.
+            quotas = [allocation[3] for allocation in allocations if allocation[0] == game_id]  # Collect every deterministic independent range.
+            self.assertGreaterEqual(sum(quota // 5 for quota in quotas), ui_50000.CONTROL_ACTIVATION_FLOOR, game_id)  # Require at least one hundred complete five-position schedules in the aggregate.
 
     # Prove every registered catalog game names one implemented strategy and future growth fails closed. (TEST-092, issue #1050)
     def test_catalog_games_have_explicit_implemented_ui_strategy_families(self):
@@ -210,13 +228,13 @@ class UI50000HarnessTests(unittest.TestCase):
             asyncio.run(ui_50000.play_simple_terminal_game(object(), "color_wheel", 101, Counter()))  # Exercise the ordinary configured play path.
         self.assertEqual(events, [("repeat", 1, '[data-testid="color-wheel-repeat"]', '[data-testid="color-wheel-spin"]'), ("repeat", 101, '[data-testid="color-wheel-repeat"]', '[data-testid="color-wheel-spin"]'), ("rotate", "[data-color]", 101, 1), ("rotate", "[data-chip]", 101, 1), ("terminal", '[data-testid="color-wheel-spin"]')])  # Reject a second settlement on repeat cycles or skipped fresh choices.
 
-    # Prove the hosted matrix derives every exact allocation and grows with the catalog instead of a YAML list. (TEST-092)
+    # Prove the hosted matrix derives every exact profiled allocation and rejects stale catalog growth. (TEST-092)
     def test_formal_workflow_matrix_comes_from_canonical_allocator(self):
         current_indices = ui_50000.formal_allocation_indices()  # Derive the exact current hosted-worker plan.
-        self.assertEqual(current_indices, list(range(len(ui_50000.GAME_IDS) + 3)))  # Require one index per game plus three extra Roulette replicas.
+        self.assertEqual(current_indices, list(range(140)))  # Require the complete duration-sized matrix with contiguous stable identities.
         with mock.patch.object(ui_50000, "GAME_IDS", ui_50000.GAME_IDS + ("fixture_catalog_growth",)):  # Model one future catalog addition without editing workflow YAML.
-            expanded_indices = ui_50000.formal_allocation_indices()  # Recompute the plan through the production allocator.
-        self.assertEqual(expanded_indices, list(range(len(current_indices) + 1)))  # Require the hosted matrix to add the new game's worker automatically.
+            with self.assertRaisesRegex(RuntimeError, "profile is stale for the catalog"):  # Require measured policy before scheduling an unprofiled strategy.
+                ui_50000.formal_allocation_indices()  # Refuse a partial matrix instead of guessing the new game's throughput.
         workflow = (ui_50000.ROOT / ".github" / "workflows" / "browser-tests.yml").read_text(encoding="utf-8")  # Read the inert exact-source workflow contract.
         planner_job = workflow.split("  formal_ui_plan:", 1)[1].split("  formal_ui_workers:", 1)[0]  # Isolate canonical planning from worker execution.
         worker_job = workflow.split("  formal_ui_workers:", 1)[1].split("  formal_ui_aggregate:", 1)[0]  # Isolate only the dynamic matrix consumer.
@@ -224,7 +242,28 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("python tests/ui_50000.py --print-formal-allocation-indices", planner_job)  # Bind planning to the public canonical helper.
         self.assertIn("allocation_index: ${{ fromJSON(needs.formal_ui_plan.outputs.allocation_indices) }}", worker_job)  # Consume the complete exact-source JSON matrix.
         self.assertNotIn("allocation_index:\n          - 0", worker_job)  # Reject a reintroduced enumerated prefix that can drift after catalog growth.
+        self.assertIn("    name: Formal UI worker ${{ matrix.allocation_index }}", worker_job)  # Preserve the required branch-protection context family.
+        self.assertIn("    timeout-minutes: 20", worker_job)  # Enforce the hard job-start-through-terminal-upload ceiling.
+        self.assertNotIn("timeout-minutes: 350", worker_job)  # Reject the former multi-hour stale-profile window.
+        self.assertIn("      max-parallel: 20", worker_job)  # Preserve the repository's bounded runner-capacity policy.
+        self.assertIn("--max-attempts-per-cycle 1", worker_job)  # Keep formal evidence retry-free on workflow attempt one.
         self.assertIn("      - formal_ui_plan\n      - formal_ui_workers", aggregate_job)  # Require the aggregate to depend on both planning and every worker.
+        self.assertIn("    name: Formal UI exact aggregate", aggregate_job)  # Preserve the exact required terminal context name.
+
+    # Prove a stale worker is cancelled inside the cleanup margin and returns an aggregate-safe red handback.
+    def test_formal_worker_execution_budget_fails_closed(self):
+        allocation = ui_50000.formal_allocations()[0]  # Use one real deterministic identity and range.
+
+        async def stalled_shard(*_args):
+            await asyncio.sleep(1)  # Model a worker that cannot finish inside its checked-in profile.
+
+        args = argparse.Namespace(allocation_index=0)  # Select the immutable hosted-worker deadline path.
+        with mock.patch.object(ui_50000, "FORMAL_EXECUTION_BUDGET_SECONDS", 0.001), mock.patch.object(ui_50000, "run_game_shard", side_effect=stalled_shard):  # Compress only the browser-free unit deadline.
+            result = asyncio.run(ui_50000.run_bounded_shard(None, asyncio.Semaphore(1), args, allocation, "run", "a" * 40))  # Exercise cancellation without starting Playwright.
+        self.assertEqual(result["status"], "FAIL")  # Keep the timed-out allocation terminally red.
+        self.assertEqual(result["failed"], allocation[3])  # Account every assigned unique cycle as incomplete.
+        self.assertFalse(result["listener_cleanup"]["closed"])  # Forbid an unproven cleanup claim after the synthetic stall.
+        self.assertEqual(result["controller_error"], "TimeoutError")  # Preserve the fixed bounded profile-staleness diagnostic.
 
     # Prove namespacing prevents identical generic selectors from merging across games.
     def test_control_signatures_keep_module_ownership(self):
@@ -583,7 +622,7 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove a complete distributed corpus loads once in canonical allocation order.
     def test_distributed_shards_require_complete_exact_inventory(self):
-        allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the immutable formal assignment.
+        allocations = ui_50000.formal_allocations()  # Build the immutable profiled formal assignment.
         source_commit = "c" * 40  # Use one valid synthetic full commit identity.
         with tempfile.TemporaryDirectory() as temporary_directory:  # Own and clean the downloaded-artifact simulation.
             root = Path(temporary_directory)  # Resolve the test-owned shard root.
@@ -598,7 +637,7 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove an exact filename cannot smuggle a foreign source or altered range into the aggregate.
     def test_distributed_shards_reject_foreign_identity(self):
-        allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the immutable formal assignment.
+        allocations = ui_50000.formal_allocations()  # Build the immutable profiled formal assignment.
         source_commit = "d" * 40  # Use one valid expected full commit identity.
         with tempfile.TemporaryDirectory() as temporary_directory:  # Own and clean the downloaded-artifact simulation.
             root = Path(temporary_directory)  # Resolve the test-owned shard root.
@@ -613,7 +652,7 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove the browser-free controller accepts exactly 50,000 completed cycles only when every formal gate is present.
     def test_distributed_aggregate_accounts_for_exact_terminal_corpus(self):
-        allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the immutable formal assignment.
+        allocations = ui_50000.formal_allocations()  # Build the immutable profiled formal assignment.
         source_commit = "f" * 40  # Use one valid immutable identity independent of optional release-copy Git metadata.
         with tempfile.TemporaryDirectory() as temporary_directory:  # Own and clean the complete downloaded-artifact simulation.
             root = Path(temporary_directory)  # Resolve the disposable aggregate root.

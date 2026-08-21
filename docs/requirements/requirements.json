@@ -7039,21 +7039,23 @@
     {
       "id": "TEST-092",
       "module": "Tests",
-      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns each game at least its deterministic floor of 50,000 divided by the current catalog count, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.",
-      "status": "PASS",
+      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns each game at least its deterministic floor of 50,000 divided by the current catalog count, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, completes every attempt-one worker job through terminal evidence upload within 20 minutes, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, budget overruns, or cleanup residue.",
+      "status": "PLANNED",
       "api_tests": [
         "UI-50000-HARNESS-001"
       ],
       "browser_tests": [],
       "implementation_files": [
         "tests/ui_50000.py",
+        "tests/formal_ui_profile.py",
+        "tests/formal_ui_duration_profile.json",
         "tests/unit/ui_50000_tests.py",
         "tests/run_tests.py",
         ".github/workflows/browser-tests.yml"
       ],
       "introduced_in": "issue-227-ui-50000-ci-replacement",
-      "changed_in": "issue-1050-formal-ui-strategies",
-      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Its exact-source planner emits one contiguous matrix index for every allocation derived from the current catalog and four Roulette replicas, workers consume that generated matrix, and the aggregate still rejects any missing, extra, duplicate, malformed, or foreign-source shard. Every registered catalog game maps to one implemented rendered-control strategy family; an unregistered game or unknown family fails before action dispatch, and the formerly hidden Color Wheel through Teen Patti range now exercises explicit choices, replay, staged decisions, and terminal readiness rather than the unknown-game fallback. Stable semantic signatures distinguish their board cells, numbers, ranks, runners, hand-setting cards, wager inputs, decision controls, deals, and repeats. Bingo reset coverage recognizes an active called session through rendered controls, accepts exactly its one native abandonment confirmation, and requires fresh-card readiness without leaking confirmation authority into safe or completed-history resets. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
+      "changed_in": "issue-1053-formal-worker-budget",
+      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Issue #1053 adds a checked-in exact-run duration profile that must match every catalog game and implemented strategy before planning; stale catalog, family, timing, provenance, or matrix metadata fails before worker creation. The current profile produces 140 contiguous allocations for exactly 50,000 unique IDs, targets ordinary ranges at 15 minutes, cancels stale in-harness execution at 17 minutes so cleanup and evidence can finish below the 18-minute UI-step target, and hard-stops the complete job at 20 minutes. The required worker and aggregate context names, maximum parallelism of 20, attempt-one/no-resume evidence, source isolation, listener cleanup, diagnostics, four governed viewports, aggregate control floor, and fail-closed shard inventory remain unchanged. Roulette reserves a 101-cycle primary affinity range for one seed plus 100 Rebet activations; draw-poker replica quotas retain at least 100 aggregate complete five-position hold schedules. With the repository cap of 20 simultaneous formal jobs, the 140-entry profile requires at most seven bounded execution waves when runners are immediately available; external runner queue delay is measured separately from job runtime. The status remains PLANNED until one fresh exact-head hosted run proves every worker and terminal aggregate green on workflow attempt one."
     },
     {
       "id": "MOTION-004",

@@ -25,6 +25,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))  # Put this source snapshot first on the import path.
 
 from casino.config import GAMES  # Discover all registered games from canonical metadata.
+from tests.formal_ui_profile import FORMAL_EXECUTION_BUDGET_SECONDS, formal_replica_policy  # Apply exact-run worker sizing and the fail-closed formal execution budget.
 from tests.long_suites import OPERATIONS_SMOKE_BUILD_SHA, ApiClient, clear_readonly_and_retry, free_port, stop_server  # Reuse governed API and exact cleanup controls.
 
 # Preserve catalog order for deterministic game quotas and global cycle IDs.
@@ -1184,6 +1185,7 @@ def write_json(path, payload):
 # Execute every assigned UI cycle for one isolated catalog game.
 async def run_game_shard(playwright, semaphore, args, game_id, game_index, replica_index, quota, cycle_start, run_id, source_commit):
     async with semaphore:  # Bound simultaneous browsers, servers, and file-backed runtimes.
+        shard_started = time.perf_counter()  # Measure the complete harness-owned worker interval, including cleanup.
         locale = "en-US" if game_index % 2 == 0 else "ru-RU"  # Distribute the two implemented locales deterministically.
         report = {"game": game_id, "game_index": game_index, "replica_index": replica_index, "locale": locale, "quota": quota, "global_cycle_start": cycle_start, "global_cycle_end": cycle_start + quota - 1, "source_commit": source_commit, "attempted": 0, "attempted_actions": 0, "completed": 0, "failed": 0, "failed_attempts": 0, "status": "FAIL", "requirements": list(REQUIREMENT_IDS)}  # Start fail-closed shard evidence bound to the exact source.
         seen_counts = Counter()  # Count actionable controls observed across states.
@@ -1291,6 +1293,7 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
             report["failure_first_cycle"] = failure_first_cycle  # Preserve deterministic first reproduction IDs.
             report["latency"] = latency_summary(latencies)  # Persist successful-cycle performance evidence.
             report["browser_diagnostics"] = {name: dict(counter.most_common()) for name, counter in diagnostics.items()}  # Persist grouped browser signals.
+            report["ui_process_seconds"] = round(time.perf_counter() - shard_started, 3)  # Expose profile-staleness evidence without relying only on hosted timestamps.
             write_json(shard_report_path, report)  # Save the terminal per-game artifact.
         return report  # Return the sanitized shard evidence to the aggregate controller.
 
@@ -1354,7 +1357,7 @@ def selected_games(args):
 
 
 # Allocate exact deterministic quotas and contiguous global cycle ranges.
-def allocate_cycles(game_ids, total_cycles, roulette_replicas, replicated_games, game_replicas):
+def allocate_cycles(game_ids, total_cycles, roulette_replicas, replicated_games, game_replicas, replica_policy=None):
     if total_cycles < len(game_ids):  # Require at least one real cycle per selected game.
         raise ValueError("total cycles must be at least the selected game count")  # Prevent silent zero-coverage games.
     base, remainder = divmod(total_cycles, len(game_ids))  # Divide evenly with a deterministic prefix remainder.
@@ -1362,11 +1365,17 @@ def allocate_cycles(game_ids, total_cycles, roulette_replicas, replicated_games,
     offset = 0  # Start global IDs at zero.
     for index, game_id in enumerate(game_ids):  # Allocate every selected catalog game.
         quota = base + (1 if index < remainder else 0)  # Give the prefix one extra cycle until the remainder is exhausted.
-        requested_replicas = roulette_replicas if game_id == "roulette" else game_replicas if game_id in replicated_games else 1  # Resolve explicitly parallelized game ranges.
+        policy = (replica_policy or {}).get(game_id, {})  # Prefer the canonical formal profile when the distributed planner supplies one.
+        requested_replicas = int(policy.get("replicas", roulette_replicas if game_id == "roulette" else game_replicas if game_id in replicated_games else 1))  # Resolve profiled or explicitly focused parallel ranges.
         replica_count = min(quota, requested_replicas)  # Never create an empty worker.
-        replica_base, replica_remainder = divmod(quota, replica_count)  # Divide its exact game quota without dropping cycles.
-        for replica_index in range(replica_count):  # Allocate each independent browser/account/runtime worker.
-            replica_quota = replica_base + (1 if replica_index < replica_remainder else 0)  # Distribute the remainder deterministically.
+        first_minimum = int(policy.get("first_replica_minimum_cycles", 0))  # Preserve a profiled affinity range such as Roulette's one-hundred Rebet activations.
+        remaining_quota = quota - first_minimum if first_minimum else quota  # Reserve only the explicit primary-shard affinity budget.
+        remaining_replicas = replica_count - 1 if first_minimum else replica_count  # Divide every non-affinity range evenly.
+        if remaining_replicas < 1 or remaining_quota < remaining_replicas:  # Reject a stale profile that would create an empty worker.
+            raise ValueError(f"replica policy cannot allocate nonempty ranges for {game_id}")
+        replica_base, replica_remainder = divmod(remaining_quota, remaining_replicas)  # Divide the unreserved quota without dropping cycles.
+        replica_quotas = ([first_minimum] if first_minimum else []) + [replica_base + (1 if index < replica_remainder else 0) for index in range(remaining_replicas)]  # Keep primary affinity first and every remaining range balanced.
+        for replica_index, replica_quota in enumerate(replica_quotas):  # Allocate each independent browser/account/runtime worker.
             allocations.append((game_id, GAME_IDS.index(game_id), replica_index, replica_quota, offset))  # Bind game, replica, quota, and contiguous range.
             offset += replica_quota  # Advance to the next unique global cycle ID.
     if offset != total_cycles:  # Defend exact accounting before browser work.
@@ -1374,9 +1383,15 @@ def allocate_cycles(game_ids, total_cycles, roulette_replicas, replicated_games,
     return allocations  # Return deterministic shard work.
 
 
+# Derive the exact profile-sized hosted allocation plan and reject stale catalog or strategy metadata. (TEST-092)
+def formal_allocations():
+    policy = formal_replica_policy(GAME_IDS, UI_STRATEGY_FAMILIES)  # Validate canonical provenance and duration sizing before allocating any cycle.
+    return allocate_cycles(list(GAME_IDS), 50_000, 4, set(), 4, policy)  # Preserve exact global IDs while applying only checked-in per-game replica counts.
+
+
 # Derive every hosted worker index from the exact-source catalog allocation policy. (TEST-092)
 def formal_allocation_indices():
-    allocations = allocate_cycles(list(GAME_IDS), 50_000, 4, set(), 4)  # Reuse the formal full-catalog cycle and Roulette-replica contract.
+    allocations = formal_allocations()  # Reuse the validated exact-run duration profile and complete full-catalog contract.
     return list(range(len(allocations)))  # Return one contiguous unique matrix entry for every canonical allocation.
 
 
@@ -1384,7 +1399,10 @@ def formal_allocation_indices():
 async def run_bounded_shard(playwright, semaphore, args, allocation, run_id, source_commit):
     game_id, game_index, replica_index, quota, cycle_start = allocation  # Unpack the deterministic shard assignment.
     try:  # Bound each game without stranding its cleanup finally block.
-        return await run_game_shard(playwright, semaphore, args, game_id, game_index, replica_index, quota, cycle_start, run_id, source_commit)  # Execute the exact-source isolated shard.
+        if args.allocation_index is not None:  # Give a stale formal profile a bounded cleanup window before the workflow's hard job timeout.
+            async with asyncio.timeout(FORMAL_EXECUTION_BUDGET_SECONDS):
+                return await run_game_shard(playwright, semaphore, args, game_id, game_index, replica_index, quota, cycle_start, run_id, source_commit)  # Execute one exact-source isolated shard inside the profile-staleness budget.
+        return await run_game_shard(playwright, semaphore, args, game_id, game_index, replica_index, quota, cycle_start, run_id, source_commit)  # Preserve focused/local behavior without the hosted worker deadline.
     except Exception as exc:  # Preserve unexpected controller-level failures.
         return {"game": game_id, "game_index": game_index, "replica_index": replica_index, "quota": quota, "global_cycle_start": cycle_start, "global_cycle_end": cycle_start + quota - 1, "source_commit": source_commit, "attempted": 0, "attempted_actions": 0, "completed": 0, "failed": quota, "failed_attempts": quota, "status": "FAIL", "controller_error": safe_error(exc), "listener_cleanup": {"closed": False}, "control_seen_counts": {}, "control_activated_counts": {}, "failure_counts": {safe_error(exc): quota}, "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}}}  # Return a fully accounted exact-source fail-closed record.
 
@@ -1459,7 +1477,8 @@ async def run_all(args):
     unknown_replicas = replicated_games.difference(game_ids)  # Reject out-of-scope or misspelled replica targets.
     if unknown_replicas:  # Fail before starting local resources.
         raise ValueError(f"replicate-games not selected: {sorted(unknown_replicas)}")  # Preserve an actionable caller error.
-    allocations = allocate_cycles(game_ids, args.total_cycles, args.roulette_replicas, replicated_games, args.game_replicas)  # Allocate exact quotas, replicas, and global IDs.
+    formal_distributed = args.aggregate_only or args.allocation_index is not None  # Keep planner-owned profile sizing exclusive to immutable distributed roles.
+    allocations = formal_allocations() if formal_distributed else allocate_cycles(game_ids, args.total_cycles, args.roulette_replicas, replicated_games, args.game_replicas)  # Allocate exact quotas, replicas, and global IDs.
     if args.aggregate_only:  # Load the immutable downloaded corpus without importing or launching Playwright.
         resumed_results = load_distributed_shards(args, allocations, source_commit)  # Require all exact reports before aggregate accounting.
         pending_allocations = []  # Never repair missing remote work inside the aggregate job.
