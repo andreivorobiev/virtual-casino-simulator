@@ -1,28 +1,29 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-21T04:23:24Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-21T13:40:00Z.
 
 ## Current branch / active Codex work
 
-- Protected main is exact `c7b86e54ba5ae03953903514207ee526dc9bc719`, the deployed v0.9.5.84 source at the start of issue #1040.
-- Isolated branch `codex/1040-concurrency-ceilings` implements the repository-only concurrency qualification packet for issue #1040.
-- No production, database, provider, release, public-policy, or deployment mutation is authorized by this branch.
+- Protected main is exact `667bdf2b4a0b3d997d5bf18f9bf158fa49749c01`, including the catalog-derived 49-worker formal matrix from issue #1048.
+- Isolated branch `codex/1050-formal-strategies` repairs the missing rendered-control strategies exposed by exact-main formal run `32480806914`.
+- No production, database, provider, release, public-policy, deployment, API, game-engine, paytable, or settlement mutation is authorized by this branch.
 
 ## Accepted scope and requirements
 
-- `MYSQL-011` raises the process-local MySQL pool default to sixteen, permits an explicit one-through-sixty-four capacity, and exposes only bounded authenticated Admin saturation telemetry.
-- `CORE-035` makes the existing production Gunicorn adapter the sole load-qualification serving stack with bounded worker and gthread controls.
-- `TEST-251` adds exact-source 32-session JSON/MySQL CI evidence and an opt-in exact-100-session disposable-MySQL formal profile.
-- `OPS-004`, `STORAGE-010`, and `TEST-220` are compatibly amended; requirements total exactly 1114 and the API case inventory is exactly 213.
+- `TEST-092` keeps its exact 50,000-cycle, full-catalog, four-viewport, per-control, exact-source, and fail-closed aggregate contract.
+- Every registered catalog game now maps to an implemented strategy family; unknown games and unknown families fail before action dispatch.
+- The fifteen formerly hidden games from Color Wheel through Teen Patti receive explicit visible-choice, replay, decision, and terminal-readiness coverage; Double Bonus Video Poker stays on the existing draw-poker family.
+- Stable control signatures distinguish the new board, choice, hand-setting, wager, decision, deal, and repeat identities.
+- Requirements remain exactly 1114 and the frozen `/api/v1` contract remains unchanged.
 
-## Version and contract allocation
+## Version and validation allocation
 
 - Packaged release remains `0.9.5.84`.
-- Content-owned module revisions are application `9.72.0`, core `10.13.0`, admin `1.21.0`, operations `1.2.0`, tests `1.116.2`, docs `1.112.2`, contracts `1.63.0`, and tooling `1.45.1`; every other module remains exact protected-main values.
+- Tests and docs receive compatible patch revisions; every runtime and game module remains at its exact protected-main revision.
 - The frozen `/api/v1` contract and all game, paytable, settlement, signup, OAuth, provider, billing, and public-launch behavior remain unchanged.
 
 ## Validation and handback
 
-- Local focused Python evidence, requirements, versions, contracts, module boundaries, and catalog validation are green on the moving packet.
-- Before merge, the immutable PR head must pass the full repository gates, ordinary 32-session JSON/MySQL hosted evidence, exact Admin Browser rows, and the opt-in 100-session MySQL Gunicorn profile.
-- Issue #1040 closes only after exact-head formal evidence is posted to the issue and the normal non-bypass PR merge completes.
+- Local work is browser-free by policy: syntax, catalog/registry proofs, strategy state-machine unit seams, requirements, versions, contracts, boundaries, comments, headers, and rule gates run locally.
+- The immutable exact-head PR must pass ordinary checks plus one 49-worker formal dispatch before merge and issue #1050 closure.
+- One fresh exact-main formal dispatch after merge must repeat every worker, aggregate, and visual gate before parent #1041 can close.

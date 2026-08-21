@@ -165,6 +165,51 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertEqual(len(assigned_ids), len(set(assigned_ids)))  # Reject overlapping replica ranges.
         self.assertEqual(len(allocations), len(ui_50000.GAME_IDS) + 3)  # Pin one shard per game plus three additional Roulette replicas.
 
+    # Prove every registered catalog game names one implemented strategy and future growth fails closed. (TEST-092, issue #1050)
+    def test_catalog_games_have_explicit_implemented_ui_strategy_families(self):
+        self.assertEqual(set(ui_50000.UI_STRATEGY_FAMILIES), set(ui_50000.GAME_IDS))  # Require exact catalog coverage without stale or missing strategy registrations.
+        self.assertEqual(set(ui_50000.UI_STRATEGY_FAMILIES.values()), set(ui_50000.IMPLEMENTED_UI_STRATEGY_FAMILIES))  # Require every registered family to reach executable dispatch and every dispatch family to remain used.
+        simple_games = {game_id for game_id, family in ui_50000.UI_STRATEGY_FAMILIES.items() if family == "simple_terminal"}  # Derive the configured settled-action family from the canonical registry.
+        self.assertEqual(simple_games, set(ui_50000.SIMPLE_TERMINAL_UI_STRATEGIES))  # Require complete selectors for every simple-family member without extra configs.
+        with self.assertRaisesRegex(AssertionError, "no UI cycle strategy for catalog game fixture_catalog_growth"):  # Model a future registered game before its strategy is implemented.
+            ui_50000.strategy_family_for("fixture_catalog_growth")  # Require the production resolver to stop instead of silently skipping the new game.
+        with mock.patch.dict(ui_50000.UI_STRATEGY_FAMILIES, {"fixture_bad_family": "missing_dispatch"}):  # Model a typo that superficially registers a future game.
+            with self.assertRaisesRegex(AssertionError, "no UI cycle strategy implementation for family missing_dispatch"):  # Require an executable family rather than a registry-only waiver.
+                ui_50000.strategy_family_for("fixture_bad_family")  # Exercise the exact invalid-family guard.
+
+    # Prove newly covered board and staged controls retain stable semantic identities in both discovery paths.
+    def test_new_strategy_controls_use_stable_semantic_signatures(self):
+        source = (ui_50000.ROOT / "tests" / "ui_50000.py").read_text(encoding="utf-8")  # Read the inert harness source without starting a browser.
+        semantic_attributes = ("data-number", "data-cell", "data-color", "data-rank", "data-marble", "data-card-index", "data-ante", "data-aces", "data-fold", "data-deal", "data-repeat")  # Enumerate the new strategy-owned identities that cannot fall back to translated text.
+        for attribute in semantic_attributes:  # Inspect pointer signatures and rendered inventory together.
+            self.assertEqual(source.count(f"'{attribute}'"), 2, attribute)  # Require the attribute once in each aligned expression augmentation.
+
+    # Prove manual Pai Gow setting keeps the low hand on the weakest two distinct visible ranks.
+    def test_pai_gow_manual_low_hand_uses_legal_visible_rank_order(self):
+        self.assertEqual(ui_50000.pai_gow_low_hand_positions(("K", "2", "A", "5", "2", "J", "JOKER")), (1, 3))  # Avoid a low-hand pair and keep the Joker in the five-card high hand.
+        self.assertEqual(ui_50000.pai_gow_low_hand_positions(("10", "4", "Q", "7", "A", "3", "K")), (5, 1))  # Order ordinary visible ranks numerically rather than lexicographically.
+        with self.assertRaisesRegex(AssertionError, "Pai Gow setting exposed 1 card ranks"):  # Reject an incomplete rendered setting surface.
+            ui_50000.pai_gow_low_hand_positions(("A",))  # Exercise the fail-closed public-count gate.
+
+    # Prove the simple-family runner completes either one repeat or one configured fresh play, never both.
+    def test_simple_terminal_strategy_keeps_one_settlement_per_cycle(self):
+        events = []  # Record only the public helper boundaries exercised by the dispatcher.
+
+        async def fake_repeat(_page, ordinal, repeat_selector, ready_selector, _activated):
+            events.append(("repeat", ordinal, repeat_selector, ready_selector))  # Preserve the replay contract chosen for this game.
+            return ordinal == 1  # Model one reachable repeat cycle and one ordinary cycle.
+
+        async def fake_rotate(_page, selector, ordinal, clicks, _activated):
+            events.append(("rotate", selector, ordinal, clicks))  # Record each configured real-control group in order.
+
+        async def fake_terminal(_page, selector, _activated):
+            events.append(("terminal", selector))  # Record the sole fresh terminal action.
+
+        with mock.patch.object(ui_50000, "maybe_repeat_terminal", side_effect=fake_repeat), mock.patch.object(ui_50000, "rotate_control_group", side_effect=fake_rotate), mock.patch.object(ui_50000, "terminal_action", side_effect=fake_terminal):  # Isolate deterministic dispatch without Playwright.
+            asyncio.run(ui_50000.play_simple_terminal_game(object(), "color_wheel", 1, Counter()))  # Exercise the bounded repeat path.
+            asyncio.run(ui_50000.play_simple_terminal_game(object(), "color_wheel", 101, Counter()))  # Exercise the ordinary configured play path.
+        self.assertEqual(events, [("repeat", 1, '[data-testid="color-wheel-repeat"]', '[data-testid="color-wheel-spin"]'), ("repeat", 101, '[data-testid="color-wheel-repeat"]', '[data-testid="color-wheel-spin"]'), ("rotate", "[data-color]", 101, 1), ("rotate", "[data-chip]", 101, 1), ("terminal", '[data-testid="color-wheel-spin"]')])  # Reject a second settlement on repeat cycles or skipped fresh choices.
+
     # Prove the hosted matrix derives every exact allocation and grows with the catalog instead of a YAML list. (TEST-092)
     def test_formal_workflow_matrix_comes_from_canonical_allocator(self):
         current_indices = ui_50000.formal_allocation_indices()  # Derive the exact current hosted-worker plan.

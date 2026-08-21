@@ -31,6 +31,73 @@ from tests.long_suites import OPERATIONS_SMOKE_BUILD_SHA, ApiClient, clear_reado
 GAME_IDS = tuple(game["id"] for game in GAMES)
 # Read module-owned ready selectors so catalog additions cannot silently skip readiness.
 READY_TEST_IDS = {game["id"]: game["frontend"]["ready_testid"] for game in GAMES}
+# Bind every registered game to one explicit rendered-control strategy family. (TEST-092, issue #1050)
+UI_STRATEGY_FAMILIES = {
+    "roulette": "roulette",  # Exercise the full table, drawer, refund, and wheel lifecycle.
+    "slots": "slots",  # Exercise the cabinet spin lifecycle.
+    "keno": "keno",  # Exercise ticket construction, purchase, draw, and reset.
+    "bingo": "bingo",  # Exercise card purchase, call, and bounded reset.
+    "blackjack": "blackjack",  # Exercise deals and every legal decision state.
+    "baccarat": "baccarat",  # Exercise wager placement, refund, and coup settlement.
+    "multi_hand_video_poker": "draw_poker",  # Share the five-position hold-and-draw strategy.
+    "casino_war": "casino_war",  # Exercise deal and mutually exclusive tie decisions.
+    "big_six_wheel": "wager_inputs",  # Share the visible wager-input terminal strategy.
+    "dragon_tiger": "dragon_tiger",  # Exercise rotating table bets and deal settlement.
+    "red_dog": "red_dog",  # Exercise deal and spread decisions.
+    "hi_lo": "hi_lo",  # Exercise both prediction controls.
+    "scratch_cards": "scratch_cards",  # Exercise purchase, cell reveal, and reveal-all settlement.
+    "sic_bo": "sic_bo",  # Exercise the complete wager board and shake settlement.
+    "chuck_a_luck": "wager_inputs",  # Share the visible wager-input terminal strategy.
+    "craps": "craps",  # Exercise a complete Pass Line round.
+    "jacks_or_better_video_poker": "draw_poker",  # Share the five-position hold-and-draw strategy.
+    "deuces_wild_video_poker": "draw_poker",  # Share the five-position hold-and-draw strategy.
+    "three_card_poker": "three_card_poker",  # Exercise deal plus Play and Fold.
+    "texas_holdem_practice_table": "texas_holdem",  # Exercise fold and call-through practice hands.
+    "crown_and_anchor": "wager_inputs",  # Share the visible wager-input terminal strategy.
+    "over_under_7": "wager_inputs",  # Share the visible wager-input terminal strategy.
+    "plinko": "plinko",  # Exercise one terminal drop.
+    "fan_tan": "wager_inputs",  # Share the visible wager-input terminal strategy.
+    "andar_bahar": "andar_bahar",  # Exercise both table sides.
+    "acey_deucey": "acey_deucey",  # Exercise rendered Pass, Play, and free-boundary states.
+    "caribbean_stud": "caribbean_stud",  # Exercise deal plus Call and Fold.
+    "let_it_ride": "let_it_ride",  # Exercise both decisions at both stages.
+    "casino_holdem": "casino_holdem",  # Exercise deal plus Call and Fold.
+    "joker_poker": "draw_poker",  # Share the five-position hold-and-draw strategy.
+    "color_wheel": "simple_terminal",  # Share rotating choices, chips, repeat, and terminal action.
+    "pai_gow_poker": "pai_gow_poker",  # Exercise manual setting, house way, repeat, and settlement.
+    "poker_dice": "simple_terminal",  # Share rotating chips, repeat, and terminal action.
+    "boule": "simple_terminal",  # Share rotating number/even-money choices and terminal action.
+    "faro": "simple_terminal",  # Share rotating rank/chip choices and terminal action.
+    "trente_et_quarante": "simple_terminal",  # Share rotating table/chip choices and terminal action.
+    "pachinko": "simple_terminal",  # Share rotating chips, repeat, and terminal action.
+    "coin_pusher": "simple_terminal",  # Share rotating chips, repeat, and terminal action.
+    "marble_race": "simple_terminal",  # Share rotating market, marble, chip, and terminal action.
+    "pattern_draw": "simple_terminal",  # Share rotating pattern/chip choices and terminal action.
+    "lucky_grid": "lucky_grid",  # Exercise every cell through complete three-pick reveals.
+    "daily_draw_lab": "daily_draw_lab",  # Exercise every number through complete five-pick draws.
+    "four_card_poker": "four_card_poker",  # Exercise deal, repeat, fold, and every Play multiplier.
+    "double_bonus_video_poker": "draw_poker",  # Reuse the established draw-poker family without duplication.
+    "mississippi_stud": "mississippi_stud",  # Exercise repeat and balanced decisions through every street.
+    "teen_patti": "teen_patti",  # Exercise deal, repeat, Play, and Fold.
+}
+# Enumerate every implemented dispatch family so registry entries cannot name a silent no-op.
+IMPLEMENTED_UI_STRATEGY_FAMILIES = frozenset({
+    "acey_deucey", "andar_bahar", "baccarat", "bingo", "blackjack", "caribbean_stud", "casino_holdem", "casino_war", "craps", "daily_draw_lab", "dragon_tiger", "draw_poker", "four_card_poker", "hi_lo", "keno", "let_it_ride", "lucky_grid", "mississippi_stud", "pai_gow_poker", "plinko", "red_dog", "roulette", "scratch_cards", "sic_bo", "simple_terminal", "slots", "teen_patti", "texas_holdem", "three_card_poker", "wager_inputs",
+})
+# Rank visible Pai Gow cards from weakest through strongest while keeping the semi-wild Joker out of the low hand.
+PAI_GOW_RANK_VALUES = {rank: value for value, rank in enumerate(("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"), start=2)}
+# Describe the simple settled-action surfaces without weakening their rendered-control coverage.
+SIMPLE_TERMINAL_UI_STRATEGIES = {
+    "color_wheel": {"control_groups": (("[data-color]", 1), ("[data-chip]", 1)), "action": '[data-testid="color-wheel-spin"]', "repeat": '[data-testid="color-wheel-repeat"]'},  # Rotate every color and chip before spinning.
+    "poker_dice": {"control_groups": (("[data-chip]", 1),), "action": '[data-testid="poker-dice-roll"]', "repeat": '[data-testid="poker-dice-repeat"]'},  # Rotate chips before rolling.
+    "boule": {"control_groups": (("[data-bet],[data-number]", 2), ("[data-chip]", 1)), "action": '[data-testid="boule-spin"]', "repeat": '[data-action="repeat"]'},  # Touch two of fourteen wager choices per cycle so every identity exceeds the floor.
+    "faro": {"control_groups": (("[data-rank]", 2), ("[data-chip]", 1)), "action": '[data-testid="faro-deal"]', "repeat": '[data-testid="faro-repeat"]'},  # Touch two ranks per cycle so all thirteen exceed the floor.
+    "trente_et_quarante": {"control_groups": (("[data-bet]", 1), ("[data-chip]", 1)), "action": '[data-testid="teq-deal"]', "repeat": '[data-action="repeat"]'},  # Rotate all four table choices and chips before dealing.
+    "pachinko": {"control_groups": (("[data-chip]", 1),), "action": '[data-testid="pachinko-drop"]', "repeat": '[data-testid="pachinko-repeat"]'},  # Rotate chips before dropping.
+    "coin_pusher": {"control_groups": (("[data-chip]", 1),), "action": '[data-testid="coin-pusher-drop"]', "repeat": '[data-testid="coin-pusher-repeat"]'},  # Rotate chips before dropping.
+    "marble_race": {"control_groups": (("[data-bet]", 1), ("[data-marble]", 1), ("[data-chip]", 1)), "action": '[data-testid="marble-race-go"]', "repeat": '[data-testid="marble-race-repeat"]'},  # Rotate market, runner, and chip before racing.
+    "pattern_draw": {"control_groups": (("[data-bet]", 1), ("[data-chip]", 1)), "action": '[data-testid="pattern-draw-draw"]', "repeat": '[data-testid="pattern-draw-repeat"]'},  # Rotate pattern and chip before drawing.
+}
 # Apply the authoritative governed viewport inventory to distributed visual evidence.
 VIEWPORTS = (
     {"id": "desktop_primary", "width": 1920, "height": 1080},
@@ -67,6 +134,16 @@ ESSENTIAL_STAGE_CONTRACTS = {
 CONTROL_NAMESPACE = ContextVar("ui_50000_control_namespace", default="unscoped")
 # Allow an explicitly governed caller to replace ordinary per-operation timeouts with one task-local absolute deadline.
 FORMAL_OPERATION_DEADLINE = ContextVar("ui_50000_formal_operation_deadline", default=None)
+
+
+# Resolve the explicit rendered-control strategy family for one registered game. (TEST-092)
+def strategy_family_for(game_id):
+    family = UI_STRATEGY_FAMILIES.get(game_id)  # Read the catalog-bound strategy registration without inferring from markup.
+    if family is None:  # Reject every future catalog game until a real strategy is deliberately registered.
+        raise AssertionError(f"no UI cycle strategy for catalog game {game_id}")  # Preserve the exact fail-closed catalog diagnostic.
+    if family not in IMPLEMENTED_UI_STRATEGY_FAMILIES:  # Reject a registry entry that names no executable dispatch family.
+        raise AssertionError(f"no UI cycle strategy implementation for family {family}")  # Keep configuration typos from becoming silent skips.
+    return family  # Return only a known implemented family.
 
 
 # Convert one exception into a bounded single-line local diagnostic.
@@ -245,6 +322,8 @@ def start_ui_server(repo_root):
 # Resolve a stable selector-like signature from one rendered form control.
 async def control_signature(locator):
     expression = """node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }"""  # Prefer stable metadata and collapse dynamic ticket ids into semantic remove actions.
+    expression = expression.replace("'data-num',", "'data-num','data-number','data-cell','data-color','data-rank','data-marble','data-card-index',")  # Distinguish every newly covered board, choice, runner, rank, and hand-setting control.
+    expression = expression.replace("'data-wager',", "'data-wager','data-ante','data-aces',").replace("'data-play',", "'data-play','data-fold','data-deal','data-repeat',")  # Distinguish staged wager, decision, deal, and repeat controls.
     return qualify_control_signature(await locator.evaluate(expression))  # Read DOM metadata and bind it to the task-local surface.
 
 
@@ -253,6 +332,8 @@ async def inventory_controls(page, seen_counts):
     namespace = CONTROL_NAMESPACE.get()  # Read the task-local owning surface.
     root_selector = "#view" if namespace in READY_TEST_IDS else None  # Scan the complete game outlet while excluding persistent shell controls.
     expression = """rootSelector => { const root = rootSelector ? document.querySelector(rootSelector) : document; if (!root) return []; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; return [...root.querySelectorAll('button,input,select,summary')].filter(node => !node.disabled && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden' && (node.tagName === 'SUMMARY' || !node.closest('details:not([open])'))).map(node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }); }"""  # Discover only semantically visible enabled controls within the owned game root or current shell/auth surface.
+    expression = expression.replace("'data-num',", "'data-num','data-number','data-cell','data-color','data-rank','data-marble','data-card-index',")  # Keep inventory identities aligned with the newly covered board and setting controls.
+    expression = expression.replace("'data-wager',", "'data-wager','data-ante','data-aces',").replace("'data-play',", "'data-play','data-fold','data-deal','data-repeat',")  # Keep staged input and decision identities aligned with pointer accounting.
     for signature in await page.evaluate(expression, root_selector):  # Visit every stable signature on this owned UI state.
         seen_counts[qualify_control_signature(signature, namespace)] += 1  # Count namespaced observations for later classification.
 
@@ -476,6 +557,26 @@ async def draw_poker_select_balanced_hold(page, seen_counts, activated_counts):
         raise AssertionError(f"draw-poker hold did not commit at position {target_position}") from exc  # Reject a draw that would race or omit the selected hold.
 
 
+# Choose the two weakest visible distinct ranks so the remaining five-card Pai Gow high hand stays legally stronger.
+def pai_gow_low_hand_positions(card_ranks):
+    ranked = sorted(enumerate(card_ranks), key=lambda item: (PAI_GOW_RANK_VALUES.get(str(item[1]).upper(), 99), item[0]))  # Sort visible ordinary ranks first and the Joker/unknown marker last.
+    if len(ranked) < 2:  # Reject an incomplete public seven-card setting surface.
+        raise AssertionError(f"Pai Gow setting exposed {len(ranked)} card ranks")  # Preserve only the bounded rendered count.
+    first_position, first_rank = ranked[0]  # Assign the weakest visible card to the low hand.
+    second = next((item for item in ranked[1:] if str(item[1]).upper() != str(first_rank).upper()), ranked[1])  # Prefer a distinct rank so the low hand cannot become a pair above a high-card high hand.
+    return first_position, second[0]  # Return stable rendered positions for real pointer activation.
+
+
+# Read visible Pai Gow rank glyphs and derive one legal manual low-hand selection.
+async def pai_gow_visible_low_hand_positions(page):
+    cards = page.locator("[data-card-index]")  # Resolve the seven rendered setting buttons in stable position order.
+    ranks = []  # Preserve only public rank glyphs, never hidden dealer or server state.
+    for index in range(await cards.count()):  # Inspect every player card tile once.
+        rank_node = cards.nth(index).locator(".playing-card__rank")  # Resolve the shared visible rank primitive inside this tile.
+        ranks.append((await rank_node.text_content()).strip() if await rank_node.count() else "JOKER")  # Keep a semi-wild Joker out of the low-hand preference.
+    return pai_gow_low_hand_positions(ranks)  # Apply the deterministic legal visible-rank policy.
+
+
 # Return all visible enabled locators matching a selector after a decision rerender.
 async def enabled_locators(page, selector):
     ready = []  # Preserve DOM order for deterministic cycling.
@@ -496,6 +597,39 @@ async def least_activated_locator(locators, activated_counts):
     if not scored:  # Refuse an empty decision set explicitly.
         raise AssertionError("no enabled control available for deficit selection")  # Preserve one bounded harness diagnostic.
     return min(scored, key=lambda item: (item[0], item[1]))[2]  # Return the real rendered locator without programmatic activation.
+
+
+# Activate a rotating semantic control group, re-resolving after every module rerender.
+async def rotate_control_group(page, selector, ordinal, clicks_per_cycle, activated_counts):
+    for offset in range(clicks_per_cycle):  # Spend the configured honest pointer budget across this group.
+        controls = await enabled_locators(page, selector)  # Re-resolve the current DOM after any prior selection repaint.
+        if not controls:  # Reject a configured group that is absent or disabled.
+            raise AssertionError(f"UI strategy control group unavailable: {selector}")  # Preserve one bounded public-selector diagnostic.
+        target_index = (ordinal * clicks_per_cycle + offset) % len(controls)  # Continue a deterministic even rotation across cycles.
+        await click_locator(controls[target_index], activated_counts)  # Activate only the real rendered target.
+
+
+# Exercise an enabled one-click repeat as the complete terminal play for the first hundred reachable cycles.
+async def maybe_repeat_terminal(page, ordinal, repeat_selector, ready_selector, activated_counts):
+    if not 0 < ordinal <= CONTROL_ACTIVATION_FLOOR:  # Reserve exactly one hundred post-bootstrap cycles for repeat coverage.
+        return False  # Leave the ordinary configured play path unchanged outside the coverage window.
+    repeat = page.locator(repeat_selector).first  # Resolve the current route's repeat control.
+    if not await locator_ready(repeat):  # Permit the first mounted cycle to establish replay state.
+        return False  # Fall back to one ordinary play when no replay is legitimately available.
+    await click_locator(repeat, activated_counts)  # Replay the last committed wager through the real pointer control.
+    await page.wait_for_timeout(5)  # Allow the busy-state rerender to replace the control before polling readiness.
+    await wait_any_enabled(page, [ready_selector])  # Require terminal next-round readiness after the repeated settlement.
+    return True  # Report that this cycle already completed one terminal play.
+
+
+# Exercise one simple configured-choice game through repeat or a fresh terminal action.
+async def play_simple_terminal_game(page, game_id, ordinal, activated_counts):
+    strategy = SIMPLE_TERMINAL_UI_STRATEGIES[game_id]  # Resolve the catalog-audited selectors for this explicit family member.
+    if await maybe_repeat_terminal(page, ordinal, strategy["repeat"], strategy["action"], activated_counts):  # Close the repeat deficit without adding a second wager.
+        return  # Preserve exactly one terminal settlement for this UI cycle.
+    for selector, clicks_per_cycle in strategy["control_groups"]:  # Exercise every configured ready-state choice family.
+        await rotate_control_group(page, selector, ordinal, clicks_per_cycle, activated_counts)  # Rotate real pointer coverage evenly.
+    await terminal_action(page, strategy["action"], activated_counts)  # Commit and observe one complete fresh round.
 
 
 # Fill exactly one rotating wager input and clear other compatible wager fields.
@@ -539,10 +673,11 @@ async def navigate_to_game(page, game_id, activated_counts, ordinal=None, phase_
 # Complete one terminal game play using only rendered controls.
 async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, replica_index=0):
     action_evidence = "wager_required"  # Require player-scoped game ledger evidence unless the rendered action proves it was non-wagering.
+    strategy_family = strategy_family_for(game_id)  # Resolve one explicit catalog-bound dispatch before touching rendered controls.
     await inventory_controls(page, seen_counts)  # Discover ready-state controls before the play.
     await exercise_configuration_controls(page, ordinal, activated_counts)  # Cover visible fields and disclosures before the game locks them.
     await exercise_autoplay_controls(page, ordinal, activated_counts)  # Cover shared Start/Stop without leaving background play active.
-    if game_id == "roulette":  # Exercise several table regions and one complete spin.
+    if strategy_family == "roulette":  # Exercise several table regions and one complete spin.
         chips = await enabled_locators(page, "[data-chip]")  # Discover every visible chip denomination.
         if chips:  # Rotate the selected wager unit across the complete chip stack.
             await click_locator(chips[ordinal % len(chips)], activated_counts)  # Exercise one denomination through the rendered control.
@@ -566,9 +701,9 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             await roulette_add_bet(page, specials[(ordinal * 24 + offset) % len(specials)], activated_counts)  # Exercise and serialize each rendered hit region through the continuous replicated schedule.
         await inventory_controls(page, seen_counts)  # Discover contextual removal actions after the wager slip is populated.
         await roulette_reset_seed_and_spin(page, ordinal, activated_counts)  # Serialize contextual refund, clear-all, replacement wager, and terminal spin.
-    elif game_id == "slots":  # Exercise one complete slot spin.
+    elif strategy_family == "slots":  # Exercise one complete slot spin.
         await terminal_action(page, '[data-testid="slots-spin"]', activated_counts)  # Use the cabinet's visible spin control.
-    elif game_id == "keno":  # Exercise ticket selection, purchase, drawing, and reset.
+    elif strategy_family == "keno":  # Exercise ticket selection, purchase, drawing, and reset.
         new_ticket = page.get_by_test_id("keno-new-ticket")  # Resolve a persisted result-state reset.
         if await locator_ready(new_ticket):  # Normalize a restored prior draw before selecting numbers.
             await click_locator(new_ticket, activated_counts)  # Start a fresh ticket through the UI.
@@ -596,14 +731,14 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             await click_control(page, '[data-testid="keno-buy"]', activated_counts)  # Repurchase the preserved draft before drawing.
         await click_control(page, '[data-testid="keno-draw"]', activated_counts)  # Draw the purchased ticket.
         await wait_any_enabled(page, ['[data-testid="keno-new-ticket"]'])  # Require the terminal result mode after the draw animation.
-    elif game_id == "bingo":  # Exercise buy, call, and terminal reset/refund.
+    elif strategy_family == "bingo":  # Exercise buy, call, and terminal reset/refund.
         await click_control(page, '[data-testid="bingo-reset"]', activated_counts)  # Normalize any autoplay-committed session and exercise the visible reset path.
         await wait_any_enabled(page, ['[data-testid="bingo-buy"]'])  # Require a fresh card-purchase state after normalization.
         await click_control(page, '[data-testid="bingo-buy"]', activated_counts)  # Buy one synthetic card.
         await click_control(page, '[data-testid="bingo-call"]', activated_counts)  # Call one ball through the UI.
         await click_control(page, '[data-testid="bingo-reset"]', activated_counts)  # End the bounded session visibly.
         await wait_any_enabled(page, ['[data-testid="bingo-buy"]'])  # Require a fresh purchase state.
-    elif game_id == "blackjack":  # Exercise deals and available conditional decisions.
+    elif strategy_family == "blackjack":  # Exercise deals and available conditional decisions.
         save_rules = page.locator("#saveRules").first  # Resolve the rendered table-rule persistence action.
         if ordinal < CONTROL_ACTIVATION_FLOOR and await locator_ready(save_rules):  # Meet the literal button floor without excessive rule writes.
             await click_locator(save_rules, activated_counts)  # Persist the currently rendered synthetic table rules.
@@ -631,7 +766,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             await page.wait_for_timeout(5)  # Allow the next decision or settlement rerender.
         else:  # Reject unbounded or cycling Blackjack state.
             raise AssertionError("Blackjack UI did not settle within 24 decisions")  # Preserve a terminal-state failure.
-    elif game_id == "baccarat":  # Exercise rotating chip sizes, wager zones, and a coup.
+    elif strategy_family == "baccarat":  # Exercise rotating chip sizes, wager zones, and a coup.
         chips = await enabled_locators(page, "[data-chip]")  # Discover visible chip controls.
         if chips:  # Rotate chip coverage when the rail exposes chips.
             await click_locator(chips[ordinal % len(chips)], activated_counts)  # Select the wager unit visibly.
@@ -646,7 +781,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         refreshed_bets = await enabled_locators(page, "[data-bet]")  # Re-resolve wager buttons after the clear rerender.
         await click_locator(refreshed_bets[ordinal % len(refreshed_bets)], activated_counts)  # Restore one bounded wager for the coup.
         await terminal_action(page, '[data-testid="baccarat-deal"]', activated_counts)  # Deal and settle the coup.
-    elif game_id in {"multi_hand_video_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "double_bonus_video_poker", "joker_poker"}:  # Exercise draw-poker families.
+    elif strategy_family == "draw_poker":  # Exercise every explicitly registered draw-poker family member.
         modes = await enabled_locators(page, "[data-hand-count],[data-coin-count]")  # Discover pre-deal mode/coin controls.
         if modes:  # Rotate configuration coverage before the hand locks.
             await click_locator(modes[ordinal % len(modes)], activated_counts)  # Select a rendered compatible mode.
@@ -654,7 +789,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         await draw_poker_select_balanced_hold(page, seen_counts, activated_counts)  # Wait for the hand, cover every position fairly, and commit the selected hold.
         await click_control(page, '[data-action="draw"]', activated_counts)  # Draw and settle the hand.
         await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
-    elif game_id == "casino_war":  # Exercise deal and tie decisions when available.
+    elif strategy_family == "casino_war":  # Exercise deal and tie decisions when available.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal one card per side.
         choice = await wait_any_enabled(page, ['[data-action="surrender"]', '[data-action="war"]', '[data-action="deal"]'])  # Detect tie or settlement.
         if choice != '[data-action="deal"]':  # Resolve only an active tie decision.
@@ -662,18 +797,18 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             tie_actions = await enabled_locators(page, '[data-action="surrender"],[data-action="war"]')  # Resolve both mutually exclusive rare actions in the live tie state.
             await click_locator(await least_activated_locator(tie_actions, activated_counts), activated_counts)  # Balance the finite tie-state budget honestly across both alternatives.
             await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal next-deal state.
-    elif game_id in {"big_six_wheel", "crown_and_anchor", "fan_tan", "over_under_7", "chuck_a_luck"}:  # Exercise rotating wager-input games.
+    elif strategy_family == "wager_inputs":  # Exercise every explicitly registered rotating wager-input game.
         await rotate_wager_inputs(page, ordinal, activated_counts)  # Select one catalog outcome visibly.
         action = {"big_six_wheel": "[data-spin]", "crown_and_anchor": "[data-play]", "fan_tan": "[data-play]", "over_under_7": "[data-play]", "chuck_a_luck": "[data-roll]"}[game_id]  # Resolve the module action.
         await terminal_action(page, action, activated_counts)  # Play and require next-round readiness.
-    elif game_id == "dragon_tiger":  # Exercise rotating Dragon, Tiger, and tie wagers.
+    elif strategy_family == "dragon_tiger":  # Exercise rotating Dragon, Tiger, and tie wagers.
         await wait_any_enabled(page, ["[data-bet]"])  # Wait for asynchronous table data to enable the visible wager rail.
         bets = await enabled_locators(page, "[data-bet]")  # Discover the table's wager controls.
         if not bets:  # Require a visible wager surface.
             raise AssertionError("Dragon Tiger wager controls unavailable")  # Preserve a missing game action.
         await click_locator(bets[ordinal % len(bets)], activated_counts)  # Select a rotating outcome.
         await terminal_action(page, '[data-action="deal"]', activated_counts)  # Deal and settle the round.
-    elif game_id == "red_dog":  # Exercise deal and alternating call/raise decisions.
+    elif strategy_family == "red_dog":  # Exercise deal and alternating call/raise decisions.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the initial spread.
         choice = await wait_any_enabled(page, ['[data-action="call"]', '[data-action="raise"]', '[data-action="deal"]'])  # Detect decision or automatic result.
         if choice != '[data-action="deal"]':  # Resolve an active spread decision.
@@ -681,12 +816,12 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             decision = '[data-action="raise"]' if ordinal % 2 and await locator_ready(page.locator('[data-action="raise"]').first) else '[data-action="call"]'  # Alternate legal decisions.
             await click_control(page, decision, activated_counts)  # Complete the spread visibly.
             await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal next-round state.
-    elif game_id == "hi_lo":  # Exercise both Higher and Lower predictions.
+    elif strategy_family == "hi_lo":  # Exercise both Higher and Lower predictions.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the reference card.
         await inventory_controls(page, seen_counts)  # Discover both prediction controls in their actionable state.
         await click_control(page, f'[data-guess="{"higher" if ordinal % 2 == 0 else "lower"}"]', activated_counts)  # Make a rotating visible prediction.
         await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal next-round readiness.
-    elif game_id == "scratch_cards":  # Exercise purchase and reveal-all settlement.
+    elif strategy_family == "scratch_cards":  # Exercise purchase and reveal-all settlement.
         await click_control(page, '[data-action="start"]', activated_counts)  # Buy one synthetic card.
         await wait_any_enabled(page, ['[data-testid^="scratch-cell-"]'])  # Require the asynchronous purchase to publish actionable covered cells.
         await inventory_controls(page, seen_counts)  # Discover all covered scratch cells before revealing one.
@@ -698,7 +833,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         await click_control(page, '[data-action="reveal-all"]', activated_counts)  # Reveal every cell through the public control.
         await page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 9", timeout=operation_timeout_ms(SETUP_TIMEOUT_MS))  # Require all nine authorized values to render after settlement.
         await wait_any_enabled(page, ['[data-action="start"]'])  # Require a fresh-card state.
-    elif game_id == "sic_bo":  # Exercise rotating selections across the full bet board.
+    elif strategy_family == "sic_bo":  # Exercise rotating selections across the full bet board.
         bets = page.locator("[data-bet-id]")  # Discover every catalog wager button.
         count = await bets.count()  # Count the full rendered board.
         if count < 1:  # Refuse a missing board.
@@ -716,7 +851,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             refreshed_count = await refreshed_bets.count()  # Count the rebuilt board before selecting a replacement.
             await click_locator(refreshed_bets.nth(ordinal % refreshed_count), activated_counts)  # Restore one wager for settlement.
         await terminal_action(page, '[data-action="shake"]', activated_counts)  # Roll and settle the selected wagers.
-    elif game_id == "craps":  # Exercise one complete Pass Line round.
+    elif strategy_family == "craps":  # Exercise one complete Pass Line round.
         await click_control(page, '[data-testid="craps-start"]', activated_counts)  # Commit the line wager through the UI.
         for _ in range(50):  # Bound exceptionally long point sequences.
             choice = await wait_any_enabled(page, ['[data-testid="craps-roll"]', '[data-testid="craps-start"]'])  # Detect roll or settlement.
@@ -725,12 +860,12 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             await click_control(page, choice, activated_counts)  # Roll through the visible control.
         else:  # Reject an unbounded point sequence.
             raise AssertionError("Craps UI did not settle within 50 rolls")  # Preserve the failing state.
-    elif game_id == "three_card_poker":  # Exercise deal and alternating Play/Fold decisions.
+    elif strategy_family == "three_card_poker":  # Exercise deal and alternating Play/Fold decisions.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the three-card hand.
         await inventory_controls(page, seen_counts)  # Discover both terminal decision buttons before choosing one.
         await click_control(page, '[data-action="play"]' if ordinal % 2 else '[data-action="fold"]', activated_counts)  # Alternate terminal decisions.
         await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
-    elif game_id == "texas_holdem_practice_table":  # Exercise folds and complete call-through hands.
+    elif strategy_family == "texas_holdem":  # Exercise folds and complete call-through hands.
         await click_control(page, '[data-action="start-hand"]', activated_counts)  # Start the practice hand.
         opening = await wait_any_enabled(page, ['[data-action="call"]', '[data-action="fold"]', '[data-action="start-hand"]'])  # Wait for the preflop decision or an automatic terminal result.
         if opening == '[data-action="start-hand"]':  # Accept a rare automatically settled hand.
@@ -749,17 +884,17 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             else:  # Reject a stranded practice hand.
                 raise AssertionError("Texas Hold'em practice hand did not settle")  # Preserve the terminal-state failure.
         await wait_any_enabled(page, ['[data-action="start-hand"]'])  # Require the next-hand state.
-    elif game_id == "andar_bahar":  # Exercise both table sides.
+    elif strategy_family == "andar_bahar":  # Exercise both table sides.
         await click_control(page, f'[data-side="{"andar" if ordinal % 2 == 0 else "bahar"}"]', activated_counts)  # Select a rotating side.
         await terminal_action(page, '[data-action="play"]', activated_counts)  # Deal and settle the round.
-    elif game_id == "acey_deucey":  # Exercise pass and play when legally available.
+    elif strategy_family == "acey_deucey":  # Exercise pass and play when legally available.
         action_evidence = await acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts)  # Classify the actual rendered Pass, Play, or automatic free-boundary result.
-    elif game_id == "caribbean_stud":  # Exercise call and fold decisions.
+    elif strategy_family == "caribbean_stud":  # Exercise call and fold decisions.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the five-card hand.
         await inventory_controls(page, seen_counts)  # Discover Call and Fold in their live decision state.
         await click_control(page, '[data-action="call"]' if ordinal % 2 else '[data-action="fold"]', activated_counts)  # Alternate decisions.
         await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
-    elif game_id == "let_it_ride":  # Exercise both Pull and Ride at both stages.
+    elif strategy_family == "let_it_ride":  # Exercise both Pull and Ride at both stages.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the initial hand.
         for stage in range(3):  # Bound two decisions plus terminal observation.
             choice = await wait_any_enabled(page, ['[data-action="deal"]', '[data-decision="ride"]', '[data-decision="pull"]'])  # Wait through each decision or settlement rerender.
@@ -770,15 +905,85 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             await click_control(page, decision, activated_counts)  # Resolve the current stage through the UI.
         else:  # Reject an unbounded decision sequence.
             raise AssertionError("Let It Ride UI did not settle")  # Preserve the failing state.
-    elif game_id == "casino_holdem":  # Exercise call and fold decisions.
+    elif strategy_family == "casino_holdem":  # Exercise call and fold decisions.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the Hold'em hand.
         await inventory_controls(page, seen_counts)  # Discover both legal Hold'em decisions before choosing one.
         await click_control(page, '[data-decision="call"]' if ordinal % 2 else '[data-decision="fold"]', activated_counts)  # Alternate terminal decisions.
         await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
-    elif game_id == "plinko":  # Exercise one complete Plinko drop.
+    elif strategy_family == "plinko":  # Exercise one complete Plinko drop.
         await terminal_action(page, '[data-action="drop"]', activated_counts)  # Drop and settle through the visible control.
+    elif strategy_family == "simple_terminal":  # Exercise configured choices, repeat, and one settled public action.
+        await play_simple_terminal_game(page, game_id, ordinal, activated_counts)  # Use the explicit per-game selector contract.
+    elif strategy_family == "lucky_grid":  # Exercise every cell through complete three-pick reveals.
+        repeated = await maybe_repeat_terminal(page, ordinal, '[data-testid="lucky-grid-repeat"]', '[data-testid="lucky-grid-go"]', activated_counts)  # Use replay as the sole settlement on its bounded coverage cycles.
+        if not repeated:  # Build a fresh grid selection outside repeat cycles.
+            await rotate_control_group(page, "[data-chip]", ordinal, 1, activated_counts)  # Rotate every visible stake denomination.
+            await rotate_control_group(page, "[data-cell]", ordinal, 3, activated_counts)  # Select three distinct cells and exceed the per-cell floor.
+            await terminal_action(page, '[data-testid="lucky-grid-go"]', activated_counts)  # Reveal and settle the complete grid.
+    elif strategy_family == "daily_draw_lab":  # Exercise every number through complete five-pick draws.
+        repeated = await maybe_repeat_terminal(page, ordinal, '[data-testid="daily-draw-lab-repeat"]', '[data-testid="daily-draw-lab-go"]', activated_counts)  # Use replay as the sole settlement on its bounded coverage cycles.
+        if not repeated:  # Build a fresh draw selection outside repeat cycles.
+            await rotate_control_group(page, "[data-chip]", ordinal, 1, activated_counts)  # Rotate every visible stake denomination.
+            await rotate_control_group(page, "[data-number]", ordinal, 5, activated_counts)  # Mark five distinct numbers so all thirty exceed the floor.
+            await terminal_action(page, '[data-testid="daily-draw-lab-go"]', activated_counts)  # Draw and settle the marked ticket.
+    elif strategy_family == "pai_gow_poker":  # Exercise repeat, manual setting, house way, and settlement.
+        repeat = page.locator('[data-action="repeat"]').first  # Resolve the ready-state one-click replay control.
+        use_repeat = 0 < ordinal <= CONTROL_ACTIVATION_FLOOR and await locator_ready(repeat)  # Reserve exactly one hundred reachable cycles for replay.
+        if use_repeat:  # Open this round from the prior committed ante.
+            await click_locator(repeat, activated_counts)  # Dispatch replay without programmatic state mutation.
+        else:  # Open a fresh ante round.
+            await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the seven-card hand through the visible primary control.
+        await wait_any_enabled(page, ['[data-action="house-way"]'])  # Require the authoritative hand-setting state.
+        await inventory_controls(page, seen_counts)  # Discover all seven cards and both setting choices together.
+        if ordinal % 3 == 0:  # Give House Way more than the literal activation floor.
+            await click_control(page, '[data-action="house-way"]', activated_counts)  # Set and settle through the rendered automatic choice.
+        else:  # Cover every manual card tile and the Set control.
+            low_positions = await pai_gow_visible_low_hand_positions(page)  # Derive a legal low hand from rendered rank glyphs only.
+            for position in low_positions:  # Activate both selected cards through their stable public positions.
+                await click_control(page, f'[data-card-index="{position}"]', activated_counts)  # Assign one visible weak distinct-rank card to the low hand.
+            await inventory_controls(page, seen_counts)  # Record the newly enabled Set control after both selections commit.
+            await click_control(page, '[data-action="set"]', activated_counts)  # Submit the rendered manual split and settle.
+        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal next-round readiness.
+    elif strategy_family == "four_card_poker":  # Exercise replay and every terminal decision choice.
+        repeat = page.locator('[data-action="repeat"]').first  # Resolve replay from the ready or settled state.
+        if 0 < ordinal <= CONTROL_ACTIVATION_FLOOR and await locator_ready(repeat):  # Close the repeat deficit without opening a second round.
+            await click_locator(repeat, activated_counts)  # Re-deal the stored wagers through the public control.
+        else:  # Open one fresh decision round.
+            await click_control(page, '[data-deal]', activated_counts)  # Deal through the visible wager-owned action.
+        await wait_any_enabled(page, ["[data-fold]", "[data-play]"])  # Require the authoritative decision state.
+        await inventory_controls(page, seen_counts)  # Discover Fold and every Play multiplier before choosing.
+        decisions = await enabled_locators(page, "[data-fold],[data-play]")  # Resolve every legal terminal choice.
+        await click_locator(await least_activated_locator(decisions, activated_counts), activated_counts)  # Balance all decisions above the literal floor.
+        await wait_any_enabled(page, ["[data-deal]"])  # Require terminal next-round readiness.
+    elif strategy_family == "mississippi_stud":  # Exercise replay plus balanced choices across every street.
+        repeat = page.locator("[data-repeat]").first  # Resolve replay from the ready or settled state.
+        if 0 < ordinal <= CONTROL_ACTIVATION_FLOOR and await locator_ready(repeat):  # Close the repeat deficit without opening a second round.
+            await click_locator(repeat, activated_counts)  # Re-deal the stored ante through the public control.
+        else:  # Open one fresh multi-street round.
+            await click_control(page, "[data-deal]", activated_counts)  # Deal through the rendered ante action.
+        for _street in range(4):  # Bound three decisions plus terminal observation.
+            choice = await wait_any_enabled(page, ["[data-deal]", "[data-fold]", "[data-bet]"])  # Wait for settlement or the next authoritative street.
+            if choice == "[data-deal]":  # Detect terminal next-round readiness.
+                break  # Preserve one completed round.
+            await inventory_controls(page, seen_counts)  # Discover Fold and every legal multiplier on this street.
+            decisions = await enabled_locators(page, "[data-fold],[data-bet]")  # Resolve the complete current decision set.
+            await click_locator(await least_activated_locator(decisions, activated_counts), activated_counts)  # Spend the largest remaining real control deficit.
+            await page.wait_for_timeout(5)  # Allow the next street or settlement rerender before polling again.
+        else:  # Reject a stranded or cycling stud round.
+            raise AssertionError("Mississippi Stud UI did not settle within three decisions")  # Preserve one bounded terminal-state failure.
+    elif strategy_family == "teen_patti":  # Exercise replay plus both Play and Fold.
+        repeat = page.locator("[data-repeat]").first  # Resolve replay from the ready or settled state.
+        if 0 < ordinal <= CONTROL_ACTIVATION_FLOOR and await locator_ready(repeat):  # Close the repeat deficit without opening a second round.
+            await click_locator(repeat, activated_counts)  # Re-deal the stored ante through the public control.
+        else:  # Open one fresh decision round.
+            await click_control(page, "[data-deal]", activated_counts)  # Deal through the visible ante action.
+        await wait_any_enabled(page, ["[data-fold]", "[data-play]"])  # Require the authoritative decision state.
+        await inventory_controls(page, seen_counts)  # Discover both terminal choices before selecting one.
+        decisions = await enabled_locators(page, "[data-fold],[data-play]")  # Resolve both legal visible decisions.
+        await click_locator(await least_activated_locator(decisions, activated_counts), activated_counts)  # Balance Play and Fold above the floor.
+        await wait_any_enabled(page, ["[data-deal]"])  # Require terminal next-round readiness.
     else:  # Refuse silent catalog omissions.
-        raise AssertionError(f"no UI cycle strategy for catalog game {game_id}")  # Force an explicit strategy for every game.
+        raise AssertionError(f"no UI cycle strategy implementation for family {strategy_family}")  # Force executable dispatch for every registered family.
     await inventory_controls(page, seen_counts)  # Discover terminal and conditional-state controls after the play.
     return action_evidence  # Return one fixed action-aware ledger expectation without identity or gameplay payload data.
 
