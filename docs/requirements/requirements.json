@@ -13212,7 +13212,12 @@
         "PERF-MULTIPROCESS-SAFETY-001"
       ],
       "browser_tests": [
-        "BR-CAA-001"
+        "BR-CAA-001",
+        "BR-CHUCK-001",
+        "BR-BINGO-001",
+        "BR-CRAPS-001",
+        "BR-KENO-001",
+        "BR-ROU-PREMIUM-001"
       ],
       "implementation_files": [
         "tests/simple_game_tests.py",
@@ -13542,7 +13547,8 @@
         "BR-FOUR-CARD-POKER-001",
         "BR-DT-001",
         "BR-OU7-001",
-        "BR-TEEN-PATTI-001"
+        "BR-TEEN-PATTI-001",
+        "BR-CAA-001"
       ],
       "implementation_files": [
         "web/core/game_lifecycle.js",
@@ -13584,6 +13590,18 @@
         "web/games/over_under_7.css",
         "web/games/teen_patti.js",
         "web/games/teen_patti.css",
+        "web/games/crown_and_anchor.js",
+        "web/games/crown_and_anchor.css",
+        "web/games/chuck_a_luck.js",
+        "web/games/chuck_a_luck.css",
+        "web/games/bingo.js",
+        "web/games/bingo.css",
+        "web/games/craps.js",
+        "web/games/craps.css",
+        "web/games/keno.js",
+        "web/games/keno.css",
+        "web/games/roulette.js",
+        "web/games/roulette.css",
         "docs/game_catalog_governance.md",
         "docs/evidence/daily_draw_lab/README.md",
         "docs/evidence/faro/README.md",
@@ -13604,6 +13622,7 @@
         "docs/evidence/dragon_tiger/README.md",
         "docs/evidence/over_under_7/README.md",
         "docs/evidence/teen_patti/README.md",
+        "docs/evidence/crown_and_anchor/README.md",
         "modules/application.json",
         "modules/daily_draw_lab.json",
         "modules/faro.json",
@@ -13623,16 +13642,23 @@
         "modules/four_card_poker.json",
         "modules/dragon_tiger.json",
         "modules/over_under_7.json",
-        "modules/teen_patti.json"
+        "modules/teen_patti.json",
+        "modules/crown_and_anchor.json",
+        "modules/chuck_a_luck.json",
+        "modules/bingo.json",
+        "modules/craps.json",
+        "modules/keno.json",
+        "modules/roulette.json",
+        "modules/core.json"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1033-teen-patti-lifecycle-slice",
-      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, and Teen Patti are the first nineteen adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal; Lucky Grid retains its established lg fallback identity shape and 600 ms reveal; Color Wheel retains its established cw fallback identity shape, cumulative forward motion, and 3.2-second spin; Mississippi Stud retains distinct ms-deal and ms-decision fallback identity scopes, unresolved-response replay bindings, and mount-specific stale-response refusal; Double Bonus retains distinct dbvp-deal and dbvp-draw fallback identity scopes, unresolved-response replay bindings, sorted hold fingerprints, and mount-specific stale-response refusal; Four Card Poker retains distinct fcp-deal and fcp-decision fallback identity scopes, two-wager and decision retry bindings, card privacy, and mount-specific stale-response refusal; Dragon Tiger retains its dt-prefixed identity, pending-action replay payload, initial-state protection, and mount-specific stale-response refusal; Over/Under 7 retains its ou7-prefixed identity, immutable wager replay payload, scoped dice reveal, and mount-specific stale-response refusal; Teen Patti retains distinct tp-deal and tp-decision fallback identity scopes, unresolved-response retry bindings, card privacy, and mount-specific stale-response refusal."
+      "changed_in": "issue-718-game-frontend-lifecycle-completion",
+      "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, Teen Patti, Crown and Anchor, Chuck-a-Luck, Bingo, Craps, Keno, and Roulette are the complete twenty-five adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal; Lucky Grid retains its established lg fallback identity shape and 600 ms reveal; Color Wheel retains its established cw fallback identity shape, cumulative forward motion, and 3.2-second spin; Mississippi Stud retains distinct ms-deal and ms-decision fallback identity scopes, unresolved-response replay bindings, and mount-specific stale-response refusal; Double Bonus retains distinct dbvp-deal and dbvp-draw fallback identity scopes, unresolved-response replay bindings, sorted hold fingerprints, and mount-specific stale-response refusal; Four Card Poker retains distinct fcp-deal and fcp-decision fallback identity scopes, two-wager and decision retry bindings, card privacy, and mount-specific stale-response refusal; Dragon Tiger retains its dt-prefixed identity, pending-action replay payload, initial-state protection, and mount-specific stale-response refusal; Over/Under 7 retains its ou7-prefixed identity, immutable wager replay payload, scoped dice reveal, and mount-specific stale-response refusal; Teen Patti retains distinct tp-deal and tp-decision fallback identity scopes, unresolved-response retry bindings, card privacy, and mount-specific stale-response refusal; Crown and Anchor retains its strict caa-prefixed identity, immutable wager replay payload, scoped dice reveal, and mount-specific stale-response refusal; Chuck-a-Luck and Craps retain their strict request identities and scoped dice motion; Bingo retains independent purchase and call busy presentation; Keno retains its draw scheduler and authoritative ticket state; Roulette retains its three-domain localization, result-locked motion sequence, refund boundary, and stale-response refusal."
     },
     {
       "id": "TEST-248",
       "module": "Tests",
-      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, and Teen Patti browser cases preserve their real settled-round and repeat flows.",
+      "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy primary and reviewed shared-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, Teen Patti, Crown and Anchor, Chuck-a-Luck, Bingo, Craps, Keno, and Roulette browser cases preserve their real settled-round and repeat flows.",
       "status": "PASS",
       "api_tests": [
         "UI-GAME-LIFECYCLE-001"
@@ -13656,7 +13682,13 @@
         "BR-FOUR-CARD-POKER-001",
         "BR-DT-001",
         "BR-OU7-001",
-        "BR-TEEN-PATTI-001"
+        "BR-TEEN-PATTI-001",
+        "BR-CAA-001",
+        "BR-CHUCK-001",
+        "BR-BINGO-001",
+        "BR-CRAPS-001",
+        "BR-KENO-001",
+        "BR-ROU-PREMIUM-001"
       ],
       "implementation_files": [
         "tests/game_frontend_lifecycle.mjs",
@@ -13674,6 +13706,14 @@
         "tests/games/dragon_tiger/test_frontend.mjs",
         "tests/games/over_under_7/test_frontend.mjs",
         "tests/games/teen_patti/test_frontend.mjs",
+        "tests/games/crown_and_anchor/test_frontend.mjs",
+        "tests/games/chuck_a_luck/test_frontend.mjs",
+        "tests/games/bingo/test_frontend.mjs",
+        "tests/games/craps/test_frontend.mjs",
+        "tests/games/keno/test_frontend.mjs",
+        "tests/games/roulette/test_frontend.mjs",
+        "tests/cases/browser/bingo_admin.py",
+        "tests/cases/browser/roulette_slots_keno.py",
         "tests/cases/api/frontend_presentation.py",
         "tests/cicd_deployment_tests.py",
         "tests/api_case_inventory.json",
@@ -13681,8 +13721,8 @@
         "tests/runner.py"
       ],
       "introduced_in": "issue-718-game-frontend-lifecycle",
-      "changed_in": "issue-1033-teen-patti-lifecycle-slice",
-      "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for each adopter."
+      "changed_in": "issue-718-game-frontend-lifecycle-completion",
+      "notes": "The Node proof imports the production controller with deterministic browser seams rather than duplicating its implementation. Dedicated affected-game browser evidence remains the authoritative visible and settlement acceptance for all twenty-five adopters; the final six slices additionally prove their external stylesheet singleton in the real Browser route."
     },
     {
       "id": "TEST-249",
@@ -19583,11 +19623,12 @@
       "implementation_files": [
         "casino/games/crown_and_anchor/engine.py",
         "casino/games/crown_and_anchor/rules.py",
-        "web/games/crown_and_anchor.js"
+        "web/games/crown_and_anchor.js",
+        "web/games/crown_and_anchor.css"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "game-expansion-crown-and-anchor",
-      "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #133."
+      "changed_in": "issue-1035-crown-and-anchor-lifecycle-slice",
+      "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #133. Issue #1035 preserves every symbol, hit-count, and payout rule while moving only browser route ownership and unchanged presentation declarations onto the shared lifecycle and external stylesheet."
     },
     {
       "id": "CAA-002",
@@ -19605,11 +19646,14 @@
         "casino/games/crown_and_anchor/api.py",
         "casino/games/crown_and_anchor/service.py",
         "web/app.js",
+        "web/games/crown_and_anchor.js",
+        "web/games/crown_and_anchor.css",
+        "tests/games/crown_and_anchor/test_frontend.mjs",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "issue-867-crown-and-anchor-simple-wager",
-      "notes": "Session context overrides caller player ids; provider-current prepared faces remain private until exact ledger proof allows one terminal result to survive reload and process restart."
+      "changed_in": "issue-1035-crown-and-anchor-lifecycle-slice",
+      "notes": "Session context overrides caller player ids; provider-current prepared faces remain private until exact ledger proof allows one terminal result to survive reload and process restart. The shared route generation rejects stale initial-state and delayed-settlement responses after teardown or remount."
     },
     {
       "id": "CAA-003",
@@ -19641,14 +19685,17 @@
       ],
       "implementation_files": [
         "web/games/crown_and_anchor.js",
+        "web/games/crown_and_anchor.css",
         "web/i18n/en-US/games/crown_and_anchor.json",
         "web/i18n/ru-RU/games/crown_and_anchor.json",
+        "docs/evidence/crown_and_anchor/README.md",
+        "tests/games/crown_and_anchor/test_frontend.mjs",
         "tests/visual/visual_matrix.json",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "issue-227-crown-stage-completeness",
-      "notes": "Evidence covers both locales and every governed viewport; BR-CAA-001 rejects any missing, unpainted, or stage-escaped die or symbol panel."
+      "changed_in": "issue-1035-crown-and-anchor-lifecycle-slice",
+      "notes": "Evidence covers both locales and every governed viewport; BR-CAA-001 rejects any missing, unpainted, or stage-escaped die or symbol panel, requires the external stylesheet singleton, preserves the dominant stage and control sizes, and proves teardown plus remount without stale route DOM."
     },
     {
       "id": "CAA-005",
@@ -19668,15 +19715,18 @@
         "modules/crown_and_anchor.json",
         "modules/module-manifest.json",
         "contracts/compatibility/module-api-matrix.json",
+        "tests/game_frontend_lifecycle.mjs",
+        "tests/games/crown_and_anchor/test_frontend.mjs",
         "tests/game_drivers/crown_and_anchor.py",
+        "docs/evidence/crown_and_anchor/README.md",
         "tests/visual/visual_matrix.json",
         "tests/ui_50000.py",
         "tests/unit/ui_50000_tests.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "issue-227-crown-stage-completeness",
-      "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical; formal evidence rejects incomplete Crown and Anchor theater even when no enabled control is clipped."
+      "changed_in": "issue-1035-crown-and-anchor-lifecycle-slice",
+      "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical; listener-free lifecycle evidence rejects duplicate route helpers or CSS owners, and formal evidence rejects incomplete Crown and Anchor theater even when no enabled control is clipped."
     },
     {
       "id": "CAA-006",

@@ -117,7 +117,7 @@ function installFakeBrowser() {
   // Install session storage without retaining any guest proof.
   globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
   // Install the fake document used by real game mount and wallet rendering.
-  globalThis.document = { cookie: 'casino_csrf=test', documentElement: { lang: 'en-US', dir: 'ltr', dataset: {}, setAttribute() {} }, head: { append() {} }, createElement: tag => createFakeElement(tag), getElementById: id => { if (!documentNodes.has(id)) documentNodes.set(id, createFakeElement(`#${id}`)); return documentNodes.get(id); }, querySelectorAll() { return []; } };
+  globalThis.document = { cookie: 'casino_csrf=test', documentElement: { lang: 'en-US', dir: 'ltr', dataset: {}, setAttribute() {} }, head: { append() {}, appendChild(node) { documentNodes.set(node.id, node); return node; } }, createElement: tag => { const element = createFakeElement(tag); element.tagName = String(tag).toUpperCase(); element.getAttribute = name => name === 'href' ? element.href : null; return element; }, getElementById: id => { if (id === 'roulette-styles') return documentNodes.get(id) || null; if (!documentNodes.has(id)) documentNodes.set(id, createFakeElement(`#${id}`)); return documentNodes.get(id); }, querySelectorAll() { return []; } };
   // Install a bounded custom event object used by shared wallet publication.
   globalThis.CustomEvent = class { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } };
   // Install online navigator state so authoritative requests are permitted.
@@ -175,6 +175,18 @@ const { RouletteGame, computeLandingPlan, pocketBaseAngle, norm360, createRoulet
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 // Read the production browser module as UTF-8 text for guard-wiring assertions.
 const source = await readFile(path.join(root, 'web', 'games', 'roulette.js'), 'utf8');
+// Read the external Roulette stylesheet for lifecycle and presentation preservation evidence.
+const stylesheet = await readFile(path.join(root, 'web', 'games', 'roulette.css'), 'utf8');
+
+// Verify issue #718 Roulette delegates shared route ownership without weakening motion or multi-domain i18n.
+test('CORE-034 Roulette delegates shared lifecycle ownership', () => {
+  // Require the shared owner, exact stylesheet, compound domains, busy guard, and stale-route token.
+  for (const marker of ['createGameLifecycle', 'additionalDomains: [AUTOPLAY_DOMAIN, BOTS_DOMAIN]', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "requestPrefix: 'roulette'", "href: '/games/roulette.css'", 'routeSession', 'createMotionTimerScope']) assert.ok(source.includes(marker), marker);
+  // Reject the migrated root, spin guard, locale listener, generation counter, and inline style owner.
+  for (const duplicate of ['let root =', 'let spinBusy =', 'localeUnsubscribe', 'mountGeneration', 'ensurePremiumStyle', 'style.textContent', 'onLocaleChange', 'initI18n', 'PREMIUM_STYLE']) assert.equal(source.includes(duplicate), false, duplicate);
+  // Require representative premium, wheel, table, motion, result, responsive, and reduced-motion rules after extraction.
+  for (const selector of ['.roulette-premium {', '.roulette-wheel-frame {', '.roulette-table-shell {', '@keyframes roulettePremiumWheelSpin {', '@keyframes roulettePremiumBallSpin {', '.roulette-settlement-card {', '@media (max-width:1200px) {', '@media (prefers-reduced-motion: reduce) {']) assert.ok(stylesheet.includes(selector), selector);
+});
 
 // Compare two angles for congruence modulo one full turn within a small numeric tolerance.
 function congruent(a, b) {
@@ -302,7 +314,7 @@ test('MOTION-002 landing timers are guarded against a disposed route scope', () 
 
 // Verify ROU-059 the unmount refund guard still suppresses the mid-spin clear race.
 test('ROU-059 unmount refund keeps its committed-spin suppression', () => {
-  assert.match(source, /const wasSpinning = spinBusy;/, 'unmount must capture the live spin state before releasing it'); // Pin the pre-reset capture.
+  assert.match(source, /const wasSpinning = lifecycle\.isBusy\(\);/, 'unmount must capture the live spin state before releasing it'); // Pin the pre-reset capture.
   assert.match(source, /if \(humanBets\(\)\.length && !wasSpinning\) \{/, 'the refund must consult the captured spin state'); // Pin the live guard so the issue-246 race cannot return.
 });
 

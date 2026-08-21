@@ -18,21 +18,25 @@ import unittest
 
 # Resolve the repository root without depending on the process working directory.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-# Point at the tracked Keno client module that owns the ball-rail styling.
-KENO_PATH = ROOT / "web" / "games" / "keno.js"
+# Point at the tracked Keno client module that owns the ball-rail markup.
+KENO_SOURCE_PATH = ROOT / "web" / "games" / "keno.js"
+# Point at the extracted Keno stylesheet that owns the ball-rail layout.
+KENO_STYLES_PATH = ROOT / "web" / "games" / "keno.css"
 
 
 # Verify the drawn-ball rail stays bounded and scrollable rather than clipping.
 class KenoBallRailTests(unittest.TestCase):
-    # Read the tracked Keno client once.
+    # Read the tracked Keno client and stylesheet once.
     def setUp(self) -> None:
         # Load the module text without executing it.
-        self.text = KENO_PATH.read_text(encoding="utf-8")
+        self.source = KENO_SOURCE_PATH.read_text(encoding="utf-8")
+        # Load the external stylesheet without opening a browser.
+        self.styles = KENO_STYLES_PATH.read_text(encoding="utf-8")
 
     # Extract the CSS body of the .keno-ball-rail rule.
     def _rail_rule(self) -> str:
         # Locate the tracked rail declaration block.
-        match = re.search(r"\.keno-ball-rail\{([^}]*)\}", self.text)
+        match = re.search(r"\.keno-ball-rail\s*\{([^}]*)\}", self.styles)
         # Fail loudly if the rail rule this test guards was renamed or removed.
         self.assertIsNotNone(match, "the .keno-ball-rail rule is missing from the tracked Keno client")
         # Return the rule body.
@@ -57,12 +61,12 @@ class KenoBallRailTests(unittest.TestCase):
     # Require each ball to keep its fixed size inside the scrolling rail rather than shrinking.
     def test_balls_keep_fixed_size(self) -> None:
         # Require the balls to opt out of flex shrinking so they stay circular and legible.
-        self.assertIsNotNone(re.search(r"\.keno-ball-rail \.ball\{[^}]*flex:0 0 auto", self.text), "drawn balls are allowed to shrink inside the rail instead of scrolling")
+        self.assertIsNotNone(re.search(r"\.keno-ball-rail \.ball\s*\{[^}]*flex:0 0 auto", self.styles), "drawn balls are allowed to shrink inside the rail instead of scrolling")
 
     # Require the intentional scroll surface to expose keyboard and assistive-technology ownership.
     def test_rail_is_keyboard_reachable_and_named(self) -> None:
         # Locate the rendered rail markup without executing the browser client.
-        markup = re.search(r'return `<div class="keno-ball-rail"([^>]*)>', self.text)
+        markup = re.search(r'return `<div class="keno-ball-rail"([^>]*)>', self.source)
         # Fail loudly if the owned rail markup is renamed or removed.
         self.assertIsNotNone(markup, "the rendered .keno-ball-rail markup is missing")
         # Read the attribute fragment once for the complete accessibility contract.

@@ -5,8 +5,10 @@
 import { api, post } from '../core/api.js';
 // Import the #97 deterministic dice helpers for decorative, non-authoritative preview faces.
 import { createSeededRandom, rollDice } from '../core/dice.js';
-// Import locale loading, formatting, and subscription helpers for the game-owned domain.
-import { formatNumber, loadI18nDomain, onLocaleChange, t } from '../core/i18n.js';
+// Import locale-aware number formatting while shared lifecycle owns route translations.
+import { formatNumber } from '../core/i18n.js';
+// Import the shared frontend lifecycle for mount, locale, action, and stylesheet ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 // Import the #97 lifecycle timer scope and platform reduced-motion query.
 import { createMotionTimerScope, prefersReducedMotion } from '../core/motion.js';
 // Import shared escaping, feedback, and authenticated-wallet refresh helpers.
@@ -16,8 +18,6 @@ import { refreshBalance, renderCommittedWagerBalance, safe, toast } from '../cor
 const DOMAIN = 'games/chuck_a_luck';
 // Store the frozen-v1 additive API root once for state and roll actions.
 const API_ROOT = '/api/v1/games/chuck-a-luck';
-// Store a stable style id so repeated route mounts never duplicate game CSS.
-const STYLE_ID = 'chuck-a-luck-styles';
 // Store one tab-scoped retry record so an ambiguous response can survive reload.
 const PENDING_STORAGE_KEY = 'casino.chuck_a_luck.pending.v1';
 // Store the normal decorative reveal duration consumed by the shared timer scope.
@@ -39,57 +39,6 @@ const PIP_POSITIONS = Object.freeze({
   5: Object.freeze([1, 3, 5, 7, 9]), // Add a center pip to the four corners.
   6: Object.freeze([1, 3, 4, 6, 7, 9]), // Fill two vertical columns for six.
 });
-// Define route-local responsive styling without changing the shared stylesheet.
-const ROUTE_CSS = [
-  '.cal-shell{display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px;width:100%;height:100%;min-width:0;min-height:0;color:var(--text,#f5ead6);}', // Contain the complete route inside the shared game outlet.
-  '.cal-header{display:flex;align-items:end;justify-content:space-between;gap:16px;min-width:0;padding:2px;}', // Keep title and phase compact above the three-zone layout.
-  '.cal-header h1{margin:0;color:var(--gold,#f2c55c);font-family:var(--font-display,serif);font-size:clamp(30px,3.5vw,50px);line-height:1;}', // Make the localized game title the primary heading.
-  '.cal-header p{max-width:760px;margin:7px 0 0;color:var(--muted,#b8c8c1);}', // Keep the localized game explanation subordinate.
-  '.cal-phase{flex:0 0 auto;min-width:132px;padding:8px 12px;border:1px solid var(--gold);border-radius:999px;background:var(--felt);color:var(--text);text-align:center;font-weight:850;}', // Reserve a stable player-facing phase chip.
-  '.cal-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(460px,1.9fr) minmax(220px,.72fr);gap:14px;min-width:0;min-height:0;}', // Keep the dice stage wider than both desktop support rails combined.
-  '.cal-panel{min-width:0;border-color:var(--gold);border-radius:18px;background:linear-gradient(150deg,var(--felt),var(--bg));}', // Separate controls, stage, and data through governed surfaces.
-  '.cal-controls{display:grid;align-content:start;gap:12px;}', // Keep all wager configuration in one predictable rail.
-  '.cal-controls fieldset{display:grid;gap:8px;min-width:0;margin:0;padding:0;border:0;}', // Group the six related wager inputs semantically.
-  '.cal-controls legend{margin-bottom:8px;color:var(--text);font-weight:850;}', // Give the wager group a visible localized name.
-  '.cal-help,.cal-retry-note{margin:0;color:var(--muted,#b8c8c1);font-size:13px;line-height:1.4;}', // Keep instructional and retry copy compact.
-  '.cal-wager{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:8px;align-items:center;min-height:46px;}', // Align each localized face label with its amount input.
-  '.cal-wager-copy{display:grid;gap:2px;min-width:0;}', // Keep the label and payout summary together.
-  '.cal-wager-copy strong{color:var(--text);}', // Emphasize the wager target without relying on color alone.
-  '.cal-wager-copy small{color:var(--muted,#b8c8c1);line-height:1.25;}', // Keep the match-based payout summary readable.
-  '.cal-wager input{width:100%;min-width:0;min-height:42px;}', // Preserve keyboard and touch usability for wager inputs.
-  '.cal-wager-total{display:flex;justify-content:space-between;gap:8px;min-height:42px;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.04);}', // Reserve a stable aggregate wager summary.
-  '.cal-roll{width:100%;min-height:48px;border:0;border-radius:12px;background:#a7192b;color:#fff;font-weight:900;}', // Use the governed red treatment for the primary action.
-  '.cal-roll:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state visible and understandable.
-  '.cal-error{min-height:38px;margin:0;color:var(--bad);line-height:1.35;}.cal-repeat{width:100%;min-height:46px;border:1px solid var(--gold);border-radius:12px;background:transparent;color:var(--gold);font-weight:800;}.cal-repeat:disabled{opacity:.5;cursor:not-allowed;}', // Reserve localized validation feedback without shifting controls.
-  '.cal-stage{display:grid;grid-template-rows:auto minmax(220px,1fr) auto;gap:14px;overflow:hidden;place-items:stretch;}', // Keep the full dice stage visible without a nested scrollbar.
-  '.cal-stage-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;}', // Keep the stage heading and round total aligned.
-  '.cal-stage-heading h2{margin:0;color:var(--text);}', // Identify the dominant stage semantically.
-  '.cal-total-chip{min-width:92px;padding:8px 10px;border:1px solid rgba(255,255,255,.14);border-radius:999px;text-align:center;}', // Reserve total output across every phase.
-  '.cal-dice-tray{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(10px,2vw,24px);place-items:center;width:100%;min-width:0;padding:clamp(16px,3vw,34px);border:2px solid var(--gold);border-radius:24px;background:radial-gradient(circle at 50% 40%,var(--felt2),var(--felt) 68%);box-shadow:inset 0 0 54px rgba(255,230,155,.05);}', // Present three code-native dice as the visual focus.
-  '.cal-die{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);width:min(100%,150px);aspect-ratio:1;padding:15%;border:3px solid #cfb97b;border-radius:22%;background:linear-gradient(145deg,#fffdf2,#e7dcb9);box-shadow:0 16px 28px rgba(0,0,0,.38),inset 0 -8px 16px rgba(91,65,19,.13);transform:translateZ(0);}', // Draw each accessible die without special-font glyphs.
-  '.cal-die.is-rolling{animation:cal-tumble .56s cubic-bezier(.2,.75,.25,1) infinite alternate;}', // Animate only transform and opacity during decorative preview.
-  '.cal-pip{align-self:center;justify-self:center;width:clamp(8px,1.2vw,17px);aspect-ratio:1;border-radius:50%;background:#152019;box-shadow:inset 0 2px 2px rgba(255,255,255,.25);}', // Draw reliable code-native pips.
-  '.cal-pip--1{grid-area:1/1}.cal-pip--2{grid-area:1/2}.cal-pip--3{grid-area:1/3}.cal-pip--4{grid-area:2/1}.cal-pip--5{grid-area:2/2}.cal-pip--6{grid-area:2/3}.cal-pip--7{grid-area:3/1}.cal-pip--8{grid-area:3/2}.cal-pip--9{grid-area:3/3}', // Position every possible pip in the three-by-three grid.
-  '.cal-result{display:grid;gap:5px;align-content:center;min-height:92px;padding:13px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(0,0,0,.18);text-align:center;}', // Reserve final result copy so settlement never resizes the stage.
-  '.cal-result strong{color:var(--text);font-size:19px;}', // Emphasize the player-facing outcome summary.
-  '.cal-result span{color:var(--muted,#b8c8c1);}', // Keep supporting result detail subordinate.
-  '.cal-data{display:grid;align-content:start;gap:16px;min-height:0;overflow:auto;}', // Keep the desktop data rail as the only governed nested scroll surface.
-  '.cal-data section{display:grid;gap:8px;}', // Give each data group a consistent rhythm.
-  '.cal-data h2{margin:0;color:var(--text);}', // Label each data group clearly.
-  '.cal-paytable{width:100%;border-collapse:collapse;font-size:13px;}', // Use a semantic compact table for the six wager profiles.
-  '.cal-paytable th,.cal-paytable td{padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left;vertical-align:top;}', // Align paytable labels and payout sequences.
-  '.cal-history{display:grid;gap:7px;}', // Let history expand into the single governed data-rail scroll surface.
-  '.cal-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:9px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(0,0,0,.14);}', // Present each settlement as one compact data row.
-  '.cal-history-row span:last-child{font-weight:800;}', // Emphasize the signed round result.
-  '.cal-shell button:focus-visible,.cal-shell input:focus-visible{outline:3px solid var(--gold,#f2c55c);outline-offset:2px;}', // Provide a visible keyboard focus indicator.
-  '@keyframes cal-tumble{0%{opacity:.72;transform:translateY(-7px) rotate(-5deg) scale(.96)}100%{opacity:1;transform:translateY(7px) rotate(5deg) scale(1.03)}}', // Keep decorative movement transform-and-opacity only.
-  '@media(max-width:1200px){.cal-shell{height:auto}.cal-layout{grid-template-columns:1fr}.cal-controls{order:1}.cal-stage{order:2;min-height:470px}.cal-data{order:3;overflow:visible}}', // Use document scrolling with control-stage-data order at the shared breakpoint.
-  '@media(max-width:560px){.cal-header{align-items:start;flex-direction:column}.cal-phase{min-width:0}.cal-panel{padding:12px}.cal-wager{grid-template-columns:minmax(0,1fr) 82px}.cal-stage{min-height:390px}.cal-dice-tray{gap:8px;padding:14px}.cal-die{padding:13%;border-width:2px}.cal-pip{width:9px}.cal-history-row{grid-template-columns:1fr}}', // Preserve complete mobile controls and prevent horizontal overflow.
-  '@media(prefers-reduced-motion:reduce){.cal-shell *{animation:none!important;scroll-behavior:auto!important;transition:none!important}}', // Remove decorative motion for users who request it.
-].join(''); // Combine the route-local style fragments into one stable payload.
-
-// Store the currently mounted route outlet for deterministic rerenders.
-let root = null;
 // Store the latest server-owned game state for reload-safe rendering.
 let gameState = { recent_rounds: [] };
 // Store the current authenticated player summary only for local retry-record scoping.
@@ -104,8 +53,6 @@ let wagers = {};
 let lastBet = null;
 // Store the current machine-readable UI phase independently of localization.
 let phase = 'ready';
-// Store the in-flight action guard so duplicate clicks cannot overlap.
-let rolling = false;
 // Store decorative faces separately from authoritative server dice.
 let previewDice = [...INITIAL_DICE];
 // Store the current reduced-motion preference for evidence attributes.
@@ -120,13 +67,8 @@ let pendingPlayerId = null;
 let errorKey = null;
 // Store the disposable #97 timer scope owned by this route mount.
 let motionScope = null;
-// Store the locale-subscription cleanup callback for unmount.
-let unsubscribeLocale = null;
 // Store a fallback sequence only for environments without cryptographic UUID support.
 let requestCounter = 0;
-
-// Resolve one game-owned localized string from the active domain.
-const tx = (key, params = {}) => t(key, params, DOMAIN);
 
 // Generate one retry-safe browser action identity through an injectable UUID seam.
 export function createRequestId(randomUUID = globalThis.crypto?.randomUUID?.bind(globalThis.crypto)) {
@@ -137,6 +79,18 @@ export function createRequestId(randomUUID = globalThis.crypto?.randomUUID?.bind
   // Return a readable game-prefixed fallback identity for constrained test browsers.
   return `cal-${Date.now().toString(36)}-${requestCounter.toString(36)}`;
 }
+
+// Centralize route, locale, stylesheet, and action ownership while preserving exact request identities.
+const lifecycle = createGameLifecycle({
+  domain: DOMAIN, // Load only the Chuck-a-Luck locale domain for each mount.
+  requestPrefix: 'cal', // Preserve a stable lifecycle namespace for action diagnostics.
+  stylesheet: { id: 'chuck-a-luck-styles', href: '/games/chuck_a_luck.css' }, // Own one external stylesheet across remounts.
+  uuidFactory: () => createRequestId(), // Preserve the frozen cal-prefixed UUID and fallback format.
+});
+// Reuse lifecycle-owned translation lookup throughout markup and feedback.
+const { tx } = lifecycle;
+// Bind late async work to the exact active route session.
+let routeSession = null;
 
 // Produce deterministic non-authoritative preview dice from one stable action seed.
 export function createDecorativeDice(seed) {
@@ -302,16 +256,6 @@ function restorePendingRequest() {
   wagers = { ...restoredWagers }; // Mirror the locked values into visible controls.
 }
 
-// Install the game-owned style block once per document.
-function ensureStyles() {
-  // Reuse the existing route-local style node after remount.
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement('style'); // Create one native stylesheet node.
-  style.id = STYLE_ID; // Assign the stable deduplication id.
-  style.textContent = ROUTE_CSS; // Apply only game-prefixed rules and media queries.
-  document.head.append(style); // Install styles before the first game render.
-}
-
 // Return localized match-payout copy for one catalog entry.
 function payoutSequence(entry, translate = tx) {
   const payouts = Array.isArray(entry?.payouts) ? entry.payouts : []; // Read the backend-authored match profile.
@@ -321,7 +265,7 @@ function payoutSequence(entry, translate = tx) {
 
 // Return the six stable wager controls backed by the server catalog.
 function wagerControlsHtml(translate = tx) {
-  const locked = rolling || Boolean(pendingPayload); // Lock amounts while committed or awaiting exact retry.
+  const locked = lifecycle.isBusy() || Boolean(pendingPayload); // Lock amounts while committed or awaiting exact retry.
   const values = activeWagers(); // Read one stable wager snapshot for this render.
   // Render every canonical wager target with the required focused-test selector.
   return BET_IDS.map(id => {
@@ -390,6 +334,7 @@ function historyHtml(translate = tx) {
 
 // Return the complete localized three-zone route markup for rendering and focused tests.
 export function viewMarkup({ translate = tx } = {}) {
+  const rolling = lifecycle.isBusy(); // Read shared action ownership once for consistent control state.
   const faces = visibleDice(); // Read the current tray once for total display.
   const displayedTotal = latestRound && phase !== 'rolling' ? Number(latestRound.total ?? faces.reduce((sum, face) => sum + face, 0)) : null; // Show only an authoritative total.
   const totalText = displayedTotal === null ? translate('stage.totalWaiting') : translate('stage.total', { total: displayedTotal }); // Reserve the total chip in every phase.
@@ -404,16 +349,18 @@ export function viewMarkup({ translate = tx } = {}) {
 
 // Update one rendered wager total and primary-action availability without replacing focused inputs.
 function updateControlPreview() {
+  const root = lifecycle.root(); // Resolve the currently owned outlet at event time.
   // Stop when an event fires after route teardown.
   if (!root) return;
   const totalNode = root.querySelector('[data-wager-total]'); // Find the reserved aggregate amount node.
   if (totalNode) totalNode.textContent = tokenAmount(activeWagerTotal()); // Refresh localized fake-token total copy.
   const rollButton = root.querySelector('[data-roll]'); // Find the stable primary action.
-  if (rollButton) rollButton.disabled = rolling || activeWagerTotal() <= 0; // Enable only valid non-overlapping actions.
+  if (rollButton) rollButton.disabled = lifecycle.isBusy() || activeWagerTotal() <= 0; // Enable only valid non-overlapping actions.
 }
 
 // Render the route atomically and reconnect game-owned semantic controls.
 function render() {
+  const root = lifecycle.root(); // Resolve the currently owned outlet before painting.
   // Stop stale async completions after unmount.
   if (!root) return;
   reducedMotionActive = prefersReducedMotion(); // Refresh the platform preference for evidence and CSS state.
@@ -425,7 +372,7 @@ function render() {
       const amount = positiveAmount(input.value); // Normalize the current control value.
       if (amount > 0) wagers[input.dataset.wager] = amount; else delete wagers[input.dataset.wager]; // Update only valid canonical local wagers.
       errorKey = null; // Clear stale validation after a corrective edit.
-      const errorNode = root?.querySelector('[data-error]'); // Resolve the current reserved error node.
+      const errorNode = lifecycle.root()?.querySelector('[data-error]'); // Resolve the current reserved error node.
       if (errorNode) errorNode.textContent = ''; // Clear visible error copy in place.
       updateControlPreview(); // Refresh total and button state without replacing inputs.
     };
@@ -449,10 +396,16 @@ function applyStatePayload(payload) {
 }
 
 // Load authenticated session-owned state from the additive v1 endpoint.
-async function loadState(mountedRoot, activeScope) {
+function ownsRoute(session, mountedRoot, activeScope) {
+  // Require the same lifecycle session, outlet, and timer scope before accepting late work.
+  return routeSession === session && lifecycle.root() === mountedRoot && motionScope === activeScope;
+}
+
+// Load authenticated session-owned state from the additive v1 endpoint.
+async function loadState(session, mountedRoot, activeScope) {
   const payload = await api(`${API_ROOT}/state`); // Read state without any caller-selected player id.
   // Stop a late response from repainting a different route or mount.
-  if (root !== mountedRoot || motionScope !== activeScope) return false;
+  if (!ownsRoute(session, mountedRoot, activeScope)) return false;
   applyStatePayload(payload); // Store server game, player, catalog, and history data.
   restorePendingRequest(); // Reconcile any ambiguous tab-scoped action against server history.
   render(); // Paint the complete localized route after resources and state exist.
@@ -462,7 +415,12 @@ async function loadState(mountedRoot, activeScope) {
 // Submit one complete six-target wager map through a retained idempotency identity.
 async function roll() {
   // Ignore duplicate events while one atomic request or reveal is active.
-  if (rolling) return;
+  if (lifecycle.isBusy()) return;
+  const mountedRoot = lifecycle.root(); // Capture the active outlet before validating or mutating action state.
+  const activeScope = motionScope; // Capture timer ownership before the request starts.
+  const session = routeSession; // Capture exact route-session ownership across every asynchronous boundary.
+  // Ignore stale control events after navigation or mount replacement.
+  if (!mountedRoot || !activeScope || !ownsRoute(session, mountedRoot, activeScope)) return;
   const requestWagers = normalizeWagers(pendingPayload?.wagers || wagers); // Reuse an immutable retry wager map or snapshot current controls.
   // Reject an empty action without creating a request identity.
   if (!Object.keys(requestWagers).length) {
@@ -471,26 +429,24 @@ async function roll() {
     return; // Avoid contacting the ledger endpoint.
   }
   // Retain one identity across every retry until the backend acknowledges it.
-  pendingRequestId = pendingRequestId || createRequestId();
+  pendingRequestId = pendingRequestId || lifecycle.nextRequestId();
   // Pair the retry identity with the authenticated state owner before the request starts.
   pendingPlayerId = pendingPlayerId || player?.player_id || null;
   // Retain the exact immutable wager payload paired with that identity.
   pendingPayload = pendingPayload || Object.freeze({ request_id: pendingRequestId, wagers: Object.freeze({ ...requestWagers }) });
   writePendingRecord(); // Preserve ambiguous-response recovery across a full-page reload.
-  rolling = true; // Lock duplicate input before starting the request.
+  lifecycle.setBusy(true); // Lock duplicate input before starting the request.
   phase = 'rolling'; // Publish machine-readable and localized rolling state.
   errorKey = null; // Clear earlier validation or request failures.
   previewDice = [...createDecorativeDice(pendingRequestId)]; // Show only deterministic non-authoritative preview faces.
-  motionScope.cancelAll(); // Cancel any abandoned presentation callback from this mount.
+  activeScope.cancelAll(); // Cancel any abandoned presentation callback from this mount.
   render(); // Paint disabled controls and decorative dice before awaiting I/O.
-  const mountedRoot = root; // Capture route ownership across the network request.
-  const activeScope = motionScope; // Capture timer ownership across the network request.
   // Start protected request handling so ambiguity preserves the exact retry payload.
   try {
     const response = await post(`${API_ROOT}/rolls`, pendingPayload); // Send no caller player id and rely on the standard envelope.
-    clearPendingRequest(); // Treat a parsed success envelope, including replay, as acknowledgement.
     // Stop presentation when navigation replaced or disposed this mount during I/O.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (!ownsRoute(session, mountedRoot, activeScope)) return;
+    clearPendingRequest(); // Treat an owned parsed success envelope, including replay, as acknowledgement.
     renderCommittedWagerBalance(response.ledger?.wager); // Show the committed debit before the dice reveal. (LEDGER-031, issue #586)
     gameState = response?.state && typeof response.state === 'object' ? response.state : gameState; // Adopt returned reload-safe history.
     player = response?.player || player; // Adopt the returned authenticated player summary.
@@ -501,10 +457,10 @@ async function roll() {
     // Schedule final presentation through reduced-motion-aware route ownership.
     scheduleReveal({ timerScope: activeScope, onReveal: () => {
       // Stop an unusual late callback after mount replacement.
-      if (root !== mountedRoot || motionScope !== activeScope) return;
+      if (!ownsRoute(session, mountedRoot, activeScope)) return;
       previewDice = finalDice; // Replace decorative faces with authoritative server dice.
       phase = 'settled'; // Publish the final machine-readable phase.
-      rolling = false; // Re-enable a new atomic roll only after reveal.
+      lifecycle.setBusy(false); // Re-enable a new atomic roll only after reveal.
       render(); // Paint authoritative dice, result, paytable, and history.
       // Refresh the shared authenticated wallet without making it game-owned state.
       refreshBalance().catch(() => {}); // Let a later shell refresh recover without changing the settled game result.
@@ -512,9 +468,9 @@ async function roll() {
   // Preserve the exact request identity and payload after any ambiguous failure.
   } catch (error) {
     // Stop a late failure from repainting a different route.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
+    if (!ownsRoute(session, mountedRoot, activeScope)) return;
     phase = 'ready'; // Return controls to an understandable retry-ready phase.
-    rolling = false; // Allow the exact retained payload to be retried.
+    lifecycle.setBusy(false); // Allow the exact retained payload to be retried.
     const definitiveRejection = isDefinitiveRollRejection(error); // Separate confirmed rejection from an ambiguous interrupted response.
     if (definitiveRejection) clearPendingRequest(); // Unlock wagers only when the server proves no retry of this action should occur.
     errorKey = definitiveRejection ? 'error.rollRejected' : 'error.rollFailed'; // Use localized copy that accurately describes retry ownership.
@@ -526,7 +482,7 @@ async function roll() {
 // Re-place the last settled wager map and re-fire one roll without a timer.
 async function repeat() {
   // Ignore repeat while rolling, holding an unresolved retry, or without a prior wager map.
-  if (rolling || pendingPayload || !lastBet) return;
+  if (lifecycle.isBusy() || pendingPayload || !lastBet) return;
   // Restore the full previous wager map into the local control state.
   wagers = { ...lastBet.wagers };
   // Fire the shared retry-safe roll action with the restored wagers.
@@ -539,24 +495,23 @@ export const ChuckALuckGame = {
   label: '', // Leave presentation labels to the game descriptor and locale domain.
   // Mount resources and authenticated state into the shared route outlet.
   async mount(node) {
-    root = node; // Store this mount before asynchronous initialization.
     lastBet = null; // Reset the repeatable wager map so a new mount never inherits a stale one before load reconciles history.
-    ensureStyles(); // Install the route-scoped responsive styles once.
+    const mounted = await lifecycle.mount(node, render); // Acquire route, locale, and external stylesheet ownership.
+    // Stop when navigation replaced this mount during shared initialization.
+    if (!mounted) return;
     motionScope = createMotionTimerScope(); // Create lifecycle-bound reduced-motion timer ownership.
-    const mountedRoot = root; // Capture this mount across locale and state loading.
+    routeSession = Object.freeze({}); // Create an exact identity for this route session.
+    const session = routeSession; // Capture the session across state loading.
+    const mountedRoot = lifecycle.root(); // Capture this mount across state loading.
     const activeScope = motionScope; // Capture this timer scope across locale and state loading.
-    await loadI18nDomain(DOMAIN); // Load active and English fallback resources before visible text.
-    // Stop when navigation disposed this mount while resources loaded.
-    if (root !== mountedRoot || motionScope !== activeScope) return;
-    unsubscribeLocale = onLocaleChange(() => render()); // Rerender strings without resetting wagers or backend state.
     // Load state while retaining a localized route if the endpoint is temporarily unavailable.
     try {
-      await loadState(mountedRoot, activeScope); // Restore recent rounds, player, and payout catalog.
+      await loadState(session, mountedRoot, activeScope); // Restore recent rounds, player, and payout catalog.
     } catch (_) { // Convert state-load failures into owned localized route feedback.
       // Stop a late failure from repainting a different route.
-      if (root !== mountedRoot || motionScope !== activeScope) return;
+      if (!ownsRoute(session, mountedRoot, activeScope)) return;
       phase = 'ready'; // Keep the route in an understandable non-action phase.
-      rolling = false; // Ensure controls are not left as in-flight.
+      lifecycle.setBusy(false); // Ensure controls are not left as in-flight.
       errorKey = 'error.stateFailed'; // Resolve failure through owned EN/RU copy.
       restorePendingRequest(); // Preserve any exact retry record even while state is unavailable.
       render(); // Render a recoverable localized surface.
@@ -565,12 +520,10 @@ export const ChuckALuckGame = {
   },
   // Release all game-owned lifecycle resources whenever navigation leaves the route.
   unmount() {
+    routeSession = null; // Invalidate late async work before disposing route resources.
     motionScope?.dispose(); // Cancel pending reveal callbacks and lifecycle listeners.
     motionScope = null; // Clear the disposed scope for a future mount.
-    unsubscribeLocale?.(); // Release the locale subscriber when initialization completed.
-    unsubscribeLocale = null; // Clear the callback reference for repeated unmount safety.
-    root = null; // Prevent late network work from repainting another route.
-    rolling = false; // Release only the presentation guard, not retry identity.
+    lifecycle.unmount(); // Release outlet, locale, stylesheet, and shared busy ownership.
     phase = 'ready'; // Reset transient presentation before the next authoritative load.
     errorKey = null; // Clear route-local visible feedback.
     gameState = { recent_rounds: [] }; // Drop stale server state while inactive.

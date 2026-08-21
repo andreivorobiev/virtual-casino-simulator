@@ -23,10 +23,16 @@ const sharedStyles = await readFile(path.join(root, 'web', 'styles.css'), 'utf8'
 const baccaratSource = await readFile(path.join(root, 'web', 'games', 'baccarat.js'), 'utf8');
 // Read Bingo's affected animation source.
 const bingoSource = await readFile(path.join(root, 'web', 'games', 'bingo.js'), 'utf8');
+// Read Bingo's extracted route stylesheet for reduced-motion ownership.
+const bingoStyles = await readFile(path.join(root, 'web', 'games', 'bingo.css'), 'utf8');
 // Read Keno's affected animation source.
 const kenoSource = await readFile(path.join(root, 'web', 'games', 'keno.js'), 'utf8');
+// Read Keno's extracted route stylesheet for reduced-motion ownership.
+const kenoStyles = await readFile(path.join(root, 'web', 'games', 'keno.css'), 'utf8');
 // Read Roulette's guarded action wiring source.
 const rouletteSource = await readFile(path.join(root, 'web', 'games', 'roulette.js'), 'utf8');
+// Read Roulette's extracted route stylesheet for precision-control sizing.
+const rouletteStyles = await readFile(path.join(root, 'web', 'games', 'roulette.css'), 'utf8');
 // Read Teen Patti's external stylesheet for its mobile feedback-clearance contract.
 const teenPattiStyles = await readFile(path.join(root, 'web', 'games', 'teen_patti.css'), 'utf8');
 // Read the shared autoplay lifecycle for reconciliation and server-tick contracts.
@@ -202,7 +208,7 @@ assert.match(indexSource, /<div id="game-live-status" class="sr-only" role="stat
 // Require all five governed games to preserve focus and publish current result status. (UX-025)
 for (const source of [rouletteSource, kenoSource, bingoSource, blackjackSource, baccaratSource]) assert.match(source, /captureGameFocus\(root\)[\s\S]*restoreGameFocus\(root, focus\)[\s\S]*syncGameLiveStatus\(root\)/);
 // Require Roulette precision controls to keep a 24-pixel hit area around the compact marker. (UX-025)
-assert.match(rouletteSource, /const SPOT_SIZE = 24;[\s\S]*\.spot\{display:grid;place-items:center;width:24px;height:24px/);
+assert.match(rouletteSource, /const SPOT_SIZE = 24;/); assert.match(rouletteStyles, /\.roulette-premium \.spot\s*\{\s*display:grid;\s*place-items:center;\s*width:24px;\s*height:24px;/);
 // Require shared and route-local controls called out by UX-025 to preserve 44-pixel touch targets.
 assert.match(sharedStyles, /button\s*\{\s*min-height:\s*44px;/); assert.match(baccaratSource, /\.bac-rail-card select\{min-height:44px\}[\s\S]*\.bac-repeat-grid button\{min-height:44px/); assert.match(colorWheelStyles, /\.cw-chip\s*\{[\s\S]*?min-width:\s*44px;[\s\S]*?min-height:\s*44px;/); assert.match(fourCardPokerStyles, /\.fcp-field input\s*\{[\s\S]*?min-height:\s*44px;/);
 // Require structured API failures to ignore raw server messages while preserving diagnostic fields. (I18N-011)
@@ -216,9 +222,9 @@ assert.match(sharedStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.s
 // Require Baccarat reveal animation to stop under reduced motion.
 assert.match(baccaratSource, /@media \(prefers-reduced-motion:reduce\)\{\.bac-card\.revealing\{animation:none;transform:none;opacity:1;\}\}/);
 // Require every Bingo-owned animation and transition to stop under reduced motion.
-assert.match(bingoSource, /@media \(prefers-reduced-motion:reduce\)\{\[class\*="bingo"\]\{animation:none!important;transition:none!important;\}\}/);
+assert.match(bingoStyles, /@media \(prefers-reduced-motion:reduce\)\s*\{\s*\[class\*="bingo"\]\s*\{\s*animation:none!important;\s*transition:none!important;/);
 // Require Keno's latest-number animation to stop under reduced motion.
-assert.match(kenoSource, /@media \(prefers-reduced-motion:reduce\)\{\.keno-grid button\.latest\{animation:none;transform:none;\}\}/);
+assert.match(kenoStyles, /@media \(prefers-reduced-motion:reduce\)\s*\{\s*\.keno-grid button\.latest\s*\{\s*animation:none;\s*transform:none;/);
 // Enumerate every Roulette action whose rejection must remain player-visible.
 const guardedActions = ["#mode').onchange = guarded(settings)", "#zero').onchange = guarded(settings)", "button.onclick = guarded(() => placeBetForCell(button))", "button.onclick = guarded(() => placeCall(button.dataset.call))", "button.onclick = guarded(() => clearBet(button.dataset.clear))", "#clear').onclick = guarded(clearAll)", "#rebet').onclick = guarded(rebet)", "#spin').onclick = guarded(() => spin(true))"];
 // Require every governed action to stay behind the shared failure guard.

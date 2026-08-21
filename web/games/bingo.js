@@ -10,8 +10,10 @@ import { renderAutoplay, stopAutoplay } from '../core/autoplay.js';
 import { speak, clickSound } from '../core/voice.js';
 // Import shared bot helpers so bot cards still use public controller actions.
 import { botPanelHtml, playBotRound } from '../core/bots.js';
-// Import the i18n runtime so Bingo-owned visible strings live in locale resources.
-import { initI18n, t, onLocaleChange, formatMoney, formatNumber } from '../core/i18n.js';
+// Import locale-aware formatters while shared lifecycle owns Bingo translations.
+import { formatMoney, formatNumber } from '../core/i18n.js';
+// Import the shared frontend lifecycle for route, locale, busy, and stylesheet ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
 
 // Store the i18n domain used by this module's resource files.
 const I18N_DOMAIN = 'games/bingo';
@@ -21,15 +23,6 @@ const COLUMNS = ['B', 'I', 'N', 'G', 'O'];
 const TOTAL_BALLS = 75;
 // Store supported pattern ids so the select stays aligned with the API contract.
 const PATTERNS = ['line', 'four_corners', 'postage_stamp', 'blackout'];
-// Store the style element id so scoped CSS is injected only once.
-const STYLE_ID = 'premium-bingo-styles';
-// Store scoped CSS for the premium Bingo module without touching shared stylesheet ownership.
-const BINGO_CSS = '.premium-bingo{display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px;height:100%;min-height:0}.premium-bingo-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(460px,0.78fr);gap:18px;align-items:end}.premium-bingo-kicker{margin:0 0 4px;color:var(--gold);font-weight:900}.premium-bingo-title{margin:0;color:var(--text);font-family:var(--font-display);font-size:46px;line-height:1}.premium-bingo-subtitle{max-width:760px;margin:8px 0 0;color:var(--muted)}.premium-bingo-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.premium-bingo-grid{min-height:0}.premium-bingo .control-rail,.premium-bingo .details-drawer{display:grid;align-content:start;gap:12px}.premium-bingo .game-stage{display:grid;grid-template-rows:auto minmax(0,1fr) 138px;gap:12px;padding:16px}.premium-bingo-config{display:grid;grid-template-columns:1fr 1fr;gap:10px}.premium-bingo-field{display:grid;gap:6px;padding:12px;border:1px solid var(--border-soft);border-radius:13px;background:rgba(255,255,255,.04)}.premium-bingo-field span{color:var(--muted);font-size:12px;font-weight:800}.premium-bingo-field input,.premium-bingo-field select{width:100%;min-width:0}.premium-bingo-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.premium-bingo [data-testid="bingo-control-rail"][aria-busy="true"] button:disabled,.premium-bingo [data-testid="bingo-control-rail"][aria-busy="true"] input:disabled,.premium-bingo [data-testid="bingo-control-rail"][aria-busy="true"] select:disabled{opacity:.55;cursor:wait}.premium-bingo-status-card{display:grid;gap:10px;padding:12px;border:1px solid var(--border-soft);border-radius:14px;background:rgba(0,0,0,.18)}.premium-bingo-status-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}.premium-bingo-dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 18px var(--ok)}.premium-bingo-dot.is-won{background:#ff6670;box-shadow:0 0 18px #ff6670}.premium-bingo-progress{height:12px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.09)}.premium-bingo-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--brand-strong),var(--gold),var(--accent));transition:width .22s ease}.premium-bingo-stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.premium-bingo-stage-title{margin:0;color:var(--text);font-family:var(--font-display);font-size:30px}.premium-bingo-card-wrap{display:grid;place-items:center;min-height:0}.premium-bingo .bingo-card{width:min(100%,760px);max-width:760px;min-height:500px;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:74px repeat(5,minmax(64px,1fr));gap:8px;margin:0 auto;padding:14px;border:1px solid var(--gold);border-radius:18px;background:rgba(0,0,0,.2);box-shadow:inset 0 0 32px rgba(255,199,83,.08)}.premium-bingo .bingo-head,.premium-bingo .bingo-cell{min-height:0;border-radius:12px}.premium-bingo .bingo-head{color:#1d1100;background:linear-gradient(180deg,var(--metal-gold),var(--metal-gold-deep));font-family:var(--font-display);font-size:30px}.premium-bingo .bingo-cell{position:relative;overflow:hidden;color:var(--text);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025));font-size:24px}.premium-bingo .bingo-cell.marked{color:var(--text);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03))}.premium-bingo .bingo-cell.latest{box-shadow:inset 0 0 0 2px rgba(255,59,107,.5)}.premium-bingo .bingo-cell.win{outline:4px solid var(--accent);box-shadow:0 0 22px rgba(34,224,195,.72),inset 0 0 24px rgba(34,224,195,.2)}.premium-bingo-cell-value{position:relative;z-index:2}.bingo-daub{position:absolute;inset:50% auto auto 50%;z-index:1;width:48px;height:48px;border:4px solid rgba(255,113,122,.34);border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,105,115,.92),rgba(157,18,31,.88));box-shadow:0 6px 18px rgba(0,0,0,.32);opacity:.78;transform:translate(-50%,-50%) scale(.92);animation:bingoDaubIn .18s ease-out}.premium-bingo-call-bay{display:flex;align-items:center;gap:22px;min-height:138px;padding:16px;border:1px solid var(--border-soft);border-radius:16px;background:rgba(0,0,0,.18)}.premium-bingo-orb{display:grid;place-items:center;flex:0 0 96px;width:96px;height:96px;border-radius:50%;color:#3a1600;background:radial-gradient(circle at 35% 25%,#fff7cf,#e7c45f 70%,#a36f16);box-shadow:0 0 28px rgba(255,220,130,.5);font-size:27px;font-weight:1000}.premium-bingo-orb.is-calling{animation:bingoLatestPulse .8s ease-in-out infinite}.premium-bingo-call-copy{min-width:0}.premium-bingo-call-copy strong{display:block;color:var(--text)}.premium-bingo-chip-row{display:flex;flex-wrap:wrap;gap:6px;max-height:118px;overflow:auto}.premium-bingo-called-chip{min-width:auto;min-height:28px;padding:4px 10px;border-radius:999px;color:var(--text);background:rgba(255,199,83,.11)}.premium-bingo-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:8px 0;padding:11px 12px;border:1px solid var(--border-soft);border-radius:12px;background:rgba(255,255,255,.035)}.premium-bingo-row.is-active{border-color:var(--gold);background:rgba(255,199,83,.1)}.premium-bingo-row b{color:var(--text)}.premium-bingo-row small{display:block;color:var(--muted)}.premium-bingo-result-grid{display:grid;gap:6px}.premium-bingo-empty{display:grid;place-items:center;min-height:160px;color:var(--muted);text-align:center}.premium-bingo .tag-row{margin-top:10px}@keyframes bingoDaubIn{from{opacity:0;transform:translate(-50%,-50%) scale(.35)}to{opacity:.78;transform:translate(-50%,-50%) scale(.92)}}@keyframes bingoLatestPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}} @media (prefers-reduced-motion:reduce){[class*="bingo"]{animation:none!important;transition:none!important;}}@media (max-width:1100px){.premium-bingo-hero{grid-template-columns:1fr}.premium-bingo-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.premium-bingo .game-stage{grid-template-rows:auto auto 138px}.premium-bingo .bingo-card{min-height:430px}}@media (max-width:760px){.premium-bingo{height:auto}.premium-bingo-title{font-size:34px}.premium-bingo-metrics{grid-template-columns:1fr 1fr}.premium-bingo-config,.premium-bingo-actions{grid-template-columns:1fr}.premium-bingo .bingo-card{min-height:330px;grid-template-rows:52px repeat(5,52px);gap:5px;padding:8px}.premium-bingo .bingo-head{font-size:22px}.premium-bingo .bingo-cell{font-size:18px}.bingo-daub{width:36px;height:36px}.premium-bingo-call-bay{align-items:flex-start;min-height:132px}.premium-bingo-orb{flex-basis:72px;width:72px;height:72px;font-size:20px}}.premium-bingo-repeat{background:transparent;color:var(--gold);border:1px solid var(--gold);min-height:44px}.premium-bingo-repeat:disabled{opacity:.5}';
-// Store desktop-only containment overrides so the card and call bay consume the allocated stage instead of escaping below it. (UX-026)
-const BINGO_DESKTOP_CONTAINMENT_CSS = '@media (min-width:1101px){.premium-bingo .game-stage{grid-template-rows:auto minmax(0,1fr) clamp(96px,13vh,138px)}.premium-bingo-card-wrap{height:100%;min-height:0;overflow:hidden}.premium-bingo .bingo-card{height:100%;min-height:0;grid-template-rows:minmax(38px,.85fr) repeat(5,minmax(34px,1fr));gap:clamp(4px,.6vh,8px);padding:clamp(8px,1.1vh,14px)}.premium-bingo-call-bay{height:100%;min-height:0;padding:clamp(10px,1.5vh,16px)}.premium-bingo-orb{flex-basis:clamp(68px,9vh,96px);width:clamp(68px,9vh,96px);height:clamp(68px,9vh,96px);font-size:clamp(20px,2.4vh,27px)}}';
-
-// Store the root node supplied by the shell mount contract.
-let root = null;
 // Store the latest full Bingo state returned by the API.
 let state = null;
 // Store the current autoplay widget so unmount can stop its session.
@@ -42,38 +35,27 @@ let pattern = 'line';
 let lastBet = null;
 // Store the bot panel markup because the core bot helper renders asynchronously.
 let botPanelCache = '';
-// Store whether a call request is in flight so the layout can show a fixed busy state.
-let callBusy = false;
-// Store whether a human card purchase is unresolved so duplicate clicks cannot debit twice.
-let purchaseBusy = false;
+// Store only which busy presentation is active while lifecycle owns the actual action lock.
+let busyAction = null;
 // Store the last session returned by a call so won sessions remain visible after active_session clears.
 let displayedSession = null;
 // Store the latest B/I/N/G/O label for the fixed call display.
 let lastLabel = '';
 // Store the latest called number for daub emphasis on the card.
 let lastNumber = null;
-// Store the active locale subscription cleanup function.
-let unsubscribeLocale = null;
+// Centralize route, locale, busy, request-id, and external stylesheet ownership.
+const lifecycle = createGameLifecycle({ domain: I18N_DOMAIN, requestPrefix: 'bingo', stylesheet: { id: 'premium-bingo-styles', href: '/games/bingo.css' } });
+// Reuse lifecycle-owned translation lookup throughout the premium surface.
+const { tx: tr } = lifecycle;
+// Bind every asynchronous action to the exact active route session.
+let routeSession = null;
 
-// Define tr so every Bingo-owned string lookup uses the same domain.
-function tr(key, params = {}) {
-  // Return the localized string from the Bingo resource file.
-  return t(key, params, I18N_DOMAIN);
-}
-
-// Define ensureStyles so module-owned premium CSS stays scoped to Bingo.
-function ensureStyles() {
-  // Stop when this module has already installed its scoped style element.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create a style element for this module's scoped selectors.
-  const style = document.createElement('style');
-  // Mark the style element so repeated mounts do not duplicate CSS.
-  style.id = STYLE_ID;
-  // Attach the scoped CSS text for the premium Bingo layout.
-  style.textContent = BINGO_CSS + BINGO_DESKTOP_CONTAINMENT_CSS;
-  // Add the style element to the document head.
-  document.head.append(style);
-}
+// Report whether the shared action lock is presenting a card purchase.
+const isBuying = () => lifecycle.isBusy() && busyAction === 'buy';
+// Report whether the shared action lock is presenting a ball call.
+const isCalling = () => lifecycle.isBusy() && busyAction === 'call';
+// Require the exact route session and outlet before accepting late asynchronous work.
+const ownsRoute = (session, mountedRoot) => routeSession === session && lifecycle.root() === mountedRoot;
 
 // Define patternLabel so API pattern ids become localized visible labels.
 function patternLabel(value) {
@@ -194,7 +176,7 @@ function sessionCards(session) {
 // Define statusKey so status rendering has one state classification.
 function statusKey(session) {
   // Show the in-flight state while the call endpoint is pending.
-  if (callBusy) return 'calling';
+  if (isCalling()) return 'calling';
   // Show complete when the selected session has settled.
   if (session?.status === 'won') return 'complete';
   // Show running while the API has an active session.
@@ -248,17 +230,17 @@ function botSummaryHtml(session) {
 // Define controlsHtml to render the left Bingo command rail.
 function controlsHtml(session) {
   // Store whether the call button can start a new atomic call.
-  const canCall = Boolean(state?.active_session) && !callBusy && !purchaseBusy;
+  const canCall = Boolean(state?.active_session) && !lifecycle.isBusy();
   // Store whether a new card can be purchased without conflicting with an active session.
-  const canBuy = !state?.active_session && !callBusy && !purchaseBusy;
+  const canBuy = !state?.active_session && !lifecycle.isBusy();
   // Disable purchase configuration while its submitted values are being committed.
-  const purchaseDisabled = purchaseBusy ? 'disabled' : '';
+  const purchaseDisabled = lifecycle.isBusy() ? 'disabled' : '';
   // Store the localized buy button label for first and follow-up cards.
-  const buyLabel = purchaseBusy ? `${tr('control.buy')}…` : (session?.status === 'won' ? tr('control.buyNext') : tr('control.buy'));
+  const buyLabel = isBuying() ? `${tr('control.buy')}…` : (session?.status === 'won' ? tr('control.buyNext') : tr('control.buy'));
   // Render all supported pattern options from the frozen pattern list.
   const options = PATTERNS.map(value => `<option value="${safe(value)}">${safe(patternLabel(value))}</option>`).join('');
   // Return the complete control rail with fixed sections for status, autoplay, and bots.
-  return `<section class="panel control-rail" data-testid="bingo-control-rail" aria-busy="${purchaseBusy ? 'true' : 'false'}"><h2>${safe(tr('control.title'))}</h2><div class="premium-bingo-config"><label class="premium-bingo-field"><span>${safe(tr('control.amount'))}</span><input id="bingoAmount" type="number" min="1" value="${safe(amount)}" data-testid="bingo-amount" ${purchaseDisabled}></label><label class="premium-bingo-field"><span>${safe(tr('control.pattern'))}</span><select id="bingoPattern" data-testid="bingo-pattern" ${purchaseDisabled}>${options}</select></label></div><div class="premium-bingo-actions action-row"><button id="buy" data-testid="bingo-buy" class="gold" ${canBuy ? '' : 'disabled'}>${safe(buyLabel)}</button><button id="call" data-testid="bingo-call" class="primary" ${canCall ? '' : 'disabled'}>${safe(callBusy ? tr('control.calling') : tr('control.call'))}</button></div><button id="bingoRepeat" data-testid="bingo-repeat" class="premium-bingo-repeat" ${canBuy && lastBet ? '' : 'disabled'}>${safe(tr('controls.repeat'))}</button><button id="reset" data-testid="bingo-reset" ${purchaseDisabled}>${safe(tr('control.reset'))}</button>${statusCardHtml(session)}${botSummaryHtml(session)}<div id="auto"></div><div id="botPanel">${botPanelCache || loadingBotsHtml()}</div></section>`;
+  return `<section class="panel control-rail" data-testid="bingo-control-rail" aria-busy="${lifecycle.isBusy() ? 'true' : 'false'}"><h2>${safe(tr('control.title'))}</h2><div class="premium-bingo-config"><label class="premium-bingo-field"><span>${safe(tr('control.amount'))}</span><input id="bingoAmount" type="number" min="1" value="${safe(amount)}" data-testid="bingo-amount" ${purchaseDisabled}></label><label class="premium-bingo-field"><span>${safe(tr('control.pattern'))}</span><select id="bingoPattern" data-testid="bingo-pattern" ${purchaseDisabled}>${options}</select></label></div><div class="premium-bingo-actions action-row"><button id="buy" data-testid="bingo-buy" class="gold" ${canBuy ? '' : 'disabled'}>${safe(buyLabel)}</button><button id="call" data-testid="bingo-call" class="primary" ${canCall ? '' : 'disabled'}>${safe(isCalling() ? tr('control.calling') : tr('control.call'))}</button></div><button id="bingoRepeat" data-testid="bingo-repeat" class="premium-bingo-repeat" ${canBuy && lastBet ? '' : 'disabled'}>${safe(tr('controls.repeat'))}</button><button id="reset" data-testid="bingo-reset" ${purchaseDisabled}>${safe(tr('control.reset'))}</button>${statusCardHtml(session)}${botSummaryHtml(session)}<div id="auto"></div><div id="botPanel">${botPanelCache || loadingBotsHtml()}</div></section>`;
 }
 
 // Define placeholderCardHtml so the game stage keeps its footprint before purchase.
@@ -324,13 +306,13 @@ function callBayHtml(session) {
   // Store the latest visible label from direct call response or session state.
   const visibleLabel = lastLabel || session?.last_ball_label || (latestCalledNumber(session) ? label(latestCalledNumber(session)) : '');
   // Store the call bay state for localized copy.
-  const key = callBusy ? 'calling' : (session?.status === 'won' ? 'bingo' : (visibleLabel ? 'latest' : 'ready'));
+  const key = isCalling() ? 'calling' : (session?.status === 'won' ? 'bingo' : (visibleLabel ? 'latest' : 'ready'));
   // Store the orb text while preserving a stable orb footprint.
-  const orb = visibleLabel || (callBusy ? '...' : 'B');
+  const orb = visibleLabel || (isCalling() ? '...' : 'B');
   // Store localized descriptive text for the current call bay state.
   const text = key === 'bingo' ? tr('callBay.bingoText', { winner: session?.winner || tr('drawer.noWin'), payout: formatMoney(session?.payout || 0) }) : tr(`callBay.${key}Text`, { label: visibleLabel || tr('callBay.none') });
   // Return the fixed call/result bay below the card.
-  return `<div class="premium-bingo-call-bay fixed-result" data-testid="bingo-call-bay"><div class="premium-bingo-orb ${callBusy ? 'is-calling' : ''}">${safe(orb)}</div><div class="premium-bingo-call-copy" data-game-live-status><strong>${safe(tr(`callBay.${key}Title`))}</strong><p>${safe(text)}</p></div></div>`;
+  return `<div class="premium-bingo-call-bay fixed-result" data-testid="bingo-call-bay"><div class="premium-bingo-orb ${isCalling() ? 'is-calling' : ''}">${safe(orb)}</div><div class="premium-bingo-call-copy" data-game-live-status><strong>${safe(tr(`callBay.${key}Title`))}</strong><p>${safe(text)}</p></div></div>`;
 }
 
 // Define stageHtml to render the center premium Bingo card and call bay.
@@ -378,19 +360,25 @@ function drawerHtml(session) {
 }
 
 // Define updateBotPanel to refresh shared bot controller markup after state changes.
-async function updateBotPanel() {
+async function updateBotPanel(session = routeSession, mountedRoot = lifecycle.root()) {
   // Load the shared bot controller panel for Bingo.
-  botPanelCache = await botPanelHtml('bingo');
+  const markup = await botPanelHtml('bingo');
+  // Stop stale bot markup from crossing a route teardown or remount.
+  if (!ownsRoute(session, mountedRoot)) return false;
+  botPanelCache = markup; // Publish bot markup only for the owning route.
   // Find the mounted bot panel target after the latest render.
-  const element = root?.querySelector('#botPanel');
+  const element = mountedRoot?.querySelector('#botPanel');
   // Replace the loading placeholder only when the module is still mounted.
   if (element) element.innerHTML = botPanelCache;
+  return true; // Report that the active route accepted the markup.
 }
 
 // Define load to initialize Bingo state from the frozen state endpoint.
-async function load() {
+async function load(session, mountedRoot) {
   // Load the latest Bingo state through the v1 API envelope.
   const data = await api(currentPlayerPath('/api/v1/games/bingo/state'));
+  // Stop a late state response from repainting a different route session.
+  if (!ownsRoute(session, mountedRoot)) return false;
   // Store the game state for all render helpers.
   state = data.state;
   // Display the active session or the latest completed session on initial mount.
@@ -406,13 +394,17 @@ async function load() {
   // Render immediately so the shell shows stable Bingo layout before async bot markup arrives.
   render();
   // Refresh bot panel rows after the base layout is mounted.
-  await updateBotPanel();
+  await updateBotPanel(session, mountedRoot);
+  // Stop when bot-panel loading outlived this route.
+  if (!ownsRoute(session, mountedRoot)) return false;
   // Refresh the premium shell wallet after Bingo state loads.
   await refreshBalance();
+  return ownsRoute(session, mountedRoot); // Report whether this mount still owns the completed load.
 }
 
 // Define syncPurchaseControls to publish purchase state without remounting shared autoplay.
 function syncPurchaseControls() {
+  const root = lifecycle.root(); // Resolve the currently owned outlet at control-update time.
   // Stop when Bingo has been unmounted while a request was still resolving.
   if (!root) return;
   // Keep the current Buy control disabled while pending or after a session becomes active.
@@ -420,38 +412,38 @@ function syncPurchaseControls() {
   // Apply the authoritative purchase availability to the stable current control.
   if (buyButton) {
     // Keep the submitted action visible as an in-progress localized label.
-    buyButton.textContent = purchaseBusy ? `${tr('control.buy')}…` : tr('control.buy');
+    buyButton.textContent = isBuying() ? `${tr('control.buy')}…` : tr('control.buy');
     // Apply the authoritative purchase availability to the stable current control.
-    buyButton.disabled = purchaseBusy || Boolean(state?.active_session) || callBusy;
+    buyButton.disabled = lifecycle.isBusy() || Boolean(state?.active_session);
   }
   // Read the current Call control because a purchase render creates it in a disabled busy state.
   const callButton = root.querySelector('#call');
   // Enable Call only after the purchase has resolved into an active authoritative session.
-  if (callButton) callButton.disabled = purchaseBusy || !state?.active_session || callBusy;
+  if (callButton) callButton.disabled = lifecycle.isBusy() || !state?.active_session;
   // Lock the submitted amount and pattern until their request is fully applied.
-  root.querySelectorAll('#bingoAmount, #bingoPattern').forEach(control => { control.disabled = purchaseBusy; });
+  root.querySelectorAll('#bingoAmount, #bingoPattern').forEach(control => { control.disabled = lifecycle.isBusy(); });
   // Prevent a concurrent reset from racing a committed purchase whose response is delayed.
   const resetButton = root.querySelector('#reset');
   // Apply the same purchase boundary to the current reset control.
-  if (resetButton) resetButton.disabled = purchaseBusy;
+  if (resetButton) resetButton.disabled = lifecycle.isBusy();
   // Publish the purchase boundary for assistive technology and deterministic browser tests.
-  root.querySelector('[data-testid="bingo-control-rail"]')?.setAttribute('aria-busy', purchaseBusy ? 'true' : 'false');
+  root.querySelector('[data-testid="bingo-control-rail"]')?.setAttribute('aria-busy', lifecycle.isBusy() ? 'true' : 'false');
 }
 
 // Define repeat to buy one fresh card with the previous amount and pattern.
 async function repeat() {
   // Ignore repeat while a purchase is pending, a session is active, calling, or before any prior buy.
-  if (purchaseBusy || Boolean(state?.active_session) || callBusy || !lastBet) return;
+  if (lifecycle.isBusy() || Boolean(state?.active_session) || !lastBet) return;
   // Restore the previous amount into both the module state and the visible input.
   amount = lastBet.amount;
   // Restore the previous pattern into both the module state and the visible select.
   pattern = lastBet.pattern;
   // Reflect the restored amount on the mounted control so buy() re-reads it.
-  const amountInput = root?.querySelector('#bingoAmount');
+  const amountInput = lifecycle.root()?.querySelector('#bingoAmount');
   // Apply the restored amount value when the control is present.
   if (amountInput) amountInput.value = amount;
   // Reflect the restored pattern on the mounted control so buy() re-reads it.
-  const patternInput = root?.querySelector('#bingoPattern');
+  const patternInput = lifecycle.root()?.querySelector('#bingoPattern');
   // Apply the restored pattern value when the control is present.
   if (patternInput) patternInput.value = pattern;
   // Fire the shared purchase path with the restored configuration.
@@ -461,19 +453,26 @@ async function repeat() {
 // Define buy to purchase one human card and then let compatible bots buy cards.
 async function buy() {
   // Ignore duplicate manual clicks or autoplay ticks while one purchase remains unresolved.
-  if (purchaseBusy) return;
+  if (lifecycle.isBusy()) return;
+  const mountedRoot = lifecycle.root(); // Capture route ownership before reading controls.
+  const session = routeSession; // Capture exact route-session ownership across every awaited dependency.
+  // Stop stale control events after navigation or mount replacement.
+  if (!mountedRoot || !ownsRoute(session, mountedRoot)) return;
   // Read the amount from the current input and keep it bounded for the API validator.
-  amount = Math.max(1, Number(root.querySelector('#bingoAmount')?.value || amount || 5));
+  amount = Math.max(1, Number(mountedRoot.querySelector('#bingoAmount')?.value || amount || 5));
   // Read the pattern from the current select before posting the card purchase.
-  pattern = root.querySelector('#bingoPattern')?.value || pattern;
+  pattern = mountedRoot.querySelector('#bingoPattern')?.value || pattern;
   // Reserve the purchase boundary synchronously before the first request can yield.
-  purchaseBusy = true;
+  busyAction = 'buy'; // Preserve the purchase-specific progress label.
+  lifecycle.setBusy(true); // Reserve the shared action boundary synchronously.
   // Disable the stable current controls without recreating autoplay or bot widgets.
   syncPurchaseControls();
   // Start protected purchase work so the busy boundary always recovers.
   try {
     // Purchase the human card through the frozen v1 Bingo API.
     const data = await post('/api/v1/games/bingo/cards', withCurrentPlayer({ amount, pattern }));
+    // Stop a late purchase response from crossing route ownership.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Remember the committed amount and pattern so the next buy can repeat with one click.
     lastBet = { amount, pattern };
     // Store the immediate state so the human card appears without waiting for bots.
@@ -488,8 +487,12 @@ async function buy() {
     render();
     // Let eligible bot controllers purchase cards through their public controller endpoint.
     await playBotRound('bingo');
+    // Stop when bot actions outlive the owning route.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Reload state so bot cards appear in the cards-in-play drawer.
     const refreshed = await api(currentPlayerPath('/api/v1/games/bingo/state'));
+    // Stop a late refresh from crossing a remount boundary.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Store the refreshed state after bot controller actions.
     state = refreshed.state;
     // Keep the active session visible after bot cards are attached.
@@ -497,13 +500,17 @@ async function buy() {
     // Render the full session with bot cards and fixed layout.
     render();
     // Refresh the shared bot panel after controller actions.
-    await updateBotPanel();
+    await updateBotPanel(session, mountedRoot);
+    // Stop before wallet or sound work when the route no longer owns this action.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Refresh the wallet after human and bot card purchases settle.
     await refreshBalance();
     // Play a short confirmation sound for the purchase action.
     clickSound(500, .05);
   // Surface a failed purchase and let autoplay stop through its existing error path.
   } catch (error) {
+    // Ignore stale failures after route teardown or replacement.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Show the API failure without changing wallet or game state locally.
     toast(error.message);
     // Re-throw after the visible toast so control-plane callers observe the failure.
@@ -511,7 +518,9 @@ async function buy() {
   // Always release the purchase boundary after response application and refreshes finish.
   } finally {
     // Mark the purchase as resolved before restoring current control availability.
-    purchaseBusy = false;
+    if (!ownsRoute(session, mountedRoot)) return; // Leave teardown-owned state to lifecycle cleanup.
+    busyAction = null; // Clear the purchase-specific presentation.
+    lifecycle.setBusy(false); // Release shared action ownership after all response work.
     // Restore controls in place without remounting the shared autoplay widget.
     syncPurchaseControls();
   }
@@ -520,15 +529,22 @@ async function buy() {
 // Define call to perform one atomic Bingo ball call.
 async function call(showVoice = true) {
   // Avoid overlapping call actions because each call mutates session state.
-  if (callBusy) return;
+  if (lifecycle.isBusy()) return;
+  const mountedRoot = lifecycle.root(); // Capture the owning outlet before starting the request.
+  const session = routeSession; // Capture exact session ownership for every late completion.
+  // Ignore stale autoplay or control callbacks after navigation.
+  if (!mountedRoot || !ownsRoute(session, mountedRoot)) return;
   // Mark the fixed call bay busy before the API request starts.
-  callBusy = true;
+  busyAction = 'call'; // Preserve the call-specific orb and label presentation.
+  lifecycle.setBusy(true); // Reserve the shared atomic-action boundary.
   // Render the busy state without changing the card layout.
   render();
   // Start protected logic so API errors show as toasts and preserve state.
   try {
     // Call the frozen v1 endpoint for a single ball.
     const data = await post('/api/v1/games/bingo/call', withCurrentPlayer());
+    // Stop a late call response from crossing a route session.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Store the returned state, which may clear active_session after a win.
     state = data.state;
     // Retain the returned session so a completed winning card remains visible.
@@ -542,7 +558,9 @@ async function call(showVoice = true) {
     // Render the new call, daubs, drawer rows, and possible win highlight.
     render();
     // Refresh bot panel rows after call state changes.
-    await updateBotPanel();
+    await updateBotPanel(session, mountedRoot);
+    // Stop when bot markup loading outlives this route.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Refresh the wallet after a possible payout credit.
     await refreshBalance();
     // Play a short call sound for manual and autoplay calls.
@@ -551,6 +569,8 @@ async function call(showVoice = true) {
     if (showVoice) speak(tr('voice.ball', { label: data.label }), 'bingo');
   // Handle call failures with the shared toast surface.
   } catch (error) {
+    // Ignore stale failures after teardown or remount.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Show the API error without mutating game behavior.
     toast(error.message);
     // Re-throw so autoplay can stop through the shared controller.
@@ -558,7 +578,9 @@ async function call(showVoice = true) {
   // Always clear the busy flag and restore button state.
   } finally {
     // Clear the busy state after the call request finishes.
-    callBusy = false;
+    if (!ownsRoute(session, mountedRoot)) return; // Let lifecycle teardown own abandoned action cleanup.
+    busyAction = null; // Clear the call-specific presentation.
+    lifecycle.setBusy(false); // Release shared action ownership.
     // Render once more so buttons and status text settle.
     render();
   }
@@ -566,6 +588,12 @@ async function call(showVoice = true) {
 
 // Define reset to clear or abandon the current Bingo session through the API.
 async function reset() {
+  // Prevent reset from overlapping a card purchase or ball call.
+  if (lifecycle.isBusy()) return;
+  const mountedRoot = lifecycle.root(); // Capture the owning outlet for this action.
+  const session = routeSession; // Capture exact route-session identity across reset work.
+  // Ignore stale reset callbacks after navigation.
+  if (!mountedRoot || !ownsRoute(session, mountedRoot)) return;
   // Capture the authoritative active session before reset can remove it from state. (BINGO-027)
   const active = state?.active_session;
   // Read the number of committed calls that make the reset an abandonment rather than a refund.
@@ -574,8 +602,13 @@ async function reset() {
   const stake = Number(humanCardRecord(active)?.amount || active?.amount || 0);
   // Require explicit confirmation before abandoning a called session and its non-refundable stake. (BINGO-027)
   if (active && calls > 0 && !window.confirm(tr('reset.confirmAbandon', { amount: formatMoney(stake), calls: formatNumber(calls) }))) return;
+  busyAction = 'reset'; // Record the reset presentation while lifecycle owns the action lock.
+  lifecycle.setBusy(true); // Prevent overlapping state mutations.
+  try {
   // Reset the Bingo table through the frozen v1 endpoint.
   const data = await post('/api/v1/games/bingo/reset', withCurrentPlayer());
+  // Stop a late reset response from repainting another route.
+  if (!ownsRoute(session, mountedRoot)) return;
   // Store the reset state returned by the API.
   state = data.state;
   // Show the latest completed session if one exists after reset.
@@ -587,7 +620,9 @@ async function reset() {
   // Render the reset table state.
   render();
   // Refresh bot panel rows after the reset.
-  await updateBotPanel();
+  await updateBotPanel(session, mountedRoot);
+  // Stop when bot-panel loading outlives this route.
+  if (!ownsRoute(session, mountedRoot)) return;
   // Refresh the wallet after possible pre-call refunds.
   await refreshBalance();
   // Explain whether reset refunded an uncalled card or abandoned a started session. (BINGO-027)
@@ -595,6 +630,14 @@ async function reset() {
   const resetKey = (data.refunds || []).length ? 'reset.refunded' : (calls > 0 ? 'reset.abandoned' : 'reset.cleared');
   // Use the failure palette for a knowingly abandoned stake and positive feedback otherwise.
   toast(tr(resetKey, { amount: formatMoney(stake) }), calls === 0 || (data.refunds || []).length > 0);
+  } finally {
+    // Release reset ownership only for the exact route that started it.
+    if (ownsRoute(session, mountedRoot)) {
+      busyAction = null; // Clear reset-specific presentation.
+      lifecycle.setBusy(false); // Release the shared action boundary.
+      render(); // Restore current controls after reset work settles.
+    }
+  }
 }
 
 // Define autoTick so autoplay performs one public call per controller tick.
@@ -609,6 +652,9 @@ async function autoTick() {
 
 // Define wireControls to attach event handlers after each render.
 function wireControls() {
+  const root = lifecycle.root(); // Resolve the currently owned outlet before wiring controls.
+  // Stop when a render was superseded before event wiring.
+  if (!root) return;
   // Keep amount state synchronized when the input changes.
   root.querySelector('#bingoAmount').onchange = event => { amount = Math.max(1, Number(event.target.value || amount || 5)); };
   // Keep pattern state synchronized when the select changes.
@@ -629,10 +675,9 @@ function wireControls() {
 
 // Define render to mount the complete premium Bingo view.
 function render() {
+  const root = lifecycle.root(); // Resolve the currently owned outlet before painting.
   // Stop rendering when the module has already been unmounted.
   if (!root) return;
-  // Ensure scoped CSS is present before markup is inserted.
-  ensureStyles();
   // Store the session selected for display.
   const session = currentSession();
   // Preserve the same control through the full-root rerender. (UX-025)
@@ -657,29 +702,27 @@ export const BingoGame = {
   label: 'Bingo',
   // Mount the Bingo view into the shared shell outlet.
   async mount(node) {
-    // Store the root node for all render and event helpers.
-    root = node;
     // Clear any repeatable buy so a new session never inherits another player's configuration.
     lastBet = null;
-    // Load the Bingo i18n domain and locale settings before rendering visible text.
-    await initI18n({ domains: [I18N_DOMAIN] });
-    // Seed the localized bot placeholder before async bot markup is available.
+    // Acquire route, locale, busy, and external stylesheet ownership.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation replaced this mount during shared initialization.
+    if (!mounted) return;
+    // Seed the localized bot placeholder only after the lifecycle loaded Bingo resources.
     botPanelCache = loadingBotsHtml();
-    // Subscribe to locale changes so card state survives language switches.
-    unsubscribeLocale = onLocaleChange(() => render());
+    routeSession = Object.freeze({}); // Create an exact identity for this mount.
+    const session = routeSession; // Capture session ownership across initial state loading.
+    const mountedRoot = lifecycle.root(); // Capture the exact outlet for initial state loading.
     // Load state and render the premium Bingo view.
-    await load();
+    await load(session, mountedRoot);
   },
   // Unmount the Bingo view and stop active control-plane widgets.
   unmount() {
+    routeSession = null; // Invalidate late async work before releasing route resources.
     // Stop any active Bingo autoplay session when leaving the route.
     if (autoBox?._stop) autoBox._stop();
-    // Remove the locale listener when the route is unmounted.
-    if (unsubscribeLocale) unsubscribeLocale();
-    // Clear the locale unsubscribe reference.
-    unsubscribeLocale = null;
-    // Clear the root so pending async work cannot render into a stale node.
-    root = null;
+    lifecycle.unmount(); // Release outlet, locale, stylesheet, and action ownership.
+    busyAction = null; // Clear route-local busy presentation for a future mount.
     // Clear the repeatable buy so the next session starts fresh.
     lastBet = null;
   },

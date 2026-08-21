@@ -8,6 +8,8 @@ import { initI18n, onLocaleChange, t } from './i18n.js';
 const IDENTIFIER_RE = /^[a-z][a-z0-9-]{0,63}$/;
 // Accept only canonical lazy game domains with bounded path segments.
 const GAME_DOMAIN_RE = /^games\/[a-z0-9_-]+(?:\/[a-z0-9_-]+)*$/;
+// Accept optional shared resource domains needed by compound game control planes.
+const RESOURCE_DOMAIN_RE = /^(?:games|core)\/[a-z0-9_-]+(?:\/[a-z0-9_-]+)*$/;
 // Accept only one same-origin route-local CSS asset without traversal or query ambiguity.
 const GAME_STYLESHEET_RE = /^\/games\/[a-z0-9_-]+\.css$/;
 // Retain the production i18n adapters as one immutable default dependency set.
@@ -17,6 +19,12 @@ const DEFAULT_I18N = Object.freeze({ initI18n, onLocaleChange, t });
 export function createGameLifecycle(options = {}) {
   // Read the required localization domain once so every translation call has one owner.
   const domain = String(options.domain || '');
+  // Read the optional additional-domain declaration before normalizing its entries.
+  const requestedAdditionalDomains = options.additionalDomains;
+  // Reject ambiguous scalar declarations before any values can be coerced.
+  if (requestedAdditionalDomains !== undefined && !Array.isArray(requestedAdditionalDomains)) throw new TypeError('game lifecycle additional domains are invalid');
+  // Retain any additional shared localization domains as one immutable ordered list.
+  const additionalDomains = Object.freeze((requestedAdditionalDomains || []).map(value => String(value)));
   // Read the bounded request prefix used only when UUID support is unavailable.
   const requestPrefix = String(options.requestPrefix || 'game');
   // Retain an optional external stylesheet descriptor for route-local presentation.
@@ -33,6 +41,8 @@ export function createGameLifecycle(options = {}) {
   const random = options.random || (() => Math.random());
   // Reject a missing or traversal-shaped localization domain before any DOM or network work.
   if (!GAME_DOMAIN_RE.test(domain)) throw new TypeError('game lifecycle domain is invalid');
+  // Reject malformed, duplicate, or primary-domain aliases before resource loading begins.
+  if (additionalDomains.some(value => !RESOURCE_DOMAIN_RE.test(value)) || new Set([domain, ...additionalDomains]).size !== additionalDomains.length + 1) throw new TypeError('game lifecycle additional domains are invalid');
   // Reject request prefixes that cannot form a bounded opaque identifier.
   if (!IDENTIFIER_RE.test(requestPrefix)) throw new TypeError('game lifecycle request prefix is invalid');
   // Require the three exact locale operations consumed by the controller.
@@ -120,8 +130,8 @@ export function createGameLifecycle(options = {}) {
     try {
       // Install or validate the route-local stylesheet before visible rendering.
       ensureStylesheet();
-      // Load the exact game domain through the shared fallback chain.
-      await i18n.initI18n({ domains: [domain] });
+      // Load the game domain and its explicitly reviewed shared domains through one owner.
+      await i18n.initI18n({ domains: [domain, ...additionalDomains] });
       // Stop cleanly when navigation unmounted this route during asynchronous initialization.
       if (generation !== ownedGeneration || outlet !== node) return false;
       // Subscribe one repaint callback after resources are ready.

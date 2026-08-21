@@ -1,0 +1,253 @@
+/* Establish the Crown and Anchor route surface and keep it within the shell outlet. */
+.crown-anchor {
+  display: grid;
+  gap: 12px;
+  min-height: 100%;
+  color: var(--text, #f5ead6);
+}
+
+/* Keep the route title and current phase compact and visually distinct. */
+.crown-anchor__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 2px;
+}
+
+/* Make the localized game title the primary heading. */
+.crown-anchor__header h1 {
+  margin: 0;
+  color: var(--gold, #f2c55c);
+  font-size: clamp(30px, 4vw, 52px);
+}
+
+/* Reserve a stable status chip for ready, rolling, and settled phases. */
+.crown-anchor__phase {
+  padding: 7px 12px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  background: rgba(20, 10, 34, 0.92);
+}
+
+/* Keep the three-column dice stage dominant between the control and data rails. */
+.crown-anchor__layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.76fr) minmax(420px, 1.6fr) minmax(240px, 0.78fr);
+  gap: 14px;
+  min-height: 0;
+}
+
+/* Frame each functional region without changing shared shell styles. */
+.crown-anchor__panel {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(20, 10, 34, 0.92);
+}
+
+/* Keep wager controls in one ordered action rail. */
+.crown-anchor__controls {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+/* Align each symbol label with its bounded wager input. */
+.crown-anchor__bet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Preserve a usable minimum input target. */
+.crown-anchor__bet input {
+  min-width: 0;
+  min-height: 42px;
+}
+
+/* Present the atomic round action as the primary control. */
+.crown-anchor__play {
+  min-height: 46px;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  background: #9f1f2e;
+  font-weight: 800;
+}
+
+/* Keep the disabled primary action readable. */
+.crown-anchor__play:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+/* Distinguish the secondary repeat action from the primary play button. */
+.crown-anchor__repeat {
+  min-height: 46px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  color: var(--gold);
+  background: transparent;
+  font-weight: 800;
+}
+
+/* Keep the disabled repeat state readable. */
+.crown-anchor__repeat:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Center complete theater rows without allowing intrinsic width to escape the panel. */
+.crown-anchor__stage {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Reserve three stable dice slots inside the stage width. */
+.crown-anchor__dice {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(74px, 1fr));
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Render each authoritative symbol as a readable die face. */
+.crown-anchor__die {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 2px solid #f2c55c;
+  border-radius: 8px;
+  background: #f8f0d5;
+  color: #15211d;
+  font-size: clamp(22px, 4vw, 44px);
+  font-weight: 900;
+  transition: transform 0.9s ease;
+}
+
+/* Add a small decorative rotation while the backend-owned outcome is revealing. */
+.crown-anchor__die[data-rolling="true"] {
+  transform: rotate(14deg) scale(1.03);
+}
+
+/* Remove decorative motion when the platform requests reduced motion. */
+.crown-anchor__die[data-reduced-motion="true"] {
+  transform: none;
+  transition: none;
+}
+
+/* Show all six symbol cells inside the stage width. */
+.crown-anchor__table {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Keep symbol and hit-count cells scannable. */
+.crown-anchor__cell {
+  display: grid;
+  gap: 4px;
+  min-height: 88px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Reserve a bounded result row to avoid settlement layout shifts. */
+.crown-anchor__result {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  text-align: center;
+}
+
+/* Keep paytable and history data distinct from action controls. */
+.crown-anchor__data {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+/* Align compact paytable and history rows. */
+.crown-anchor__payrow,
+.crown-anchor__history-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Bound historical rows in one keyboard-scrollable region. */
+.crown-anchor__history {
+  max-height: 260px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* Reserve localized failure copy without moving adjacent controls. */
+.crown-anchor__error {
+  min-height: 20px;
+  color: #ffb9b9;
+}
+
+/* Stack functional zones while preserving complete tablet document flow. */
+@media (max-width: 1200px) {
+  .crown-anchor {
+    min-height: 0;
+  }
+
+  .crown-anchor__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .crown-anchor__controls {
+    order: 1;
+  }
+
+  .crown-anchor__stage {
+    order: 2;
+    align-content: start;
+    overflow: visible;
+  }
+
+  .crown-anchor__data {
+    order: 3;
+  }
+}
+
+/* Preserve the title, wager, dice, and symbol-table fit on narrow phones. */
+@media (max-width: 560px) {
+  .crown-anchor__header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .crown-anchor__panel {
+    padding: 12px;
+  }
+
+  .crown-anchor__bet {
+    grid-template-columns: minmax(0, 1fr) 84px;
+  }
+
+  .crown-anchor__table {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crown-anchor__dice {
+    grid-template-columns: repeat(3, minmax(54px, 1fr));
+  }
+}

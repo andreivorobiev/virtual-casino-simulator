@@ -10,13 +10,15 @@ import { renderAutoplay } from '../core/autoplay.js';
 import { speak, clickSound } from '../core/voice.js';
 // Import required dependency so Keno can show compatible bot controllers and trigger bot tickets through public actions.
 import { eligibleBots, playBotRound } from '../core/bots.js';
-// Import required dependency so all Keno-owned visible strings and number formats use shared i18n resources.
-import { initI18n, loadI18nDomain, onLocaleChange, t, formatMoney, formatNumber } from '../core/i18n.js';
+// Import locale-aware formatters while shared lifecycle owns Keno translations.
+import { formatMoney, formatNumber } from '../core/i18n.js';
+// Import the shared frontend lifecycle for route, locale, busy, and stylesheet ownership.
+import { createGameLifecycle } from '../core/game_lifecycle.js';
+// Import a disposable timer scope so reveal delays cannot survive route teardown.
+import { createMotionTimerScope } from '../core/motion.js';
 
 // Store the i18n domain that owns Keno frontend strings.
 const KENO_DOMAIN = 'games/keno';
-// Store the style element id so Keno-scoped premium styles are installed once.
-const STYLE_ID = 'keno-premium-styles';
 // Store the default human ticket amount shown before the first API response.
 const DEFAULT_AMOUNT = 5;
 // Store the maximum legal Keno spot count from KENO-002.
@@ -26,8 +28,6 @@ const DRAW_TOTAL = 20;
 // Store the animation delay so the reveal stays visible while controls remain fixed.
 const DRAW_DELAY_MS = 65;
 
-// Store the route outlet supplied by the shared shell.
-let root = null;
 // Store the latest Keno state payload from /api/v1/games/keno/state.
 let state = null;
 // Store the current Keno paytable from the API payload.
@@ -46,18 +46,16 @@ let displayedDraw = [];
 let botData = { bots: [], capabilities: { supports_bots: false, strategies: [] } };
 // Store the latest bot ticket actions triggered before a draw.
 let lastBotActions = [];
-// Store whether a draw request or reveal animation is active.
-let drawBusy = false;
 // Store the last committed spots and amount so one click can repeat the same ticket.
 let lastBet = null;
-// Store the locale unsubscribe callback so remounts do not leak subscriptions.
-let localeUnsubscribe = null;
-
-// Define tx to resolve Keno strings from the game-specific resource file.
-function tx(key, params = {}) {
-  // Return the translated Keno string using the shared i18n fallback chain.
-  return t(key, params, KENO_DOMAIN);
-}
+// Store one disposable reveal scope owned by the active route mount.
+let motionScope = null;
+// Centralize route, locale, action, and external stylesheet ownership.
+const lifecycle = createGameLifecycle({ domain: KENO_DOMAIN, requestPrefix: 'keno', stylesheet: { id: 'keno-premium-styles', href: '/games/keno.css' } });
+// Reuse lifecycle-owned translation lookup throughout Keno markup and feedback.
+const { tx } = lifecycle;
+// Bind all asynchronous state and reveal work to the exact active route session.
+let routeSession = null;
 
 // Define moneyText to format fake-money values through the active locale.
 function moneyText(value) {
@@ -71,28 +69,10 @@ function numberText(value, options = {}) {
   return formatNumber(value, options);
 }
 
-// Define ensureStyles to install Keno-only premium layout styles without touching shared CSS.
-function ensureStyles() {
-  // Branch when this worker already installed the scoped style block.
-  if (document.getElementById(STYLE_ID)) return;
-  // Create a style element owned by the Keno game module.
-  const style = document.createElement('style');
-  // Tag the style block so later renders can detect it.
-  style.id = STYLE_ID;
-  // Define scoped CSS for premium Keno surfaces, stable board sizing, reveal motion, and responsive containment.
-  style.textContent = '/* Keno premium layout: route-local wrapper, hero metrics, and fixed game stage. */ .keno-premium{display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;width:100%;max-width:100%;height:100%;min-width:0;min-height:0;} .keno-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end;min-width:0;min-height:104px;padding:10px 2px 4px;} .keno-eyebrow{margin:0 0 4px;color:var(--gold);font-weight:900;text-transform:uppercase;letter-spacing:0;font-size:13px;} .keno-hero-title{margin:0;color:var(--text);font-family:var(--font-display);font-size:34px;line-height:1.05;letter-spacing:0;} .keno-metric-strip{display:grid;grid-template-columns:repeat(4,minmax(126px,1fr));gap:10px;min-width:min(720px,100%);} .keno-metric{min-height:74px;padding:12px 14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.24);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);} .keno-metric strong{display:block;color:var(--text);font-size:15px;} .keno-metric span{display:block;margin-top:7px;color:var(--muted);font-size:12px;} /* Keno premium panels: preserve the shared three-column shell while keeping internal scroll areas. */ .keno-layout{width:100%;max-width:100%;min-width:0;min-height:0;} .keno-control-panel,.keno-stage-panel,.keno-detail-panel{min-width:0;border-color:var(--gold);} .keno-stage-panel{overflow:hidden;} .keno-control-panel{display:grid;align-content:start;gap:10px;} .keno-ticket-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .keno-command-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;} .keno-button-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;} .keno-action-card{padding:10px;border:1px solid var(--border-soft);border-radius:14px;background:rgba(255,255,255,.045);} .keno-action-card .row{justify-content:space-between;} .keno-action-card strong{color:var(--text);} .keno-board-shell{width:100%;max-width:100%;min-width:0;padding:14px;overflow:hidden;border:1px solid var(--gold);border-radius:18px;background:rgba(0,0,0,.18);} .keno-board-scroll{box-sizing:border-box;width:100%;max-width:100%;min-width:0;padding:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;touch-action:pan-x pan-y;scroll-padding:32px;} .keno-premium-board{box-sizing:border-box;width:max(100%,696px);grid-template-columns:repeat(10,minmax(54px,1fr));gap:8px;min-width:696px;min-height:584px;padding:32px 44px 32px 32px;} .keno-premium-board .keno-num{min-height:58px;font-size:20px;font-weight:1000;transition:transform .18s ease,box-shadow .18s ease,background .18s ease,outline-color .18s ease;} .keno-premium-board .keno-num:focus-visible{outline:3px solid var(--gold);outline-offset:3px;} .keno-premium-board .keno-num:disabled{opacity:1;color:inherit;} .keno-premium-board .keno-num.selected:disabled{color:#1d1300;} .keno-premium-board .keno-num.catch:disabled{color:#00240e;} .keno-premium-board .keno-num.latest{transform:scale(1.05);box-shadow:0 0 22px rgba(255,238,179,.66);animation:kenoPop .55s ease;} .keno-ball-rail{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;min-height:76px;margin:14px 0 0;padding:12px 14px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;border:1px solid var(--border-soft);border-radius:14px;background:rgba(0,0,0,.16);} .keno-ball-rail .ball{flex:0 0 auto;} .keno-ball-rail .ball{min-width:44px;min-height:44px;border-radius:999px;color:#1d1300;background:linear-gradient(160deg,#fff4bd,#d8a72d);font-weight:1000;} .keno-ball-rail .ball.latest{box-shadow:0 0 24px rgba(255,238,179,.82);transform:scale(1.12);} .keno-progress-track{height:12px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.08);} .keno-progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--metal-gold));transition:width .2s ease;} .keno-ticket-chip-row,.keno-drawn-chip-row{display:flex;flex-wrap:wrap;gap:6px;} .keno-ticket-chip{display:inline-grid;place-items:center;min-width:32px;min-height:30px;padding:0 8px;border-radius:8px;color:#1d1300;background:var(--metal-gold);font-weight:900;} .keno-drawn-chip{display:inline-grid;place-items:center;min-width:32px;min-height:30px;padding:0 8px;border-radius:8px;color:var(--text);background:rgba(255,217,120,.16);font-weight:900;} .keno-paytable-list,.keno-history-list{display:grid;gap:8px;} .keno-pay-row,.keno-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px;border:1px solid var(--border-soft);border-radius:12px;background:rgba(0,0,0,.14);} .keno-history-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .keno-pay-row.active{border-color:var(--gold);background:rgba(255,217,120,.13);box-shadow:0 0 0 1px rgba(255,217,120,.16);} .keno-result-copy{min-height:82px;} @keyframes kenoPop{0%{transform:scale(.92);opacity:.55;}100%{transform:scale(1.05);opacity:1;}} @media (prefers-reduced-motion:reduce){.keno-grid button.latest{animation:none;transform:none;}} @media (max-width:1200px){.keno-premium{height:auto;}.keno-hero{grid-template-columns:1fr;align-items:start;}.keno-metric-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;}.keno-stage-panel{overflow:hidden!important;}.keno-premium-board{min-height:534px;}} @media (max-width:560px){.keno-hero-title{font-size:28px;}.keno-metric-strip,.keno-ticket-metrics,.keno-button-pair,.keno-command-grid{grid-template-columns:1fr;}.keno-board-shell{padding:10px;}.keno-premium-board{width:max(100%,688px);min-width:688px;min-height:516px;}}';
-  // Let compact desktop Keno grow into the single game-outlet scroller instead of clipping lower board rows inside fixed panels.
-  style.textContent += '/* Compact desktop containment: preserve one outer vertical scroller while the board retains horizontal ownership. */ @media (min-width:1201px) and (max-height:950px){.keno-premium{height:auto;overflow:visible;}.keno-layout{grid-template-rows:auto;height:auto;overflow:visible;contain:none;}.keno-control-panel,.keno-stage-panel,.keno-detail-panel{height:auto;overflow:visible;}}';
-  // Present the secondary repeat action as a full-width gold-outline control beside the primary draw button.
-  style.textContent += '/* Keno repeat action: transparent gold-outline secondary control with a readable disabled state. */ .keno-repeat{width:100%;min-height:46px;border:1px solid color-mix(in srgb,var(--gold) 55%,transparent);border-radius:12px;background:transparent;color:var(--gold);font-weight:900;} .keno-repeat:disabled{opacity:.5;cursor:not-allowed;}';
-  // Append the style block to the document head for the mounted Keno route.
-  document.head.append(style);
-}
-
 // Define delay to make draw reveal timing readable without blocking the browser event loop.
-function delay(ms) {
-  // Return a promise that resolves after the requested animation interval.
-  return new Promise(resolve => setTimeout(resolve, ms));
+function delay(timerScope, ms) {
+  // Return a promise whose callback is canceled when the owning route scope is disposed.
+  return new Promise(resolve => timerScope.schedule(resolve, ms));
 }
 
 // Define sortedNumbers to normalize visible number collections for deterministic rendering.
@@ -138,7 +118,7 @@ function botResults() {
 // Define activeDrawNumbers to expose only numbers that should currently be visible.
 function activeDrawNumbers() {
   // Return partial reveal state during animation so the board never jumps to the final draw early.
-  if (drawBusy) return displayedDraw;
+  if (lifecycle.isBusy()) return displayedDraw;
   // Hide historical draw decoration while a newer open human ticket owns the selection surface.
   if (currentHumanTickets().length) return [];
   // Return explicitly displayed draw numbers when a completed draw has been revealed.
@@ -192,7 +172,7 @@ function activeSpotCount() {
 // Define activePhase to identify the premium Keno view state.
 function activePhase() {
   // Branch while the draw animation or request is still active.
-  if (drawBusy) return 'drawing';
+  if (lifecycle.isBusy()) return 'drawing';
   // Keep a purchased open human ticket visible ahead of any older settled result.
   if (currentHumanTickets().length) return 'selection';
   // Branch when a completed human result is available for comparison.
@@ -214,7 +194,7 @@ function strategyLabel(strategyId) {
 // Define readAmount to keep the amount input and internal amount value synchronized.
 function readAmount() {
   // Store the current numeric input value if the amount control is mounted.
-  const raw = Number(root?.querySelector('#kenoAmount')?.value || amount || DEFAULT_AMOUNT);
+  const raw = Number(lifecycle.root()?.querySelector('#kenoAmount')?.value || amount || DEFAULT_AMOUNT);
   // Store a valid positive amount while falling back to the default for invalid input.
   amount = Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_AMOUNT;
   // Return the normalized amount for API calls.
@@ -252,26 +232,35 @@ function syncSelectionFromState() {
 }
 
 // Define refreshBotData to load Keno-compatible bot controllers for the rail.
-async function refreshBotData() {
+async function refreshBotData(session = routeSession, mountedRoot = lifecycle.root()) {
   // Start protected bot metadata loading so bot API failures never break human Keno play.
   try {
     // Store eligible Keno bots and capability metadata from the public bot controller.
-    botData = await eligibleBots('keno');
+    const data = await eligibleBots('keno');
+    // Stop stale bot metadata from crossing route ownership.
+    if (!ownsRoute(session, mountedRoot)) return false;
+    botData = data; // Publish metadata only for the owning route.
   // Handle bot metadata failures with an empty capability model.
   } catch (_) {
     // Store an empty bot model so the panel can render a stable fallback.
+    if (!ownsRoute(session, mountedRoot)) return false; // Ignore failures after teardown.
     botData = { bots: [], capabilities: { supports_bots: false, strategies: [] } };
   }
+  return true; // Report that the active route accepted the metadata result.
 }
 
-// Define load to bootstrap i18n, Keno state, bot metadata, and the first render.
-async function load() {
-  // Initialize the shared i18n runtime with the Keno domain.
-  await initI18n({ domains: [KENO_DOMAIN] });
-  // Ensure the Keno domain is loaded even if i18n was already initialized by another route.
-  await loadI18nDomain(KENO_DOMAIN);
+// Require the exact route session and outlet before accepting late asynchronous work.
+function ownsRoute(session, mountedRoot) {
+  // Compare both ownership identities rather than trusting DOM presence alone.
+  return routeSession === session && lifecycle.root() === mountedRoot;
+}
+
+// Define load to bootstrap Keno state, bot metadata, and the first render.
+async function load(session, mountedRoot) {
   // Load current Keno state through the frozen v1 endpoint.
   const data = await api(currentPlayerPath('/api/v1/games/keno/state'));
+  // Stop a late initial-state response from repainting another route.
+  if (!ownsRoute(session, mountedRoot)) return false;
   // Apply the API payload to local render state.
   applyKenoPayload(data);
   // Store the latest draw so history and result reloads have an immediate focus.
@@ -285,15 +274,22 @@ async function load() {
   // Restore the repeatable spots and amount only when a settled human result is present.
   lastBet = restoredResult?.ticket?.spots ? { spots: sortedNumbers(restoredResult.ticket.spots), amount: restoredResult.ticket.amount } : null;
   // Load bot panel data before the first visible render.
-  await refreshBotData();
+  await refreshBotData(session, mountedRoot);
+  // Stop when bot metadata loading outlived the route.
+  if (!ownsRoute(session, mountedRoot)) return false;
   // Render the premium Keno route.
   render();
   // Refresh the shared wallet after route mount.
   await refreshBalance();
+  return ownsRoute(session, mountedRoot); // Report whether this route still owns the completed load.
 }
 
 // Define buyTicket to purchase the current human ticket through the documented Keno API.
 async function buyTicket({ renderAfter = true } = {}) {
+  const mountedRoot = lifecycle.root(); // Capture route ownership before reading or purchasing a ticket.
+  const session = routeSession; // Capture exact route-session ownership across ticket work.
+  // Ignore stale control or autoplay callbacks after navigation.
+  if (!mountedRoot || !ownsRoute(session, mountedRoot)) return null;
   // Branch when the human has not selected a legal ticket.
   if (selected.size < 1) {
     // Show a localized validation toast without calling the API.
@@ -307,6 +303,8 @@ async function buyTicket({ renderAfter = true } = {}) {
   try {
     // Purchase a ticket with the selected spots and human fake-money amount.
     const data = await post('/api/v1/games/keno/tickets', withCurrentPlayer({ amount, spots: selectedNumbers() }));
+    // Stop a late ticket response from crossing route ownership.
+    if (!ownsRoute(session, mountedRoot)) return null;
     // Apply the returned Keno state and paytable.
     applyKenoPayload(data);
     // Clear focused draw data when the user is preparing a fresh ticket.
@@ -316,7 +314,9 @@ async function buyTicket({ renderAfter = true } = {}) {
     // Render the updated ticket drawer when this is a standalone purchase.
     if (renderAfter) render();
     // Refresh bot metadata after balance-affecting game work.
-    if (renderAfter) await refreshBotData();
+    if (renderAfter) await refreshBotData(session, mountedRoot);
+    // Stop when metadata loading outlived this route.
+    if (!ownsRoute(session, mountedRoot)) return null;
     // Refresh the shared wallet after the ticket debit.
     await refreshBalance();
     // Play a light ticket-confirmation cue.
@@ -325,6 +325,8 @@ async function buyTicket({ renderAfter = true } = {}) {
     return data.ticket;
   // Handle ticket purchase errors without leaving the route.
   } catch (error) {
+    // Ignore stale failures after route teardown or remount.
+    if (!ownsRoute(session, mountedRoot)) return null;
     // Show the API error message in the shared toast outlet.
     toast(error.message || tx('toast.ticketFailed'));
     // Return null so callers can stop chained draw work.
@@ -334,10 +336,16 @@ async function buyTicket({ renderAfter = true } = {}) {
 
 // Define clearTicket to refund an open human ticket through the documented Keno API.
 async function clearTicket(ticketId) {
+  const mountedRoot = lifecycle.root(); // Capture the owning outlet for this refund action.
+  const session = routeSession; // Capture exact route-session ownership across the request.
+  // Ignore stale drawer callbacks after navigation.
+  if (!mountedRoot || !ownsRoute(session, mountedRoot)) return;
   // Start protected ticket clearing so missing-ticket errors become toasts.
   try {
     // Request the documented pre-draw ticket refund for the human player.
     const data = await del(`/api/v1/games/keno/tickets/${ticketId}`, withCurrentPlayer());
+    // Stop a late refund response from crossing route ownership.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Apply the returned Keno state and paytable.
     applyKenoPayload(data);
     // Render the updated ticket drawer and controls.
@@ -346,6 +354,8 @@ async function clearTicket(ticketId) {
     await refreshBalance();
   // Handle clear-ticket errors without interrupting the route.
   } catch (error) {
+    // Ignore stale failures after route teardown or remount.
+    if (!ownsRoute(session, mountedRoot)) return;
     // Show the API error message in the shared toast outlet.
     toast(error.message || tx('toast.clearFailed'));
   }
@@ -354,9 +364,14 @@ async function clearTicket(ticketId) {
 // Define draw to run one Keno draw while preserving API and ledger behavior.
 async function draw(show = true) {
   // Branch when another draw is already active.
-  if (drawBusy) return;
+  if (lifecycle.isBusy()) return;
+  const mountedRoot = lifecycle.root(); // Capture the active outlet before starting draw work.
+  const session = routeSession; // Capture exact route-session ownership across every await.
+  const activeScope = motionScope; // Capture reveal timer ownership for this draw.
+  // Ignore stale control or autoplay callbacks after navigation.
+  if (!mountedRoot || !activeScope || !ownsRoute(session, mountedRoot)) return;
   // Mark the draw busy before any render so controls reserve their disabled state.
-  drawBusy = true;
+  lifecycle.setBusy(true);
   // Clear old reveal state for the upcoming draw.
   displayedDraw = [];
   // Render the busy state immediately with fixed board dimensions.
@@ -367,15 +382,21 @@ async function draw(show = true) {
     if (!currentHumanTickets().length) {
       // Purchase the selected ticket as the same atomic human action path used by manual play.
       const ticket = await buyTicket({ renderAfter: false });
+      // Stop when ticket purchase outlived route ownership.
+      if (!ownsRoute(session, mountedRoot) || motionScope !== activeScope) return;
       // Stop the draw when ticket purchase validation failed.
       if (!ticket) return;
     }
     // Trigger eligible Keno bots through the public bot controller before the shared draw.
     const botRound = await playBotRound('keno');
+    // Stop when bot actions outlived route ownership.
+    if (!ownsRoute(session, mountedRoot) || motionScope !== activeScope) return;
     // Store bot ticket actions for the reserved bot panel.
     lastBotActions = botRound.actions || [];
     // Run the documented Keno draw endpoint without changing payload shape.
     const data = await post('/api/v1/games/keno/draw', withCurrentPlayer());
+    // Stop a late draw response from crossing route ownership.
+    if (!ownsRoute(session, mountedRoot) || motionScope !== activeScope) return;
     // Apply final state and paytable from the draw response.
     applyKenoPayload(data);
     // Store the draw payload for result and drawer surfaces.
@@ -399,7 +420,9 @@ async function draw(show = true) {
         // Play a short pitch cue tied to the ball value.
         clickSound(280 + number * 8, .035);
         // Wait briefly so browser evidence can capture draw progress.
-        await delay(DRAW_DELAY_MS);
+        await delay(activeScope, DRAW_DELAY_MS);
+        // Stop a canceled reveal from resuming in a replacement route.
+        if (!ownsRoute(session, mountedRoot) || motionScope !== activeScope) return;
       }
     // Handle autoplay and non-visual draws by showing the final draw immediately.
     } else {
@@ -407,7 +430,9 @@ async function draw(show = true) {
       displayedDraw = [...data.draw.drawn];
     }
     // Refresh bot metadata so balances in the bot panel reflect ticket debits and payouts.
-    await refreshBotData();
+    await refreshBotData(session, mountedRoot);
+    // Stop when bot metadata loading outlived this route.
+    if (!ownsRoute(session, mountedRoot) || motionScope !== activeScope) return;
     // Refresh the shared wallet after Keno settlements.
     await refreshBalance();
     // Store the primary human result for the optional voice announcement.
@@ -416,12 +441,15 @@ async function draw(show = true) {
     if (show) speak(tx('voice.caught', { count: human?.result.catch_count || 0 }), 'keno');
   // Handle draw errors without losing the route.
   } catch (error) {
+    // Ignore stale failures after route teardown or remount.
+    if (!ownsRoute(session, mountedRoot) || motionScope !== activeScope) return;
     // Show the API error message in the shared toast outlet.
     toast(error.message || tx('toast.drawFailed'));
   // Always restore controls and render the final state.
   } finally {
     // Mark draw work complete so buttons and board interactions can resume.
-    drawBusy = false;
+    if (!ownsRoute(session, mountedRoot) || motionScope !== activeScope) return; // Leave teardown cleanup to lifecycle ownership.
+    lifecycle.setBusy(false);
     // Render the completed or restored draw state.
     render();
   }
@@ -430,7 +458,7 @@ async function draw(show = true) {
 // Define repeat to re-apply the last committed ticket and re-fire one draw without a timer.
 async function repeat() {
   // Ignore repeat while a draw is active or before any prior ticket has settled.
-  if (drawBusy || !lastBet) return;
+  if (lifecycle.isBusy() || !lastBet) return;
   // Restore the previous spot selection into the local control state.
   selected = new Set(lastBet.spots);
   // Restore the previous ticket amount into the local control state.
@@ -442,7 +470,7 @@ async function repeat() {
 // Define toggleSpot to update the draft human ticket selection.
 function toggleSpot(number) {
   // Branch while a draw is active so board clicks never mutate a running ticket.
-  if (drawBusy) return;
+  if (lifecycle.isBusy()) return;
   // Remove the spot when it is already selected.
   if (selected.has(number)) selected.delete(number);
   // Add the spot when the ticket remains within the Keno spot limit.
@@ -460,7 +488,7 @@ function toggleSpot(number) {
 // Define quickPick to choose a deterministic-size random ticket for the human player.
 function quickPick(count) {
   // Branch while a draw is active so controls stay stable.
-  if (drawBusy) return;
+  if (lifecycle.isBusy()) return;
   // Replace selected spots with a unique random sample.
   selected = new Set(randomSpots(count));
   // Clear old result focus because the ticket draft changed.
@@ -476,7 +504,7 @@ function quickPick(count) {
 // Define clearSelection to reset the draft ticket without mutating open tickets.
 function clearSelection() {
   // Branch while a draw is active so controls stay stable.
-  if (drawBusy) return;
+  if (lifecycle.isBusy()) return;
   // Remove all draft spots.
   selected.clear();
   // Clear old result focus because the ticket draft changed.
@@ -597,7 +625,7 @@ function ticketMetricsHtml() {
 // Define repeatButtonHtml to render the one-click repeat control after the primary draw button.
 function repeatButtonHtml() {
   // Disable the repeat control while a draw is active or before any prior ticket has settled.
-  const repeatDisabled = drawBusy || !lastBet;
+  const repeatDisabled = lifecycle.isBusy() || !lastBet;
   // Return the secondary repeat button that re-fires the last committed spots and amount.
   return `<button type="button" class="keno-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(tx('controls.repeat'))}</button>`;
 }
@@ -609,15 +637,15 @@ function ticketControlsHtml() {
   // Branch for replay and new-ticket controls after a completed result.
   if (resultMode) return `<div class="keno-button-pair"><button id="draw" data-testid="keno-draw" type="button" class="gold">${safe(tx('controls.replay'))}</button><button id="newTicket" data-testid="keno-new-ticket" type="button" class="primary">${safe(tx('controls.newTicket'))}</button></div>${repeatButtonHtml()}`;
   // Store disabled markup for controls that cannot run during an active draw.
-  const disabled = drawBusy ? 'disabled' : '';
+  const disabled = lifecycle.isBusy() ? 'disabled' : '';
   // Return spot-selection ticket controls.
-  return `<div class="keno-command-grid"><button id="quick5" type="button" ${disabled}>${safe(tx('controls.quickPick5'))}</button><button id="quick10" type="button" ${disabled}>${safe(tx('controls.quickPick10'))}</button><button id="clearSel" type="button" ${disabled}>${safe(tx('controls.clear'))}</button></div><div class="keno-button-pair action-row"><button id="buy" data-testid="keno-buy" type="button" class="gold" ${disabled}>${safe(tx('controls.buy'))}</button><button id="draw" data-testid="keno-draw" type="button" class="primary" ${disabled}>${safe(drawBusy ? tx('controls.drawing') : tx('controls.draw'))}</button></div>${repeatButtonHtml()}`;
+  return `<div class="keno-command-grid"><button id="quick5" type="button" ${disabled}>${safe(tx('controls.quickPick5'))}</button><button id="quick10" type="button" ${disabled}>${safe(tx('controls.quickPick10'))}</button><button id="clearSel" type="button" ${disabled}>${safe(tx('controls.clear'))}</button></div><div class="keno-button-pair action-row"><button id="buy" data-testid="keno-buy" type="button" class="gold" ${disabled}>${safe(tx('controls.buy'))}</button><button id="draw" data-testid="keno-draw" type="button" class="primary" ${disabled}>${safe(lifecycle.isBusy() ? tx('controls.drawing') : tx('controls.draw'))}</button></div>${repeatButtonHtml()}`;
 }
 
 // Define ticketPanelHtml to render the left Keno control rail.
 function ticketPanelHtml() {
   // Store disabled input markup while a draw is active.
-  const disabled = drawBusy ? 'disabled' : '';
+  const disabled = lifecycle.isBusy() ? 'disabled' : '';
   // Return the complete control rail with ticket, status, autoplay, and bot panels.
   return `<section class="panel control-rail keno-control-panel" data-testid="keno-ticket-drawer"><h2>${safe(tx('ticket.title'))}</h2>${ticketMetricsHtml()}<label>${safe(tx('ticket.amount'))}<input id="kenoAmount" data-testid="keno-amount" type="number" min="0.01" max="1000000" step="0.01" value="${safe(amount)}" ${disabled}></label>${ticketControlsHtml()}${statusCardHtml()}<div data-keno-auto></div>${botPanelHtml()}</section>`;
 }
@@ -633,7 +661,7 @@ function boardCellHtml(number, drawnSet, catchSet, latest) {
   // Store all visual state classes for this cell.
   const classes = ['keno-num', isSelected ? 'selected' : '', isDrawn ? 'drawn' : '', isCatch ? 'catch' : '', latest === number ? 'latest' : ''].filter(Boolean).join(' ');
   // Return the fixed-size number button with its stable test id.
-  return `<button type="button" class="${classes}" data-num="${number}" data-keno-num="${number}" data-testid="keno-num-${number}" aria-pressed="${isSelected ? 'true' : 'false'}" ${drawBusy ? 'disabled' : ''}>${number}</button>`;
+  return `<button type="button" class="${classes}" data-num="${number}" data-keno-num="${number}" data-testid="keno-num-${number}" aria-pressed="${isSelected ? 'true' : 'false'}" ${lifecycle.isBusy() ? 'disabled' : ''}>${number}</button>`;
 }
 
 // Define boardHtml to render the 1-80 Keno board.
@@ -817,6 +845,9 @@ function drawerHtml() {
 
 // Define bindEvents to wire controls after each route-local render.
 function bindEvents() {
+  const root = lifecycle.root(); // Resolve the currently owned outlet before wiring controls.
+  // Stop when render ownership changed before event binding.
+  if (!root) return;
   // Wire every Keno number cell to spot selection.
   root.querySelectorAll('[data-keno-num]').forEach(button => { button.onclick = () => toggleSpot(Number(button.dataset.kenoNum)); });
   // Synchronize amount state without replacing the focused control during blur into Draw.
@@ -845,6 +876,7 @@ function bindEvents() {
 
 // Define render to paint the premium Keno route into the shared shell outlet.
 function render() {
+  const root = lifecycle.root(); // Resolve the currently owned outlet before painting.
   // Branch when the route has been unmounted.
   if (!root) return;
   // Preserve the focused ticket control through the full-root render. (UX-025)
@@ -865,28 +897,29 @@ export const KenoGame = {
   label: 'Keno',
   // Mount Keno into the supplied route outlet.
   async mount(node) {
-    // Store the shared shell route outlet.
-    root = node;
     // Reset the repeatable ticket so a new mount never inherits a stale one before load reconciles history.
     lastBet = null;
-    // Install route-local premium styles before the first render.
-    ensureStyles();
-    // Subscribe to locale changes so Keno text updates without remounting gameplay state.
-    localeUnsubscribe = onLocaleChange(() => render());
+    // Acquire route, locale, action, and external stylesheet ownership.
+    const mounted = await lifecycle.mount(node, render);
+    // Stop when navigation replaced this mount during shared initialization.
+    if (!mounted) return;
+    motionScope?.dispose(); // Dispose a defensive stale reveal scope.
+    motionScope = createMotionTimerScope(); // Own every reveal delay through route teardown.
+    routeSession = Object.freeze({}); // Create an exact identity for this mount.
+    const session = routeSession; // Capture route-session ownership across initial loading.
+    const mountedRoot = lifecycle.root(); // Capture the exact outlet across initial loading.
     // Load state, resources, and bot metadata before rendering.
-    await load();
+    await load(session, mountedRoot);
   },
   // Unmount Keno and release shared control-plane subscriptions.
   unmount() {
+    routeSession = null; // Invalidate late async work before releasing route resources.
     // Stop Keno autoplay through the shared control-plane helper when mounted.
     if (autoBox?._stop) autoBox._stop();
-    // Remove the locale subscription when one exists.
-    if (localeUnsubscribe) localeUnsubscribe();
-    // Clear the locale unsubscribe reference for the next mount.
-    localeUnsubscribe = null;
+    motionScope?.dispose(); // Cancel every pending reveal callback owned by this route.
+    motionScope = null; // Clear the disposed scope for a future mount.
     // Clear the repeatable ticket so the next session starts fresh.
     lastBet = null;
-    // Clear the route outlet reference.
-    root = null;
+    lifecycle.unmount(); // Release outlet, locale, stylesheet, and shared action ownership.
   }
 };

@@ -141,8 +141,8 @@ class BrowserWaitGovernanceTests(unittest.TestCase):
         bingo_source = BINGO_ADMIN_OWNER_SOURCE.partition("if table_games_owner:")[2].partition("# Seed one isolated deferred natural")[0]
         # Preserve the two permanent case ids and their exact existing requirement mappings.
         self.assertEqual(bingo_source.count("run_case('BR-BINGO-PURCHASE-001',['BINGO-012','BINGO-022','LEDGER-020','TEST-010','TEST-012']"), 1)
-        # Preserve the premium terminal case identity and mapping byte-for-byte.
-        self.assertEqual(bingo_source.count("run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013']"), 1)
+        # Preserve the premium terminal case identity and its lifecycle-expanded mapping byte-for-byte.
+        self.assertEqual(bingo_source.count("run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013','CORE-034']"), 1)
         # Require explicit auto-response and reload-response validation around a lobby transition.
         self.assertIn("require_bingo_terminal_auto_payload(bingo_auto_payload)", bingo_source)
         # Require route ownership to leave Bingo before the state-response-observed remount.

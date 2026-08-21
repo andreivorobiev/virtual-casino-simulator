@@ -127,6 +127,21 @@ assert.throws(() => createGameLifecycle({ domain: '../games/escape' }), /domain 
 assert.throws(() => createGameLifecycle({ domain: 'games/test', stylesheet: { id: 'bad-style', href: 'https://example.invalid/style.css' } }), /stylesheet is invalid/);
 // Reject same-origin traversal before a browser can normalize it to an unrelated asset.
 assert.throws(() => createGameLifecycle({ domain: 'games/test', stylesheet: { id: 'bad-style', href: '/games/../styles.css' } }), /stylesheet is invalid/);
+// Create one compound game controller that owns two reviewed shared resource domains.
+const compoundI18n = createI18n();
+// Construct the controller with the exact Roulette-style domain topology.
+const compound = createGameLifecycle({ domain: 'games/roulette', additionalDomains: ['core/autoplay', 'core/bots'], i18n: compoundI18n, documentRef: createDocument() });
+// Mount the compound controller through the same single locale-subscription owner.
+assert.equal(await compound.mount({ id: 'compound-outlet' }, () => {}), true);
+// Require the primary and shared domains to load once in deterministic order.
+assert.deepEqual(compoundI18n.initialized, [{ domains: ['games/roulette', 'core/autoplay', 'core/bots'] }]);
+// Release the compound route before validating hostile configuration.
+compound.unmount();
+// Reject a non-array domain declaration instead of silently accepting ambiguous input.
+assert.throws(() => createGameLifecycle({ domain: 'games/test', additionalDomains: 'core/bots' }), /additional domains are invalid/);
+// Reject duplicate and traversal-shaped additional domains before any locale work.
+assert.throws(() => createGameLifecycle({ domain: 'games/test', additionalDomains: ['core/bots', 'core/bots'] }), /additional domains are invalid/);
+assert.throws(() => createGameLifecycle({ domain: 'games/test', additionalDomains: ['core/../escape'] }), /additional domains are invalid/);
 
 // Seed one conflicting DOM owner to exercise fail-closed mount cleanup.
 const conflictDocument = createDocument();
@@ -368,5 +383,41 @@ for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'l
 for (const duplicate of ['let root =', 'let busy =', 'unsubscribeLocale', 'mountGeneration', 'requestCounter', 'function ensureStyles', 'function nextActionId', 'function text(', 'style.textContent', 'onLocaleChange', 'loadI18nDomain']) assert.equal(teenPattiSource.includes(duplicate), false, duplicate);
 // Require representative route, card, decision, wager, paytable, result, repeat, and responsive rules to survive extraction.
 for (const selector of ['.teenp {', '.tp-stage {', '.tp-row h4 {', '.tp-cards {', '.tp-cards.win {', '.tp-actions {', '.tp-btn.play {', '.tp-btn.fold {', '.tp-btn.deal {', '.tp-field input {', '.tp-pays {', '.tp-rank {', '.tp-result {', '.tp-repeat {', '@media (max-width: 900px)', '@media (max-width: 640px)', '@media (prefers-reduced-motion: reduce)']) assert.ok(teenPattiCss.includes(selector), selector);
+// Read the exact twentieth-adopter source for per-slice duplicate-helper deletion evidence.
+const crownAndAnchorSource = await readFile(new URL('../web/games/crown_and_anchor.js', import.meta.url), 'utf8');
+// Read Crown and Anchor's formatted external stylesheet for ownership and tooling visibility.
+const crownAndAnchorCss = await readFile(new URL('../web/games/crown_and_anchor.css', import.meta.url), 'utf8');
+// Require Crown and Anchor to delegate shared lifecycle ownership while retaining strict secure replay identity and motion scope contracts.
+for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', 'lifecycle.isBusy()', 'lifecycle.setBusy(true)', "requestPrefix: 'caa'", "href: '/games/crown_and_anchor.css'", 'export function createClientRequestId', 'createMotionTimerScope', 'routeSession']) assert.ok(crownAndAnchorSource.includes(marker), marker);
+// Reject Crown and Anchor's migrated root, busy, locale, style-text, and inline-style wrappers.
+for (const duplicate of ['let root =', 'let playPending =', 'localeUnsubscribe', 'function ensureStyles', 'style.textContent', 'onLocaleChange', 'initI18n', 'ROUTE_CSS']) assert.equal(crownAndAnchorSource.includes(duplicate), false, duplicate);
+// Require representative layout, dice, reduced-motion, controls, history, and responsive rules to survive extraction.
+for (const selector of ['.crown-anchor {', '.crown-anchor__layout {', '.crown-anchor__play {', '.crown-anchor__repeat {', '.crown-anchor__stage {', '.crown-anchor__dice {', '.crown-anchor__die[data-rolling="true"] {', '.crown-anchor__die[data-reduced-motion="true"] {', '.crown-anchor__table {', '.crown-anchor__result {', '.crown-anchor__history {', '@media (max-width: 1200px)', '@media (max-width: 560px)']) assert.ok(crownAndAnchorCss.includes(selector), selector);
+// Read each final issue-718 adopter as one aggregate completion inventory.
+const completionAdopters = [
+  // Bind Chuck-a-Luck to its extracted style and frozen request-id seam.
+  { id: 'chuck_a_luck', markers: ["requestPrefix: 'cal'", "href: '/games/chuck_a_luck.css'", 'lifecycle.nextRequestId()', 'routeSession'], duplicates: ['let root =', 'let rolling =', 'unsubscribeLocale', 'style.textContent', 'onLocaleChange', 'loadI18nDomain'] },
+  // Bind Bingo to independent busy presentation under one shared owner.
+  { id: 'bingo', markers: ["requestPrefix: 'bingo'", "href: '/games/bingo.css'", 'lifecycle.isBusy()', 'routeSession'], duplicates: ['let root =', 'let callBusy =', 'let purchaseBusy =', 'unsubscribeLocale', 'style.textContent', 'onLocaleChange', 'initI18n'] },
+  // Bind Craps to its strict action ids, stale route guard, and managed dice scope.
+  { id: 'craps', markers: ["requestPrefix: 'craps'", "href: '/games/craps.css'", 'lifecycle.isBusy()', 'routeSession', 'createMotionTimerScope'], duplicates: ['let root =', 'localeUnsubscribe', 'style.textContent', 'onLocaleChange', 'loadI18nDomain'] },
+  // Bind Keno to its managed draw scope and authoritative ticket state.
+  { id: 'keno', markers: ["requestPrefix: 'keno'", "href: '/games/keno.css'", 'lifecycle.isBusy()', 'routeSession', 'createMotionTimerScope'], duplicates: ['let root =', 'let drawBusy =', 'localeUnsubscribe', 'style.textContent', 'onLocaleChange', 'initI18n', 'setTimeout'] },
+  // Bind Roulette to compound locale ownership and its result-locked motion scope.
+  { id: 'roulette', markers: ["requestPrefix: 'roulette'", "href: '/games/roulette.css'", 'additionalDomains: [AUTOPLAY_DOMAIN, BOTS_DOMAIN]', 'lifecycle.isBusy()', 'routeSession', 'createMotionTimerScope'], duplicates: ['let root =', 'let spinBusy =', 'localeUnsubscribe', 'mountGeneration', 'style.textContent', 'onLocaleChange', 'initI18n', 'PREMIUM_STYLE'] },
+];
+// Verify every completion adopter delegates the shared root, mount, and teardown contract.
+for (const adopter of completionAdopters) {
+  // Read the production game source for exact duplicate-helper deletion evidence.
+  const adopterSource = await readFile(new URL(`../web/games/${adopter.id}.js`, import.meta.url), 'utf8');
+  // Require the common controller surface plus each game's behavior-preserving seams.
+  for (const marker of ['createGameLifecycle', 'lifecycle.mount(node, render)', 'lifecycle.unmount()', 'lifecycle.root()', ...adopter.markers]) assert.ok(adopterSource.includes(marker), `${adopter.id}:${marker}`);
+  // Reject every game-local lifecycle owner retired by the slice.
+  for (const duplicate of adopter.duplicates) assert.equal(adopterSource.includes(duplicate), false, `${adopter.id}:${duplicate}`);
+  // Require a formatted external style asset with route and responsive presentation rules.
+  const adopterCss = await readFile(new URL(`../web/games/${adopter.id}.css`, import.meta.url), 'utf8');
+  // Reject an empty or opaque stylesheet extraction.
+  assert.ok(adopterCss.includes('{') && adopterCss.includes('@media'), `${adopter.id}:external-css`);
+}
 // Report one stable diagnostic only after every lifecycle and adoption assertion passes.
 console.log('game_frontend_lifecycle=PASS');

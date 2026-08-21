@@ -1,9 +1,10 @@
 {
   "module": "bingo",
-  "version": "9.3.8",
+  "version": "9.3.9",
   "paths": [
     "casino/games/bingo/",
-    "web/games/bingo.js"
+    "web/games/bingo.js",
+    "web/games/bingo.css"
   ],
   "requirements_prefixes": [
     "BINGO"

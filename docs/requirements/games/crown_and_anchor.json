@@ -18,11 +18,12 @@
       "implementation_files": [
         "casino/games/crown_and_anchor/engine.py",
         "casino/games/crown_and_anchor/rules.py",
-        "web/games/crown_and_anchor.js"
+        "web/games/crown_and_anchor.js",
+        "web/games/crown_and_anchor.css"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "game-expansion-crown-and-anchor",
-      "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #133."
+      "changed_in": "issue-1035-crown-and-anchor-lifecycle-slice",
+      "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #133. Issue #1035 preserves every symbol, hit-count, and payout rule while moving only browser route ownership and unchanged presentation declarations onto the shared lifecycle and external stylesheet."
     },
     {
       "id": "CAA-002",
@@ -40,11 +41,14 @@
         "casino/games/crown_and_anchor/api.py",
         "casino/games/crown_and_anchor/service.py",
         "web/app.js",
+        "web/games/crown_and_anchor.js",
+        "web/games/crown_and_anchor.css",
+        "tests/games/crown_and_anchor/test_frontend.mjs",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "issue-867-crown-and-anchor-simple-wager",
-      "notes": "Session context overrides caller player ids; provider-current prepared faces remain private until exact ledger proof allows one terminal result to survive reload and process restart."
+      "changed_in": "issue-1035-crown-and-anchor-lifecycle-slice",
+      "notes": "Session context overrides caller player ids; provider-current prepared faces remain private until exact ledger proof allows one terminal result to survive reload and process restart. The shared route generation rejects stale initial-state and delayed-settlement responses after teardown or remount."
     },
     {
       "id": "CAA-003",
@@ -76,14 +80,17 @@
       ],
       "implementation_files": [
         "web/games/crown_and_anchor.js",
+        "web/games/crown_and_anchor.css",
         "web/i18n/en-US/games/crown_and_anchor.json",
         "web/i18n/ru-RU/games/crown_and_anchor.json",
+        "docs/evidence/crown_and_anchor/README.md",
+        "tests/games/crown_and_anchor/test_frontend.mjs",
         "tests/visual/visual_matrix.json",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "issue-227-crown-stage-completeness",
-      "notes": "Evidence covers both locales and every governed viewport; BR-CAA-001 rejects any missing, unpainted, or stage-escaped die or symbol panel."
+      "changed_in": "issue-1035-crown-and-anchor-lifecycle-slice",
+      "notes": "Evidence covers both locales and every governed viewport; BR-CAA-001 rejects any missing, unpainted, or stage-escaped die or symbol panel, requires the external stylesheet singleton, preserves the dominant stage and control sizes, and proves teardown plus remount without stale route DOM."
     },
     {
       "id": "CAA-005",
@@ -103,15 +110,18 @@
         "modules/crown_and_anchor.json",
         "modules/module-manifest.json",
         "contracts/compatibility/module-api-matrix.json",
+        "tests/game_frontend_lifecycle.mjs",
+        "tests/games/crown_and_anchor/test_frontend.mjs",
         "tests/game_drivers/crown_and_anchor.py",
+        "docs/evidence/crown_and_anchor/README.md",
         "tests/visual/visual_matrix.json",
         "tests/ui_50000.py",
         "tests/unit/ui_50000_tests.py",
         "tests/run_tests.py"
       ],
       "introduced_in": "game-expansion-crown-and-anchor",
-      "changed_in": "issue-227-crown-stage-completeness",
-      "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical; formal evidence rejects incomplete Crown and Anchor theater even when no enabled control is clipped."
+      "changed_in": "issue-1035-crown-and-anchor-lifecycle-slice",
+      "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical; listener-free lifecycle evidence rejects duplicate route helpers or CSS owners, and formal evidence rejects incomplete Crown and Anchor theater even when no enabled control is clipped."
     },
     {
       "id": "CAA-006",

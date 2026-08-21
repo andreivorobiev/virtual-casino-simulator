@@ -315,6 +315,8 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             assert roulette_locale_state['missingKeyCount'] == 0, roulette_i18n_failure_diagnostic(roulette_locale_state)
         # Define the premium_roulette_layout function used by this module.
         def premium_roulette_layout():
+            # Require one lifecycle-owned external stylesheet and no retained inline owner.
+            assert page.locator('link#roulette-styles[href="/games/roulette.css"]').count()==1 and page.locator('style#roulette-styles').count()==0
             # Verify the premium three-zone layout is mounted.
             assert page.get_by_test_id('roulette-premium-layout').is_visible()
             # Verify the dimensional wheel frame is mounted as a dedicated casino focal region.
@@ -391,7 +393,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             page.screenshot(path=str(screenshots/'after-pass-shell-roulette-tablet.png'),full_page=False)
             # Restore desktop dimensions before gameplay interaction coverage continues.
             page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
-        run_case('BR-ROU-PREMIUM-001',['ROU-041','ROU-043','ROU-045','ROU-048','ROU-049','UX-007','UX-009'],premium_roulette_layout)
+        run_case('BR-ROU-PREMIUM-001',['ROU-041','ROU-043','ROU-045','ROU-048','ROU-049','UX-007','UX-009','CORE-034'],premium_roulette_layout)
         # Capture the key-clean desktop Roulette shell as after-pass evidence.
         shot('after-pass-shell-roulette-desktop.png')
         # Capture betting-state visual evidence for the Roulette worker handback.
@@ -1288,6 +1290,8 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size({'width':1920,'height':1080})
         # Navigate directly to Keno so no Slots route state is required on this shard.
         page.goto(base+'/games/keno',wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=WAIT_MS)
+        # Require one lifecycle-owned external stylesheet and no retained inline owner.
+        assert page.locator('link#keno-premium-styles[href="/games/keno.css"]').count()==1 and page.locator('style#keno-premium-styles').count()==0
         # Normalize the player locale before Keno builds its complete localized evidence matrix.
         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
         # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
@@ -1654,7 +1658,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             keno_singular_result=page.get_by_test_id('keno-result').inner_text()
             # Require singular English copy and reject the reported plural grammar defect.
             assert '1 catch on a 1-spot ticket' in keno_singular_result and '1 catches' not in keno_singular_result
-        run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','KENO-023','KENO-024','TEST-066','AUTO-012','UX-007','UX-009'],premium_keno)
+        run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','KENO-023','KENO-024','TEST-066','AUTO-012','UX-007','UX-009','CORE-034'],premium_keno)
         # Resize to the governed mobile viewport for Keno containment coverage.
         page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(300)
         # Read page and intended board-scroll widths at the exact evaluator viewport.
