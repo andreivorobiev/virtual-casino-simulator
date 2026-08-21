@@ -18,7 +18,7 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-2
 ## Version and contract allocation
 
 - Packaged release remains `0.9.5.84`.
-- Content-owned module revisions are application `9.72.0`, core `10.13.0`, admin `1.21.0`, operations `1.2.0`, tests `1.116.1`, docs `1.112.1`, contracts `1.63.0`, and tooling `1.45.0`; every other module remains exact protected-main values.
+- Content-owned module revisions are application `9.72.0`, core `10.13.0`, admin `1.21.0`, operations `1.2.0`, tests `1.116.2`, docs `1.112.2`, contracts `1.63.0`, and tooling `1.45.1`; every other module remains exact protected-main values.
 - The frozen `/api/v1` contract and all game, paytable, settlement, signup, OAuth, provider, billing, and public-launch behavior remain unchanged.
 
 ## Validation and handback

@@ -199,9 +199,34 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # Distribute the formal issue #227 workload only when the explicit dispatch input is true.
+  # Derive the formal issue #227 matrix from the exact-source catalog instead of a stale enumerated list.
+  formal_ui_plan:
+    name: Formal UI allocation plan
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.formal_ui_50000 == true }}
+    runs-on: ubuntu-latest
+    outputs:
+      allocation_indices: ${{ steps.plan.outputs.allocation_indices }}
+    steps:
+      # Pin planning to the same immutable source that every worker and aggregate will inspect.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dev requirements
+        run: python -m pip install -r requirements-dev.txt
+      - name: Derive complete formal worker matrix
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          allocation_indices="$(python tests/ui_50000.py --print-formal-allocation-indices)"
+          test -n "${allocation_indices}"
+          echo "allocation_indices=${allocation_indices}" >> "${GITHUB_OUTPUT}"
+
+  # Distribute every planner-owned formal allocation only when the explicit dispatch input is true.
   formal_ui_workers:
     name: Formal UI worker ${{ matrix.allocation_index }}
+    needs: formal_ui_plan
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.formal_ui_50000 == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
@@ -209,40 +234,7 @@ jobs:
       fail-fast: false
       max-parallel: 20
       matrix:
-        allocation_index:
-          - 0
-          - 1
-          - 2
-          - 3
-          - 4
-          - 5
-          - 6
-          - 7
-          - 8
-          - 9
-          - 10
-          - 11
-          - 12
-          - 13
-          - 14
-          - 15
-          - 16
-          - 17
-          - 18
-          - 19
-          - 20
-          - 21
-          - 22
-          - 23
-          - 24
-          - 25
-          - 26
-          - 27
-          - 28
-          - 29
-          - 30
-          - 31
-          - 32
+        allocation_index: ${{ fromJSON(needs.formal_ui_plan.outputs.allocation_indices) }}
     steps:
       # Pin every worker to the exact workflow-dispatch commit.
       - uses: actions/checkout@v4
@@ -281,7 +273,9 @@ jobs:
   formal_ui_aggregate:
     name: Formal UI exact aggregate
     if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.formal_ui_50000 == true }}
-    needs: formal_ui_workers
+    needs:
+      - formal_ui_plan
+      - formal_ui_workers
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -292,6 +286,10 @@ jobs:
           python-version: '3.11'
       - name: Install dev requirements
         run: python -m pip install -r requirements-dev.txt
+      - name: Require exact-source allocation planning
+        run: |
+          test "${{ needs.formal_ui_plan.result }}" = "success"
+          test -n "${{ needs.formal_ui_plan.outputs.allocation_indices }}"
       - name: Download every terminal worker artifact
         uses: actions/download-artifact@v4
         with:

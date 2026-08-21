@@ -7039,7 +7039,7 @@
     {
       "id": "TEST-092",
       "module": "Tests",
-      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.",
+      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns each game at least its deterministic floor of 50,000 divided by the current catalog count, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.",
       "status": "PASS",
       "api_tests": [
         "UI-50000-HARNESS-001"
@@ -7052,8 +7052,8 @@
         ".github/workflows/browser-tests.yml"
       ],
       "introduced_in": "issue-227-ui-50000-ci-replacement",
-      "changed_in": "issue-227-draw-poker-hold-serialization",
-      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
+      "changed_in": "issue-1048-formal-worker-matrix",
+      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Its exact-source planner emits one contiguous matrix index for every allocation derived from the current catalog and four Roulette replicas, workers consume that generated matrix, and the aggregate still rejects any missing, extra, duplicate, malformed, or foreign-source shard. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
     },
     {
       "id": "MOTION-004",
