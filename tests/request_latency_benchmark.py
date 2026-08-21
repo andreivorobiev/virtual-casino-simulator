@@ -91,6 +91,10 @@ SYNTHETIC_ORIGIN = "https://latency-benchmark.example.invalid"
 SYNTHETIC_EMAIL = "request-latency@example.invalid"
 # Keep the synthetic bootstrap credential inside the child process only.
 SYNTHETIC_PASSWORD = "synthetic-request-latency-password-2026"
+# Keep one shared synthetic token-digest namespace for sequential MySQL qualification children.
+SYNTHETIC_TOKEN_DIGEST_KEY = "request-latency-token-digest-key-material-2026"
+# Keep one shared synthetic mail-digest namespace so a persisted Admin remains discoverable.
+SYNTHETIC_MAIL_DIGEST_KEY = "request-latency-mail-digest-key-material-2026"
 
 
 # Report one fixed benchmark failure without reflecting request or environment data.
@@ -831,9 +835,9 @@ def _configure_child_environment(provider: str, runtime_root: Path) -> None:
     # Supply the synthetic bootstrap credential only to this child.
     os.environ["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = SYNTHETIC_PASSWORD
     # Supply an independent synthetic token-digest key.
-    os.environ["CASINO_TOKEN_DIGEST_KEY"] = "request-latency-token-digest-key-material-2026"
+    os.environ["CASINO_TOKEN_DIGEST_KEY"] = SYNTHETIC_TOKEN_DIGEST_KEY
     # Supply an independent synthetic mail-digest key.
-    os.environ["CASINO_MAIL_DIGEST_KEY"] = "request-latency-mail-digest-key-material-2026"
+    os.environ["CASINO_MAIL_DIGEST_KEY"] = SYNTHETIC_MAIL_DIGEST_KEY
     # Supply the reserved-domain canonical origin.
     os.environ["CASINO_CANONICAL_ORIGIN"] = SYNTHETIC_ORIGIN
     # Trust only the direct loopback peer.

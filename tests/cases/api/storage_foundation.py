@@ -34,7 +34,7 @@ from tests.games import test_game_rule_schema
 
 
 # Register the complete storage/MySQL area at its historical CLI boundary.
-def run_cases(run_case, include_live=False, include_migration_live=False, request_latency_callback=None):
+def run_cases(run_case, include_live=False, include_migration_live=False, request_latency_callback=None, gunicorn_json_load_callback=None, gunicorn_load_callback=None):
     """Run the exact default and explicitly selected live storage cases."""
     # Define one focused runner for the extracted provider-neutral package boundary.
     def run_storage_package_boundary_tests():
@@ -217,7 +217,11 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case("STORAGE-MYSQL-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "LEDGER-009", "LEDGER-033", "TEST-164"], storage_tests.run_mysql_schema_provider_path)
     # Execute bounded capacity, cleanup, fork, observability, and pool evidence without a service.
-    run_case("MYSQL-POOL-001", ["STORAGE-010", "TEST-141", "TEST-220"], run_mysql_pool_tests)
+    run_case("MYSQL-POOL-001", ["STORAGE-010", "MYSQL-011", "TEST-141", "TEST-220"], run_mysql_pool_tests)
+    # Exercise ordinary JSON concurrency through the exact production Gunicorn stack when explicitly hosted.
+    if gunicorn_json_load_callback is not None:
+        # Keep the provider-neutral profile inside the central inventory and aggregate result ledger.
+        gunicorn_json_load_callback()
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
@@ -227,4 +231,4 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "STORAGE-018", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246", "TEST-247"], lambda: run_mysql_migration_live_matrix(request_latency_callback))
+        run_case("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "STORAGE-018", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246", "TEST-247", "TEST-251"], lambda: run_mysql_migration_live_matrix(request_latency_callback, gunicorn_load_callback))

@@ -6,16 +6,16 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.71.4
-- core: 10.12.0
+- application: 9.72.0
+- core: 10.13.0
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.4
 - bots: 1.1.1
 - autoplay: 1.1.6
 - audio: 9.1.3
-- admin: 1.20.13
-- operations: 1.1.2
+- admin: 1.21.0
+- operations: 1.2.0
 - marketing_site: 1.0.2
 - roulette: 9.7.6
 - slots: 9.5.2
@@ -51,10 +51,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.7
-- tests: 1.115.1
-- docs: 1.111.1
-- contracts: 1.62.7
-- tooling: 1.44.0
+- tests: 1.116.0
+- docs: 1.112.0
+- contracts: 1.63.0
+- tooling: 1.45.0
 - commenting_policy: 2.1.0
 - color_wheel: 1.1.7
 - poker_dice: 1.1.5
@@ -335,7 +335,7 @@ Historical source baseline: 9.1.0
 - **OPS-001** (Operations) - PASS: Anonymous liveness reports only a fixed live process state without storage access, build metadata, timestamps, heartbeat state, or dependency diagnostics.
 - **OPS-002** (Operations) - PASS: Authenticated readiness checks configured JSON or MySQL storage with bounded waits and returns only allowlisted provider, component state, and fixed degraded reason codes.
 - **OPS-003** (Operations) - PASS: Successful dependency checks advance a monotonic process-local heartbeat timestamp, while later degradation retains the last successful value and restart resets it.
-- **OPS-004** (Operations) - PASS: Admin presents live, degraded, and client-derived down Operations states in English and Russian with text plus a non-color signal and no raw diagnostics.
+- **OPS-004** (Operations) - PASS: Admin presents live, degraded, and client-derived down Operations states in English and Russian with text plus a non-color signal, and shows only bounded process-local MySQL pool capacity, gauges, saturation encounters, and checkout timeouts without raw diagnostics.
 - **OPS-005** (Operations) - PASS: Copied-deployment smoke records the loopback child PID and port, probes anonymous liveness plus authenticated readiness and Admin telemetry, verifies sanitized build provenance, stops the child, and proves the port closed.
 - **OPS-006** (Operations) - PASS: Production readiness and Admin Operations accept a root-managed SHA-256-verified monitor bearer only for GET /readyz and GET /api/v2/admin/operations, while every other API route continues to require a normal authenticated session. Pull deployment validates the split root-managed bearer and application digest before cutover, an explicit root-operator repair mode can atomically align only the digest, and post-cutover observation loads the Authorization assignment through a strict non-shell reader without logging any protected value.
 - **TEST-044** (Tests) - PASS: Operations regression evidence covers anonymous and authenticated policy, healthy and degraded dependencies, Admin authorization, EN/RU responsive states, copied deployment, and listener cleanup.
@@ -554,7 +554,7 @@ Historical source baseline: 9.1.0
 - **CORE-030** (Core) - PASS: The core exposes one route-free player-game-state update helper that executes default selection, object normalization, caller mutation, schema and timestamp stamping, and publication inside the selected provider's existing atomic document boundary. It preserves the legacy human fallback, keeps non-human documents isolated, publishes no partial state, and leaves durable JSON bytes or MySQL-owned state unchanged when the mutator fails.
 - **CORE-031** (Core) - PASS: The core defines one provider-neutral game-action contract with bounded immutable identity, declared resources, snapshots, signed integer-cent movements, plans, receipts, and lifecycle resolution; canonical request fingerprints bind exact semantic input and resources, conflicting durable-key reuse is rejected before planner or RNG work, execute_game_action_once applies the same receipt model to paid and zero-cost actions, and resolve_game_action reports only pending, committed with the exact receipt, or durably uncommitted without invoking a planner.
 - **TEST-140** (Tests) - PASS: Listener-free source inspection proves the Casino nginx virtual hosts override the identity-bearing default access log, use the complete fixed route-family set, and expose exactly the five approved timing variables with every raw request, path, query, identity, network, header, cookie, body, and payload field excluded.
-- **STORAGE-010** (Storage) - PASS: Each MySQL application process owns one lazy thread-safe physical connection pool with validated capacity one through sixteen, bounded checkout and physical-connect deadlines, non-reconnecting idle liveness checks, request-scoped cursor and lease cleanup, fork/PID isolation, rollback and session reset before reuse, unhealthy-session discard, and terminal process cleanup, while JSON storage, schema version two, DDL-free runtime grants, transaction semantics, and application-only rollback remain unchanged.
+- **STORAGE-010** (Storage) - PASS: Each MySQL application process owns one lazy thread-safe physical connection pool with default capacity sixteen and validated capacity one through sixty-four, bounded checkout and physical-connect deadlines, non-reconnecting idle liveness checks, request-scoped cursor and lease cleanup, fork/PID isolation, rollback and session reset before reuse, unhealthy-session discard, and terminal process cleanup, while JSON storage, database schema, DDL-free runtime grants, transaction semantics, and application-only rollback remain unchanged.
 - **STORAGE-011** (Storage) - PASS: The JSON storage provider owns one recoverable execute-game-action-once boundary that validates immutable action identity, canonical fingerprint, declared wallet and game-state resources, and a side-effect-free planner before converging wallet movements, game-state publication, and an immutable receipt under one cross-process gate. Durable journal recovery completes before affected JSON state is exposed; same-key replays return the committed receipt, conflicting reuse is rejected before planner, RNG, or mutation, and corrupt or unknown journal state fails closed without replacing its original bytes.
 - **TEST-141** (Tests) - PASS: Focused fake-connector and disposable-MySQL evidence proves pool configuration bounds, hard capacity, waiter wake and timeout, physical reuse, non-reconnecting dead-session replacement, rollback/reset isolation, cleanup discard, connector failure, PID rebuild, terminal shutdown, provider integration, secret-free metrics, and sanitized p50/p95/throughput/error measurements at concurrency one, two, four, and eight with no exhaustion or cross-request session leakage.
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
@@ -748,12 +748,15 @@ Historical source baseline: 9.1.0
 - **STORAGE-018** (Storage) - PASS: The state_store compatibility API is a thin provider facade: ordinary and strict reads, complete writes, and atomic updates unconditionally delegate key resolution, locking, recovery, validation, rollback, and publication to the selected storage provider. JSON preserves exact injectable filesystem paths, while non-filesystem providers reject paths outside the configured data root before any operation.
 - **TEST-247** (Tests) - PASS: Listener-free facade evidence runs the identical absent-read, write, ordinary read, atomic update, strict read, and strict update sequence through production JSON and transaction-shaped database providers; binds exact portable keys; proves injectable JSON paths; rejects out-of-root database paths; preserves rollback and concurrency; and statically prevents selector or sidecar-lock reintroduction. Disposable MySQL coverage continues to exercise production state_store callers against real provider rows.
 - **CORE-034** (Application) - PASS: Isolated browser games may delegate route ownership, asynchronous mount cancellation, busy-state coordination, lazy locale initialization and teardown, domain-bound translation, external same-origin stylesheet ownership, and opaque request identities to one shared lifecycle controller without changing game DOM, actions, settlement, localization, or visible layout.
+- **CORE-035** (Application) - PASS: Gunicorn with the production WSGI adapter is the sole production and concurrency-qualification serving stack, with configurable one-through-eight worker processes and one-through-sixty-four gthread request threads, conservative one-worker/sixteen-thread defaults, loopback-only binding, and aggregate connection budgeting against the process-local MySQL pool. The stdlib ThreadingHTTPServer remains local development and ordinary browser-test infrastructure only.
 - **TEST-248** (Tests) - PASS: Listener-free lifecycle evidence proves exact root and busy ownership, lazy primary and reviewed shared-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, Teen Patti, Crown and Anchor, Chuck-a-Luck, Bingo, Craps, Keno, and Roulette browser cases preserve their real settled-round and repeat flows.
 - **TEST-249** (Tests) - PASS: The standalone Deuces Wild diagnostic issues a distinct browser-readable CSRF cookie only after a valid session-bound bootstrap, accepts exact cookie/header pairs for real English and Russian deal, hold, and draw actions, and rejects anonymous bootstrap plus missing, mismatched, or cross-session proofs before game dispatch. Both focused and browser paths close their ephemeral non-production listener on success or failure.
 - **SESSION-014** (Core) - PASS: Authentication sessions are provider-owned first-class rows rather than one shared document. Creation, bearer lookup, activity touch, bearer-and-CSRF rotation, targeted and account-wide revocation, and expiry preserve the existing opaque session id, deterministic cap, generation, absolute lifetime, idle-timeout, guest, provider, and Admin-control semantics while plaintext bearer material exists only in request-local results and cookies.
 - **STORAGE-019** (Storage) - PASS: StorageProvider exposes one session lifecycle whose JSON implementation stores one strict atomically published file per bearer digest and whose MySQL implementation stores one independently keyed compatibility document on clean schemas two through four or one indexed native row on clean schema five. Compound cap, rotation, account revocation, replacement, and expiry operations serialize their complete selection and writes, while direct bearer lookup reads only the digest-selected row and every durable representation omits plaintext tokens.
 - **MYSQL-010** (MySQL) - PASS: Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.
+- **MYSQL-011** (MySQL) - PASS: The process-local MySQL pool defaults to sixteen physical sessions, accepts an explicit capacity from one through sixty-four, and publishes only authenticated Admin Operations telemetry for configured capacity, in-use, idle, waiting, cumulative saturation encounters, and checkout timeouts. Readiness remains shape-compatible, JSON reports pool telemetry unavailable, and malformed snapshots fail closed without connector, target, credential, query, request, user, or exception detail.
 - **TEST-250** (Tests) - PASS: Provider-neutral JSON and transaction-faithful MySQL-model evidence proves deterministic per-user and global caps, direct bearer lookup, secret-free durable rows, atomic bearer-and-CSRF generation rotation, idempotent targeted and account revocation, expiry sweeps, one-shot legacy import, and parallel same-user plus different-user login/logout with zero lost sessions, cross-wired CSRF proofs, or hidden worker failures. Disposable MySQL evidence verifies native indexes, schema-four bridge backfill, least-privilege DML, restart compatibility, and the same concurrent lifecycle on real connectors.
+- **TEST-251** (Tests) - PASS: Exact-clean-source load evidence starts the supported loopback-only Gunicorn WSGI command over caller-external temporary state, provisions reserved-domain synthetic players through the Admin API, authenticates every independent session, synchronizes one public Boule round per session, validates provider-specific Admin pool telemetry, closes the exact process and listener, and emits one atomic aggregate report. Ordinary CI requires 32 sessions on JSON and disposable MySQL; the opt-in formal profile requires exactly 100 sessions on disposable MySQL with zero failed sessions, rounds, checkout timeouts, or listener residue.
 - **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
 - **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
 - **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.

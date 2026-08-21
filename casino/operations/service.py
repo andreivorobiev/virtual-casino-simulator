@@ -8,7 +8,7 @@ import threading
 # Import the shared UTC formatter for contract-compatible timestamps.
 from casino.core.clock import utc_now
 # Import only sanitized probe helpers and their safe default dependency sources.
-from casino.operations.probes import build_metadata, environment_build_sha, probe_storage
+from casino.operations.probes import build_metadata, environment_build_sha, probe_storage, storage_pool_telemetry
 # Import the configured provider factory used only when a dependency probe is requested.
 from casino.core.storage import get_storage_provider
 
@@ -83,6 +83,10 @@ class OperationsProbeService:
         payload["checks"] = {"backend": {"status": "pass"}, "storage": {"status": storage["status"], "provider": storage["provider"]}}
         # Publish an empty list on success or one fixed component reason on degradation.
         payload["reasons"] = [] if ready else [{"component": "storage", "code": storage["reason_code"]}]
+        # Add process-local physical-pool telemetry only to the Admin heartbeat contract.
+        if probe == "heartbeat":
+            # Reduce JSON, missing, or malformed pool state to the explicit unavailable shape.
+            payload["storage_pool"] = storage_pool_telemetry(self._provider_factory, storage["provider"])
         # Return the complete sanitized dependency status for API policy handling.
         return payload
 

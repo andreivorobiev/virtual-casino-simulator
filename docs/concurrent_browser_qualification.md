@@ -19,8 +19,18 @@ the disposable preflight has its connector and the required encrypted-recovery b
 
 ## Observability-first sequence
 
-The explicit hosted job runs the existing disposable-MySQL `TEST-141` packet first at concurrency
-1, 2, 4, and 8. That packet records only p50, p95, throughput, errors, capacity, in-use, idle,
+The explicit `concurrent_browser_138` job runs the existing disposable-MySQL `TEST-141` packet first
+at concurrency 1, 2, 4, and 8 before starting its browser contexts. The independent explicit
+`gunicorn_load_100` job runs the `TEST-251` exact 100-user authenticated Gunicorn profile on its own
+disposable MySQL target and hosted runner, so neither formal qualification consumes the other's
+bounded process budget. The production-stack profile establishes its 100 independent sessions
+before releasing all 100 public game rounds together, so the measured phase isolates the reviewed
+Gunicorn and MySQL-pool ceilings from serialized session creation. Its 32 request threads share a
+16-slot pool under the documented bounded 10-second checkout ceiling. Routine CI materializes all
+32 authenticated sessions through an eight-worker login ceiling before synchronizing all 32 public
+rounds; this keeps authentication failures outside the game barrier while preserving concurrent
+login coverage and full round pressure. These packets record only p50, p95, throughput, errors,
+session/round completion counts, capacity, in-use, idle,
 waiting, physical-created, reuse, discard, wait, timeout, rollback-cleanup, connector-error, and
 fixed wait-bucket values. The browser controller accepts the preflight only when it is bound to the
 same full source commit, contains all four levels, has zero errors and timeouts, leaves no lease or
@@ -83,7 +93,9 @@ requires a separately governed population change before the hosted qualification
 ## Multi-process boundary
 
 The MySQL pool is process-local. Possible physical connections equal worker processes multiplied
-by configured pool capacity. This slice does not add a Gunicorn worker or change thread count.
-Any later second-worker experiment must first budget aggregate physical connections, retain the
-same fixed-cardinality measurements, and repeat the synchronized browser qualification in a
-separately authorized disposable environment.
+by configured pool capacity. The qualification-grade profile uses one Gunicorn worker, 32 request
+threads, and a 16-slot pool; the reviewed production default is one worker and sixteen threads.
+Any second-worker experiment must first budget aggregate physical connections, retain the same
+fixed-cardinality measurements, and repeat the synchronized qualification in a separately
+authorized disposable environment. The stdlib threaded server remains local development and
+ordinary browser-test infrastructure and cannot satisfy the production-stack qualification.

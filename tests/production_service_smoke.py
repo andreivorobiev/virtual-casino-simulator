@@ -134,7 +134,7 @@ def extract_release(archive_path: pathlib.Path, destination: pathlib.Path) -> pa
 
 
 # Send one JSON API request and return its decoded standard envelope.
-def api_request(base_url: str, path: str, method="GET", body=None, token=None, csrf=None) -> dict:
+def api_request(base_url: str, path: str, method="GET", body=None, token=None, csrf=None, timeout_seconds=3) -> dict:
     # Encode an optional request object as UTF-8 JSON.
     payload = None if body is None else json.dumps(body).encode("utf-8")
     # Start with the accepted request content type.
@@ -157,18 +157,18 @@ def api_request(base_url: str, path: str, method="GET", body=None, token=None, c
         headers["Cookie"] = f"casino_csrf={csrf}"
     # Construct the bounded same-origin loopback request.
     request = urllib.request.Request(base_url + path, data=payload, method=method, headers=headers)
-    # Open the request with a short timeout so a failed worker cannot stall the gate.
-    with urllib.request.urlopen(request, timeout=3) as response:
+    # Open the request with the caller's bounded profile timeout so queued qualification work can complete.
+    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
         # Decode the exact JSON envelope returned by the production process.
         return json.loads(response.read().decode("utf-8"))
 
 
 # Bootstrap one anonymous double-submit token without relying on Secure-cookie storage over loopback HTTP.
-def bootstrap_csrf(base_url: str) -> str:
+def bootstrap_csrf(base_url: str, timeout_seconds=3) -> str:
     # Request the packaged shell with the exact configured authority.
     request = urllib.request.Request(base_url + "/", method="GET", headers={"Host": CANONICAL_AUTHORITY})
-    # Open the direct loopback request with the same bounded timeout as API calls.
-    with urllib.request.urlopen(request, timeout=3) as response:
+    # Open the direct loopback request with the caller's bounded profile timeout.
+    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
         # Read the one bootstrap Set-Cookie header without printing it.
         cookie = response.headers.get("Set-Cookie", "")
         # Require the expected host-only CSRF cookie.

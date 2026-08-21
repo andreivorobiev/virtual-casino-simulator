@@ -80,6 +80,74 @@ def safe_provider_name(provider) -> str:
     return provider_name if provider_name in SUPPORTED_STORAGE_PROVIDERS else "unknown"
 
 
+# Return one nonnegative built-in integer from a provider-owned metric mapping.
+def _pool_metric(snapshot: dict, name: str) -> int:
+    # Read one named value only after the caller has established an exact plain dictionary.
+    value = snapshot.get(name)
+    # Reject booleans, numeric subclasses, negative values, and missing fields uniformly.
+    if type(value) is not int or value < 0:
+        # Keep malformed provider telemetry behind the explicit unavailable state.
+        raise ValueError("invalid MySQL pool telemetry")
+    # Return the validated low-cardinality aggregate.
+    return value
+
+
+# Reduce the configured provider's pool state to the Admin Operations allowlist. (MYSQL-011)
+def storage_pool_telemetry(provider_factory=get_storage_provider, provider_name: str = "unknown") -> dict:
+    # JSON and unsupported providers own no MySQL physical connection pool.
+    if provider_name != "mysql":
+        # Publish explicit unavailability rather than fabricating zero-valued MySQL counters.
+        return {"available": False}
+    # Protect the Operations response from provider construction and dynamic-method failures.
+    try:
+        # Resolve the same process-wide provider already used by the dependency probe.
+        provider = provider_factory()
+        # Require the provider identity to remain MySQL across both sanitized observations.
+        if safe_provider_name(provider) != "mysql":
+            # Refuse a selector race or hostile provider replacement.
+            raise ValueError("invalid MySQL pool telemetry")
+        # Resolve the fixed provider-owned snapshot seam without inspecting configuration or credentials.
+        snapshot_source = getattr(provider, "pool_snapshot", None)
+        # Require one callable telemetry seam on the configured MySQL provider.
+        if not callable(snapshot_source):
+            # Convert a missing seam into the same unavailable result.
+            raise ValueError("invalid MySQL pool telemetry")
+        # Snapshot counters once so a concurrent checkout cannot cross-wire related gauges.
+        snapshot = snapshot_source()
+        # Reject custom mappings whose accessors could retain or emit provider detail.
+        if type(snapshot) is not dict:
+            # Keep arbitrary provider objects behind the sanitized boundary.
+            raise ValueError("invalid MySQL pool telemetry")
+        # Validate the configured process-local hard ceiling.
+        capacity = _pool_metric(snapshot, "capacity")
+        # Enforce the same one-through-sixty-four policy as the pool configuration.
+        if not 1 <= capacity <= 64:
+            # Refuse inconsistent or expanded telemetry.
+            raise ValueError("invalid MySQL pool telemetry")
+        # Validate current gauges independently before checking their capacity relationship.
+        in_use = _pool_metric(snapshot, "in_use")
+        # Validate the reusable idle-session gauge.
+        idle = _pool_metric(snapshot, "idle")
+        # Reject impossible physical-session accounting.
+        if in_use + idle > capacity:
+            # Preserve one fail-closed unavailable state rather than a contradictory dashboard.
+            raise ValueError("invalid MySQL pool telemetry")
+        # Return only operator-actionable policy, gauges, saturation encounters, and bounded timeouts.
+        return {
+            "available": True,
+            "capacity": capacity,
+            "in_use": in_use,
+            "idle": idle,
+            "waiting": _pool_metric(snapshot, "waiting"),
+            "saturation_count": _pool_metric(snapshot, "saturation_count"),
+            "timeout_count": _pool_metric(snapshot, "timeout_count"),
+        }
+    # Convert every provider or snapshot failure into an explicit detail-free unavailable state.
+    except Exception:
+        # Never return raw provider configuration, connector text, or exception identity.
+        return {"available": False}
+
+
 # Close a DB-API object without allowing cleanup diagnostics to leak into probe responses.
 def _close_quietly(resource) -> None:
     # Skip cleanup for resources that were never created.

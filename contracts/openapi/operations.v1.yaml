@@ -158,6 +158,45 @@ components:
         code:
           type: string
           enum: [storage_unavailable, database_unavailable, storage_provider_unsupported]
+    UnavailableStoragePoolTelemetry:
+      type: object
+      required: [available]
+      additionalProperties: false
+      properties:
+        available:
+          type: boolean
+          enum: [false]
+    AvailableStoragePoolTelemetry:
+      type: object
+      required: [available, capacity, in_use, idle, waiting, saturation_count, timeout_count]
+      additionalProperties: false
+      properties:
+        available:
+          type: boolean
+          enum: [true]
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 64
+        in_use:
+          type: integer
+          minimum: 0
+        idle:
+          type: integer
+          minimum: 0
+        waiting:
+          type: integer
+          minimum: 0
+        saturation_count:
+          type: integer
+          minimum: 0
+        timeout_count:
+          type: integer
+          minimum: 0
+    StoragePoolTelemetry:
+      oneOf:
+        - $ref: '#/components/schemas/UnavailableStoragePoolTelemetry'
+        - $ref: '#/components/schemas/AvailableStoragePoolTelemetry'
     ReadinessLiveData:
       type: object
       required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons]
@@ -195,7 +234,7 @@ components:
             $ref: '#/components/schemas/DegradedReason'
     HeartbeatLiveData:
       type: object
-      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons]
+      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons, storage_pool]
       additionalProperties: false
       properties:
         schema_version:
@@ -228,6 +267,8 @@ components:
           maxItems: 0
           items:
             $ref: '#/components/schemas/DegradedReason'
+        storage_pool:
+          $ref: '#/components/schemas/StoragePoolTelemetry'
     ReadinessDegradedData:
       type: object
       required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons]
@@ -267,7 +308,7 @@ components:
             $ref: '#/components/schemas/DegradedReason'
     HeartbeatDegradedData:
       type: object
-      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons]
+      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons, storage_pool]
       additionalProperties: false
       properties:
         schema_version:
@@ -302,6 +343,8 @@ components:
           maxItems: 1
           items:
             $ref: '#/components/schemas/DegradedReason'
+        storage_pool:
+          $ref: '#/components/schemas/StoragePoolTelemetry'
     LivenessEnvelope:
       type: object
       required: [ok, data]

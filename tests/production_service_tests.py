@@ -18,6 +18,8 @@ import sys
 import tempfile
 # Import standard unittest discovery and assertions.
 import unittest
+# Import environment patching for deterministic Gunicorn configuration tests.
+from unittest.mock import patch
 
 # Resolve the repository root independently of the test runner's working directory.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -118,32 +120,52 @@ class ProductionServiceTests(unittest.TestCase):
 
     # Prove the tracked process policy can select only a loopback listener.
     def test_gunicorn_policy_is_loopback_only(self):
-        # Preserve any caller port setting before evaluating the policy.
-        original_port = os.environ.get("CASINO_BIND_PORT")
-        # Select an unprotected deterministic test port without creating a listener.
-        os.environ["CASINO_BIND_PORT"] = "18765"
-        # Start protected environment cleanup around config evaluation.
-        try:
+        # Pin every non-secret serving control so caller environment cannot change the test.
+        with patch.dict(os.environ, {"CASINO_BIND_PORT": "18765", "CASINO_GUNICORN_WORKERS": "1", "CASINO_GUNICORN_THREADS": "16"}, clear=False):
             # Evaluate the repository-owned Gunicorn config as ordinary Python data.
             policy = runpy.run_path(str(ROOT / "deploy" / "gunicorn.conf.py"))
-        # Restore the caller environment regardless of assertion outcome.
-        finally:
-            # Remove the test setting when the caller did not have one.
-            if original_port is None:
-                # Restore absence rather than an empty value.
-                os.environ.pop("CASINO_BIND_PORT", None)
-            # Restore the exact caller value when it existed.
-            else:
-                # Replace the temporary port with the original value.
-                os.environ["CASINO_BIND_PORT"] = original_port
         # Require the fixed IPv4 loopback interface and selected unprotected port.
         self.assertEqual(policy["bind"], "127.0.0.1:18765")
         # Require the configured port to remain outside the protected user set.
         self.assertNotIn(18765, PROTECTED_PORTS)
-        # Require one worker and two threads for the approved single-process topology.
-        self.assertEqual((policy["workers"], policy["threads"]), (1, 2))
+        # Require one worker and sixteen threads for the reviewed default production topology.
+        self.assertEqual((policy["workers"], policy["threads"]), (1, 16))
         # Require a bounded graceful drain shorter than systemd's stop timeout.
         self.assertLessEqual(policy["graceful_timeout"], 20)
+
+    # Prove worker and thread controls are configurable only inside their reviewed bounds. (CORE-035)
+    def test_gunicorn_concurrency_controls_fail_closed(self):
+        # Exercise both lower and upper invalid boundaries without opening a listener.
+        cases = (
+            # Reject zero workers.
+            ({"CASINO_GUNICORN_WORKERS": "0", "CASINO_GUNICORN_THREADS": "16"}, "CASINO_GUNICORN_WORKERS"),
+            # Reject more than eight workers.
+            ({"CASINO_GUNICORN_WORKERS": "9", "CASINO_GUNICORN_THREADS": "16"}, "CASINO_GUNICORN_WORKERS"),
+            # Reject zero request threads.
+            ({"CASINO_GUNICORN_WORKERS": "1", "CASINO_GUNICORN_THREADS": "0"}, "CASINO_GUNICORN_THREADS"),
+            # Reject more than sixty-four request threads.
+            ({"CASINO_GUNICORN_WORKERS": "1", "CASINO_GUNICORN_THREADS": "65"}, "CASINO_GUNICORN_THREADS"),
+            # Reject malformed worker text without reflecting it.
+            ({"CASINO_GUNICORN_WORKERS": "private-secret", "CASINO_GUNICORN_THREADS": "16"}, "CASINO_GUNICORN_WORKERS"),
+            # Reject malformed thread text without reflecting it.
+            ({"CASINO_GUNICORN_WORKERS": "1", "CASINO_GUNICORN_THREADS": "private-secret"}, "CASINO_GUNICORN_THREADS"),
+        )
+        # Require every invalid tuple to stop during policy evaluation.
+        for environment, expected_name in cases:
+            # Identify the rejected setting when a case fails.
+            with self.subTest(environment=expected_name):
+                # Add one safe port while preserving no caller serving values.
+                values = {"CASINO_BIND_PORT": "18765", **environment}
+                # Isolate the exact hostile tuple for this config evaluation.
+                with patch.dict(os.environ, values, clear=False):
+                    # Capture the fixed range error for key and reflection assertions.
+                    with self.assertRaises(RuntimeError) as caught:
+                        # Evaluate configuration without creating a process or socket.
+                        runpy.run_path(str(ROOT / "deploy" / "gunicorn.conf.py"))
+                # Keep the rejected public key actionable.
+                self.assertIn(expected_name, str(caught.exception))
+                # Keep malformed caller bytes out of public startup diagnostics.
+                self.assertNotIn("private-secret", str(caught.exception))
 
     # Prove the service template encodes the documented least-privilege lifecycle boundary.
     def test_systemd_template_matches_runtime_contract(self):

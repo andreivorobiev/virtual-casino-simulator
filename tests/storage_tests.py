@@ -1205,12 +1205,12 @@ def _run_mysql_pool_live_measurements(provider):
     return evidence
 
 
-# Exercise the capacity-two pool with repeated real wallet-row contention. (STORAGE-010, TEST-220)
-def _run_mysql_capacity_two_debit_cohorts(provider, ledger_module, players_module):
+# Exercise the configured bounded pool with repeated real wallet-row contention. (STORAGE-010, MYSQL-011, TEST-220)
+def _run_mysql_capacity_aligned_debit_cohorts(provider, ledger_module, players_module):
     # Capture the exact pool policy and counters before any contested debit starts.
     before_snapshot = provider.pool_snapshot()
-    # Require the disposable gate to exercise the issue's exact capacity-two contract.
-    assert before_snapshot["capacity"] == 2
+    # Require the disposable gate to stay inside the reviewed process-local capacity range.
+    assert 1 <= before_snapshot["capacity"] <= 64
     # Require no lease or waiter residue from the preceding pool measurement packet.
     assert before_snapshot["in_use"] == 0 and before_snapshot["waiting"] == 0
     # Capture the authoritative wallet balance before three repeated cohorts.
@@ -1244,7 +1244,7 @@ def _run_mysql_capacity_two_debit_cohorts(provider, ledger_module, players_modul
     # Build one secret-free aggregate for hosted acceptance evidence.
     evidence = {"capacity": after_cohort["capacity"], "cohorts": 3, "debits_per_cohort": 20, "committed": len(ledger_ids), "wallet_delta": starting_balance - players_module.get_player("human")["balance"], "pool": after_cohort}
     # Emit only fixed counts and the production pool's existing secret-free telemetry.
-    print("MYSQL_POOL_CAPACITY_TWO_DEBITS " + json.dumps(evidence, sort_keys=True), flush=True)
+    print("MYSQL_POOL_CAPACITY_ALIGNED_DEBITS " + json.dumps(evidence, sort_keys=True), flush=True)
     # Return exact before/after balances for the following cross-process idempotency proof.
     return starting_balance, players_module.get_player("human")["balance"]
 
@@ -1288,8 +1288,8 @@ def run_mysql_live_provider_path():
         bot = profiles.update_bot("bot_1", {"enabled": False})
         # Persist an autoplay session through the real control-plane module.
         autoplay_session = autoplay.start("slots", "human", "medium", 2, {"type": "mysql-live"}, {})
-        # Run the repeated capacity-two debit gate before cross-process replay evidence. (TEST-220)
-        _, balance_after_concurrent = _run_mysql_capacity_two_debit_cohorts(provider, ledger, players)
+        # Run the repeated configured-capacity debit gate before cross-process replay evidence. (MYSQL-011, TEST-220)
+        _, balance_after_concurrent = _run_mysql_capacity_aligned_debit_cohorts(provider, ledger, players)
         # Execute 25 duplicate calls through two independent spawned processes.
         with ProcessPoolExecutor(max_workers=2) as executor:
             # Materialize every duplicate result so cross-process failures surface.

@@ -1381,8 +1381,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require first-class session storage to bring the governed registry to 1111 rows.
-        self.assertEqual(len(requirements), 1111)
+        # Require the concurrency-ceiling packet to bring the governed registry to 1114 rows.
+        self.assertEqual(len(requirements), 1114)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1491,7 +1491,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-218": "Tests",  # Bind real Deuces Wild terminal ordering, sibling, and recovery evidence.
             "DBVP-003": "Double Bonus Video Poker",  # Bind deal, draw, replay, and recovery publication to provider-current callbacks.
             "TEST-219": "Tests",  # Bind real Double Bonus terminal ordering, sibling, and recovery evidence.
-            "TEST-220": "Tests",  # Bind repeated capacity-two debit and exact lease-return evidence.
+            "TEST-220": "Tests",  # Bind repeated configured-capacity debit and exact lease-return evidence.
             "DT-006": "Dragon Tiger",  # Bind shoe, recovery, terminal, and rollback publication to provider-current callbacks.
             "TEST-221": "Tests",  # Bind real Dragon Tiger terminal ordering, sibling, and recovery evidence.
             "JP-006": "Joker Poker",  # Bind deal, hold, draw, replay, and recovery publication to provider-current callbacks.
@@ -1550,6 +1550,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "STORAGE-019": "Storage",  # Bind keyed JSON and schema-aware MySQL session rows.
             "MYSQL-010": "MySQL",  # Bind indexed schema-five native session capacity.
             "TEST-250": "Tests",  # Bind provider-parity concurrency and migration evidence.
+            "CORE-035": "Application",  # Bind production and qualification serving concurrency.
+            "MYSQL-011": "MySQL",  # Bind bounded pool capacity and Admin telemetry.
+            "TEST-251": "Tests",  # Bind 32-session CI and exact-100-session formal evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

@@ -23,7 +23,7 @@ from casino.operations import probes
 from casino.operations.service import OperationsProbeService
 
 # Map this focused suite to existing cross-cutting requirements pending permanent OPS allocation by #77.
-REQUIREMENT_IDS = ("CORE-011", "CORE-012", "STORAGE-001", "STORAGE-003", "MYSQL-001", "TEST-038")
+REQUIREMENT_IDS = ("CORE-011", "CORE-012", "STORAGE-001", "STORAGE-003", "MYSQL-001", "MYSQL-011", "OPS-004", "TEST-038")
 
 
 # Supply deterministic timestamps without accessing the system clock.
@@ -139,6 +139,11 @@ class FakeMySQLProvider:
         # Return it to the probe.
         return connection
 
+    # Return one fixed secret-free process-local pool snapshot.
+    def pool_snapshot(self):
+        # Model a partially used sixteen-slot pool with recorded pressure.
+        return {"capacity": 16, "in_use": 3, "idle": 5, "waiting": 2, "saturation_count": 7, "timeout_count": 1}
+
 
 # Verify canonical build identity, sanitized dependencies, and heartbeat state.
 class OperationsProbeServiceTests(unittest.TestCase):
@@ -221,6 +226,23 @@ class OperationsProbeServiceTests(unittest.TestCase):
         self.assertEqual([{"connection_timeout": probes.MYSQL_PROBE_TIMEOUT_SECONDS}], provider.connection_options)
         # Verify the public status identifies only the allowlisted provider.
         self.assertEqual(("mysql", True), (payload["storage_provider"], payload["ready"]))
+        # Verify the heartbeat publishes only the approved aggregate pool dimensions.
+        self.assertEqual({"available": True, "capacity": 16, "in_use": 3, "idle": 5, "waiting": 2, "saturation_count": 7, "timeout_count": 1}, payload["storage_pool"])
+
+    # Confirm JSON and malformed MySQL snapshots stay behind one explicit unavailable shape.
+    def test_pool_telemetry_is_provider_scoped_and_fails_closed(self):
+        # Verify the JSON provider cannot manufacture MySQL connection metrics.
+        self.assertEqual({"available": False}, probes.storage_pool_telemetry(lambda: self.json_provider(), "json"))
+        # Create a supported provider whose hostile snapshot contains credential-like text.
+        provider = FakeMySQLProvider()
+        # Replace the public seam with malformed detail that must never escape.
+        provider.pool_snapshot = lambda: {"capacity": "mysql://admin:secret@private"}
+        # Reduce the malformed object to the fixed unavailable variant.
+        result = probes.storage_pool_telemetry(lambda: provider, "mysql")
+        # Verify no snapshot key or sensitive value survives the boundary.
+        self.assertEqual({"available": False}, result)
+        # Verify the complete serialized response contains no hostile fragment.
+        self.assertNotIn("secret", json.dumps(result))
 
     # Confirm degraded responses retain the previous success and never expose raw provider errors.
     def test_degraded_storage_is_sanitized_and_retains_last_success(self):

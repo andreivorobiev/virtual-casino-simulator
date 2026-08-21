@@ -744,7 +744,7 @@ class GameActionContractTests(unittest.TestCase):
             # Return the ordinary paid plan.
             return _paid_plan(snapshot)
 
-        # Exercise only the accepted one-worker/two-thread posture.
+        # Exercise the exact bounded two-contender same-process posture owned by this contract test.
         with ThreadPoolExecutor(max_workers=2) as executor:
             # Submit bounded compatible action calls.
             futures = [

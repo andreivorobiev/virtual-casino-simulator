@@ -132,8 +132,31 @@ class OperationsApiTests(unittest.TestCase):
         self.assertEqual(({"status": "live"}, "readiness", "heartbeat"), (liveness, readiness["probe"], heartbeat["probe"]))
         # Verify readiness-equivalent routes return healthy direct-router data.
         self.assertTrue(readiness["ready"] and heartbeat["ready"])
+        # Verify readiness remains shape-compatible while only Admin receives pool telemetry.
+        self.assertNotIn("storage_pool", readiness)
+        # Verify JSON emits the exact non-MySQL telemetry variant.
+        self.assertEqual({"available": False}, heartbeat["storage_pool"])
         # Verify the latest successful heartbeat advances across both dependency routes.
         self.assertEqual(heartbeat["checked_at"], heartbeat["last_successful_heartbeat_at"])
+
+    # Confirm hostile pool shapes are rejected at the final API boundary without leakage.
+    def test_heartbeat_pool_telemetry_is_exact_and_sanitized(self):
+        # Build one valid heartbeat payload from the concrete service.
+        payload = OperationsProbeService(provider_factory=lambda: ReadyProvider(self.temporary_directory.name), clock=lambda: "2026-07-14T11:02:30.000Z", build_sha_source=lambda: None).heartbeat()
+        # Replace its safe unavailable variant with undeclared secret-bearing detail.
+        payload["storage_pool"] = {"available": False, "dsn": "mysql://admin:secret@private"}
+        # Register the hostile successful-return service through the real route boundary.
+        api.register(self.router, service=InjectedPayloadService(payload))
+        # Capture the fixed sanitized failure instead of returning the hostile telemetry.
+        with self.assertRaises(CasinoError) as raised:
+            # Dispatch the authenticated Operations route without opening a listener.
+            self.router.dispatch("GET", "/api/v2/admin/operations")
+        # Serialize every public failure field for a complete leak check.
+        serialized = json.dumps({"message": raised.exception.message, "details": raised.exception.details})
+        # Verify credentials and private endpoint fragments were discarded.
+        self.assertNotIn("secret", serialized)
+        # Require the route-owned fixed failure instead of any provider diagnostic.
+        self.assertEqual({"probe": "heartbeat", "component": "backend", "code": "operations_probe_failed"}, raised.exception.details)
 
     # Confirm a dependency failure becomes one fixed sanitized 503 CasinoError.
     def test_degraded_readiness_raises_sanitized_503(self):

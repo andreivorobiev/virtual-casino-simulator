@@ -957,7 +957,7 @@ def _exercise_game_action_provider() -> None:
 
 
 # Run the complete MySQL 8.4 migration and DDL-free runtime matrix.
-def run_mysql_migration_live_matrix(request_latency_callback=None):
+def run_mysql_migration_live_matrix(request_latency_callback=None, gunicorn_load_callback=None):
     # Reject a malformed optional test callback before any administrator connection.
     if request_latency_callback is not None and not callable(request_latency_callback):
         # Keep the no-argument production path unchanged while failing closed on test misuse.
@@ -1473,6 +1473,10 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
             if request_latency_callback is not None:
                 # Invoke without arguments so administrator, migrator, and runtime credentials never cross the seam.
                 request_latency_callback()
+            # Run optional production-stack load evidence while the disposable runtime grants still exist.
+            if gunicorn_load_callback is not None:
+                # Invoke without arguments so target and credential configuration stays environment-owned.
+                gunicorn_load_callback()
         # Always remove every disposable database and account.
         finally:
             # Teardown only validated `_204` targets and users.

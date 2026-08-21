@@ -46,6 +46,8 @@ from casino.core.storage import JsonStorageProvider, set_provider_for_tests, sto
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import pure Browser discovery, affinity packing, and shard verification outside the compatibility runner. (TEST-242)
 from tests import browser_sharding
+# Import the production-stack concurrency gate without starting its explicit listener. (TEST-251)
+from tests import gunicorn_load_smoke
 # Import the sole environment-scalable Playwright wait budget. (TEST-053)
 from tests.browser_timing import WAIT_MS
 # Import source-only API registration discovery and exact reviewed inventory validation. (TEST-242)
@@ -5776,8 +5778,22 @@ def main():
     try:
         # Build the credential-free MySQL callback only for the explicit benchmark selector.
         request_latency_callback=(lambda: run_case('REQUEST-LATENCY-MYSQL-001',['TEST-148'],lambda: run_request_latency_provider('mysql',args.request_latency_output))) if args.request_latency=='mysql' else None
+        # Read the optional issue-owned MySQL Gunicorn population without adding a compatibility-runner CLI flag.
+        gunicorn_users=str(os.environ.get('CASINO_1040_LOAD_USERS','')).strip()
+        # Read the caller-external aggregate destination paired with the explicit population.
+        gunicorn_report=str(os.environ.get('CASINO_1040_LOAD_REPORT','')).strip()
+        # Read the optional provider-neutral aggregate destination for ordinary CI.
+        gunicorn_json_report=str(os.environ.get('CASINO_1040_JSON_LOAD_REPORT','')).strip()
+        # Require both environment controls together so a partial hosted setup cannot silently skip evidence.
+        if bool(gunicorn_users)!=bool(gunicorn_report): raise AssertionError('Gunicorn load smoke configuration is incomplete')
+        # Refuse a JSON report without the same exact population authorization.
+        if gunicorn_json_report and not gunicorn_users: raise AssertionError('JSON Gunicorn load smoke configuration is incomplete')
+        # Build a credential-free callback only when the hosted disposable matrix requested the load profile.
+        gunicorn_load_callback=(lambda: run_case('GUNICORN-LOAD-MYSQL-001',['MYSQL-011','CORE-035','TEST-251'],lambda: gunicorn_load_smoke.run('mysql',int(gunicorn_users),Path(gunicorn_report)))) if gunicorn_users else None
+        # Build the provider-neutral companion case only when its external report was explicitly supplied.
+        gunicorn_json_load_callback=(lambda: run_case('GUNICORN-LOAD-JSON-001',['CORE-035','TEST-251'],lambda: gunicorn_load_smoke.run('json',int(gunicorn_users),Path(gunicorn_json_report)))) if gunicorn_json_report else None
         # Delegate the complete storage/MySQL area while preserving explicit live selectors and callback wiring.
-        if args.storage or args.mysql_live or args.mysql_migrations_live: api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback)
+        if args.storage or args.mysql_live or args.mysql_migrations_live: api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback,gunicorn_json_load_callback=gunicorn_json_load_callback,gunicorn_load_callback=gunicorn_load_callback)
         # Run the JSON provider only through its explicit benchmark selector.
         if args.request_latency=='json': run_case('REQUEST-LATENCY-JSON-001',['TEST-148'],lambda: run_request_latency_provider('json',args.request_latency_output))
         if args.api: run_api_tests()

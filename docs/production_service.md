@@ -8,9 +8,9 @@ Requirement `CORE-023` defines the repository-side production process for the re
 
 ## Supported topology
 
-- Gunicorn runs one `gthread` worker with two threads and imports `casino.wsgi:application`.
-- `deploy/gunicorn.conf.py` fixes the interface to `127.0.0.1`; only the non-secret port may be changed for isolated tests.
-- The Python development server in `casino.app` remains a local launcher and is not part of the production invocation.
+- Gunicorn imports `casino.wsgi:application`, defaults to one `gthread` worker with sixteen threads, and bounds `CASINO_GUNICORN_WORKERS` to 1–8 and `CASINO_GUNICORN_THREADS` to 1–64.
+- `deploy/gunicorn.conf.py` fixes the interface to `127.0.0.1`; only the non-secret port and bounded worker/thread controls may be changed for isolated tests or a separately budgeted deployment.
+- Gunicorn is the production and concurrency-qualification stack. The Python `ThreadingHTTPServer` in `casino.app` remains a local development and ordinary browser-test launcher only.
 - A future edge proxy may send same-origin requests to this loopback listener only after the separate edge gate is approved.
 - The adapter trusts forwarding metadata only from the one configured loopback peer under the exact paired-header policy in `docs/restricted_preview_security.md`. Issue #203 supplies repository policy and tests only; it does not install or configure that proxy.
 
@@ -24,11 +24,11 @@ This repository change does not render, copy, enable, reload, or inspect a produ
 
 ## Bounded MySQL connection lifecycle
 
-Requirement `STORAGE-010` gives each application process one lazy bounded MySQL pool while preserving the existing `MySQLStorageProvider.connect()` and `connection.close()` seams. The current one-worker/two-thread topology therefore defaults to two physical slots per process. Healthy connections are reused only after a non-reconnecting check. Return closes request-owned cursors, rolls back an unfinished transaction, resets session state, validates the same socket, and then makes it idle; uncertain sessions are closed and removed. Checkout waits at most 500 ms by default and fails closed when capacity stays exhausted.
+Requirements `STORAGE-010` and `MYSQL-011` give each application process one lazy bounded MySQL pool while preserving the existing `MySQLStorageProvider.connect()` and `connection.close()` seams. The reviewed one-worker/sixteen-thread topology defaults to sixteen physical slots per process and permits an explicit 1–64 capacity. Healthy connections are reused only after a non-reconnecting check. Return closes request-owned cursors, rolls back an unfinished transaction, resets session state, validates the same socket, and then makes it idle; uncertain sessions are closed and removed. Checkout waits at most 500 ms by default and fails closed when capacity stays exhausted.
 
-The added `CASINO_MYSQL_POOL_SIZE`, `CASINO_MYSQL_POOL_WAIT_MS`, and `CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS` controls are non-secret, bounded, and documented in [the MySQL connection lifecycle runbook](mysql_connection_pool.md). The internal evidence surface has only capacity/in-use/idle/waiter gauges, fixed lifecycle counters, and fixed wait buckets. It contains no user, session, request, query, host, network, database, credential, connector-text, or free-form labels. This slice does not change the public Operations/readiness contract, schema 2, runtime grants, JSON storage, Gunicorn shape, provider settings, or database rollback prohibition.
+The `CASINO_MYSQL_POOL_SIZE`, `CASINO_MYSQL_POOL_WAIT_MS`, and `CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS` controls are non-secret, bounded, and documented in [the MySQL connection lifecycle runbook](mysql_connection_pool.md). The internal evidence surface has only capacity/in-use/idle/waiter gauges, fixed lifecycle counters, and fixed wait buckets. Authenticated Admin Operations receives only the bounded capacity, gauges, saturation encounters, and checkout timeouts; `/readyz` remains unchanged. Neither surface contains user, session, request, query, host, network, database, credential, connector-text, or free-form labels. This slice changes no schema, runtime grant, provider selection, public admission policy, or database rollback boundary.
 
-`TEST-141` supplies listener-free fake-connector lifecycle evidence plus a disposable-MySQL packet at concurrency 1, 2, 4, and 8. The live packet reports only aggregate p50, p95, throughput, error count, and fixed pool counters; it also proves connector session state does not cross request-scoped leases. Production observation and any worker/thread tuning remain separately authorized.
+`TEST-141` supplies listener-free fake-connector lifecycle evidence plus a disposable-MySQL packet at concurrency 1, 2, 4, and 8. `TEST-251` runs 32 authenticated JSON and MySQL sessions in ordinary CI and exactly 100 MySQL sessions in the opt-in formal lane through the production Gunicorn command. Each synchronized session completes one public Boule round; evidence contains only exact source, provider, population, aggregate duration/throughput, completion counts, topology, bounded pool fields, and cleanup. Production deployment and target-specific capacity tuning remain separately authorized.
 
 ## Static asset cache contract
 
