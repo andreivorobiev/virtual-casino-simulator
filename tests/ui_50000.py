@@ -481,6 +481,25 @@ async def exercise_autoplay_controls(page, ordinal, activated_counts):
         await wait_any_enabled(page, settled_selectors, SETUP_TIMEOUT_MS)  # Prevent the manual cycle from racing the final autoplay render.
 
 
+# Reset Bingo through its rendered control and accept only its active called-session confirmation. (TEST-092, issue #1052)
+async def bingo_reset_to_purchase(page, activated_counts):
+    call = page.locator('[data-testid="bingo-call"]').first  # Resolve the public active-session signal without reading private game state.
+    called_balls = page.locator('[data-testid="bingo-called-ball"]')  # Resolve rendered call history that makes reset destructive.
+    requires_confirmation = await locator_ready(call) and await called_balls.count() > 0  # Distinguish active called sessions from completed history still shown on the board.
+    accepted_dialog_types = []  # Record the one dialog handled by this exact destructive reset.
+
+    async def accept_reset_confirmation(dialog):
+        accepted_dialog_types.append(dialog.type)  # Preserve the public browser-dialog type before accepting it.
+        await dialog.accept()  # Confirm the same abandonment prompt a player must accept.
+
+    if requires_confirmation:  # Install a handler only when the rendered state proves reset will prompt.
+        page.once("dialog", accept_reset_confirmation)  # Scope confirmation authority to the next dialog from this reset click.
+    await click_control(page, '[data-testid="bingo-reset"]', activated_counts)  # Activate the visible Reset control through Playwright's real pointer path.
+    if requires_confirmation and accepted_dialog_types != ["confirm"]:  # Require exactly one expected confirmation to have unblocked the click.
+        raise AssertionError(f"Bingo reset confirmation mismatch: {accepted_dialog_types}")  # Reject a missing or wrong browser-dialog boundary.
+    await wait_any_enabled(page, ['[data-testid="bingo-buy"]'])  # Require authoritative fresh-card readiness after reset.
+
+
 # Click one terminal action and require it to become ready for another round.
 async def terminal_action(page, selector, activated_counts):
     await click_control(page, selector, activated_counts)  # Start the public UI-owned atomic action.
@@ -732,12 +751,10 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         await click_control(page, '[data-testid="keno-draw"]', activated_counts)  # Draw the purchased ticket.
         await wait_any_enabled(page, ['[data-testid="keno-new-ticket"]'])  # Require the terminal result mode after the draw animation.
     elif strategy_family == "bingo":  # Exercise buy, call, and terminal reset/refund.
-        await click_control(page, '[data-testid="bingo-reset"]', activated_counts)  # Normalize any autoplay-committed session and exercise the visible reset path.
-        await wait_any_enabled(page, ['[data-testid="bingo-buy"]'])  # Require a fresh card-purchase state after normalization.
+        await bingo_reset_to_purchase(page, activated_counts)  # Normalize any autoplay-committed session through its truthful confirmation boundary.
         await click_control(page, '[data-testid="bingo-buy"]', activated_counts)  # Buy one synthetic card.
         await click_control(page, '[data-testid="bingo-call"]', activated_counts)  # Call one ball through the UI.
-        await click_control(page, '[data-testid="bingo-reset"]', activated_counts)  # End the bounded session visibly.
-        await wait_any_enabled(page, ['[data-testid="bingo-buy"]'])  # Require a fresh purchase state.
+        await bingo_reset_to_purchase(page, activated_counts)  # End the bounded session visibly and accept its required abandonment confirmation.
     elif strategy_family == "blackjack":  # Exercise deals and available conditional decisions.
         save_rules = page.locator("#saveRules").first  # Resolve the rendered table-rule persistence action.
         if ordinal < CONTROL_ACTIVATION_FLOOR and await locator_ready(save_rules):  # Meet the literal button floor without excessive rule writes.

@@ -310,6 +310,72 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("spin?.disabled", page.expression)  # Require the public button to be non-actionable during resolution.
         self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep transition observation inside the governed action timeout.
 
+    # Prove Bingo accepts exactly one destructive reset confirmation without leaking a handler into safe resets. (TEST-092, issue #1052)
+    def test_bingo_reset_confirmation_tracks_rendered_active_called_state(self):
+        # Execute one browser-free rendered state and return its interaction trace.
+        async def run_scenario(call_ready, called_ball_count):
+            events = []  # Record public state reads, dialog handling, reset activation, and purchase readiness.
+
+            class FakeLocatorCollection:  # Model either the Call locator or rendered called-ball collection.
+                def __init__(self, selector):
+                    self.selector = selector  # Preserve the public selector used by production code.
+                    self.first = self  # Match Playwright's first-locator interface.
+
+                async def count(self):
+                    events.append(f"count:{self.selector}")  # Record called-ball evidence before any dialog authority is installed.
+                    return called_ball_count  # Return the scenario's visible called-ball count.
+
+            class FakeDialog:  # Model the native confirmation emitted synchronously by Bingo Reset.
+                type = "confirm"  # Expose the Playwright dialog type used by the production assertion.
+
+                async def accept(self):
+                    events.append("dialog:accept")  # Record real confirmation before Reset can complete.
+
+            class FakePage:  # Provide only locator and one-shot dialog surfaces owned by the helper.
+                def __init__(self):
+                    self.dialog_handler = None  # Start without any leaked confirmation authority.
+
+                def locator(self, selector):
+                    events.append(f"locator:{selector}")  # Record both rendered-state queries.
+                    return FakeLocatorCollection(selector)  # Return a stable public locator facade.
+
+                def once(self, event_name, handler):
+                    self.assert_event_name = event_name  # Preserve the exact browser event identity for assertion.
+                    self.dialog_handler = handler  # Retain the one-shot callback until the modeled reset click.
+                    events.append("dialog:registered")  # Record that confirmation authority precedes the destructive click.
+
+            page = FakePage()  # Create one isolated rendered Bingo state.
+
+            async def fake_locator_ready(locator):
+                events.append(f"ready:{locator.selector}")  # Record active-session detection through the public Call control.
+                return call_ready  # Return the scenario's rendered Call actionability.
+
+            async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+                events.append(f"click:{selector}")  # Record the real Reset pointer boundary.
+                if page.dialog_handler is not None:  # Emit a dialog only for the scenario where the helper registered one.
+                    handler = page.dialog_handler  # Capture the one-shot handler before consuming it.
+                    page.dialog_handler = None  # Model Playwright removing a once-listener before callback execution.
+                    await handler(FakeDialog())  # Require the native confirmation to be accepted during the click.
+
+            async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+                events.append(f"ready:{selectors[0]}")  # Record fresh-card readiness only after Reset completes.
+                return selectors[0]  # Model the authoritative enabled Buy control.
+
+            with mock.patch.object(ui_50000, "locator_ready", side_effect=fake_locator_ready), mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control), mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled):  # Isolate exact ordering from Playwright and the Bingo API.
+                await ui_50000.bingo_reset_to_purchase(page, Counter())  # Exercise the production helper through rendered seams only.
+            self.assertIsNone(page.dialog_handler)  # Reject any confirmation handler leaking into a later unrelated dialog.
+            return events, getattr(page, "assert_event_name", None)  # Return the trace and any registered event identity.
+
+        destructive_events, event_name = asyncio.run(run_scenario(True, 1))  # Model an active session after one committed ball.
+        self.assertEqual(destructive_events, ['locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'count:[data-testid="bingo-called-ball"]', "dialog:registered", 'click:[data-testid="bingo-reset"]', "dialog:accept", 'ready:[data-testid="bingo-buy"]'])  # Require confirmation registration and acceptance before fresh-card readiness.
+        self.assertEqual(event_name, "dialog")  # Bind the one-shot listener to the native browser-dialog event.
+        uncalled_events, event_name = asyncio.run(run_scenario(True, 0))  # Model an active card before any ball has been called.
+        self.assertEqual(uncalled_events, ['locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'count:[data-testid="bingo-called-ball"]', 'click:[data-testid="bingo-reset"]', 'ready:[data-testid="bingo-buy"]'])  # Keep pre-call refundable Reset free of destructive-confirmation authority.
+        self.assertIsNone(event_name)  # Prove an uncalled active card registered no dialog listener.
+        completed_events, event_name = asyncio.run(run_scenario(False, 12))  # Model completed history whose called balls remain visible without an active session.
+        self.assertEqual(completed_events, ['locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'click:[data-testid="bingo-reset"]', 'ready:[data-testid="bingo-buy"]'])  # Forbid confirmation authority when only completed history is visible.
+        self.assertIsNone(event_name)  # Prove the safe reset registered no dialog listener.
+
     # Prove Roulette serializes refund and wager rerenders before the strict spinning-state transition.
     def test_roulette_reset_seed_and_spin_orders_every_drawer_boundary(self):
         events = []  # Record only public UI mutation and committed-state boundaries.

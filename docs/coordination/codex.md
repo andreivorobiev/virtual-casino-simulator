@@ -1,11 +1,11 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-21T13:40:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-21T18:13:00Z.
 
 ## Current branch / active Codex work
 
 - Protected main is exact `667bdf2b4a0b3d997d5bf18f9bf158fa49749c01`, including the catalog-derived 49-worker formal matrix from issue #1048.
-- Isolated branch `codex/1050-formal-strategies` repairs the missing rendered-control strategies exposed by exact-main formal run `32480806914`.
+- Isolated branch `codex/1050-formal-strategies` repairs the missing rendered-control strategies and the Bingo confirmation timeout exposed by exact-main formal run `32480806914` under issues #1050 and #1052.
 - No production, database, provider, release, public-policy, deployment, API, game-engine, paytable, or settlement mutation is authorized by this branch.
 
 ## Accepted scope and requirements
@@ -14,6 +14,7 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-2
 - Every registered catalog game now maps to an implemented strategy family; unknown games and unknown families fail before action dispatch.
 - The fifteen formerly hidden games from Color Wheel through Teen Patti receive explicit visible-choice, replay, decision, and terminal-readiness coverage; Double Bonus Video Poker stays on the existing draw-poker family.
 - Stable control signatures distinguish the new board, choice, hand-setting, wager, decision, deal, and repeat identities.
+- Bingo's formal strategy now detects an active called session through the rendered Call control and called-ball history, accepts exactly the native destructive Reset confirmation, and installs no handler for safe or completed-history resets.
 - Requirements remain exactly 1114 and the frozen `/api/v1` contract remains unchanged.
 
 ## Version and validation allocation
@@ -25,5 +26,5 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-2
 ## Validation and handback
 
 - Local work is browser-free by policy: syntax, catalog/registry proofs, strategy state-machine unit seams, requirements, versions, contracts, boundaries, comments, headers, and rule gates run locally.
-- The immutable exact-head PR must pass ordinary checks plus one 49-worker formal dispatch before merge and issue #1050 closure.
+- The immutable exact-head PR must pass ordinary checks plus one 49-worker formal dispatch before merge and issues #1050 and #1052 closure; Bingo worker 6 must complete exactly 1,087/1,087 cycles with zero failures.
 - One fresh exact-main formal dispatch after merge must repeat every worker, aggregate, and visual gate before parent #1041 can close.
