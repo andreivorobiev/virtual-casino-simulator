@@ -1093,6 +1093,7 @@ def parse_args():
     parser.add_argument("--keep-deployments", action="store_true", help="Preserve disposable runtimes for explicit local debugging.")  # Allow opt-in post-failure inspection.
     parser.add_argument("--allocation-index", type=int, default=None, help="Run exactly one deterministic formal worker allocation.")  # Let non-local CI distribute the immutable 50,000-cycle assignment.
     parser.add_argument("--aggregate-only", action="store_true", help="Aggregate a complete downloaded formal shard set without launching a browser.")  # Separate terminal accounting from worker execution.
+    parser.add_argument("--print-formal-allocation-indices", action="store_true", help="Print the canonical hosted-worker matrix as compact JSON without launching a browser.")  # Let the workflow derive its complete matrix from exact-source catalog policy.
     parser.add_argument("--source-commit", default="", help="Exact 40-character commit expected by --aggregate-only.")  # Bind downloaded evidence to the workflow checkout.
     args = parser.parse_args()  # Parse caller options.
     if args.total_cycles < 1:  # Reject an empty test run.
@@ -1109,9 +1110,9 @@ def parse_args():
         parser.error("--max-attempts-per-cycle must be at least 1")  # Preserve real UI execution.
     if args.allocation_index is not None and args.allocation_index < 0:  # Reject negative distributed worker identities.
         parser.error("--allocation-index must be zero or greater")  # Require a deterministic allocation index.
-    if args.aggregate_only and args.allocation_index is not None:  # Keep worker and aggregate roles mutually exclusive.
-        parser.error("--aggregate-only cannot be combined with --allocation-index")  # Prevent ambiguous execution.
-    if args.aggregate_only or args.allocation_index is not None:  # Enforce one immutable formal distributed plan.
+    if sum((bool(args.aggregate_only), args.allocation_index is not None, bool(args.print_formal_allocation_indices))) > 1:  # Keep planner, worker, and aggregate roles mutually exclusive.
+        parser.error("formal planner, worker, and aggregate modes cannot be combined")  # Prevent ambiguous distributed execution.
+    if args.aggregate_only or args.allocation_index is not None or args.print_formal_allocation_indices:  # Enforce one immutable formal distributed plan.
         if args.total_cycles != 50_000 or args.only_games.strip() or args.replicate_games.strip() or args.roulette_replicas != 4 or args.resume_shards:  # Reject focused, resized, or resumed distributed variants.
             parser.error("distributed modes require exactly 50000 full-catalog cycles, four Roulette replicas, and no resume or extra replicas")  # Freeze issue-owned accounting.
     if args.aggregate_only and not args.source_commit.strip():  # Require explicit provenance for downloaded artifacts.
@@ -1149,6 +1150,12 @@ def allocate_cycles(game_ids, total_cycles, roulette_replicas, replicated_games,
     if offset != total_cycles:  # Defend exact accounting before browser work.
         raise AssertionError("cycle allocation did not equal requested total")  # Preserve the arithmetic gate.
     return allocations  # Return deterministic shard work.
+
+
+# Derive every hosted worker index from the exact-source catalog allocation policy. (TEST-092)
+def formal_allocation_indices():
+    allocations = allocate_cycles(list(GAME_IDS), 50_000, 4, set(), 4)  # Reuse the formal full-catalog cycle and Roulette-replica contract.
+    return list(range(len(allocations)))  # Return one contiguous unique matrix entry for every canonical allocation.
 
 
 # Convert a timeout-cancelled shard into one aggregate-safe failure record.
@@ -1331,6 +1338,9 @@ async def run_all(args):
 def main():
     args = parse_args()  # Read the requested cycle volume and runtime bounds.
     try:  # Convert caller/configuration failures into a nonzero terminal result.
+        if args.print_formal_allocation_indices:  # Keep workflow planning browser-free and exact-source deterministic.
+            print(json.dumps(formal_allocation_indices(), separators=(",", ":")), flush=True)  # Emit compact GitHub-matrix JSON without logs or mutable metadata.
+            return 0  # Finish before importing or launching Playwright.
         return asyncio.run(run_all(args))  # Execute the complete browser qualification.
     except Exception as exc:  # Preserve one concise controller failure.
         print(f"UI50000 FAIL controller={safe_error(exc)}", flush=True)  # Exclude credentials, sessions, and raw logs.

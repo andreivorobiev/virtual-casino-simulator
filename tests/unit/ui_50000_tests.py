@@ -107,7 +107,7 @@ class UI50000HarnessTests(unittest.TestCase):
         ordinary_job = workflow.split("  browser_tests:", 1)[1].split("  # Run the focused issue #265", 1)[0]  # Isolate the ordinary browser job from the sustained profile.
         self.assertIn("github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true", ordinary_job)  # Run ordinary coverage for pull requests, protected main, and formal dispatch while skipping sustained-only dispatches.
         self.assertNotIn("baccarat_sustained_2000", ordinary_job)  # Keep the focused run from starting a second browser suite.
-        sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Distribute the formal issue #227", 1)[0]  # Isolate only the focused hosted job.
+        sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Derive the formal issue #227", 1)[0]  # Isolate only the focused hosted job before formal planning begins.
         self.assertIn("inputs.baccarat_sustained_2000 == true", sustained_job)  # Keep the expensive profile behind explicit authorization.
         self.assertIn("baccarat-sustained-${{ github.sha }}", sustained_job)  # Bind the terminal artifact name to the exact source head.
         self.assertNotIn("ui_50000.py", sustained_job)  # Prevent the focused dispatch from starting the unrelated 50,000-cycle controller.
@@ -164,6 +164,22 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertEqual(set(assigned_ids), set(range(50_000)))  # Require no missing or duplicate global identities.
         self.assertEqual(len(assigned_ids), len(set(assigned_ids)))  # Reject overlapping replica ranges.
         self.assertEqual(len(allocations), len(ui_50000.GAME_IDS) + 3)  # Pin one shard per game plus three additional Roulette replicas.
+
+    # Prove the hosted matrix derives every exact allocation and grows with the catalog instead of a YAML list. (TEST-092)
+    def test_formal_workflow_matrix_comes_from_canonical_allocator(self):
+        current_indices = ui_50000.formal_allocation_indices()  # Derive the exact current hosted-worker plan.
+        self.assertEqual(current_indices, list(range(len(ui_50000.GAME_IDS) + 3)))  # Require one index per game plus three extra Roulette replicas.
+        with mock.patch.object(ui_50000, "GAME_IDS", ui_50000.GAME_IDS + ("fixture_catalog_growth",)):  # Model one future catalog addition without editing workflow YAML.
+            expanded_indices = ui_50000.formal_allocation_indices()  # Recompute the plan through the production allocator.
+        self.assertEqual(expanded_indices, list(range(len(current_indices) + 1)))  # Require the hosted matrix to add the new game's worker automatically.
+        workflow = (ui_50000.ROOT / ".github" / "workflows" / "browser-tests.yml").read_text(encoding="utf-8")  # Read the inert exact-source workflow contract.
+        planner_job = workflow.split("  formal_ui_plan:", 1)[1].split("  formal_ui_workers:", 1)[0]  # Isolate canonical planning from worker execution.
+        worker_job = workflow.split("  formal_ui_workers:", 1)[1].split("  formal_ui_aggregate:", 1)[0]  # Isolate only the dynamic matrix consumer.
+        aggregate_job = workflow.split("  formal_ui_aggregate:", 1)[1].split("  # Run issue #225", 1)[0]  # Isolate the fail-closed terminal aggregate.
+        self.assertIn("python tests/ui_50000.py --print-formal-allocation-indices", planner_job)  # Bind planning to the public canonical helper.
+        self.assertIn("allocation_index: ${{ fromJSON(needs.formal_ui_plan.outputs.allocation_indices) }}", worker_job)  # Consume the complete exact-source JSON matrix.
+        self.assertNotIn("allocation_index:\n          - 0", worker_job)  # Reject a reintroduced enumerated prefix that can drift after catalog growth.
+        self.assertIn("      - formal_ui_plan\n      - formal_ui_workers", aggregate_job)  # Require the aggregate to depend on both planning and every worker.
 
     # Prove namespacing prevents identical generic selectors from merging across games.
     def test_control_signatures_keep_module_ownership(self):
@@ -493,7 +509,7 @@ class UI50000HarnessTests(unittest.TestCase):
             shard_root = root / "shards"  # Separate terminal JSON from screenshots.
             evidence_root = root / "visual"  # Separate screenshots from aggregate reports.
             shard_root.mkdir(parents=True, exist_ok=True)  # Create the test-owned shard directory.
-            self.write_distributed_corpus(shard_root, allocations, source_commit, evidence_root)  # Persist a complete passing 33-worker corpus.
+            self.write_distributed_corpus(shard_root, allocations, source_commit, evidence_root)  # Persist the complete current-catalog worker corpus.
             report_path = root / "aggregate.json"  # Resolve the test-owned terminal aggregate.
             args = argparse.Namespace(aggregate_only=True, allocation_index=None, source_commit=source_commit, only_games="", replicate_games="", total_cycles=50_000, roulette_replicas=4, game_replicas=4, shard_report_root=str(shard_root), evidence_root=str(evidence_root), report=str(report_path), parallel=4)  # Provide every aggregate-owned immutable option.
             with mock.patch.object(ui_50000, "resolve_distributed_source_commit", return_value=source_commit):  # Isolate aggregate accounting from the release builder's intentional metadata-free source copy.
