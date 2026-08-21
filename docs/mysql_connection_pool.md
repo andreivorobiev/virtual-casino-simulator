@@ -6,8 +6,9 @@ runtime grants, transaction statements, and application rollback boundary do not
 
 ## Process and request boundaries
 
-The production service currently runs one Gunicorn `gthread` worker with two threads, so each
-process defaults to two physical MySQL slots. A storage operation receives a request-scoped lease.
+The production and concurrency-qualification service runs Gunicorn `gthread`, with one worker and
+sixteen threads by default. Each process defaults to sixteen physical MySQL slots. A storage
+operation receives a request-scoped lease.
 Calling the existing `connection.close()` seam does not close a healthy socket immediately; it
 closes request-owned cursors, rolls back an unfinished transaction, resets connector session state,
 performs a non-reconnecting liveness check, and returns the physical connection to that process's
@@ -31,7 +32,7 @@ Only these non-secret controls are added:
 
 | Variable | Default | Accepted range | Meaning |
 | --- | ---: | ---: | --- |
-| `CASINO_MYSQL_POOL_SIZE` | `2` | `1`–`16` | Maximum physical connections per application process |
+| `CASINO_MYSQL_POOL_SIZE` | `16` | `1`–`64` | Maximum physical connections per application process |
 | `CASINO_MYSQL_POOL_WAIT_MS` | `500` | `1`–`10000` | Maximum checkout wait in milliseconds |
 | `CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS` | `3` | `1`–`60` | Physical connection establishment deadline |
 
@@ -40,12 +41,17 @@ do not replace `CASINO_MYSQL_HOST`, port, database, user, or password. Credentia
 remain private runtime configuration and are never included in metrics or errors.
 
 Capacity is per process, not global. The total possible physical connection count is therefore
-`worker processes × CASINO_MYSQL_POOL_SIZE`. Worker-count or thread-count tuning must account for
-the database connection budget and remains outside this change.
+`worker processes × CASINO_MYSQL_POOL_SIZE`. `CASINO_GUNICORN_WORKERS` accepts 1–8 and
+`CASINO_GUNICORN_THREADS` accepts 1–64; the reviewed default remains one process with sixteen
+threads and a sixteen-slot pool. Operators must keep the product within the database's connection
+budget. Increasing worker count multiplies the physical ceiling and therefore requires a
+target-specific capacity review before deployment.
 
-## Internal observability
+## Admin observability
 
-The first Package B observability seam is intentionally internal and testable. It exposes only:
+The provider snapshot remains internal and testable. The authenticated Admin Operations heartbeat
+publishes only capacity, in-use, idle, waiting, saturation-encounter, and checkout-timeout values;
+JSON reports that the MySQL pool is not applicable. The fuller internal seam exposes only:
 
 - capacity, in-use, idle, and waiting gauges;
 - physical-created, reused, discarded, wait, timeout, rollback-cleanup, and connector-error
@@ -53,8 +59,8 @@ The first Package B observability seam is intentionally internal and testable. I
 - fixed checkout-wait buckets at 1, 5, 25, 100, and 500 milliseconds plus one greater-than bucket.
 
 It has no player, account, user, session, request, query, route, host, network, database, credential,
-exception, or free-form error labels. No public Operations or readiness contract changes in this
-slice.
+exception, or free-form error labels. `/readyz` remains shape-compatible; only authenticated Admin
+Operations receives the additive pool object.
 
 ## Measurement and acceptance
 
@@ -73,10 +79,14 @@ Acceptance requires:
 - physical connection creation bounded by the configured capacity;
 - no in-use lease or waiter residue after the packet.
 
-The live gate uses only the disposable workflow database. It does not target production or user
-data, open a browser or public listener, change schema, or tune Gunicorn. Package A edge timing can
-be correlated with these low-cardinality storage aggregates during a separately authorized
-production observation; raw request identity remains excluded.
+The ordinary gate additionally runs 32 independently authenticated JSON sessions and 32 disposable-
+MySQL sessions through the production Gunicorn command, then synchronizes one Boule round per
+session, including concurrent login. The opt-in formal profile provisions and authenticates exactly
+100 sessions before synchronizing all 100 public Boule rounds through one worker, 32 request threads,
+and a 16-slot pool with the documented bounded 10-second checkout ceiling. This keeps the formal pool/serving measurement independent from serialized session
+creation while still proving 100 simultaneously active authenticated users. Both reports are exact-source, aggregate-only, loopback-only,
+and external to the checkout. They do not target production or user data and do not change schema,
+grants, provider policy, or deployment state.
 
 ## Rollback and operations
 

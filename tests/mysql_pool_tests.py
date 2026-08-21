@@ -173,12 +173,12 @@ class MySQLPoolTests(unittest.TestCase):
             for name in ("CASINO_MYSQL_POOL_SIZE", "CASINO_MYSQL_POOL_WAIT_MS", "CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS"):
                 # Delete only the focused non-secret setting.
                 os.environ.pop(name, None)
-            # Load the default one-worker/two-thread pool shape.
+            # Load the reviewed default pool shape for the qualification-grade serving stack.
             config = MySQLPoolConfig.from_env()
         # Require the approved capacity, checkout wait, and physical timeout defaults.
-        self.assertEqual((config.capacity, config.checkout_wait_ms, config.connect_timeout_seconds), (2, 500, 3))
+        self.assertEqual((config.capacity, config.checkout_wait_ms, config.connect_timeout_seconds), (16, 500, 3))
         # Reject every out-of-range policy dimension.
-        for values in ((0, 500, 3), (17, 500, 3), (2, 0, 3), (2, 10_001, 3), (2, 500, 0), (2, 500, 61)):
+        for values in ((0, 500, 3), (65, 500, 3), (2, 0, 3), (2, 10_001, 3), (2, 500, 0), (2, 500, 61)):
             # Require fixed policy validation before any connector call.
             with self.assertRaises(ValueError):
                 # Construct one invalid policy tuple.
@@ -266,6 +266,8 @@ class MySQLPoolTests(unittest.TestCase):
         snapshot = pool.snapshot()
         # Compare the low-cardinality counters.
         self.assertEqual((snapshot["wait_count"], snapshot["timeout_count"], snapshot["physical_created"], snapshot["reused"]), (1, 0, 1, 1))
+        # Bind the operator-facing saturation counter to the exact checkout-capacity encounter.
+        self.assertEqual(snapshot["wait_count"], snapshot["saturation_count"])
         # Require exactly one fixed wait bucket to have been incremented.
         self.assertEqual(sum(snapshot["wait_buckets_ms"].values()), 1)
         # Close the reusable session.
@@ -285,6 +287,8 @@ class MySQLPoolTests(unittest.TestCase):
         snapshot = pool.snapshot()
         # Compare the secret-free wait counters and gauge.
         self.assertEqual((snapshot["wait_count"], snapshot["timeout_count"], snapshot["waiting"]), (1, 1, 0))
+        # Require one saturation encounter for the one capacity-bound checkout.
+        self.assertEqual(1, snapshot["saturation_count"])
         # Return the original lease after the timeout proof.
         first.close()
         # Close the remaining idle physical connection.

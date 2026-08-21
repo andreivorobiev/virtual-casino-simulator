@@ -45,7 +45,7 @@
   "contracts/openapi/mississippi_stud.v1.yaml": "ebc7ae7973db855f074ef8d93b0954cbaeee72cff24a4ad1233748036483038f",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",
   "contracts/openapi/one-time-tokens.v2.yaml": "0025dbe355d8fedcb89a53b3c9261e2966a5962f5cf12d2fb2582b773887b690",
-  "contracts/openapi/operations.v1.yaml": "486dfd784991b1f30038f13de8f94d94ea7bff0954ef7977cd5d2e99ebda1e00",
+  "contracts/openapi/operations.v1.yaml": "7ee392a9ef55ea97d1f45397b90d2837108a86c834428641bc0c7acca1301b19",
   "contracts/openapi/over_under_7.v1.yaml": "a05d10a2058abdd5048d16c8c7beea3370d10b0373cab03190072a071ae98a8c",
   "contracts/openapi/pachinko.v1.yaml": "86d1c14cd9c9863af297f130fbb7b4e27fc2d52f58fb5e00a1942769bec730a2",
   "contracts/openapi/pai_gow_poker.v1.yaml": "c14394a9ddcd474e04c65db201ef75de42b66dd5b9f6c43bfd77b9414f74e795",

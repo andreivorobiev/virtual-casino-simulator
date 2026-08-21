@@ -161,6 +161,28 @@ export function createOperationsTab(dependencies) {
         diagnosticRow(t('operations.buildSha', {}, 'admin'), buildSha),
         diagnosticRow(t('operations.lastHeartbeat', {}, 'admin'), heartbeat),
       ]);
+      // Reduce the exact API variant to either one localized unavailable message or its fixed metrics table.
+      const pool = data.storage_pool?.available === true ? data.storage_pool : null;
+      // Render only aggregate process-local pool state, never connector or database identity.
+      const poolEvidence = pool
+        ? table([
+          t('operations.poolMetric', {}, 'admin'),
+          t('operations.poolValue', {}, 'admin'),
+        ], [
+          diagnosticRow(t('operations.poolCapacity', {}, 'admin'), String(pool.capacity)),
+          diagnosticRow(t('operations.poolInUse', {}, 'admin'), String(pool.in_use)),
+          diagnosticRow(t('operations.poolIdle', {}, 'admin'), String(pool.idle)),
+          diagnosticRow(t('operations.poolWaiting', {}, 'admin'), String(pool.waiting)),
+          diagnosticRow(t('operations.poolSaturation', {}, 'admin'), String(pool.saturation_count)),
+          diagnosticRow(t('operations.poolTimeouts', {}, 'admin'), String(pool.timeout_count)),
+        ])
+        : html`<p>${safe(t('operations.poolUnavailable', {}, 'admin'))}</p>`;
+      // Keep connection-pool evidence independently addressable for browser and accessibility checks.
+      const poolCard = html`<section class="admin-card" data-testid="admin-storage-pool">
+        <h2>${safe(t('operations.poolTitle', {}, 'admin'))}</h2>
+        <p>${safe(t('operations.poolDescription', {}, 'admin'))}</p>
+        ${poolEvidence}
+      </section>`;
       // Preserve optional localized attention reasons.
       const attention = reasonLabels.length
         ? html`<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => html`<li>${safe(label)}</li>`)}</ul>`
@@ -168,7 +190,7 @@ export function createOperationsTab(dependencies) {
       // Render Operations first with independent diagnostic placeholders.
       const danger = data.ready ? '' : 'danger';
       const operationsCard = html`<section class="admin-card ${danger}" data-testid="admin-operations-${stateKey}">${heading}${evidence}${attention}</section>`;
-      view.innerHTML = html`${operationsCard}${oauthDiagnosticsCard(null)}${mailDiagnosticsCard(null)}`;
+      view.innerHTML = html`${operationsCard}${poolCard}${oauthDiagnosticsCard(null)}${mailDiagnosticsCard(null)}`;
       // Start provider and mail diagnostics independently after Operations is visible.
       api('/api/v2/admin/oauth/providers')
         .then(replaceOAuthDiagnosticsCard)

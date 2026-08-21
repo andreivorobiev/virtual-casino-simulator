@@ -119,7 +119,7 @@ def run_service_cases(run_case, base, api, root):
         assert api(base, "/readyz")["ready"] is True
 
     # Record anonymous/authenticated/degraded/recovery Operations behavior under permanent IDs.
-    run_case("API-OPS-001", ["OPS-001", "OPS-002", "OPS-003", "OPS-005", "TEST-044"], operations_api)
+    run_case("API-OPS-001", ["OPS-001", "OPS-002", "OPS-003", "OPS-004", "OPS-005", "MYSQL-011", "TEST-044"], operations_api)
 
     # Define the disabled OAuth Admin diagnostic contract against the real loopback backend.
     def oauth_api():
@@ -166,7 +166,7 @@ def run_service_cases(run_case, base, api, root):
         # Require the disabled route to fail closed under repository defaults.
         assert signup["error"]["code"] == "FORBIDDEN"
         # Confirm OAuth diagnostics never extend the accepted Operations response shape.
-        assert set(api(base, "/api/v2/admin/operations")) == {"schema_version", "probe", "status", "checked_at", "last_successful_heartbeat_at", "build", "ready", "storage_provider", "checks", "reasons"}
+        assert set(api(base, "/api/v2/admin/operations")) == {"schema_version", "probe", "status", "checked_at", "last_successful_heartbeat_at", "build", "ready", "storage_provider", "checks", "reasons", "storage_pool"}
 
     # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.
     run_case("API-OAUTH-001", ["OAUTH-001", "OAUTH-002", "OAUTH-006", "OAUTH-007", "AUTH-007", "TEST-045", "TEST-093"], oauth_api)

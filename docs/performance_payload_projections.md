@@ -4,7 +4,7 @@ Source program: GitHub issue #323. Requirement: `TEST-166`.
 
 ## Decision
 
-The deployed process topology remains one Gunicorn worker with two threads. The repository's fail-closed multiprocess inventory (`TEST-160`) still classifies a second worker as blocked, so this slice does not change worker, thread, pool, service, provider, or production settings.
+The reviewed process topology is one Gunicorn worker with sixteen threads and a sixteen-slot MySQL pool. `TEST-251` separately exercises a one-worker/32-thread qualification profile without changing production, provider, or deployment settings. A second worker multiplies the process-local connection ceiling and remains blocked until a target-specific connection-budget review passes.
 
 The current client instead reduces repeated response work through two explicit compatibility projections:
 

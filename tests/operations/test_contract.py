@@ -80,7 +80,7 @@ class OperationsContractTests(unittest.TestCase):
         # Parse the canonical shared Operations module descriptor.
         module = json.loads(MODULE_PATH.read_text(encoding="utf-8"))
         # Verify module identity, current revision, and future permanent requirement prefix.
-        self.assertEqual(("operations", "1.1.2", ["OPS"]), (module["module"], module["version"], module["requirements_prefixes"]))
+        self.assertEqual(("operations", "1.2.0", ["OPS"]), (module["module"], module["version"], module["requirements_prefixes"]))
         # Verify the descriptor owns only the isolated Operations package.
         self.assertEqual(["casino/operations/"], module["paths"])
         # Verify the new OpenAPI file is the module's declared public contract.

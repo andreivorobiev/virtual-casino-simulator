@@ -37,7 +37,7 @@ class MySQLPoolClosedError(RuntimeError):
 @dataclass(frozen=True)
 class MySQLPoolConfig:
     # Limit simultaneously open physical connections in one application process.
-    capacity: int = 2
+    capacity: int = 16
     # Bound how long one checkout may wait for a busy connection.
     checkout_wait_ms: int = 500
     # Bound how long the connector may spend opening a physical connection.
@@ -45,10 +45,10 @@ class MySQLPoolConfig:
 
     # Validate every pool policy value before the provider can open a connection.
     def __post_init__(self) -> None:
-        # Reject capacities outside the approved one-to-sixteen process-local range.
-        if not 1 <= self.capacity <= 16:
+        # Reject capacities outside the approved one-to-sixty-four process-local range.
+        if not 1 <= self.capacity <= 64:
             # Raise a fixed validation message that contains no environment value.
-            raise ValueError("MySQL pool capacity must be between 1 and 16.")
+            raise ValueError("MySQL pool capacity must be between 1 and 64.")
         # Reject unbounded or non-positive checkout waits.
         if not 1 <= self.checkout_wait_ms <= 10_000:
             # Raise a fixed validation message that contains no environment value.
@@ -64,7 +64,7 @@ class MySQLPoolConfig:
         # Start protected integer parsing so malformed values produce one fixed failure.
         try:
             # Parse the bounded process-local capacity without reading any credential variable.
-            capacity = int(os.getenv("CASINO_MYSQL_POOL_SIZE", "2"))
+            capacity = int(os.getenv("CASINO_MYSQL_POOL_SIZE", "16"))
             # Parse the bounded checkout deadline without reading any credential variable.
             checkout_wait_ms = int(os.getenv("CASINO_MYSQL_POOL_WAIT_MS", "500"))
             # Parse the physical connector deadline without reading any credential variable.
@@ -498,6 +498,8 @@ class MySQLConnectionPool:
                 "discarded": self._metrics["discarded"],
                 # Report checkouts that encountered capacity.
                 "wait_count": self._metrics["wait_count"],
+                # Publish the same capacity-encounter counter under its operator-facing saturation name.
+                "saturation_count": self._metrics["wait_count"],
                 # Report bounded checkout timeouts.
                 "timeout_count": self._metrics["timeout_count"],
                 # Report automatic rollback cleanups.

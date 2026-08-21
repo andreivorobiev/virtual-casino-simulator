@@ -26,7 +26,8 @@
     "allowlisted storage provider name",
     "component pass/fail state",
     "fixed degraded reason code",
-    "probe and last-success timestamps"
+    "probe and last-success timestamps",
+    "bounded MySQL pool capacity, gauges, saturation encounters, and checkout timeout counters"
   ],
   "trusted_authentication": [
     "normal Admin session",

@@ -21,7 +21,7 @@ driven rather than implicit.
 | Rank | Bespoke layer | Current evidence | Disposition on next break |
 | --- | --- | --- | --- |
 | 1 | Session storage (first-class keyed JSON and MySQL rows after #1039) | Session-architecture epic, prior P1 symptoms, and provider-parity concurrency evidence | **Monitor the replacement** — do not reintroduce an aggregate session document; continue the broader session-redesign epic. |
-| 2 | Serving stack (stdlib `ThreadingHTTPServer` plus a parallel gunicorn WSGI path) and the MySQL connection pool (default 2, cap 16) | Concurrency-ceiling qualification finding | **Replace / harden** — standardize on the WSGI path; size and instrument the pool. |
+| 2 | Serving stack and MySQL connection pool | Concurrency-ceiling qualification finding | **Hardened by #1040** — Gunicorn is the production/qualification path, bounded 1×16 defaults and 1–64 pool policy are configurable, Admin exposes sanitized saturation telemetry, and 32/100-user disposable gates cover JSON/MySQL. The stdlib server remains local-development only. |
 | 3 | Auth / CSRF / one-time tokens | P1s cluster here | Prefer a mature framework primitive at the next material break; migrate behind the existing provider/service seams. |
 | 4 | Transactional mail and OAuth adapters | Disabled by default; bespoke but bounded | Adopt a maintained provider SDK when live enablement is actually scheduled, not before. |
 | 5 | Routing | Small, stable | Patch; revisit only if it starts gating features. |

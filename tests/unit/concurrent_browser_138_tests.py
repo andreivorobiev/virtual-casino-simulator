@@ -1110,6 +1110,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                 "reused": 198,
                 "discarded": 0,
                 "wait_count": 98,
+                "saturation_count": 98,
                 "timeout_count": 0,
                 "rollback_cleanup": 0,
                 "connector_error": 0,
@@ -1198,6 +1199,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                     "reused": 50,
                     "discarded": 0,
                     "wait_count": 2,
+                    "saturation_count": 2,
                     "timeout_count": 0,
                     "rollback_cleanup": 0,
                     "connector_error": 0,
@@ -1279,6 +1281,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                 "reused": 50,  # Prove bounded connection reuse.
                 "discarded": 0,  # Model no unhealthy-session discard.
                 "wait_count": 2,  # Preserve fixed aggregate wait evidence.
+                "saturation_count": 2,  # Preserve the public alias for the same encounters.
                 "timeout_count": 0,  # Refuse checkout exhaustion.
                 "rollback_cleanup": 0,  # Model no residual rollback cleanup.
                 "connector_error": 0,  # Refuse connector failures.
@@ -1329,6 +1332,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                 "reused": 50,
                 "discarded": 0,
                 "wait_count": 2,
+                "saturation_count": 2,
                 "timeout_count": 0,
                 "rollback_cleanup": 0,
                 "connector_error": 0,
@@ -1383,7 +1387,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         # Require terminal aggregate artifact upload on failure or success.
         self.assertIn("concurrent-browser-138-${{ github.sha }}", workflow)
         # Keep the expensive qualification outside ordinary pull-request execution.
-        job = workflow.split("\n  concurrent_browser_138:\n", 1)[1]
+        job = workflow.split("\n  concurrent_browser_138:\n", 1)[1].split("\n  gunicorn_load_100:\n", 1)[0]
         # Require explicit workflow-dispatch authorization.
         self.assertIn("inputs.concurrent_browser_138 == true", job)
         # Require the disposable MySQL preflight to install both connector and recovery groups.

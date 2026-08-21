@@ -60,6 +60,15 @@ jobs:
           python -m pip install -r requirements-dev.txt
           python -m pip install -e ".[mysql,recovery]"
       - name: Run checks
+        env:
+          # Authorize only issue #1040's disposable production-stack qualification.
+          CASINO_1040_DISPOSABLE: 1
+          # Run the ordinary CI profile with a few dozen independent authenticated sessions.
+          CASINO_1040_LOAD_USERS: 32
+          # Keep the JSON aggregate outside the exact source checkout.
+          CASINO_1040_JSON_LOAD_REPORT: ${{ runner.temp }}/gunicorn-load-json.json
+          # Keep the MySQL aggregate outside the exact source checkout.
+          CASINO_1040_LOAD_REPORT: ${{ runner.temp }}/gunicorn-load-mysql.json
         run: |
           python -m py_compile run.py verify_rules.py tests/run_tests.py $(find casino scripts -name "*.py")
           python scripts/validate_pr_issue_lifecycle.py
@@ -104,6 +113,8 @@ jobs:
             ${{ runner.temp }}/request-latency-json.json
             ${{ runner.temp }}/request-latency-mysql.json
             ${{ runner.temp }}/performance-target-acceptance.json
+            ${{ runner.temp }}/gunicorn-load-json.json
+            ${{ runner.temp }}/gunicorn-load-mysql.json
           if-no-files-found: error
           retention-days: 14
       # Provide a JavaScript runtime for the frontend contract suites. (issue #413)

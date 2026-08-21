@@ -1222,22 +1222,44 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             viewports={'desktop-primary':{'width':1920,'height':1080},'desktop-compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900}}
             # Exercise both installed locales on the same authenticated real backend.
             for locale in ('en-US','ru-RU'):
+                # Bind the expected localized non-MySQL pool status for the isolated JSON browser server.
+                pool_unavailable={'en-US':'Not applicable for the configured storage provider.','ru-RU':'Не применяется для настроенного поставщика хранилища.'}[locale]
+                # Bind the operator-facing saturation label for the available MySQL variant.
+                saturation_label={'en-US':'Saturation encounters','ru-RU':'Случаи насыщения'}[locale]
                 # Switch locale in place without changing the user's browser preference outside this test.
                 page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
                 # Open the Operations tab and wait for healthy real-backend telemetry.
                 page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=WAIT_MS)
+                # Require the new independent pool card to present the exact localized JSON variant.
+                page.get_by_test_id('admin-storage-pool').wait_for(timeout=WAIT_MS); assert pool_unavailable in page.get_by_test_id('admin-storage-pool').inner_text()
                 # Capture the healthy state at every exact governed viewport.
                 for viewport_name,viewport in viewports.items():
                     # Resize to the named visual-matrix dimensions.
                     page.set_viewport_size(viewport); page.wait_for_timeout(150)
                     # Save branch-current after-pass evidence for this locale and viewport.
                     page.screenshot(path=str(screenshots/f'after-pass-admin-operations-live-{locale}-{viewport_name}.png'),full_page=False)
+                # Read one authenticated real heartbeat before constructing the exact available MySQL test variant.
+                mysql_payload=page.evaluate("async () => await (await fetch('/api/v2/admin/operations')).json()")
+                # Preserve all live metadata while switching only the provider and allowlisted process-local pool dimensions.
+                mysql_payload['data']['storage_provider']='mysql'; mysql_payload['data']['checks']['storage']['provider']='mysql'; mysql_payload['data']['storage_pool']={'available':True,'capacity':16,'in_use':8,'idle':8,'waiting':3,'saturation_count':7,'timeout_count':0}
+                # Replace only the Operations response with the contract-valid available variant.
+                page.route('**/api/v2/admin/operations',lambda route,_request,body=json.dumps(mysql_payload): route.fulfill(status=200,content_type='application/json',body=body))
+                # Refresh the active tab and wait for the independent pool card to repaint with the available variant.
+                page.get_by_test_id('admin-refresh').click(); page.wait_for_function("label => document.querySelector('[data-testid=\"admin-storage-pool\"]')?.textContent.includes(label)",arg=saturation_label,timeout=WAIT_MS)
+                # Require localized saturation copy plus every exact synthetic metric without exposing a target or connector.
+                mysql_pool_text=page.get_by_test_id('admin-storage-pool').inner_text(); assert saturation_label in mysql_pool_text and all(value in mysql_pool_text.split() for value in ('16','8','3','7','0')) and 'mysql://' not in mysql_pool_text.lower()
+                # Capture one passing available-pool desktop state in each installed locale.
+                page.set_viewport_size(viewports['desktop-primary']); page.screenshot(path=str(screenshots/f'after-pass-admin-operations-pool-mysql-{locale}-desktop-primary.png'),full_page=False)
+                # Restore the real JSON response before inducing backend degradation.
+                page.unroute('**/api/v2/admin/operations')
                 # Remove only the isolated test server's player document to produce a real degraded dependency.
                 players_path.replace(unavailable_path)
                 # Always restore storage before continuing to the down-state proof.
                 try:
                     # Refresh the active tab and wait for sanitized degraded telemetry.
                     page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-degraded').wait_for(timeout=WAIT_MS)
+                    # Keep the provider-scoped pool card present and localized through degraded storage.
+                    assert pool_unavailable in page.get_by_test_id('admin-storage-pool').inner_text()
                     # Capture the degraded state at every governed viewport.
                     for viewport_name,viewport in viewports.items():
                         # Resize to the named visual-matrix dimensions.
@@ -1263,7 +1285,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             # Restore primary desktop dimensions and English for the remaining Admin suite.
             page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
         # Execute authenticated Operations UI, EN/RU, responsive, degraded, and down gates.
-        run_case('BR-OPS-001',['OPS-004','OPS-005','TEST-044'],admin_operations_browser)
+        run_case('BR-OPS-001',['OPS-004','OPS-005','MYSQL-011','TEST-044'],admin_operations_browser)
     # Preserve exact feedback/Admin operational case accounting on non-owning shards.
     else:
         # Advance only the feedback-through-operations affinity range.

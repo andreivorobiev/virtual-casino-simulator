@@ -50,7 +50,7 @@ FORMAL_ACTION_STATES = ("driver_selection", "initial_ready", "wager_selection", 
 # Keep otherwise unclassified game-action failures inside one fixed aggregate state bucket.
 FORMAL_FAILURE_ACTION_STATES = (*FORMAL_ACTION_STATES, "unclassified")
 # Bind the formal report to permanent requirement and browser-test identities.
-REQUIREMENT_IDS = ("AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-039", "TEST-042", "TEST-142", "CORE-021")
+REQUIREMENT_IDS = ("AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-039", "TEST-042", "TEST-142", "CORE-021", "CORE-035", "TEST-251")
 # Reuse canonical game order so catalog growth changes the plan deterministically.
 GAME_IDS = tuple(game["id"] for game in GAMES)
 # Map each single-request catalog gap to its visible preparation controls and terminal action.
@@ -276,6 +276,7 @@ def load_pool_preflight(path, source_commit):
         "reused",  # Preserve the successful connection-reuse count.
         "discarded",  # Preserve the rejected connection count.
         "wait_count",  # Preserve the cumulative lease-wait count.
+        "saturation_count",  # Preserve the operator-facing capacity-encounter counter.
         "timeout_count",  # Preserve the cumulative lease-timeout count.
         "rollback_cleanup",  # Preserve the rollback cleanup count.
         "connector_error",  # Preserve the connector failure count.
@@ -327,6 +328,7 @@ def pool_snapshot():
         "reused",
         "discarded",
         "wait_count",
+        "saturation_count",
         "timeout_count",
         "rollback_cleanup",
         "connector_error",

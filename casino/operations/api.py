@@ -34,8 +34,10 @@ READY_STORAGE_PROVIDERS = ("json", "mysql")
 DEGRADED_STORAGE_PROVIDERS = ("json", "mysql", "unknown")
 # Define the exact common response keys required by protected Operations probes.
 COMMON_PAYLOAD_KEYS = frozenset({"schema_version", "probe", "status", "checked_at", "last_successful_heartbeat_at", "build"})
-# Define the exact dependency response keys required by readiness and heartbeat.
-DEPENDENCY_PAYLOAD_KEYS = COMMON_PAYLOAD_KEYS | frozenset({"ready", "storage_provider", "checks", "reasons"})
+# Define the exact dependency response keys required by the public readiness route.
+READINESS_PAYLOAD_KEYS = COMMON_PAYLOAD_KEYS | frozenset({"ready", "storage_provider", "checks", "reasons"})
+# Extend only the Admin heartbeat with sanitized process-local pool telemetry.
+HEARTBEAT_PAYLOAD_KEYS = READINESS_PAYLOAD_KEYS | frozenset({"storage_pool"})
 
 
 # Mark the one sanitized degraded-status error that may cross the final boundary unchanged.
@@ -196,12 +198,60 @@ def _validated_reasons(value, *, ready: bool) -> list:
     return [{"component": component, "code": reason_code}]
 
 
+# Validate and rebuild the low-cardinality MySQL connection-pool telemetry object. (MYSQL-011)
+def _validated_storage_pool(value) -> dict:
+    # Require a plain object before deciding which exact availability variant is present.
+    if type(value) is not dict:
+        # Reject custom mappings and non-object values before any caller-controlled access.
+        raise ValueError("invalid Operations payload")
+    # Snapshot the built-in dictionary so later service mutation cannot alter validation.
+    source = dict(value)
+    # Require the availability discriminator on every heartbeat.
+    if "available" not in source or type(source["available"]) is not bool:
+        # Reject truthy values and missing discriminators through the fixed failure boundary.
+        raise ValueError("invalid Operations payload")
+    # Non-MySQL or unavailable snapshots expose no fabricated counters.
+    if source["available"] is False:
+        # Enforce the one-field unavailable variant exactly.
+        _require_exact_dict(source, frozenset({"available"}))
+        # Rebuild the explicit unavailable shape.
+        return {"available": False}
+    # Require every allowed gauge and counter, with no provider-owned extras.
+    exact_keys = frozenset({"available", "capacity", "in_use", "idle", "waiting", "saturation_count", "timeout_count"})
+    # Snapshot the exact available variant before validating individual integers.
+    available = _require_exact_dict(source, exact_keys)
+    # Rebuild the six numeric fields from strict built-in nonnegative integers.
+    numeric = {}
+    # Validate each allowlisted public field without accepting booleans or subclasses.
+    for name in ("capacity", "in_use", "idle", "waiting", "saturation_count", "timeout_count"):
+        # Read one field from the exact plain dictionary.
+        metric = available[name]
+        # Reject negative, non-integer, and custom numeric values.
+        if type(metric) is not int or metric < 0:
+            # Convert every malformed telemetry value to the fixed probe failure.
+            raise ValueError("invalid Operations payload")
+        # Copy the accepted built-in integer into the public result.
+        numeric[name] = metric
+    # Enforce the same reviewed process-local capacity range as the storage pool.
+    if not 1 <= numeric["capacity"] <= 64:
+        # Reject expanded or contradictory capacity policy.
+        raise ValueError("invalid Operations payload")
+    # Refuse physical-session gauges that exceed the configured pool ceiling.
+    if numeric["in_use"] + numeric["idle"] > numeric["capacity"]:
+        # Keep impossible telemetry behind the fixed failure boundary.
+        raise ValueError("invalid Operations payload")
+    # Rebuild the complete available variant with the discriminator first.
+    return {"available": True, **numeric}
+
+
 # Validate and rebuild one readiness-equivalent payload against exact state invariants.
 def _validated_dependency_payload(probe: str, payload: dict) -> dict:
+    # Select the exact public shape for readiness or the Admin-only heartbeat.
+    expected_keys = HEARTBEAT_PAYLOAD_KEYS if probe == "heartbeat" else READINESS_PAYLOAD_KEYS
     # Snapshot the exact dependency keys before reading any state-specific values.
-    source = _require_exact_dict(payload, DEPENDENCY_PAYLOAD_KEYS)
+    source = _require_exact_dict(payload, expected_keys)
     # Validate the shared metadata from the stable top-level snapshot.
-    result = _validated_common_payload(probe, source, DEPENDENCY_PAYLOAD_KEYS)
+    result = _validated_common_payload(probe, source, expected_keys)
     # Read the readiness marker from the exact plain source dictionary.
     ready = source["ready"]
     # Require a real boolean rather than truthy caller-controlled values.
@@ -226,6 +276,10 @@ def _validated_dependency_payload(probe: str, payload: dict) -> dict:
         raise ValueError("invalid Operations payload")
     # Add only validated dependency fields to the rebuilt common payload.
     result.update({"ready": ready, "storage_provider": provider, "checks": _validated_checks(source["checks"], ready=ready, provider=provider), "reasons": _validated_reasons(source["reasons"], ready=ready)})
+    # Add the separately validated pool shape only to the protected Admin heartbeat.
+    if probe == "heartbeat":
+        # Rebuild pool telemetry so service-owned objects never cross the API boundary directly.
+        result["storage_pool"] = _validated_storage_pool(source["storage_pool"])
     # Return the complete plain allowlisted payload.
     return result
 

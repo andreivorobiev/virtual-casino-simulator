@@ -1,28 +1,28 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-21T02:49:24Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-08-21T04:23:24Z.
 
 ## Current branch / active Codex work
 
-- Protected main is exact `861c1c8d84e88794d0f85e24f44548c63ad055ef`, packaging every accepted change after terminal-green v0.9.5.83.
-- Isolated branch `codex/release-v0.9.5.84` prepares the release-only wrapper for owner-authorized current-source deployment.
-- Host pull delivery remains installed; GitHub owns immutable publication and the production timer owns checksum-gated activation.
+- Protected main is exact `c7b86e54ba5ae03953903514207ee526dc9bc719`, the deployed v0.9.5.84 source at the start of issue #1040.
+- Isolated branch `codex/1040-concurrency-ceilings` implements the repository-only concurrency qualification packet for issue #1040.
+- No production, database, provider, release, public-policy, or deployment mutation is authorized by this branch.
 
 ## Accepted scope and requirements
 
-- The release packages accepted shared frontend lifecycles, browser/process reliability, version-governance ratchets, and first-class session-storage capacity already merged to protected main.
-- Frozen APIs, the 46-game catalog, paytables, public envelopes, restricted-preview policy, and required status-context names remain exact.
-- Requirements total exactly 1111; no release requirement identifier is allocated and the release wrapper closes no issue.
+- `MYSQL-011` raises the process-local MySQL pool default to sixteen, permits an explicit one-through-sixty-four capacity, and exposes only bounded authenticated Admin saturation telemetry.
+- `CORE-035` makes the existing production Gunicorn adapter the sole load-qualification serving stack with bounded worker and gthread controls.
+- `TEST-251` adds exact-source 32-session JSON/MySQL CI evidence and an opt-in exact-100-session disposable-MySQL formal profile.
+- `OPS-004`, `STORAGE-010`, and `TEST-220` are compatibly amended; requirements total exactly 1114 and the API case inventory is exactly 213.
 
 ## Version and contract allocation
 
-- Release versions advance only to package `0.9.5.84`, application `9.71.4`, contracts `1.62.7`, tests `1.115.1`, and docs `1.111.1`.
-- Core remains content-owned `10.12.0`, tooling remains `1.44.0`, Mobile remains `1.0.0`, Players remains `9.1.4`, Ledger remains `9.1.2`, and every game revision remains exact protected-main values.
-- The compatibility record retains exact immutable v0.9.5.83 source `36f5df4eae0bfea3a9eb0f017a617e7d6d49b09b`, archive SHA-256 `ce1e43d18be05b6fdc5a6aca5370dd00a7ee5e9c915b623fcb4749faa9b79bda`, and manifest SHA-256 `c5cd62e769781cbc16e57569befd1bf3ca998f032bb17fc86a404493267a6ef0`.
+- Packaged release remains `0.9.5.84`.
+- Content-owned module revisions are application `9.72.0`, core `10.13.0`, admin `1.21.0`, operations `1.2.0`, tests `1.116.0`, docs `1.112.0`, contracts `1.63.0`, and tooling `1.45.0`; every other module remains exact protected-main values.
+- The frozen `/api/v1` contract and all game, paytable, settlement, signup, OAuth, provider, billing, and public-launch behavior remain unchanged.
 
-## Rollback, validation, and handback
+## Validation and handback
 
-- Rollback remains application-only at exact schema 2; database rollback is prohibited outside `TOOL-003`. The migration catalog remains minimum 2 / expected 5 / apply held, while production remains exact schema 2.
-- The canonical deployable inventory is exactly 849 regular files: current source selection 848 plus this compatibility record; migration five is packaged but inert.
-- Local validation includes full repository bootstrap/API gates, exact predecessor resolution, two deterministic release builds, clean-copy smoke, and exact inventory verification; fresh hosted all-nine evidence remains mandatory before normal merge.
-- The release authorizes immutable publication and checksum-bound v0.9.5.84 application activation through the installed poller with exact v0.9.5.83 rollback. It authorizes no live mail, OAuth, provider traffic, provider-console change, public-signup activation, public-policy activation, public launch, database migration, grant mutation, paytable change, route/API expansion, or wagering-economics change.
+- Local focused Python evidence, requirements, versions, contracts, module boundaries, and catalog validation are green on the moving packet.
+- Before merge, the immutable PR head must pass the full repository gates, ordinary 32-session JSON/MySQL hosted evidence, exact Admin Browser rows, and the opt-in 100-session MySQL Gunicorn profile.
+- Issue #1040 closes only after exact-head formal evidence is posted to the issue and the normal non-bypass PR merge completes.

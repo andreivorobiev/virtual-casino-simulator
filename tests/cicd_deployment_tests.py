@@ -495,7 +495,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Define the exact reviewed cases and requirement mappings in historical order.
         expected_cases = (
             ("API-MONEY-NONFINITE-001", ["CORE-025", "LEDGER-027", "MHVP-006", "TEST-055"]),
-            ("API-OPS-001", ["OPS-001", "OPS-002", "OPS-003", "OPS-005", "TEST-044"]),
+            ("API-OPS-001", ["OPS-001", "OPS-002", "OPS-003", "OPS-004", "OPS-005", "MYSQL-011", "TEST-044"]),
             ("API-OAUTH-001", ["OAUTH-001", "OAUTH-002", "OAUTH-006", "OAUTH-007", "AUTH-007", "TEST-045", "TEST-093"]),
             ("API-OAUTH-002", ["OAUTH-007", "OAUTH-008", "OAUTH-009", "OAUTH-010", "OAUTH-012", "OAUTH-013", "AUTH-007", "AUTH-017", "TEST-093", "TEST-167", "TEST-168"]),
             ("API-MAIL-002", ["MAIL-001", "MAIL-002", "MAIL-003", "TEST-090"]),
@@ -569,9 +569,9 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             ("API-GAME-RULES-001", ["SEC-002", "SEC-004", "SEC-014", "TEST-163"]),
             ("STORAGE-TABLE-RULES-001", ["LEDGER-029", "TOKEN-006"]),
             ("STORAGE-MYSQL-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "LEDGER-009", "LEDGER-033", "TEST-164"]),
-            ("MYSQL-POOL-001", ["STORAGE-010", "TEST-141", "TEST-220"]),
+            ("MYSQL-POOL-001", ["STORAGE-010", "MYSQL-011", "TEST-141", "TEST-220"]),
             ("STORAGE-MYSQL-LIVE-001", ["STORAGE-001", "STORAGE-002", "STORAGE-003", "STORAGE-004", "STORAGE-005", "STORAGE-006", "STORAGE-010", "MYSQL-001", "MYSQL-002", "MYSQL-003", "MYSQL-004", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "INVITE-003", "TEST-038", "TEST-043", "TEST-089", "TEST-090", "TEST-091", "TEST-141", "TEST-171", "TEST-220"]),
-            ("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "STORAGE-018", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246", "TEST-247"]),
+            ("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "STORAGE-018", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246", "TEST-247", "TEST-251"]),
         )
         # Read the compatibility runner and extracted owner as inert source text.
         runner_source = BROWSER_RUNNER.read_text(encoding="utf-8")
@@ -604,7 +604,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         for case_id, _ in expected_cases:
             self.assertNotRegex(runner_source, rf"\brun_case\(\s*['\"]{re.escape(case_id)}['\"]")
         # Require one exact delegation that forwards both selectors and the callback.
-        delegation = "api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback)"
+        delegation = "api_storage_foundation.run_cases(run_case,include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback,gunicorn_json_load_callback=gunicorn_json_load_callback,gunicorn_load_callback=gunicorn_load_callback)"
         self.assertEqual(runner_source.count(delegation), 1)
         # Preserve the existing dispatch guard so default API runs never open a provider.
         self.assertIn("if args.storage or args.mysql_live or args.mysql_migrations_live: " + delegation, runner_source)

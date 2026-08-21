@@ -4705,7 +4705,7 @@
     {
       "id": "OPS-004",
       "module": "Operations",
-      "description": "Admin presents live, degraded, and client-derived down Operations states in English and Russian with text plus a non-color signal and no raw diagnostics.",
+      "description": "Admin presents live, degraded, and client-derived down Operations states in English and Russian with text plus a non-color signal, and shows only bounded process-local MySQL pool capacity, gauges, saturation encounters, and checkout timeouts without raw diagnostics.",
       "status": "PASS",
       "api_tests": [
         "API-OPS-001"
@@ -4719,11 +4719,13 @@
         "web/i18n/en-US/admin.json",
         "web/i18n/ru-RU/admin.json",
         "tests/visual/visual_matrix.json",
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "web/admin/operations.js",
+        "contracts/openapi/operations.v1.yaml"
       ],
       "introduced_in": "issue-72-operations-foundation",
-      "changed_in": "issue-72-operations-foundation",
-      "notes": "The browser infers down only from a failed transport because an unavailable process cannot report its own state."
+      "changed_in": "issue-1040-concurrency-ceilings",
+      "notes": "The browser infers down only from a failed transport because an unavailable process cannot report its own state. JSON storage renders the MySQL pool as not applicable; malformed provider telemetry reduces to the same unavailable shape and never exposes connector or target detail."
     },
     {
       "id": "OPS-005",
@@ -9080,7 +9082,7 @@
     {
       "id": "STORAGE-010",
       "module": "Storage",
-      "description": "Each MySQL application process owns one lazy thread-safe physical connection pool with validated capacity one through sixteen, bounded checkout and physical-connect deadlines, non-reconnecting idle liveness checks, request-scoped cursor and lease cleanup, fork/PID isolation, rollback and session reset before reuse, unhealthy-session discard, and terminal process cleanup, while JSON storage, schema version two, DDL-free runtime grants, transaction semantics, and application-only rollback remain unchanged.",
+      "description": "Each MySQL application process owns one lazy thread-safe physical connection pool with default capacity sixteen and validated capacity one through sixty-four, bounded checkout and physical-connect deadlines, non-reconnecting idle liveness checks, request-scoped cursor and lease cleanup, fork/PID isolation, rollback and session reset before reuse, unhealthy-session discard, and terminal process cleanup, while JSON storage, database schema, DDL-free runtime grants, transaction semantics, and application-only rollback remain unchanged.",
       "status": "PASS",
       "api_tests": [
         "MYSQL-POOL-001",
@@ -9097,8 +9099,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-323-mysql-pool-lifecycle",
-      "changed_in": "issue-948-storage-mysql-provider",
-      "notes": "The default capacity is two for the existing one-worker/two-thread service shape; checkout exhaustion and connector creation fail with fixed secret-free errors, and the internal snapshot exposes only fixed low-cardinality gauges, counters, policy, and wait buckets. Public Operations/readiness contract expansion and Gunicorn worker tuning remain separately governed follow-ups. Issue #948 moves the complete ordinary MySQL provider and its process-local planner/reset ownership into one bounded module while preserving the historical pool configuration export, exact pool object, checkout, rollback, reset, discard, and shutdown behavior."
+      "changed_in": "issue-1040-concurrency-ceilings",
+      "notes": "Checkout exhaustion and connector creation fail with fixed secret-free errors. The internal snapshot exposes only fixed low-cardinality gauges, counters, policy, and wait buckets; authenticated Admin Operations exposes the smaller MYSQL-011 allowlist while readiness stays shape-compatible. The exact capacity-two TEST-220 fixture remains a deliberate regression profile independent of the new default."
     },
     {
       "id": "STORAGE-011",
@@ -12631,8 +12633,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-809-mysql-capacity-two-evidence",
-      "changed_in": "issue-809-mysql-capacity-two-evidence",
-      "notes": "The production pool policy and fixed MySQLPoolExhaustedError deadline remain unchanged. The disposable fixture removes artificial checkout starvation by matching worker count to exact capacity while retaining real wallet-row contention and repeated hosted MySQL execution."
+      "changed_in": "issue-1040-concurrency-ceilings",
+      "notes": "The fixed MySQLPoolExhaustedError deadline remains unchanged. This exact capacity-two regression fixture is intentionally independent from the configurable default-sixteen policy; it removes artificial checkout starvation by matching worker count to exact fixture capacity while retaining real wallet-row contention and repeated hosted MySQL execution."
     },
     {
       "id": "TEST-221",
@@ -13657,6 +13659,18 @@
       "notes": "Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, Teen Patti, Crown and Anchor, Chuck-a-Luck, Bingo, Craps, Keno, and Roulette are the complete twenty-five adopters. Their previously inline route CSS declarations are formatted as external module-owned assets, while all selectors, markup, game state, request payloads, and settlement behavior remain unchanged. Fan-Tan retains its strict secure ft-prefixed action identity and ambiguous-response replay contract; Poker Dice and Pattern Draw retain their established pd fallback identity shape; Coin Pusher retains its established cp fallback identity shape; Marble Race retains its established mr fallback identity shape and semantic game colors; Boule retains its established bl fallback identity shape; Big Six Wheel retains its strict secure bsw-prefixed identity, ambiguous replay payload, cumulative motion, and delayed reveal; Lucky Grid retains its established lg fallback identity shape and 600 ms reveal; Color Wheel retains its established cw fallback identity shape, cumulative forward motion, and 3.2-second spin; Mississippi Stud retains distinct ms-deal and ms-decision fallback identity scopes, unresolved-response replay bindings, and mount-specific stale-response refusal; Double Bonus retains distinct dbvp-deal and dbvp-draw fallback identity scopes, unresolved-response replay bindings, sorted hold fingerprints, and mount-specific stale-response refusal; Four Card Poker retains distinct fcp-deal and fcp-decision fallback identity scopes, two-wager and decision retry bindings, card privacy, and mount-specific stale-response refusal; Dragon Tiger retains its dt-prefixed identity, pending-action replay payload, initial-state protection, and mount-specific stale-response refusal; Over/Under 7 retains its ou7-prefixed identity, immutable wager replay payload, scoped dice reveal, and mount-specific stale-response refusal; Teen Patti retains distinct tp-deal and tp-decision fallback identity scopes, unresolved-response retry bindings, card privacy, and mount-specific stale-response refusal; Crown and Anchor retains its strict caa-prefixed identity, immutable wager replay payload, scoped dice reveal, and mount-specific stale-response refusal; Chuck-a-Luck and Craps retain their strict request identities and scoped dice motion; Bingo retains independent purchase and call busy presentation; Keno retains its draw scheduler and authoritative ticket state; Roulette retains its three-domain localization, result-locked motion sequence, refund boundary, and stale-response refusal."
     },
     {
+      "id": "CORE-035",
+      "module": "Application",
+      "description": "Gunicorn with the production WSGI adapter is the sole production and concurrency-qualification serving stack, with configurable one-through-eight worker processes and one-through-sixty-four gthread request threads, conservative one-worker/sixteen-thread defaults, loopback-only binding, and aggregate connection budgeting against the process-local MySQL pool. The stdlib ThreadingHTTPServer remains local development and ordinary browser-test infrastructure only.",
+      "status": "PASS",
+      "api_tests": ["SERVICE-WSGI-001", "GUNICORN-LOAD-JSON-001", "GUNICORN-LOAD-MYSQL-001"],
+      "browser_tests": ["BR-CONCURRENT-138-001"],
+      "implementation_files": ["deploy/gunicorn.conf.py", "tests/production_service_tests.py", "tests/gunicorn_load_smoke.py", ".github/workflows/ci.yml", ".github/workflows/browser-tests.yml", "docs/production_service.md", "docs/concurrent_browser_qualification.md"],
+      "introduced_in": "issue-1040-concurrency-ceilings",
+      "changed_in": "issue-1040-concurrency-ceilings",
+      "notes": "Ordinary CI proves 32 authenticated JSON and disposable-MySQL sessions; the explicit formal profile proves exactly 100 authenticated MySQL sessions. Both use one Gunicorn worker with 32 request threads for bounded queue pressure, retain a 16-slot pool, complete one synchronized Boule round per session, and emit no identity, credential, request, wager, outcome, target, or exception detail."
+    },
+    {
       "id": "TEST-248",
       "module": "Tests",
       "description": "Listener-free lifecycle evidence proves exact root and busy ownership, lazy primary and reviewed shared-domain initialization, locale repaint suppression and teardown, external stylesheet reuse and conflict refusal, UUID and bounded fallback identities, stale asynchronous mount cancellation, strict validation, and deletion of adopter duplicate helpers; dedicated Daily Draw Lab, Faro, Trente et Quarante, Pachinko, Fan-Tan, Poker Dice, Pattern Draw, Coin Pusher, Marble Race, Boule, Big Six Wheel, Lucky Grid, Color Wheel, Mississippi Stud, Double Bonus Video Poker, Four Card Poker, Dragon Tiger, Over/Under 7, Teen Patti, Crown and Anchor, Chuck-a-Luck, Bingo, Craps, Keno, and Roulette browser cases preserve their real settled-round and repeat flows.",
@@ -13776,6 +13790,18 @@
       "notes": "Runtime accepts exact clean schema prefixes two through five. Game-action lifecycle remains eligible on the unchanged schema-four prefix and schema five; no schema-five migration or grant change is applied to production by this issue."
     },
     {
+      "id": "MYSQL-011",
+      "module": "MySQL",
+      "description": "The process-local MySQL pool defaults to sixteen physical sessions, accepts an explicit capacity from one through sixty-four, and publishes only authenticated Admin Operations telemetry for configured capacity, in-use, idle, waiting, cumulative saturation encounters, and checkout timeouts. Readiness remains shape-compatible, JSON reports pool telemetry unavailable, and malformed snapshots fail closed without connector, target, credential, query, request, user, or exception detail.",
+      "status": "PASS",
+      "api_tests": ["MYSQL-POOL-001", "API-OPS-001", "MYSQL-MIGRATION-LIVE-001", "GUNICORN-LOAD-MYSQL-001"],
+      "browser_tests": ["BR-OPS-001"],
+      "implementation_files": ["casino/core/mysql_pool.py", "casino/operations/probes.py", "casino/operations/service.py", "casino/operations/api.py", "contracts/openapi/operations.v1.yaml", "web/admin/operations.js", "tests/mysql_pool_tests.py", "tests/operations/test_service.py", "tests/operations/test_api.py", "docs/mysql_connection_pool.md"],
+      "introduced_in": "issue-1040-concurrency-ceilings",
+      "changed_in": "issue-1040-concurrency-ceilings",
+      "notes": "Saturation count is the cumulative number of checkouts that encountered hard capacity and therefore aliases the existing internal wait-count event exactly. Waiting is a current gauge and timeout count is the cumulative bounded checkout failure counter. The telemetry is process-local, not a database-global capacity promise."
+    },
+    {
       "id": "TEST-250",
       "module": "Tests",
       "description": "Provider-neutral JSON and transaction-faithful MySQL-model evidence proves deterministic per-user and global caps, direct bearer lookup, secret-free durable rows, atomic bearer-and-CSRF generation rotation, idempotent targeted and account revocation, expiry sweeps, one-shot legacy import, and parallel same-user plus different-user login/logout with zero lost sessions, cross-wired CSRF proofs, or hidden worker failures. Disposable MySQL evidence verifies native indexes, schema-four bridge backfill, least-privilege DML, restart compatibility, and the same concurrent lifecycle on real connectors.",
@@ -13786,6 +13812,18 @@
       "introduced_in": "issue-1039-first-class-sessions",
       "changed_in": "issue-1039-first-class-sessions",
       "notes": "All rows, bearer tokens, CSRF proofs, users, databases, and files are synthetic and isolated. The listener-free suite opens no network; disposable MySQL remains explicit loopback-only and performs no production operation."
+    },
+    {
+      "id": "TEST-251",
+      "module": "Tests",
+      "description": "Exact-clean-source load evidence starts the supported loopback-only Gunicorn WSGI command over caller-external temporary state, provisions reserved-domain synthetic players through the Admin API, authenticates every independent session, synchronizes one public Boule round per session, validates provider-specific Admin pool telemetry, closes the exact process and listener, and emits one atomic aggregate report. Ordinary CI requires 32 sessions on JSON and disposable MySQL; the opt-in formal profile requires exactly 100 sessions on disposable MySQL with zero failed sessions, rounds, checkout timeouts, or listener residue.",
+      "status": "PASS",
+      "api_tests": ["GUNICORN-LOAD-JSON-001", "GUNICORN-LOAD-MYSQL-001", "MYSQL-MIGRATION-LIVE-001"],
+      "browser_tests": ["BR-CONCURRENT-138-001"],
+      "implementation_files": ["tests/gunicorn_load_smoke.py", "tests/unit/gunicorn_load_smoke_tests.py", "tests/mysql_migration_live.py", "tests/cases/api/storage_foundation.py", "tests/runner.py", ".github/workflows/ci.yml", ".github/workflows/browser-tests.yml", "docs/concurrent_browser_qualification.md"],
+      "introduced_in": "issue-1040-concurrency-ceilings",
+      "changed_in": "issue-1040-concurrency-ceilings",
+      "notes": "The marker, report-containment, clean-checkout, provider, population, process, and listener gates fail before or cleanly after resource use. Evidence contains only exact source, provider, population, completion counts, aggregate duration and throughput, configured Gunicorn topology, allowlisted pool aggregates, requirement IDs, and terminal listener closure."
     }
   ]
 }
