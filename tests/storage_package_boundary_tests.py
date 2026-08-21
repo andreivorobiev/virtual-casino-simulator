@@ -426,7 +426,7 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         provider_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertTrue(set(RESET_METHOD_NAMES).isdisjoint(provider_methods))
         # Require reset ownership to remain before the provider contracts after later mixins.
-        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonSessionMixin", "JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
         self.assertIs(storage.JsonStorageProvider.reset_transaction, storage_reset.JsonResetMixin.reset_transaction)
         # Keep ordinary JSON, ledger, document, and game-action implementations outside reset ownership.
         for forbidden in ("_read_json", "_write_json", "transact_ledger", "read_document", "execute_game_action_once", "resolve_game_action"):
@@ -533,7 +533,7 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         provider_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertTrue(set(MYSQL_ACTION_METHOD_NAMES).isdisjoint(provider_methods))
         # Require lifecycle ownership to precede the provider contracts in the exact MRO.
-        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["MySQLGameActionMixin", "StorageProvider", "GameActionExecutor"])
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["MySQLSessionMixin", "MySQLGameActionMixin", "StorageProvider", "GameActionExecutor"])
         # Require every inherited implementation to be the exact mixin object.
         for method_name in MYSQL_ACTION_METHOD_NAMES:
             # Compare descriptor identity without constructing a provider or checking out a connection.
@@ -568,7 +568,7 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         owned_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertEqual(owned_methods, set(MYSQL_PROVIDER_METHOD_NAMES))
         # Preserve the accepted lifecycle-first provider contract MRO.
-        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["MySQLGameActionMixin", "StorageProvider", "GameActionExecutor"])
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["MySQLSessionMixin", "MySQLGameActionMixin", "StorageProvider", "GameActionExecutor"])
         # Require historical imports to remain exact class objects rather than wrappers.
         self.assertIs(storage.MySQLStorageProvider, storage_mysql_provider.MySQLStorageProvider)
         self.assertIs(storage._BorrowedMySQLConnection, storage_mysql_provider._BorrowedMySQLConnection)
@@ -603,7 +603,7 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         provider_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertTrue(set(JSON_INFRASTRUCTURE_METHOD_NAMES).isdisjoint(provider_methods))
         # Preserve substrate-first method resolution before action, reset, and public contracts.
-        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonSessionMixin", "JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
         # Require every historical provider descriptor to resolve to the exact extracted object.
         for method_name in JSON_INFRASTRUCTURE_METHOD_NAMES:
             # Compare descriptor identity without constructing a provider or touching storage.
@@ -630,7 +630,7 @@ class StoragePackageBoundaryTests(unittest.TestCase):
         owned_methods = {node.name for node in provider_class.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         self.assertEqual(owned_methods, set(JSON_PROVIDER_METHOD_NAMES))
         # Preserve the accepted substrate, action, reset, and contract MRO exactly.
-        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
+        self.assertEqual([ast.unparse(base) for base in provider_class.bases], ["JsonSessionMixin", "JsonInfrastructureMixin", "JsonGameActionMixin", "JsonResetMixin", "StorageProvider", "GameActionExecutor"])
         # Require historical callers to receive the exact extracted class object.
         self.assertIs(storage.JsonStorageProvider, storage_json_provider.JsonStorageProvider)
         # Require every ordinary descriptor to resolve to the sole extracted owner.

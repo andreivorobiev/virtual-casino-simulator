@@ -9374,7 +9374,7 @@
     {
       "id": "MYSQL-008",
       "module": "MySQL",
-      "description": "The schema-four rollback-compatibility bridge accepts runtime startup only for an initialized clean checksum-valid schema-two, schema-three, or schema-four migration prefix, binds recovery evidence to the actual schema version and exact applied prefix, and holds migration application before configuration, connection, lock, DDL, or state mutation.",
+      "description": "The rollback-compatibility bridge accepts runtime startup only for an initialized clean checksum-valid schema-two, schema-three, schema-four, or schema-five migration prefix, binds recovery evidence to the actual schema version and exact applied prefix, and holds migration application before configuration, connection, lock, DDL, or state mutation.",
       "status": "PASS",
       "api_tests": [
         "MYSQL-MIGRATION-001",
@@ -9393,8 +9393,8 @@
         "tests/storage_tests.py"
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
-      "changed_in": "issue-683-game-action-lifecycle-bridge",
-      "notes": "This bridge is runtime capacity only: clean schemas two and three retain current behavior, while lifecycle executor/resolver methods are usable only on exact clean schema four. The catalog remains apply-held; the application performs no migration, production grant, provider, route, game, public API, or deployment mutation."
+      "changed_in": "issue-1039-first-class-session-storage",
+      "notes": "This bridge is runtime capacity only: clean schemas two through four use independently keyed session documents, schema five uses the native indexed session table, and lifecycle executor/resolver methods are usable only on exact clean schema four or five. The catalog remains apply-held; the application performs no migration, production grant, provider, route, game, public API, or deployment mutation."
     },
     {
       "id": "TOOL-011",
@@ -9415,8 +9415,8 @@
         "tests/cicd_deployment_tests.py"
       ],
       "introduced_in": "issue-430-mysql-schema-rollback-bridge",
-      "changed_in": "issue-430-mysql-schema-rollback-bridge",
-      "notes": "The bridge rejects an exact-schema-three or exact-schema-four candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three or schema-four release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.83 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three or schema-four production activation, or issue closure."
+      "changed_in": "issue-1039-first-class-session-storage",
+      "notes": "The bridge rejects an exact-schema-three, exact-schema-four, or exact-schema-five candidate mapped to an exact-schema-two-only predecessor, accepts schema-two rollback through compatible bridge windows, and accepts a future schema-three, schema-four, or schema-five release rollback only to a bridge that accepts that exact schema. The separately governed v0.9.5.39 through v0.9.5.83 compatibility records declare unchanged schema-two application rollback and authorize no migration, database rollback, credential, provider, server-global, schema-three, schema-four, or schema-five production activation, or issue closure."
     },
     {
       "id": "UX-023",
@@ -10524,8 +10524,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "top-half-portfolio-v61",
-      "changed_in": "issue-773-blackjack-atomic-settings",
-      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Casino War, Keno, Baccarat, and Blackjack are classified as provider-atomic for player-state publication after retiring their final direct saves, but remain blocked because game state and money are still committed through separate provider boundaries."
+      "changed_in": "issue-1039-first-class-session-storage",
+      "notes": "The audit remains conservative: a blocked disposition is evidence against increasing process count, not authorization to tune production. Auth sessions are classified as compatible only through independently keyed provider rows with no aggregate-document write bypass; Casino War, Keno, Baccarat, and Blackjack remain blocked because game state and money are still committed through separate provider boundaries."
     },
     {
       "id": "TEST-161",
@@ -11088,7 +11088,7 @@
     {
       "id": "STORAGE-013",
       "module": "Storage",
-      "description": "JSON and clean-schema-four MySQL storage expose one provider-neutral game-action lifecycle resolver. The first exact semantic claimant wins an immutable execute or uncommitted disposition within the current reset epoch; resolver lock contention or reset unavailability returns pending without a claim, committed resolution returns the original complete receipt, resolver-first prevents every late planner and mutation, conflicts are detected before resource reads, and no claim or receipt is updated or deleted. A successful governed reset advances one durable unavailable namespace through resetting to ready, preserves prior immutable history while making it unreachable to current action lookups, and permits the same external key to execute freshly only after bootstrap completes.",
+      "description": "JSON and clean-schema-four-or-five MySQL storage expose one provider-neutral game-action lifecycle resolver. The first exact semantic claimant wins an immutable execute or uncommitted disposition within the current reset epoch; resolver lock contention or reset unavailability returns pending without a claim, committed resolution returns the original complete receipt, resolver-first prevents every late planner and mutation, conflicts are detected before resource reads, and no claim or receipt is updated or deleted. A successful governed reset advances one durable unavailable namespace through resetting to ready, preserves prior immutable history while making it unreachable to current action lookups, and permits the same external key to execute freshly only after bootstrap completes.",
       "status": "PASS",
       "api_tests": [
         "STORAGE-GAME-ACTION-LIFECYCLE-001",
@@ -11107,8 +11107,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-683-game-action-lifecycle-bridge",
-      "changed_in": "issue-948-storage-mysql-provider",
-      "notes": "The bridge is inert: no route, game, public API, contract, migration application, or production activation uses it. JSON holds its existing global provider gate across reset and caller bootstrap, retains epoch-scoped immutable history, and restores exact prior bytes on body or finalization failure. MySQL lifecycle DML requires exact clean schema four and a ready singleton epoch. Issue #946 moves the exact twelve-method MySQL lifecycle implementation into a bounded owner without changing behavior, schema eligibility, transaction ordering, grants, or activation policy. Issue #948 moves the remaining ordinary MySQL provider and provider-neutral codecs behind exact compatibility re-exports; lifecycle schema eligibility, planner purity, transaction ordering, reset epochs, grants, and activation policy remain unchanged."
+      "changed_in": "issue-1039-first-class-session-storage",
+      "notes": "The bridge is inert: no route, game, public API, contract, migration application, or production activation uses it. JSON holds its existing global provider gate across reset and caller bootstrap, retains epoch-scoped immutable history, and restores exact prior bytes on body or finalization failure. MySQL lifecycle DML requires exact clean schema four or five and a ready singleton epoch. Schema five adds only first-class session capacity; it preserves the schema-four action tables, ordering, grants, and reset semantics."
     },
     {
       "id": "MYSQL-009",
@@ -11134,13 +11134,13 @@
         "tests/mysql_migration_live.py"
       ],
       "introduced_in": "issue-683-game-action-lifecycle-bridge",
-      "changed_in": "issue-948-storage-mysql-provider",
-      "notes": "Catalog policy remains held with minimum runtime schema two and expected schema four. Application runtime accepts clean schemas two, three, and four, but lifecycle executor/resolver methods reject schemas two and three before DML. A failed schema-four reset remains durably resetting until a later explicitly authorized reset acquires the same named lock, advances again, and completes bootstrap; action planning never runs in that gap. Issue #946 changes only the bounded Python owner of the exact lifecycle method bytes; no production migration, grant mutation, or activation is included. Issue #948 changes only Python ownership for the complete provider and shared durable codecs; schema-four DDL, clean-schema eligibility, least-privilege grants, and held activation remain byte- and behavior-compatible."
+      "changed_in": "issue-1039-first-class-session-storage",
+      "notes": "Catalog policy remains held with minimum runtime schema two and expected schema five. Application runtime accepts clean schemas two through five, but lifecycle executor/resolver methods reject schemas two and three before DML. A failed schema-four-or-five reset remains durably resetting until a later explicitly authorized reset acquires the same named lock, advances again, and completes bootstrap; action planning never runs in that gap. Schema five preserves the schema-four lifecycle DDL, clean-schema eligibility, least-privilege grants, and held activation while adding separately indexed session rows."
     },
     {
       "id": "TEST-174",
       "module": "Tests",
-      "description": "Provider-neutral, JSON, transactional MySQL-model, migration, disposable-MySQL, storage, recovery, release, and CI evidence proves resolver-first and executor-first convergence, finite pending lock waits, exact replay and changed-input conflict, planner at most once, no late execution after uncommitted, crash recovery at every JSON projection boundary, exact wallet/state/ledger/receipt convergence, schema-three receipt byte preservation during schema-four epoch-one backfill, runtime append-only grants, clean schema-two/three compatibility, exact clean-schema-four lifecycle eligibility, and held application. Reset evidence proves action-versus-reset orderings, claim-zero/planner-zero resetting gaps, same-session capacity-one bootstrap, fresh same-key execution in a new epoch, old immutable history retention without cross-epoch replay, exact JSON rollback, durable MySQL reset failure and later recovery, nonblocking concurrent reset refusal, and no route, game, API, log, or deployment activation.",
+      "description": "Provider-neutral, JSON, transactional MySQL-model, migration, disposable-MySQL, storage, recovery, release, and CI evidence proves resolver-first and executor-first convergence, finite pending lock waits, exact replay and changed-input conflict, planner at most once, no late execution after uncommitted, crash recovery at every JSON projection boundary, exact wallet/state/ledger/receipt convergence, schema-three receipt byte preservation during schema-four epoch-one backfill, runtime append-only grants, clean schema-two/three compatibility, exact clean-schema-four-or-five lifecycle eligibility, schema-five session backfill, and held application. Reset evidence proves action-versus-reset orderings, claim-zero/planner-zero resetting gaps, same-session capacity-one bootstrap, fresh same-key execution in a new epoch, old immutable history retention without cross-epoch replay, exact JSON rollback, durable MySQL reset failure and later recovery, nonblocking concurrent reset refusal, and no route, game, API, log, or deployment activation.",
       "status": "PASS",
       "api_tests": [
         "API-GAME-ACTION-LIFECYCLE-001",
@@ -11165,8 +11165,8 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-683-game-action-lifecycle-bridge",
-      "changed_in": "issue-683-game-action-lifecycle-bridge",
-      "notes": "TEST-173 remains reserved by the separate parked issue #168 worktree and is not reused. All database identities and money are disposable synthetic fixtures; no production database, deployment, route, game, or public API is touched."
+      "changed_in": "issue-1039-first-class-session-storage",
+      "notes": "TEST-173 remains reserved by the separate parked issue #168 worktree and is not reused. Schema five preserves the complete game-action lifecycle while disposable evidence adds its session-table backfill and runtime restart prefix. All database identities and money are disposable synthetic fixtures; no production database, deployment, route, game, or public API is touched."
     },
     {
       "id": "UX-028",
@@ -13737,6 +13737,105 @@
       "introduced_in": "issue-828-deuces-wild-diagnostic-csrf",
       "changed_in": "issue-828-deuces-wild-diagnostic-csrf",
       "notes": "The fixture exercises the public /api/v2/auth/csrf bootstrap and double-submit wire contract without changing or bypassing production auth, API, game, contract, or browser code. The diagnostic remains explicitly outside formal after-pass Browser evidence."
+    },
+    {
+      "id": "SESSION-014",
+      "module": "Core",
+      "description": "Authentication sessions are provider-owned first-class rows rather than one shared document. Creation, bearer lookup, activity touch, bearer-and-CSRF rotation, targeted and account-wide revocation, and expiry preserve the existing opaque session id, deterministic cap, generation, absolute lifetime, idle-timeout, guest, provider, and Admin-control semantics while plaintext bearer material exists only in request-local results and cookies.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-SESSIONS-001",
+        "API-AUTH-001",
+        "API-MOBILE-CORE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/auth.py",
+        "casino/core/storage/base.py",
+        "casino/core/storage/sessions.py",
+        "casino/core/storage/sessions_json.py",
+        "casino/core/storage/sessions_mysql.py",
+        "docs/session_storage.md"
+      ],
+      "introduced_in": "issue-1039-first-class-sessions",
+      "changed_in": "issue-1039-first-class-sessions",
+      "notes": "The retired aggregate sessions document is importer-only after a one-shot provider-owned migration. No API envelope, cookie name, CSRF policy, signup policy, provider configuration, or production state changes in this compatible storage cutover."
+    },
+    {
+      "id": "STORAGE-019",
+      "module": "Storage",
+      "description": "StorageProvider exposes one session lifecycle whose JSON implementation stores one strict atomically published file per bearer digest and whose MySQL implementation stores one independently keyed compatibility document on clean schemas two through four or one indexed native row on clean schema five. Compound cap, rotation, account revocation, replacement, and expiry operations serialize their complete selection and writes, while direct bearer lookup reads only the digest-selected row and every durable representation omits plaintext tokens.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-SESSIONS-001",
+        "MYSQL-MIGRATION-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/storage/base.py",
+        "casino/core/storage/sessions.py",
+        "casino/core/storage/sessions_json.py",
+        "casino/core/storage/sessions_mysql.py",
+        "casino/core/storage/json_provider.py",
+        "casino/core/storage/mysql_provider.py",
+        "casino/core/storage/__init__.py",
+        "docs/session_storage.md"
+      ],
+      "introduced_in": "issue-1039-first-class-sessions",
+      "changed_in": "issue-1039-first-class-sessions",
+      "notes": "JSON and the held-schema MySQL bridge remove the single hot aggregate immediately without requiring schema activation. Migration application remains held and no provider selector, database, grant, or deployment mutation is included."
+    },
+    {
+      "id": "MYSQL-010",
+      "module": "MySQL",
+      "description": "Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-SESSIONS-001",
+        "MYSQL-MIGRATION-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/storage/sessions_mysql.py",
+        "casino/core/storage/mysql_provider.py",
+        "migrations/mysql/0005_first_class_sessions.json",
+        "migrations/mysql/catalog.json",
+        "scripts/package_app.py",
+        "tests/mysql_migration_tests.py",
+        "tests/mysql_migration_live.py",
+        "docs/mysql_migrations.md",
+        "docs/session_storage.md"
+      ],
+      "introduced_in": "issue-1039-first-class-sessions",
+      "changed_in": "issue-1039-first-class-sessions",
+      "notes": "Runtime accepts exact clean schema prefixes two through five. Game-action lifecycle remains eligible on the unchanged schema-four prefix and schema five; no schema-five migration or grant change is applied to production by this issue."
+    },
+    {
+      "id": "TEST-250",
+      "module": "Tests",
+      "description": "Provider-neutral JSON and transaction-faithful MySQL-model evidence proves deterministic per-user and global caps, direct bearer lookup, secret-free durable rows, atomic bearer-and-CSRF generation rotation, idempotent targeted and account revocation, expiry sweeps, one-shot legacy import, and parallel same-user plus different-user login/logout with zero lost sessions, cross-wired CSRF proofs, or hidden worker failures. Disposable MySQL evidence verifies native indexes, schema-four bridge backfill, least-privilege DML, restart compatibility, and the same concurrent lifecycle on real connectors.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-SESSIONS-001",
+        "MYSQL-MIGRATION-001",
+        "MYSQL-MIGRATION-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/session_storage_tests.py",
+        "tests/mysql_migration_tests.py",
+        "tests/mysql_migration_live.py",
+        "tests/security/test_policy.py",
+        "tests/admin_session_control_tests.py",
+        "tests/session_timeout_tests.py",
+        "tests/mobile_core_security_tests.py",
+        "tests/cases/api/storage_foundation.py"
+      ],
+      "introduced_in": "issue-1039-first-class-sessions",
+      "changed_in": "issue-1039-first-class-sessions",
+      "notes": "All rows, bearer tokens, CSRF proofs, users, databases, and files are synthetic and isolated. The listener-free suite opens no network; disposable MySQL remains explicit loopback-only and performs no production operation."
     },
     {
       "id": "ROU-001",

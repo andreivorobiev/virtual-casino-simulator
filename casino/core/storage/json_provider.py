@@ -35,6 +35,8 @@ from casino.core.storage.reset import JsonResetMixin
 from casino.core.storage.game_actions_json import JsonGameActionMixin
 # Import the bounded JSON filesystem, locking, cache, and planner substrate.
 from casino.core.storage.json_infrastructure import JsonInfrastructureMixin
+# Import first-class keyed session ownership without reintroducing the aggregate auth document.
+from casino.core.storage.sessions_json import JsonSessionMixin
 # Import required dependency so storage providers surface existing API errors.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 
@@ -43,7 +45,7 @@ _LEDGER_ACTION_COMPACT_BYTES = 512 * 1024
 
 
 # Define the JsonStorageProvider that preserves default local file behavior.
-class JsonStorageProvider(JsonInfrastructureMixin, JsonGameActionMixin, JsonResetMixin, StorageProvider, GameActionExecutor):
+class JsonStorageProvider(JsonSessionMixin, JsonInfrastructureMixin, JsonGameActionMixin, JsonResetMixin, StorageProvider, GameActionExecutor):
     # Store the provider name used by diagnostics and tests.
     name = "json"
 

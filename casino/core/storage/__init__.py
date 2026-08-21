@@ -39,6 +39,12 @@ from casino.core.storage.reset import JsonResetMixin, _GAME_ACTION_EPOCH_STORAGE
 from casino.core.storage.game_actions_json import JsonGameActionMixin, _GAME_ACTION_STAGES
 # Import and re-export the JSON filesystem, locking, cache, and planner infrastructure aliases.
 from casino.core.storage.json_infrastructure import JsonInfrastructureMixin, _JSON_GATE_LOCAL, _JSON_GATE_LOCKS, _JSON_GATE_REGISTRY_LOCK, _json_gate_lock
+# Import and re-export provider-neutral first-class session helpers.
+from casino.core.storage.sessions import durable_session_row, resolved_session_row, session_eviction_key, session_is_expired, session_token_digest
+# Import and re-export the keyed JSON session lifecycle mixin.
+from casino.core.storage.sessions_json import JsonSessionMixin
+# Import and re-export the schema-aware MySQL session lifecycle mixin.
+from casino.core.storage.sessions_mysql import MySQLSessionMixin
 # Import and re-export the complete ordinary JSON provider from its bounded owner.
 from casino.core.storage.json_provider import JsonStorageProvider, _LEDGER_ACTION_COMPACT_BYTES
 # Import and re-export the complete MySQL provider from its bounded owner.

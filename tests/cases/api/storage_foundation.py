@@ -17,6 +17,8 @@ from tests import mysql_pool_tests
 from tests import recovery_tests
 # Import provider-neutral player-state atomicity coverage.
 from tests import state_store_atomic_tests
+# Import first-class session lifecycle and concurrency parity coverage.
+from tests import session_storage_tests
 # Import JSON and modeled-MySQL provider parity helpers.
 from tests import storage_tests
 # Import the first #728 package-boundary ownership suite.
@@ -145,8 +147,21 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
         if not result.wasSuccessful():
             raise AssertionError("MySQL migration policy suite failed")
 
+    # Define one focused unittest runner for first-class session provider parity.
+    def run_session_storage_tests():
+        # Load the complete keyed JSON and modeled-MySQL lifecycle suite.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(session_storage_tests.SessionStorageProviderTests)
+        # Execute the concurrency, cap, rotation, expiry, and importer cases.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named central case when any session-storage assertion failed.
+        if not result.wasSuccessful():
+            # Preserve one fixed listener-free diagnostic.
+            raise AssertionError("first-class session storage suite failed")
+
     # Map the listener-free policy suite to the permanent migration requirements.
     run_case("MYSQL-MIGRATION-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "TEST-048", "TEST-174"], run_mysql_migration_policy_tests)
+    # Prove keyed session rows, deterministic caps, rotation, expiry, and concurrent login/logout parity.
+    run_case("STORAGE-SESSIONS-001", ["SESSION-014", "STORAGE-019", "MYSQL-010", "TEST-250"], run_session_storage_tests)
     # Map the listener-free recovery suite to the permanent recovery requirements.
     run_case("RECOVERY-POLICY-001", ["MYSQL-006", "MYSQL-008", "MYSQL-009", "TOOL-004", "TEST-049", "TEST-174"], run_recovery_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.

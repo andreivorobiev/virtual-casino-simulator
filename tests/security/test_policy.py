@@ -219,10 +219,10 @@ class SessionSecurityTests(unittest.TestCase):
             return (now + auth.timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
         # Build the exact active-session shape needed by the presence aggregator.
         def session(session_id, user_id, updated_seconds, *, status="active", expires_seconds=3600):
-            # Return one credential-free durable record for aggregate-only testing.
-            return {"session_id": session_id, "user_id": user_id, "status": status, "created_at": stamp(-300), "updated_at": stamp(updated_seconds), "expires_at": stamp(expires_seconds)}
-        # Persist duplicates, a just-inside boundary, exact-boundary stale data, revoked data, expired data, and malformed data.
-        auth.save_sessions({"schema_version": auth.SCHEMA_VERSION, "sessions": [session("a1", "user-a", 0), session("a2", "user-a", -30), session("b1", "user-b", -119), session("stale", "user-stale", -120), session("revoked", "user-revoked", 0, status="revoked"), session("expired", "user-expired", 0, expires_seconds=-1), {"session_id": "malformed", "user_id": "user-malformed", "status": "active", "updated_at": "invalid", "expires_at": stamp(3600)}]})
+            # Return one complete synthetic first-class record for aggregate-only testing.
+            return {"session_id": session_id, "user_id": user_id, "token": f"token-{session_id}", "csrf_token": f"csrf-{session_id}".ljust(32, "x"), "generation": 1, "status": status, "created_at": stamp(-300), "updated_at": stamp(updated_seconds), "expires_at": stamp(expires_seconds), "auth_method": "local"}
+        # Persist duplicates, a just-inside boundary, exact-boundary stale data, revoked data, and expired data.
+        auth.save_sessions({"schema_version": auth.SCHEMA_VERSION, "sessions": [session("a1", "user-a", 0), session("a2", "user-a", -30), session("b1", "user-b", -119), session("stale", "user-stale", -120), session("revoked", "user-revoked", 0, status="revoked"), session("expired", "user-expired", 0, expires_seconds=-1)]})
         # Freeze the helper's server-owned clock without altering durable timestamps.
         with mock.patch.object(auth, "utc_datetime", return_value=now):
             # Require exactly two recently active unique users.
@@ -241,7 +241,7 @@ class SessionSecurityTests(unittest.TestCase):
         # Require independent bearer and CSRF material on every issued session.
         self.assertNotEqual((first["token"], first["csrf_token"]), (second["token"], second["csrf_token"]))
         # Require both concurrent sessions to remain present in durable active state.
-        self.assertEqual({session["token"] for session in auth.load_sessions()["sessions"] if session.get("status") == "active"}, {first["token"], second["token"]})
+        self.assertEqual({session["session_id"] for session in auth.load_sessions()["sessions"] if session.get("status") == "active"}, {first["session_id"], second["session_id"]})
         # Require the predecessor to keep authenticating after the newer login (issue #226).
         self.assertEqual(auth.authenticate_token(first["token"])[1]["user_id"], user["user_id"])
         # Require the newer session to authenticate independently of the predecessor.
@@ -297,13 +297,13 @@ class SessionSecurityTests(unittest.TestCase):
             # Require the identity to retain exactly the reduced per-user cap.
             self.assertEqual(len(active), 3)
             # Require the survivors to be the three most recently issued sessions.
-            self.assertEqual({session["token"] for session in active}, {session["token"] for session in issued[-3:]})
+            self.assertEqual({session["session_id"] for session in active}, {session["session_id"] for session in issued[-3:]})
             # Require the two least-recently-used predecessors to be evicted entirely.
-            surviving_tokens = {session["token"] for session in active}
+            surviving_ids = {session["session_id"] for session in active}
             # Confirm neither evicted predecessor still authenticates.
             for evicted in issued[:2]:
                 # Require each evicted token to be absent from surviving active state.
-                self.assertNotIn(evicted["token"], surviving_tokens)
+                self.assertNotIn(evicted["session_id"], surviving_ids)
 
     # Publish the distinct CSRF proof intentionally while keeping bearer and client data private.
     def test_public_session_exposes_only_distinct_compatible_csrf_material(self):
@@ -328,8 +328,12 @@ class SessionSecurityTests(unittest.TestCase):
         resolved = auth.csrf_token_for_session_cookie({"Cookie": f"casino_session={session['token']}"})
         # Require the exact session proof rather than an anonymous replacement.
         self.assertEqual(resolved, session["csrf_token"])
-        # Require the read-only shell lookup to preserve the active context-bound session unchanged.
-        self.assertEqual(auth.load_sessions()["sessions"], [session])
+        # Require the read-only shell lookup to preserve the active context-bound session identity and lifecycle unchanged.
+        stored = auth.load_sessions()["sessions"]
+        # Verify the sole durable row while plaintext bearer authority remains absent from projections.
+        self.assertEqual((len(stored), stored[0]["session_id"], stored[0]["status"]), (1, session["session_id"], "active"))
+        # Require provider projections to retain only the one-way bearer digest.
+        self.assertNotIn("token", stored[0])
 
     # Require production session and logout cookies to be Secure, HttpOnly, host-only, and governed.
     def test_session_cookie_set_and_clear_attributes(self):

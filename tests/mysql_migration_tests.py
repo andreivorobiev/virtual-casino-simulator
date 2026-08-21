@@ -203,16 +203,16 @@ class MySQLMigrationTests(unittest.TestCase):
     def test_catalog_contract_is_exact(self):
         # Load the verified immutable migration catalog.
         migrations, expected, minimum, catalog_sha256 = mysql_migrations.load_catalog()
-        # Require the four explicit sequential migrations and bridge runtime window.
-        self.assertEqual([item.version for item in migrations], [1, 2, 3, 4])
+        # Require the five explicit sequential migrations and bridge runtime window.
+        self.assertEqual([item.version for item in migrations], [1, 2, 3, 4, 5])
         # Require the separately versioned runtime window.
-        self.assertEqual((minimum, expected), (2, 4))
+        self.assertEqual((minimum, expected), (2, 5))
         # Require the public contract to bind the closed apply policy.
         self.assertEqual(mysql_migrations.schema_contract()["apply_policy"], "held")
         # Require canonical SHA-256 identities.
         self.assertRegex(catalog_sha256, r"^[0-9a-f]{64}$")
         # Require every listed migration to retain a distinct checksum.
-        self.assertEqual(len({item.checksum for item in migrations}), 4)
+        self.assertEqual(len({item.checksum for item in migrations}), 5)
         # Pin the two immutable predecessor files byte-for-byte.
         self.assertEqual(
             [item.checksum for item in migrations[:2]],
@@ -225,8 +225,8 @@ class MySQLMigrationTests(unittest.TestCase):
         self.assertEqual(mysql_migrations.migration_chain_digest(migrations, 2), "72fa8f8918022d5bcd29ba286bd96ab6f319ea0ea6aee5e376e1ff71c2eeedd8")
         # Pin the unchanged schema-three prefix containing exact legacy receipt bytes.
         self.assertEqual(mysql_migrations.migration_chain_digest(migrations, 3), "083682e266576aa571e20f2baf6746b0ee28c8f81906c17dc96f05bed6a51a7b")
-        # Require one reviewed complete chain identity for the schema-four catalog tail.
-        self.assertEqual(mysql_migrations.migration_chain_digest(migrations), "0fa4dcd42d590bc64b10323fd2362129776d5e0b4dcde8c6262070e615a7060b")
+        # Require one reviewed complete chain identity for the schema-five catalog tail.
+        self.assertEqual(mysql_migrations.migration_chain_digest(migrations), "06a811dee8e5603409069abafc6862c53848ff9ccaf97e09c96b5bd953e6e3ee")
 
     # Prove catalog loading rejects absent or alternate apply policy.
     def test_catalog_apply_policy_is_exact_and_closed(self):
@@ -267,7 +267,7 @@ class MySQLMigrationTests(unittest.TestCase):
         # Select only the new receipt-capacity migration tail.
         migration = migrations[2]
         # Require the exact stable migration identity.
-        self.assertEqual((expected, migration.version, migration.name), (4, 3, "game-action-receipts"))
+        self.assertEqual((expected, migration.version, migration.name), (5, 3, "game-action-receipts"))
         # Require exactly one additive table and no stored enforcement object.
         self.assertEqual(len(migration.statements), 1)
         # Read the complete additive table statement once.
@@ -312,7 +312,7 @@ class MySQLMigrationTests(unittest.TestCase):
         # Select only the schema-four lifecycle migration.
         migration = migrations[3]
         # Require exact catalog identity and unchanged compatibility floor.
-        self.assertEqual((minimum, expected, migration.version, migration.name), (2, 4, 4, "game-action-claims"))
+        self.assertEqual((minimum, expected, migration.version, migration.name), (2, 5, 4, "game-action-claims"))
         # Require the reviewed twelve-statement epoch/additive/backfill/binding sequence.
         self.assertEqual(12, len(migration.statements))
         # Join exact statements only for bounded forbidden-object proof.
@@ -354,6 +354,41 @@ class MySQLMigrationTests(unittest.TestCase):
         # Preserve exact immutable schema-three descriptor bytes.
         self.assertEqual("7fcb2a4997796f170c914480b1a10ebc695c4751ed66679d64774373242c0e7b", hashlib.sha256((mysql_migrations.MIGRATION_ROOT / "0003_game_action_receipts.json").read_bytes()).hexdigest())
 
+    # Prove schema five creates indexed first-class sessions without bearer-token persistence.
+    def test_schema_five_session_boundary_is_exact_and_bounded(self):
+        # Load the checksum-verified catalog without touching a database.
+        migrations, expected, minimum, _catalog_sha256 = mysql_migrations.load_catalog()
+        # Select only the schema-five session migration.
+        migration = migrations[4]
+        # Require exact catalog identity and the unchanged compatibility floor.
+        self.assertEqual((minimum, expected, migration.version, migration.name), (2, 5, 5, "first-class-sessions"))
+        # Require one table creation, one deterministic backfill, and one bridge cleanup statement.
+        self.assertEqual(3, len(migration.statements))
+        # Read the native table statement once.
+        create_table = migration.statements[0]
+        # Require one InnoDB row per session with independent primary and token identities.
+        self.assertIn("CREATE TABLE casino_sessions", create_table)
+        self.assertIn("PRIMARY KEY (session_id)", create_table)
+        self.assertIn("UNIQUE KEY uq_casino_sessions_token_digest (token_digest)", create_table)
+        # Require the user-activity and expiry access paths used by auth and sweeps.
+        self.assertIn("INDEX idx_casino_sessions_user_activity (user_id, status, updated_at, session_id)", create_table)
+        self.assertIn("INDEX idx_casino_sessions_expiry (status, expires_at, session_id)", create_table)
+        # Require finite status, digest, generation, and canonical-payload checks.
+        for fragment in ("token_digest REGEXP '^[0-9a-f]{64}$'", "status IN ('active', 'revoked')", "generation BETWEEN 1 AND 9223372036854775807", "JSON_TYPE(session_json) = 'OBJECT'"):
+            # Bind each integrity rule to the reviewed table DDL.
+            self.assertIn(fragment, create_table)
+        # Require deterministic backfill from only the keyed schema-two-through-four bridge namespace.
+        self.assertIn("INSERT INTO casino_sessions", migration.statements[1])
+        self.assertIn("WHERE document_key LIKE 'auth/session/v2/row/%' ORDER BY document_key", migration.statements[1])
+        # Require bridge rows to be removed only after the table insert completes in the migration transaction.
+        self.assertEqual("DELETE FROM casino_documents WHERE document_key LIKE 'auth/session/v2/row/%'", migration.statements[2])
+        # Reject plaintext bearer-token columns or JSON extraction from the native boundary.
+        joined = "\n".join(migration.statements).lower()
+        self.assertNotIn(" token ", joined)
+        self.assertNotIn("$.token'", joined)
+        # Preserve the exact immutable schema-four descriptor bytes.
+        self.assertEqual("0a5681988f3210b249799f2aa16e8356ec5dc8b2f67ea5df811e2a2c9eb9a8f6", hashlib.sha256((mysql_migrations.MIGRATION_ROOT / "0004_game_action_claims.json").read_bytes()).hexdigest())
+
     # Prove held application refuses before connection state, lock, DDL, or metadata mutation.
     def test_public_apply_is_held_before_connection_access(self):
         # Allocate one hostile connection whose attributes and methods must stay untouched.
@@ -365,16 +400,16 @@ class MySQLMigrationTests(unittest.TestCase):
         # Require no cursor, autocommit assignment, lock, DDL, or state write.
         self.assertEqual(connection.mock_calls, [])
 
-    # Prove release packaging binds and requires the exact schema-four inventory.
-    def test_package_inventory_requires_schema_four(self):
+    # Prove release packaging binds and requires the exact schema-five inventory.
+    def test_package_inventory_requires_schema_five(self):
         # Calculate release schema provenance from the selected source tree.
         inventory = package_app.mysql_schema_inventory(package_app.ROOT)
-        # Require the schema-two-through-four bridge runtime window.
-        self.assertEqual((inventory["minimum_version"], inventory["expected_version"]), (2, 4))
+        # Require the schema-two-through-five bridge runtime window.
+        self.assertEqual((inventory["minimum_version"], inventory["expected_version"]), (2, 5))
         # Require package provenance to bind the held application policy.
         self.assertEqual(inventory["apply_policy"], "held")
         # Require the same deterministic chain as the migration runtime.
-        self.assertEqual(inventory["migration_chain_sha256"], "0fa4dcd42d590bc64b10323fd2362129776d5e0b4dcde8c6262070e615a7060b")
+        self.assertEqual(inventory["migration_chain_sha256"], "06a811dee8e5603409069abafc6862c53848ff9ccaf97e09c96b5bd953e6e3ee")
         # Require every immutable migration path in the archive's mandatory allowlist.
         self.assertTrue(
             {
@@ -382,6 +417,7 @@ class MySQLMigrationTests(unittest.TestCase):
                 "migrations/mysql/0002_action_identity.json",
                 "migrations/mysql/0003_game_action_receipts.json",
                 "migrations/mysql/0004_game_action_claims.json",
+                "migrations/mysql/0005_first_class_sessions.json",
                 "migrations/mysql/catalog.json",
             }.issubset(package_app.REQUIRED_FILES)
         )
@@ -389,18 +425,19 @@ class MySQLMigrationTests(unittest.TestCase):
         repository_paths = [
             *package_app.tracked_paths(package_app.ROOT),
             "migrations/mysql/0004_game_action_claims.json",
+            "migrations/mysql/0005_first_class_sessions.json",
             "scripts/normalize_wallet_balances.py",
         ]
         # Select the exact package inventory through the production allowlist.
         selected = package_app.select_release_files(package_app.ROOT, repository_paths)
-        # Require the schema-four descriptor to be physically packaged.
-        self.assertIn("migrations/mysql/0004_game_action_claims.json", selected)
+        # Require the schema-five descriptor to be physically packaged.
+        self.assertIn("migrations/mysql/0005_first_class_sessions.json", selected)
         # Remove only the new migration from an otherwise complete source inventory.
-        missing_four = [path for path in repository_paths if path != "migrations/mysql/0004_game_action_claims.json"]
+        missing_five = [path for path in repository_paths if path != "migrations/mysql/0005_first_class_sessions.json"]
         # Require package selection to fail before creating an incomplete archive.
-        with self.assertRaisesRegex(ValueError, "0004_game_action_claims"):
+        with self.assertRaisesRegex(ValueError, "0005_first_class_sessions"):
             # Attempt selection without the catalog-required migration.
-            package_app.select_release_files(package_app.ROOT, missing_four)
+            package_app.select_release_files(package_app.ROOT, missing_five)
 
     # Prove migration configuration never falls back to runtime credentials or weak/reused keys.
     def test_migration_configuration_is_isolated(self):
@@ -616,8 +653,8 @@ class MySQLMigrationTests(unittest.TestCase):
                 clock.now.return_value = datetime(2026, 7, 16, 18, 30, tzinfo=timezone.utc)
                 # Execute the non-mutating pending dry run.
                 pending = mysql_migrations.dry_run(connection, synthetic_config(), proof_path)
-        # Require all four migration versions to remain pending.
-        self.assertEqual([item.version for item in pending], [1, 2, 3, 4])
+        # Require all five migration versions to remain pending.
+        self.assertEqual([item.version for item in pending], [1, 2, 3, 4, 5])
         # Require every database statement during pending dry-run to be SELECT.
         self.assertTrue(connection.statements and all(statement.lstrip().upper().startswith("SELECT") for statement, _ in connection.statements))
 
@@ -695,12 +732,12 @@ class MySQLMigrationTests(unittest.TestCase):
         # Require no lock, read, DDL, or metadata statement.
         self.assertEqual(connection.statements, [])
 
-    # Prove clean schema-two, schema-three, and schema-four prefixes are runtime compatible.
-    def test_runtime_accepts_only_clean_exact_schema_two_three_or_four_prefixes(self):
+    # Prove clean schema-two through schema-five prefixes are runtime compatible.
+    def test_runtime_accepts_only_clean_exact_schema_two_through_five_prefixes(self):
         # Load the checksum-bound complete catalog.
         migrations, _, _, _ = mysql_migrations.load_catalog()
         # Exercise both reviewed runtime versions.
-        for version in (2, 3, 4):
+        for version in (2, 3, 4, 5):
             # Build one exact clean prefix state.
             state = clean_schema_state(migrations, version)
             # Patch only the SELECT-backed state reader.
@@ -711,8 +748,8 @@ class MySQLMigrationTests(unittest.TestCase):
         refused = (
             # Schema one is below the closed bridge window.
             clean_schema_state(migrations, 1),
-            # Schema five is an unknown future state.
-            mysql_migrations.SchemaState(True, 5, "clean", None, "0" * 64, tuple(), True),
+            # Schema six is an unknown future state.
+            mysql_migrations.SchemaState(True, 6, "clean", None, "0" * 64, tuple(), True),
             # Applying schema three is not runtime-visible.
             mysql_migrations.SchemaState(True, 2, "applying", 3, mysql_migrations.migration_chain_digest(migrations, 2), tuple(), True),
             # Dirty schema three is not runtime-visible.

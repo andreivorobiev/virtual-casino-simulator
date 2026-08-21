@@ -20,7 +20,7 @@ driven rather than implicit.
 
 | Rank | Bespoke layer | Current evidence | Disposition on next break |
 | --- | --- | --- | --- |
-| 1 | Session storage (single contended `data/auth/sessions.json` document; one hot `casino_documents` row under MySQL) | Session-architecture epic and its P1 symptoms | **Replace / redesign** — first-class per-session storage; see the session-redesign epic. |
+| 1 | Session storage (first-class keyed JSON and MySQL rows after #1039) | Session-architecture epic, prior P1 symptoms, and provider-parity concurrency evidence | **Monitor the replacement** — do not reintroduce an aggregate session document; continue the broader session-redesign epic. |
 | 2 | Serving stack (stdlib `ThreadingHTTPServer` plus a parallel gunicorn WSGI path) and the MySQL connection pool (default 2, cap 16) | Concurrency-ceiling qualification finding | **Replace / harden** — standardize on the WSGI path; size and instrument the pool. |
 | 3 | Auth / CSRF / one-time tokens | P1s cluster here | Prefer a mature framework primitive at the next material break; migrate behind the existing provider/service seams. |
 | 4 | Transactional mail and OAuth adapters | Disabled by default; bespoke but bounded | Adopt a maintained provider SDK when live enablement is actually scheduled, not before. |
@@ -49,6 +49,6 @@ and closed so the ranking stays honest.
 
 - [Session storage redesign epic (#1041)](https://github.com/andreivorobiev/virtual-casino-simulator/issues/1041)
   and its [per-session-storage issue (#1039)](https://github.com/andreivorobiev/virtual-casino-simulator/issues/1039)
-  — this record is that epic's replace-versus-patch justification.
+  — #1039 implements the per-session storage replacement; the epic retains broader session-architecture follow-up.
 - [Concurrency-ceiling finding (#1040)](https://github.com/andreivorobiev/virtual-casino-simulator/issues/1040)
   — serving stack and pool sizing.

@@ -87,12 +87,17 @@ AUTH_SESSION_ROOTS = {
     "consume_guest_action",  # Include guest allowance mutation.
     "create_guest",  # Include guest-session creation.
     "create_session",  # Include authenticated-session creation.
+    "csrf_token_for_session_cookie",  # Include CSRF reads that may perform the one-shot legacy import.
     "end_guest_trial",  # Include guest-session closure.
     "expire_overdue_guests",  # Include overdue guest closure.
+    "export_auth_state",  # Include compatibility reads that may perform the one-shot legacy import.
     "import_auth_state",  # Include compatibility-state import.
+    "list_admin_sessions_for_user",  # Include administrative reads that may perform the one-shot legacy import.
+    "load_sessions",  # Include compatibility reads that may perform the one-shot legacy import.
     "login",  # Include login session creation.
     "logout",  # Include one-session revocation.
     "mark_guest_departed",  # Include guest departure state.
+    "online_user_count",  # Include presence reads that may perform the one-shot legacy import.
     "revoke_admin_session_for_user",  # Include one administrative revocation.
     "revoke_all_admin_sessions_for_user",  # Include bulk administrative revocation.
     "revoke_session_by_id",  # Include the owner-confirmed single-session revocation path.
@@ -103,13 +108,25 @@ AUTH_SESSION_ROOTS = {
     "set_user_password",  # Include password-driven session mutation.
     "update_user_by_id",  # Include user-driven session mutation.
 }
-# Declare every public session entrypoint that only reads the owned session document.
-AUTH_SESSION_READ_ONLY_ROOTS = {
-    "csrf_token_for_session_cookie",  # Include CSRF derivation reads.
-    "export_auth_state",  # Include compatibility-state reads.
-    "list_admin_sessions_for_user",  # Include strict administrative session reads.
-    "load_sessions",  # Include direct compatibility snapshot reads.
-    "online_user_count",  # Include the bounded presence read over current sessions.
+# Declare no read-only root because every session access may perform the one-shot legacy import.
+AUTH_SESSION_READ_ONLY_ROOTS = set()
+# Name every first-class provider operation that only reads session rows.
+AUTH_SESSION_READ_CALLS = {
+    "get_session_by_token",  # Read one exact bearer-digest row.
+    "list_sessions",  # Read the bounded session-row collection.
+}
+# Name every first-class provider operation that mutates independently keyed session rows.
+AUTH_SESSION_MUTATION_CALLS = {
+    "create_session",  # Insert one independently keyed session row.
+    "delete_sessions_for_user",  # Delete every independently keyed row for one user.
+    "expire_sessions",  # Sweep independently keyed expired rows.
+    "import_legacy_sessions",  # Perform the one-shot aggregate-document import.
+    "replace_sessions",  # Replace compatibility state through the provider transaction boundary.
+    "revoke_session_by_id",  # Revoke one exact session row by stable id.
+    "revoke_session_by_token",  # Revoke one exact session row by bearer digest.
+    "revoke_sessions_for_user",  # Revoke independently keyed rows for one user.
+    "rotate_session",  # Replace one bearer digest and generation atomically.
+    "update_session",  # Update one exact independently keyed row atomically.
 }
 # Bound autoplay proof to every public lifecycle entrypoint.
 AUTOPLAY_ROOTS = {
@@ -1114,9 +1131,8 @@ def _component_inventory(modules: list[dict], module_state: list[dict], instance
     # Derive every public session state entrypoint independently.
     auth_discovered = _public_state_entrypoints(
         auth_modules,  # Restrict discovery to auth ownership.
-        read_calls={"read_json", "read_json_strict"},  # Classify ordinary and strict session reads.
-        mutation_calls={"update_json", "update_json_strict", "write_json"},  # Classify all mutations.
-        document_symbol="SESSIONS_PATH",  # Require exact session document ownership.
+        read_calls=AUTH_SESSION_READ_CALLS,  # Classify first-class provider reads.
+        mutation_calls=AUTH_SESSION_MUTATION_CALLS,  # Classify first-class provider mutations.
     )
     # Reconcile derived auth ownership against reviewed mutating and read-only dispositions.
     auth_entrypoints = _reconcile_state_entrypoints(
@@ -1129,14 +1145,22 @@ def _component_inventory(modules: list[dict], module_state: list[dict], instance
         auth_modules,  # Restrict analysis to the auth owner.
         AUTH_SESSION_ROOTS,  # Seed every live session entrypoint.
     )
-    # Count reachable session document semantics.
-    session_calls = _document_call_counts(session_reachability["calls"], "SESSIONS_PATH")
-    # Read the exact provider-atomic call count.
-    atomic_session_calls = session_calls["atomic"]
-    # Read the exact direct whole-document write count.
-    direct_session_writes = session_calls["write"]
-    # Classify session paths from bounded reachable calls.
-    session_model, session_status = _document_semantics(session_calls)
+    # Count exact first-class provider mutation calls across reviewed session entrypoints.
+    atomic_session_calls = sum(
+        call["name"] in AUTH_SESSION_MUTATION_CALLS  # Match one provider-owned session mutation.
+        for call in session_reachability["calls"]  # Inspect every reachable executable call.
+    )
+    # Count any reintroduced direct aggregate-session write so it remains fail closed.
+    direct_session_writes = _document_call_counts(
+        session_reachability["calls"],  # Inspect the same bounded reachable call graph.
+        "SESSIONS_PATH",  # Bind the retired compatibility document symbol.
+    )["write"]
+    # Require executable first-class mutation evidence and no aggregate-document write bypass.
+    if atomic_session_calls <= 0 or direct_session_writes > 0:
+        # Reject absent provider boundaries or a reintroduced direct whole-document write.
+        raise MultiprocessSafetyAuditError("component inventory unavailable")
+    # Publish the exact independently keyed provider state model.
+    session_model, session_status = "provider_first_class_session_rows", "compatible"
     # Select structural rate-limiter instance state.
     limiter_rows = [
         row  # Retain one limiter instance-state row.

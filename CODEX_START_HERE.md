@@ -341,6 +341,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/restricted_preview_edge.md`](docs/restricted_preview_edge.md) — Restricted-preview edge preparation
 - [`docs/restricted_preview_security.md`](docs/restricted_preview_security.md) — Restricted-preview security policy
 - [`docs/server_authority_certification.md`](docs/server_authority_certification.md) — Server-Authority and Hostile-Client Certification
+- [`docs/session_storage.md`](docs/session_storage.md) — First-class session storage
 - [`docs/settlement_interface.md`](docs/settlement_interface.md) — Catalog-Wide Settlement Interface
 - [`docs/transactional_mail_runbook.md`](docs/transactional_mail_runbook.md) — Transactional mail runbook
 - [`docs/verified_email_enrollment.md`](docs/verified_email_enrollment.md) — Verified-email enrollment

@@ -850,18 +850,16 @@ def validate_guest_lifecycle():
     inactive_guest=auth_core.create_guest('focused-inactivity-test',True,'private-beta-1','en-US','desktop')
     # Calculate a server timestamp older than the configured inactivity window.
     inactive_at=(datetime.now(timezone.utc)-timedelta(seconds=auth_core.GUEST_INACTIVITY_SECONDS+1)).isoformat(timespec='milliseconds').replace('+00:00','Z')
-    # Define the atomic session-age mutation.
-    def age_inactive_session(state):
-        # Find only the focused inactivity session.
-        for stored in state.get('sessions',[]):
-            # Match by opaque session id without copying its credential.
-            if stored.get('session_id')==inactive_guest['session']['session_id']:
-                # Move the server-observed activity marker past the inactivity boundary.
-                stored['updated_at']=inactive_at
-        # Return the mutated sessions document.
-        return state
-    # Persist the focused inactivity condition atomically.
-    auth_core.update_json(auth_core.SESSIONS_PATH,age_inactive_session,auth_core.default_sessions)
+    # Define the atomic first-class row age mutation.
+    def age_inactive_session(stored):
+        # Move only the selected server-observed activity marker past the inactivity boundary.
+        stored['updated_at']=inactive_at
+        # Return the complete selected row for provider replacement.
+        return stored
+    # Persist the focused inactivity condition through the provider-owned row boundary.
+    aged_session=auth_core._session_store().update_session(inactive_guest['session']['session_id'],age_inactive_session)
+    # Fail closed if the just-created session disappeared before the boundary proof.
+    assert aged_session is not None
     # Prove the old session cannot authenticate even with its correct browser proof.
     try:
         # Attempt authentication at the inactivity boundary.
