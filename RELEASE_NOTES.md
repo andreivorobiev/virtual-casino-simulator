@@ -1,3 +1,17 @@
+# Virtual Casino Simulator v0.9.5.84 Release Notes
+
+## Shared game lifecycles and first-class session capacity
+
+- Packages every accepted protected-main change since v0.9.5.83, including the remaining shared frontend-lifecycle migrations, responsive game surfaces, governed visual evidence, browser timing reliability, and Windows process-race hardening.
+- Promotes retained account sessions to provider-owned first-class JSON and MySQL rows with fail-closed legacy backfill and provider-parity evidence; the capability remains route-inert until a separately governed adoption phase.
+- Packages migration `0005_first_class_sessions.json` while keeping the catalog minimum `2`, expected `5`, and apply policy `held`; production and application-only rollback remain exact clean schema `2`.
+- Preserves frozen API compatibility, the exact 46-game catalog, paytables, wager acceptance, settlement behavior, release channel, and private-invite policy.
+- Adds no release-only requirement identifier; the governed total remains exactly 1111 permanent requirements.
+- Records the exact canonical package inventory as 849 regular files: current source selection 848 plus this v0.9.5.84 compatibility record.
+- Advances package `0.9.5.84`, application `9.71.4`, contracts `1.62.7`, tests `1.115.1`, and docs `1.111.1`; accepted Core `10.12.0`, tooling `1.44.0`, and every content-owned module remain exact.
+- Retains exact terminal-green v0.9.5.83 as the application-only schema-two rollback predecessor. Database rollback, migration application, grant mutation, provider activation, public signup, live OAuth, billing, DNS, and secret mutation remain prohibited.
+- The installed production pull poller owns checksum-, provenance-, inventory-, schema-, health-, readiness-, rollback-, persistence-, root-integrity-, and alarm-gated delivery. This release-only wrapper closes no issue.
+
 # Virtual Casino Simulator v0.9.5.83 Release Notes
 
 ## Pull-poller extraction permission repair
