@@ -19,6 +19,8 @@ MANIFEST = ROOT / "modules" / "module-manifest.json"
 README = ROOT / "README.md"
 # Point to the Codex starter document that repeats packaged-release context.
 STARTER = ROOT / "CODEX_START_HERE.md"
+# Point to the standalone versioning explainer that reconciles every version surface.
+VERSIONING = ROOT / "VERSIONING.md"
 # Point to the generated requirements document that labels both version classes.
 GENERATED_REQUIREMENTS = ROOT / "docs" / "requirements" / "requirements_generated.md"
 # Point to canonical requirement metadata whose provenance must not masquerade as a release.
@@ -224,6 +226,8 @@ def main(argv=None):
     validate_document_versions(README, packaged_version, source_baseline, errors)
     # Validate the starter document independently so either surface can fail CI.
     validate_document_versions(STARTER, packaged_version, source_baseline, errors)
+    # Validate the standalone versioning explainer so its stated current numbers cannot drift from the manifest.
+    validate_document_versions(VERSIONING, packaged_version, source_baseline, errors)
     # Require generated requirements to label the packaged release unambiguously.
     require_snippet(GENERATED_REQUIREMENTS, f"Packaged application release: {packaged_version}", "generated packaged-release marker", errors)
     # Require generated requirements to label independent module revisions unambiguously.

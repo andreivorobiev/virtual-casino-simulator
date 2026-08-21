@@ -35,6 +35,12 @@ The packaged application release changes only through formal release-artifact
 work. Every changed source module updates its independent revision. Never reuse
 or overwrite a version owned by an active PR.
 
+See [`VERSIONING.md`](VERSIONING.md) for the one-page scheme: what the packaged
+release number means, why the numbering lineage changed from `v9.x` to
+`0.9.5.x`, what the historical baseline denotes, how module revisions relate,
+and which surface shows which number. `scripts/validate_versions.py` asserts the
+numbers stated there match the manifest.
+
 ## Pending-proposal handling
 
 Open pull requests are pending proposals, not accepted repository state. Before
@@ -83,6 +89,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`FIRST_PROMPT_FOR_CODEX.md`](FIRST_PROMPT_FOR_CODEX.md) — First prompt for Codex
 - [`README.md`](README.md) — Virtual Casino Simulator
 - [`RELEASE_NOTES.md`](RELEASE_NOTES.md) — Virtual Casino Simulator v0.9.5.83 Release Notes
+- [`VERSIONING.md`](VERSIONING.md) — Versioning
 
 ### GitHub contribution templates
 
@@ -234,6 +241,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 - [`docs/AGENTS.md`](docs/AGENTS.md) — AGENTS.md - docs module
 - [`docs/api_contract_freeze.md`](docs/api_contract_freeze.md) — API contract freeze policy
+- [`docs/bespoke_replacement_ladder.md`](docs/bespoke_replacement_ladder.md) — Bespoke infrastructure replacement ladder
 - [`docs/card_poker_primitives.md`](docs/card_poker_primitives.md) — Card and poker primitives
 - [`docs/ci_compute.md`](docs/ci_compute.md) — Pull-request compute routing
 - [`docs/claude_codex_work_division.md`](docs/claude_codex_work_division.md) — Claude and Codex work-division proposal
