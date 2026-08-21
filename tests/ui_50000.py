@@ -85,6 +85,11 @@ UI_STRATEGY_FAMILIES = {
 IMPLEMENTED_UI_STRATEGY_FAMILIES = frozenset({
     "acey_deucey", "andar_bahar", "baccarat", "bingo", "blackjack", "caribbean_stud", "casino_holdem", "casino_war", "craps", "daily_draw_lab", "dragon_tiger", "draw_poker", "four_card_poker", "hi_lo", "keno", "let_it_ride", "lucky_grid", "mississippi_stud", "pai_gow_poker", "plinko", "red_dog", "roulette", "scratch_cards", "sic_bo", "simple_terminal", "slots", "teen_patti", "texas_holdem", "three_card_poker", "wager_inputs",
 })
+# Keep Double Bonus on the shared draw-poker state machine while addressing its established route-local attribute names.
+DRAW_POKER_UI_CONTROLS = {
+    "default": {"deal": '[data-action="deal"]', "hold_attribute": "data-hold-position", "draw": '[data-action="draw"]'},  # Preserve every previously qualified draw-poker family member unchanged.
+    "double_bonus_video_poker": {"deal": "[data-deal]", "hold_attribute": "data-hold", "draw": "[data-draw]"},  # Match the rendered Double Bonus Deal, five hold cards, and Draw controls without changing product markup.
+}
 # Rank visible Pai Gow cards from weakest through strongest while keeping the semi-wild Joker out of the low hand.
 PAI_GOW_RANK_VALUES = {rank: value for value, rank in enumerate(("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"), start=2)}
 # Describe the simple settled-action surfaces without weakening their rendered-control coverage.
@@ -324,7 +329,7 @@ def start_ui_server(repo_root):
 async def control_signature(locator):
     expression = """node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }"""  # Prefer stable metadata and collapse dynamic ticket ids into semantic remove actions.
     expression = expression.replace("'data-num',", "'data-num','data-number','data-cell','data-color','data-rank','data-marble','data-card-index',")  # Distinguish every newly covered board, choice, runner, rank, and hand-setting control.
-    expression = expression.replace("'data-wager',", "'data-wager','data-ante','data-aces',").replace("'data-play',", "'data-play','data-fold','data-deal','data-repeat',")  # Distinguish staged wager, decision, deal, and repeat controls.
+    expression = expression.replace("'data-hold-position',", "'data-hold-position','data-hold',").replace("'data-wager',", "'data-wager','data-ante','data-aces',").replace("'data-play',", "'data-play','data-fold','data-deal','data-draw','data-repeat',")  # Distinguish both draw-poker attribute dialects plus staged wager, decision, deal, draw, and repeat controls.
     return qualify_control_signature(await locator.evaluate(expression))  # Read DOM metadata and bind it to the task-local surface.
 
 
@@ -334,7 +339,7 @@ async def inventory_controls(page, seen_counts):
     root_selector = "#view" if namespace in READY_TEST_IDS else None  # Scan the complete game outlet while excluding persistent shell controls.
     expression = """rootSelector => { const root = rootSelector ? document.querySelector(rootSelector) : document; if (!root) return []; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; return [...root.querySelectorAll('button,input,select,summary')].filter(node => !node.disabled && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden' && (node.tagName === 'SUMMARY' || !node.closest('details:not([open])'))).map(node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }); }"""  # Discover only semantically visible enabled controls within the owned game root or current shell/auth surface.
     expression = expression.replace("'data-num',", "'data-num','data-number','data-cell','data-color','data-rank','data-marble','data-card-index',")  # Keep inventory identities aligned with the newly covered board and setting controls.
-    expression = expression.replace("'data-wager',", "'data-wager','data-ante','data-aces',").replace("'data-play',", "'data-play','data-fold','data-deal','data-repeat',")  # Keep staged input and decision identities aligned with pointer accounting.
+    expression = expression.replace("'data-hold-position',", "'data-hold-position','data-hold',").replace("'data-wager',", "'data-wager','data-ante','data-aces',").replace("'data-play',", "'data-play','data-fold','data-deal','data-draw','data-repeat',")  # Keep both draw-poker dialects plus staged input and decision identities aligned with pointer accounting.
     for signature in await page.evaluate(expression, root_selector):  # Visit every stable signature on this owned UI state.
         seen_counts[qualify_control_signature(signature, namespace)] += 1  # Count namespaced observations for later classification.
 
@@ -560,18 +565,18 @@ async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_coun
 
 
 # Select one least-covered draw-poker hold only after both the deal and hold response own the rendered DOM.
-async def draw_poker_select_balanced_hold(page, seen_counts, activated_counts):
-    selector = '[data-hold-position][aria-pressed="false"]'  # Address only currently unheld source cards so the pointer action always adds a hold.
+async def draw_poker_select_balanced_hold(page, seen_counts, activated_counts, position_attribute="data-hold-position"):
+    selector = f'[{position_attribute}][aria-pressed="false"]'  # Address only currently unheld source cards through the registered route-local semantic position attribute.
     await wait_any_enabled(page, [selector])  # Require the asynchronous deal response to publish the actionable decision state.
     await inventory_controls(page, seen_counts)  # Count all five hold opportunities only after the live hand is committed.
     holds = await enabled_locators(page, selector)  # Re-resolve the five unheld cards from the response-owned DOM.
-    positions = [await hold.get_attribute("data-hold-position") for hold in holds]  # Read stable semantic positions before any click rerenders the hand.
+    positions = [await hold.get_attribute(position_attribute) for hold in holds]  # Read stable semantic positions before any click rerenders the hand.
     if set(positions) != {"0", "1", "2", "3", "4"}:  # Reject an incomplete or duplicate five-card decision surface.
         raise AssertionError(f"draw-poker hold controls incomplete: {positions}")  # Preserve the exact public position inventory without private state.
     target = await least_activated_locator(holds, activated_counts)  # Balance the literal activation floor across all five stable identities.
-    target_position = await target.get_attribute("data-hold-position")  # Bind the post-response wait to the clicked public card identity.
+    target_position = await target.get_attribute(position_attribute)  # Bind the post-response wait to the clicked public card identity.
     await click_locator(target, activated_counts)  # Toggle the selected hold through the real pointer and public API path.
-    committed_expression = """position => [...document.querySelectorAll('[data-hold-position]')].some(node => node.dataset.holdPosition === String(position) && node.getAttribute('aria-pressed') === 'true' && !node.disabled && node.getClientRects().length)"""  # Require the persisted response to publish the selected, actionable held card.
+    committed_expression = f"""position => [...document.querySelectorAll('[{position_attribute}]')].some(node => node.getAttribute('{position_attribute}') === String(position) && node.getAttribute('aria-pressed') === 'true' && !node.disabled && node.getClientRects().length)"""  # Require the persisted response to publish the selected, actionable held card through the same semantic dialect.
     try:  # Convert a lost or stale hold response into one bounded state-contract diagnostic.
         await page.wait_for_function(committed_expression, arg=target_position, timeout=operation_timeout_ms(ACTION_TIMEOUT_MS))  # Serialize the hold mutation before Draw can consume its server-owned state.
     except Exception as exc:  # Preserve only the public rendered-state failure in terminal evidence.
@@ -801,13 +806,14 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         await click_locator(refreshed_bets[ordinal % len(refreshed_bets)], activated_counts)  # Restore one bounded wager for the coup.
         await terminal_action(page, '[data-testid="baccarat-deal"]', activated_counts)  # Deal and settle the coup.
     elif strategy_family == "draw_poker":  # Exercise every explicitly registered draw-poker family member.
+        controls = DRAW_POKER_UI_CONTROLS.get(game_id, DRAW_POKER_UI_CONTROLS["default"])  # Use the shared contract unless the rendered route declares its established equivalent attributes.
         modes = await enabled_locators(page, "[data-hand-count],[data-coin-count]")  # Discover pre-deal mode/coin controls.
         if modes:  # Rotate configuration coverage before the hand locks.
             await click_locator(modes[ordinal % len(modes)], activated_counts)  # Select a rendered compatible mode.
-        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the source hand.
-        await draw_poker_select_balanced_hold(page, seen_counts, activated_counts)  # Wait for the hand, cover every position fairly, and commit the selected hold.
-        await click_control(page, '[data-action="draw"]', activated_counts)  # Draw and settle the hand.
-        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
+        await click_control(page, controls["deal"], activated_counts)  # Deal the source hand through the registered rendered selector.
+        await draw_poker_select_balanced_hold(page, seen_counts, activated_counts, controls["hold_attribute"])  # Wait for all five cards, balance every position, and commit the selected hold.
+        await click_control(page, controls["draw"], activated_counts)  # Draw and settle the hand through the registered rendered selector.
+        await wait_any_enabled(page, [controls["deal"]])  # Require next-hand readiness through the same route-local Deal control.
     elif strategy_family == "casino_war":  # Exercise deal and tie decisions when available.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal one card per side.
         choice = await wait_any_enabled(page, ['[data-action="surrender"]', '[data-action="war"]', '[data-action="deal"]'])  # Detect tie or settlement.

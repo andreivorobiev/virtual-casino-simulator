@@ -206,7 +206,7 @@ class UI50000HarnessTests(unittest.TestCase):
     # Prove newly covered board and staged controls retain stable semantic identities in both discovery paths.
     def test_new_strategy_controls_use_stable_semantic_signatures(self):
         source = (ui_50000.ROOT / "tests" / "ui_50000.py").read_text(encoding="utf-8")  # Read the inert harness source without starting a browser.
-        semantic_attributes = ("data-number", "data-cell", "data-color", "data-rank", "data-marble", "data-card-index", "data-ante", "data-aces", "data-fold", "data-deal", "data-repeat")  # Enumerate the new strategy-owned identities that cannot fall back to translated text.
+        semantic_attributes = ("data-number", "data-cell", "data-color", "data-rank", "data-marble", "data-card-index", "data-ante", "data-aces", "data-fold", "data-deal", "data-draw", "data-hold", "data-repeat")  # Enumerate the strategy-owned identities that cannot fall back to translated text.
         for attribute in semantic_attributes:  # Inspect pointer signatures and rendered inventory together.
             self.assertEqual(source.count(f"'{attribute}'"), 2, attribute)  # Require the attribute once in each aligned expression augmentation.
 
@@ -558,6 +558,68 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("aria-pressed", page.expression)  # Bind the response boundary to the visible selected state.
         self.assertIn("!node.disabled", page.expression)  # Require the public hold response to leave the hand actionable.
         self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep the network-backed hold transition bounded.
+
+    # Prove Double Bonus completes the shared Deal, five-position hold, committed-hold, and Draw sequence through its rendered attribute dialect.
+    def test_double_bonus_draw_poker_uses_rendered_controls_without_changing_family_defaults(self):
+        events = []  # Record the complete browser-free rendered-control order.
+
+        class FakeHold:  # Model one of the five Double Bonus source-card buttons.
+            def __init__(self, position):
+                self.position = str(position)  # Preserve the public data-hold identity.
+
+            async def get_attribute(self, name):
+                self.requested_attribute = name  # Retain the exact semantic attribute used by the harness.
+                return self.position  # Return the stable zero-based card position.
+
+        class FakePage:  # Provide only the committed held-card predicate boundary.
+            async def wait_for_function(self, expression, arg, timeout):
+                events.append(f"committed:{arg}")  # Require the hold rerender before Draw.
+                self.expression = expression  # Preserve the rendered-state predicate for assertions.
+                self.timeout = timeout  # Preserve the unchanged action timeout.
+
+        holds = [FakeHold(position) for position in range(5)]  # Expose the complete five-position decision state.
+
+        async def fake_inventory_controls(_page, _seen_counts):
+            events.append("inventory")  # Record both ready-state and post-deal inventory boundaries.
+
+        async def fake_configuration(_page, _ordinal, _activated_counts):
+            events.append("configuration")  # Preserve the existing pre-deal configuration stage.
+
+        async def fake_autoplay(_page, _ordinal, _activated_counts):
+            events.append("autoplay")  # Preserve the existing shared control-plane stage.
+
+        async def fake_enabled_locators(_page, selector):
+            events.append(f"discover:{selector}")  # Record mode discovery and five-card discovery distinctly.
+            return holds if selector == '[data-hold][aria-pressed="false"]' else []  # Expose holds only after the rendered Deal state.
+
+        async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"control:{selector}")  # Record real Deal and Draw selector dispatch boundaries.
+            return selector  # Preserve the click helper's stable signature-shaped return seam.
+
+        async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"wait:{selectors[0]}")  # Record both deal-to-hold and terminal-to-next-deal waits.
+            return selectors[0]  # Model a visible enabled rendered control.
+
+        async def fake_control_signature(locator):
+            events.append(f"score:{locator.position}")  # Require every position to participate in deficit balancing.
+            return f"double_bonus_video_poker::button[data-hold={locator.position}]"  # Use the stable aggregate identity added for Double Bonus.
+
+        async def fake_click_locator(locator, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"hold:{locator.position}")  # Record the one balanced real pointer hold activation.
+
+        activated = Counter({f"double_bonus_video_poker::button[data-hold={position}]": 100 + position for position in range(5)})  # Start with distinct passing counts.
+        activated["double_bonus_video_poker::button[data-hold=2]"] = 3  # Make position two the unique aggregate deficit.
+        page = FakePage()  # Create one isolated deterministic browser seam.
+        with mock.patch.object(ui_50000, "inventory_controls", side_effect=fake_inventory_controls), mock.patch.object(ui_50000, "exercise_configuration_controls", side_effect=fake_configuration), mock.patch.object(ui_50000, "exercise_autoplay_controls", side_effect=fake_autoplay), mock.patch.object(ui_50000, "enabled_locators", side_effect=fake_enabled_locators), mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control), mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled), mock.patch.object(ui_50000, "control_signature", side_effect=fake_control_signature), mock.patch.object(ui_50000, "click_locator", side_effect=fake_click_locator):  # Isolate exact selector and ordering behavior without Playwright or Chromium.
+            asyncio.run(ui_50000.play_game_ui(page, "double_bonus_video_poker", 7, Counter(), activated))  # Execute one complete Double Bonus formal strategy cycle.
+        self.assertEqual(events, ["inventory", "configuration", "autoplay", "discover:[data-hand-count],[data-coin-count]", "control:[data-deal]", 'wait:[data-hold][aria-pressed="false"]', "inventory", 'discover:[data-hold][aria-pressed="false"]', "score:0", "score:1", "score:2", "score:3", "score:4", "hold:2", "committed:2", "control:[data-draw]", "wait:[data-deal]", "inventory"])  # Require the full rendered Deal-to-Draw state machine and terminal inventory without timeout-only selectors.
+        self.assertTrue(all(hold.requested_attribute == "data-hold" for hold in holds))  # Require all five controls to share the registered semantic position attribute.
+        self.assertIn("[data-hold]", page.expression)  # Bind committed-state observation to Double Bonus markup.
+        self.assertIn("aria-pressed", page.expression)  # Preserve the visible selected-state contract.
+        self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Preserve the established hold-response wait budget.
+        self.assertEqual(ui_50000.DRAW_POKER_UI_CONTROLS["default"], {"deal": '[data-action="deal"]', "hold_attribute": "data-hold-position", "draw": '[data-action="draw"]'})  # Prove every previously qualified draw-poker family retains its exact selectors.
+        other_draw_games = {game_id for game_id, family in ui_50000.UI_STRATEGY_FAMILIES.items() if family == "draw_poker"}.difference({"double_bonus_video_poker"})  # Derive every already-qualified shared family member independently of catalog order.
+        self.assertTrue(all(ui_50000.DRAW_POKER_UI_CONTROLS.get(game_id, ui_50000.DRAW_POKER_UI_CONTROLS["default"]) is ui_50000.DRAW_POKER_UI_CONTROLS["default"] for game_id in other_draw_games))  # Reject an accidental selector override for any predecessor draw-poker route.
 
     # Prove Acey-Deucey deals before editing its phase-owned wager and skips that edit for Pass or automatic settlement.
     def test_acey_deucey_orders_wager_after_deal_only_for_play(self):
