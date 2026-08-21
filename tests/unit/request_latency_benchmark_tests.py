@@ -1381,8 +1381,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require the Deuces Wild diagnostic CSRF fixture to bring the governed registry to 1107 rows.
-        self.assertEqual(len(requirements), 1107)
+        # Require first-class session storage to bring the governed registry to 1111 rows.
+        self.assertEqual(len(requirements), 1111)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1546,6 +1546,10 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "CORE-034": "Application",  # Bind shared browser-game lifecycle and external style ownership.
             "TEST-248": "Tests",  # Bind lifecycle semantics and first-adopter evidence.
             "TEST-249": "Tests",  # Bind session-scoped diagnostic CSRF and listener cleanup evidence.
+            "SESSION-014": "Core",  # Bind provider-owned first-class authentication sessions.
+            "STORAGE-019": "Storage",  # Bind keyed JSON and schema-aware MySQL session rows.
+            "MYSQL-010": "MySQL",  # Bind indexed schema-five native session capacity.
+            "TEST-250": "Tests",  # Bind provider-parity concurrency and migration evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

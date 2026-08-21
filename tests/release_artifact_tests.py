@@ -49,8 +49,10 @@ class ReleaseArtifactTests(unittest.TestCase):
         migration_three = json.dumps({"version": 3, "name": "game-action-receipts", "description": "fixture", "statements": ["CREATE TABLE fixture_game_action_receipts (game_id VARCHAR(191) NOT NULL, player_id VARCHAR(191) NOT NULL, action_key VARCHAR(191) NOT NULL, PRIMARY KEY (game_id, player_id, action_key))"]}, indent=2) + "\n"
         # Define one exact schema-four immutable-claims fixture migration.
         migration_four = json.dumps({"version": 4, "name": "game-action-claims", "description": "fixture", "statements": ["CREATE TABLE fixture_game_action_claims (game_id VARCHAR(191) NOT NULL, player_id VARCHAR(191) NOT NULL, action_key VARCHAR(191) NOT NULL, disposition VARCHAR(16) NOT NULL, PRIMARY KEY (game_id, player_id, action_key))"]}, indent=2) + "\n"
+        # Define one exact schema-five first-class-session fixture migration.
+        migration_five = json.dumps({"version": 5, "name": "first-class-sessions", "description": "fixture", "statements": ["CREATE TABLE fixture_sessions (session_id VARCHAR(64) NOT NULL, token_digest CHAR(64) NOT NULL, user_id VARCHAR(191) NOT NULL, PRIMARY KEY (session_id), UNIQUE KEY fixture_sessions_token (token_digest))"]}, indent=2) + "\n"
         # Build the checksum-pinned fixture catalog from exact UTF-8 bytes.
-        migration_catalog = json.dumps({"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 2, "expected_version": 4, "apply_policy": "held", "migrations": [{"version": 1, "name": "initial", "file": "0001_initial.json", "sha256": hashlib.sha256(migration_one.encode("utf-8")).hexdigest()}, {"version": 2, "name": "upgrade", "file": "0002_upgrade.json", "sha256": hashlib.sha256(migration_two.encode("utf-8")).hexdigest()}, {"version": 3, "name": "game-action-receipts", "file": "0003_game_action_receipts.json", "sha256": hashlib.sha256(migration_three.encode("utf-8")).hexdigest()}, {"version": 4, "name": "game-action-claims", "file": "0004_game_action_claims.json", "sha256": hashlib.sha256(migration_four.encode("utf-8")).hexdigest()}]}, indent=2) + "\n"
+        migration_catalog = json.dumps({"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 2, "expected_version": 5, "apply_policy": "held", "migrations": [{"version": 1, "name": "initial", "file": "0001_initial.json", "sha256": hashlib.sha256(migration_one.encode("utf-8")).hexdigest()}, {"version": 2, "name": "upgrade", "file": "0002_upgrade.json", "sha256": hashlib.sha256(migration_two.encode("utf-8")).hexdigest()}, {"version": 3, "name": "game-action-receipts", "file": "0003_game_action_receipts.json", "sha256": hashlib.sha256(migration_three.encode("utf-8")).hexdigest()}, {"version": 4, "name": "game-action-claims", "file": "0004_game_action_claims.json", "sha256": hashlib.sha256(migration_four.encode("utf-8")).hexdigest()}, {"version": 5, "name": "first-class-sessions", "file": "0005_first_class_sessions.json", "sha256": hashlib.sha256(migration_five.encode("utf-8")).hexdigest()}]}, indent=2) + "\n"
         # Define the minimal required tracked application file inventory.
         self.files = {
             "ARCHITECTURE.md": "# Architecture\n",
@@ -73,6 +75,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             "migrations/mysql/0002_action_identity.json": migration_two,
             "migrations/mysql/0003_game_action_receipts.json": migration_three,
             "migrations/mysql/0004_game_action_claims.json": migration_four,
+            "migrations/mysql/0005_first_class_sessions.json": migration_five,
             "migrations/mysql/catalog.json": migration_catalog.replace("0002_upgrade.json", "0002_action_identity.json"),
             "scripts/mysql_migrate.py": "# Fixture deployment-only migration runner.\n",
             "scripts/normalize_wallet_balances.py": "# Fixture explicit wallet normalization runner.\n",
@@ -665,8 +668,8 @@ class ReleaseArtifactTests(unittest.TestCase):
         manifest = package_app.verify_release(archive_path, manifest_path, expected_commit=self.commit_sha, smoke=True)
         # Require the smoke-verified manifest to retain canonical fixture version identity.
         self.assertEqual(manifest["app_version"], "9.3.0")
-        # Require release provenance to bind the schema-two-to-four bridge window.
-        self.assertEqual((manifest["mysql_schema"]["minimum_version"], manifest["mysql_schema"]["expected_version"]), (2, 4))
+        # Require release provenance to bind the schema-two-to-five bridge window.
+        self.assertEqual((manifest["mysql_schema"]["minimum_version"], manifest["mysql_schema"]["expected_version"]), (2, 5))
         # Require release provenance to bind held migration application.
         self.assertEqual(manifest["mysql_schema"]["apply_policy"], "held")
         # Require both catalog and ordered migration chain checksums.

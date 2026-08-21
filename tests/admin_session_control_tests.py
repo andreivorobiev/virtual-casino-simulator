@@ -20,7 +20,7 @@ from casino.core import auth
 # Import direct JSON readers and writers for isolated test fixtures.
 from casino.core.state_store import read_json, write_json
 # Import the bounded public validation error used by malformed requests.
-from casino.errors import ValidationError
+from casino.errors import ConflictError, ValidationError
 
 
 # Prove the server-side session-control core is safe, atomic, and account-scoped. (SESSION-008, TEST-143)
@@ -93,7 +93,9 @@ class AdminSessionControlTests(unittest.TestCase):
             # Persist synthetic bearer material to prove it is excluded.
             "token": f"bearer-secret-{session_id}",
             # Persist synthetic CSRF material to prove it is excluded.
-            "csrf_token": f"csrf-secret-{session_id}",
+            "csrf_token": f"csrf-secret-{session_id}".ljust(32, "x"),
+            # Persist the explicit native generation used by first-class providers.
+            "generation": 1,
             # Persist the reviewed lifecycle state.
             "status": status,
             # Persist a fixed creation timestamp.
@@ -199,20 +201,24 @@ class AdminSessionControlTests(unittest.TestCase):
 
     # Prove malformed session evidence fails closed without any repair write.
     def test_malformed_session_document_is_preserved(self) -> None:
-        # Build a malformed second row after one otherwise mutable target record.
-        malformed = {"schema_version": 1, "sessions": [self._session("session-valid", self.user["user_id"]), {"session_id": "missing-owner", "status": "active"}]}
-        # Persist the exact malformed structure directly.
-        write_json(self.sessions_path, malformed)
-        # Snapshot the serialized structure before the failed mutation.
-        before = read_json(self.sessions_path, {})
+        # Resolve the active isolated JSON provider after the empty first-class seed.
+        provider = auth._session_store()
+        # Build one canonical credential-derived path for a malformed per-session row.
+        row_path = provider._session_row_path("0" * 64)
+        # Persist a structurally valid JSON object missing its required owner.
+        malformed = {"session_id": "missing-owner", "token_digest": "0" * 64, "status": "active"}
+        # Write the exact malformed first-class row directly for corruption evidence.
+        row_path.write_text(json.dumps(malformed, sort_keys=True), encoding="utf-8")
+        # Snapshot the exact source bytes before the failed mutation.
+        before = row_path.read_bytes()
         # Attempt the all-session mutation that must validate every row first.
-        with self.assertRaisesRegex(RuntimeError, "operator recovery"):
+        with self.assertRaisesRegex(ConflictError, "operator recovery"):
             # Fail before changing or rewriting any row.
             auth.revoke_all_admin_sessions_for_user(self.user["user_id"])
-        # Require the complete stored document to remain structurally unchanged.
-        self.assertEqual(read_json(self.sessions_path, {}), before)
+        # Require the complete stored row to remain byte-for-byte unchanged.
+        self.assertEqual(row_path.read_bytes(), before)
         # Require read-only inventory to fail through the same recovery boundary.
-        with self.assertRaisesRegex(RuntimeError, "operator recovery"):
+        with self.assertRaisesRegex(ConflictError, "operator recovery"):
             # Avoid returning a partial inventory from the valid prefix.
             auth.list_admin_sessions_for_user(self.user["user_id"])
 
@@ -220,32 +226,34 @@ class AdminSessionControlTests(unittest.TestCase):
     def test_invalid_json_bytes_fail_closed_without_normalization(self) -> None:
         # Build one truncated JSON document that cannot be decoded.
         invalid_bytes = b'{"schema_version":1,"sessions":['
-        # Create the isolated parent before writing the corruption fixture.
-        self.sessions_path.parent.mkdir(parents=True, exist_ok=True)
+        # Resolve the isolated provider and one canonical per-session path.
+        provider = auth._session_store()
+        # Derive the exact keyed row path for the synthetic digest.
+        row_path = provider._session_row_path("1" * 64)
         # Persist the exact invalid bytes without invoking a normalizing helper.
-        self.sessions_path.write_bytes(invalid_bytes)
-        # Attempt read-only inventory against the corrupt default-provider document.
-        with self.assertRaisesRegex(RuntimeError, "Session storage requires operator recovery"):
+        row_path.write_bytes(invalid_bytes)
+        # Attempt read-only inventory against the corrupt first-class row.
+        with self.assertRaisesRegex(ConflictError, "Session storage requires operator recovery"):
             # Require inventory to fail instead of appearing empty.
             auth.list_admin_sessions_for_user(self.user["user_id"])
         # Require inventory to preserve every original byte.
-        self.assertEqual(self.sessions_path.read_bytes(), invalid_bytes)
+        self.assertEqual(row_path.read_bytes(), invalid_bytes)
         # Derive one valid alias so targeted mutation reaches strict storage decoding.
         alias = auth.admin_session_alias("session-invalid-json")
         # Attempt targeted revocation against the corrupt document.
-        with self.assertRaisesRegex(RuntimeError, "Session storage requires operator recovery"):
+        with self.assertRaisesRegex(ConflictError, "Session storage requires operator recovery"):
             # Require targeted mutation to fail before normalization or rewrite.
             auth.revoke_admin_session_for_user(self.user["user_id"], alias)
         # Require targeted mutation to preserve every original byte.
-        self.assertEqual(self.sessions_path.read_bytes(), invalid_bytes)
+        self.assertEqual(row_path.read_bytes(), invalid_bytes)
         # Attempt all-session revocation against the same corrupt document.
-        with self.assertRaisesRegex(RuntimeError, "Session storage requires operator recovery"):
+        with self.assertRaisesRegex(ConflictError, "Session storage requires operator recovery"):
             # Require all-session mutation to fail before normalization or rewrite.
             auth.revoke_all_admin_sessions_for_user(self.user["user_id"])
         # Require all-session mutation to preserve every original byte.
-        self.assertEqual(self.sessions_path.read_bytes(), invalid_bytes)
+        self.assertEqual(row_path.read_bytes(), invalid_bytes)
         # Require the permissive reader's corrupt-backup side effect never to run.
-        self.assertEqual(list(self.sessions_path.parent.glob("sessions.json.corrupt-*")), [])
+        self.assertEqual(list(row_path.parent.glob("*.corrupt-*")), [])
 
     # Prove malformed request parameters cannot rewrite session state.
     def test_invalid_alias_and_limit_leave_state_unchanged(self) -> None:

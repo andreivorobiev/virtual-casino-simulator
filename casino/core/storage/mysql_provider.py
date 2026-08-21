@@ -35,6 +35,8 @@ from casino.core.storage.reset import _GAME_ACTION_MAX_EPOCH
 from casino.core.storage.game_actions_json import JsonGameActionMixin
 # Import the schema-four MySQL lifecycle implementation inherited by the concrete provider.
 from casino.core.storage.game_actions_mysql import MySQLGameActionMixin
+# Import schema-aware first-class MySQL session ownership.
+from casino.core.storage.sessions_mysql import MySQLSessionMixin
 # Import stable public errors preserved by the extracted provider implementation.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 
@@ -72,7 +74,7 @@ class _BorrowedMySQLConnection:
         self._closed = True
 
 
-class MySQLStorageProvider(MySQLGameActionMixin, StorageProvider, GameActionExecutor):
+class MySQLStorageProvider(MySQLSessionMixin, MySQLGameActionMixin, StorageProvider, GameActionExecutor):
     # Store the provider name used by diagnostics and tests.
     name = "mysql"
 
@@ -84,6 +86,8 @@ class MySQLStorageProvider(MySQLGameActionMixin, StorageProvider, GameActionExec
         self._pool = MySQLConnectionPool(self._open_physical_connection, pool_config)
         # Track whether this process has completed exact read-only schema compatibility verification.
         self._ready = False
+        # Cache only the sanitized verified migration version for schema-aware storage lanes.
+        self._schema_version: int | None = None
         # Serialize first-use compatibility verification across concurrent request threads.
         self._ready_lock = threading.RLock()
         # Track same-thread reset lease borrowing without sharing authority across requests.
@@ -209,7 +213,9 @@ class MySQLStorageProvider(MySQLGameActionMixin, StorageProvider, GameActionExec
             # Start protected schema verification so the connection is always closed.
             try:
                 # Fail closed on missing, old, future, dirty, gapped, or checksum-mismatched state.
-                verify_runtime_compatibility(connection)
+                schema_state = verify_runtime_compatibility(connection)
+                # Retain only the clean applied version, never target or credential metadata.
+                self._schema_version = schema_state.current_version
                 # Mark this provider ready only after exact read-only verification.
                 self._ready = True
             # Always close the connection after schema verification.
@@ -259,6 +265,10 @@ class MySQLStorageProvider(MySQLGameActionMixin, StorageProvider, GameActionExec
 
     # Delete only reset-owned mutable projections inside an active transaction.
     def _clear_mysql_mutable_state(self, cursor) -> None:
+        # Delete native authentication sessions before documents and account bootstrap.
+        if getattr(self, "_schema_version", None) == 5:
+            # Clear only mutable session rows; no lifecycle claim or receipt history is affected.
+            cursor.execute("DELETE FROM casino_sessions")
         # Delete ledger rows before players to satisfy foreign keys.
         cursor.execute("DELETE FROM casino_ledger")
         # Delete history rows because reset starts a fresh visible outcome set.
@@ -325,8 +335,8 @@ class MySQLStorageProvider(MySQLGameActionMixin, StorageProvider, GameActionExec
             connection.start_transaction()
             # Re-read exact migration state inside the reset transaction.
             schema_state = self._runtime_schema_state(connection)
-            # Activate durable epoch semantics only on exact clean schema four.
-            if schema_state.initialized and schema_state.status == "clean" and schema_state.current_version == 4:
+            # Activate durable epoch semantics on every clean schema containing migration four.
+            if schema_state.initialized and schema_state.status == "clean" and schema_state.current_version in {4, 5}:
                 # Lock the singleton exclusively before any mutable table deletion.
                 epoch_state = self._mysql_game_action_epoch(cursor, exclusive=True)
                 # Refuse namespace overflow without changing the existing phase.

@@ -64,7 +64,7 @@ class SessionTimeoutTests(unittest.TestCase):
     # Persist one active local session for the given owner with controlled ages.
     def _seed(self, token: str, user_id: str, created_ago: int, updated_ago: int) -> None:
         # Build a durable active session whose expiry stays far in the future so only the new policy gates it.
-        session = {"session_id": f"session-{token}", "user_id": user_id, "token": token, "csrf_token": f"csrf-{token}", "status": "active", "created_at": _stamp(created_ago), "updated_at": _stamp(updated_ago), "expires_at": _stamp(-86_400), "client": "test", "auth_method": "local"}
+        session = {"session_id": f"session-{token}", "user_id": user_id, "token": token, "csrf_token": f"csrf-{token}".ljust(32, "x"), "generation": 1, "status": "active", "created_at": _stamp(created_ago), "updated_at": _stamp(updated_ago), "expires_at": _stamp(-86_400), "client": "test", "auth_method": "local"}
         # Persist the single seeded session document.
         auth.save_sessions({"schema_version": 1, "sessions": [session]})
 

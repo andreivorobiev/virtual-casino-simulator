@@ -24,7 +24,7 @@ from unittest.mock import patch
 # Import the application router for direct no-listener v2 probe evidence.
 from casino.app import build_router
 # Import the canonical session implementation under test.
-from casino.core import auth
+from casino.core import auth, storage
 # Import production policy parsing without starting the WSGI application.
 from casino.core.security import SecurityPolicy
 # Import the expected stale-rotation conflict.
@@ -291,7 +291,7 @@ class MobileCoreSecurityTests(unittest.TestCase):
         # Require one durable session record, never overlapping predecessor and successor rows.
         stored = auth.load_sessions()["sessions"]
         self.assertEqual(len(stored), 1)
-        self.assertEqual((stored[0]["token"], stored[0]["generation"]), (winner["token"], 2))
+        self.assertEqual((stored[0]["token_digest"], stored[0]["generation"]), (storage.session_token_digest(winner["token"]), 2))
 
     # Prove native probe output is deliberately smaller than browser current-user data.
     def test_native_probe_is_minimal_and_secret_free(self) -> None:

@@ -106,6 +106,7 @@ REQUIRED_FILES = {
     "migrations/mysql/0002_action_identity.json",
     "migrations/mysql/0003_game_action_receipts.json",
     "migrations/mysql/0004_game_action_claims.json",
+    "migrations/mysql/0005_first_class_sessions.json",
     "migrations/mysql/catalog.json",
     "scripts/mysql_migrate.py",
     # Require the wallet normalization operator boundary in every immutable release.

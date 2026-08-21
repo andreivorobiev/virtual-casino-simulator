@@ -15,7 +15,7 @@ from typing import Any, Callable
 from casino.core.clock import utc_now
 # Import provider-neutral action values, codecs, and validation helpers.
 from casino.core.game_action import GameActionIdentity, GameActionPlan, GameActionReceipt, GameActionResolution, GameActionResources, GameActionSnapshot, apply_plan_to_snapshot, canonical_json_bytes, validate_execution_request, validate_resolution_request
-# Import read-only runtime schema verification for exact schema-four eligibility.
+# Import read-only runtime schema verification for schema-four-prefix eligibility.
 from casino.core.mysql_migrations import verify_runtime_compatibility
 # Import the strict provider JSON decoder used for locked state documents.
 from casino.core.storage.base import _decode_json
@@ -27,19 +27,19 @@ from casino.errors import ConflictError, NotFoundError, ValidationError
 
 # Own the MySQL game-action lifecycle while pool, reset, and ordinary provider I/O remain in storage.py.
 class MySQLGameActionMixin:
-    # Require exact clean schema four before exposing the inert lifecycle write bridge.
+    # Require a clean schema containing the complete schema-four lifecycle prefix.
     def _runtime_schema_state(self, connection):
         # Delegate read-only catalog verification through one overridable test seam.
         return verify_runtime_compatibility(connection)
 
-    # Require exact clean schema four before exposing the inert lifecycle write bridge.
+    # Require a clean schema containing the complete schema-four lifecycle prefix.
     def _require_game_action_schema(self, connection) -> None:
         # Re-read control metadata on this transaction connection rather than trusting readiness cache.
         state = self._runtime_schema_state(connection)
         # Accept no older compatible schema because claims do not exist before migration four.
-        if not state.initialized or state.status != "clean" or state.current_version != 4:
+        if not state.initialized or state.status != "clean" or state.current_version not in {4, 5}:
             # Keep ordinary schema-two/three runtime reads available while lifecycle writes fail closed.
-            raise ConflictError("MySQL game action lifecycle requires clean schema 4")
+            raise ConflictError("MySQL game action lifecycle requires the clean schema 4 prefix")
 
     # Lock and validate the singleton MySQL reset epoch inside an active transaction.
     def _mysql_game_action_epoch(self, cursor, *, exclusive: bool = False) -> dict:

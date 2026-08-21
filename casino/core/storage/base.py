@@ -424,6 +424,66 @@ class StorageProvider:
         # Raise because concrete providers must expose history rows.
         raise NotImplementedError
 
+    # Import the retired aggregate session document exactly once into provider-owned rows. (SESSION-014)
+    def import_legacy_sessions(self, legacy_key: str | Path, default_factory: Callable[[], dict]) -> None:
+        # Raise because each provider must own crash-safe one-shot migration semantics.
+        raise NotImplementedError
+
+    # Create one first-class session while enforcing deterministic account and global caps. (STORAGE-019)
+    def create_session(self, session: dict, per_user_limit: int, total_limit: int) -> dict:
+        # Raise because each provider must serialize only the required session scope.
+        raise NotImplementedError
+
+    # Resolve one active session through its one-way bearer digest index.
+    def get_session_by_token(self, token: str) -> dict | None:
+        # Raise because providers own their indexed credential lookup.
+        raise NotImplementedError
+
+    # List bounded durable sessions for lifecycle, presence, and Admin projections.
+    def list_sessions(self, user_id: str | None = None, limit: int | None = None) -> list[dict]:
+        # Raise because providers own user indexing and deterministic ordering.
+        raise NotImplementedError
+
+    # Mutate one session by opaque id inside the provider's atomic row boundary.
+    def update_session(self, session_id: str, mutator: Callable[[dict], dict | None]) -> dict | None:
+        # Raise because providers must prevent cross-session lost updates.
+        raise NotImplementedError
+
+    # Atomically replace one bearer and CSRF pair under the exact native generation.
+    def rotate_session(self, session_id: str, token: str, expected_generation: int, replacement_token: str, replacement_csrf: str, updated_at: str) -> dict | None:
+        # Raise because providers own the compare-and-swap credential boundary.
+        raise NotImplementedError
+
+    # Revoke one session selected by its bearer without exposing lookup identity.
+    def revoke_session_by_token(self, token: str, updated_at: str) -> int:
+        # Raise because providers own indexed revocation and exact changed counts.
+        raise NotImplementedError
+
+    # Revoke one session selected by opaque durable id.
+    def revoke_session_by_id(self, session_id: str, updated_at: str) -> int:
+        # Raise because providers own row-scoped lifecycle transitions.
+        raise NotImplementedError
+
+    # Revoke active sessions for one account, optionally limited to an external method.
+    def revoke_sessions_for_user(self, user_id: str, updated_at: str, auth_method: str | None = None) -> int:
+        # Raise because providers own account indexes and transactional multi-row changes.
+        raise NotImplementedError
+
+    # Delete every session for a permanently ended disposable identity.
+    def delete_sessions_for_user(self, user_id: str) -> int:
+        # Raise because providers own exact row deletion and cleanup ordering.
+        raise NotImplementedError
+
+    # Remove inactive, expired, and deterministic overflow rows without issuing authority.
+    def expire_sessions(self, now: Any, total_limit: int) -> int:
+        # Raise because providers own bounded cleanup and row visibility.
+        raise NotImplementedError
+
+    # Replace first-class rows only for compatibility fixtures and reset rollback snapshots.
+    def replace_sessions(self, sessions: list[dict]) -> None:
+        # Raise because providers own complete test/reset publication semantics.
+        raise NotImplementedError
+
     # Read a named JSON document such as audio settings.
     def read_document(self, key: str, default: Any) -> Any:
         # Raise because concrete providers must persist settings documents.

@@ -20,13 +20,16 @@ from casino.core import guest_analytics
 from casino.core import guest_settings
 from casino.core.clock import utc_now
 from casino.core.ids import new_id
-# Import normal and strict document boundaries so session control preserves corrupt evidence.
+# Import normal and strict document boundaries for retained account and policy documents.
 from casino.core.state_store import read_json, read_json_strict, write_json, update_json, update_json_strict
+# Import the active first-class storage provider for row-scoped session lifecycle operations.
+from casino.core.storage import get_storage_provider
 # Import restricted-preview cookie helpers without coupling the auth store to WSGI.
 from casino.core.security import csrf_cookie_header, new_csrf_token
 from casino.errors import ConflictError, ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 
 USERS_PATH = DATA_DIR / "auth" / "users.json"
+# Retain the historical aggregate path only as one-shot import input; it is never session authority after migration. (SESSION-014)
 SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
 # Point the bounded per-source guest-creation record store at the auth-owned data tree. (GUEST-001)
 GUEST_CREATION_LOG_PATH = DATA_DIR / "auth" / "guest_creation_log.json"
@@ -93,14 +96,29 @@ def save_users(state: dict) -> None:
     write_json(USERS_PATH, state)
 
 def load_sessions() -> dict:
-    state = read_json(SESSIONS_PATH, default_sessions)
-    if not isinstance(state, dict) or "sessions" not in state:
-        state = default_sessions()
-    return state
+    # List detached durable rows containing no plaintext bearer credentials.
+    rows = _session_store().list_sessions()
+    # Preserve the compatibility envelope used by internal snapshots and focused tests.
+    return {"schema_version": SCHEMA_VERSION, "sessions": rows}
 
 def save_sessions(state: dict) -> None:
-    state["schema_version"] = SCHEMA_VERSION
-    write_json(SESSIONS_PATH, state)
+    # Require the historical compatibility envelope without routing it through one aggregate document.
+    if not isinstance(state, dict) or not isinstance(state.get("sessions"), list):
+        # Refuse invalid fixture or rollback state without changing provider rows.
+        raise RuntimeError("Session storage requires operator recovery")
+    # Replace only through the provider-owned first-class fixture/reset boundary.
+    _session_store().replace_sessions(state["sessions"])
+
+# Resolve the authoritative provider after completing its crash-safe one-shot legacy import.
+def _session_store():
+    # Resolve one provider so import and the following operation cannot cross backends.
+    provider = get_storage_provider()
+    # Translate the retired local path into the provider's canonical legacy document identity.
+    legacy = provider.document_reference(SESSIONS_PATH, DATA_DIR)
+    # Complete or verify the one-shot migration before exposing first-class rows.
+    provider.import_legacy_sessions(legacy, default_sessions)
+    # Return the exact provider that owns the completed migration boundary.
+    return provider
 
 def export_auth_state() -> dict:
     return {"users": load_users(), "sessions": load_sessions()}
@@ -679,19 +697,18 @@ def create_guest(client: str = "", accepted: bool = False, terms_version: str = 
     browser_nonce = secrets.token_urlsafe(32)
     # Persist only a digest so storage disclosure cannot recreate the browser-context proof.
     browser_nonce_hash = hashlib.sha256(browser_nonce.encode("utf-8")).hexdigest()
-    # Tighten the persisted session expiry from the registered-user TTL down to the guest lifetime cap.
-    def cap_expiry(state: dict) -> dict:
-        # Apply the guest lifetime to only this session record.
-        for stored in state.get("sessions", []):
-            # Match the freshly issued guest session by id.
-            if stored.get("session_id") == session["session_id"]:
-                # Overwrite its expiry with the guest lifetime bound.
-                stored["expires_at"] = expires_at
-                # Bind the credential to the creating browser context without retaining the raw proof.
-                stored["guest_browser_nonce_hash"] = browser_nonce_hash
-        # Return the mutated session document for atomic persistence.
-        return state
-    update_json(SESSIONS_PATH, cap_expiry, default_sessions)
+    # Tighten the one first-class session row to the guest lifetime and browser-context bound.
+    def cap_expiry(stored: dict) -> dict:
+        # Overwrite the absolute expiry only for the freshly issued opaque session id.
+        stored["expires_at"] = expires_at
+        # Bind the credential to the creating browser context without retaining the raw proof.
+        stored["guest_browser_nonce_hash"] = browser_nonce_hash
+        # Return the complete row for provider-owned atomic replacement.
+        return stored
+    # Update only the guest's independent session row.
+    if _session_store().update_session(session["session_id"], cap_expiry) is None:
+        # Refuse an orphan guest identity when its issued session cannot be rebound.
+        raise ConflictError("Session storage requires operator recovery")
     # Reflect the capped expiry on the returned session copy for the caller.
     session["expires_at"] = expires_at
     # Reflect only the digest on the internal session copy; the raw proof has a separate one-time field.
@@ -823,20 +840,8 @@ def end_guest_trial(user: dict, reason: str = "ended") -> None:
     except Exception:
         # Omit the optional aggregate rather than weakening credential revocation.
         ending_balance = None
-    # Remove every session belonging to the claimed guest so stale cookies stop resolving immediately.
-    def remove_guest_sessions(state: dict) -> dict:
-        # Reject malformed session storage without replacing recoverable credential evidence.
-        if not isinstance(state, dict) or not isinstance(state.get("sessions"), list):
-            # Surface one fixed operator boundary without exposing any credential or identity.
-            raise RuntimeError("Session storage requires operator recovery")
-        # Delete only the disposable identity's rows so no browser credential can resume it.
-        state["sessions"] = [stored for stored in state["sessions"] if stored.get("user_id") != canonical["user_id"]]
-        # Stamp the canonical schema version after the bounded deletion.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the complete sessions document for atomic persistence.
-        return state
-    # Apply the deletion through strict JSON handling and the provider's document transaction.
-    update_json_strict(SESSIONS_PATH, remove_guest_sessions, default_sessions, "Session storage requires operator recovery")
+    # Delete only the disposable identity's first-class rows so stale cookies stop resolving immediately.
+    _session_store().delete_sessions_for_user(canonical["user_id"])
     # Import the control-plane helper lazily so auth initialization remains cycle-free.
     from casino.core import autoplay
     # Stop every active guest-owned autoplay registration before revoking its wallet.
@@ -872,41 +877,38 @@ def consume_guest_action(session: dict, user: dict) -> int:
         return 0
     # Track the persisted count returned by the atomic mutation.
     result = {"count": 0, "limited": False}
-    # Define the session-scoped allowance update.
-    def mutate(state: dict) -> dict:
-        # Normalize malformed session storage before searching the authenticated row.
-        if not isinstance(state, dict) or not isinstance(state.get("sessions"), list):
-            # Replace invalid state with the canonical empty container.
-            state = default_sessions()
-        # Find only the already-authenticated guest session.
-        for stored in state.get("sessions", []):
-            # Skip every unrelated or inactive session.
-            if stored.get("session_id") != session.get("session_id") or stored.get("status") != "active":
-                # Continue without exposing whether another session exists.
-                continue
-            # Read the current bounded action count.
-            current = int(stored.get("guest_action_count") or 0)
-            # Reject any request at or beyond the configured ceiling without incrementing it.
-            if current >= GUEST_MAX_ACTIONS:
-                # Publish only the bounded result to the caller.
-                result["limited"] = True
-                result["count"] = current
-                # Return unchanged session state.
-                return state
-            # Consume one allowance before the game mutation begins.
-            stored["guest_action_count"] = current + 1
-            # Publish the accepted count to the authenticated caller.
-            result["count"] = current + 1
-            # Mirror the count in the in-request session copy for consistent diagnostics.
-            session["guest_action_count"] = current + 1
-            # Return the mutated session document.
-            return state
-        # Treat a missing authenticated row as a generic limit failure.
+    # Define the row-scoped allowance update.
+    def mutate(stored: dict) -> dict | None:
+        # Reject an inactive row through the same generic limit result.
+        if stored.get("status") != "active":
+            # Record a conditional no-change result.
+            result["limited"] = True
+            # Return no replacement so provider bytes remain unchanged.
+            return None
+        # Read the current bounded action count.
+        current = int(stored.get("guest_action_count") or 0)
+        # Reject any request at or beyond the configured ceiling without incrementing it.
+        if current >= GUEST_MAX_ACTIONS:
+            # Publish only the bounded result to the caller.
+            result["limited"] = True
+            # Preserve the current count for the standard error path.
+            result["count"] = current
+            # Return no replacement so the exact row stays byte-identical.
+            return None
+        # Consume one allowance before the game mutation begins.
+        stored["guest_action_count"] = current + 1
+        # Publish the accepted count to the authenticated caller.
+        result["count"] = current + 1
+        # Mirror the count in the in-request session copy for consistent diagnostics.
+        session["guest_action_count"] = current + 1
+        # Return the complete row for atomic replacement.
+        return stored
+    # Persist the allowance on only the authenticated session row before gameplay starts.
+    updated = _session_store().update_session(session.get("session_id", ""), mutate)
+    # Treat a missing authenticated row as the same generic limit failure.
+    if updated is None and not result["limited"]:
+        # Avoid distinguishing disappeared credentials from an exhausted allowance.
         result["limited"] = True
-        # Return state unchanged.
-        return state
-    # Persist the allowance atomically before gameplay starts.
-    update_json(SESSIONS_PATH, mutate, default_sessions)
     # Fail closed with the standard sanitized rate-limit envelope.
     if result["limited"]:
         # Never expose the configured ceiling or current counter.
@@ -971,18 +973,14 @@ def mark_guest_departed(session: dict, user: dict) -> None:
         return
     # Capture one server timestamp for the departure marker.
     now = utc_now()
-    # Define the atomic session-scoped departure mutation.
-    def mutate(state: dict) -> dict:
-        # Find only the authenticated guest session without exposing its token.
-        for stored in state.get("sessions", []):
-            # Match the durable random session identifier.
-            if stored.get("session_id") == session.get("session_id"):
-                # Record the lifecycle signal used by cleanup diagnostics.
-                stored["guest_departed_at"] = now
-        # Return the mutated sessions document for atomic persistence.
-        return state
-    # Persist the marker without creating a resumable credential.
-    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Define the atomic row-scoped departure mutation.
+    def mutate(stored: dict) -> dict:
+        # Record the lifecycle signal used by cleanup diagnostics.
+        stored["guest_departed_at"] = now
+        # Return the complete row for provider-owned replacement.
+        return stored
+    # Persist the marker on only the authenticated session row.
+    _session_store().update_session(session.get("session_id", ""), mutate)
 
 # Build the guest browser-session cookie so closing the browser drops the disposable trial. (issue #317)
 def guest_cookie_headers(session: dict, same_site: str = "Lax", secure: bool = False, include_csrf: bool = False) -> list[tuple[str, str]]:
@@ -1201,26 +1199,8 @@ def create_session(user: dict, client: str = "", auth_method: str = "local") -> 
         raise ValidationError("Session authentication method is invalid")
     # Build the durable session record with independent bearer and CSRF material.
     session = {"session_id": new_id("session"), "user_id": user["user_id"], "token": secrets.token_urlsafe(32), "csrf_token": new_csrf_token(), "generation": 1, "status": "active", "created_at": now, "updated_at": now, "expires_at": session_expiry(), "client": client, "auth_method": auth_method}
-    # Define the atomic mutation that preserves concurrent same-user sessions. (SESSION-007)
-    def mutate(state: dict) -> dict:
-        # Normalize malformed persisted state into the canonical sessions container.
-        if not isinstance(state, dict) or "sessions" not in state:
-            # Reset to a fresh default sessions document before mutation.
-            state = default_sessions()
-        # Drop expired records and enforce the global retention cap before adding the replacement.
-        prune_sessions(state)
-        # Enforce the per-user cap by evicting least-recently-used predecessors instead of all of them.
-        _evict_user_sessions_over_cap(state, user["user_id"])
-        # Append the newly issued active session for this identity.
-        state.setdefault("sessions", []).append(session)
-        # Stamp the schema version consistent with save_sessions.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the mutated state for atomic persistence.
-        return state
-    # Persist the new session atomically so concurrent logins cannot lose each other's writes. (SESSION-007, CORE-021)
-    update_json(SESSIONS_PATH, mutate, default_sessions)
-    # Return the issued session to the caller.
-    return session
+    # Persist one independent row while the provider enforces account and global caps atomically. (SESSION-007, STORAGE-019)
+    return _session_store().create_session(session, MAX_SESSIONS_PER_USER, MAX_STORED_SESSIONS)
 
 def public_session(session: dict) -> dict:
     # Copy public session metadata without exposing the bearer token, client, or guest proof digest.
@@ -1331,22 +1311,18 @@ def csrf_token_for_session_cookie(headers) -> str:
     if not token:
         # Preserve anonymous shell bootstrap behavior.
         return ""
-    # Read a pruned in-memory session view without refreshing activity or persisting state.
-    state = prune_sessions(load_sessions())
-    # Inspect only surviving active sessions for the exact opaque cookie.
-    for session in state.get("sessions", []):
-        # Skip every unrelated or non-active record without exposing identifiers.
-        if session.get("status") != "active" or not hmac.compare_digest(str(session.get("token") or ""), token):
-            # Continue to the next bounded session row.
-            continue
-        # Read the browser-readable session CSRF value without authenticating a guest browser proof.
-        csrf_token = session.get("csrf_token")
-        # Accept only the bounded generated proof shape used by application sessions.
-        if isinstance(csrf_token, str) and 32 <= len(csrf_token) <= 128:
-            # Return the exact session proof for the host-only double-submit cookie.
-            return csrf_token
-        # Reject a malformed matching session without substituting a durable value.
+    # Resolve only the digest-indexed first-class row without refreshing activity.
+    session = _session_store().get_session_by_token(token)
+    # Reject unknown, revoked, or absolutely expired credentials.
+    if session is None or not _session_is_active(session, utc_datetime()):
+        # Preserve anonymous shell bootstrap behavior.
         return ""
+    # Read the browser-readable session CSRF value without authenticating a guest browser proof.
+    csrf_token = session.get("csrf_token")
+    # Accept only the bounded generated proof shape used by application sessions.
+    if isinstance(csrf_token, str) and 32 <= len(csrf_token) <= 128:
+        # Return the exact session proof for the host-only double-submit cookie.
+        return csrf_token
     # Return no proof when the cookie is expired, revoked, or unknown.
     return ""
 
@@ -1354,103 +1330,106 @@ def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict,
     # Branch when the token is missing.
     if not token:
         raise UnauthorizedError()
-    # Read a pruned in-memory view without persisting so concurrent logins are not clobbered. (SESSION-007)
-    state = prune_sessions(load_sessions())
-    for session in state.get("sessions", []):
-        # Branch when the session token matches.
-        if hmac.compare_digest(session.get("token", ""), token):
-            user = find_user_by_id(session.get("user_id", ""))
-            # Branch when the session has no active user.
-            if not user or user.get("status") != "active":
-                raise ForbiddenError("User is inactive")
-            # Recheck external-provider rollback, link ownership, and active configuration on every request.
-            if session.get("auth_method", "local") in {"google", "facebook"}:
-                # Import lazily so the core auth module does not create an OAuth import cycle.
-                from casino.core.oauth.service import provider_session_is_authorized
-                # Revoke effective access immediately when a flag, release gate, or durable link disappears.
-                if not provider_session_is_authorized(session, user):
-                    # Reject the provider session without affecting local-password sessions.
-                    raise UnauthorizedError("External provider session is no longer authorized")
-            # Refresh the guest's de-identified activity marker so the Admin active-now window stays truthful. (issue #317)
-            if is_guest(user):
-                # End an expired absolute-lifetime session before any protected route can resume it.
-                if user.get("guest_expires_at") and parse_time(user["guest_expires_at"]) <= utc_datetime():
-                    # Revoke the complete disposable principal through the canonical teardown.
-                    end_guest_trial(user, "expired")
-                    # Reject the expired credential with the standard unauthenticated result.
-                    raise UnauthorizedError("Guest trial expired")
-                # End a session that exceeded the configured server-observed inactivity window.
-                if (utc_datetime() - parse_time(session.get("updated_at") or session.get("created_at"))).total_seconds() >= GUEST_INACTIVITY_SECONDS:
-                    # Revoke the complete disposable principal through the canonical teardown.
-                    end_guest_trial(user, "inactive")
-                    # Reject the inactive credential without exposing timestamps.
-                    raise UnauthorizedError("Guest trial expired")
-                # Hash the browser-context proof before constant-time comparison with storage.
-                supplied_nonce_hash = hashlib.sha256(str(guest_browser_nonce or "").encode("utf-8")).hexdigest()
-                # End the guest when a cookie is replayed outside its originating browser-session context.
-                if not guest_browser_nonce or not hmac.compare_digest(str(session.get("guest_browser_nonce_hash") or ""), supplied_nonce_hash):
-                    # Irreversibly close the replayed or contextless trial.
-                    end_guest_trial(user, "browser_closed")
-                    # Reject without revealing which component of the browser binding failed.
-                    raise UnauthorizedError("Guest trial is not resumable")
-                # Capture one timestamp used for both session activity and departure-marker clearing.
-                activity_now = utc_now()
-                # Define the atomic authenticated-activity mutation.
-                def touch_guest_session(stored_state: dict) -> dict:
-                    # Find only the authenticated session by its opaque identifier.
-                    for stored in stored_state.get("sessions", []):
-                        # Match the session without comparing or copying its bearer credential.
-                        if stored.get("session_id") == session.get("session_id"):
-                            # Refresh the server-observed inactivity marker.
-                            stored["updated_at"] = activity_now
-                            # Clear a page-departure marker when the same browser context resumes after reload.
-                            stored.pop("guest_departed_at", None)
-                    # Return the mutated sessions document for atomic persistence.
-                    return stored_state
-                # Persist activity atomically so concurrent requests cannot restore stale session state.
-                update_json(SESSIONS_PATH, touch_guest_session, default_sessions)
-                # Reflect the touch in the request-local session used by downstream code.
-                session["updated_at"] = activity_now
-                # Touch only the one-way analytics id; the summary never stores user, player, or session identifiers.
-                guest_analytics.record_event(user.get("guest_analytics_id"))
-            # Enforce the global idle and absolute session-timeout policy for registered accounts. (SESSION-009)
-            else:
-                # Import the policy resolver lazily so the core auth module keeps a flat import graph.
-                from casino.core.session_settings import resolve_timeout_seconds
-                # Read one UTC instant used for both timeout comparisons and any activity refresh.
-                policy_now = utc_datetime()
-                # Resolve the effective idle and absolute limits, honoring the stricter admin policy.
-                idle_seconds, absolute_seconds = resolve_timeout_seconds(is_admin(user))
-                # Measure elapsed time since login for the absolute cap, tolerating a missing creation stamp.
-                created_elapsed = (policy_now - parse_time(session.get("created_at") or session.get("updated_at"))).total_seconds()
-                # Measure elapsed time since the last observed activity for the idle cap.
-                idle_elapsed = (policy_now - parse_time(session.get("updated_at") or session.get("created_at"))).total_seconds()
-                # Revoke and reject a session past either limit so the next request must re-authenticate.
-                if created_elapsed >= absolute_seconds or idle_elapsed >= idle_seconds:
-                    # Mark the timed-out session revoked so it cannot be resumed.
-                    revoke_session_by_id(session.get("session_id"))
-                    # Reject without exposing which limit elapsed.
-                    raise UnauthorizedError("Session is invalid or expired")
-                # Refresh the server-observed activity marker only when it is stale enough to matter, avoiding a write per request.
-                if idle_elapsed >= 60:
-                    # Capture the activity timestamp once for the atomic refresh.
-                    activity_now = utc_now()
-                    # Define the atomic authenticated-activity mutation for the one matching session.
-                    def touch_account_session(stored_state: dict) -> dict:
-                        # Find only the authenticated session by its opaque identifier.
-                        for stored in stored_state.get("sessions", []):
-                            # Match the session without comparing or copying its bearer credential.
-                            if stored.get("session_id") == session.get("session_id"):
-                                # Slide the server-observed inactivity marker forward.
-                                stored["updated_at"] = activity_now
-                        # Return the mutated sessions document for atomic persistence.
-                        return stored_state
-                    # Persist activity atomically so concurrent requests cannot restore stale session state.
-                    update_json(SESSIONS_PATH, touch_account_session, default_sessions)
-                    # Reflect the touch in the request-local session used by downstream code.
-                    session["updated_at"] = activity_now
-            return session, user
-    raise UnauthorizedError("Session is invalid or expired")
+    # Resolve one digest-indexed row without scanning or rewriting unrelated sessions. (SESSION-014)
+    session = _session_store().get_session_by_token(token)
+    # Reject unknown, revoked, or absolutely expired credentials uniformly.
+    if session is None or not _session_is_active(session, utc_datetime()):
+        # Preserve the established unauthenticated response.
+        raise UnauthorizedError("Session is invalid or expired")
+    # Resolve the durable identity bound by the stored session row.
+    user = find_user_by_id(session.get("user_id", ""))
+    # Reject a session whose account is absent or inactive.
+    if not user or user.get("status") != "active":
+        # Preserve the established inactive-account response.
+        raise ForbiddenError("User is inactive")
+    # Recheck external-provider rollback, link ownership, and active configuration on every request.
+    if session.get("auth_method", "local") in {"google", "facebook"}:
+        # Import lazily so the core auth module does not create an OAuth import cycle.
+        from casino.core.oauth.service import provider_session_is_authorized
+        # Revoke effective access immediately when a flag, release gate, or durable link disappears.
+        if not provider_session_is_authorized(session, user):
+            # Reject the provider session without affecting local-password sessions.
+            raise UnauthorizedError("External provider session is no longer authorized")
+    # Refresh the guest's de-identified activity marker so the Admin active-now window stays truthful. (issue #317)
+    if is_guest(user):
+        # End an expired absolute-lifetime session before any protected route can resume it.
+        if user.get("guest_expires_at") and parse_time(user["guest_expires_at"]) <= utc_datetime():
+            # Revoke the complete disposable principal through the canonical teardown.
+            end_guest_trial(user, "expired")
+            # Reject the expired credential with the standard unauthenticated result.
+            raise UnauthorizedError("Guest trial expired")
+        # End a session that exceeded the configured server-observed inactivity window.
+        if (utc_datetime() - parse_time(session.get("updated_at") or session.get("created_at"))).total_seconds() >= GUEST_INACTIVITY_SECONDS:
+            # Revoke the complete disposable principal through the canonical teardown.
+            end_guest_trial(user, "inactive")
+            # Reject the inactive credential without exposing timestamps.
+            raise UnauthorizedError("Guest trial expired")
+        # Hash the browser-context proof before constant-time comparison with storage.
+        supplied_nonce_hash = hashlib.sha256(str(guest_browser_nonce or "").encode("utf-8")).hexdigest()
+        # End the guest when a cookie is replayed outside its originating browser-session context.
+        if not guest_browser_nonce or not hmac.compare_digest(str(session.get("guest_browser_nonce_hash") or ""), supplied_nonce_hash):
+            # Irreversibly close the replayed or contextless trial.
+            end_guest_trial(user, "browser_closed")
+            # Reject without revealing which component of the browser binding failed.
+            raise UnauthorizedError("Guest trial is not resumable")
+        # Capture one timestamp used for both session activity and departure-marker clearing.
+        activity_now = utc_now()
+
+        # Define the atomic row-scoped guest activity mutation.
+        def touch_guest_session(stored: dict) -> dict:
+            # Refresh the server-observed inactivity marker.
+            stored["updated_at"] = activity_now
+            # Clear a page-departure marker when the same browser context resumes after reload.
+            stored.pop("guest_departed_at", None)
+            # Return the complete row for provider replacement.
+            return stored
+
+        # Persist activity on only the authenticated session row.
+        if _session_store().update_session(session["session_id"], touch_guest_session) is None:
+            # Reject a disappeared concurrent session without restoring it.
+            raise UnauthorizedError("Session is invalid or expired")
+        # Reflect the touch in the request-local session used by downstream code.
+        session["updated_at"] = activity_now
+        # Touch only the one-way analytics id; the summary never stores user, player, or session identifiers.
+        guest_analytics.record_event(user.get("guest_analytics_id"))
+    # Enforce the global idle and absolute session-timeout policy for registered accounts. (SESSION-009)
+    else:
+        # Import the policy resolver lazily so the core auth module keeps a flat import graph.
+        from casino.core.session_settings import resolve_timeout_seconds
+        # Read one UTC instant used for both timeout comparisons and any activity refresh.
+        policy_now = utc_datetime()
+        # Resolve the effective idle and absolute limits, honoring the stricter admin policy.
+        idle_seconds, absolute_seconds = resolve_timeout_seconds(is_admin(user))
+        # Measure elapsed time since login for the absolute cap, tolerating a missing creation stamp.
+        created_elapsed = (policy_now - parse_time(session.get("created_at") or session.get("updated_at"))).total_seconds()
+        # Measure elapsed time since the last observed activity for the idle cap.
+        idle_elapsed = (policy_now - parse_time(session.get("updated_at") or session.get("created_at"))).total_seconds()
+        # Revoke and reject a session past either limit so the next request must re-authenticate.
+        if created_elapsed >= absolute_seconds or idle_elapsed >= idle_seconds:
+            # Mark the timed-out session revoked so it cannot be resumed.
+            revoke_session_by_id(session.get("session_id"))
+            # Reject without exposing which limit elapsed.
+            raise UnauthorizedError("Session is invalid or expired")
+        # Refresh the server-observed activity marker only when it is stale enough to matter, avoiding a write per request.
+        if idle_elapsed >= 60:
+            # Capture the activity timestamp once for the atomic refresh.
+            activity_now = utc_now()
+
+            # Define the atomic row-scoped account activity mutation.
+            def touch_account_session(stored: dict) -> dict:
+                # Slide the server-observed inactivity marker forward.
+                stored["updated_at"] = activity_now
+                # Return the complete row for provider replacement.
+                return stored
+
+            # Persist activity on only the authenticated session row.
+            if _session_store().update_session(session["session_id"], touch_account_session) is None:
+                # Reject a concurrently disappeared credential without restoring it.
+                raise UnauthorizedError("Session is invalid or expired")
+            # Reflect the touch in the request-local session used by downstream code.
+            session["updated_at"] = activity_now
+    # Return the authenticated request-local session and durable user.
+    return session, user
 
 def authenticate_headers(headers) -> tuple[dict, dict]:
     token = extract_bearer_token(headers) or extract_cookie_token(headers)
@@ -1460,28 +1439,10 @@ def authenticate_headers(headers) -> tuple[dict, dict]:
     return authenticate_token(token, guest_browser_nonce)
 
 def logout(token: str) -> dict:
-    # Track whether any stored session matched the supplied bearer token.
-    changed = {"value": False}
-    # Define the atomic revocation that only touches the matching session record. (SESSION-007)
-    def mutate(state: dict) -> dict:
-        # Normalize malformed persisted state into the canonical sessions container.
-        if not isinstance(state, dict) or "sessions" not in state:
-            # Reset to a fresh default sessions document before mutation.
-            state = default_sessions()
-        for session in state.get("sessions", []):
-            # Branch when the session token matches.
-            if token and hmac.compare_digest(session.get("token", ""), token):
-                session["status"] = "revoked"
-                session["updated_at"] = utc_now()
-                # Record that at least one matching session was revoked.
-                changed["value"] = True
-        # Stamp the schema version consistent with save_sessions.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the mutated state for atomic persistence.
-        return state
-    # Persist the revocation atomically so a concurrent login is never clobbered. (SESSION-007)
-    update_json(SESSIONS_PATH, mutate, default_sessions)
-    return {"logged_out": changed["value"]}
+    # Revoke only the digest-indexed first-class row without rewriting concurrent logins. (SESSION-014)
+    changed = _session_store().revoke_session_by_token(token, utc_now()) if token else 0
+    # Preserve the established boolean logout response.
+    return {"logged_out": changed == 1}
 
 
 # Atomically replace one native session's bearer and CSRF pair under an exact generation. (SESSION-013)
@@ -1490,93 +1451,30 @@ def rotate_mobile_session(session_id: str, token: str, expected_generation: int)
     if not isinstance(expected_generation, int) or isinstance(expected_generation, bool) or expected_generation < 1:
         # Reject malformed or absent generation without touching session state.
         raise ValidationError("Mobile session generation is invalid")
-    # Retain only the newly committed session outside the provider transaction.
-    rotated = {}
-    # Define one exact compare-and-swap over the current session record.
-    def mutate(state: dict) -> dict:
-        # Normalize malformed persisted state through the existing session schema.
-        if not isinstance(state, dict) or "sessions" not in state:
-            # Use the canonical empty document before failing the missing-session match.
-            state = default_sessions()
-        # Inspect only active retained sessions for the exact opaque identity.
-        for stored in state.get("sessions", []):
-            # Match session id, bearer, status, and generation in one provider lock.
-            if stored.get("session_id") == session_id and stored.get("status") == "active" and hmac.compare_digest(str(stored.get("token") or ""), str(token or "")) and stored.get("generation", 1) == expected_generation:
-                # Replace the bearer before any concurrent request can observe two valid credentials.
-                stored["token"] = secrets.token_urlsafe(32)
-                # Replace the matching CSRF proof in the same atomic transaction.
-                stored["csrf_token"] = new_csrf_token()
-                # Advance generation so every predecessor action and completion becomes stale.
-                stored["generation"] = expected_generation + 1
-                # Record only a bounded activity timestamp.
-                stored["updated_at"] = utc_now()
-                # Copy the committed record for the response after provider commit.
-                rotated.update(dict(stored))
-                # Stop after the unique session match.
-                break
-        # Reject stale, replayed, expired, or mismatched rotation without mutation.
-        if not rotated:
-            # Use one generic conflict so no session detail is disclosed.
-            raise ConflictError("Mobile session changed; sign in again")
-        # Stamp the canonical state schema after successful replacement.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the atomically mutated document.
-        return state
-    # Persist one compare-and-swap; a lost response intentionally forces login with no dual credential.
-    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Generate replacement bearer and CSRF material before the single provider compare-and-swap.
+    replacement_token = secrets.token_urlsafe(32)
+    # Generate the independent matching CSRF proof.
+    replacement_csrf = new_csrf_token()
+    # Capture one bounded activity and issuance timestamp.
+    updated_at = utc_now()
+    # Replace one exact first-class row; a lost response intentionally forces sign-in with no dual credential.
+    rotated = _session_store().rotate_session(session_id, token, expected_generation, replacement_token, replacement_csrf, updated_at)
+    # Reject stale, replayed, expired, or mismatched rotation without mutation.
+    if rotated is None:
+        # Use one generic conflict so no session detail is disclosed.
+        raise ConflictError("Mobile session changed; sign in again")
     # Return the exact committed secret pair only to the native OS-vault response boundary.
     return rotated
 
 # Revoke one session by its opaque identifier so a timed-out account cannot resume it. (SESSION-009)
 def revoke_session_by_id(session_id: str) -> None:
-    # Define the atomic revocation that only touches the identified session record.
-    def mutate(state: dict) -> dict:
-        # Normalize malformed persisted state into the canonical sessions container.
-        if not isinstance(state, dict) or "sessions" not in state:
-            # Reset to a fresh default sessions document before mutation.
-            state = default_sessions()
-        for session in state.get("sessions", []):
-            # Branch when the stored session identifier matches without touching bearer material.
-            if session.get("session_id") == session_id:
-                # Mark the timed-out session revoked so it cannot be resumed.
-                session["status"] = "revoked"
-                # Record the revocation time consistent with logout.
-                session["updated_at"] = utc_now()
-        # Stamp the schema version consistent with save_sessions.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the mutated state for atomic persistence.
-        return state
-    # Persist the revocation atomically so a concurrent login is never clobbered.
-    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Revoke only the opaque-id selected first-class row.
+    _session_store().revoke_session_by_id(session_id, utc_now())
 
 # Revoke every active session owned by one account after a privilege change.
 def revoke_sessions_for_user(user_id: str) -> int:
-    # Count changed records without retaining any token value.
-    changed = {"value": 0}
-    # Define the atomic account-scoped revocation applied under the session-file lock. (SESSION-007, SESSION-006)
-    def mutate(state: dict) -> dict:
-        # Normalize malformed persisted state into the canonical sessions container.
-        if not isinstance(state, dict) or "sessions" not in state:
-            # Reset to a fresh default sessions document before mutation.
-            state = default_sessions()
-        # Iterate through stored sessions without comparing caller-supplied credentials.
-        for session in state.get("sessions", []):
-            # Revoke only active records for the selected durable identity.
-            if session.get("user_id") == user_id and session.get("status") == "active":
-                # Mark the predecessor unusable immediately.
-                session["status"] = "revoked"
-                # Record a bounded audit timestamp without user or token data.
-                session["updated_at"] = utc_now()
-                # Count the revoked record for focused tests.
-                changed["value"] += 1
-        # Stamp the schema version consistent with save_sessions.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the mutated state for atomic persistence.
-        return state
-    # Persist the account-scoped revocation result atomically.
-    update_json(SESSIONS_PATH, mutate, default_sessions)
-    # Return only the number of invalidated predecessors.
-    return changed["value"]
+    # Revoke only active first-class rows owned by the selected account.
+    return _session_store().revoke_sessions_for_user(user_id, utc_now())
 
 # Require a retained full account before exposing or mutating its session inventory. (SESSION-008)
 def _require_session_control_target(user_id: str) -> dict:
@@ -1676,14 +1574,8 @@ def list_admin_sessions_for_user(user_id: str, limit: int = MAX_ADMIN_SESSION_RE
     if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1 or limit > MAX_ADMIN_SESSION_RESULTS:
         # Keep every caller on the documented bounded inventory contract.
         raise ValidationError("Session result limit is invalid")
-    # Read through the strict provider boundary so corrupt JSON cannot appear as an empty inventory.
-    state = read_json_strict(SESSIONS_PATH, default_sessions, "Session storage requires operator recovery")
-    # Validate the complete document before deriving any partial result.
-    rows = _validated_session_rows(state)
-    # Select only the exact target account without exposing unrelated identities.
-    selected = [session for session in rows if session["user_id"] == user_id]
-    # Sort newest activity first using compatible ISO timestamps and a stable identifier tie-break.
-    selected.sort(key=lambda session: (str(session.get("updated_at") or session.get("created_at") or ""), str(session["session_id"])), reverse=True)
+    # Read only the target account's validated first-class rows through the provider index.
+    selected = _session_store().list_sessions(user_id=user_id, limit=limit)
     # Return only the bounded privacy-safe projections.
     return [_admin_session_summary(session) for session in selected[:limit]]
 
@@ -1695,63 +1587,25 @@ def revoke_admin_session_for_user(user_id: str, session_alias: str) -> int:
     if not isinstance(session_alias, str) or not ADMIN_SESSION_ALIAS_PATTERN.fullmatch(session_alias):
         # Reject malformed lookup material without reading or rewriting session state.
         raise ValidationError("Session alias is invalid")
-    # Count only a newly committed active-to-revoked transition.
-    changed = {"value": 0}
-    # Define the complete targeted mutation under the provider transaction.
-    def mutate(state: dict) -> dict:
-        # Validate every row before changing any target record.
-        rows = _validated_session_rows(state)
-        # Resolve all exact account-and-alias matches without leaking whether another account owns the alias.
-        matches = [session for session in rows if session["user_id"] == user_id and hmac.compare_digest(admin_session_alias(session["session_id"]), session_alias)]
-        # Fail closed on a cryptographic alias collision instead of revoking multiple records.
-        if len(matches) > 1:
-            # Preserve the complete document for operator investigation.
-            raise RuntimeError("Session storage requires operator recovery")
-        # Revoke the sole matching active session when one exists.
-        if matches and matches[0]["status"] == "active":
-            # Make the selected session unusable immediately.
-            matches[0]["status"] = "revoked"
-            # Record the bounded lifecycle timestamp without changing any secret.
-            matches[0]["updated_at"] = utc_now()
-            # Record the single committed transition for idempotent callers.
-            changed["value"] = 1
-        # Preserve the canonical schema marker on a successful transaction.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the complete session document for atomic persistence.
-        return state
-    # Persist through the strict boundary so invalid JSON bytes are never normalized or overwritten.
-    update_json_strict(SESSIONS_PATH, mutate, default_sessions, "Session storage requires operator recovery")
-    # Return only whether one active session transitioned.
-    return changed["value"]
+    # Resolve exact account-and-alias matches from validated first-class rows.
+    matches = [session for session in _session_store().list_sessions(user_id=user_id) if hmac.compare_digest(admin_session_alias(session["session_id"]), session_alias)]
+    # Fail closed on a cryptographic alias collision instead of revoking multiple records.
+    if len(matches) > 1:
+        # Preserve every conflicting row for operator investigation.
+        raise RuntimeError("Session storage requires operator recovery")
+    # Preserve idempotent absent or already-terminal behavior.
+    if not matches or matches[0]["status"] != "active":
+        # Return no active transition.
+        return 0
+    # Revoke only the exact opaque-id row resolved from the one-way alias.
+    return _session_store().revoke_session_by_id(matches[0]["session_id"], utc_now())
 
 # Revoke every active session for one retained full account through the Admin boundary. (SESSION-008)
 def revoke_all_admin_sessions_for_user(user_id: str) -> int:
     # Validate the persistent target before entering the session transaction.
     _require_session_control_target(user_id)
-    # Count exact active-to-revoked transitions.
-    changed = {"value": 0}
-    # Define the complete account-scoped mutation under the provider transaction.
-    def mutate(state: dict) -> dict:
-        # Validate every row before changing any target record.
-        rows = _validated_session_rows(state)
-        # Inspect each validated row while holding the atomic provider boundary.
-        for session in rows:
-            # Revoke only active records owned by the selected retained account.
-            if session["user_id"] == user_id and session["status"] == "active":
-                # Make the selected session unusable immediately.
-                session["status"] = "revoked"
-                # Record the bounded lifecycle timestamp without changing any secret.
-                session["updated_at"] = utc_now()
-                # Count the committed transition for idempotent callers.
-                changed["value"] += 1
-        # Preserve the canonical schema marker on a successful transaction.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the complete session document for atomic persistence.
-        return state
-    # Persist through the strict boundary so invalid JSON bytes are never normalized or overwritten.
-    update_json_strict(SESSIONS_PATH, mutate, default_sessions, "Session storage requires operator recovery")
-    # Return only the number of newly revoked active sessions.
-    return changed["value"]
+    # Revoke only active first-class rows owned by the selected retained account.
+    return _session_store().revoke_sessions_for_user(user_id, utc_now())
 
 # Revoke active sessions created through one external provider while preserving local login.
 def revoke_sessions_for_user_method(user_id: str, auth_method: str) -> int:
@@ -1759,36 +1613,8 @@ def revoke_sessions_for_user_method(user_id: str, auth_method: str) -> int:
     if auth_method not in {"google", "facebook"}:
         # Prevent this helper from becoming a broad local-session revocation primitive.
         raise ValidationError("External session authentication method is invalid")
-    # Count only exact active provider-session changes.
-    changed = {"value": 0}
-    # Define the complete provider-scoped session mutation.
-    def mutate(state: dict) -> dict:
-        # Require recognizable session storage so malformed evidence is never rewritten.
-        if not isinstance(state, dict) or not isinstance(state.get("sessions"), list):
-            # Abort without replacing the recoverable session document.
-            raise RuntimeError("Session storage requires operator recovery")
-        # Inspect every stored session under the shared atomic update lock.
-        for session in state["sessions"]:
-            # Reject malformed rows before any revocation can publish a partial repair.
-            if not isinstance(session, dict):
-                # Preserve the complete document for operator recovery.
-                raise RuntimeError("Session storage requires operator recovery")
-            # Revoke only active records for the exact user and provider method.
-            if session.get("user_id") == user_id and session.get("auth_method") == auth_method and session.get("status") == "active":
-                # Make this provider-authenticated session unusable immediately.
-                session["status"] = "revoked"
-                # Record a bounded audit timestamp without token or user data.
-                session["updated_at"] = utc_now()
-                # Count the exact provider-session revocation.
-                changed["value"] += 1
-        # Preserve the canonical schema marker on commit.
-        state["schema_version"] = SCHEMA_VERSION
-        # Return the complete mutated session document.
-        return state
-    # Persist the provider-scoped revocation atomically.
-    update_json(SESSIONS_PATH, mutate, default_sessions)
-    # Return only the number of revoked sessions.
-    return changed["value"]
+    # Revoke only active first-class rows for the selected external provider.
+    return _session_store().revoke_sessions_for_user(user_id, utc_now(), auth_method=auth_method)
 
 # Format one UTC instant using the same Z-suffixed millisecond shape as the rest of the session contract.
 def _iso_z(moment) -> str:

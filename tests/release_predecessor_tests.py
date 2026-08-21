@@ -30,7 +30,7 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Create the canonical migration catalog directory.
         (self.root / "migrations" / "mysql").mkdir(parents=True)
         # Write the bridge runtime window and held application policy.
-        self.write_json("migrations/mysql/catalog.json", {"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 2, "expected_version": 4, "apply_policy": "held", "migrations": []})
+        self.write_json("migrations/mysql/catalog.json", {"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 2, "expected_version": 5, "apply_policy": "held", "migrations": []})
         # Write the candidate release declaration.
         self.write_json(
             "contracts/compatibility/app-0.9.5.83.json",
@@ -197,16 +197,16 @@ class ReleasePredecessorTests(unittest.TestCase):
             # Verify the exact retained predecessor.
             resolve_release_predecessor.verify_manifest("0.9.5.83", manifest, self.root)
 
-    # Prove a future exact-schema-four release may roll back to the bridge window.
-    def test_future_schema_four_candidate_accepts_bridge_predecessor(self):
-        # Replace the candidate catalog with an exact-schema-four runtime window.
-        self.write_json("migrations/mysql/catalog.json", {"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 4, "expected_version": 4, "apply_policy": "held", "migrations": []})
+    # Prove a future exact-schema-five release may roll back to the current bridge window.
+    def test_future_schema_five_candidate_accepts_bridge_predecessor(self):
+        # Replace the candidate catalog with an exact-schema-five runtime window.
+        self.write_json("migrations/mysql/catalog.json", {"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 5, "expected_version": 5, "apply_policy": "held", "migrations": []})
         # Write the future candidate declaration pointing to the bridge predecessor.
-        self.write_json("contracts/compatibility/app-0.9.5.84.json", {"app_version": "0.9.5.84", "rollback": {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 4, "requires_retained_predecessor_manifest": True}, "predecessor": {"app_version": "0.9.5.83", "compatibility_record": "contracts/compatibility/app-0.9.5.83.json", "required_artifact": "release-manifest.json", "source_commit_sha": "9" * 40, "artifact_sha256": "8" * 64, "manifest_sha256": ""}})
+        self.write_json("contracts/compatibility/app-0.9.5.84.json", {"app_version": "0.9.5.84", "rollback": {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 5, "requires_retained_predecessor_manifest": True}, "predecessor": {"app_version": "0.9.5.83", "compatibility_record": "contracts/compatibility/app-0.9.5.83.json", "required_artifact": "release-manifest.json", "source_commit_sha": "9" * 40, "artifact_sha256": "8" * 64, "manifest_sha256": ""}})
         # Write the bridge predecessor compatibility identity.
         self.write_json("contracts/compatibility/app-0.9.5.83.json", {"app_version": "0.9.5.83"})
-        # Write a predecessor manifest whose runtime accepts schema four.
-        manifest = self.write_json("bridge-manifest.json", {"app_version": "0.9.5.83", "source": {"release_tag": "v0.9.5.83", "commit_sha": "9" * 40}, "artifact": {"name": "virtual_casino_simulator_package.zip", "sha256": "8" * 64}, "mysql_schema": {"minimum_version": 2, "expected_version": 4, "apply_policy": "held"}})
+        # Write a predecessor manifest whose runtime accepts schema five.
+        manifest = self.write_json("bridge-manifest.json", {"app_version": "0.9.5.83", "source": {"release_tag": "v0.9.5.83", "commit_sha": "9" * 40}, "artifact": {"name": "virtual_casino_simulator_package.zip", "sha256": "8" * 64}, "mysql_schema": {"minimum_version": 2, "expected_version": 5, "apply_policy": "held"}})
         # Bind the exact manifest digest into future compatibility.
         future_path = self.root / "contracts" / "compatibility" / "app-0.9.5.84.json"
         # Parse the future candidate record.
@@ -215,7 +215,7 @@ class ReleasePredecessorTests(unittest.TestCase):
         future["predecessor"]["manifest_sha256"] = hashlib.sha256(manifest.read_bytes()).hexdigest()
         # Persist the completed candidate policy.
         future_path.write_text(json.dumps(future) + "\n", encoding="utf-8", newline="\n")
-        # Require exact-schema-four rollback into the bridge runtime to be accepted.
+        # Require exact-schema-five rollback into the bridge runtime to be accepted.
         self.assertEqual(resolve_release_predecessor.verify_manifest("0.9.5.84", manifest, self.root), "v0.9.5.83")
 
     # Update only the synthetic candidate's retained manifest checksum.

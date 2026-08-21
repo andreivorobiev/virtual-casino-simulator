@@ -515,18 +515,18 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
                 "bot_controller",  # Include bot game state.
             },
         )
-        # Require the live auth paths to expose their current mixed atomic/direct writes.
+        # Require the live auth paths to expose first-class independently keyed provider rows.
         self.assertEqual(
             (  # Compare semantic model and decision together.
                 components["auth_sessions"]["state_model"],  # Read current model.
                 components["auth_sessions"]["multiworker_status"],  # Read current disposition.
             ),
-            ("mixed_atomic_and_direct_document_writes", "blocked"),  # Pin fail-closed semantics.
+            ("provider_first_class_session_rows", "compatible"),  # Pin cross-worker provider semantics.
         )
-        # Require at least one live atomic and one live direct auth mutation.
+        # Require at least one live provider-atomic auth mutation.
         self.assertGreater(components["auth_sessions"]["atomic_call_sites"], 0)
-        # Require the unsafe live auth path to remain explicit.
-        self.assertGreater(components["auth_sessions"]["direct_write_call_sites"], 0)
+        # Require the retired whole-document write bypass to remain absent.
+        self.assertEqual(components["auth_sessions"]["direct_write_call_sites"], 0)
         # Require all declared bot ownership rather than a Roulette sample.
         self.assertEqual(
             components["bot_controller"]["owned_games"],  # Read complete bot ownership.
@@ -569,8 +569,14 @@ class MultiprocessSafetyInventoryTests(unittest.TestCase):
             components["bot_controller"]["read_only_entrypoints"],  # Read bot readers.
             sorted(audit.BOT_READ_ONLY_ROOTS),  # Compare reviewed empty ownership.
         )
-        # Refuse a second worker for every required component.
-        self.assertTrue(all(row["multiworker_status"] == "blocked" for row in components.values()))
+        # Preserve the provider-compatible auth exception while every process-local owner remains blocked.
+        self.assertTrue(
+            all(  # Inspect every non-session component disposition.
+                row["multiworker_status"] == "blocked"  # Require the conservative blocked state.
+                for name, row in components.items()  # Traverse deterministic component ownership.
+                if name != "auth_sessions"  # Exclude independently keyed provider session rows.
+            )
+        )
 
     # Prove module object discovery is name-agnostic across core, app, WSGI, and games.
     def test_module_objects_cover_public_lowercase_services_and_provider_singletons(self) -> None:

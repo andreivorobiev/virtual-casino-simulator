@@ -4,8 +4,8 @@
 
 # Import UTC timing for short-lived synthetic recovery proofs.
 from datetime import datetime, timedelta, timezone
-# Import process isolation for advisory-lock and runtime transaction evidence.
-from concurrent.futures import ProcessPoolExecutor
+# Import process and thread isolation for advisory-lock, transaction, and session evidence.
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 # Import detached state snapshots for the real different-player settlement race.
 import copy
 # Import SHA-256 for canonical receipt-byte verification.
@@ -29,6 +29,8 @@ import time
 from casino.core import auth, mysql_migrations, players, storage
 # Import immutable game-action values for real disposable-provider lifecycle proof.
 from casino.core.game_action import GameActionIdentity, GameActionMovement, GameActionPlan, GameActionResolution, GameActionResources
+# Import the canonical bearer digest for schema-five backfill evidence.
+from casino.core.storage.sessions import session_token_digest
 # Import the shared per-player settlement helper for real MySQL concurrency evidence. (GAMECORE-009)
 from casino.core.simple_game import SimpleWagerGame
 # Import the canonical game-money gateway bound directly to the disposable provider.
@@ -393,7 +395,7 @@ def _exercise_game_action_receipts(connection):
         raise AssertionError("uncommitted game-action claim accepted a receipt")
 
 
-# Exercise the production MySQL lifecycle provider against the disposable schema-four service.
+# Exercise the production MySQL lifecycle provider against the disposable schema-five service.
 def _exercise_game_action_provider() -> None:
     # Bind a new provider only to the already guarded disposable runtime identity.
     provider = storage.MySQLStorageProvider(
@@ -413,6 +415,51 @@ def _exercise_game_action_provider() -> None:
         pool_config=storage.MySQLPoolConfig(capacity=2, checkout_wait_ms=1000, connect_timeout_seconds=3),
     )
     try:
+        # Build twelve complete sessions spanning one shared and six distinct identities.
+        session_rows = [
+            # Preserve one independent bearer and CSRF proof per concurrent login.
+            {"session_id": f"live-session-{index}", "user_id": "live-shared" if index < 6 else f"live-user-{index}", "token": f"live-token-{index}", "csrf_token": f"live-csrf-{index}".ljust(32, "x"), "generation": 1, "status": "active", "created_at": f"2026-01-01T00:00:{index:02d}.000Z", "updated_at": f"2026-01-01T00:00:{index:02d}.000Z", "expires_at": "2027-01-01T00:00:00.000Z", "client": "mysql-live", "auth_method": "local"}
+            # Materialize the bounded live cohort.
+            for index in range(12)
+        ]
+
+        # Create and resolve one exact native-table session.
+        def create_live_session(row):
+            # Commit one independent first-class row with caps above this cohort.
+            created = provider.create_session(row, 12, 24)
+            # Resolve through the unique bearer digest index after commit.
+            resolved = provider.get_session_by_token(created["token"])
+            # Return only exact identity and CSRF proof.
+            return resolved["session_id"], resolved["csrf_token"]
+
+        # Execute the same-user and different-user login cohort concurrently.
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            # Surface every connector or integrity failure in the parent thread.
+            created_sessions = list(executor.map(create_live_session, session_rows))
+        # Require all twelve identities and CSRF proofs without lost rows.
+        assert {item[0] for item in created_sessions} == {row["session_id"] for row in session_rows} and {item[1] for item in created_sessions} == {row["csrf_token"] for row in session_rows}
+        # Require durable list projections to omit every plaintext bearer.
+        assert len(provider.list_sessions()) == 12 and all("token" not in row for row in provider.list_sessions())
+        # Rotate one native token and CSRF pair through exact generation one.
+        rotated_session = provider.rotate_session("live-session-0", "live-token-0", 1, "live-token-rotated", "live-csrf-rotated".ljust(32, "x"), "2026-01-01T01:00:00.000Z")
+        # Require old-token invalidation and one generation advance.
+        assert provider.get_session_by_token("live-token-0") is None and rotated_session["generation"] == 2 and rotated_session["token"] == "live-token-rotated"
+
+        # Revoke one exact native-table bearer during the parallel logout cohort.
+        def revoke_live_session(row):
+            # Select the rotated bearer only for the first session.
+            token = "live-token-rotated" if row["session_id"] == "live-session-0" else row["token"]
+            # Revoke the selected active row exactly once.
+            return provider.revoke_session_by_token(token, "2026-01-01T02:00:00.000Z")
+
+        # Execute every logout concurrently through the same bounded pool.
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            # Materialize every exact changed count.
+            revoked_sessions = list(executor.map(revoke_live_session, session_rows))
+        # Require zero lost revocations or unexpected misses.
+        assert revoked_sessions == [1] * len(session_rows)
+        # Sweep all revoked rows and prove the native table becomes empty.
+        assert provider.expire_sessions(datetime(2026, 1, 2, tzinfo=timezone.utc), 24) == 12 and provider.list_sessions() == []
         # Create one deterministic synthetic wallet through the public provider seam.
         player = provider.ensure_player(
             {
@@ -994,24 +1041,24 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 # Seed the checksum-verified full chain solely for runtime compatibility proof.
                 migrations, _, _, _ = mysql_migrations.load_catalog()
                 # Apply the complete fixture prefix through existing private test seams.
-                _seed_catalog_prefix(base_connection, migrations, 4)
+                _seed_catalog_prefix(base_connection, migrations, 5)
                 # Inspect exact runtime state after fixture seeding.
                 final_state = mysql_migrations.verify_runtime_compatibility(base_connection)
-                # Require exact schema version four.
-                assert final_state.current_version == 4 and final_state.status == "clean"
+                # Require exact schema version five.
+                assert final_state.current_version == 5 and final_state.status == "clean"
                 # Require exact applied migration sequence.
-                assert [item[0] for item in final_state.applied] == [1, 2, 3, 4]
-                # Open a fresh process-independent connector to model schema-four restart readiness.
-                restarted_four = _connector().connect(**base_config.kwargs())
-                # Always close the restarted schema-four connection.
+                assert [item[0] for item in final_state.applied] == [1, 2, 3, 4, 5]
+                # Open a fresh process-independent connector to model schema-five restart readiness.
+                restarted_five = _connector().connect(**base_config.kwargs())
+                # Always close the restarted schema-five connection.
                 try:
                     # Require the complete chain to remain runtime compatible after reconnection.
-                    assert mysql_migrations.verify_runtime_compatibility(restarted_four).current_version == 4
+                    assert mysql_migrations.verify_runtime_compatibility(restarted_five).current_version == 5
                 # Release the restarted connection.
                 finally:
                     # Close all connector-owned state.
-                    restarted_four.close()
-                # Prove held apply remains closed even at the complete schema-four tail.
+                    restarted_five.close()
+                # Prove held apply remains closed even at the complete schema-five tail.
                 try:
                     # Attempt a no-proof application call at the full chain.
                     mysql_migrations.apply_migrations(base_connection, base_config, None)
@@ -1159,6 +1206,35 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 cursor.execute("SELECT c.reset_epoch, r.reset_epoch, c.disposition, c.request_fingerprint, c.resources_json, r.claim_disposition, r.receipt_json, r.receipt_sha256 FROM casino_game_action_claims c JOIN casino_game_action_receipts r ON r.reset_epoch=c.reset_epoch AND r.game_id=c.game_id AND r.player_id=c.player_id AND r.action_key=c.action_key WHERE c.reset_epoch=1 AND c.game_id=%s AND c.player_id=%s AND c.action_key=%s", ("roulette", "player_204", "legacy_204"))
                 # Require exact execute backfill and byte-for-byte legacy receipt preservation.
                 assert tuple(str(value) for value in cursor.fetchone()) == ("1", "1", "execute", "e" * 64, legacy_resources, "execute", legacy_receipt, legacy_sha)
+                # Build one secret-free schema-four bridge session for native-table backfill.
+                bridge_session = {"session_id": "legacy-session-204", "token_digest": session_token_digest("legacy-session-token-204"), "user_id": "legacy-user-204", "csrf_token": "legacy-session-csrf-204".ljust(32, "x"), "generation": 1, "status": "active", "created_at": "2026-01-01T00:00:00.000Z", "updated_at": "2026-01-01T00:00:00.000Z", "expires_at": "2027-01-01T00:00:00.000Z", "client": "migration-live", "auth_method": "local"}
+                # Encode the complete canonical durable row without plaintext bearer authority.
+                bridge_payload = json.dumps(bridge_session, sort_keys=True, separators=(",", ":"))
+                # Insert one exact keyed compatibility row before schema-five migration.
+                cursor.execute("INSERT INTO casino_documents (document_key, payload_json, updated_at) VALUES (%s, %s, %s)", (f"auth/session/v2/row/{bridge_session['token_digest']}", bridge_payload, bridge_session["updated_at"]))
+                # Commit the schema-four bridge source before native-table DDL.
+                upgrade_connection.commit()
+                # Mark exact schema five applying through the disposable fixture seam.
+                source_state = mysql_migrations.inspect_schema(upgrade_connection, migrations)
+                # Persist migration-five applying metadata before its DDL and backfill.
+                mysql_migrations._mark_applying(upgrade_connection, source_state, migrations[4])
+                # Execute every checksum-verified schema-five statement.
+                for statement in migrations[4].statements:
+                    # Apply one exact driver statement in reviewed order.
+                    cursor.execute(statement)
+                # Complete the full schema-five fixture state.
+                mysql_migrations._mark_complete(upgrade_connection, migrations[4], migrations)
+                # Require runtime readiness to accept exact clean schema five.
+                assert mysql_migrations.verify_runtime_compatibility(upgrade_connection).current_version == 5
+                # Read indexed columns and canonical bytes from the backfilled native row.
+                cursor.execute("SELECT session_id, token_digest, user_id, status, generation, session_json FROM casino_sessions WHERE session_id=%s", (bridge_session["session_id"],))
+                # Require exact index values and semantically exact secret-free payload.
+                native_session = cursor.fetchone()
+                assert tuple(str(value) for value in native_session[:5]) == (bridge_session["session_id"], bridge_session["token_digest"], bridge_session["user_id"], "active", "1") and json.loads(str(native_session[5])) == bridge_session and "token" not in json.loads(str(native_session[5]))
+                # Require the compatibility row to be retired after successful backfill.
+                cursor.execute("SELECT COUNT(*) FROM casino_documents WHERE document_key LIKE 'auth/session/v2/row/%'")
+                # Require zero dual-authority bridge rows.
+                assert int(cursor.fetchone()[0]) == 0
                 # Capture exact immutable rows for corruption/refusal cases.
                 applied_rows = [(item.version, item.name, item.checksum) for item in migrations]
                 # Corrupt one checksum in the disposable metadata.
@@ -1198,7 +1274,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 # Restore exact version-one row.
                 cursor.execute("INSERT INTO casino_schema_migrations (version, name, checksum, applied_at) VALUES (1, %s, %s, %s)", (applied_rows[0][1], applied_rows[0][2], datetime.now(timezone.utc).isoformat()))
                 # Set an impossible future current version.
-                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 5 WHERE state_id = 1")
+                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 6 WHERE state_id = 1")
                 # Commit the future fixture.
                 upgrade_connection.commit()
                 # Require future refusal.
@@ -1213,8 +1289,8 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
                 else:
                     # Surface the missing refusal.
                     raise AssertionError("future migration state was accepted")
-                # Restore current version and mark the next transition dirty.
-                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 4, status = 'dirty', applying_version = 5 WHERE state_id = 1")
+                # Restore current version and mark an unknown future transition dirty.
+                cursor.execute("UPDATE casino_schema_migration_state SET current_version = 5, status = 'dirty', applying_version = 6 WHERE state_id = 1")
                 # Commit the dirty fixture.
                 upgrade_connection.commit()
                 # Require runtime refusal of dirty state.
@@ -1286,7 +1362,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
             # Grant database-scoped read rights needed by runtime compatibility and current locking reads.
             admin_cursor.execute(f"GRANT SELECT ON `{base_database}`.* TO '{runtime_user}'@'%'")
             # Grant compatible insertion, update, and delete only to established mutable runtime tables.
-            for table in ("casino_players", "casino_ledger", "casino_history", "casino_documents"):
+            for table in ("casino_players", "casino_ledger", "casino_history", "casino_documents", "casino_sessions"):
                 # Preserve ordinary runtime DML while excluding lifecycle history and control rows.
                 admin_cursor.execute(f"GRANT INSERT, UPDATE, DELETE ON `{base_database}`.`{table}` TO '{runtime_user}'@'%'")
             # Permit append-only lifecycle ownership without update or delete authority.
@@ -1302,7 +1378,7 @@ def run_mysql_migration_live_matrix(request_latency_callback=None):
             # Start protected runtime grant tests.
             try:
                 # Prove runtime startup compatibility with SELECT only.
-                assert mysql_migrations.verify_runtime_compatibility(runtime_connection).current_version == 4
+                assert mysql_migrations.verify_runtime_compatibility(runtime_connection).current_version == 5
                 # Read actual grants through the runtime identity.
                 runtime_cursor = runtime_connection.cursor()
                 # Query current-user grants without administrator credentials.

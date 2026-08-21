@@ -65,8 +65,10 @@ class GuestTeardownLedgerTests(unittest.TestCase):
         user = {"user_id": "guest_unit", "player_id": player["player_id"], "guest": True, "role": "guest", "roles": ["guest"], "status": "active", "identity_provider": "guest", "guest_analytics_id": analytics_id}
         # Persist the identity so terminal status can be proved after teardown.
         auth.save_users({"schema_version": 1, "users": [user], "reservations": []})
-        # Persist one resumable session so revocation is measured rather than assumed.
-        auth.save_sessions({"schema_version": 1, "sessions": [{"session_id": "session_unit", "user_id": user["user_id"]}]})
+        # Build one complete resumable session so revocation is measured rather than assumed.
+        session = {"session_id": "session_unit", "user_id": user["user_id"], "token": "guest-teardown-token", "csrf_token": "guest-teardown-csrf".ljust(32, "x"), "generation": 1, "status": "active", "created_at": "2026-08-20T00:00:00.000Z", "updated_at": "2026-08-20T00:00:00.000Z", "expires_at": "2099-01-01T00:00:00.000Z", "client": "guest-teardown", "auth_method": "guest"}
+        # Persist the independently keyed session row through the compatibility fixture seam.
+        auth.save_sessions({"schema_version": 1, "sessions": [session]})
         # Return the server-shaped principal to the focused test.
         return user
 
