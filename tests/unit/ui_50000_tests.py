@@ -273,6 +273,72 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertFalse(result["listener_cleanup"]["closed"])  # Forbid an unproven cleanup claim after the synthetic stall.
         self.assertEqual(result["controller_error"], "TimeoutError")  # Preserve the fixed bounded profile-staleness diagnostic.
 
+    # Prove the formal deadline traverses the production shard cleanup and persists terminal artifact evidence.
+    def test_formal_worker_timeout_cleans_real_shard_and_writes_report(self):
+        events = []  # Capture cleanup order without starting a server or browser.
+
+        class Client:
+            base_url = "http://127.0.0.1:1/"
+
+            def call(self, path, method="GET", payload=None):
+                return {"ready": True} if path == "/api/v2/admin/operations" else {}
+
+            def login_default_user(self):
+                return None
+
+        class Context:
+            async def new_page(self):
+                return object()
+
+            async def close(self):
+                events.append("context")
+
+        class Browser:
+            async def new_context(self, **_kwargs):
+                return Context()
+
+            async def close(self):
+                events.append("browser")
+
+        class Chromium:
+            async def launch(self, **_kwargs):
+                return Browser()
+
+        class Playwright:
+            chromium = Chromium()
+
+        async def stall_login(*_args):
+            await asyncio.Event().wait()  # Hold inside the real shard after every tracked resource exists.
+
+        def stop_tracked_server(_proc, _client):
+            events.append("server")
+            return {"closed": True}
+
+        allocation = ui_50000.formal_allocations()[0]
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            deployment = root / "deployment"
+            deployment.mkdir()
+            args = argparse.Namespace(allocation_index=0, evidence_root=str(root / "visual"), shard_report_root=str(root / "shards"), keep_deployments=False, headed=False)
+            patches = (
+                mock.patch.object(ui_50000, "FORMAL_EXECUTION_BUDGET_SECONDS", 0.001),
+                mock.patch.object(ui_50000, "prepare_deployment", return_value=deployment),
+                mock.patch.object(ui_50000, "start_ui_server", return_value=(object(), Client())),
+                mock.patch.object(ui_50000, "create_synthetic_user", return_value={"email": "fixture", "password": "fixture"}),
+                mock.patch.object(ui_50000, "attach_page_diagnostics"),
+                mock.patch.object(ui_50000, "login_through_ui", side_effect=stall_login),
+                mock.patch.object(ui_50000, "stop_server", side_effect=stop_tracked_server),
+                mock.patch("builtins.print"),
+            )
+            with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7]:
+                result = asyncio.run(ui_50000.run_bounded_shard(Playwright(), asyncio.Semaphore(1), args, allocation, "run", "a" * 40))
+            report = json.loads((root / "shards" / "00-roulette-r0.json").read_text(encoding="utf-8"))
+            self.assertFalse(deployment.exists())  # Remove only the isolated runtime after its listener closes.
+        self.assertEqual(events, ["context", "browser", "server"])  # Preserve complete resource teardown order.
+        self.assertEqual((result["status"], result["failed"], result["listener_cleanup"]), ("FAIL", allocation[3], {"closed": True}))  # Return truthful cleanup while failing every unfinished case.
+        self.assertEqual((report["status"], report["failed"], report["fatal_error"]["message"]), ("FAIL", allocation[3], "CancelledError"))  # Persist fail-closed terminal artifact evidence.
+        self.assertIn("ui_process_seconds", report)  # Keep cancellation timing available for hosted profile review.
+
     # Prove formal liveness is time-based and sanitized instead of waiting for one hundred completed cycles.
     def test_formal_worker_heartbeat_identifies_immutable_range(self):
         allocation = ui_50000.formal_allocations()[0]  # Use one canonical hosted range with no browser work.

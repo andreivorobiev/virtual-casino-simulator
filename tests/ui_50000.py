@@ -86,10 +86,7 @@ IMPLEMENTED_UI_STRATEGY_FAMILIES = frozenset({
     "acey_deucey", "andar_bahar", "baccarat", "bingo", "blackjack", "caribbean_stud", "casino_holdem", "casino_war", "craps", "daily_draw_lab", "dragon_tiger", "draw_poker", "four_card_poker", "hi_lo", "keno", "let_it_ride", "lucky_grid", "mississippi_stud", "pai_gow_poker", "plinko", "red_dog", "roulette", "scratch_cards", "sic_bo", "simple_terminal", "slots", "teen_patti", "texas_holdem", "three_card_poker", "wager_inputs",
 })
 # Keep Double Bonus on the shared draw-poker state machine while addressing its established route-local attribute names.
-DRAW_POKER_UI_CONTROLS = {
-    "default": {"deal": '[data-action="deal"]', "hold_attribute": "data-hold-position", "draw": '[data-action="draw"]'},  # Preserve every previously qualified draw-poker family member unchanged.
-    "double_bonus_video_poker": {"deal": "[data-deal]", "hold_attribute": "data-hold", "draw": "[data-draw]"},  # Match the rendered Double Bonus Deal, five hold cards, and Draw controls without changing product markup.
-}
+DRAW_POKER_UI_CONTROLS = {"default": {"deal": '[data-action="deal"]', "hold_attribute": "data-hold-position", "draw": '[data-action="draw"]'}, "double_bonus_video_poker": {"deal": "[data-deal]", "hold_attribute": "data-hold", "draw": "[data-draw]"}}  # Preserve the shared family while matching Double Bonus's established route-local semantic attributes.
 # Rank visible Pai Gow cards from weakest through strongest while keeping the semi-wild Joker out of the low hand.
 PAI_GOW_RANK_VALUES = {rank: value for value, rank in enumerate(("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"), start=2)}
 # Describe the simple settled-action surfaces without weakening their rendered-control coverage.
@@ -1277,6 +1274,8 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
             post_operations = call_post_soak_admin_evidence(client, "/api/v2/admin/operations")  # Reauthenticate again before the terminal readiness proof.
             report["operations_ready_after"] = bool(post_operations.get("ready"))  # Preserve post-load readiness.
             report["status"] = "PASS" if report["completed"] == quota and not report["failed"] and not failure_counts and report["isolation"]["player_match"] and report["isolation"]["nonnegative_balance"] and report["isolation"]["ledger_events"] > 0 and report["operations_ready_after"] and not diagnostics["console_errors"] and not diagnostics["page_errors"] and not diagnostics["http_failures"] else "FAIL"  # Evaluate every gameplay, identity, readiness, and browser-diagnostic shard gate.
+        except asyncio.CancelledError:  # Convert the formal deadline into terminal evidence before returning control to its owner.
+            report.update({"fatal_error": {"message": "CancelledError"}, "failed": max(report["failed"], quota - report["completed"]), "status": "FAIL"})  # Account every unfinished immutable case and never let a budget-cancelled shard qualify.
         except Exception as exc:  # Capture fatal setup, browser, or evidence failures.
             report["fatal_error"] = {"message": safe_error(exc), "traceback_summary": safe_error(traceback.format_exc())}  # Preserve a bounded sanitized traceback summary.
             report["failed"] = max(report["failed"], quota - report["completed"])  # Account for all uncompleted assigned tests.
