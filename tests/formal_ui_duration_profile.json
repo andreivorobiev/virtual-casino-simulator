@@ -6,12 +6,14 @@
     "run_url": "https://github.com/andreivorobiev/virtual-casino-simulator/actions/runs/32513324554",
     "commit": "db0f4d08caa0e49199f7ab530d364709eea22ab2",
     "observed_at": "2026-08-21T22:27:06Z",
+    "completed_worker_summary": {"count": 47, "minimum_seconds": 483, "median_seconds": 1151, "maximum_seconds": 10449, "over_20_minutes": 23},
     "note": "Completed entries use exact GitHub UI-step timestamps. Bingo and Double Bonus are conservative in-progress lower-bound profiles rounded upward for planning."
   },
   "policy": {
     "planning_target_seconds": 900,
     "execution_budget_seconds": 1020,
     "ui_step_target_seconds": 1080,
+    "heartbeat_seconds": 60,
     "hard_job_timeout_minutes": 20,
     "max_parallel": 20,
     "max_matrix_workers": 256

@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))  # Put this source snapshot first on the import path.
 
 from casino.config import GAMES  # Discover all registered games from canonical metadata.
-from tests.formal_ui_profile import FORMAL_EXECUTION_BUDGET_SECONDS, formal_replica_policy  # Apply exact-run worker sizing and the fail-closed formal execution budget.
+from tests.formal_ui_profile import FORMAL_EXECUTION_BUDGET_SECONDS, formal_replica_policy, formal_worker_heartbeat, stop_formal_worker_heartbeat  # Apply exact-run sizing, monitoring, and the fail-closed execution budget.
 from tests.long_suites import OPERATIONS_SMOKE_BUILD_SHA, ApiClient, clear_readonly_and_retry, free_port, stop_server  # Reuse governed API and exact cleanup controls.
 
 # Preserve catalog order for deterministic game quotas and global cycle IDs.
@@ -1398,13 +1398,17 @@ def formal_allocation_indices():
 # Convert a timeout-cancelled shard into one aggregate-safe failure record.
 async def run_bounded_shard(playwright, semaphore, args, allocation, run_id, source_commit):
     game_id, game_index, replica_index, quota, cycle_start = allocation  # Unpack the deterministic shard assignment.
+    heartbeat_task = None  # Local/focused runs retain their existing monitoring and unlimited controller behavior.
     try:  # Bound each game without stranding its cleanup finally block.
         if args.allocation_index is not None:  # Give a stale formal profile a bounded cleanup window before the workflow's hard job timeout.
+            heartbeat_task = asyncio.create_task(formal_worker_heartbeat(args.allocation_index, allocation))  # Keep hosted liveness visible even when no cycle reaches the count-based interval.
             async with asyncio.timeout(FORMAL_EXECUTION_BUDGET_SECONDS):
                 return await run_game_shard(playwright, semaphore, args, game_id, game_index, replica_index, quota, cycle_start, run_id, source_commit)  # Execute one exact-source isolated shard inside the profile-staleness budget.
         return await run_game_shard(playwright, semaphore, args, game_id, game_index, replica_index, quota, cycle_start, run_id, source_commit)  # Preserve focused/local behavior without the hosted worker deadline.
     except Exception as exc:  # Preserve unexpected controller-level failures.
         return {"game": game_id, "game_index": game_index, "replica_index": replica_index, "quota": quota, "global_cycle_start": cycle_start, "global_cycle_end": cycle_start + quota - 1, "source_commit": source_commit, "attempted": 0, "attempted_actions": 0, "completed": 0, "failed": quota, "failed_attempts": quota, "status": "FAIL", "controller_error": safe_error(exc), "listener_cleanup": {"closed": False}, "control_seen_counts": {}, "control_activated_counts": {}, "failure_counts": {safe_error(exc): quota}, "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}}}  # Return a fully accounted exact-source fail-closed record.
+    finally:  # Never leave the independent liveness task pending after success, failure, or timeout.
+        await stop_formal_worker_heartbeat(heartbeat_task)  # Stop cadence output before the terminal worker line and artifact upload.
 
 
 # Reuse only complete compatible worker handbacks from an earlier bounded controller run.

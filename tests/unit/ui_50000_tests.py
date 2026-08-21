@@ -155,21 +155,29 @@ class UI50000HarnessTests(unittest.TestCase):
         allocations = ui_50000.formal_allocations()  # Build the profiled formal deterministic assignment.
         per_game = Counter()  # Aggregate replica quotas back to canonical games.
         assigned_ids = []  # Reconstruct every global cycle ID for uniqueness evidence.
+        expected_offset = 0  # Pin deterministic contiguous worker boundaries in canonical plan order.
         for game_id, _game_index, _replica_index, quota, cycle_start in allocations:  # Inspect every bounded worker assignment.
+            self.assertEqual(cycle_start, expected_offset)  # Reject gaps, overlaps, or reordered subranges before expanding case IDs.
             per_game[game_id] += quota  # Preserve the complete game quota across replicas.
             assigned_ids.extend(range(cycle_start, cycle_start + quota))  # Rebuild the worker's contiguous global range.
+            expected_offset += quota  # Advance to the next exact immutable boundary.
         self.assertEqual(sum(per_game.values()), 50_000)  # Require the exact formal total.
         self.assertEqual(len(per_game), len(ui_50000.GAME_IDS))  # Require every registered game exactly once in the aggregate.
         expected_floor = 50_000 // len(ui_50000.GAME_IDS)  # Derive the honest catalog-wide floor from the current registered game count.
         self.assertGreaterEqual(min(per_game.values()), expected_floor)  # Require every game to receive at least its exact balanced share.
-        self.assertEqual(set(assigned_ids), set(range(50_000)))  # Require no missing or duplicate global identities.
+        self.assertEqual(sorted(assigned_ids), list(range(50_000)))  # Require exact case-inventory equality from zero through 49,999.
         self.assertEqual(len(assigned_ids), len(set(assigned_ids)))  # Reject overlapping replica ranges.
+        self.assertEqual(allocations, ui_50000.formal_allocations())  # Require the checked-in profile to reproduce byte-equivalent plan inputs.
         self.assertEqual(len(allocations), 140)  # Pin the exact checked-in profile result under GitHub's 256-entry matrix ceiling.
 
     # Prove profiled ranges retain duration headroom plus the special Roulette and draw-poker aggregate affinities. (TEST-092, issue #1053)
     def test_formal_duration_profile_preserves_replica_affinities(self):
         allocations = ui_50000.formal_allocations()  # Resolve the same canonical plan consumed by workflow workers and the aggregate.
         entries = {entry["id"]: entry for entry in formal_ui_profile.FORMAL_DURATION_PROFILE["games"]}  # Index the immutable timing evidence by canonical game.
+        self.assertEqual(list(entries), list(ui_50000.GAME_IDS))  # Require exact catalog/profile case equality before measuring any range.
+        self.assertEqual(formal_ui_profile.FORMAL_EXECUTION_BUDGET_SECONDS, 17 * 60)  # Leave three minutes for cleanup and terminal artifact upload.
+        self.assertEqual(formal_ui_profile.FORMAL_UI_STEP_TARGET_SECONDS, 18 * 60)  # Preserve the normal UI-step target below the hard job limit.
+        self.assertEqual(formal_ui_profile.FORMAL_WORKER_TIMEOUT_MINUTES, 20)  # Pin the job-start-through-upload contract.
         for game_id, _game_index, replica_index, quota, _cycle_start in allocations:  # Verify every integer range independently.
             entry = entries[game_id]  # Read this allocation's measured cycles and conservative planning duration.
             predicted_seconds = math.ceil(entry["planning_ui_seconds"] * quota / entry["measured_cycles"])  # Scale the source run without hiding range remainders.
@@ -264,6 +272,24 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertEqual(result["failed"], allocation[3])  # Account every assigned unique cycle as incomplete.
         self.assertFalse(result["listener_cleanup"]["closed"])  # Forbid an unproven cleanup claim after the synthetic stall.
         self.assertEqual(result["controller_error"], "TimeoutError")  # Preserve the fixed bounded profile-staleness diagnostic.
+
+    # Prove formal liveness is time-based and sanitized instead of waiting for one hundred completed cycles.
+    def test_formal_worker_heartbeat_identifies_immutable_range(self):
+        allocation = ui_50000.formal_allocations()[0]  # Use one canonical hosted range with no browser work.
+        cadences = []  # Capture the requested interval independently of any cycle counter.
+
+        async def stop_after_cadence(seconds):
+            cadences.append(seconds)  # Observe the requested wall-clock interval without actually waiting.
+            raise asyncio.CancelledError  # End the perpetual production loop after its first emission.
+
+        with mock.patch("builtins.print") as emit, mock.patch.object(formal_ui_profile.asyncio, "sleep", side_effect=stop_after_cadence):
+            with self.assertRaises(asyncio.CancelledError):
+                asyncio.run(ui_50000.formal_worker_heartbeat(0, allocation, interval_seconds=60))  # Exercise only the browser-free monitoring seam.
+        line = emit.call_args.args[0]  # Inspect the single sanitized heartbeat string.
+        self.assertIn("UI50K HEARTBEAT allocation=0 game=roulette replica=0 range=0-100", line)  # Bind liveness to immutable allocation identity.
+        self.assertIn("budget_seconds=1020", line)  # Expose the checked-in cleanup-margin deadline in live Actions output.
+        self.assertNotIn("completed=", line)  # Never let liveness imply browser progress while an action may be stalled.
+        self.assertEqual(cadences, [60])  # Pin a time-based cadence independent of the one-hundred-cycle progress setting.
 
     # Prove namespacing prevents identical generic selectors from merging across games.
     def test_control_signatures_keep_module_ownership(self):

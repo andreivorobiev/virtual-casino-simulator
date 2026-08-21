@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """Validate the canonical TEST-092 duration profile and derive bounded replicas."""
 
+import asyncio  # Emit and terminate hosted liveness independently of cycle throughput.
 import json  # Read the checked-in exact-run timing evidence without executable configuration.
 import math  # Convert conservative profiled duration into a deterministic worker count.
+import time  # Report sanitized monotonic worker time without hosted runner metadata.
 from pathlib import Path  # Resolve the profile beside its sole planner owner.
 
 
@@ -24,8 +26,13 @@ def load_profile(path=PROFILE_PATH):
     if not all(isinstance(value, int) and value > 0 for value in ordered_limits) or ordered_limits != sorted(ordered_limits) or len(set(ordered_limits)) != len(ordered_limits):
         raise RuntimeError("formal UI duration budgets are invalid")
     hard_seconds = int(policy.get("hard_job_timeout_minutes", 0)) * 60
-    if hard_seconds <= ordered_limits[-1] or policy.get("max_matrix_workers") != 256:
+    heartbeat_seconds = policy.get("heartbeat_seconds")
+    if hard_seconds <= ordered_limits[-1] or not isinstance(heartbeat_seconds, int) or not 0 < heartbeat_seconds < ordered_limits[1] or policy.get("max_matrix_workers") != 256:
         raise RuntimeError("formal UI hard worker policy is invalid")
+    completed = payload.get("source", {}).get("completed_worker_summary", {})
+    summary_values = [completed.get(name) for name in ("count", "minimum_seconds", "median_seconds", "maximum_seconds", "over_20_minutes")]
+    if not all(isinstance(value, int) and value > 0 for value in summary_values) or not completed["minimum_seconds"] <= completed["median_seconds"] <= completed["maximum_seconds"] or completed["over_20_minutes"] > completed["count"]:
+        raise RuntimeError("formal UI completed-worker summary is invalid")
     return payload
 
 
@@ -33,7 +40,29 @@ FORMAL_DURATION_PROFILE = load_profile()
 FORMAL_PLANNING_TARGET_SECONDS = FORMAL_DURATION_PROFILE["policy"]["planning_target_seconds"]
 FORMAL_EXECUTION_BUDGET_SECONDS = FORMAL_DURATION_PROFILE["policy"]["execution_budget_seconds"]
 FORMAL_UI_STEP_TARGET_SECONDS = FORMAL_DURATION_PROFILE["policy"]["ui_step_target_seconds"]
+FORMAL_HEARTBEAT_SECONDS = FORMAL_DURATION_PROFILE["policy"]["heartbeat_seconds"]
 FORMAL_WORKER_TIMEOUT_MINUTES = FORMAL_DURATION_PROFILE["policy"]["hard_job_timeout_minutes"]
+
+
+# Emit immutable worker identity on a fixed cadence even when no browser cycle completes. (TEST-092)
+async def formal_worker_heartbeat(allocation_index, allocation, interval_seconds=FORMAL_HEARTBEAT_SECONDS):
+    game_id, _game_index, replica_index, quota, cycle_start = allocation
+    started = time.perf_counter()
+    while True:
+        elapsed_seconds = round(time.perf_counter() - started, 1)
+        print(f"UI50K HEARTBEAT allocation={allocation_index} game={game_id} replica={replica_index} range={cycle_start}-{cycle_start + quota - 1} elapsed_seconds={elapsed_seconds} budget_seconds={FORMAL_EXECUTION_BUDGET_SECONDS}", flush=True)
+        await asyncio.sleep(interval_seconds)
+
+
+# Observe heartbeat cancellation without allowing monitoring to replace authoritative shard evidence.
+async def stop_formal_worker_heartbeat(task):
+    if task is None:
+        return
+    task.cancel()
+    try:
+        await task
+    except (asyncio.CancelledError, Exception):
+        pass
 
 
 # Reject catalog, strategy, provenance, or budget drift before GitHub creates a partial matrix. (TEST-092)
