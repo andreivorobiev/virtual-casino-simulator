@@ -484,6 +484,7 @@ async def exercise_autoplay_controls(page, ordinal, activated_counts):
 
 # Reset Bingo through its rendered control and accept only its active called-session confirmation. (TEST-092, issue #1052)
 async def bingo_reset_to_purchase(page, activated_counts):
+    await wait_any_enabled(page, ['[data-testid="bingo-reset"]'])  # Let any dispatched Buy or Call finish before deciding whether Reset has become destructive.
     call = page.locator('[data-testid="bingo-call"]').first  # Resolve the public active-session signal without reading private game state.
     called_balls = page.locator('[data-testid="bingo-called-ball"]')  # Resolve rendered call history that makes reset destructive.
     requires_confirmation = await locator_ready(call) and await called_balls.count() > 0  # Distinguish active called sessions from completed history still shown on the board.
