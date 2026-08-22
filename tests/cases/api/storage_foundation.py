@@ -15,6 +15,8 @@ from tests import mysql_migration_tests
 from tests import mysql_pool_tests
 # Import PostgreSQL configuration and lazy-selector coverage without importing psycopg. (TEST-252)
 from tests import postgres_registration_tests
+# Import the listener-free bounded PostgreSQL pool suite without importing psycopg. (TEST-253)
+from tests import postgres_pool_tests
 # Import the authenticated recovery-policy suite.
 from tests import recovery_tests
 # Import provider-neutral player-state atomicity coverage.
@@ -140,6 +142,17 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
             # Preserve one fixed provider-neutral diagnostic.
             raise AssertionError("PostgreSQL registration suite failed")
 
+    # Define one listener-free runner for bounded PostgreSQL pool lifecycle behavior.
+    def run_postgres_pool_tests():
+        # Load only the STORAGE-021 and TEST-253 pool test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(postgres_pool_tests.PostgresPoolTests)
+        # Execute without a connector, listener, provider implementation, or external target.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named central case when lifecycle or concurrency evidence drifts.
+        if not result.wasSuccessful():
+            # Preserve one fixed provider-neutral diagnostic.
+            raise AssertionError("PostgreSQL connection pool lifecycle suite failed")
+
     # Define one focused unittest runner for authenticated recovery and clean-target policy.
     def run_recovery_policy_tests():
         # Load only the #205 synthetic recovery test case.
@@ -179,6 +192,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
     run_case("RECOVERY-POLICY-001", ["MYSQL-006", "MYSQL-008", "MYSQL-009", "TOOL-004", "TEST-049", "TEST-174"], run_recovery_policy_tests)
     # Prove deterministic configuration and an explicit lazy selector with JSON/MySQL import isolation.
     run_case("POSTGRES-CONFIG-001", ["STORAGE-001", "STORAGE-003", "STORAGE-004", "STORAGE-020", "TEST-252"], run_postgres_registration_tests)
+    # Prove bounded checkout, cleanup, fork isolation, shutdown, and secret-free pool evidence.
+    run_case("POSTGRES-POOL-001", ["STORAGE-010", "STORAGE-021", "TEST-253"], run_postgres_pool_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"], run_storage_base_and_json_parity)
     # Execute one identical paid settlement, replay, resolve, and conflict schedule on JSON and MySQL.

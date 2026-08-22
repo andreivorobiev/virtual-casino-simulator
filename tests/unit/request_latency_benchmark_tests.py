@@ -1381,8 +1381,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
     def test_governance_allocation_is_unique_and_narrow(self) -> None:
         # Parse the canonical requirement source.
         requirements = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))["requirements"]
-        # Require PostgreSQL registration to add exactly STORAGE-020 and TEST-252 to the accepted registry.
-        self.assertEqual(len(requirements), 1116)
+        # Require PostgreSQL registration and pool lanes to add their four accepted IDs.
+        self.assertEqual(len(requirements), 1118)
         # Keep the historical contributor reservation out of the canonical registry so it is never reused.
         self.assertEqual([row for row in requirements if row.get("id") == "TEST-144"], [])
         # Bind every new permanent allocation to its accepted owning module.
@@ -1555,6 +1555,8 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             "TEST-251": "Tests",  # Bind 32-session CI and exact-100-session formal evidence.
             "STORAGE-020": "Storage",  # Bind lazy PostgreSQL registration without changing JSON/MySQL.
             "TEST-252": "Tests",  # Bind deterministic configuration and import-isolation evidence.
+            "STORAGE-021": "Storage",  # Bind bounded connector-neutral PostgreSQL pool lifecycle.
+            "TEST-253": "Tests",  # Bind listener-free PostgreSQL pool concurrency evidence.
             "TEST-175": "Tests",  # Bind the complete catalog economics registry without changing game math.
             "TOKEN-007": "Application",  # Bind wallet UI ordering to the shell.
             "I18N-011": "Application",  # Bind shared localized copy to the shell.

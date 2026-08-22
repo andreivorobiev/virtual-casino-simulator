@@ -13859,6 +13859,24 @@
       "notes": "This registration lane opens no connector or target and installs no concrete PostgreSQL provider. Explicit PostgreSQL selection remains fail-closed until the separately governed provider-core lane lands; JSON/MySQL startup never dynamically imports PostgreSQL or psycopg."
     },
     {
+      "id": "STORAGE-021",
+      "module": "Storage",
+      "description": "The connector-neutral PostgreSQL pool lazily bounds each application process to sixteen physical sessions by default with an accepted explicit capacity from one through sixty-four, one bounded checkout deadline, and one bounded physical-connect deadline. Request-scoped leases close cursors, roll back non-idle transactions, reset session state, and require a non-reconnecting wire check before reuse; cleanup, health, fork-generation, connector, or shutdown conflicts discard the physical session through fixed secret-free errors and metrics.",
+      "status": "PASS",
+      "api_tests": [
+        "POSTGRES-POOL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/postgres_pool.py",
+        "tests/postgres_pool_tests.py",
+        "tests/cases/api/storage_foundation.py"
+      ],
+      "introduced_in": "issue-1056-postgres-pool",
+      "changed_in": "issue-1056-postgres-pool",
+      "notes": "The pool imports no psycopg or provider implementation and opens no connector during construction. A later provider lane supplies the connector adapter and reuses the existing cached-provider close_pool process-exit hook; this lane adds no global pool registry or production setting."
+    },
+    {
       "id": "MYSQL-010",
       "module": "MySQL",
       "description": "Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.",
@@ -13984,6 +14002,26 @@
       "introduced_in": "issue-1055-postgres-registration",
       "changed_in": "issue-1055-postgres-registration",
       "notes": "The focused suite replaces established provider constructors with inert fakes and intercepts the exact dynamic import boundary. It opens no driver, connector, database, listener, provider service, or production target and restores every environment value."
+    },
+    {
+      "id": "TEST-253",
+      "module": "Tests",
+      "description": "Listener-free PostgreSQL pool evidence proves exact policy defaults and boundaries, lazy hard-cap reservations, fixed checkout and connection failures, waiter wakeup and timeout cleanup, cursor-rollback-reset-check ordering, adapter failure discard, non-reconnecting object reuse, concurrent idempotent lease close, fork-generation isolation, terminal shutdown wakeup, late factory-result closure, defensive secret-free metrics, and unchanged MySQL pool behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "POSTGRES-POOL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/postgres_pool_tests.py",
+        "tests/mysql_pool_tests.py",
+        "tests/cases/api/storage_foundation.py",
+        "tests/api_case_inventory.json",
+        "tests/cicd_deployment_tests.py"
+      ],
+      "introduced_in": "issue-1056-postgres-pool",
+      "changed_in": "issue-1056-postgres-pool",
+      "notes": "All physical sessions, cursors, connector failures, transaction states, process identities, and timing gates are deterministic in-memory fakes. The suite imports no driver, opens no listener or network target, and persists no database, credential, or provider state."
     },
     {
       "id": "ROU-001",
