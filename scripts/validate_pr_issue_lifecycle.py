@@ -35,7 +35,7 @@ def validate_release_only_exception(pull_request: dict) -> list[str]:
         return ["'Release-only: yes' is permitted only for a codex/release-vN.N.N... head targeting main."]
     # Require the human-facing title to carry the same numeric version as the immutable branch.
     version = head_match.group("version")
-    title_re = re.compile(rf"(?i)\brelease\b.*\bv{re.escape(version)}(?:\b|-)")
+    title_re = re.compile(rf"(?i)\brelease\b.*\bv{re.escape(version)}(?![.\d])")
     if title_re.search(title) is None:
         # Identify the expected public version without echoing the untrusted title.
         return [f"Release-only PR title must identify branch version v{version}."]

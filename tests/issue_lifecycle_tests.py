@@ -66,6 +66,13 @@ class IssueLifecycleTests(unittest.TestCase):
         payload = self.payload("Release-only: yes\n", head="codex/release-v0.9.5.85", title="Release v0.9.5.86")
         self.assertEqual(["Release-only PR title must identify branch version v0.9.5.85."], validate_pull_request_payload(payload))
 
+    # Prove a longer numeric title version cannot pass by sharing the branch version's prefix.
+    def test_rejects_release_title_version_prefix(self):
+        """A title must identify the exact numeric version rather than a longer descendant."""
+        # Append a numeric segment that the old word-boundary check incorrectly accepted.
+        payload = self.payload("Release-only: yes\n", head="codex/release-v0.9.5.85", title="Release v0.9.5.85.1")
+        self.assertEqual(["Release-only PR title must identify branch version v0.9.5.85."], validate_pull_request_payload(payload))
+
     # Prove ambiguous template declarations fail before either exception or issue parsing.
     def test_rejects_duplicate_conflicting_or_invalid_release_only_declarations(self):
         """Release-only metadata has one exact fail-closed value."""
