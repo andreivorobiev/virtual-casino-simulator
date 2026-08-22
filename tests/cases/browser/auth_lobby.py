@@ -5,6 +5,9 @@
 # Import regular expressions for exact visible-text and route diagnostics retained by the extracted family.
 import re
 
+# Import monotonic wall delay only for the route-owned delayed locale-resource regression proof. (TEST-092)
+import time
+
 # Import the sole environment-scalable Playwright wait budget. (TEST-053)
 from tests.browser_timing import WAIT_MS
 
@@ -358,6 +361,62 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
         page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'ru-RU' && document.querySelector('[data-testid=\"login-email\"]')")
         # Define the auth_login_gate function used by this module.
         def auth_login_gate():
+            # Force a fresh English bootstrap so Russian dictionaries cannot be satisfied from this document's module cache.
+            page.evaluate("() => localStorage.setItem('casino.locale.settings.v1', JSON.stringify({language:'en-US',formatLocale:'en-US',useBrowserLocale:false}))")
+            # Delay every Russian resource request while preserving the real loopback response bytes and route behavior.
+            def delay_russian_locale(route):
+                # Hold the asynchronous locale promise long enough to expose any stale-form credential race deterministically.
+                time.sleep(0.2)
+                # Continue the exact original same-origin request after the controlled delay.
+                route.continue_()
+            # Install the bounded locale-only delay before loading the fresh English document.
+            page.route('**/i18n/ru-RU/*.json',delay_russian_locale)
+            # Reload through the real shell so only English resources are preloaded before the visible switch.
+            page.reload(wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS)
+            # Capture the current-locale gate because half the formal workers intentionally reselect English.
+            same_locale_old_gate=page.get_by_test_id('login-gate').element_handle()
+            # Require one concrete English gate before dispatching the same-locale selection.
+            assert same_locale_old_gate is not None
+            # Reselect English through the real control so its asynchronous render path is covered too.
+            page.get_by_test_id('auth-locale-select').select_option('en-US')
+            # Require the same-locale handler to replace the old form before any credential lookup.
+            same_locale_old_gate.wait_for_element_state('hidden',timeout=WAIT_MS)
+            # Require a complete replacement English gate before beginning the delayed Russian proof.
+            page.wait_for_function("""() => { const gate=document.querySelector('[data-testid="login-gate"]'); const select=gate?.querySelector('[data-testid="auth-locale-select"]'); return Boolean(gate && select?.value==='en-US' && gate.querySelector('[data-testid="login-email"]') && gate.querySelector('[data-testid="login-password"]') && gate.querySelector('[data-testid="login-terms-check"]') && gate.querySelector('[data-testid="login-submit"]')); }""",timeout=WAIT_MS)
+            # Capture the exact old DOM owner rather than a locator that can silently re-resolve to its replacement.
+            delayed_old_gate=page.get_by_test_id('login-gate').element_handle()
+            # Require one concrete pre-change gate before dispatching the asynchronous locale control.
+            assert delayed_old_gate is not None
+            # Switch through the real visible selector while Russian resources are deliberately delayed.
+            page.get_by_test_id('auth-locale-select').select_option('ru-RU')
+            # Require the old form to detach before resolving any credential control from the replacement gate.
+            delayed_old_gate.wait_for_element_state('hidden',timeout=WAIT_MS)
+            # Require the fresh gate, committed locale, and complete replacement form as one bounded readiness predicate.
+            page.wait_for_function("""locale => { const gate=document.querySelector('[data-testid="login-gate"]'); const select=gate?.querySelector('[data-testid="auth-locale-select"]'); return Boolean(gate && select?.value===locale && gate.querySelector('[data-testid="login-email"]') && gate.querySelector('[data-testid="login-password"]') && gate.querySelector('[data-testid="login-terms-check"]') && gate.querySelector('[data-testid="login-submit"]')); }""",arg='ru-RU',timeout=WAIT_MS)
+            # Remove only the controlled locale delay after the real replacement gate is ready.
+            page.unroute('**/i18n/ru-RU/*.json',delay_russian_locale)
+            # Fulfill the proof-only login boundary successfully at HTTP transport level while leaving the anonymous gate mounted.
+            page.route('**/api/v2/auth/login',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"AUTH_INVALID","message":"Invalid credentials"}}'))
+            # Record only exact form-owned POST requests so retries or duplicate handlers cannot hide.
+            delayed_login_posts=[]
+            # Append the public method/path identity without retaining credentials or request bodies.
+            def record_delayed_login_post(request):
+                # Count only the exact returning-user endpoint exercised by the visible form.
+                if request.method=='POST' and request.url.partition('?')[0].endswith('/api/v2/auth/login'): delayed_login_posts.append('/api/v2/auth/login')
+            # Observe the real browser request independently from the matching response oracle.
+            page.on('request',record_delayed_login_post)
+            # Enter valid credential shapes only after the replacement form owns the selected locale.
+            page.get_by_test_id('login-email').fill('locale-race@example.invalid'); page.get_by_test_id('login-password').fill('not-a-real-password'); page.get_by_test_id('login-terms-check').check()
+            # Require exactly one form-owned POST while activating the real visible submit control.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v2/auth/login') and response.request.method=='POST',timeout=WAIT_MS) as delayed_login_info:
+                # Submit through the replacement gate that survived the delayed locale transition.
+                page.get_by_test_id('login-submit').click()
+            # Prove one and only one request reached the controlled endpoint and the anonymous form remained authoritative.
+            assert delayed_login_info.value.status==200 and delayed_login_posts==['/api/v2/auth/login'] and page.get_by_test_id('login-gate').is_visible()
+            # Remove the proof-only listener and endpoint route before ordinary real-backend browser acceptance continues.
+            page.remove_listener('request',record_delayed_login_post); page.unroute('**/api/v2/auth/login')
+            # Restore an empty unchecked Russian form for the established terms-validation scenario below.
+            page.get_by_test_id('login-email').fill(''); page.get_by_test_id('login-password').fill(''); page.get_by_test_id('login-terms-check').uncheck()
             # Verify the login panel is visible before casino routes mount.
             assert page.get_by_test_id('login-gate').is_visible()
             # Verify the premium topbar is hidden while logged out.
@@ -407,7 +466,7 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,browser_sh
             shot('after-pass-password-reset-initiate.png')
             # Return to the login gate so the existing real-backend authentication flow remains unchanged.
             page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=WAIT_MS); page.get_by_test_id('guest-trial-button').wait_for(timeout=WAIT_MS); page.set_viewport_size({'width':1920,'height':1080})
-        run_case('BR-AUTH-LOGIN-001',['AUTH-001','TERMS-001','AUTH-UI-002','RESET-004','UX-028','TEST-071','TEST-158','TEST-176'],auth_login_gate)
+        run_case('BR-AUTH-LOGIN-001',['AUTH-001','TERMS-001','AUTH-UI-002','RESET-004','UX-028','TEST-071','TEST-092','TEST-158','TEST-176'],auth_login_gate)
         # Reselect the Russian gate through the visible control when this shard skipped the producing cases.
         if not browser_shard_owns('BR-TOUCH-TARGET-AUTH-001'): page.get_by_test_id('auth-locale-select').select_option('ru-RU')
         # Keep the Russian locale selected by the OAuth acceptance loop for login persistence coverage.

@@ -34,6 +34,25 @@ _MYSQL_SESSION_STORAGE_VERSION = 1
 
 # Add schema-aware first-class session ownership to the MySQL provider.
 class MySQLSessionMixin:
+    # Serialize one complete-registry mutation through the import marker that auth verifies before use.
+    def _lock_mysql_session_registry(self, cursor) -> None:
+        # Lock one stable existing row before any range lock or insertion can participate in a cycle.
+        cursor.execute("SELECT payload_json FROM casino_documents WHERE document_key = %s FOR UPDATE", (_MYSQL_SESSION_IMPORT_MARKER,))
+        # Read the marker under the transaction-owned exclusive row lock.
+        marker = cursor.fetchone()
+        # Decode the fixed marker without permitting malformed JSON or cursor shapes to escape this boundary.
+        try:
+            # Accept only the exact completed import authority object.
+            complete = isinstance(marker, dict) and _decode_json(marker.get("payload_json")) == {"schema_version": _MYSQL_SESSION_STORAGE_VERSION, "status": "complete"}
+        # Normalize invalid JSON and non-decodable connector values into the recovery result.
+        except (TypeError, ValueError):
+            # Treat malformed bytes as incomplete without repairing or replacing them.
+            complete = False
+        # Refuse direct provider use that bypassed import or retained malformed migration authority.
+        if not complete:
+            # Preserve all session and legacy rows for explicit operator recovery.
+            raise ConflictError("Session storage requires operator recovery")
+
     # Return whether the verified runtime schema owns the native session table.
     def _native_session_storage(self) -> bool:
         # Verify readiness before consulting the cached sanitized schema version.
@@ -317,6 +336,8 @@ class MySQLSessionMixin:
 
         # Own collision checks, eviction, and insert in one transaction.
         def create(_connection, cursor) -> dict:
+            # Serialize concurrent creators before their compatible range locks can deadlock on insertion.
+            self._lock_mysql_session_registry(cursor)
             # Lock the bounded complete registry because the global cap spans every user.
             current = self._select_mysql_sessions(cursor, for_update=True)
             # Reject credential or opaque-id collision without replacement.
@@ -632,6 +653,8 @@ class MySQLSessionMixin:
 
         # Own complete replacement inside one transaction.
         def replace(_connection, cursor) -> None:
+            # Validate and lock the importer marker first so every two-resource transaction uses one order.
+            self._lock_mysql_session_registry(cursor)
             # Lock and validate every current session before deletion.
             current = self._select_mysql_sessions(cursor, for_update=True)
             # Remove only first-class session rows through the active schema lane.
@@ -642,17 +665,6 @@ class MySQLSessionMixin:
             for row in rows:
                 # Insert one native or bridge row.
                 self._insert_mysql_session(cursor, row)
-            # Lock the importer marker so replacement can make first-class rows authoritative.
-            cursor.execute("SELECT payload_json FROM casino_documents WHERE document_key = %s FOR UPDATE", (_MYSQL_SESSION_IMPORT_MARKER,))
-            # Fetch the optional marker row.
-            marker = cursor.fetchone()
-            # Insert or replace only the fixed non-secret completion marker.
-            if marker is None:
-                # Create the authoritative marker beside ordinary documents.
-                cursor.execute("INSERT INTO casino_documents (document_key, payload_json, updated_at) VALUES (%s, %s, %s)", (_MYSQL_SESSION_IMPORT_MARKER, json.dumps({"schema_version": _MYSQL_SESSION_STORAGE_VERSION, "status": "complete"}, sort_keys=True), utc_now()))
-            else:
-                # Restore the exact marker shape without touching session rows.
-                cursor.execute("UPDATE casino_documents SET payload_json = %s, updated_at = %s WHERE document_key = %s", (json.dumps({"schema_version": _MYSQL_SESSION_STORAGE_VERSION, "status": "complete"}, sort_keys=True), utc_now(), _MYSQL_SESSION_IMPORT_MARKER))
             # Return no secret-bearing result.
             return None
 

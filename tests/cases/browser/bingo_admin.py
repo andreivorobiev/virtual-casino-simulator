@@ -8,6 +8,8 @@ import base64
 import json
 # Import regular expressions for report, locale, and ledger-label assertions.
 import re
+# Import monotonic timing for the focused same-mount replay/reset ceiling.
+import time
 
 # Import the sole environment-scalable Playwright wait budget. (TEST-053)
 from tests.browser_timing import WAIT_MS
@@ -97,6 +99,103 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         bingo_terminal_render=wait_for_bingo_terminal_render(page,bingo_reload_terminal)
         # Preserve the existing premium Bingo acceptance after the new purchase boundary proof.
         run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013','CORE-034'],lambda: bingo_terminal_render['winningCellCount']==bingo_terminal['winning_cell_count'] and page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
+        # Define the exact same-mount Repeat, Call, and generation-replacing Reset regression for formal workers twenty and twenty-one. (TEST-092)
+        def bingo_formal_same_mount_replay():
+            # Start focused timing before the real route-local replay sequence.
+            started=time.perf_counter()
+            # Capture the canonical route URL so no lobby remount can fabricate Repeat history.
+            mounted_url=page.url
+            # Require the recovered completed-session Repeat control on this exact mounted route.
+            assert page.get_by_test_id('bingo-repeat').is_enabled()
+            # Rebuy the prior human card through the real one-click Repeat pointer and exact cards response.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/cards') and response.request.method=='POST',timeout=WAIT_MS) as repeat_info: page.get_by_test_id('bingo-repeat').click()
+            # Require the accepted repeated purchase and response-owned Call readiness.
+            assert repeat_info.value.ok; page.wait_for_function("() => !document.querySelector('[data-testid=\"bingo-call\"]')?.disabled",timeout=WAIT_MS)
+            # Call one real ball so Reset owns the destructive confirmation boundary seen in the failed formal workers.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/call') and response.request.method=='POST',timeout=WAIT_MS) as call_info: page.get_by_test_id('bingo-call').click()
+            # Require the accepted call and visible called-ball generation before authorizing Reset.
+            assert call_info.value.ok; page.wait_for_function("() => document.querySelectorAll('[data-testid=\"bingo-called-ball\"]').length > 0 && !document.querySelector('[data-testid=\"bingo-reset\"]')?.disabled",timeout=WAIT_MS)
+            # Capture the post-Call active generation's disabled Buy node immediately before Reset.
+            old_buy=page.get_by_test_id('bingo-buy').element_handle()
+            # Authorize exactly the next native destructive confirmation from this real called session.
+            page.once('dialog',lambda dialog: dialog.accept())
+            # Reset through the public pointer path while observing the exact mutation response.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/reset') and response.request.method=='POST',timeout=WAIT_MS) as reset_info: page.get_by_test_id('bingo-reset').click()
+            # Require the accepted response before observing its replacement generation.
+            assert reset_info.value.ok
+            # Require the stale active-generation Buy node to detach rather than satisfy purchase readiness.
+            page.wait_for_function('node => !node.isConnected',arg=old_buy,timeout=WAIT_MS)
+            # Require one fresh enabled Buy generation after reset completion.
+            page.wait_for_function("() => { const buy=document.querySelector('[data-testid=\"bingo-buy\"]'); return Boolean(buy && !buy.disabled); }",timeout=WAIT_MS)
+            # Prove every action stayed on the same route while fresh Bingo markup remained visible.
+            assert page.url==mounted_url and page.get_by_test_id('premium-bingo').is_visible()
+            # Keep the three-operation focused replay inside three unchanged per-operation ceilings without inventing a tighter product timeout.
+            assert time.perf_counter()-started < 3*WAIT_MS/1000
+        # Execute the real-browser regression without any API setup, navigation bypass, retry, or synthetic activation credit.
+        run_case('BR-BINGO-FORMAL-REPLAY-001',['BINGO-012','BINGO-022','TEST-092'],bingo_formal_same_mount_replay)
+        # Define the exact pass-to-play bootstrap and same-mount Repeat regression for formal Acey-Deucey worker eighty-five. (TEST-092)
+        def acey_deucey_formal_same_mount_replay():
+            # Enter Acey-Deucey from a clean table-games shard account through the real catalog route.
+            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS); page.get_by_test_id('nav-acey_deucey').click(); page.get_by_test_id('acey-deucey').wait_for(timeout=WAIT_MS)
+            # Require no preexisting wager history so the first Pass cannot accidentally inherit Repeat authority.
+            assert page.locator('[data-action="repeat"]').is_disabled()
+            # Collect only public free-deal action identities emitted by real pointer clicks.
+            deal_action_ids=[]
+            # Deal one distinct real boundary and retain its request-owned identity.
+            def deal_boundary():
+                # Observe the exact free-deal mutation before activating its rendered control.
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/acey-deucey/rounds') and response.request.method=='POST',timeout=WAIT_MS) as deal_info: page.locator('[data-action="deal"]:not([disabled])').click()
+                # Require an accepted response and record its bounded client action identity.
+                assert deal_info.value.ok; deal_action_ids.append(deal_info.value.request.post_data_json['action_id'])
+                # Require the public decision render before choosing Pass or Play.
+                page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=WAIT_MS)
+            # Force the first real prepared round through Pass so no wager can seed Repeat.
+            deal_boundary()
+            # Observe the exact pass mutation before activating its rendered decision.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/pass') and response.request.method=='POST',timeout=WAIT_MS) as first_pass_info: page.locator('[data-action="pass"]:not([disabled])').click()
+            # Require accepted no-wager terminal readiness and continued absence of Repeat ownership.
+            assert first_pass_info.value.ok; page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS); assert page.locator('[data-action="repeat"]').is_disabled()
+            # Traverse at most nineteen further distinct boundaries so the total source-bound window is exactly twenty.
+            seeded=False
+            for _boundary_index in range(19):
+                # Open one new public round with a new action identity rather than retrying the passed action.
+                deal_boundary()
+                # Commit the first legally priceable rendered Play.
+                if page.locator('[data-action="play"]').is_enabled():
+                    # Set the same bounded one-token wager used by the formal worker.
+                    page.locator('#acey-wager').fill('1')
+                    # Observe exact wagered settlement before activating Play.
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/play') and response.request.method=='POST',timeout=WAIT_MS) as play_info: page.locator('[data-action="play"]:not([disabled])').click()
+                    # Require accepted settlement, fresh Deal, and real Repeat readiness on this mount.
+                    assert play_info.value.ok; page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS); page.locator('[data-action="repeat"]:not([disabled])').wait_for(timeout=WAIT_MS); seeded=True; break
+                # Close one pass-only boundary exactly once before the next distinct Deal.
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/pass') and response.request.method=='POST',timeout=WAIT_MS) as pass_info: page.locator('[data-action="pass"]:not([disabled])').click()
+                # Require accepted no-wager terminal readiness without sleeping or retrying.
+                assert pass_info.value.ok; page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS)
+            # Fail closed when the complete retained-history-sized window contains no priceable boundary.
+            assert seeded, 'Acey-Deucey repeat seed found no priceable boundary in 20 deals'
+            # Preserve the mounted route URL before spending one actual Repeat activation.
+            mounted_url=page.url
+            # Open the next boundary through the real Repeat pointer and exact free-deal response.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/acey-deucey/rounds') and response.request.method=='POST',timeout=WAIT_MS) as repeat_info: page.locator('[data-action="repeat"]:not([disabled])').click()
+            # Require accepted fresh-round ownership and retain its distinct deal identity.
+            assert repeat_info.value.ok; deal_action_ids.append(repeat_info.value.request.post_data_json['action_id']); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=WAIT_MS)
+            # Select the same legal Play-first decision used by the formal bootstrap when priceable, otherwise the required Pass.
+            terminal_selector='[data-action="play"]' if page.locator('[data-action="play"]').is_enabled() else '[data-action="pass"]'
+            # Bind response observation to the exact selected public terminal route.
+            terminal_suffix='/play' if terminal_selector=='[data-action="play"]' else '/pass'
+            # Supply the restored wager only when the repeated boundary legally accepts Play.
+            if terminal_selector=='[data-action="play"]': page.locator('#acey-wager').fill('1')
+            # Observe the exact terminal mutation before activating the visible decision.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith(terminal_suffix) and response.request.method=='POST',timeout=WAIT_MS) as terminal_info: page.locator(terminal_selector+':not([disabled])').click()
+            # Require terminal readiness, preserved route ownership, and retained Repeat authority without remounting.
+            assert terminal_info.value.ok; page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=WAIT_MS); assert page.url==mounted_url and page.get_by_test_id('acey-deucey').is_visible() and page.locator('[data-action="repeat"]').is_enabled()
+            # Prove every free round used one fresh client action identity and no hidden same-action retry.
+            assert len(deal_action_ids)==len(set(deal_action_ids))
+            # Return through the real Lobby control so downstream table-game cases start canonically.
+            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=WAIT_MS)
+        # Execute the real-browser proof without direct state, request interception, retry, or synthetic activation credit.
+        run_case('BR-AD-FORMAL-REPLAY-001',['AD-001','AD-002','AD-003','TEST-092'],acey_deucey_formal_same_mount_replay)
         # Seed one isolated deferred natural so the rendered Stand path is deterministic. (BJ-031, TEST-054)
         browser_blackjack_state=blackjack_engine.default_state(); browser_blackjack_state['shoe']=['2S']*52+['9D','AS','KH','AS']
         # Persist only the synthetic browser player's controlled Blackjack shoe before mounting the route.

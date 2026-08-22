@@ -8,9 +8,15 @@ import json
 import re
 # Import monotonic waits retained by the extracted game-state transitions.
 import time
+# Import disposable directories for browser-only diagnostic publication proofs.
+import tempfile
+# Import portable paths for disposable browser-only artifact assertions.
+from pathlib import Path
 
 # Import the sole environment-scalable Playwright wait budget. (TEST-053)
 from tests.browser_timing import WAIT_MS
+# Import the pre-document shared-application boundary and sanitized first-failure writer. (TEST-053)
+from tests.browser_readiness import install_shared_app_readiness_probe, persist_shared_app_first_failure, reload_and_wait_for_shared_app_readiness
 
 
 # Execute each game-local producer/consumer family under its deterministic shard owner.
@@ -23,6 +29,86 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         page.goto(base+'/games/roulette',wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
         # Normalize the player locale before the Roulette cases build their own localized state.
         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+        # Define the exact real-backend settings serialization regression for formal cycle-six overlap. (TEST-092)
+        def roulette_formal_settings_serialization():
+            # Open the real advanced-settings disclosure so every select uses Playwright's visible pointer-owned surface.
+            disclosure=page.get_by_test_id('roulette-rules-disclosure')
+            # Expand the disclosure only when the current generation remains collapsed.
+            if disclosure.get_attribute('open') is None: disclosure.locator('summary').click()
+            # Require all three rendered selectors before constructing the race reproduction.
+            page.get_by_test_id('roulette-mode').wait_for(state='visible',timeout=WAIT_MS); page.get_by_test_id('roulette-zero').wait_for(state='visible',timeout=WAIT_MS); page.get_by_test_id('roulette-presentation-mode').wait_for(state='visible',timeout=WAIT_MS)
+            # Use the client-only quick profile so the real seed spin stays inside the focused proof budget.
+            page.get_by_test_id('roulette-presentation-mode').select_option('quick')
+            # Capture every exact settings response to reject any hidden 409 or duplicate request.
+            settings_statuses=[]
+            # Record only public response statuses from the frozen settings endpoint.
+            def record_settings_response(response):
+                # Ignore every unrelated game and shell response.
+                if response.url.partition('?')[0].endswith('/api/v1/games/roulette/settings') and response.request.method=='POST': settings_statuses.append(response.status)
+            # Observe settings responses without intercepting or modifying them.
+            page.on('response',record_settings_response)
+            try:
+                # Place one real seed wager and serialize its authoritative drawer render.
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST',timeout=WAIT_MS) as seed_bet_info: page.get_by_test_id('roulette-num-1').click()
+                # Require the seed wager response before spinning its reusable template.
+                assert seed_bet_info.value.ok
+                # Use the product's real reduced-motion settlement path so the seed completes inside the unchanged focused-browser ceiling.
+                page.emulate_media(reduced_motion='reduce')
+                try:
+                    # Settle one real seed spin so Rebet becomes a truthful public action.
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/spin') and response.request.method=='POST',timeout=WAIT_MS) as seed_spin_info: page.get_by_test_id('roulette-spin').click()
+                    # Require the server settlement and fresh-spin render before exercising Rebet.
+                    assert seed_spin_info.value.ok; page.wait_for_function("() => !document.querySelector('[data-testid=roulette-spin]')?.disabled",timeout=WAIT_MS)
+                finally:
+                    # Restore the suite's ordinary media preference before exercising settings or later Roulette cases.
+                    page.emulate_media(reduced_motion='no-preference')
+                # Recreate the formal primary-worker open-template state through the real Rebet control.
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/rebet') and response.request.method=='POST',timeout=WAIT_MS) as rebet_info: page.locator('#rebet').click()
+                # Require the populated template response and drawer before client-only generic configuration.
+                assert rebet_info.value.ok; page.wait_for_function("() => document.querySelectorAll('[data-clear]').length > 0",timeout=WAIT_MS)
+                # Record the settings request count at the exact former generic-configuration boundary.
+                before_client_only=len(settings_statuses)
+                # Change only the client-owned presentation field while a real Rebet remains open.
+                page.get_by_test_id('roulette-presentation-mode').select_option('authentic')
+                # Require the client-owned value to commit before checking the synchronous request-dispatch observer.
+                page.wait_for_function("() => document.querySelector('[data-testid=roulette-presentation-mode]')?.value === 'authentic'",timeout=WAIT_MS)
+                # Prove the filtered generic boundary issued no settings request and therefore no cycle-six 409; a settings fetch dispatches before select_option returns.
+                assert len(settings_statuses)==before_client_only
+                # Clear the real open Rebet before deliberate server-owned mode changes.
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/clear') and response.request.method=='POST',timeout=WAIT_MS) as clear_info: page.locator('#clear').click()
+                # Require the accepted empty-drawer replacement before the first settings request.
+                assert clear_info.value.ok; page.wait_for_function("() => document.querySelector('#clear')?.disabled === true",timeout=WAIT_MS)
+                # Define one exact select-response-detach-fresh helper matching the formal harness boundary.
+                def select_setting(test_id,value):
+                    # Capture the exact old control generation before arming its response observer.
+                    old_node=page.get_by_test_id(test_id).element_handle()
+                    # Select one changed rendered value while observing exactly its settings POST.
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/settings') and response.request.method=='POST',timeout=WAIT_MS) as settings_info: page.get_by_test_id(test_id).select_option(value)
+                    # Reject conflicts without retries or suppression.
+                    assert settings_info.value.ok and settings_info.value.status<400
+                    # Require the response-owned render to detach the selected old generation.
+                    page.wait_for_function('node => !node.isConnected',arg=old_node,timeout=WAIT_MS)
+                    # Require one fresh enabled generation containing the accepted value.
+                    page.wait_for_function("expected => { const node=document.querySelector(`[data-testid=\"${expected.testId}\"]`); return Boolean(node && !node.disabled && node.value===expected.value); }",arg={'testId':test_id,'value':value},timeout=WAIT_MS)
+                # Rotate the zero rule once through a genuinely changed server-owned value.
+                current_zero=page.get_by_test_id('roulette-zero').input_value(); next_zero={'normal':'la_partage','la_partage':'en_prison','en_prison':'normal'}[current_zero]; select_setting('roulette-zero',next_zero)
+                # Probe the opposite real wheel mode through one fully terminal response and replacement generation.
+                scheduled_mode=page.get_by_test_id('roulette-mode').input_value(); opposite_mode='single' if scheduled_mode=='double' else 'double'; select_setting('roulette-mode',opposite_mode)
+                # Restore the scheduled mode only after the probe's old node is detached and its fresh node is accepted.
+                select_setting('roulette-mode',scheduled_mode)
+                # Require exactly three deliberate successful settings responses and no hidden 409.
+                assert settings_statuses[before_client_only:]==[200,200,200]
+                # Restore the default zero rule through the same terminal boundary when the proof changed it.
+                if page.get_by_test_id('roulette-zero').input_value()!='normal': select_setting('roulette-zero','normal')
+            finally:
+                # Remove only this proof's observer so later Roulette cases retain their established diagnostics.
+                page.remove_listener('response',record_settings_response)
+            # Reacquire the disclosure after response-owned rerenders and restore its collapsed baseline.
+            disclosure=page.get_by_test_id('roulette-rules-disclosure')
+            # Close the real disclosure without mutating any server setting.
+            if disclosure.get_attribute('open') is not None: disclosure.locator('summary').click()
+        # Execute the focused real-browser regression for exact serialized settings and the former Rebet conflict.
+        run_case('BR-ROU-FORMAL-SETTINGS-001',['ROU-002','ROU-016','TEST-092'],roulette_formal_settings_serialization)
         # Define the exhaustive hit-target integrity and geometry regression required by issue #222.
         def roulette_hit_target_integrity():
             # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)
@@ -1015,6 +1101,88 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             page.remove_listener('request',observe_slots_spin)
         # Record immediate feedback, synchronization, localization, evidence, and real request coverage.
         run_case('BR-SLOT-LINE-BET-001',['SLOT-027','SLOT-036','TEST-058','UX-009'],slots_line_bet_validation)
+        # Prove shared-app readiness and bounded diagnostics in the Chromium-installed Browser lane. (TEST-053)
+        def shared_app_readiness_browser_proof():
+            # Reuse the runner-owned governed page because Browser.new_page convenience contexts reject child pages.
+            proof_page=page
+            # Track only bounded route counts needed to delay the second late navigation.
+            route_counts={}
+            # Fulfill synthetic same-process documents without external network access.
+            def fulfill_probe_document(route):
+                # Classify the fixed proof path without retaining query or request payloads.
+                proof_path=route.request.url.partition('?')[0].rsplit('/',1)[-1]
+                # Increment only the three fixed proof counters.
+                route_counts[proof_path]=route_counts.get(proof_path,0)+1
+                # Delay only the reload of the fixed late-navigation document past its 100ms budget.
+                if proof_path=='late' and route_counts[proof_path]>1: time.sleep(0.2)
+                # Dispatch the fixed error event only from the error document.
+                event_name='casino:shared-app-error' if proof_path=='error' else 'casino:shared-app-ready'
+                # Prove the marker existed before the application document dispatched its terminal event.
+                body=f"<script>window.markerBeforeDispatch=Boolean(window.__casinoSharedAppReadinessProbe);window.dispatchEvent(new Event('{event_name}'))</script>"
+                # Complete the synthetic navigation with no external assets.
+                route.fulfill(status=200,content_type='text/html',body=body)
+            try:
+                # Intercept the fixed synthetic origin entirely inside Chromium.
+                proof_page.route('http://shared-ready.test/**',fulfill_probe_document)
+                # Install the production pre-document probe before any proof document runs.
+                install_shared_app_readiness_probe(proof_page)
+                # Establish and reload the ready document under the ordinary Browser budget.
+                proof_page.goto('http://shared-ready.test/ready',wait_until='load'); ready=reload_and_wait_for_shared_app_readiness(proof_page,timeout_ms=WAIT_MS)
+                # Require both pre-document execution and the exact terminal ready marker.
+                assert proof_page.evaluate('window.markerBeforeDispatch') is True and ready=={'status':'ready','milestone':'shared_app_ready'}
+                # Establish the error document before exercising the same production reload helper.
+                proof_page.goto('http://shared-ready.test/error',wait_until='load')
+                # Track fail-closed error observation without retaining exception detail.
+                error_failed_closed=False
+                try: reload_and_wait_for_shared_app_readiness(proof_page,timeout_ms=WAIT_MS)
+                except AssertionError as error: error_failed_closed='terminal error signal' in str(error)
+                # Require the real terminal error event to fail closed.
+                assert error_failed_closed
+                # Establish the document whose reload is deliberately later than the total proof budget.
+                proof_page.goto('http://shared-ready.test/late',wait_until='load')
+                # Start one bounded measurement around reload plus terminal observation.
+                late_started=time.monotonic(); late_failed_closed=False
+                try: reload_and_wait_for_shared_app_readiness(proof_page,timeout_ms=100)
+                except AssertionError: late_failed_closed=True
+                # Reject a second terminal-sized allowance after the deliberately late navigation.
+                assert late_failed_closed and time.monotonic()-late_started<1.0
+            finally:
+                # Remove the synthetic origin handler before restoring the canonical authenticated Slots route.
+                proof_page.unroute('http://shared-ready.test/**',fulfill_probe_document)
+                # Restore the governed runner-owned page even when a synthetic navigation assertion fails.
+                proof_page.goto(base+'/games/slots',wait_until='networkidle'); proof_page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
+            # Reuse the governed page for one disposable document whose cache and worker inventories never resolve.
+            capture_page=page
+            try:
+                # Load one self-contained document for the bounded diagnostic evaluation.
+                capture_page.goto('data:text/html,<div id="view"></div>',wait_until='load')
+                # Replace inventory seams only in this disposable document so canonical navigation clears them.
+                capture_page.evaluate("""() => { Object.defineProperty(window,'caches',{value:{keys:()=>new Promise(()=>{})},configurable:true}); Object.defineProperty(navigator,'serviceWorker',{value:{getRegistrations:()=>new Promise(()=>{}),controller:null},configurable:true}); }""")
+                # Isolate the synthetic first-failure artifact outside the repository.
+                with tempfile.TemporaryDirectory() as directory:
+                    # Resolve one disposable fixed evidence path.
+                    target=Path(directory)/'shared-app-first-failure.json'
+                    # Freeze one original exception object for exact bare-rethrow identity proof.
+                    original=RuntimeError('browser-only diagnostic proof')
+                    # Retain publication outcome and elapsed time outside the nested handler.
+                    persisted=False; capture_elapsed=0.0; captured=None
+                    try:
+                        try: raise original
+                        except RuntimeError as error:
+                            # Bound the complete diagnostic call around deliberately unresolved Browser promises.
+                            capture_started=time.monotonic(); persisted=persist_shared_app_first_failure(capture_page,target,failure=error); capture_elapsed=time.monotonic()-capture_started
+                            # Preserve the exact original exception and traceback.
+                            raise
+                    except RuntimeError as error: captured=error
+                    # Require bounded capture, atomic publication, and original-exception identity.
+                    assert persisted and capture_elapsed<2.0 and captured is original
+                    # Read the fixed-schema evidence after atomic publication.
+                    artifact=json.loads(target.read_text(encoding='utf-8'))
+                    # Require both unresolved inventory seams to collapse into fixed capture enums.
+                    assert {'cache_capture','service_worker_capture'}<=set(artifact['capture_failures'])
+            finally:
+                # Canonical navigation destroys the disposable unresolved Promise overrides.
+                capture_page.goto(base+'/games/slots',wait_until='networkidle'); capture_page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
         # Define the complete governed Slots economics and visual-state matrix for SLOT-036.
         def slots_economics_visual_matrix():
             # Resolve the authenticated player whose isolated Slots state drives deterministic evidence.
@@ -1098,8 +1266,23 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
                     for state_name,prepared_state in persisted_states.items():
                         # Save one detached copy so route reads cannot mutate a later matrix cell.
                         save_player_game_state('slots',matrix_player,json.loads(json.dumps(prepared_state)))
-                        # Reload the canonical Slots route from the persisted state.
-                        page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
+                        # Isolate the route-restored reload behind the shared application's own pre-document terminal signal. (TEST-053)
+                        if state_name=='route_restored':
+                            # Install the listener before reload so neither a fast ready nor error event can escape observation.
+                            install_shared_app_readiness_probe(page)
+                            try:
+                                # Require reload and the terminal shared-app signal to share the one unchanged Browser deadline.
+                                reload_and_wait_for_shared_app_readiness(page,timeout_ms=WAIT_MS)
+                                # Preserve the independent module-owned readiness assertion after shared bootstrap succeeds.
+                                page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
+                            except Exception as error:
+                                # Persist at most one bounded sanitized diagnostic bundle for this exact case and boundary.
+                                persist_shared_app_first_failure(page,screenshots/'before-failure-slots-route-restored-shared-app.json',failure=error)
+                                # Preserve the original readiness or module-mount exception unchanged.
+                                raise
+                        else:
+                            # Keep every non-restoration matrix reload on its established independent module readiness path.
+                            page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=WAIT_MS)
                         # Switch through the visible locale control and wait for the runtime rerender.
                         page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected",arg=locale)
                         # Read the exact backing state/config returned to the mounted browser.
@@ -1211,6 +1394,8 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
             page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(matrix_viewports['desktop_primary']); page.emulate_media(reduced_motion='no-preference'); page.evaluate("document.body.style.zoom=''")
         # Execute the existing economics matrix plus the real normal/reduced presentation matrix under one permanent case.
         def slots_economics_and_presentation():
+            # Execute disposable real-Chromium readiness and diagnostic proofs in the Browser-only lane.
+            shared_app_readiness_browser_proof()
             # Preserve the complete engine, configuration, copy, state, and geometry matrix.
             slots_economics_visual_matrix()
             # Execute the new real normal/reduced action matrix inside the same permanent owner case.
