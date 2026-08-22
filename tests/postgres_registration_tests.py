@@ -166,12 +166,22 @@ class PostgresRegistrationTests(unittest.TestCase):
 
     # Prove JSON and MySQL selections never visit the PostgreSQL import seam.
     def test_json_and_mysql_do_not_import_postgres_or_psycopg(self):
-        # Exercise both established provider branches with synthetic constructors.
-        for name, attribute in (("json", "JsonStorageProvider"), ("mysql", "MySQLStorageProvider")):
+        # Exercise the absent-selector default plus both explicit established branches.
+        for name, attribute in (
+            (None, "JsonStorageProvider"),
+            ("json", "JsonStorageProvider"),
+            ("mysql", "MySQLStorageProvider"),
+        ):
             # Name the selected provider in focused assertion output.
-            with self.subTest(provider=name):
-                # Install the established selector value.
-                with mock.patch.dict(os.environ, {"CASINO_STORAGE_PROVIDER": name}):
+            with self.subTest(provider=name or "absent"):
+                # Install the explicit selector, or a restoring environment patch for its absence.
+                selector = {} if name is None else {"CASINO_STORAGE_PROVIDER": name}
+                # Restore the process environment after each selector cell.
+                with mock.patch.dict(os.environ, selector):
+                    # Remove any inherited selector so the default-JSON boundary is exercised.
+                    if name is None:
+                        # Keep the removal scoped to the restoring environment patch.
+                        os.environ.pop("CASINO_STORAGE_PROVIDER", None)
                     # Replace the concrete established provider so the proof opens no storage or connector.
                     with mock.patch.object(storage, attribute, return_value=object()) as constructor:
                         # Trap every dynamic import attempt during provider construction.
