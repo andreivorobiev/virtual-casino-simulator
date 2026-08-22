@@ -132,24 +132,42 @@ class ReleaseArtifactTests(unittest.TestCase):
     def test_isolated_api_copy_initializes_exact_tracked_inventory(self):
         # Allocate one disposable archive-like source root independent of the packaging fixture.
         with tempfile.TemporaryDirectory(prefix="casino-release-index-") as temporary:
-            # Resolve the exact extracted-copy root used by the production helper.
-            root = pathlib.Path(temporary)
-            # Create the register parent required by the file-length validator.
-            (root / "docs").mkdir()
-            # Provide an empty canonical review register for the compact source fixtures.
-            (root / "docs" / "file_length_register.json").write_text('{"schema_version": 1, "entries": []}\n', encoding="utf-8")
-            # Create one Python source from the hypothetical trusted archive.
-            (root / "exact.py").write_text("# Exact archived source.\n", encoding="utf-8")
-            # Create one nested JavaScript source from the same archive.
-            (root / "web").mkdir()
-            # Preserve one compact executable-source fixture beneath its canonical area.
-            (root / "web" / "exact.js").write_text("// Exact archived source.\n", encoding="utf-8")
-            # Retain one non-source archive member to prove the complete extraction is indexed.
-            (root / "README.md").write_text("# Exact archive\n", encoding="utf-8")
-            # Model a tracked source that also matches a repository ignore rule.
-            (root / ".gitignore").write_text("exact.py\n", encoding="utf-8")
-            # Initialize only the disposable index through the production release seam.
-            make_release.initialize_validation_index(root)
+            # Resolve separate exact-source and archive-copy roots beneath the disposable owner.
+            source_root, root = pathlib.Path(temporary) / "source", pathlib.Path(temporary) / "archive"
+            # Define the complete compact archive inventory once for byte-identical fixture creation.
+            files = {"docs/file_length_register.json": '{"schema_version": 1, "entries": []}\n', "exact.py": "# Exact archived source.\n", "web/exact.js": "// Exact archived source.\n", "README.md": "# Exact archive\n", ".gitignore": "exact.py\n"}
+            # Create byte-identical source and extracted-copy fixtures without filesystem traversal.
+            for fixture_root in (source_root, root):
+                # Materialize every reviewed fixture path beneath the selected disposable root.
+                for relative_path, contents in files.items():
+                    # Resolve the exact member beneath the selected fixture root.
+                    target = fixture_root / relative_path
+                    # Create the exact member parent before writing stable bytes.
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    # Write the same normalized tracked bytes into both fixtures.
+                    target.write_text(contents, encoding="utf-8", newline="\n")
+            # Create source repository metadata without consulting user templates.
+            make_release.subprocess.check_call(["git", "init", "--quiet", "--template="], cwd=source_root)
+            # Preserve exact fixture bytes independently of host line-ending policy.
+            make_release.subprocess.check_call(["git", "config", "core.autocrlf", "false"], cwd=source_root)
+            # Configure one disposable identity only inside the fixture repository.
+            make_release.subprocess.check_call(["git", "config", "user.name", "Release Test"], cwd=source_root)
+            # Configure the matching non-deliverable fixture address locally.
+            make_release.subprocess.check_call(["git", "config", "user.email", "release-test@example.invalid"], cwd=source_root)
+            # Index every source fixture, including the deliberately ignored tracked member.
+            make_release.subprocess.check_call(["git", "add", "--all", "--force"], cwd=source_root)
+            # Freeze one exact source commit without signing or external hooks.
+            make_release.subprocess.check_call(["git", "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "exact source"], cwd=source_root)
+            # Capture the immutable source commit for exact-copy identity assertions.
+            source_head = make_release.subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source_root, text=True).strip()
+            # Capture the immutable source tree independently of the commit identity.
+            source_tree = make_release.subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=source_root, text=True).strip()
+            # Initialize the disposable copy through the production release seam.
+            make_release.initialize_validation_index(root, source_root)
+            # Require the isolated copy to expose the exact source commit and tree to diagnostic gates.
+            self.assertEqual((make_release.subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(), make_release.subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=root, text=True).strip()), (source_head, source_tree))
+            # Require source bytes and the imported exact index to remain completely clean.
+            self.assertEqual(make_release.subprocess.check_output(["git", "status", "--porcelain"], cwd=root, text=True), "")
             # Ask Git for the complete indexed inventory using the production separator format.
             indexed = make_release.subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode("utf-8").split("\0")
             # Require every exact archive member and no metadata path in canonical order.
@@ -568,19 +586,19 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.84.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.85.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.84", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.85", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
         self.assertEqual(
             compatibility["predecessor"],
             {
-                "app_version": "0.9.5.83",
-                "compatibility_record": "contracts/compatibility/app-0.9.5.83.json",
+                "app_version": "0.9.5.84",
+                "compatibility_record": "contracts/compatibility/app-0.9.5.84.json",
                 "required_artifact": "release-manifest.json",
-                "source_commit_sha": "36f5df4eae0bfea3a9eb0f017a617e7d6d49b09b",
-                "artifact_sha256": "ce1e43d18be05b6fdc5a6aca5370dd00a7ee5e9c915b623fcb4749faa9b79bda",
-                "manifest_sha256": "c5cd62e769781cbc16e57569befd1bf3ca998f032bb17fc86a404493267a6ef0",
+                "source_commit_sha": "c7b86e54ba5ae03953903514207ee526dc9bc719",
+                "artifact_sha256": "994c3e5a53721fa66ba29b6de4b155066128b2ff82b66d2910a2ecaf51561982",
+                "manifest_sha256": "bb212b11fc128dce21740a4da00caed6795f53b5091b36888a5fbdd3ecb7098e",
             },
         )
         # Require both retained release-asset identities to remain exact lowercase SHA-256 values.
@@ -588,7 +606,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Reject truncated, uppercase, or otherwise noncanonical live predecessor pins.
             self.assertRegex(compatibility["predecessor"][identity_name], r"^[0-9a-f]{64}$")
         # Require the exact current candidate policy to resolve its retained immutable predecessor.
-        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.84"), "v0.9.5.83")
+        self.assertEqual(resolve_release_predecessor.predecessor_tag("0.9.5.85"), "v0.9.5.84")
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
         self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
         # Require all broader enrollment surfaces to remain disabled for this release channel.
