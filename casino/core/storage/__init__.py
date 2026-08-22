@@ -6,6 +6,8 @@ from __future__ import annotations
 import atexit
 # Preserve the historical deep-copy module attribute during incremental package cutover.
 import copy
+# Import modules by name so PostgreSQL and psycopg remain absent from JSON/MySQL startup. (STORAGE-020)
+import importlib
 # Import required dependency so historical decimal constants retain their exact values.
 from decimal import Decimal
 # Preserve the historical JSON module attribute during incremental package cutover.
@@ -32,7 +34,7 @@ from casino.core.game_action import GameActionExecutor, GameActionMovement, Game
 # Preserve the historical pool-configuration import used by storage fixtures and live validation.
 from casino.core.mysql_pool import MySQLPoolConfig
 # Import and re-export the provider-neutral storage contract and shared helpers.
-from casino.core.storage.base import ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS, HISTORY_FIELDS, MySQLConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _is_player_economics_event, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _player_economics_amount, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
+from casino.core.storage.base import ECONOMICS_EXCLUDED_TRANSACTION_FRAGMENTS, HISTORY_FIELDS, MySQLConfig, PostgresConfig, StorageProvider, _action_details, _action_fingerprint, _action_scope, _decode_json, _history_from_row, _is_player_economics_event, _ledger_event, _ledger_from_row, _money, _money_decimal, _normalizable_players_document, _normalize_action_key, _player_economics_amount, _quantized_money, _quantized_money_decimal, _validate_action_replay, _validate_wallet_normalization_replay, _validated_players_document, _validated_strict_document, _wallet_normalization_event
 # Import and re-export the JSON reset lifecycle and shared private epoch constants.
 from casino.core.storage.reset import JsonResetMixin, _GAME_ACTION_EPOCH_STORAGE_VERSION, _GAME_ACTION_MAX_EPOCH, _GAME_ACTION_STORAGE_VERSION
 # Import and re-export the JSON game-action lifecycle and private recovery-stage set.
@@ -82,6 +84,24 @@ def _build_provider() -> StorageProvider:
     if name == "mysql":
         # Build the configured MySQL provider.
         return MySQLStorageProvider()
+    # Resolve PostgreSQL only after its explicit selector so default installs never import psycopg. (STORAGE-020)
+    if name == "postgres":
+        # Bound the intentionally incomplete lane and an absent optional driver to one fixed diagnostic.
+        try:
+            # Import the future concrete owner only inside the explicit PostgreSQL branch.
+            postgres_module = importlib.import_module("casino.core.storage.postgres_provider")
+            # Resolve the future provider class without requiring a placeholder in this lane.
+            postgres_provider = getattr(postgres_module, "PostgresStorageProvider")
+            # Reject a malformed future module before its attribute can be invoked.
+            if not callable(postgres_provider):
+                # Route the malformed export through the fixed incomplete-provider boundary.
+                raise AttributeError("PostgresStorageProvider is not callable")
+            # Construct the future provider while optional-driver import failures remain bounded.
+            return postgres_provider()
+        # Hide module, optional-driver, and missing-class details from configuration callers.
+        except (ImportError, AttributeError):
+            # Fail closed until Lane 4 installs the complete provider implementation. (TEST-252)
+            raise ValidationError("PostgreSQL storage provider is unavailable") from None
     # Reject unknown provider names with a clear validation error.
     raise ValidationError(f"Unsupported storage provider: {name}")
 

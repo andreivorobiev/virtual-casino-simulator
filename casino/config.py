@@ -216,6 +216,14 @@ DEFAULT_MYSQL_PORT = 3306
 DEFAULT_MYSQL_USER = "casino"
 # Set DEFAULT_MYSQL_DATABASE to the conventional local casino database name.
 DEFAULT_MYSQL_DATABASE = "virtual_casino"
+# Set DEFAULT_POSTGRES_HOST to the loopback-only PostgreSQL developer default. (STORAGE-020)
+DEFAULT_POSTGRES_HOST = "127.0.0.1"
+# Set DEFAULT_POSTGRES_PORT to the standard PostgreSQL TCP port. (STORAGE-020)
+DEFAULT_POSTGRES_PORT = 5432
+# Set DEFAULT_POSTGRES_USER to the conventional local casino database user. (STORAGE-020)
+DEFAULT_POSTGRES_USER = "casino"
+# Set DEFAULT_POSTGRES_DATABASE to the conventional local casino database name. (STORAGE-020)
+DEFAULT_POSTGRES_DATABASE = "virtual_casino"
 
 # Define the is_loopback_host function used to distinguish local-only server bindings.
 def is_loopback_host(host: str) -> bool:

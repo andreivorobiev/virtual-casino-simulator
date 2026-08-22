@@ -13838,6 +13838,27 @@
       "notes": "JSON and the held-schema MySQL bridge remove the single hot aggregate immediately without requiring schema activation. Migration application remains held and no provider selector, database, grant, or deployment mutation is included."
     },
     {
+      "id": "STORAGE-020",
+      "module": "Storage",
+      "description": "Provider-neutral storage configuration exposes immutable PostgreSQL host, TCP port, role, password, and database settings under the dedicated CASINO_POSTGRES namespace, retains JSON as the default and MySQL unchanged, and resolves the PostgreSQL provider only after explicit selection through a lazy optional-driver seam. Malformed configuration and an absent or incomplete PostgreSQL provider fail before connector access through fixed value-free diagnostics.",
+      "status": "PASS",
+      "api_tests": [
+        "POSTGRES-CONFIG-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/config.py",
+        "casino/core/storage/base.py",
+        "casino/core/storage/__init__.py",
+        "pyproject.toml",
+        "tests/postgres_registration_tests.py",
+        "tests/cases/api/storage_foundation.py"
+      ],
+      "introduced_in": "issue-1055-postgres-registration",
+      "changed_in": "issue-1055-postgres-registration",
+      "notes": "This registration lane opens no connector or target and installs no concrete PostgreSQL provider. Explicit PostgreSQL selection remains fail-closed until the separately governed provider-core lane lands; JSON/MySQL startup never dynamically imports PostgreSQL or psycopg."
+    },
+    {
       "id": "MYSQL-010",
       "module": "MySQL",
       "description": "Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.",
@@ -13944,6 +13965,25 @@
       "introduced_in": "issue-1040-concurrency-ceilings",
       "changed_in": "issue-1040-concurrency-ceilings",
       "notes": "The marker, report-containment, clean-checkout, provider, population, process, and listener gates fail before or cleanly after resource use. Evidence contains only exact source, provider, population, completion counts, aggregate duration and throughput, configured Gunicorn topology, allowlisted pool aggregates, requirement IDs, and terminal listener closure."
+    },
+    {
+      "id": "TEST-252",
+      "module": "Tests",
+      "description": "Listener-free PostgreSQL registration evidence binds canonical defaults, deterministic environment overrides, complete TCP-port and blank-identifier rejection, fixed secret-free diagnostics, public configuration identity, psycopg keyword translation, explicit lazy future-provider resolution, absent-driver and incomplete-provider failure, JSON/MySQL import isolation, and unchanged unknown-selector behavior.",
+      "status": "PASS",
+      "api_tests": [
+        "POSTGRES-CONFIG-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/postgres_registration_tests.py",
+        "tests/storage_package_boundary_tests.py",
+        "tests/cases/api/storage_foundation.py",
+        "tests/cicd_deployment_tests.py"
+      ],
+      "introduced_in": "issue-1055-postgres-registration",
+      "changed_in": "issue-1055-postgres-registration",
+      "notes": "The focused suite replaces established provider constructors with inert fakes and intercepts the exact dynamic import boundary. It opens no driver, connector, database, listener, provider service, or production target and restores every environment value."
     },
     {
       "id": "ROU-001",
