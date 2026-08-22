@@ -1,0 +1,20 @@
+{
+  "version": 4,
+  "name": "game-action-claims",
+  "description": "Add reset-epoch ownership, immutable execute-or-uncommitted claims, and receipt-to-claim binding.",
+  "statements": [
+    "CREATE TABLE casino_game_action_epoch_state (state_id SMALLINT NOT NULL, current_epoch BIGINT NOT NULL, phase VARCHAR(16) NOT NULL, PRIMARY KEY (state_id), CONSTRAINT chk_game_action_epoch_singleton CHECK (state_id = 1), CONSTRAINT chk_game_action_epoch_range CHECK (current_epoch BETWEEN 1 AND 9223372036854775807), CONSTRAINT chk_game_action_epoch_phase CHECK (phase IN ('ready', 'resetting'))) ",
+    "INSERT INTO casino_game_action_epoch_state (state_id, current_epoch, phase) VALUES (1, 1, 'ready') ON CONFLICT (state_id) DO NOTHING",
+    "ALTER TABLE casino_game_action_receipts ADD COLUMN reset_epoch BIGINT NOT NULL DEFAULT 1",
+    "ALTER TABLE casino_game_action_receipts ALTER COLUMN reset_epoch DROP DEFAULT",
+    "ALTER TABLE casino_game_action_receipts DROP CONSTRAINT casino_game_action_receipts_pkey",
+    "ALTER TABLE casino_game_action_receipts ADD PRIMARY KEY (reset_epoch, game_id, player_id, action_key)",
+    "CREATE TABLE casino_game_action_claims (reset_epoch BIGINT NOT NULL, game_id VARCHAR(191) NOT NULL, player_id VARCHAR(191) NOT NULL, action_key VARCHAR(191) NOT NULL, request_fingerprint CHAR(64) NOT NULL, resources_json JSONB NOT NULL, disposition VARCHAR(16) NOT NULL, PRIMARY KEY (reset_epoch, game_id, player_id, action_key), CONSTRAINT uq_game_action_claim_semantics UNIQUE (reset_epoch, game_id, player_id, action_key, disposition, request_fingerprint), CONSTRAINT chk_game_action_claim_epoch CHECK (reset_epoch BETWEEN 1 AND 9223372036854775807), CONSTRAINT chk_game_action_claim_fingerprint CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'), CONSTRAINT chk_game_action_claim_resources CHECK (jsonb_typeof(resources_json) = 'object' AND octet_length(resources_json::text) BETWEEN 2 AND 16384), CONSTRAINT chk_game_action_claim_disposition CHECK (disposition IN ('execute', 'uncommitted'))) ",
+    "INSERT INTO casino_game_action_claims (reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, disposition) SELECT reset_epoch, game_id, player_id, action_key, request_fingerprint, resources_json, 'execute' FROM casino_game_action_receipts",
+    "ALTER TABLE casino_game_action_receipts ADD COLUMN claim_disposition VARCHAR(16) NOT NULL DEFAULT 'execute'",
+    "ALTER TABLE casino_game_action_receipts ALTER COLUMN claim_disposition DROP DEFAULT",
+    "ALTER TABLE casino_game_action_receipts ADD CONSTRAINT chk_game_action_receipt_disposition CHECK (claim_disposition = 'execute')",
+    "ALTER TABLE casino_game_action_receipts ADD CONSTRAINT uq_game_action_receipt_claim UNIQUE (reset_epoch, game_id, player_id, action_key, claim_disposition, request_fingerprint)",
+    "ALTER TABLE casino_game_action_receipts ADD CONSTRAINT fk_game_action_receipt_claim FOREIGN KEY (reset_epoch, game_id, player_id, action_key, claim_disposition, request_fingerprint) REFERENCES casino_game_action_claims (reset_epoch, game_id, player_id, action_key, disposition, request_fingerprint) ON UPDATE RESTRICT ON DELETE RESTRICT"
+  ]
+}
