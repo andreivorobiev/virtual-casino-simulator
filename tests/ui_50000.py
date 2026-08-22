@@ -38,6 +38,7 @@ READY_TEST_IDS = {game["id"]: game["frontend"]["ready_testid"] for game in GAMES
 UI_STRATEGY_FAMILIES, IMPLEMENTED_UI_STRATEGY_FAMILIES = control_schedule.UI_STRATEGY_FAMILIES, control_schedule.IMPLEMENTED_UI_STRATEGY_FAMILIES
 DRAW_POKER_UI_CONTROLS, PAI_GOW_RANK_VALUES, SIMPLE_TERMINAL_UI_STRATEGIES = control_schedule.DRAW_POKER_UI_CONTROLS, control_schedule.PAI_GOW_RANK_VALUES, control_schedule.SIMPLE_TERMINAL_UI_STRATEGIES
 REPEAT_CONTROL_SELECTORS, CONTROL_ACTIVATION_FLOOR = control_schedule.REPEAT_CONTROL_SELECTORS, control_schedule.CONTROL_ACTIVATION_FLOOR
+ACEY_DEUCEY_REPEAT_SEED_LIMIT, SAME_MOUNT_REPEAT_GAME_IDS = control_schedule.ACEY_DEUCEY_REPEAT_SEED_LIMIT, control_schedule.SAME_MOUNT_REPEAT_GAME_IDS
 KENO_NUMBER_CLICKS_PER_CYCLE, SIC_BO_WAGER_CLICKS_PER_CYCLE = control_schedule.KENO_NUMBER_CLICKS_PER_CYCLE, control_schedule.SIC_BO_WAGER_CLICKS_PER_CYCLE
 ROULETTE_NUMBER_COUNTS, ROULETTE_SPECIAL_COUNTS = control_schedule.ROULETTE_NUMBER_COUNTS, control_schedule.ROULETTE_SPECIAL_COUNTS
 # Apply the authoritative governed viewport inventory to distributed visual evidence.
@@ -192,6 +193,7 @@ roulette_mode_for_ordinal, roulette_number_schedule = control_schedule.roulette_
 roulette_special_schedule, roulette_autoplay_ordinal = control_schedule.roulette_special_schedule, control_schedule.roulette_autoplay_ordinal
 should_probe_roulette_mode, should_rotate_roulette_zero_rule = control_schedule.should_probe_roulette_mode, control_schedule.should_rotate_roulette_zero_rule
 bingo_navigation_entry = control_schedule.bingo_navigation_entry
+acey_deucey_navigation_entry, same_mount_repeat_navigation_entry = control_schedule.acey_deucey_navigation_entry, control_schedule.same_mount_repeat_navigation_entry
 
 
 # Preserve historical classification names while the extracted module owns byte-equivalent policy. (TEST-092)
@@ -419,27 +421,9 @@ async def roulette_reset_seed_and_spin(page, ordinal, activated_counts):
     await roulette_terminal_action(page, activated_counts)  # Observe the strict disabled resolving render before accepting settlement.
 
 
-# Complete one Acey-Deucey round without editing its wager before the boundary deal enables that decision input.
-async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts, opening_started=False):
-    if not opening_started:  # Open a fresh wager only when scheduled Repeat did not already deal this cycle's boundary cards.
-        await click_control(page, '[data-action="deal"]', activated_counts)  # Reveal the two free boundary cards before touching the phase-owned wager input.
-    choice = await wait_any_enabled(page, ['[data-action="play"]', '[data-action="pass"]', '[data-action="deal"]'])  # Wait for a legal decision or an automatically terminal pair/consecutive deal.
-    if choice == '[data-action="deal"]':  # Accept a round that settled without exposing a player decision.
-        await inventory_controls(page, seen_counts)  # Preserve the terminal next-deal control for complete coverage accounting.
-        return "non_wager"  # Classify the automatic free-boundary result without fabricating ledger evidence.
-    await inventory_controls(page, seen_counts)  # Discover both legal decision controls and the newly enabled wager input.
-    decisions = await enabled_locators(page, '[data-action="play"],[data-action="pass"]')  # Resolve only currently actionable decision buttons after the deal rerender.
-    if not decisions:  # Reject a prepared round that exposes no legal choice.
-        raise AssertionError("Acey-Deucey exposed no decision")  # Preserve a bounded product-state diagnostic.
-    decision = decisions[ordinal % len(decisions)]  # Rotate real Play and Pass actions across the complete game quota.
-    action = await decision.get_attribute("data-action")  # Read the stable semantic identity before the decision rerenders the route.
-    if action == "play":  # Supply a wager only for the action whose real contract consumes one.
-        await fill_control(page.locator("#acey-wager").first, "1", activated_counts)  # Edit the now-enabled public input immediately before Play.
-    elif action != "pass":  # Refuse an unexpected control admitted by a future selector regression.
-        raise AssertionError("Acey-Deucey exposed an unknown decision")  # Keep the state-machine mismatch actionable.
-    await click_locator(decision, activated_counts)  # Commit the selected decision through Playwright's real pointer path.
-    await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal settlement and fresh-boundary readiness.
-    return "wager_required" if action == "play" else "non_wager"  # Bind ledger acceptance to the actual rendered decision.
+# Complete one Acey-Deucey round while the extracted transition owner enforces bounded formal Repeat bootstrap.
+async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts, opening_started=False, require_repeat_seed=False):
+    return await transitions.acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts, opening_started=opening_started, require_repeat_seed=require_repeat_seed, seed_limit=ACEY_DEUCEY_REPEAT_SEED_LIMIT, click_control=click_control, wait_any_enabled=wait_any_enabled, inventory_controls=inventory_controls, enabled_locators=enabled_locators, fill_control=fill_control, click_locator=click_locator)  # Supply only existing public interaction seams and the source-bound seed ceiling.
 
 
 # Select one least-covered draw-poker hold only after both the deal and hold response own the rendered DOM.
@@ -883,8 +867,9 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         else:  # Preserve ordinary side rotation on fresh cycles.
             await click_control(page, f'[data-side="{"andar" if ordinal % 2 == 0 else "bahar"}"]', activated_counts)  # Select a rotating side.
             await terminal_action(page, '[data-action="play"]', activated_counts)  # Deal and settle the round.
-    elif strategy_family == "acey_deucey":  # Exercise pass and play when legally available.
-        action_evidence = await acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts, repeated)  # Classify the actual rendered Pass, Play, or automatic free-boundary result.
+    elif strategy_family == "acey_deucey":  # Exercise pass and play while guaranteeing the formal Repeat owner's seed wager.
+        require_repeat_seed = formal and worker_ordinal == 0 and formal_repeat_quota(game_id, replica_index) > 0  # Apply bounded bootstrap only to a user that owns a real Repeat share.
+        action_evidence = await acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts, repeated, require_repeat_seed)  # Classify the actual rendered Pass or Play without fabricating state.
     elif strategy_family == "caribbean_stud":  # Exercise call and fold decisions.
         if not repeated:  # Preserve Repeat as the sole ante entry for its assigned cycle.
             await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the five-card hand.
@@ -1222,15 +1207,15 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
                     report["attempted_actions"] += 1  # Count every real browser play attempt, including recovery attempts.
                     started = time.perf_counter()  # Start end-to-end navigation and gameplay timing.
                     try:  # Continue after bounded product failures so exact completion can still be measured.
-                        same_mount_bingo_repeat = game_id == "bingo" and should_schedule_repeat(game_id, ordinal, replica_index, formal_worker)  # Preserve route-local lastBet only for this replica's exact replay share.
-                        if same_mount_bingo_repeat:  # Continue directly from the prior successful same-user seed or replay settlement.
-                            await page.get_by_test_id(READY_TEST_IDS[game_id]).wait_for(state="visible", timeout=operation_timeout_ms(SETUP_TIMEOUT_MS))  # Require the owned Bingo mount to survive before replay.
-                            CONTROL_NAMESPACE.set(game_id)  # Attribute the same-mount replay controls to Bingo without fabricating shell navigation.
+                        same_mount_repeat = game_id in SAME_MOUNT_REPEAT_GAME_IDS and should_schedule_repeat(game_id, ordinal, replica_index, formal_worker)  # Preserve route-local wager history for each exact replay share.
+                        if same_mount_repeat:  # Continue directly from the prior successful same-user seed or replay settlement.
+                            await page.get_by_test_id(READY_TEST_IDS[game_id]).wait_for(state="visible", timeout=operation_timeout_ms(SETUP_TIMEOUT_MS))  # Require the owned game mount to survive before replay.
+                            CONTROL_NAMESPACE.set(game_id)  # Attribute same-mount replay controls without fabricating shell navigation.
                         else:  # Navigate every seed and ordinary fresh cycle through one real catalog entry.
-                            entry_kind = None  # Preserve established navigation schedules outside formal Bingo.
-                            if game_id == "bingo" and formal_worker:  # Replace the removed replay entries with an exact gapless real nav/open schedule.
+                            entry_kind = None  # Preserve established navigation outside formal same-mount games.
+                            if game_id in SAME_MOUNT_REPEAT_GAME_IDS and formal_worker:  # Replace removed replay entries with an exact gapless real nav/open schedule.
                                 ordinary_ordinal = formal_ordinary_ordinal(game_id, scheduled_ordinal, ordinal, replica_index)  # Resolve this fresh cycle's continuous rank across replicas.
-                                entry_kind = bingo_navigation_entry(ordinary_ordinal)  # Allocate exactly one hundred nav entries and eight hundred eighty-seven lobby-card entries.
+                                entry_kind = same_mount_repeat_navigation_entry(game_id, ordinary_ordinal)  # Allocate exactly one hundred nav entries and eight hundred eighty-seven lobby-card entries.
                             await navigate_to_game(page, game_id, activated_counts, scheduled_ordinal, entry_kind=entry_kind)  # Navigate visibly while preserving exact catalog-control floors.
                         await play_game_ui(page, game_id, scheduled_ordinal, seen_counts, activated_counts, replica_index, ordinal, formal_worker)  # Complete one rendered-control play using continuous game ranks and isolated-user Repeat ownership.
                         latencies.append(time.perf_counter() - started)  # Record successful full-cycle latency.

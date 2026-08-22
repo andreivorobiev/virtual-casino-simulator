@@ -13,6 +13,10 @@ from casino.config import GAMES
 GAME_IDS = tuple(game["id"] for game in GAMES)
 # Require the issue-owned activation floor for every ordinarily reachable eligible control.
 CONTROL_ACTIVATION_FLOOR = 100
+# Bound Acey-Deucey formal seed traversal to the product's complete retained-history window.
+ACEY_DEUCEY_REPEAT_SEED_LIMIT = 20
+# Preserve route-local replay state only for games whose product teardown clears otherwise valid Repeat ownership.
+SAME_MOUNT_REPEAT_GAME_IDS = frozenset({"acey_deucey", "bingo"})
 # Bind every registered game to one explicit rendered-control strategy family. (TEST-092, issue #1050)
 UI_STRATEGY_FAMILIES = {
     "roulette": "roulette", "slots": "slots", "keno": "keno", "bingo": "bingo", "blackjack": "blackjack", "baccarat": "baccarat",  # Bind the six primary game strategies.
@@ -200,12 +204,25 @@ def should_rotate_roulette_zero_rule(game_ordinal):
     return (101 <= ordinal <= 1081 and (ordinal - 101) % 10 == 0) or ordinal == 1086  # Distribute ninety-nine rotations plus one terminal rotation.
 
 
-# Preserve the first one hundred Bingo catalog-nav activations after removing same-mount replay-only cycles.
-def bingo_navigation_entry(ordinary_ordinal):
+# Preserve the first one hundred catalog-nav activations after removing same-mount replay-only cycles.
+def same_mount_repeat_navigation_entry(game_id, ordinary_ordinal):
+    labels = {"acey_deucey": "Acey-Deucey", "bingo": "Bingo"}  # Bind diagnostics to the exact two reviewed route-local replay games.
+    if game_id not in SAME_MOUNT_REPEAT_GAME_IDS:  # Refuse accidental reuse for a game whose navigation plan was not reviewed.
+        raise AssertionError(f"unsupported same-mount Repeat game: {game_id}")  # Preserve one bounded schedule diagnostic.
     ordinal = int(ordinary_ordinal)  # Normalize the gapless fresh rank once.
     if not 0 <= ordinal < 987:  # Reject stale allocation arithmetic outside the exact post-replay fresh inventory.
-        raise AssertionError(f"invalid Bingo ordinary ordinal: {ordinal}")  # Preserve one bounded schedule diagnostic.
+        raise AssertionError(f"invalid {labels[game_id]} ordinary ordinal: {ordinal}")  # Preserve one bounded game-owned diagnostic.
     return "nav" if ordinal < CONTROL_ACTIVATION_FLOOR else "open"  # Produce exact nav=100 and open=887 across 987 fresh cycles.
+
+
+# Preserve the historical Bingo schedule seam for focused callers and prior evidence.
+def bingo_navigation_entry(ordinary_ordinal):
+    return same_mount_repeat_navigation_entry("bingo", ordinary_ordinal)  # Delegate without changing exact navigation arithmetic.
+
+
+# Expose the independently named Acey-Deucey schedule seam for exact worker eighty-five evidence.
+def acey_deucey_navigation_entry(ordinary_ordinal):
+    return same_mount_repeat_navigation_entry("acey_deucey", ordinary_ordinal)  # Delegate to the reviewed shared route-preservation plan.
 
 
 # Resolve the honest opportunity budget for mutually exclusive rare decisions.

@@ -3,6 +3,49 @@
 """Response-and-generation transition helpers for the TEST-092 browser harness."""
 
 
+# Complete one Acey-Deucey round while requiring formal seed cycle zero to establish one durable played wager.
+async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts, *, opening_started, require_repeat_seed, seed_limit, click_control, wait_any_enabled, inventory_controls, enabled_locators, fill_control, click_locator):
+    boundary_limit = int(seed_limit) if require_repeat_seed else 1  # Traverse the complete bounded seed window only for the exact formal bootstrap.
+    if boundary_limit < 1:  # Refuse stale or missing source-bound seed policy.
+        raise AssertionError("Acey-Deucey repeat seed limit is invalid")  # Fail before any public action is dispatched.
+    if not opening_started:  # Open a fresh boundary only when scheduled Repeat did not already deal this cycle.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Use the real rendered Deal pointer path.
+    for boundary_index in range(boundary_limit):  # Bound distinct free rounds without retrying any action identity.
+        choice = await wait_any_enabled(page, ['[data-action="play"]', '[data-action="pass"]', '[data-action="deal"]'])  # Wait for one legal decision or ordinary terminal readiness.
+        if choice == '[data-action="deal"]':  # Preserve predecessor handling for a nonformal automatically terminal boundary.
+            await inventory_controls(page, seen_counts)  # Record the truthful ready-state controls before returning.
+            if require_repeat_seed:  # A formal bootstrap must establish a wagered settlement, never accept a no-wager seed.
+                raise AssertionError("Acey-Deucey repeat seed exposed no decision")  # Fail closed without dispatching another Deal as a retry.
+            return "non_wager"  # Preserve ordinary no-ledger evidence.
+        await inventory_controls(page, seen_counts)  # Discover live Play and Pass controls after the boundary render.
+        decisions = await enabled_locators(page, '[data-action="play"],[data-action="pass"]')  # Resolve only actionable public decisions.
+        if not decisions:  # Reject a prepared round that exposes no legal choice.
+            raise AssertionError("Acey-Deucey exposed no decision")  # Keep the state-machine mismatch bounded.
+        decision = decisions[ordinal % len(decisions)]  # Preserve ordinary and Repeat-opened decision rotation outside formal bootstrap.
+        if require_repeat_seed:  # Bootstrap Repeat only through the first genuinely priceable played round.
+            for item in decisions:  # Inspect only already-actionable rendered decision locators.
+                if await item.get_attribute("data-action") == "play":  # Select one legally enabled Play control.
+                    decision = item  # Bind the priceable action before any wager edit.
+                    break  # Stop after the first exact Play identity.
+        action = await decision.get_attribute("data-action")  # Read the stable semantic identity before the route rerenders.
+        if action == "play":  # Supply a wager only for the action whose public contract consumes one.
+            await fill_control(page.locator("#acey-wager").first, "1", activated_counts)  # Edit the enabled wager immediately before Play.
+        elif action != "pass":  # Refuse any unexpected control admitted by a selector regression.
+            raise AssertionError("Acey-Deucey exposed an unknown decision")  # Keep the public mismatch actionable.
+        await click_locator(decision, activated_counts)  # Commit Play or Pass through the ordinary real pointer path.
+        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal completion and next-boundary readiness.
+        if action == "play":  # A wagered settlement establishes both route-local and reload-safe Repeat ownership.
+            if require_repeat_seed:  # Bind formal cycle zero to the exact control needed by cycle one.
+                await wait_any_enabled(page, ['[data-action="repeat"]'])  # Require rendered Repeat readiness before completing the seed case.
+            return "wager_required"  # Preserve exact ledger-evidence classification.
+        if not require_repeat_seed:  # Ordinary and Repeat-opened Pass remains this cycle's complete non-wager terminal action.
+            return "non_wager"  # Do not fabricate ledger evidence for a real Pass.
+        if boundary_index + 1 == boundary_limit:  # Stop after the complete retained-history-sized seed window.
+            raise AssertionError(f"Acey-Deucey repeat seed found no priceable boundary in {boundary_limit} deals")  # Fail closed before a twenty-first Deal.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Open one distinct next free round after the accepted Pass.
+    raise AssertionError("Acey-Deucey repeat seed traversal escaped its bound")  # Keep impossible control flow explicitly fail closed.
+
+
 # Reset Bingo only from an active generation and require its replacement purchase generation.
 async def bingo_reset_to_purchase(page, activated_counts, *, wait_any_enabled, locator_ready, click_control, operation_timeout_ms, action_timeout_ms):
     await wait_any_enabled(page, ['[data-testid="bingo-buy"]', '[data-testid="bingo-reset"]'])  # Let any dispatched Buy or Call reach one authoritative actionable boundary.

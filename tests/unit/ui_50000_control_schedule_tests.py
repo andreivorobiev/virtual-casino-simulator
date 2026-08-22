@@ -61,6 +61,36 @@ class UI50000ControlScheduleTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "invalid Bingo ordinary ordinal"):
             ui_50000.bingo_navigation_entry(987)  # Reject a fresh rank beyond the exact post-replay inventory.
 
+    # Prove Acey-Deucey keeps its complete Repeat share on one mount and retains exact real navigation floors afterward.
+    def test_acey_deucey_seed_limit_same_mount_repeat_and_navigation_plan_are_exact(self):
+        from casino.games.acey_deucey.engine import RECENT_ROUND_LIMIT  # Bind the harness ceiling to the product's complete recoverable history window.
+
+        self.assertEqual(ui_50000.ACEY_DEUCEY_REPEAT_SEED_LIMIT, RECENT_ROUND_LIMIT)  # Reject drift between bounded seed evidence and public history capacity.
+        self.assertEqual(ui_50000.SAME_MOUNT_REPEAT_GAME_IDS, frozenset({"acey_deucey", "bingo"}))  # Limit route preservation to the two reviewed transient replay owners.
+        allocations = [allocation for allocation in ui_50000.formal_allocations() if allocation[0] == "acey_deucey"]  # Resolve exact worker eighty-five ownership.
+        self.assertEqual(len(allocations), 1)  # Preserve one isolated Acey-Deucey worker and its unchanged duration profile.
+        replay_locals = []  # Collect only exact same-mount Repeat cycles.
+        ordinary_ranks = []  # Preserve all remaining fresh ranks without aliases or holes.
+        navigation_counts = Counter()  # Count real catalog entries plus lobby returns on navigated cycles.
+        for game_id, _game_index, replica_index, quota, cycle_start in allocations:  # Traverse all 1,087 exact assigned IDs once.
+            self.assertEqual(quota, 1087)  # Bind navigation arithmetic to the frozen one-worker allocation.
+            for local_ordinal in range(quota):  # Reproduce the production route-preservation decision.
+                game_ordinal = ui_50000.coverage_ordinal(game_id, local_ordinal, cycle_start + local_ordinal, True)  # Resolve the continuous game rank.
+                if ui_50000.should_schedule_repeat(game_id, local_ordinal, replica_index, True):  # Match the exact local1..100 replay share.
+                    replay_locals.append(local_ordinal)  # Credit one real same-mount Repeat case.
+                    continue  # Forbid fabricated navigation on replay-only cycles.
+                ordinary = ui_50000.formal_ordinary_ordinal(game_id, game_ordinal, local_ordinal, replica_index)  # Collapse the exact Repeat prefix.
+                ordinary_ranks.append(ordinary)  # Preserve gapless fresh strategy ownership.
+                navigation_counts[ui_50000.acey_deucey_navigation_entry(ordinary)] += 1  # Credit the scheduled public game entry.
+                navigation_counts["lobby"] += 1  # Every navigated case first returns through the real Lobby control.
+        self.assertEqual(replay_locals, list(range(1, 101)))  # Keep exactly one hundred consecutive replay cycles after local seed zero.
+        self.assertEqual(ordinary_ranks, list(range(987)))  # Preserve exactly 987 fresh ranks including seed rank zero.
+        self.assertEqual(navigation_counts, Counter({"lobby": 987, "open": 887, "nav": 100}))  # Keep all three exact shell controls above the literal floor.
+        with self.assertRaisesRegex(AssertionError, "invalid Acey-Deucey ordinary ordinal"):
+            ui_50000.acey_deucey_navigation_entry(-1)  # Reject stale negative fresh-rank arithmetic.
+        with self.assertRaisesRegex(AssertionError, "invalid Acey-Deucey ordinary ordinal"):
+            ui_50000.acey_deucey_navigation_entry(987)  # Reject a rank beyond the exact post-replay inventory.
+
     # Prove Roulette setting mutations are deterministic, distributed off Rebet, and sufficient for literal control floors.
     def test_roulette_serialized_settings_schedule_reaches_exact_control_floors(self):
         mode_probes = [ordinal for ordinal in range(1087) if ui_50000.should_probe_roulette_mode(ordinal)]  # Enumerate every opposite-mode probe.

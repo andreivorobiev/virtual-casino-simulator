@@ -1776,7 +1776,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "bingo_admin.py")
         # Bind each reduced affinity tuple while preserving the complete historical source order.
         expected_groups = {
-            "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BINGO-FORMAL-REPLAY-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
+            "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BINGO-FORMAL-REPLAY-001", "BR-AD-FORMAL-REPLAY-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
             "feedback_admin": ("BR-FEEDBACK-001", "BR-ADMIN-NAV-AUTH-001", "BR-ADMIN-001", "BR-ADMIN-DIAGNOSTICS-001", "BR-ADMIN-ECONOMICS-001", "BR-ADMIN-SESSION-POLICY-001", "BR-ADMIN-LEDGER-LABELS-001", "BR-ADMIN-FEEDBACK-001", "BR-ADMIN-OAUTH-001", "BR-ADMIN-MAIL-001", "BR-INVITE-001", "BR-OPS-001"),
             "admin_presentation": ("BR-ADMIN-PRACTICE-OPPONENT-001", "BR-ADMIN-USERS-001", "BR-ADMIN-GUEST-001", "BR-AUDIO-001", "BR-I18N-FOUNDATION-001", "BR-I18N-ADMIN-001"),
         }
@@ -1827,8 +1827,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         from tests import runner as browser_runner_module
         # Discover inline and extracted permanent IDs at their exact cross-file source positions.
         case_ids = browser_runner_module.browser_case_ids()
-        # Bind the complete inventory after adding the two formal race regressions. (TEST-092)
-        self.assertEqual(len(case_ids), 132)
+        # Bind the complete inventory after adding the Acey-Deucey formal lifecycle regression. (TEST-092)
+        self.assertEqual(len(case_ids), 133)
         # Read the first extracted Browser affinity owner for guard-location checks below.
         auth_backend_pwa_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
         # Read the extracted disposable guest-lifecycle owner for guard-location checks below.
@@ -1855,8 +1855,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
-        # Bind deterministic load totals after packing the two formal race regressions. (TEST-092, TEST-242)
-        self.assertEqual(shard_loads, (226, 227, 227, 225, 226, 225))
+        # Bind deterministic load totals after packing the three formal lifecycle regressions. (TEST-092, TEST-242)
+        self.assertEqual(shard_loads, (228, 226, 227, 226, 226, 227))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 3)
         # Prove additional runners now reduce the reviewed full-run floor beyond six shards.

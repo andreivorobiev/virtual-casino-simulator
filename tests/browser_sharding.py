@@ -32,7 +32,7 @@ BROWSER_CASE_AFFINITY_GROUPS = {
     # Keep Keno edge-state production and the premium-result consumer together.
     "keno": ("BR-KENO-EDGE-001", "BR-KENO-001"),
     # Keep Bingo, Blackjack, Baccarat, route localization, and wellness state together.
-    "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BINGO-FORMAL-REPLAY-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
+    "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BINGO-FORMAL-REPLAY-001", "BR-AD-FORMAL-REPLAY-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
     # Keep feedback production and all operational Admin consumers together.
     "feedback_admin": ("BR-FEEDBACK-001", "BR-ADMIN-NAV-AUTH-001", "BR-ADMIN-001", "BR-ADMIN-DIAGNOSTICS-001", "BR-ADMIN-ECONOMICS-001", "BR-ADMIN-SESSION-POLICY-001", "BR-ADMIN-LEDGER-LABELS-001", "BR-ADMIN-FEEDBACK-001", "BR-ADMIN-OAUTH-001", "BR-ADMIN-MAIL-001", "BR-INVITE-001", "BR-OPS-001"),
     # Keep practice-opponent production beside its localized consumer and final Admin presentation chain.

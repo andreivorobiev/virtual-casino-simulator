@@ -12,6 +12,87 @@ from tests import ui_50000  # Exercise the exact production harness helpers owne
 
 # Prove formal UI transitions serialize server responses and rendered generations.
 class UI50000TransitionTests(unittest.TestCase):
+    # Prove Acey-Deucey formal seed traversal commits the first legal Play and fails before a twenty-first distinct Deal. (TEST-092)
+    def test_acey_deucey_repeat_seed_traversal_is_bounded_and_pointer_only(self):
+        # Execute one deterministic rendered-decision sequence and return its public interaction trace.
+        async def run_scenario(actions):
+            events = []  # Record only Deal, decision, wager, and readiness boundaries.
+            position = 0  # Own the next distinct prepared boundary in this fake public state machine.
+
+            class FakeWager:  # Model the real enabled wager input locator.
+                first = None  # Populate the Playwright-compatible first seam after class creation.
+
+            wager = FakeWager()  # Allocate one stable input identity for fill evidence.
+            wager.first = wager  # Match Playwright locator.first without private state.
+
+            class FakeDecision:  # Model one already-actionable rendered Play or Pass locator.
+                def __init__(self, action):
+                    self.action = action  # Preserve only the stable public data-action value.
+
+                async def get_attribute(self, name):
+                    self.requested_name = name  # Retain the exact semantic attribute inspected by production.
+                    return self.action  # Return Play or Pass without exposing product-private state.
+
+            class FakePage:  # Provide only the public locator seam required for the wager edit.
+                def locator(self, selector):
+                    events.append(f"locator:{selector}")  # Record exact wager ownership.
+                    return wager  # Return the one compatible public input locator.
+
+            page = FakePage()  # Create one isolated fake browser surface.
+
+            async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+                events.append(f"control:{selector}")  # Record every distinct rendered Deal pointer dispatch.
+
+            async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+                if selectors == ['[data-action="play"]', '[data-action="pass"]', '[data-action="deal"]']:
+                    events.append(f"decision:{actions[position]}")  # Record the current prepared boundary's public decision.
+                    return f'[data-action="{actions[position]}"]'  # Return only the modeled legal decision identity.
+                events.append(f"ready:{'|'.join(selectors)}")  # Record terminal Deal and formal Repeat readiness separately.
+                return selectors[0]  # Model exact requested readiness without a timeout shortcut.
+
+            async def fake_inventory_controls(_page, _seen_counts):
+                events.append("inventory")  # Record one truthful inventory after every prepared boundary.
+
+            async def fake_enabled_locators(_page, selector):
+                events.append(f"enabled:{selector}")  # Bind discovery to the exact Play/Pass selector.
+                if actions[position] == "play":  # Prove formal bootstrap prefers Play even when Pass appears first.
+                    return [FakeDecision("pass"), FakeDecision("play")]  # Model both legally actionable controls in reverse preferred order.
+                return [FakeDecision("pass")]  # Model a zero-spread pass-only boundary.
+
+            async def fake_fill_control(locator, value, _activated_counts):
+                events.append(("fill", locator is wager, value))  # Record the real wager seam only on Play.
+
+            async def fake_click_locator(locator, _activated_counts):
+                nonlocal position  # Advance only after one rendered decision pointer commits.
+                events.append(f"click:{locator.action}")  # Record the exact terminal decision.
+                position += 1  # Move to the next distinct prepared round after successful Pass or Play.
+
+            with mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control), mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled), mock.patch.object(ui_50000, "inventory_controls", side_effect=fake_inventory_controls), mock.patch.object(ui_50000, "enabled_locators", side_effect=fake_enabled_locators), mock.patch.object(ui_50000, "fill_control", side_effect=fake_fill_control), mock.patch.object(ui_50000, "click_locator", side_effect=fake_click_locator):  # Exercise the exact production wrapper without browser or API shortcuts.
+                try:  # Preserve the bounded exhaustion result for exact no-twenty-first assertions.
+                    result = await ui_50000.acey_deucey_terminal_action(page, 0, Counter(), Counter(), require_repeat_seed=True)  # Run formal local seed cycle zero.
+                except AssertionError as exc:  # Capture only expected fail-closed seed exhaustion.
+                    result = exc  # Return the original bounded diagnostic.
+            return result, events  # Expose semantic action order for exact assertions.
+
+        immediate_result, immediate_events = asyncio.run(run_scenario(["play"]))  # Exercise an immediately priceable first boundary.
+        self.assertEqual(immediate_result, "wager_required")  # Require one durable wagered settlement.
+        self.assertEqual(immediate_events.count('control:[data-action="deal"]'), 1)  # Dispatch exactly one fresh Deal.
+        self.assertNotIn("click:pass", immediate_events)  # Forbid a needless Pass when Play is already legal.
+        self.assertIn(("fill", True, "1"), immediate_events)  # Bind the real wager edit immediately before Play.
+        self.assertEqual(immediate_events[-2:], ['ready:[data-action="deal"]', 'ready:[data-action="repeat"]'])  # Require terminal and Repeat readiness before completion.
+        nineteenth_result, nineteenth_events = asyncio.run(run_scenario(["pass"] * 19 + ["play"]))  # Exercise the complete retained-history window ending in Play.
+        self.assertEqual(nineteenth_result, "wager_required")  # Accept the twentieth distinct boundary's legal wager.
+        self.assertEqual(nineteenth_events.count('control:[data-action="deal"]'), 20)  # Require one new rendered Deal per distinct boundary.
+        self.assertEqual(nineteenth_events.count("click:pass"), 19)  # Close every prior pass-only boundary exactly once.
+        self.assertEqual(nineteenth_events.count("click:play"), 1)  # Commit exactly one seed wager.
+        exhausted_result, exhausted_events = asyncio.run(run_scenario(["pass"] * 20))  # Exercise complete bounded pass-only exhaustion.
+        self.assertIsInstance(exhausted_result, AssertionError)  # Fail closed instead of proceeding without Repeat ownership.
+        self.assertIn("20 deals", str(exhausted_result))  # Publish only the fixed source-bound ceiling.
+        self.assertEqual(exhausted_events.count('control:[data-action="deal"]'), 20)  # Forbid a twenty-first Deal or hidden retry.
+        self.assertEqual(exhausted_events.count("click:pass"), 20)  # Close each distinct prepared round once.
+        self.assertNotIn("click:play", exhausted_events)  # Forbid fabricated wager evidence on exhaustion.
+        self.assertFalse(any(event == 'ready:[data-action="repeat"]' for event in exhausted_events))  # Never accept Repeat readiness without a settled Play.
+
     # Prove Bingo skips a true purchase-ready no-op and otherwise requires response-owned generation replacement. (TEST-092, issue #1052)
     def test_bingo_reset_confirmation_tracks_rendered_active_called_state(self):
         # Execute one browser-free rendered state and return its exact public interaction trace.
