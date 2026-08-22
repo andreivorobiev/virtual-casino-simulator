@@ -13824,6 +13824,18 @@
       "notes": "The pool imports no psycopg or provider implementation and opens no connector during construction. A later provider lane supplies the connector adapter and reuses the existing cached-provider close_pool process-exit hook; this lane adds no global pool registry or production setting."
     },
     {
+      "id": "STORAGE-022",
+      "module": "Storage",
+      "description": "A checksum-bound PostgreSQL migration catalog defines the exact contiguous schema-one-through-five relational contract for players, ledger, history, documents, action identities, immutable claims and receipts, reset epochs, and first-class sessions. The deployment-only runner applies that catalog only to an explicitly marked disposable PostgreSQL target under a session advisory lock and separate keyed target binding, while ordinary runtime compatibility performs SELECT-only exact-clean version, checksum-prefix, and finite-state verification without reading migration credentials, keys, markers, or environment state.",
+      "status": "PASS",
+      "api_tests": ["POSTGRES-MIGRATION-001", "POSTGRES-MIGRATION-LIVE-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/postgres_migrations.py", "migrations/postgres/catalog.json", "migrations/postgres/0001_initial.json", "migrations/postgres/0002_action_identity.json", "migrations/postgres/0003_game_action_receipts.json", "migrations/postgres/0004_game_action_claims.json", "migrations/postgres/0005_first_class_sessions.json", "scripts/postgres_migrate.py", "tests/postgres_migration_tests.py", "tests/postgres_migration_live.py", "tests/cases/api/storage_foundation.py"],
+      "introduced_in": "issue-1057-postgres-migrations",
+      "changed_in": "issue-1057-postgres-migrations",
+      "notes": "Descriptors use PostgreSQL identity columns, JSONB, separate indexes, bound parameters, ON CONFLICT, RETURNING, and row locks without changing MySQL catalog bytes or runtime behavior. Application is held until a later provider lane; no production target, grant, deployment, or release mutation is included."
+    },
+    {
       "id": "MYSQL-010",
       "module": "MySQL",
       "description": "Schema five adds casino_sessions with one binary opaque primary key, one unique lowercase token digest, user-activity and expiry indexes, finite lifecycle and generation checks, and a canonical JSON payload bound to duplicated indexed columns. The migration backfills only keyed schema-two-through-four session bridge rows, never persists plaintext bearer tokens, and removes those bridge rows after insertion; runtime session DML is table-scoped while catalog application remains held.",
@@ -13894,6 +13906,18 @@
       "introduced_in": "issue-1056-postgres-pool",
       "changed_in": "issue-1056-postgres-pool",
       "notes": "All physical sessions, cursors, connector failures, transaction states, process identities, and timing gates are deterministic in-memory fakes. The suite imports no driver, opens no listener or network target, and persists no database, credential, or provider state."
+    },
+    {
+      "id": "TEST-254",
+      "module": "Tests",
+      "description": "Listener-free PostgreSQL migration evidence validates contiguous descriptors, immutable checksums and catalog identity, PostgreSQL dialect and table inventory, separate migration configuration, target-binding and disposable guards, dry-run read isolation, exact clean runtime verification, hostile missing, gapped, foreign, future, dirty, applying, checksum, transaction, and lock states, fixed secret-free failures, and unchanged MySQL migration behavior. Explicit disposable PostgreSQL 16 evidence applies versions one through five, exercises identity, JSONB, ON CONFLICT, RETURNING, constraints and FOR UPDATE contention, verifies dict-row runtime readiness across restart, and removes the synthetic role, database, cluster, process, and listener.",
+      "status": "PASS",
+      "api_tests": ["POSTGRES-MIGRATION-001", "POSTGRES-MIGRATION-LIVE-001"],
+      "browser_tests": [],
+      "implementation_files": ["tests/postgres_migration_tests.py", "tests/postgres_migration_live.py", "tests/mysql_migration_tests.py", "tests/cases/api/storage_foundation.py", "tests/api_case_inventory.json", "tests/runner.py"],
+      "introduced_in": "issue-1057-postgres-migrations",
+      "changed_in": "issue-1057-postgres-migrations",
+      "notes": "The live gate requires the exact issue-owned authorization marker and an explicit official PostgreSQL binary root before creating a loopback-only temporary cluster. Evidence is sanitized and all process, listener, role, database, and filesystem residue is checked after cleanup."
     }
   ]
 }

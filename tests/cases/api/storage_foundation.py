@@ -13,6 +13,8 @@ from tests import enrollment_policy_tests
 from tests import mysql_migration_tests
 # Import the bounded MySQL connection-pool suite.
 from tests import mysql_pool_tests
+# Import the checksum-bound PostgreSQL migration-policy suite. (TEST-254)
+from tests import postgres_migration_tests
 # Import PostgreSQL configuration and lazy-selector coverage without importing psycopg. (TEST-252)
 from tests import postgres_registration_tests
 # Import the listener-free bounded PostgreSQL pool suite without importing psycopg. (TEST-253)
@@ -38,7 +40,7 @@ from tests.games import test_game_rule_schema
 
 
 # Register the complete storage/MySQL area at its historical CLI boundary.
-def run_cases(run_case, include_live=False, include_migration_live=False, request_latency_callback=None, gunicorn_json_load_callback=None, gunicorn_load_callback=None):
+def run_cases(run_case, include_live=False, include_migration_live=False, include_postgres_migration_live=False, request_latency_callback=None, gunicorn_json_load_callback=None, gunicorn_load_callback=None):
     """Run the exact default and explicitly selected live storage cases."""
     # Define one focused runner for the extracted provider-neutral package boundary.
     def run_storage_package_boundary_tests():
@@ -153,6 +155,17 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
             # Preserve one fixed provider-neutral diagnostic.
             raise AssertionError("PostgreSQL connection pool lifecycle suite failed")
 
+    # Define one listener-free runner for PostgreSQL catalog and migration-state policy.
+    def run_postgres_migration_policy_tests():
+        # Load only the STORAGE-022 and TEST-254 migration test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(postgres_migration_tests.PostgreSQLMigrationTests)
+        # Execute without opening a connector, listener, or external target.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named central case when catalog, state, or safety evidence drifts.
+        if not result.wasSuccessful():
+            # Preserve one fixed provider-neutral diagnostic.
+            raise AssertionError("PostgreSQL migration policy suite failed")
+
     # Define one focused unittest runner for authenticated recovery and clean-target policy.
     def run_recovery_policy_tests():
         # Load only the #205 synthetic recovery test case.
@@ -194,6 +207,8 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
     run_case("POSTGRES-CONFIG-001", ["STORAGE-001", "STORAGE-003", "STORAGE-004", "STORAGE-020", "TEST-252"], run_postgres_registration_tests)
     # Prove bounded checkout, cleanup, fork isolation, shutdown, and secret-free pool evidence.
     run_case("POSTGRES-POOL-001", ["STORAGE-010", "STORAGE-021", "TEST-253"], run_postgres_pool_tests)
+    # Prove the immutable PostgreSQL catalog, runtime verifier, and disposable-only runner policy.
+    run_case("POSTGRES-MIGRATION-001", ["STORAGE-022", "TEST-254"], run_postgres_migration_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"], run_storage_base_and_json_parity)
     # Execute one identical paid settlement, replay, resolve, and conflict schedule on JSON and MySQL.
@@ -262,3 +277,9 @@ def run_cases(run_case, include_live=False, include_migration_live=False, reques
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
         run_case("MYSQL-MIGRATION-LIVE-001", ["MYSQL-005", "MYSQL-007", "MYSQL-008", "MYSQL-009", "STORAGE-007", "STORAGE-010", "STORAGE-018", "GAMECORE-009", "OTT-001", "OTT-002", "MAIL-002", "MAIL-004", "TEST-048", "TEST-089", "TEST-090", "TEST-141", "TEST-174", "TEST-220", "TEST-246", "TEST-247", "TEST-251"], lambda: run_mysql_migration_live_matrix(request_latency_callback, gunicorn_load_callback))
+    # Execute the disposable PostgreSQL 16 catalog gate only when explicitly requested.
+    if include_postgres_migration_live:
+        # Import the service-dependent lifecycle only after its explicit selector is set.
+        from tests import postgres_migration_live
+        # Map exact apply, restart, dialect, locking, runtime-readiness, and cleanup evidence.
+        run_case("POSTGRES-MIGRATION-LIVE-001", ["STORAGE-022", "TEST-254"], postgres_migration_live.main)

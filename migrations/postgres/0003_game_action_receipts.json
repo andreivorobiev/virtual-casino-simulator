@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "name": "game-action-receipts",
+  "description": "Add exact-scope JSONB receipt capacity for future transactional PostgreSQL game actions.",
+  "statements": [
+    "CREATE TABLE casino_game_action_receipts (game_id VARCHAR(191) NOT NULL, player_id VARCHAR(191) NOT NULL, action_key VARCHAR(191) NOT NULL, request_fingerprint CHAR(64) NOT NULL, resources_json JSONB NOT NULL, receipt_json JSONB NOT NULL, receipt_sha256 CHAR(64) NOT NULL, PRIMARY KEY (game_id, player_id, action_key), CONSTRAINT chk_game_action_request_fingerprint CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'), CONSTRAINT chk_game_action_receipt_sha256 CHECK (receipt_sha256 ~ '^[0-9a-f]{64}$'), CONSTRAINT chk_game_action_resources_json CHECK (jsonb_typeof(resources_json) = 'object' AND octet_length(resources_json::text) BETWEEN 2 AND 16384), CONSTRAINT chk_game_action_receipt_json CHECK (jsonb_typeof(receipt_json) = 'object' AND octet_length(receipt_json::text) BETWEEN 2 AND 8388608))"
+  ]
+}
