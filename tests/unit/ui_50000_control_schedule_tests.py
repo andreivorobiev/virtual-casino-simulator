@@ -32,6 +32,45 @@ class UI50000ControlScheduleTests(unittest.TestCase):
         for game_id, shares in expected.items():  # Pin the reviewed capacity-frontloaded edge cases exactly.
             self.assertEqual([ui_50000.formal_repeat_quota(game_id, replica) for replica in range(len(shares))], shares, game_id)  # Reject a future round-robin overrun.
 
+    # Prove Bingo preserves route-local replay history only for its exact share while every remaining fresh rank reaches one real catalog entry.
+    def test_bingo_same_mount_repeat_and_navigation_plan_is_exact(self):
+        replay_local_ranges = {}  # Preserve the exact same-mount replay positions independently per isolated user.
+        ordinary_ranks = []  # Collect the globally gapless fresh strategy schedule.
+        navigation_counts = Counter()  # Count only real catalog entry controls on navigated cycles.
+        allocations = [allocation for allocation in ui_50000.formal_allocations() if allocation[0] == "bingo"]  # Resolve the immutable twenty-one-worker Bingo plan.
+        for game_id, _game_index, replica_index, quota, cycle_start in allocations:  # Traverse every assigned Bingo ID exactly once.
+            local_replays = []  # Preserve this user's consecutive same-mount replay window.
+            for local_ordinal in range(quota):  # Reproduce the production per-cycle decision.
+                game_ordinal = ui_50000.coverage_ordinal(game_id, local_ordinal, cycle_start + local_ordinal, True)  # Resolve the continuous game rank.
+                if ui_50000.should_schedule_repeat(game_id, local_ordinal, replica_index, True):  # Match the production route-preservation gate.
+                    local_replays.append(local_ordinal)  # Credit one real replay cycle without fabricating navigation.
+                    continue  # Leave fresh scheduling and catalog activation untouched.
+                ordinary = ui_50000.formal_ordinary_ordinal(game_id, game_ordinal, local_ordinal, replica_index)  # Collapse exactly prior replay-only cycles.
+                ordinary_ranks.append(ordinary)  # Preserve the fresh rank for continuity proof.
+                navigation_counts[ui_50000.bingo_navigation_entry(ordinary)] += 1  # Credit the exact real catalog control scheduled for this cycle.
+            replay_local_ranges[replica_index] = local_replays  # Store the complete per-user replay window.
+        self.assertEqual(replay_local_ranges[0], list(range(1, 52)))  # Require replica zero's seed followed by fifty-one consecutive same-mount replays.
+        self.assertEqual(replay_local_ranges[1], list(range(1, 50)))  # Require replica one's seed followed by forty-nine consecutive same-mount replays.
+        self.assertTrue(all(not values for replica, values in replay_local_ranges.items() if replica > 1))  # Forbid replay restarts on later isolated users.
+        self.assertEqual(sum(map(len, replay_local_ranges.values())), ui_50000.CONTROL_ACTIVATION_FLOOR)  # Spend exactly one hundred real replay cycles.
+        self.assertEqual(ordinary_ranks, list(range(987)))  # Preserve every remaining fresh rank once without aliases or holes.
+        self.assertEqual(navigation_counts, Counter({"open": 887, "nav": 100}))  # Keep both Bingo catalog controls above their literal floor.
+        self.assertEqual(sum(navigation_counts.values()), 987)  # Navigate once for every fresh cycle and never during same-mount replay.
+        with self.assertRaisesRegex(AssertionError, "invalid Bingo ordinary ordinal"):
+            ui_50000.bingo_navigation_entry(-1)  # Reject stale range arithmetic before any public navigation.
+        with self.assertRaisesRegex(AssertionError, "invalid Bingo ordinary ordinal"):
+            ui_50000.bingo_navigation_entry(987)  # Reject a fresh rank beyond the exact post-replay inventory.
+
+    # Prove Roulette setting mutations are deterministic, distributed off Rebet, and sufficient for literal control floors.
+    def test_roulette_serialized_settings_schedule_reaches_exact_control_floors(self):
+        mode_probes = [ordinal for ordinal in range(1087) if ui_50000.should_probe_roulette_mode(ordinal)]  # Enumerate every opposite-mode probe.
+        zero_rotations = [ordinal for ordinal in range(1087) if ui_50000.should_rotate_roulette_zero_rule(ordinal)]  # Enumerate every zero-rule transition.
+        self.assertEqual(mode_probes, list(range(202, 1085, 18)))  # Distribute exactly fifty probes beyond primary Rebet ownership.
+        self.assertEqual(len(mode_probes) * 2, ui_50000.CONTROL_ACTIVATION_FLOOR)  # Guarantee the floor from each real probe plus its serialized scheduled-mode restoration, independent of initial mode transitions.
+        self.assertEqual(len(zero_rotations), ui_50000.CONTROL_ACTIVATION_FLOOR)  # Guarantee the zero-rule floor with one hundred scheduled changes.
+        self.assertTrue(all(ordinal > 100 for ordinal in mode_probes + zero_rotations))  # Never change server settings while the primary worker owns open Rebet wagers.
+        self.assertFalse(set(mode_probes).intersection(zero_rotations))  # Keep every scheduled cycle to at most one probe before exact mode enforcement.
+
     # Prove Keno and Sic Bo retain every literal board floor after exactly one hundred sole-terminal Repeat cycles.
     def test_formal_board_schedules_exceed_floor_after_repeat_capacity(self):
         keno_counts = Counter()  # Count real individual Keno pointer targets under the exact six-worker plan.
@@ -99,10 +138,10 @@ class UI50000ControlScheduleTests(unittest.TestCase):
             if autoplay_ordinal < ui_50000.CONTROL_ACTIVATION_FLOOR:  # Match the shared autoplay helper's exact acceptance window.
                 autoplay_ranks.append((game_ordinal, autoplay_ordinal))  # Preserve only scheduled session cycles.
         self.assertEqual(mode_cycles, Counter({"double": 551, "single": 536}))  # Pin the exact source-reviewed inventory split.
-        self.assertEqual(set(number_counts["double"].values()), {100})  # Cover all 38 double-zero numbers exactly at the literal floor.
-        self.assertEqual(set(number_counts["single"].values()), {100})  # Cover all 37 single-zero numbers exactly at the literal floor.
-        self.assertEqual(set(special_counts["double"].values()), {100})  # Cover all 139 raw double-zero specials exactly at the literal floor.
-        self.assertEqual(set(special_counts["single"].values()), {100})  # Cover all 135 raw single-zero specials exactly at the literal floor.
+        self.assertEqual(set(number_counts["double"].values()), {100})  # Prove the dedicated schedule assigns all 38 double-zero numbers exactly the floor before terminal seed wagers add coverage.
+        self.assertEqual(set(number_counts["single"].values()), {100})  # Prove the dedicated schedule assigns all 37 single-zero numbers exactly the floor before terminal seed wagers add coverage.
+        self.assertEqual(set(special_counts["double"].values()), {100})  # Prove the dedicated schedule assigns all 139 raw double-zero specials exactly the floor.
+        self.assertEqual(set(special_counts["single"].values()), {100})  # Prove the dedicated schedule assigns all 135 raw single-zero specials exactly the floor.
         self.assertEqual(autoplay_ranks, [(ordinal, ordinal - 101) for ordinal in range(101, 201)])  # Move exactly one hundred sessions away from ranks0..100.
         roulette_allocations = [allocation for allocation in ui_50000.formal_allocations() if allocation[0] == "roulette"]  # Read exact frozen replica boundaries for runtime-budget ownership.
         per_replica_budgets = []  # Preserve number, special, and autoplay work assigned to each measured worker.
@@ -110,7 +149,7 @@ class UI50000ControlScheduleTests(unittest.TestCase):
             first = ui_50000.coverage_ordinal("roulette", 0, cycle_start, True)  # Resolve the first continuous Roulette rank.
             ranks = range(first, first + quota)  # Preserve the immutable contiguous per-replica interval.
             per_replica_budgets.append((replica, quota, sum(ui_50000.roulette_number_schedule(rank)[1] for rank in ranks), sum(ui_50000.roulette_special_schedule(rank)[1] for rank in ranks), sum(ui_50000.roulette_autoplay_ordinal(rank) < 100 for rank in ranks)))  # Count only scheduled real pointer/session work.
-        self.assertEqual(per_replica_budgets, [(0,101,505,2424,0),(1,90,450,2160,90),(2,90,720,2340,10),(3,90,685,2296,0),(4,90,720,2340,0),(5,90,720,2340,0),(6,90,630,2250,0),(7,90,630,2250,0),(8,89,623,2314,0),(9,89,571,2225,0),(10,89,623,2225,0),(11,89,623,2236,0)])  # Pin the reviewed time-balanced plan that keeps heavy workers below the unchanged ceiling.
+        self.assertEqual(per_replica_budgets, [(0,101,101,1414,0),(1,90,450,2160,90),(2,90,810,2565,10),(3,90,810,2566,0),(4,90,810,2520,0),(5,90,819,2675,0),(6,90,630,2250,0),(7,90,630,2250,0),(8,89,623,2314,0),(9,89,571,2225,0),(10,89,623,2225,0),(11,89,623,2236,0)])  # Remove 1,414 requests from primary Rebet ownership while preserving replica one's autoplay-heavy budget and bounded higher-margin shares.
 
     # Prove exact Roulette rotation acquires one collection count and performs only its O(clicks) nth actions.
     def test_roulette_exact_rotation_does_not_rescan_target_inventory(self):

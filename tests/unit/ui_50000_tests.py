@@ -458,6 +458,99 @@ class UI50000HarnessTests(unittest.TestCase):
         rebet_position = play_source.index("if should_exercise_roulette_rebet(replica_index, activated_counts)")  # Locate the real ready-template attempt.
         configuration_position = play_source.index("await exercise_configuration_controls(page, ordinal, activated_counts)", rebet_position)  # Locate the next generic mutation boundary.
         self.assertLess(rebet_position, configuration_position)  # Preserve Rebet before configuration and autoplay can invalidate its template.
+        scheduled_settings_position = play_source.index("await exercise_roulette_settings_controls(page, game_ordinal, activated_counts)", configuration_position)  # Locate the deterministic serialized settings schedule.
+        exact_mode_position = play_source.index("await ensure_roulette_mode(page, mode, activated_counts)", scheduled_settings_position)  # Locate scheduled-mode enforcement after any opposite-mode probe.
+        self.assertLess(configuration_position, scheduled_settings_position)  # Keep client-only generic configuration before server-owned settings work.
+        self.assertLess(scheduled_settings_position, exact_mode_position)  # Require every probe to complete before exact mode restoration.
+
+    # Prove each Roulette settings selection finishes its exact response and replacement generation before another selection can begin.
+    def test_roulette_setting_selection_serializes_response_and_generation(self):
+        events = []  # Record only public locator, response, selection, detachment, and replacement-readiness boundaries.
+        values = {"roulette-mode": "double", "roulette-zero": "normal"}  # Model the accepted rendered settings generation.
+        generation = {"value": 0}  # Distinguish every response-owned DOM replacement.
+
+        class FakeHandle:  # Preserve the selected pre-response node identity.
+            def __init__(self, test_id, owned_generation):
+                self.test_id = test_id  # Retain only the public setting identity.
+                self.generation = owned_generation  # Retain the exact old generation for detachment evidence.
+
+        class FakeLocator:  # Model one current server-owned Roulette select.
+            def __init__(self, test_id):
+                self.test_id = test_id  # Preserve the public data-testid.
+
+            async def wait_for(self, state, timeout):
+                events.append(("visible", self.test_id, state, timeout, generation["value"]))  # Require actionability on the current generation.
+
+            async def element_handle(self):
+                events.append(("handle", self.test_id, generation["value"]))  # Capture the exact pre-request generation.
+                return FakeHandle(self.test_id, generation["value"])  # Return one immutable old node.
+
+            async def input_value(self):
+                events.append(("value", self.test_id, generation["value"]))  # Read the accepted current value before request dispatch.
+                return values[self.test_id]  # Return only the rendered value.
+
+        class FakeResponse:  # Model one exact public settings response.
+            def __init__(self, ok=True):
+                self.ok = ok  # Expose server acceptance without a body.
+
+        class FakeResponseInfo:  # Model Playwright's async response observation.
+            def __init__(self, page):
+                self.page = page  # Retain the owning page's configured response result.
+
+            async def __aenter__(self):
+                events.append(("response-armed", generation["value"]))  # Require observation before the real selection.
+                return self  # Return the awaitable response facade.
+
+            async def __aexit__(self, *_args):
+                events.append(("response-captured", generation["value"]))  # Record terminal response capture after selection.
+
+            @property
+            def value(self):
+                async def resolve():
+                    events.append(("response-value", generation["value"]))  # Resolve the exact response before DOM acceptance.
+                    return FakeResponse(self.page.response_ok)  # Return the configured public status.
+                return resolve()  # Match Playwright's awaitable property.
+
+        class FakePage:  # Provide the exact public browser seams owned by the helper.
+            response_ok = True  # Start with accepted settings responses.
+
+            def get_by_test_id(self, test_id):
+                events.append(("locator", test_id, generation["value"]))  # Record each current-generation locator lookup.
+                return FakeLocator(test_id)  # Resolve against the latest generation.
+
+            def expect_response(self, predicate, timeout):
+                candidate = type("Response", (), {"url": "http://test/api/v1/games/roulette/settings", "request": type("Request", (), {"method": "POST"})()})()  # Build one exact public response identity.
+                events.append(("expect", predicate(candidate), timeout, generation["value"]))  # Prove endpoint/method filtering and unchanged deadline.
+                return FakeResponseInfo(self)  # Arm one response observation.
+
+            async def wait_for_function(self, expression, arg, timeout):
+                if isinstance(arg, FakeHandle):  # Distinguish old-generation detachment from fresh-render acceptance.
+                    events.append(("detached", arg.test_id, arg.generation, generation["value"], "isConnected" in expression, timeout))  # Require exact old identity after response.
+                    return  # Complete only the detachment boundary.
+                events.append(("fresh", arg["test_id"], arg["value"], generation["value"], timeout))  # Require the accepted fresh setting and catalog generation.
+
+        page = FakePage()  # Create one isolated fake rendered Roulette surface.
+
+        async def fake_select_control(locator, value, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(("select", locator.test_id, str(value), generation["value"], timeout_ms))  # Record one real rendered select activation.
+            values[locator.test_id] = str(value)  # Publish the accepted setting value.
+            generation["value"] += 1  # Model the response-owned full rerender.
+
+        with mock.patch.object(ui_50000, "select_control", side_effect=fake_select_control):  # Isolate selection bookkeeping from DOM signature evaluation.
+            asyncio.run(ui_50000.select_roulette_setting(page, "roulette-zero", "la_partage", Counter()))  # Commit one zero-rule transition.
+            first_selection_end = len(events)  # Capture the exact boundary before another settings request starts.
+            asyncio.run(ui_50000.select_roulette_setting(page, "roulette-mode", "single", Counter()))  # Commit one later mode transition.
+        first_detach = next(index for index, event in enumerate(events[:first_selection_end]) if event[0] == "detached")  # Locate old-node invalidation for the first request.
+        first_fresh = next(index for index, event in enumerate(events[:first_selection_end]) if event[0] == "fresh")  # Locate replacement acceptance for the first request.
+        second_arm = next(index for index, event in enumerate(events[first_selection_end:], start=first_selection_end) if event[0] == "response-armed")  # Locate the second request boundary.
+        self.assertLess(first_detach, first_fresh)  # Require old-node detachment before fresh-generation readiness.
+        self.assertLess(first_fresh, second_arm)  # Forbid overlapping settings requests across sequential helper calls.
+        self.assertEqual(sum(event[0] == "select" for event in events), 2)  # Dispatch exactly one real selection per exact response.
+        self.assertEqual(sum(event[0] == "response-armed" for event in events), 2)  # Arm exactly one public settings response per selection.
+        page.response_ok = False  # Model a server-rejected settings transition without retry authority.
+        with mock.patch.object(ui_50000, "select_control", side_effect=fake_select_control):  # Reuse the exact real-selection seam.
+            with self.assertRaisesRegex(AssertionError, "settings request failed"):
+                asyncio.run(ui_50000.select_roulette_setting(page, "roulette-zero", "normal", Counter()))  # Fail closed on the single rejected response.
 
     # Prove Roulette cannot mistake its pre-click enabled node for post-settlement readiness.
     def test_roulette_terminal_action_observes_resolving_before_ready(self):
@@ -487,78 +580,6 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("roulette-result-region", page.expression)  # Bind the predicate to the visible phase contract.
         self.assertIn("spin?.disabled", page.expression)  # Require the public button to be non-actionable during resolution.
         self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep transition observation inside the governed action timeout.
-
-    # Prove Bingo accepts exactly one destructive reset confirmation without leaking a handler into safe resets. (TEST-092, issue #1052)
-    def test_bingo_reset_confirmation_tracks_rendered_active_called_state(self):
-        # Execute one browser-free rendered state and return its interaction trace.
-        async def run_scenario(call_ready, called_ball_count, settle_dispatched_call=False):
-            events = []  # Record public state reads, dialog handling, reset activation, and purchase readiness.
-            rendered_state = {"call_ready": call_ready, "called_ball_count": called_ball_count}  # Model state before and after an asynchronously dispatched Call settles.
-
-            class FakeLocatorCollection:  # Model either the Call locator or rendered called-ball collection.
-                def __init__(self, selector):
-                    self.selector = selector  # Preserve the public selector used by production code.
-                    self.first = self  # Match Playwright's first-locator interface.
-
-                async def count(self):
-                    events.append(f"count:{self.selector}")  # Record called-ball evidence before any dialog authority is installed.
-                    return rendered_state["called_ball_count"]  # Return the current visible called-ball count after any modeled action settlement.
-
-            class FakeDialog:  # Model the native confirmation emitted synchronously by Bingo Reset.
-                type = "confirm"  # Expose the Playwright dialog type used by the production assertion.
-
-                async def accept(self):
-                    events.append("dialog:accept")  # Record real confirmation before Reset can complete.
-
-            class FakePage:  # Provide only locator and one-shot dialog surfaces owned by the helper.
-                def __init__(self):
-                    self.dialog_handler = None  # Start without any leaked confirmation authority.
-
-                def locator(self, selector):
-                    events.append(f"locator:{selector}")  # Record both rendered-state queries.
-                    return FakeLocatorCollection(selector)  # Return a stable public locator facade.
-
-                def once(self, event_name, handler):
-                    self.assert_event_name = event_name  # Preserve the exact browser event identity for assertion.
-                    self.dialog_handler = handler  # Retain the one-shot callback until the modeled reset click.
-                    events.append("dialog:registered")  # Record that confirmation authority precedes the destructive click.
-
-            page = FakePage()  # Create one isolated rendered Bingo state.
-
-            async def fake_locator_ready(locator):
-                events.append(f"ready:{locator.selector}")  # Record active-session detection through the public Call control.
-                return rendered_state["call_ready"]  # Return the scenario's current rendered Call actionability.
-
-            async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
-                events.append(f"click:{selector}")  # Record the real Reset pointer boundary.
-                if page.dialog_handler is not None:  # Emit a dialog only for the scenario where the helper registered one.
-                    handler = page.dialog_handler  # Capture the one-shot handler before consuming it.
-                    page.dialog_handler = None  # Model Playwright removing a once-listener before callback execution.
-                    await handler(FakeDialog())  # Require the native confirmation to be accepted during the click.
-
-            async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
-                events.append(f"ready:{selectors[0]}")  # Record action settlement before destructive-state inspection and fresh-card readiness afterward.
-                if selectors == ['[data-testid="bingo-reset"]'] and settle_dispatched_call:  # Model the DOM commit that occurs after Call dispatch but before Reset is actionable.
-                    rendered_state.update({"call_ready": True, "called_ball_count": 1})  # Publish the active called session that requires confirmation.
-                return selectors[0]  # Model the authoritative enabled Buy control.
-
-            with mock.patch.object(ui_50000, "locator_ready", side_effect=fake_locator_ready), mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control), mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled):  # Isolate exact ordering from Playwright and the Bingo API.
-                await ui_50000.bingo_reset_to_purchase(page, Counter())  # Exercise the production helper through rendered seams only.
-            self.assertIsNone(page.dialog_handler)  # Reject any confirmation handler leaking into a later unrelated dialog.
-            return events, getattr(page, "assert_event_name", None)  # Return the trace and any registered event identity.
-
-        destructive_events, event_name = asyncio.run(run_scenario(True, 1))  # Model an active session after one committed ball.
-        self.assertEqual(destructive_events, ['ready:[data-testid="bingo-reset"]', 'locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'count:[data-testid="bingo-called-ball"]', "dialog:registered", 'click:[data-testid="bingo-reset"]', "dialog:accept", 'ready:[data-testid="bingo-buy"]'])  # Require settled Reset actionability, confirmation registration, and acceptance before fresh-card readiness.
-        self.assertEqual(event_name, "dialog")  # Bind the one-shot listener to the native browser-dialog event.
-        resolving_events, event_name = asyncio.run(run_scenario(False, 0, settle_dispatched_call=True))  # Model Call returning from pointer dispatch before its request-owned rerender commits.
-        self.assertEqual(resolving_events, destructive_events)  # Require Reset readiness to publish the called ball before destructive-state inspection and dialog registration.
-        self.assertEqual(event_name, "dialog")  # Prove the post-Call race still installs exactly one confirmation handler.
-        uncalled_events, event_name = asyncio.run(run_scenario(True, 0))  # Model an active card before any ball has been called.
-        self.assertEqual(uncalled_events, ['ready:[data-testid="bingo-reset"]', 'locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'count:[data-testid="bingo-called-ball"]', 'click:[data-testid="bingo-reset"]', 'ready:[data-testid="bingo-buy"]'])  # Keep pre-call refundable Reset free of destructive-confirmation authority after action settlement.
-        self.assertIsNone(event_name)  # Prove an uncalled active card registered no dialog listener.
-        completed_events, event_name = asyncio.run(run_scenario(False, 12))  # Model completed history whose called balls remain visible without an active session.
-        self.assertEqual(completed_events, ['ready:[data-testid="bingo-reset"]', 'locator:[data-testid="bingo-call"]', 'locator:[data-testid="bingo-called-ball"]', 'ready:[data-testid="bingo-call"]', 'click:[data-testid="bingo-reset"]', 'ready:[data-testid="bingo-buy"]'])  # Forbid confirmation authority when only completed history is visible after action settlement.
-        self.assertIsNone(event_name)  # Prove the safe reset registered no dialog listener.
 
     # Prove Roulette serializes refund and wager rerenders before the strict spinning-state transition.
     def test_roulette_reset_seed_and_spin_orders_every_drawer_boundary(self):

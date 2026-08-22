@@ -151,10 +151,15 @@ def roulette_mode_for_ordinal(game_ordinal):
 # Resolve the time-balanced exact-floor Roulette number schedule.
 def roulette_number_schedule(game_ordinal):
     ordinal = int(game_ordinal)  # Normalize once.
-    if ordinal < 191: return (5 * ordinal) % 38, 5  # Shield Rebet and autoplay workers.
-    if ordinal < 336: return (955 + 8 * (ordinal - 191)) % 38, 8  # Spend higher-margin double-zero capacity.
-    if ordinal < 371: return (2115 + 7 * (ordinal - 336)) % 38, 7  # Reduce the longest-baseline worker.
-    if ordinal < 551: return (2360 + 8 * (ordinal - 371)) % 38, 8  # Complete exactly 3,800 activations.
+    if ordinal < 101: return ordinal % 38, 1  # Leave primary Rebet ownership far below the unchanged seventeen-minute ceiling.
+    if ordinal < 191: return (101 + 5 * (ordinal - 101)) % 38, 5  # Preserve the autoplay-heavy second worker's measured cost.
+    if ordinal < 281: return (551 + 9 * (ordinal - 191)) % 38, 9  # Spend replica two's higher-margin capacity.
+    if ordinal < 371: return (1361 + 9 * (ordinal - 281)) % 38, 9  # Continue the exact gapless double-zero stream.
+    if ordinal < 461: return (2171 + 9 * (ordinal - 371)) % 38, 9  # Balance replica four without exceeding its hosted margin.
+    if ordinal < 551:  # Finish the exact double-zero floor on replica five.
+        relative = ordinal - 461  # Resolve the final double-zero worker's local rank.
+        extras = min(relative, 9)  # Place nine required extra clicks only on its first nine cycles.
+        return (2981 + 9 * relative + extras) % 38, 10 if relative < 9 else 9  # Complete exactly 3,800 real number activations.
     relative = ordinal - 551  # Resolve single-zero rank.
     return (7 * relative - min(max(relative - 269, 0), 52)) % 37, 6 if 269 <= relative < 321 else 7  # Complete exactly 3,700 activations.
 
@@ -162,10 +167,15 @@ def roulette_number_schedule(game_ordinal):
 # Resolve the time-balanced exact-floor Roulette special schedule.
 def roulette_special_schedule(game_ordinal):
     ordinal = int(game_ordinal)  # Normalize once.
-    if ordinal < 191: return (24 * ordinal) % 139, 24  # Preserve baseline cost on heavy workers.
-    if ordinal < 281: return (4584 + 26 * (ordinal - 191)) % 139, 26  # Use higher-margin capacity.
-    if ordinal < 325: return (6924 + 25 * (ordinal - 281)) % 139, 25  # Reduce forty-four measured cycles.
-    if ordinal < 551: return (8024 + 26 * (ordinal - 325)) % 139, 26  # Complete 13,900 double-zero activations.
+    if ordinal < 101: return (14 * ordinal) % 139, 14  # Pair with one number click so primary Rebet cycles stay below budget.
+    if ordinal < 191: return (1414 + 24 * (ordinal - 101)) % 139, 24  # Preserve the autoplay-heavy second worker's measured cost.
+    if ordinal < 236: return (3574 + 29 * (ordinal - 191)) % 139, 29  # Place replica two's forty-five required extras first.
+    if ordinal < 281: return (4879 + 28 * (ordinal - 236)) % 139, 28  # Complete replica two's balanced share.
+    if ordinal < 327: return (6139 + 29 * (ordinal - 281)) % 139, 29  # Place replica three's forty-six required extras first.
+    if ordinal < 371: return (7473 + 28 * (ordinal - 327)) % 139, 28  # Complete replica three's balanced share.
+    if ordinal < 461: return (8705 + 28 * (ordinal - 371)) % 139, 28  # Spend replica four's measured margin evenly.
+    if ordinal < 526: return (11225 + 30 * (ordinal - 461)) % 139, 30  # Place replica five's sixty-five required extras first.
+    if ordinal < 551: return (13175 + 29 * (ordinal - 526)) % 139, 29  # Finish exactly 13,900 double-zero activations.
     relative = ordinal - 551  # Resolve single-zero rank.
     extras = min(max(relative - 180, 0), 89) + min(max(relative - 447, 0), 11)  # Place one hundred extras on lower-runtime workers.
     clicks = 26 if 180 <= relative < 269 or 447 <= relative < 458 else 25  # Spend exactly the reviewed per-cycle budget.
@@ -176,6 +186,26 @@ def roulette_special_schedule(game_ordinal):
 def roulette_autoplay_ordinal(game_ordinal):
     ordinal = int(game_ordinal)  # Normalize the continuous rank.
     return ordinal - 101 if 101 <= ordinal <= 200 else CONTROL_ACTIVATION_FLOOR  # Spend exactly ranks101..200.
+
+
+# Select exactly fifty lower-pressure cycles for a real opposite-mode probe and its serialized scheduled-mode restoration.
+def should_probe_roulette_mode(game_ordinal):
+    ordinal = int(game_ordinal)  # Normalize the continuous rank once.
+    return 202 <= ordinal <= 1084 and (ordinal - 202) % 18 == 0  # Distribute fifty probes outside the primary Rebet affinity range.
+
+
+# Select exactly one hundred lower-pressure cycles for a serialized real zero-rule transition.
+def should_rotate_roulette_zero_rule(game_ordinal):
+    ordinal = int(game_ordinal)  # Normalize the continuous rank once.
+    return (101 <= ordinal <= 1081 and (ordinal - 101) % 10 == 0) or ordinal == 1086  # Distribute ninety-nine rotations plus one terminal rotation.
+
+
+# Preserve the first one hundred Bingo catalog-nav activations after removing same-mount replay-only cycles.
+def bingo_navigation_entry(ordinary_ordinal):
+    ordinal = int(ordinary_ordinal)  # Normalize the gapless fresh rank once.
+    if not 0 <= ordinal < 987:  # Reject stale allocation arithmetic outside the exact post-replay fresh inventory.
+        raise AssertionError(f"invalid Bingo ordinary ordinal: {ordinal}")  # Preserve one bounded schedule diagnostic.
+    return "nav" if ordinal < CONTROL_ACTIVATION_FLOOR else "open"  # Produce exact nav=100 and open=887 across 987 fresh cycles.
 
 
 # Resolve the honest opportunity budget for mutually exclusive rare decisions.

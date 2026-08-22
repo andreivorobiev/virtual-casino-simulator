@@ -26,6 +26,7 @@ if str(ROOT) not in sys.path:
 
 from casino.config import GAMES  # Discover all registered games from canonical metadata.
 from tests import ui_50000_control_schedule as control_schedule  # Own exact-control identities, arithmetic, and classification below the monolith tripwire.
+from tests import ui_50000_transitions as transitions  # Own response-and-generation browser transitions below the monolith tripwire.
 from tests.formal_ui_profile import FORMAL_EXECUTION_BUDGET_SECONDS, formal_replica_policy, formal_worker_heartbeat, stop_formal_worker_heartbeat  # Apply exact-run sizing, monitoring, and the fail-closed execution budget.
 from tests.long_suites import OPERATIONS_SMOKE_BUILD_SHA, ApiClient, clear_readonly_and_retry, free_port, stop_server  # Reuse governed API and exact cleanup controls.
 
@@ -189,6 +190,8 @@ sic_bo_wager_schedule = control_schedule.sic_bo_wager_schedule
 # Preserve the historical Roulette helper names while the extracted module owns its exact reviewed schedules. (TEST-092)
 roulette_mode_for_ordinal, roulette_number_schedule = control_schedule.roulette_mode_for_ordinal, control_schedule.roulette_number_schedule
 roulette_special_schedule, roulette_autoplay_ordinal = control_schedule.roulette_special_schedule, control_schedule.roulette_autoplay_ordinal
+should_probe_roulette_mode, should_rotate_roulette_zero_rule = control_schedule.should_probe_roulette_mode, control_schedule.should_rotate_roulette_zero_rule
+bingo_navigation_entry = control_schedule.bingo_navigation_entry
 
 
 # Preserve historical classification names while the extracted module owns byte-equivalent policy. (TEST-092)
@@ -331,6 +334,8 @@ async def exercise_configuration_controls(page, ordinal, activated_counts):
         else:  # Open a collapsed disclosure through the real control.
             await click_locator(summary, activated_counts)  # Expose its configuration descendants.
     configurations = await enabled_locators(root, "input:not([type=hidden]),select")  # Discover visible editable controls after disclosures open.
+    if game_id == "roulette":  # Leave server-owned settings to their exact response-and-render serialized schedule.
+        configurations = [configuration for configuration in configurations if await configuration.get_attribute("data-testid") not in {"roulette-mode", "roulette-zero"}]  # Prevent generic unobserved settings writes from overlapping exact mode ownership.
     if not configurations:  # Allow games whose full interaction surface is button-only.
         return  # Preserve the game-specific strategy as the only action path.
     target = configurations[ordinal % len(configurations)]  # Rotate the field budget across every visible configuration identity.
@@ -375,26 +380,9 @@ async def exercise_autoplay_controls(page, ordinal, activated_counts):
         await page.wait_for_timeout(75)  # Let the already-started action publish its busy/phase transition before readiness polling.
         await wait_any_enabled(page, settled_selectors, SETUP_TIMEOUT_MS)  # Prevent the manual cycle from racing the final autoplay render.
 
-
-# Reset Bingo through its rendered control and accept only its active called-session confirmation. (TEST-092, issue #1052)
+# Reset Bingo only from an active generation and require its replacement purchase generation. (TEST-092, issue #1052)
 async def bingo_reset_to_purchase(page, activated_counts):
-    await wait_any_enabled(page, ['[data-testid="bingo-reset"]'])  # Let any dispatched Buy or Call finish before deciding whether Reset has become destructive.
-    call = page.locator('[data-testid="bingo-call"]').first  # Resolve the public active-session signal without reading private game state.
-    called_balls = page.locator('[data-testid="bingo-called-ball"]')  # Resolve rendered call history that makes reset destructive.
-    requires_confirmation = await locator_ready(call) and await called_balls.count() > 0  # Distinguish active called sessions from completed history still shown on the board.
-    accepted_dialog_types = []  # Record the one dialog handled by this exact destructive reset.
-
-    async def accept_reset_confirmation(dialog):
-        accepted_dialog_types.append(dialog.type)  # Preserve the public browser-dialog type before accepting it.
-        await dialog.accept()  # Confirm the same abandonment prompt a player must accept.
-
-    if requires_confirmation:  # Install a handler only when the rendered state proves reset will prompt.
-        page.once("dialog", accept_reset_confirmation)  # Scope confirmation authority to the next dialog from this reset click.
-    await click_control(page, '[data-testid="bingo-reset"]', activated_counts)  # Activate the visible Reset control through Playwright's real pointer path.
-    if requires_confirmation and accepted_dialog_types != ["confirm"]:  # Require exactly one expected confirmation to have unblocked the click.
-        raise AssertionError(f"Bingo reset confirmation mismatch: {accepted_dialog_types}")  # Reject a missing or wrong browser-dialog boundary.
-    await wait_any_enabled(page, ['[data-testid="bingo-buy"]'])  # Require authoritative fresh-card readiness after reset.
-
+    return await transitions.bingo_reset_to_purchase(page, activated_counts, wait_any_enabled=wait_any_enabled, locator_ready=locator_ready, click_control=click_control, operation_timeout_ms=operation_timeout_ms, action_timeout_ms=ACTION_TIMEOUT_MS)  # Supply only existing governed browser seams and the unchanged action deadline.
 
 # Click one terminal action and require it to become ready for another round.
 async def terminal_action(page, selector, activated_counts):
@@ -536,17 +524,21 @@ async def rotate_exact_control_group(page, selector, expected_count, start_index
         await action(page, target, activated_counts)  # Serialize the real wager response through the caller-owned action helper.
 
 
+# Select one server-owned Roulette setting and require its exact response and replacement render before any later mutation.
+async def select_roulette_setting(page, test_id, value, activated_counts):
+    return await transitions.select_roulette_setting(page, test_id, value, activated_counts, select_control=select_control, operation_timeout_ms=operation_timeout_ms, action_timeout_ms=ACTION_TIMEOUT_MS, number_counts=ROULETTE_NUMBER_COUNTS, special_counts=ROULETTE_SPECIAL_COUNTS)  # Supply the exact control action, deadlines, and source-bound inventories.
+
+# Exercise exact lower-pressure Roulette settings schedules without generic unobserved writes.
+async def exercise_roulette_settings_controls(page, game_ordinal, activated_counts):
+    return await transitions.exercise_roulette_settings_controls(page, game_ordinal, activated_counts, should_rotate_zero=should_rotate_roulette_zero_rule, should_probe_mode=should_probe_roulette_mode, mode_for_ordinal=roulette_mode_for_ordinal, select_setting=select_roulette_setting)  # Supply only exact schedule and serialized selection seams.
+
 # Reassert one scheduled Roulette mode and wait for its exact rendered number and special inventories.
 async def ensure_roulette_mode(page, mode, activated_counts):
     mode_select = page.get_by_test_id("roulette-mode")  # Resolve the visible advanced-settings control opened by generic configuration coverage.
     await mode_select.wait_for(state="visible", timeout=operation_timeout_ms(ACTION_TIMEOUT_MS))  # Require real actionability before inspecting or changing mode.
     current_mode = await mode_select.input_value()  # Read the mode potentially selected by generic configuration work.
     if current_mode != mode:  # Avoid a settings request on every cycle once this isolated user's mode is stable.
-        async with page.expect_response(lambda response: response.url.partition("?")[0].endswith("/api/v1/games/roulette/settings") and response.request.method == "POST", timeout=operation_timeout_ms(ACTION_TIMEOUT_MS)) as response_info:  # Serialize the public settings request beneath the unchanged action timeout.
-            await select_control(mode_select, mode, activated_counts)  # Reassert the scheduled mode through the rendered select.
-        response = await response_info.value  # Resolve the exact settings response before target discovery.
-        if not response.ok:  # Reject a mode transition that the server did not accept.
-            raise AssertionError(f"Roulette {mode} mode settings request failed")  # Keep the failure bounded to public mode identity.
+        await select_roulette_setting(page, "roulette-mode", mode, activated_counts)  # Serialize response, node replacement, and exact catalog readiness without retry.
     expected = {"mode": mode, "numbers": ROULETTE_NUMBER_COUNTS[mode], "specials": ROULETTE_SPECIAL_COUNTS[mode]}  # Bind readiness to the reviewed source-owned inventories.
     expression = """expected => { const mode = document.querySelector('[data-testid="roulette-mode"]')?.value; const numbers = document.querySelectorAll('[data-testid^="roulette-num-"]').length; const specials = document.querySelectorAll('[data-dozen],[data-column],[data-outside],[data-outbtn],[data-betid],[data-call]').length; return mode === expected.mode && numbers === expected.numbers && specials === expected.specials; }"""  # Wait through generic or explicit settings rerenders without raw product state.
     await page.wait_for_function(expression, arg=expected, timeout=operation_timeout_ms(ACTION_TIMEOUT_MS))  # Fail closed on mode or catalog-count drift.
@@ -559,7 +551,10 @@ async def start_scheduled_repeat(page, game_id, local_ordinal, replica_index, ac
     selector = REPEAT_CONTROL_SELECTORS[game_id]  # Resolve the catalog-audited route-local Repeat identity.
     await wait_any_enabled(page, [selector])  # Fail closed when a prior committed wager did not restore for this isolated user.
     await click_control(page, selector, activated_counts)  # Activate Repeat through Playwright's ordinary pointer path and accounting.
-    await page.wait_for_timeout(5)  # Allow the busy or staged response to replace the clicked ready-state node.
+    if game_id == "bingo":  # Bind route-local replay to its completed purchase render before Call can consume the active session.
+        await wait_any_enabled(page, ['[data-testid="bingo-call"]'])  # Require the Repeat-owned card purchase to publish real Call readiness.
+    else:  # Preserve every predecessor replay's established small rerender yield.
+        await page.wait_for_timeout(5)  # Allow the busy or staged response to replace the clicked ready-state node.
     return True  # Report that this cycle must not open a second wager or round.
 
 
@@ -601,7 +596,7 @@ async def rotate_wager_inputs(page, ordinal, activated_counts):
 
 
 # Navigate from the authenticated shell to one game through visible UI controls.
-async def navigate_to_game(page, game_id, activated_counts, ordinal=None, phase_observer=None):
+async def navigate_to_game(page, game_id, activated_counts, ordinal=None, phase_observer=None, entry_kind=None):
     CONTROL_NAMESPACE.set("shell")  # Attribute persistent navigation actions to the shared shell.
     if callable(phase_observer):  # Emit only fixed formal subphases when a governed caller supplies an observer.
         phase_observer("navigation_return_lobby", "started")  # Attribute failure before the persistent Lobby control commits.
@@ -613,7 +608,10 @@ async def navigate_to_game(page, game_id, activated_counts, ordinal=None, phase_
     if callable(phase_observer):  # Record the fixed catalog-render boundary only for governed evidence.
         phase_observer("navigation_lobby_ready", "completed")  # Record the visible Lobby state.
         phase_observer("navigation_route_open", "started")  # Attribute activation of the assigned public game route.
-    entry_selector = f'[data-testid="nav-{game_id}"]' if ordinal is not None and ordinal % 10 == 0 else f'[data-testid="open-{game_id}"]'  # Route at least one hundred full-run cycles through each top-nav game button.
+    if entry_kind not in {None, "nav", "open"}:  # Restrict explicit formal entry ownership to the two real catalog controls.
+        raise AssertionError(f"unsupported catalog entry kind: {entry_kind}")  # Fail closed on stale navigation metadata.
+    use_top_navigation = entry_kind == "nav" if entry_kind is not None else ordinal is not None and ordinal % 10 == 0  # Preserve predecessor modulo behavior unless an exact formal schedule is supplied.
+    entry_selector = f'[data-testid="nav-{game_id}"]' if use_top_navigation else f'[data-testid="open-{game_id}"]'  # Activate exactly the selected real catalog control.
     await click_control(page, entry_selector, activated_counts, SETUP_TIMEOUT_MS)  # Enter through the assigned rendered navigation control.
     if callable(phase_observer):  # Separate pointer completion from asynchronous module readiness.
         phase_observer("navigation_route_open", "completed")  # Record the assigned route activation.
@@ -644,6 +642,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
             await exercise_autoplay_controls(page, ordinal, activated_counts)  # Cover shared Start/Stop without leaving background play active.
     if strategy_family == "roulette":  # Exercise several table regions and one complete spin.
         mode = roulette_mode_for_ordinal(game_ordinal)  # Split exact cycle capacity into contiguous double- and single-zero inventories.
+        await exercise_roulette_settings_controls(page, game_ordinal, activated_counts)  # Execute only deterministic response-and-render serialized server settings writes.
         await ensure_roulette_mode(page, mode, activated_counts)  # Serialize any generic settings mutation and require exact target counts.
         await exercise_autoplay_controls(page, roulette_autoplay_ordinal(game_ordinal), activated_counts)  # Move all one hundred sessions to ranks101..200 off the primary Rebet worker.
         chips = await enabled_locators(page, "[data-chip]")  # Discover every visible chip denomination.
@@ -1223,7 +1222,16 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
                     report["attempted_actions"] += 1  # Count every real browser play attempt, including recovery attempts.
                     started = time.perf_counter()  # Start end-to-end navigation and gameplay timing.
                     try:  # Continue after bounded product failures so exact completion can still be measured.
-                        await navigate_to_game(page, game_id, activated_counts, scheduled_ordinal)  # Navigate visibly while rotating the complete game-local coverage schedule.
+                        same_mount_bingo_repeat = game_id == "bingo" and should_schedule_repeat(game_id, ordinal, replica_index, formal_worker)  # Preserve route-local lastBet only for this replica's exact replay share.
+                        if same_mount_bingo_repeat:  # Continue directly from the prior successful same-user seed or replay settlement.
+                            await page.get_by_test_id(READY_TEST_IDS[game_id]).wait_for(state="visible", timeout=operation_timeout_ms(SETUP_TIMEOUT_MS))  # Require the owned Bingo mount to survive before replay.
+                            CONTROL_NAMESPACE.set(game_id)  # Attribute the same-mount replay controls to Bingo without fabricating shell navigation.
+                        else:  # Navigate every seed and ordinary fresh cycle through one real catalog entry.
+                            entry_kind = None  # Preserve established navigation schedules outside formal Bingo.
+                            if game_id == "bingo" and formal_worker:  # Replace the removed replay entries with an exact gapless real nav/open schedule.
+                                ordinary_ordinal = formal_ordinary_ordinal(game_id, scheduled_ordinal, ordinal, replica_index)  # Resolve this fresh cycle's continuous rank across replicas.
+                                entry_kind = bingo_navigation_entry(ordinary_ordinal)  # Allocate exactly one hundred nav entries and eight hundred eighty-seven lobby-card entries.
+                            await navigate_to_game(page, game_id, activated_counts, scheduled_ordinal, entry_kind=entry_kind)  # Navigate visibly while preserving exact catalog-control floors.
                         await play_game_ui(page, game_id, scheduled_ordinal, seen_counts, activated_counts, replica_index, ordinal, formal_worker)  # Complete one rendered-control play using continuous game ranks and isolated-user Repeat ownership.
                         latencies.append(time.perf_counter() - started)  # Record successful full-cycle latency.
                         report["completed"] += 1  # Count only the first terminal completion for this global cycle.

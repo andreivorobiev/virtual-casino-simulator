@@ -1723,7 +1723,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Bind each reduced affinity tuple while preserving the complete historical source order.
         expected_groups = {
             "roulette": (
-                "BR-ROU-HITMAP-001", "BR-ROU-REFUND-001", "BR-ROU-SLIP-AUDIT-001", "BR-ROU-PREMIUM-001",
+                "BR-ROU-FORMAL-SETTINGS-001", "BR-ROU-HITMAP-001", "BR-ROU-REFUND-001", "BR-ROU-SLIP-AUDIT-001", "BR-ROU-PREMIUM-001",
                 "BR-I18N-GAMESTATE-ROU-001", "BR-ROU-MOTION-CURVE-001", "BR-ROU-SPINNING-COPY-001",
                 "BR-ROU-LOCKED-REMOVE-001", "BR-ROU-001", "BR-AUTO-START-FAIL-001", "BR-AUTO-ROU-001",
                 "BR-ROU-REDUCED-MOTION-001",
@@ -1776,7 +1776,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         owner_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "bingo_admin.py")
         # Bind each reduced affinity tuple while preserving the complete historical source order.
         expected_groups = {
-            "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
+            "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BINGO-FORMAL-REPLAY-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
             "feedback_admin": ("BR-FEEDBACK-001", "BR-ADMIN-NAV-AUTH-001", "BR-ADMIN-001", "BR-ADMIN-DIAGNOSTICS-001", "BR-ADMIN-ECONOMICS-001", "BR-ADMIN-SESSION-POLICY-001", "BR-ADMIN-LEDGER-LABELS-001", "BR-ADMIN-FEEDBACK-001", "BR-ADMIN-OAUTH-001", "BR-ADMIN-MAIL-001", "BR-INVITE-001", "BR-OPS-001"),
             "admin_presentation": ("BR-ADMIN-PRACTICE-OPPONENT-001", "BR-ADMIN-USERS-001", "BR-ADMIN-GUEST-001", "BR-AUDIO-001", "BR-I18N-FOUNDATION-001", "BR-I18N-ADMIN-001"),
         }
@@ -1827,8 +1827,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         from tests import runner as browser_runner_module
         # Discover inline and extracted permanent IDs at their exact cross-file source positions.
         case_ids = browser_runner_module.browser_case_ids()
-        # Bind the complete inventory after adding dedicated Color Wheel lifecycle acceptance. (TEST-248)
-        self.assertEqual(len(case_ids), 130)
+        # Bind the complete inventory after adding the two formal race regressions. (TEST-092)
+        self.assertEqual(len(case_ids), 132)
         # Read the first extracted Browser affinity owner for guard-location checks below.
         auth_backend_pwa_source = self.workflow_text(ROOT / "tests" / "cases" / "browser" / "auth_backend_pwa.py")
         # Read the extracted disposable guest-lifecycle owner for guard-location checks below.
@@ -1855,8 +1855,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         default_duration = sorted(durations.values())[len(durations) // 2] if durations else 1
         # Compute each ordered shard's reviewed aggregate weight.
         shard_loads = tuple(sum(durations.get(case_id, default_duration) for case_id in shard_cases) for shard_cases in shard_sets)
-        # Bind deterministic load totals after packing the new dedicated Color Wheel case. (TEST-242, TEST-248)
-        self.assertEqual(shard_loads, (225, 226, 224, 224, 224, 225))
+        # Bind deterministic load totals after packing the two formal race regressions. (TEST-092, TEST-242)
+        self.assertEqual(shard_loads, (226, 227, 227, 225, 226, 225))
         # Reject a degenerate or materially imbalanced assignment even if union remains exact.
         self.assertLessEqual(max(shard_loads) - min(shard_loads), 3)
         # Prove additional runners now reduce the reviewed full-run floor beyond six shards.

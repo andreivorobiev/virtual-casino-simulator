@@ -1,5 +1,5 @@
 {
-  "count": 130,
+  "count": 132,
   "case_ids": [
     "BR-AB-001",
     "BR-ACTION-STABILITY-001",
@@ -30,6 +30,7 @@
     "BR-BAC-MUTATION-001",
     "BR-BIG-SIX-001",
     "BR-BINGO-001",
+    "BR-BINGO-FORMAL-REPLAY-001",
     "BR-BINGO-PURCHASE-001",
     "BR-BJ-001",
     "BR-BJ-I18N-001",
@@ -97,6 +98,7 @@
     "BR-RD-001",
     "BR-REPEAT-BET-001",
     "BR-ROU-001",
+    "BR-ROU-FORMAL-SETTINGS-001",
     "BR-ROU-HITMAP-001",
     "BR-ROU-LOCKED-REMOVE-001",
     "BR-ROU-MOTION-CURVE-001",

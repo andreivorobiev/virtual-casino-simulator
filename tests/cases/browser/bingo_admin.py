@@ -8,6 +8,8 @@ import base64
 import json
 # Import regular expressions for report, locale, and ledger-label assertions.
 import re
+# Import monotonic timing for the focused same-mount replay/reset ceiling.
+import time
 
 # Import the sole environment-scalable Playwright wait budget. (TEST-053)
 from tests.browser_timing import WAIT_MS
@@ -97,6 +99,40 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         bingo_terminal_render=wait_for_bingo_terminal_render(page,bingo_reload_terminal)
         # Preserve the existing premium Bingo acceptance after the new purchase boundary proof.
         run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013','CORE-034'],lambda: bingo_terminal_render['winningCellCount']==bingo_terminal['winning_cell_count'] and page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
+        # Define the exact same-mount Repeat, Call, and generation-replacing Reset regression for formal workers twenty and twenty-one. (TEST-092)
+        def bingo_formal_same_mount_replay():
+            # Start focused timing before the real route-local replay sequence.
+            started=time.perf_counter()
+            # Capture the canonical route URL so no lobby remount can fabricate Repeat history.
+            mounted_url=page.url
+            # Require the recovered completed-session Repeat control on this exact mounted route.
+            assert page.get_by_test_id('bingo-repeat').is_enabled()
+            # Rebuy the prior human card through the real one-click Repeat pointer and exact cards response.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/cards') and response.request.method=='POST',timeout=WAIT_MS) as repeat_info: page.get_by_test_id('bingo-repeat').click()
+            # Require the accepted repeated purchase and response-owned Call readiness.
+            assert repeat_info.value.ok; page.wait_for_function("() => !document.querySelector('[data-testid=\"bingo-call\"]')?.disabled",timeout=WAIT_MS)
+            # Call one real ball so Reset owns the destructive confirmation boundary seen in the failed formal workers.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/call') and response.request.method=='POST',timeout=WAIT_MS) as call_info: page.get_by_test_id('bingo-call').click()
+            # Require the accepted call and visible called-ball generation before authorizing Reset.
+            assert call_info.value.ok; page.wait_for_function("() => document.querySelectorAll('[data-testid=\"bingo-called-ball\"]').length > 0 && !document.querySelector('[data-testid=\"bingo-reset\"]')?.disabled",timeout=WAIT_MS)
+            # Capture the post-Call active generation's disabled Buy node immediately before Reset.
+            old_buy=page.get_by_test_id('bingo-buy').element_handle()
+            # Authorize exactly the next native destructive confirmation from this real called session.
+            page.once('dialog',lambda dialog: dialog.accept())
+            # Reset through the public pointer path while observing the exact mutation response.
+            with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/bingo/reset') and response.request.method=='POST',timeout=WAIT_MS) as reset_info: page.get_by_test_id('bingo-reset').click()
+            # Require the accepted response before observing its replacement generation.
+            assert reset_info.value.ok
+            # Require the stale active-generation Buy node to detach rather than satisfy purchase readiness.
+            page.wait_for_function('node => !node.isConnected',arg=old_buy,timeout=WAIT_MS)
+            # Require one fresh enabled Buy generation after reset completion.
+            page.wait_for_function("() => { const buy=document.querySelector('[data-testid=\"bingo-buy\"]'); return Boolean(buy && !buy.disabled); }",timeout=WAIT_MS)
+            # Prove every action stayed on the same route while fresh Bingo markup remained visible.
+            assert page.url==mounted_url and page.get_by_test_id('premium-bingo').is_visible()
+            # Keep the three-operation focused replay inside three unchanged per-operation ceilings without inventing a tighter product timeout.
+            assert time.perf_counter()-started < 3*WAIT_MS/1000
+        # Execute the real-browser regression without any API setup, navigation bypass, retry, or synthetic activation credit.
+        run_case('BR-BINGO-FORMAL-REPLAY-001',['BINGO-012','BINGO-022','TEST-092'],bingo_formal_same_mount_replay)
         # Seed one isolated deferred natural so the rendered Stand path is deterministic. (BJ-031, TEST-054)
         browser_blackjack_state=blackjack_engine.default_state(); browser_blackjack_state['shoe']=['2S']*52+['9D','AS','KH','AS']
         # Persist only the synthetic browser player's controlled Blackjack shoe before mounting the route.

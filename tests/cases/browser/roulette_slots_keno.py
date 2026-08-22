@@ -29,6 +29,86 @@ def run_cases(run_case,browser_shard_owns_group,skip_browser_affinity,page,base,
         page.goto(base+'/games/roulette',wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=WAIT_MS)
         # Normalize the player locale before the Roulette cases build their own localized state.
         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+        # Define the exact real-backend settings serialization regression for formal cycle-six overlap. (TEST-092)
+        def roulette_formal_settings_serialization():
+            # Open the real advanced-settings disclosure so every select uses Playwright's visible pointer-owned surface.
+            disclosure=page.get_by_test_id('roulette-rules-disclosure')
+            # Expand the disclosure only when the current generation remains collapsed.
+            if disclosure.get_attribute('open') is None: disclosure.locator('summary').click()
+            # Require all three rendered selectors before constructing the race reproduction.
+            page.get_by_test_id('roulette-mode').wait_for(state='visible',timeout=WAIT_MS); page.get_by_test_id('roulette-zero').wait_for(state='visible',timeout=WAIT_MS); page.get_by_test_id('roulette-presentation-mode').wait_for(state='visible',timeout=WAIT_MS)
+            # Use the client-only quick profile so the real seed spin stays inside the focused proof budget.
+            page.get_by_test_id('roulette-presentation-mode').select_option('quick')
+            # Capture every exact settings response to reject any hidden 409 or duplicate request.
+            settings_statuses=[]
+            # Record only public response statuses from the frozen settings endpoint.
+            def record_settings_response(response):
+                # Ignore every unrelated game and shell response.
+                if response.url.partition('?')[0].endswith('/api/v1/games/roulette/settings') and response.request.method=='POST': settings_statuses.append(response.status)
+            # Observe settings responses without intercepting or modifying them.
+            page.on('response',record_settings_response)
+            try:
+                # Place one real seed wager and serialize its authoritative drawer render.
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/bets') and response.request.method=='POST',timeout=WAIT_MS) as seed_bet_info: page.get_by_test_id('roulette-num-1').click()
+                # Require the seed wager response before spinning its reusable template.
+                assert seed_bet_info.value.ok
+                # Use the product's real reduced-motion settlement path so the seed completes inside the unchanged focused-browser ceiling.
+                page.emulate_media(reduced_motion='reduce')
+                try:
+                    # Settle one real seed spin so Rebet becomes a truthful public action.
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/spin') and response.request.method=='POST',timeout=WAIT_MS) as seed_spin_info: page.get_by_test_id('roulette-spin').click()
+                    # Require the server settlement and fresh-spin render before exercising Rebet.
+                    assert seed_spin_info.value.ok; page.wait_for_function("() => !document.querySelector('[data-testid=roulette-spin]')?.disabled",timeout=WAIT_MS)
+                finally:
+                    # Restore the suite's ordinary media preference before exercising settings or later Roulette cases.
+                    page.emulate_media(reduced_motion='no-preference')
+                # Recreate the formal primary-worker open-template state through the real Rebet control.
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/rebet') and response.request.method=='POST',timeout=WAIT_MS) as rebet_info: page.locator('#rebet').click()
+                # Require the populated template response and drawer before client-only generic configuration.
+                assert rebet_info.value.ok; page.wait_for_function("() => document.querySelectorAll('[data-clear]').length > 0",timeout=WAIT_MS)
+                # Record the settings request count at the exact former generic-configuration boundary.
+                before_client_only=len(settings_statuses)
+                # Change only the client-owned presentation field while a real Rebet remains open.
+                page.get_by_test_id('roulette-presentation-mode').select_option('authentic')
+                # Require the client-owned value to commit before checking the synchronous request-dispatch observer.
+                page.wait_for_function("() => document.querySelector('[data-testid=roulette-presentation-mode]')?.value === 'authentic'",timeout=WAIT_MS)
+                # Prove the filtered generic boundary issued no settings request and therefore no cycle-six 409; a settings fetch dispatches before select_option returns.
+                assert len(settings_statuses)==before_client_only
+                # Clear the real open Rebet before deliberate server-owned mode changes.
+                with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/clear') and response.request.method=='POST',timeout=WAIT_MS) as clear_info: page.locator('#clear').click()
+                # Require the accepted empty-drawer replacement before the first settings request.
+                assert clear_info.value.ok; page.wait_for_function("() => document.querySelector('#clear')?.disabled === true",timeout=WAIT_MS)
+                # Define one exact select-response-detach-fresh helper matching the formal harness boundary.
+                def select_setting(test_id,value):
+                    # Capture the exact old control generation before arming its response observer.
+                    old_node=page.get_by_test_id(test_id).element_handle()
+                    # Select one changed rendered value while observing exactly its settings POST.
+                    with page.expect_response(lambda response: response.url.partition('?')[0].endswith('/api/v1/games/roulette/settings') and response.request.method=='POST',timeout=WAIT_MS) as settings_info: page.get_by_test_id(test_id).select_option(value)
+                    # Reject conflicts without retries or suppression.
+                    assert settings_info.value.ok and settings_info.value.status<400
+                    # Require the response-owned render to detach the selected old generation.
+                    page.wait_for_function('node => !node.isConnected',arg=old_node,timeout=WAIT_MS)
+                    # Require one fresh enabled generation containing the accepted value.
+                    page.wait_for_function("expected => { const node=document.querySelector(`[data-testid=\"${expected.testId}\"]`); return Boolean(node && !node.disabled && node.value===expected.value); }",arg={'testId':test_id,'value':value},timeout=WAIT_MS)
+                # Rotate the zero rule once through a genuinely changed server-owned value.
+                current_zero=page.get_by_test_id('roulette-zero').input_value(); next_zero={'normal':'la_partage','la_partage':'en_prison','en_prison':'normal'}[current_zero]; select_setting('roulette-zero',next_zero)
+                # Probe the opposite real wheel mode through one fully terminal response and replacement generation.
+                scheduled_mode=page.get_by_test_id('roulette-mode').input_value(); opposite_mode='single' if scheduled_mode=='double' else 'double'; select_setting('roulette-mode',opposite_mode)
+                # Restore the scheduled mode only after the probe's old node is detached and its fresh node is accepted.
+                select_setting('roulette-mode',scheduled_mode)
+                # Require exactly three deliberate successful settings responses and no hidden 409.
+                assert settings_statuses[before_client_only:]==[200,200,200]
+                # Restore the default zero rule through the same terminal boundary when the proof changed it.
+                if page.get_by_test_id('roulette-zero').input_value()!='normal': select_setting('roulette-zero','normal')
+            finally:
+                # Remove only this proof's observer so later Roulette cases retain their established diagnostics.
+                page.remove_listener('response',record_settings_response)
+            # Reacquire the disclosure after response-owned rerenders and restore its collapsed baseline.
+            disclosure=page.get_by_test_id('roulette-rules-disclosure')
+            # Close the real disclosure without mutating any server setting.
+            if disclosure.get_attribute('open') is not None: disclosure.locator('summary').click()
+        # Execute the focused real-browser regression for exact serialized settings and the former Rebet conflict.
+        run_case('BR-ROU-FORMAL-SETTINGS-001',['ROU-002','ROU-016','TEST-092'],roulette_formal_settings_serialization)
         # Define the exhaustive hit-target integrity and geometry regression required by issue #222.
         def roulette_hit_target_integrity():
             # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)

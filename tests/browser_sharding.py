@@ -26,13 +26,13 @@ BROWSER_CASE_AFFINITY_GROUPS = {
     # Keep the fractional wallet, shared shell, catalog, and responsive lobby consumers together.
     "lobby_shell": ("BR-TOKEN-FRACTION-001", "BR-SHELL-001", "BR-TOUCH-TARGET-001", "BR-SHELL-BRAND-001", "BR-TOKEN-WALLET-001", "BR-LOBBY-001", "BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001", "BR-LOBBY-RESP-001"),
     # Keep only Roulette cases that share wager, autoplay, and settlement state together.
-    "roulette": ("BR-ROU-HITMAP-001", "BR-ROU-REFUND-001", "BR-ROU-SLIP-AUDIT-001", "BR-ROU-PREMIUM-001", "BR-I18N-GAMESTATE-ROU-001", "BR-ROU-MOTION-CURVE-001", "BR-ROU-SPINNING-COPY-001", "BR-ROU-LOCKED-REMOVE-001", "BR-ROU-001", "BR-AUTO-START-FAIL-001", "BR-AUTO-ROU-001", "BR-ROU-REDUCED-MOTION-001"),
+    "roulette": ("BR-ROU-FORMAL-SETTINGS-001", "BR-ROU-HITMAP-001", "BR-ROU-REFUND-001", "BR-ROU-SLIP-AUDIT-001", "BR-ROU-PREMIUM-001", "BR-I18N-GAMESTATE-ROU-001", "BR-ROU-MOTION-CURVE-001", "BR-ROU-SPINNING-COPY-001", "BR-ROU-LOCKED-REMOVE-001", "BR-ROU-001", "BR-AUTO-START-FAIL-001", "BR-AUTO-ROU-001", "BR-ROU-REDUCED-MOTION-001"),
     # Keep Slots presentation, economics, and settled-result consumers together.
     "slots": ("BR-MONEY-LABEL-001", "BR-SLOTS-PAYLINE-001", "BR-SLOT-LINE-BET-001", "BR-SLOT-ECONOMICS-001", "BR-SLOT-001"),
     # Keep Keno edge-state production and the premium-result consumer together.
     "keno": ("BR-KENO-EDGE-001", "BR-KENO-001"),
     # Keep Bingo, Blackjack, Baccarat, route localization, and wellness state together.
-    "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
+    "table_games": ("BR-BINGO-PURCHASE-001", "BR-BINGO-001", "BR-BINGO-FORMAL-REPLAY-001", "BR-BJ-NATURAL-PAYOUT-001", "BR-BJ-001", "BR-BJ-I18N-001", "BR-BJ-INSURANCE-NET-001", "BR-BAC-COPY-001", "BR-BAC-FRESH-SHOE-001", "BR-BAC-MUTATION-001", "BR-BAC-001", "BR-I18N-ROUTES-001", "BR-WELLNESS-001"),
     # Keep feedback production and all operational Admin consumers together.
     "feedback_admin": ("BR-FEEDBACK-001", "BR-ADMIN-NAV-AUTH-001", "BR-ADMIN-001", "BR-ADMIN-DIAGNOSTICS-001", "BR-ADMIN-ECONOMICS-001", "BR-ADMIN-SESSION-POLICY-001", "BR-ADMIN-LEDGER-LABELS-001", "BR-ADMIN-FEEDBACK-001", "BR-ADMIN-OAUTH-001", "BR-ADMIN-MAIL-001", "BR-INVITE-001", "BR-OPS-001"),
     # Keep practice-opponent production beside its localized consumer and final Admin presentation chain.
