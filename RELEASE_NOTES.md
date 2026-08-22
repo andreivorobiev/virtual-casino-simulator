@@ -1,3 +1,20 @@
+# Virtual Casino Simulator v0.9.5.85 Release Notes
+
+## Production concurrency and complete formal UI qualification
+
+- Packages every accepted protected-main change since v0.9.5.84, including bounded production concurrency, process-local MySQL pool telemetry, formal Admin-session renewal, and a dynamically derived worker matrix for the complete catalog.
+- Includes #1063's independently accepted documentation-only engineering-workforce governance while preserving the exact runtime tree requested at `e27fb35fdcf1fce38c18caf3a502ef38234da3f7`.
+- Reconstructs the exact candidate commit and tree from the local repository inside the isolated API release copy so source-bound diagnostics remain valid without network contact or source-byte mutation.
+- Carries the terminal-green 140-worker public-UI qualification for all 46 games with exactly 50,000 completed actions, deterministic control floors, isolated cleanup, and fail-closed aggregation.
+- Serializes concurrent MySQL session creation on the existing validated marker row and adds an eight-way live-MySQL regression without adding generic transaction replay or changing session limits.
+- Adds bounded, sanitized browser-readiness diagnostics while preserving the existing timeout ceilings, one navigation attempt, explicit ready/error terminal gate, and independent mounted-control assertion.
+- Preserves frozen API compatibility, the exact 46-game catalog, paytables, wager acceptance, settlement behavior, release channel, and private-invite policy.
+- Adds no release-only requirement identifier; the governed total remains exactly 1114 permanent requirements.
+- Records the exact canonical package inventory as 850 regular files: the prior 849-file source selection plus this v0.9.5.85 compatibility record.
+- Advances package `0.9.5.85`, application `9.72.1`, contracts `1.63.1`, tests `1.116.10`, docs `1.113.1`, and tooling `1.45.2`; accepted Core `10.13.1` and every content-owned module remain exact.
+- Retains exact immutable v0.9.5.84 as the application-only schema-two rollback predecessor. Database rollback, migration application, grant mutation, provider activation, public signup, live OAuth, billing, DNS, and secret mutation remain prohibited.
+- The installed production pull poller owns checksum-, provenance-, inventory-, schema-, health-, readiness-, rollback-, persistence-, root-integrity-, and alarm-gated delivery. This release-only wrapper closes no issue.
+
 # Virtual Casino Simulator v0.9.5.84 Release Notes
 
 ## Shared game lifecycles and first-class session capacity
