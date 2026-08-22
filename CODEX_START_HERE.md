@@ -86,6 +86,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`CLAUDE.md`](CLAUDE.md) — Claude repository adapter
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — Contributing
 - [`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md) — Engineering practices
+- [`ENGINEERING_WORKFORCE.md`](ENGINEERING_WORKFORCE.md) — Engineering Workforce Governance
 - [`FIRST_PROMPT_FOR_CODEX.md`](FIRST_PROMPT_FOR_CODEX.md) — First prompt for Codex
 - [`README.md`](README.md) — Virtual Casino Simulator
 - [`RELEASE_NOTES.md`](RELEASE_NOTES.md) — Virtual Casino Simulator v0.9.5.84 Release Notes
