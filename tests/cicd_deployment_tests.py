@@ -555,6 +555,7 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             ("STORAGE-SESSIONS-001", ["SESSION-014", "STORAGE-019", "MYSQL-010", "TEST-250"]),
             ("RECOVERY-POLICY-001", ["MYSQL-006", "MYSQL-008", "MYSQL-009", "TOOL-004", "TEST-049", "TEST-174"]),
             ("POSTGRES-CONFIG-001", ["STORAGE-001", "STORAGE-003", "STORAGE-004", "STORAGE-020", "TEST-252"]),
+            ("POSTGRES-POOL-001", ["STORAGE-010", "STORAGE-021", "TEST-253"]),
             ("STORAGE-JSON-001", ["CORE-017", "LEDGER-001", "LEDGER-007", "AUDIO-010", "STORAGE-016", "TEST-030", "TEST-243"]),
             ("STORAGE-PROVIDER-SETTLEMENT-PARITY-001", ["CORE-031", "STORAGE-013", "STORAGE-016", "TEST-243"]),
             ("STORAGE-WALLET-CORRUPTION-001", ["STORAGE-014", "TEST-177"]),
@@ -590,14 +591,14 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             default_captured.append((case_id, requirements, callback.__name__))
         module.run_cases(capture_default)
         # Require both live registrations to remain absent without explicit selectors.
-        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in default_captured), expected_cases[:20])
+        self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in default_captured), expected_cases[:21])
         # Capture the explicitly selected live registrations without invoking their callbacks.
         live_captured = []
         def capture_live(case_id, requirements, callback):
             # Preserve the complete explicit-live registration packet.
             live_captured.append((case_id, requirements, callback.__name__))
         module.run_cases(capture_live, include_live=True, include_migration_live=True, request_latency_callback=object())
-        # Bind all twenty-two permanent IDs, requirement mappings, and historical order.
+        # Bind all twenty-three permanent IDs, requirement mappings, and historical order.
         self.assertEqual(tuple((case_id, requirements) for case_id, requirements, _ in live_captured), expected_cases)
         # Bind the two explicit selector cases to the final two historical positions.
         self.assertEqual(tuple(case_id for case_id, _, _ in live_captured[-2:]), ("STORAGE-MYSQL-LIVE-001", "MYSQL-MIGRATION-LIVE-001"))
