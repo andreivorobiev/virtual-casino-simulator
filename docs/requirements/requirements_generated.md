@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.72.0
-- core: 10.13.0
+- core: 10.13.1
 - mobile: 1.0.0
 - ledger: 9.1.2
 - players: 9.1.4
@@ -51,8 +51,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.5
 - pai_gow_poker: 1.1.6
 - teen_patti: 1.1.7
-- tests: 1.116.3
-- docs: 1.112.3
+- tests: 1.116.10
+- docs: 1.113.1
 - contracts: 1.63.0
 - tooling: 1.45.2
 - commenting_policy: 2.1.0
@@ -360,7 +360,7 @@ Historical source baseline: 9.1.0
 - **TEST-050** (Tests) - PASS: Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes through preferred bearer and legacy cookie monitor credentials, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.
 - **TEST-051** (Tests) - PASS: Regression tests exercise 1, 3, 30, and 100 concurrent same-account logins asserting every prior session stays valid with no 401 or 500, and prove per-user cap least-recently-used session eviction.
 - **TEST-052** (Tests) - PASS: Browser regression asserts bounded keyboard-accessible shell navigation, full brand readability without truncation, minimum nav-label readability, no page-level horizontal overflow, and every game control's containment and scroll reachability at the 1920, 1440, 1024, and 390 governed viewports.
-- **TEST-053** (Tests) - PASS: Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry. Playwright readiness boundaries consume one bounded environment-scalable WAIT_MS policy rather than duplicated five- and ten-second literals.
+- **TEST-053** (Tests) - PASS: Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry. Playwright readiness boundaries consume one bounded environment-scalable WAIT_MS policy rather than duplicated five- and ten-second literals. Slots route restoration observes pre-document shared-application ready or error state within that same budget, then independently requires its module root and retains at most one bounded sanitized first-failure bundle.
 - **DOC-017** (Documentation) - PASS: A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.
 - **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
 - **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.
@@ -451,7 +451,7 @@ Historical source baseline: 9.1.0
 - **TEST-095** (Tests) - PASS: Browser-free policy tests prove the single canonical cache identity, exact public-static allowlisting equal to the complete static application import closure, explicit disposition for every shared-core file, installed-locale shell coverage, seeded missing-file and removed-row failures, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, message-lifetime ownership of skipWaiting, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, an honest localized offline game-route panel, offline fail-closed actions, reconnect, a real one-click multi-tab update with zero waiting/banner residue, update failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
 - **TEST-096** (Tests) - PASS: The Roulette refund browser regression proves the logged deployment-closeout bugs for Clear bets and wager debit timing by placing a visible open wager, requiring the authoritative balance to debit on placement, activating the visible Clear bets control, and requiring the exact stake to be refunded before normal Roulette browser acceptance continues.
 - **TEST-099** (Tests) - PASS: An exact-source browser qualification runs one uninterrupted Baccarat session for exactly 2,000 rendered-control coups, permits only one attempt per round, requires exactly 2,000 accepted visible Deal activations and settled-to-wager-ready transitions, and rejects source drift, gaps, retries, browser diagnostics, wallet/account isolation failures, incomplete governed screenshots, or listener/runtime cleanup residue.
-- **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns each game at least its deterministic floor of 50,000 divided by the current catalog count, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.
+- **TEST-092** (Tests) - PLANNED: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns each game at least its deterministic floor of 50,000 divided by the current catalog count, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, completes every attempt-one worker job through terminal evidence upload within 20 minutes, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, budget overruns, or cleanup residue.
 - **MOTION-004** (Core) - PASS: A reusable presentation lifecycle enforces idle, locking, running, settling, and settled phases with explicit failed and aborted recovery, one opaque action owner, stale-generation rejection, and exact preservation of an already-authoritative result.
 - **MOTION-005** (Core) - PASS: Immutable named motion profiles validate normal, fast, and reduced budgets and resolve the live reduced-motion preference at each atomic action boundary without arbitrary real-time sleeps.
 - **MOTION-006** (Core) - PLANNED: Every adopted animated action presents one server- or engine-authoritative committed outcome and cannot choose, replace, conceal past capture, duplicate, or financially settle that outcome.

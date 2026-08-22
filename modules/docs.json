@@ -1,6 +1,6 @@
 {
   "module": "docs",
-  "version": "1.112.3",
+  "version": "1.113.1",
   "paths": [
     "agents/",
     "docs/",
@@ -8,6 +8,7 @@
     "CLAUDE.md",
     "CODEX_START_HERE.md",
     "ENGINEERING_PRACTICES.md",
+    "ENGINEERING_WORKFORCE.md",
     "ARCHITECTURE.md",
     "RELEASE_NOTES.md",
     "LICENSE",
